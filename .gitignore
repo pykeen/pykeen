@@ -107,3 +107,4 @@ venv.bak/
 .idea/*
 /data/
 /src/try_and_Error/
+/dist/
