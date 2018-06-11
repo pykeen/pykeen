@@ -50,7 +50,7 @@ class TransE(nn.Module):
 
         return score
 
-    def predict(self, head, relation, tail):
+    def predict(self, triple):
         """
 
         :param head:
@@ -58,13 +58,16 @@ class TransE(nn.Module):
         :param tail:
         :return:
         """
-        head_emb = self.embeddings(head)
-        relation_emb = self.embeddings(relation)
-        tail_emb = self.embeddings(tail)
+        triple = torch.tensor(triple,dtype=torch.long)
+        head, relation, tail = triple
+
+        head_emb = self.entities_embeddings(head)
+        relation_emb = self.relation_embeddings(relation)
+        tail_emb = self.entities_embeddings(tail)
 
         score = self.calc_score(h_emb=head_emb, r_emb=relation_emb, t_emb=tail_emb)
 
-        return score
+        return score.detach().numpy()
 
     def forward(self, pos_exmpl, neg_exmpl):
         """
