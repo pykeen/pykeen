@@ -75,15 +75,3 @@ class MeanRankEvaluator(AbstractEvaluator):
         return mean_rank, MEAN_RANK
 
 
-if __name__ == '__main__':
-    evaluator = MeanRankEvaluator()
-    path_to_kg = '/Users/mehdi/.kg_embeddings_pipeline/walking_rdf_and_owl_corpus/walking_rdf_and_owl.csv'
-    data = np.loadtxt(fname=path_to_kg, dtype=str, comments='@Comment@ Subject Predicate Object')
-    cfg_path = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/config_files/pipeline_config.yaml'
-
-    with open(cfg_path, 'r') as ymlfile:
-        cfg = yaml.load(ymlfile)
-
-    # trans_e = TransE(kg_embedding_model_config)
-
-    # evaluator.start_evaluation(pos_test_triples=data, kg_embedding_model=trans_e)
