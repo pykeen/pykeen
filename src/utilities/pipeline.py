@@ -17,7 +17,6 @@ class Pipeline(object):
         self.corpus_reader = None
         self.kg_embedding_model = None
         self.eval_module = None
-        # self._initialize_components(config=config)
 
     def _initialize_components(self, config):
         """

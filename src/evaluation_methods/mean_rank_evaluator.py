@@ -1,5 +1,4 @@
 import numpy as np
-import yaml
 
 from evaluation_methods.abstract_evaluator import AbstractEvaluator
 from utilities.constants import MEAN_RANK
@@ -73,5 +72,3 @@ class MeanRankEvaluator(AbstractEvaluator):
         mean_rank = np.mean(ranks)
 
         return mean_rank, MEAN_RANK
-
-
