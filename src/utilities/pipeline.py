@@ -1,12 +1,13 @@
 import random
+from collections import OrderedDict
 
 import torch
 import torch.optim as optim
-import yaml
+from sklearn.model_selection import train_test_split
 
-from utilities.constants import READER, KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS
+from utilities.constants import READER, KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, EVALUATOR
 from utilities.pipeline_helper import get_reader, get_kg_embedding_model, create_triples_and_mappings, \
-    create_negative_triples
+    create_negative_triples, get_evaluator
 
 
 class Pipeline(object):
@@ -32,7 +33,7 @@ class Pipeline(object):
         kb_embedding_model_config = config[KG_EMBEDDING_MODEL]
         self.kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
 
-    def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size):
+    def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size, ratio_test_data, seed):
         """
         :return:
         """
@@ -48,12 +49,26 @@ class Pipeline(object):
         kb_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
         self.kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
 
-        neg_triples = create_negative_triples(pos_triples=pos_tripels_of_ids,
+        neg_triples = create_negative_triples(seed=seed, pos_triples=pos_tripels_of_ids,
                                               ratio_of_negative_triples=ratio_of_neg_triples)
 
-        self._train(learning_rate, num_epochs, batch_size, pos_tripels_of_ids, neg_triples)
+        train_pos_triples, test_pos_triples = train_test_split(pos_tripels_of_ids, test_size=ratio_test_data,
+                                                               random_state=seed)
 
-        return self.kg_embedding_model
+        self._train(learning_rate, num_epochs, batch_size, train_pos_triples, neg_triples)
+
+        # Initialize KG evaluator
+        evaluator_config = self.config[EVALUATOR]
+        evaluator = get_evaluator(config=evaluator_config)
+
+        eval_result, metric_string = evaluator.start_evaluation(test_data=test_pos_triples,
+                                                                kg_embedding_model=self.kg_embedding_model)
+
+        # Prepare Output
+        eval_summary = OrderedDict()
+        eval_summary[metric_string] = eval_result
+
+        return self.kg_embedding_model, eval_summary
 
     def _train(self, learning_rate, num_epochs, batch_size, pos_tripels, neg_triples):
         optimizer = optim.SGD(self.kg_embedding_model.parameters(), lr=learning_rate)
@@ -82,5 +97,3 @@ class Pipeline(object):
 
                 # Get the Python number from a 1-element Tensor by calling tensor.item()
                 total_loss += loss.item()
-
-
