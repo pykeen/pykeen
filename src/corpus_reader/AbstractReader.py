@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-add # -*- coding: utf-8 -*-
 import abc
 
 class AbstractReader(object):

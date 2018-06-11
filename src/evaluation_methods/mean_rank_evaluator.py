@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 from evaluation_methods.abstract_evaluator import AbstractEvaluator

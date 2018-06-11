@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 from corpus_reader.walking_rdf_and_owl_reader import WROCReader
