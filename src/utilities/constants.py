@@ -16,7 +16,12 @@ WROC_READER = 'WROCReader'
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
 TRANS_E = 'TransE'
 TRANS_H = 'TransH'
-## ML params
+# Evaluator
+EVALUATOR = 'evaluator'
+MEAN_RANK_EVALUATOR = 'MeanRankEvaluator'
+## Metrics
+MEAN_RANK = 'mean_rank'
+# ML params
 BATCH_SIZE = 'batch_size'
 VOCAB_SIZE = 'vocab_size'
 EMBEDDING_DIM = 'embedding_dim'
@@ -25,3 +30,5 @@ NUM_ENTITIES = 'num_entities'
 NUM_RELATIONS = 'num_relations'
 NUM_EPOCHS = 'num_epochs'
 LEARNING_RATE = 'learning_rate'
+
+
