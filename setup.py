@@ -20,7 +20,7 @@ INSTALL_REQUIRES = [
 ENTRY_POINTS = {
     # Add later deployer_utils scripts
     'console_scripts': [
-    'start-walking-rdf-owl=deployer.walking_rdf_and_owl_deployer:main',
+        'start-walking-rdf-owl=deployer.walking_rdf_and_owl_deployer:main',
     ]
 }
 
@@ -51,7 +51,6 @@ def get_long_description():
     """Get the long_description from the README.rst file. Assume UTF-8 encoding."""
     with codecs.open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
         long_description = f.read()
-    return long_description
 
 
 if __name__ == '__main__':

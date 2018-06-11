@@ -1,4 +1,4 @@
-# csqa
+# kg_embeddings_pipeline
 kg_embeddings_pipeline is a package for training and evaluating knowledge graph embeddings.
 
 ## Project Structure
