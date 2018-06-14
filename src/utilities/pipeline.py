@@ -41,6 +41,7 @@ class Pipeline(object):
         reader_config = self.config[READER]
         self.corpus_reader = get_reader(config=reader_config)
         path_to_kg = self.corpus_reader.retreive_knowledge_graph()
+
         pos_tripels_of_ids, entity_to_id, rel_to_id = create_triples_and_mappings(path_to_kg=path_to_kg)
 
         # Initialize KG embedding model
