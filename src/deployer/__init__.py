@@ -17,7 +17,6 @@ Clone the repository from `GitHub <https://github.com/SmartDataAnalytics/kg_embe
 
 """
 
-
 __version__ = '0.1.1-dev'
 
 __title__ = 'kg_embeddings_pipeline'
@@ -25,4 +24,6 @@ __description__ = "A package for training and evaluating knowledge graph embeddi
 __url__ = 'https://github.com/SmartDataAnalytics/kg_embeddings_pipeline.git'
 __author__ = 'Mehdi Ali'
 __email__ = 'mehdi.ali@cs.uni-bonn.de'
+
+
 
