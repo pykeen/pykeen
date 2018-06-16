@@ -16,6 +16,7 @@ CLASS_NAME = 'class_name'
 ## Reader
 READER = 'reader'
 WROC_READER = 'WROCReader'
+CSQA_WIKIDATA_READER = 'CSQAWikiDataReader'
 ## KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
 TRANS_E = 'TransE'
