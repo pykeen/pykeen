@@ -8,6 +8,9 @@ KG_EMBEDDINGS_PIPELINE_DIR = create_base_dir()
 WROC = 'walking_rdf_and_owl_corpus'
 WROC_URL = 'http://aber-owl.net/aber-owl/bio2vec/bio-knowledge-graph.n3'
 
+# Related to CSQA filtered Wikidata
+CSQA_WIKIDATA = 'csqa_wiki_data'
+
 # Configuration related
 CLASS_NAME = 'class_name'
 ## Reader
