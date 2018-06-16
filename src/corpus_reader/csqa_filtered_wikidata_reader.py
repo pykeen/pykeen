@@ -72,9 +72,10 @@ class CSQAWikiDataReader(AbstractReader):
         data_dir = os.path.join(KG_EMBEDDINGS_PIPELINE_DIR, CSQA_WIKIDATA)
         os.makedirs(data_dir, exist_ok=True)
 
-        temp_path = os.path.join(data_dir, "wikidata_short_1.json")
         corpus_path = os.path.join(data_dir, "csqa_wikidata_short_1.csv")
 
-        self.transorm_corpus_to_id_format(temp_corpus=temp_path, corpus_path=corpus_path)
+        if not os.path.exists(corpus_path):
+            temp_path = os.path.join(data_dir, "wikidata_short_1.json")
+            self.transorm_corpus_to_id_format(temp_corpus=temp_path, corpus_path=corpus_path)
 
         return corpus_path
