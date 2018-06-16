@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
+from corpus_reader.csqa_filtered_wikidata_reader import CSQAWikiDataReader
 from corpus_reader.walking_rdf_and_owl_reader import WROCReader
 from evaluation_methods.mean_rank_evaluator import MeanRankEvaluator
 from kg_embeddings_model.trans_e import TransE
 from kg_embeddings_model.trans_h import TransH
-from utilities.constants import CLASS_NAME, WROC_READER, TRANS_E, TRANS_H, MEAN_RANK_EVALUATOR
+from utilities.constants import CLASS_NAME, WROC_READER, TRANS_E, TRANS_H, MEAN_RANK_EVALUATOR, CSQA_WIKIDATA_READER
 
 
 def get_evaluator(config):
@@ -25,6 +26,8 @@ def get_reader(config):
 
     if class_name == WROC_READER:
         return WROCReader()
+    if class_name == CSQA_WIKIDATA_READER:
+        return CSQAWikiDataReader()
 
 
 def get_kg_embedding_model(config):
@@ -59,7 +62,7 @@ def create_triples_and_mappings(path_to_kg):
     triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)
-    triples_of_ids = np.unique(ar=triples_of_ids,axis=0)
+    triples_of_ids = np.unique(ar=triples_of_ids, axis=0)
 
     return triples_of_ids, entity_to_id, rel_to_id
 
@@ -94,6 +97,6 @@ def create_negative_triples(seed, pos_triples, ratio_of_negative_triples=None):
         num_neg_triples = int(num_pos_triples * ratio_of_negative_triples)
 
     neg_triples = manipulated_triples[:num_neg_triples, :]
-    neg_triples = np.unique(ar=neg_triples,axis=0)
+    neg_triples = np.unique(ar=neg_triples, axis=0)
 
     return neg_triples
