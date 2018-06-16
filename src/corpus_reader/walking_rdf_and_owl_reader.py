@@ -22,7 +22,7 @@ class WROCReader(AbstractReader):
 
         with open(temp_corpus, 'r', encoding='utf-8') as f1, open(corpus_path, 'w', encoding='utf-8') as f2:
             lines = f1.readlines()
-            f2.write('# Subject Predicate Object \n')
+            f2.write('@Comment@ Subject Predicate Object\n')
             for line in lines:
                 parts = line.strip().split(' ')
                 parts = [p for p in parts if p != '' and p != '.']
