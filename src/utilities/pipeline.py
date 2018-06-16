@@ -68,8 +68,14 @@ class Pipeline(object):
         # Prepare Output
         eval_summary = OrderedDict()
         eval_summary[metric_string] = eval_result
+        id_to_entity = {value:key for key,value in entity_to_id.items()}
+        id_to_rel = {value:key for key,value in rel_to_id.items()}
+        entity_to_embedding = {id_to_entity[id]: embedding for id, embedding in
+                               enumerate(self.kg_embedding_model.entities_embeddings.weight)}
+        relation_to_embedding = {id_to_rel[id]: embedding for id, embedding in
+                               enumerate(self.kg_embedding_model.relation_embeddings.weight)}
 
-        return self.kg_embedding_model, eval_summary
+        return self.kg_embedding_model, eval_summary, entity_to_embedding, relation_to_embedding
 
     def _train(self, learning_rate, num_epochs, batch_size, pos_tripels, neg_triples):
         optimizer = optim.SGD(self.kg_embedding_model.parameters(), lr=learning_rate)
