@@ -20,7 +20,7 @@ def main(cfg_path):
 
     trained_kg_model, eval_summary = pipeline.start_pipeline(learning_rate=0.001, num_epochs=10,
                                                              ratio_of_neg_triples=0.5,
-                                                             batch_size=None, ratio_test_data=1 / 5, seed=2)
+                                                             batch_size=None, ratio_test_data=1/5, seed=2)
 
     print(eval_summary)
 
