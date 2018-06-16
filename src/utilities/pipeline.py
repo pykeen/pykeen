@@ -19,20 +19,6 @@ class Pipeline(object):
         self.kg_embedding_model = None
         self.eval_module = None
 
-    def _initialize_components(self, config):
-        """
-
-        :param config:
-        :return:
-        """
-        # Initialize reader
-        reader_config = config[READER]
-        self.corpus_reader = get_reader(config=reader_config)
-
-        # Initialize KG embedding model
-        kb_embedding_model_config = config[KG_EMBEDDING_MODEL]
-        self.kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
-
     def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size, ratio_test_data, seed):
         """
         :return:
