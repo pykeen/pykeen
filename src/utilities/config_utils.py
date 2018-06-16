@@ -14,5 +14,4 @@ def create_base_dir():
                                   os.path.join(os.path.expanduser('~'), '.kg_embeddings_pipeline'))
         os.makedirs(base_dir, exist_ok=True)
 
-    print(base_dir)
     return base_dir
