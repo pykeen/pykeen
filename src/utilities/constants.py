@@ -24,6 +24,10 @@ TRANS_H = 'TransH'
 # Evaluator
 EVALUATOR = 'evaluator'
 MEAN_RANK_EVALUATOR = 'MeanRankEvaluator'
+# Output paths
+ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
+EVAL_RESULTS ='eval_results'
+
 ## Metrics
 MEAN_RANK = 'mean_rank'
 # ML params
