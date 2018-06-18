@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import random
 from collections import OrderedDict
-
+import logging
 import torch
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
@@ -9,7 +9,8 @@ from sklearn.model_selection import train_test_split
 from utilities.constants import READER, KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, EVALUATOR
 from utilities.pipeline_helper import get_reader, get_kg_embedding_model, create_triples_and_mappings, \
     create_negative_triples, get_evaluator
-
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 class Pipeline(object):
 
@@ -24,6 +25,7 @@ class Pipeline(object):
         :return:
         """
         # Initialize reader
+        log.info("-------------Read Corpus-------------")
         reader_config = self.config[READER]
         self.corpus_reader = get_reader(config=reader_config)
         path_to_kg = self.corpus_reader.retreive_knowledge_graph()
@@ -36,18 +38,21 @@ class Pipeline(object):
         kb_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
         self.kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
 
+        log.info("-------------Create negative triples-------------")
         neg_triples = create_negative_triples(seed=seed, pos_triples=pos_tripels_of_ids,
                                               ratio_of_negative_triples=ratio_of_neg_triples)
 
         train_pos_triples, test_pos_triples = train_test_split(pos_tripels_of_ids, test_size=ratio_test_data,
                                                                random_state=seed)
 
+        log.info("-------------Train KG Embeddings-------------")
         self._train(learning_rate, num_epochs, batch_size, train_pos_triples, neg_triples)
 
         # Initialize KG evaluator
         evaluator_config = self.config[EVALUATOR]
         evaluator = get_evaluator(config=evaluator_config)
 
+        log.info("-------------Start Evaluation-------------")
         eval_result, metric_string = evaluator.start_evaluation(test_data=test_pos_triples,
                                                                 kg_embedding_model=self.kg_embedding_model)
 
