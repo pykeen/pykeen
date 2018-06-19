@@ -26,7 +26,7 @@ def main(cfg_path):
         learning_rate=0.01, num_epochs=1,
         ratio_of_neg_triples=0.5,
         batch_size=None,
-        ratio_test_data=1 / 5, seed=2)
+        ratio_test_data=1/5, seed=2)
 
     current_time = time.strftime("%H:%M:%S")
     current_date = time.strftime("%d/%m/%Y").replace('/', '-')
