@@ -34,14 +34,15 @@ class TransE(nn.Module):
         criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
-        y = torch.Tensor([-1],device=self.device)
+        y = torch.tensor([-1],dtype=torch.float,device=self.device)
         pos_score = pos_score.unsqueeze(0)
         neg_score = neg_score.unsqueeze(0)
-        pos_score = torch.tensor(pos_score,device=self.device)
-        neg_score = torch.tensor(neg_score, device=self.device)
+        pos_score = torch.tensor(pos_score,dtype=torch.float,device=self.device)
+        neg_score = torch.tensor(neg_score,dtype=torch.float,device=self.device)
         print(pos_score)
         print(neg_score)
         loss = criterion(pos_score, neg_score, y)
+        print(loss)
 
         return loss
 
@@ -86,18 +87,9 @@ class TransE(nn.Module):
         :return:
         """
 
-        pos_exmpl = torch.tensor(pos_exmpl,device=self.device)
-        neg_exmpl = torch.tensor(neg_exmpl, device=self.device)
         pos_h, pos_r, pos_t = pos_exmpl
         neg_h, neg_r, neg_t, = neg_exmpl
 
-        pos_h = torch.tensor(pos_h, dtype=torch.long, device=self.device)
-        pos_r = torch.tensor(pos_r, dtype=torch.long, device=self.device)
-        pos_t = torch.tensor(pos_t, dtype=torch.long, device=self.device)
-
-        neg_h = torch.tensor(neg_h, dtype=torch.long, device=self.device)
-        neg_r = torch.tensor(neg_r, dtype=torch.long, device=self.device)
-        neg_t = torch.tensor(neg_t, dtype=torch.long, device=self.device)
 
         pos_h_emb = self.entities_embeddings(pos_h)
         pos_r_emb = self.relation_embeddings(pos_r)
