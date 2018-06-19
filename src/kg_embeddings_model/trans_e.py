@@ -20,8 +20,7 @@ class TransE(nn.Module):
         self.entities_embeddings = nn.Embedding(num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.margin_loss = margin_loss
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.cuda = torch.device('cuda')
 
 
