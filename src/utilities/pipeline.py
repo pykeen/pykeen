@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import random
+import timeit
 from collections import OrderedDict
 
 import torch
@@ -86,12 +87,10 @@ class Pipeline(object):
         # num_batches = num_instances // num_epochs
 
         for epoch in range(num_epochs):
+            start = timeit.default_timer()
             for step in range(num_instances):
                 pos_triple = torch.tensor(random.choice(pos_tripels),dtype=torch.long,device=self.device)
                 neg_triple = torch.tensor(random.choice(neg_triples),dtype=torch.long,device=self.device)
-                # pos_triple = torch.tensor(random.choice(pos_tripels)).cuda()
-                # neg_triple = torch.tensor(random.choice(neg_triples)).cuda()
-
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old
@@ -107,3 +106,6 @@ class Pipeline(object):
 
                 # Get the Python number from a 1-element Tensor by calling tensor.item()
                 total_loss += loss.item()
+
+            stop = timeit.default_timer()
+            log.info("Epoch %s took %s seconds \n" % (str(epoch),str(round(stop - start))))
