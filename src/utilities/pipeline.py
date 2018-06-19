@@ -87,8 +87,8 @@ class Pipeline(object):
 
         for epoch in range(num_epochs):
             for step in range(num_instances):
-                pos_triple = torch.tensor(random.choice(pos_tripels), dtype=torch.long)
-                neg_triple = torch.tensor(random.choice(neg_triples), dtype=torch.long)
+                pos_triple = torch.tensor(random.choice(pos_tripels))
+                neg_triple = torch.tensor(random.choice(neg_triples))
                 # pos_triple = torch.tensor(random.choice(pos_tripels)).cuda()
                 # neg_triple = torch.tensor(random.choice(neg_triples)).cuda()
 
