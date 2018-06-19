@@ -33,7 +33,7 @@ class TransE(nn.Module):
         """
         criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         # y == -1 indicates that second input to criterion should get a larger loss
-        y = torch.Tensor([-1],device=self.device)
+        y = torch.Tensor([-1]).cuda()
         pos_score = pos_score.unsqueeze(0)
         neg_score = neg_score.unsqueeze(0)
         print(pos_score)
