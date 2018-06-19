@@ -21,7 +21,7 @@ class TransE(nn.Module):
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.margin_loss = margin_loss
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # self.cuda = torch.device('cuda')
 
 
@@ -84,6 +84,10 @@ class TransE(nn.Module):
 
         pos_h, pos_r, pos_t = pos_exmpl
         neg_h, neg_r, neg_t, = neg_exmpl
+
+        pos_h = torch.tensor(pos_h, dtype=torch.long, device=self.device)
+        pos_r = torch.tensor(pos_r, dtype=torch.long, device=self.device)
+        pos_t = torch.tensor(pos_t, dtype=torch.long, device=self.device)
 
         pos_h_emb = self.entities_embeddings(pos_h)
         pos_r_emb = self.relation_embeddings(pos_r)

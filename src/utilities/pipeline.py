@@ -75,7 +75,7 @@ class Pipeline(object):
     def _train(self, learning_rate, num_epochs, batch_size, pos_tripels, neg_triples):
 
         if torch.cuda.is_available():
-            print("GPU available")
+            log.info("***Run model on GPU***")
             self.kg_embedding_model = self.kg_embedding_model.cuda()
 
         optimizer = optim.SGD(self.kg_embedding_model.parameters(), lr=learning_rate)
@@ -87,8 +87,8 @@ class Pipeline(object):
 
         for epoch in range(num_epochs):
             for step in range(num_instances):
-                pos_triple = torch.tensor(random.choice(pos_tripels), dtype=torch.long, device=self.device)
-                neg_triple = torch.tensor(random.choice(neg_triples), dtype=torch.long, device=self.device)
+                pos_triple = torch.tensor(random.choice(pos_tripels), dtype=torch.long)
+                neg_triple = torch.tensor(random.choice(neg_triples), dtype=torch.long)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old
