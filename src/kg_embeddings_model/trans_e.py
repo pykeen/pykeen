@@ -89,13 +89,13 @@ class TransE(nn.Module):
         pos_h, pos_r, pos_t = pos_exmpl
         neg_h, neg_r, neg_t, = neg_exmpl
 
-        # pos_h = torch.tensor(pos_h, dtype=torch.long, device=self.device)
-        # pos_r = torch.tensor(pos_r, dtype=torch.long, device=self.device)
-        # pos_t = torch.tensor(pos_t, dtype=torch.long, device=self.device)
-        #
-        # neg_h = torch.tensor(neg_h, dtype=torch.long, device=self.device)
-        # neg_r = torch.tensor(neg_r, dtype=torch.long, device=self.device)
-        # neg_t = torch.tensor(neg_t, dtype=torch.long, device=self.device)
+        pos_h = torch.tensor(pos_h, dtype=torch.long, device=self.device)
+        pos_r = torch.tensor(pos_r, dtype=torch.long, device=self.device)
+        pos_t = torch.tensor(pos_t, dtype=torch.long, device=self.device)
+
+        neg_h = torch.tensor(neg_h, dtype=torch.long, device=self.device)
+        neg_r = torch.tensor(neg_r, dtype=torch.long, device=self.device)
+        neg_t = torch.tensor(neg_t, dtype=torch.long, device=self.device)
 
         pos_h_emb = self.entities_embeddings(pos_h)
         pos_r_emb = self.relation_embeddings(pos_r)
