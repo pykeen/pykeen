@@ -75,6 +75,7 @@ class Pipeline(object):
     def _train(self, learning_rate, num_epochs, batch_size, pos_tripels, neg_triples):
 
         if torch.cuda.is_available():
+            print("GPU available")
             self.kg_embedding_model = self.kg_embedding_model.cuda()
 
         optimizer = optim.SGD(self.kg_embedding_model.parameters(), lr=learning_rate)
