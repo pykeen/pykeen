@@ -19,6 +19,7 @@ class Pipeline(object):
         self.corpus_reader = None
         self.kg_embedding_model = None
         self.eval_module = None
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size, ratio_test_data, seed):
         """
@@ -61,9 +62,9 @@ class Pipeline(object):
         eval_summary[metric_string] = eval_result
         id_to_entity = {value:key for key,value in entity_to_id.items()}
         id_to_rel = {value:key for key,value in rel_to_id.items()}
-        entity_to_embedding = {id_to_entity[id]: embedding for id, embedding in
+        entity_to_embedding = {id_to_entity[id]: embedding.detach().numpy() for id, embedding in
                                enumerate(self.kg_embedding_model.entities_embeddings.weight)}
-        relation_to_embedding = {id_to_rel[id]: embedding for id, embedding in
+        relation_to_embedding = {id_to_rel[id]: embedding.detach().numpy() for id, embedding in
                                enumerate(self.kg_embedding_model.relation_embeddings.weight)}
 
         return self.kg_embedding_model, eval_summary, entity_to_embedding, relation_to_embedding
@@ -78,8 +79,8 @@ class Pipeline(object):
 
         for epoch in range(num_epochs):
             for step in range(num_instances):
-                pos_triple = torch.tensor(random.choice(pos_tripels), dtype=torch.long)
-                neg_triple = torch.tensor(random.choice(neg_triples), dtype=torch.long)
+                pos_triple = torch.tensor(random.choice(pos_tripels), dtype=torch.long, device=self.device)
+                neg_triple = torch.tensor(random.choice(neg_triples), dtype=torch.long, device=self.device)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old

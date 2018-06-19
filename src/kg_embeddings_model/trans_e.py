@@ -20,6 +20,8 @@ class TransE(nn.Module):
         self.entities_embeddings = nn.Embedding(num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.margin_loss = margin_loss
+        # self.cuda = torch.device('cuda')
+
 
     def loss_fct(self, pos_score, neg_score):
         """
@@ -77,7 +79,6 @@ class TransE(nn.Module):
         :param neg_exmpl:
         :return:
         """
-
         pos_h, pos_r, pos_t = pos_exmpl
         neg_h, neg_r, neg_t, = neg_exmpl
 
