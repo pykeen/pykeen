@@ -36,6 +36,8 @@ class TransE(nn.Module):
         y = torch.Tensor([-1],device=self.device)
         pos_score = pos_score.unsqueeze(0)
         neg_score = neg_score.unsqueeze(0)
+        print(pos_score)
+        print(neg_score)
         loss = criterion(pos_score, neg_score, y)
 
         return loss
