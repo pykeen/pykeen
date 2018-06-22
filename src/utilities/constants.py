@@ -27,6 +27,10 @@ MEAN_RANK_EVALUATOR = 'MeanRankEvaluator'
 # Output paths
 ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
 EVAL_RESULTS ='eval_results'
+# Device related
+PREFERRED_DEVICE  = 'preferred_device'
+CPU = 'cpu'
+GPU = 'gpu'
 
 ## Metrics
 MEAN_RANK = 'mean_rank'
