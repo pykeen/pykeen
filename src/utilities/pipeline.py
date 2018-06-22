@@ -2,6 +2,7 @@
 import logging
 import random
 import timeit
+import numpy as np
 from collections import OrderedDict
 
 import torch
@@ -51,7 +52,7 @@ class Pipeline(object):
                                                                random_state=seed)
 
         log.info("-------------Train KG Embeddings-------------")
-        self._train(learning_rate, num_epochs, batch_size, train_pos_triples, neg_triples)
+        self._train(learning_rate, num_epochs, batch_size, train_pos_triples, neg_triples, seed)
 
         # Initialize KG evaluator
         evaluator_config = self.config[EVALUATOR]
@@ -73,7 +74,14 @@ class Pipeline(object):
 
         return self.kg_embedding_model, eval_summary, entity_to_embedding, relation_to_embedding
 
-    def _train(self, learning_rate, num_epochs, batch_size, pos_tripels, neg_triples):
+    def _train(self, learning_rate, num_epochs, batch_size, pos_triples, neg_triples, seed):
+
+        np.random.seed(seed=seed)
+        indices = np.arange(pos_triples.shape[0])
+        np.random.shuffle(indices)
+        pos_triples = pos_triples[indices]
+        neg_triples = neg_triples[indices]
+
 
         if torch.cuda.is_available():
             log.info("***Run model on GPU***")
@@ -83,14 +91,14 @@ class Pipeline(object):
 
         total_loss = 0
 
-        num_instances = max(len(pos_tripels), len(neg_triples))
+        num_instances = pos_triples.shape[0]
         # num_batches = num_instances // num_epochs
 
         for epoch in range(num_epochs):
             start = timeit.default_timer()
             for step in range(num_instances):
-                pos_triple = torch.tensor(random.choice(pos_tripels),dtype=torch.long,device=self.device)
-                neg_triple = torch.tensor(random.choice(neg_triples),dtype=torch.long,device=self.device)
+                pos_triple = torch.tensor(pos_triples[step], dtype=torch.long, device=self.device)
+                neg_triple = torch.tensor(neg_triples[step],dtype=torch.long,device=self.device)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old
