@@ -9,7 +9,7 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 
 from utilities.constants import READER, KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, EVALUATOR, PREFERRED_DEVICE, \
-    GPU
+    GPU, CPU
 from utilities.pipeline_helper import get_reader, get_kg_embedding_model, create_triples_and_mappings, \
     create_negative_triples, get_evaluator
 
@@ -25,12 +25,7 @@ class Pipeline(object):
         self.kg_embedding_model = None
         self.eval_module = None
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] is GPU else 'cpu')
-
-        print(self.config[PREFERRED_DEVICE] is GPU)
-        print(self.config[PREFERRED_DEVICE])
-        print(self.device)
-        exit(0)
+            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else 'cpu')
 
     def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size, ratio_test_data, seed):
         """
