@@ -82,6 +82,7 @@ def create_negative_triples(seed, pos_triples, ratio_of_negative_triples=None):
     assert (ratio_of_negative_triples is not None)
 
     num_pos_triples = pos_triples.shape[0]
+    num_subj_corrupt = num_pos_triples // 2
 
     subjects = pos_triples[:, 0:1]
     objects = pos_triples[:, 2:3]
@@ -89,14 +90,13 @@ def create_negative_triples(seed, pos_triples, ratio_of_negative_triples=None):
     permuted_subjects = np.random.permutation(subjects)
     permuted_objects = np.random.permutation(objects)
 
-    triples_manp_subjs = np.concatenate([permuted_subjects, relations, objects], axis=1)
-    triples_manp_objs = np.concatenate([permuted_objects, relations, objects], axis=1)
-    manipulated_triples = np.random.permutation(np.concatenate([triples_manp_subjs, triples_manp_objs], axis=0))
+    triples_manp_subjs = np.concatenate(
+        [permuted_subjects[:num_subj_corrupt, :], relations[:num_subj_corrupt, :], objects[:num_subj_corrupt, :]],
+        axis=1)
+    triples_manp_objs = np.concatenate(
+        [subjects[num_subj_corrupt:, :], relations[num_subj_corrupt:, :], permuted_objects[num_subj_corrupt:, :]],
+        axis=1)
+    neg_triples = np.concatenate([triples_manp_subjs, triples_manp_objs], axis=0)
 
-    if ratio_of_negative_triples != None:
-        num_neg_triples = int(num_pos_triples * ratio_of_negative_triples)
-
-    neg_triples = manipulated_triples[:num_neg_triples, :]
-    neg_triples = np.unique(ar=neg_triples, axis=0)
 
     return neg_triples
