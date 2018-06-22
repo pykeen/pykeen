@@ -18,17 +18,22 @@ log = logging.getLogger(__name__)
 
 class Pipeline(object):
 
-    def __init__(self, config):
+    def __init__(self, config, enforce_cpu_use=False):
         self.config = config
         self.corpus_reader = None
         self.kg_embedding_model = None
         self.eval_module = None
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        if enforce_cpu_use:
+            self.device = torch.device('cpu')
+        else:
+            self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size, ratio_test_data, seed):
         """
         :return:
         """
+
         # Initialize reader
         log.info("-------------Read Corpus-------------")
         reader_config = self.config[READER]
@@ -81,9 +86,7 @@ class Pipeline(object):
         pos_triples = pos_triples[indices]
         neg_triples = neg_triples[indices]
 
-        if torch.cuda.is_available():
-            log.info("***Run model on GPU***")
-            self.kg_embedding_model = self.kg_embedding_model.cuda()
+        self.kg_embedding_model = self.kg_embedding_model.to(self.device)
 
         optimizer = optim.SGD(self.kg_embedding_model.parameters(), lr=learning_rate)
 
@@ -91,6 +94,8 @@ class Pipeline(object):
 
         num_instances = pos_triples.shape[0]
         # num_batches = num_instances // num_epochs
+
+        log.info('****Run Model On %s****' % str(self.device).upper())
 
         for epoch in range(num_epochs):
             start = timeit.default_timer()
