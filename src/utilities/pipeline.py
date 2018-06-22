@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
-import random
 import timeit
-import numpy as np
 from collections import OrderedDict
 
+import numpy as np
 import torch
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
@@ -48,18 +47,18 @@ class Pipeline(object):
         neg_triples = create_negative_triples(seed=seed, pos_triples=pos_tripels_of_ids,
                                               ratio_of_negative_triples=ratio_of_neg_triples)
 
-        train_pos_triples, test_pos_triples = train_test_split(pos_tripels_of_ids, test_size=ratio_test_data,
-                                                               random_state=seed)
+        train_pos, test_pos, train_neg, test_neg = train_test_split(pos_tripels_of_ids, neg_triples,
+                                                                    test_size=ratio_test_data, random_state=seed)
 
         log.info("-------------Train KG Embeddings-------------")
-        self._train(learning_rate, num_epochs, batch_size, train_pos_triples, neg_triples, seed)
+        self._train(learning_rate, num_epochs, batch_size, train_pos, train_neg, seed)
 
         # Initialize KG evaluator
         evaluator_config = self.config[EVALUATOR]
         evaluator = get_evaluator(config=evaluator_config)
 
         log.info("-------------Start Evaluation-------------")
-        eval_result, metric_string = evaluator.start_evaluation(test_data=test_pos_triples,
+        eval_result, metric_string = evaluator.start_evaluation(test_data=test_pos,
                                                                 kg_embedding_model=self.kg_embedding_model)
 
         # Prepare Output
@@ -82,7 +81,6 @@ class Pipeline(object):
         pos_triples = pos_triples[indices]
         neg_triples = neg_triples[indices]
 
-
         if torch.cuda.is_available():
             log.info("***Run model on GPU***")
             self.kg_embedding_model = self.kg_embedding_model.cuda()
@@ -98,7 +96,7 @@ class Pipeline(object):
             start = timeit.default_timer()
             for step in range(num_instances):
                 pos_triple = torch.tensor(pos_triples[step], dtype=torch.long, device=self.device)
-                neg_triple = torch.tensor(neg_triples[step],dtype=torch.long,device=self.device)
+                neg_triple = torch.tensor(neg_triples[step], dtype=torch.long, device=self.device)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old
@@ -116,4 +114,4 @@ class Pipeline(object):
                 total_loss += loss.item()
 
             stop = timeit.default_timer()
-            log.info("Epoch %s took %s seconds \n" % (str(epoch),str(round(stop - start))))
+            log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
