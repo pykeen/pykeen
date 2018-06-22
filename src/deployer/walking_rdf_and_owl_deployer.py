@@ -16,7 +16,7 @@ def main(cfg_path):
     with open(cfg_path, 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
-    pipeline = Pipeline(config=cfg, enforce_cpu_use=True)
+    pipeline = Pipeline(config=cfg)
 
     trained_kg_model, eval_summary = pipeline.start_pipeline(learning_rate=0.001, num_epochs=1,
                                                              ratio_of_neg_triples=0.5,
