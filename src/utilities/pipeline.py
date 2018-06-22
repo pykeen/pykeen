@@ -27,6 +27,11 @@ class Pipeline(object):
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] is GPU else 'cpu')
 
+        print(self.config[PREFERRED_DEVICE] is GPU)
+        print(self.config[PREFERRED_DEVICE])
+        print(self.device)
+        exit(0)
+
     def start_pipeline(self, learning_rate, num_epochs, ratio_of_neg_triples, batch_size, ratio_test_data, seed):
         """
         :return:
