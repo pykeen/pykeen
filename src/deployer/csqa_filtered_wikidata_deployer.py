@@ -22,7 +22,7 @@ def main(cfg_path):
 
     pipeline = Pipeline(config=cfg)
 
-    trained_kg_model, eval_summary, entity_to_embedding, relation_to_embedding = pipeline.start_pipeline(
+    trained_kg_model, eval_summary, entity_to_embedding, relation_to_embedding = pipeline._start_pipeline(
         learning_rate=0.01, num_epochs=1,
         ratio_of_neg_triples=0.5,
         batch_size=None,
