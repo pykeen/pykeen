@@ -7,6 +7,8 @@ from utilities.constants import MEAN_RANK
 
 class MeanRankEvaluator(AbstractEvaluator):
 
+    METRIC = MEAN_RANK
+
     def _get_algorithm_strategy(self, corrupt_suject):
         if corrupt_suject:
             start_of_columns_to_maintain = 1
