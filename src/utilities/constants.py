@@ -31,6 +31,9 @@ EVAL_RESULTS ='eval_results'
 PREFERRED_DEVICE  = 'preferred_device'
 CPU = 'cpu'
 GPU = 'gpu'
+# Hyperparamters optim
+HPO = 'hyper_param_optimization'
+RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 
 ## Metrics
 MEAN_RANK = 'mean_rank'
