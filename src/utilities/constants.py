@@ -37,6 +37,7 @@ RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 
 ## Metrics
 MEAN_RANK = 'mean_rank'
+HITS_AT_K = 'hits@k'
 # ML params
 BATCH_SIZE = 'batch_size'
 VOCAB_SIZE = 'vocab_size'
