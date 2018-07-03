@@ -11,7 +11,6 @@ class HitsAtKEvaluator(AbstractEvaluator):
 
     def _compute_hits_at_k(self, kg_embedding_model, data, k, corrupt_suject):
         num_triples = len(data)
-        ranks = []
 
         assert num_triples>=k
 
@@ -48,5 +47,5 @@ class HitsAtKEvaluator(AbstractEvaluator):
 
 
 
-        return ranks
+        return None
 
