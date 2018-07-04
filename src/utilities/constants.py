@@ -50,10 +50,12 @@ LEARNING_RATE = 'learning_rate'
 INPUT_DROPOUT = 'input_dropout'
 OUTPUT_DROPOUT = 'output_dropout'
 FEATURE_MAP_DROPOUT = 'feature_map_dropout'
-#C NN related
+#CNN related
 NUM_IN_CHANNELS = 'num_input_channel'
 NUM_OUT_CHANNELS = 'num_output_channels'
 KERNEL_HEIGHT = 'kernel_height'
 KERNEL_WIDTH = 'kernel_width'
+IMAGE_HEIGHT = 'image_height'
+IMAGE_WIDTH = 'image_width'
 
 
