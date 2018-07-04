@@ -45,7 +45,7 @@ class ConvE(nn.Module):
         self.conv1 = torch.nn.Conv2d(in_channels=num_in_channels, out_channels=num_out_channels,
                                      kernel_size=(kernel_height, kernel_width), stride=1, padding=0,
                                      bias=True)
-        # TODO: Check wheter feature_size makes sense
+
         # num_features – C from an expected input of size (N,C,L)
         self.bn0 = torch.nn.BatchNorm2d(num_in_channels)
         # num_features – C from an expected input of size (N,C,H,W)
@@ -81,6 +81,7 @@ class ConvE(nn.Module):
         # batch_size * num_output_channels 2*height-kernel_height+1 * width-kernel_width+1
         x = x.view(self.batch_size, -1)
         x = self.fc(x)
+
         x = self.hidden_drop(x)
         if self.batch_size > 1:
             x = self.bn2(x)
@@ -94,7 +95,7 @@ class ConvE(nn.Module):
 
 if __name__ == '__main__':
     config = {}
-    config[NUM_ENTITIES] = 2
+    config[NUM_ENTITIES] = 4
     config[NUM_RELATIONS] = 1
     config[EMBEDDING_DIM] = 100
     config[IMAGE_HEIGHT] = 10
