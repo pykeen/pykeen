@@ -2,9 +2,11 @@ import torch
 import torch.autograd
 import torch.nn as nn
 from torch.nn import functional as F, Parameter
-from torch.nn.init import xavier_normal, xavier_uniform
+from torch.nn.init import xavier_normal
+
 from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, NUM_IN_CHANNELS, NUM_OUT_CHANNELS, \
-    KERNEL_HEIGHT, KERNEL_WIDTH, INPUT_DROPOUT, OUTPUT_DROPOUT, FEATURE_MAP_DROPOUT
+    KERNEL_HEIGHT, KERNEL_WIDTH, INPUT_DROPOUT, OUTPUT_DROPOUT, FEATURE_MAP_DROPOUT, IMAGE_HEIGHT, IMAGE_WIDTH, \
+    BATCH_SIZE
 
 '''
 Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
@@ -26,6 +28,11 @@ class ConvE(nn.Module):
         input_dropout = config[INPUT_DROPOUT]
         hidden_dropout = config[OUTPUT_DROPOUT]
         feature_map_dropout = config[FEATURE_MAP_DROPOUT]
+        self.img_height = config[IMAGE_HEIGHT]
+        self.img_width = config[IMAGE_WIDTH]
+        self.batch_size = config[BATCH_SIZE]
+
+        assert self.img_height * self.img_width == embedding_dim
 
         self.entity_embeddings = nn.Embedding(num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
@@ -39,35 +46,44 @@ class ConvE(nn.Module):
                                      kernel_size=(kernel_height, kernel_width), stride=1, padding=0,
                                      bias=True)
         # TODO: Check wheter feature_size makes sense
+        # num_features – C from an expected input of size (N,C,L)
         self.bn0 = torch.nn.BatchNorm2d(num_in_channels)
+        # num_features – C from an expected input of size (N,C,H,W)
         self.bn1 = torch.nn.BatchNorm2d(num_out_channels)
         self.bn2 = torch.nn.BatchNorm1d(embedding_dim)
         self.register_parameter('b', Parameter(torch.zeros(num_entities)))
-        self.fc = torch.nn.Linear(10368, embedding_dim)
-
+        num_in_features = self.batch_size * num_out_channels * (2 * self.img_height - kernel_height + 1) * (
+                    self.img_width - kernel_width + 1)
+        self.fc = torch.nn.Linear(num_in_features, embedding_dim)
 
     def init(self):
         xavier_normal(self.entity_embeddings.weight.data)
         xavier_normal(self.relation_embeddings.weight.data)
 
     def forward(self, e1, rel):
-        batch_size = 1
-        e1_embedded = self.entity_embeddings(e1).view(-1, 1, 10, 20)
-        rel_embedded = self.relation_embeddings(rel).view(-1, 1, 10, 20)
+        # batch_size, num_input_channels, width, height
+        e1_embedded = self.entity_embeddings(e1).view(-1, 1, self.img_height, self.img_width)
+        rel_embedded = self.relation_embeddings(rel).view(-1, 1, self.img_height, self.img_width)
 
+        # batch_size, num_input_channels, 2*height, width
         stacked_inputs = torch.cat([e1_embedded, rel_embedded], 2)
 
+        # batch_size, num_input_channels, 2*height, width
         stacked_inputs = self.bn0(stacked_inputs)
+
+        # batch_size, num_input_channels, 2*height, width
         x = self.inp_drop(stacked_inputs)
+        # (N,C_out,H_out,W_out)
         x = self.conv1(x)
         x = self.bn1(x)
         x = F.relu(x)
         x = self.feature_map_drop(x)
-        x = x.view(batch_size, -1)
-        # print(x.size())
+        # batch_size * num_output_channels 2*height-kernel_height+1 * width-kernel_width+1
+        x = x.view(self.batch_size, -1)
         x = self.fc(x)
         x = self.hidden_drop(x)
-        x = self.bn2(x)
+        if self.batch_size > 1:
+            x = self.bn2(x)
         x = F.relu(x)
         x = torch.mm(x, self.entity_embeddings.weight.transpose(1, 0))
         x += self.b.expand_as(x)
@@ -75,11 +91,14 @@ class ConvE(nn.Module):
 
         return pred
 
+
 if __name__ == '__main__':
     config = {}
     config[NUM_ENTITIES] = 2
     config[NUM_RELATIONS] = 1
-    config[EMBEDDING_DIM] = 5
+    config[EMBEDDING_DIM] = 100
+    config[IMAGE_HEIGHT] = 10
+    config[IMAGE_WIDTH] = 10
     config[NUM_IN_CHANNELS] = 1
     config[NUM_OUT_CHANNELS] = 3
     config[KERNEL_HEIGHT] = 2
@@ -87,4 +106,11 @@ if __name__ == '__main__':
     config[INPUT_DROPOUT] = 0.5
     config[OUTPUT_DROPOUT] = 0.5
     config[FEATURE_MAP_DROPOUT] = 0.5
-    ConvE(config=config)
+    config[BATCH_SIZE] = 1
+
+    model = ConvE(config=config)
+
+    subject_ent = torch.tensor(0, dtype=torch.long)
+    relation = torch.tensor(0, dtype=torch.long)
+
+    model(e1=subject_ent, rel=relation)
