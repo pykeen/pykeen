@@ -60,6 +60,16 @@ class ConvE(nn.Module):
         xavier_normal(self.entity_embeddings.weight.data)
         xavier_normal(self.relation_embeddings.weight.data)
 
+    def compute_loss(self, pred, targets):
+        """
+
+        :param pred:
+        :param targets:
+        :return:
+        """
+
+        return self.loss(pred,targets)
+
     def forward(self, e1, rel):
         # batch_size, num_input_channels, width, height
         e1_embedded = self.entity_embeddings(e1).view(-1, 1, self.img_height, self.img_width)
@@ -87,6 +97,7 @@ class ConvE(nn.Module):
             x = self.bn2(x)
         x = F.relu(x)
         x = torch.mm(x, self.entity_embeddings.weight.transpose(1, 0))
+        # TODO: Why this?
         x += self.b.expand_as(x)
         pred = F.sigmoid(x)
 
