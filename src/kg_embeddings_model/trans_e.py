@@ -20,16 +20,17 @@ class TransE(nn.Module):
         self.entities_embeddings = nn.Embedding(num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.margin_loss = margin_loss
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    def loss_fct(self, pos_score, neg_score):
+    def compute_loss(self, pos_score, neg_score):
         """
 
         :param pos_score:
         :param neg_score:
         :return:
         """
-        criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
+
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
         y = torch.tensor([-1], dtype=torch.float, device=self.device)
@@ -37,7 +38,7 @@ class TransE(nn.Module):
         neg_score = neg_score.unsqueeze(0)
         pos_score = torch.tensor(pos_score, dtype=torch.float, device=self.device)
         neg_score = torch.tensor(neg_score, dtype=torch.float, device=self.device)
-        loss = criterion(pos_score, neg_score, y)
+        loss = self.criterion(pos_score, neg_score, y)
 
         return loss
 
@@ -96,6 +97,6 @@ class TransE(nn.Module):
         pos_score = self.calc_score(h_emb=pos_h_emb, r_emb=pos_r_emb, t_emb=pos_t_emb)
         neg_score = self.calc_score(h_emb=neg_h_emb, r_emb=neg_r_emb, t_emb=neg_t_emb)
 
-        loss = self.loss_fct(pos_score=pos_score, neg_score=neg_score)
+        loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
 
         return loss

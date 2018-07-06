@@ -39,7 +39,7 @@ class TransH(nn.Module):
 
         return score
 
-    def loss_fct(self, pos_score, neg_score):
+    def compute_loss(self, pos_score, neg_score):
         """
 
         :param pos_score:
@@ -105,7 +105,7 @@ class TransH(nn.Module):
         pos_score = self.calc_score(h_emb=projected_head_pos, r_emb=pos_rel_emb, t_emb=projected_tail_pos)
         neg_score = self.calc_score(h_emb=projected_head_pos, r_emb=neg_rel_emb, t_emb=projected_tail_neg)
 
-        loss = self.loss_fct(pos_score=pos_score, neg_score=neg_score)
+        loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
 
         return loss
 
