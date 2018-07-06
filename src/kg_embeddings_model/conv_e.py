@@ -104,25 +104,3 @@ class ConvE(nn.Module):
         return pred
 
 
-if __name__ == '__main__':
-    config = {}
-    config[NUM_ENTITIES] = 4
-    config[NUM_RELATIONS] = 1
-    config[EMBEDDING_DIM] = 100
-    config[IMAGE_HEIGHT] = 10
-    config[IMAGE_WIDTH] = 10
-    config[NUM_IN_CHANNELS] = 1
-    config[NUM_OUT_CHANNELS] = 3
-    config[KERNEL_HEIGHT] = 2
-    config[KERNEL_WIDTH] = 2
-    config[INPUT_DROPOUT] = 0.5
-    config[OUTPUT_DROPOUT] = 0.5
-    config[FEATURE_MAP_DROPOUT] = 0.5
-    config[BATCH_SIZE] = 1
-
-    model = ConvE(config=config)
-
-    subject_ent = torch.tensor(0, dtype=torch.long)
-    relation = torch.tensor(0, dtype=torch.long)
-
-    model(e1=subject_ent, rel=relation)
