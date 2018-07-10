@@ -33,7 +33,7 @@ class TransE(nn.Module):
 
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
-        y = torch.tensor([-1], dtype=torch.float, device=self.device)
+        y = torch.tensor([1], dtype=torch.float, device=self.device)
         pos_score = pos_score.unsqueeze(0)
         neg_score = neg_score.unsqueeze(0)
         pos_score = torch.tensor(pos_score, dtype=torch.float, device=self.device)
@@ -83,20 +83,43 @@ class TransE(nn.Module):
         :return:
         """
 
-        pos_h, pos_r, pos_t = pos_exmpl
-        neg_h, neg_r, neg_t, = neg_exmpl
+        pos_heads = pos_exmpl[:,0:1]
+        pos_relations = pos_exmpl[:,1:2]
+        pos_tails =  pos_exmpl[:,2:3]
 
-        pos_h_emb = self.entities_embeddings(pos_h)
-        pos_r_emb = self.relation_embeddings(pos_r)
-        pos_t_emb = self.entities_embeddings(pos_t)
+        neg_heads = neg_exmpl[:, 0:1]
+        neg_relations = neg_exmpl[:, 1:2]
+        neg_tails = neg_exmpl[:, 2:3]
 
-        neg_h_emb = self.entities_embeddings(neg_h)
-        neg_r_emb = self.relation_embeddings(neg_r)
-        neg_t_emb = self.entities_embeddings(neg_t)
+        pos_h_embs = self.entities_embeddings(pos_heads)
+        pos_r_embs = self.relation_embeddings(pos_relations)
+        pos_t_embs = self.entities_embeddings(pos_tails)
 
-        pos_score = self.calc_score(h_emb=pos_h_emb, r_emb=pos_r_emb, t_emb=pos_t_emb)
-        neg_score = self.calc_score(h_emb=neg_h_emb, r_emb=neg_r_emb, t_emb=neg_t_emb)
+        neg_h_embs = self.entities_embeddings(neg_heads)
+        neg_r_embs = self.relation_embeddings(neg_relations)
+        neg_t_embs = self.entities_embeddings(neg_tails)
+
+
+        pos_score = self.calc_score(h_emb=pos_h_embs, r_emb=pos_r_embs, t_emb=pos_t_embs)
+        neg_score = self.calc_score(h_emb=neg_h_embs, r_emb=neg_r_embs, t_emb=neg_t_embs)
+
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
+
+        # pos_h, pos_r, pos_t = pos_exmpl
+        # neg_h, neg_r, neg_t, = neg_exmpl
+        #
+        # pos_h_emb = self.entities_embeddings(pos_h)
+        # pos_r_emb = self.relation_embeddings(pos_r)
+        # pos_t_emb = self.entities_embeddings(pos_t)
+        #
+        # neg_h_embs = self.entities_embeddings(neg_h)
+        # neg_r_emb = self.relation_embeddings(neg_r)
+        # neg_t_embs = self.entities_embeddings(neg_t)
+        #
+        # pos_score = self.calc_score(h_emb=pos_h_emb, r_emb=pos_r_emb, t_emb=pos_t_emb)
+        # neg_score = self.calc_score(h_emb=neg_h_embs, r_emb=neg_r_emb, t_emb=neg_t_embs)
+        #
+        # loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
 
         return loss
