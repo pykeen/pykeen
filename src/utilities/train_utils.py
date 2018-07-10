@@ -9,6 +9,10 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
+def split_list_in_batches(input_list, batch_size):
+    return [input_list[i:i + batch_size] for i in range(0, len(input_list), batch_size)]
+
+
 def train(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, neg_triples, device, seed):
     np.random.seed(seed=seed)
     indices = np.arange(pos_triples.shape[0])
@@ -17,21 +21,21 @@ def train(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples
     neg_triples = neg_triples[indices]
     kg_embedding_model = kg_embedding_model.to(device)
 
-
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
 
     total_loss = 0
-
-    num_instances = pos_triples.shape[0]
-    # num_batches = num_instances // num_epochs
 
     log.info('****Run Model On %s****' % str(device).upper())
 
     for epoch in range(num_epochs):
         start = timeit.default_timer()
-        for step in range(num_instances):
-            pos_triple = torch.tensor(pos_triples[step], dtype=torch.long, device=device)
-            neg_triple = torch.tensor(neg_triples[step], dtype=torch.long, device=device)
+        pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
+        neg_batches = split_list_in_batches(input_list=neg_triples, batch_size=batch_size)
+        for i in range(len(pos_batches)):
+            pos_batch = pos_batches[i]
+            neg_batch = neg_batches[i]
+            pos_triple = torch.tensor(pos_batch, dtype=torch.long, device=device)
+            neg_triple = torch.tensor(neg_batch, dtype=torch.long, device=device)
 
             # Recall that torch *accumulates* gradients. Before passing in a
             # new instance, you need to zero out the gradients from the old

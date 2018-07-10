@@ -79,7 +79,7 @@ class Pipeline(object):
             learning_rate = kb_embedding_model_config[LEARNING_RATE]
 
             log.info("-------------Train KG Embeddings-------------")
-
+            print(batch_size)
             trained_model = train(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=num_epochs,
                                   batch_size=batch_size, pos_triples=mapped_pos_tripels, neg_triples=mapped_neg_triples,
                                   device=self.device, seed=self.seed)
