@@ -21,10 +21,11 @@ class TransR(nn.Module):
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entities_embeddings = nn.Embedding(num_entities, self.entity_embedding_dim)
-        self.relation_embeddings = nn.Embedding(num_relations, self.entity_embedding_dim)
+        self.relation_embeddings = nn.Embedding(num_relations, self.relation_embedding_dim)
         # TODO: Check
         self.projection_matrices = nn.Embedding(num_relations, self.relation_embedding_dim*self.entity_embedding_dim)
         self.margin_loss = margin_loss
+        self._init()
 
     def compute_scores(self, h_embs, r_embs, t_embs):
         # TODO: - torch.abs(h_emb + r_emb - t_emb)
