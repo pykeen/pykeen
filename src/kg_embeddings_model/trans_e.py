@@ -42,17 +42,17 @@ class TransE(nn.Module):
 
         return loss
 
-    def calc_score(self, h_emb, r_emb, t_emb):
+    def calc_score(self, h_embs, r_embs, t_embs):
         """
 
-        :param h_emb:
-        :param r_emb:
-        :param t_emb:
+        :param h_embs:
+        :param r_embs:
+        :param t_embs:
         :return:
         """
         # TODO: - torch.abs(h_emb + r_emb - t_emb)
         # Compute score and transform result to 1D tensor
-        score = - torch.sum(torch.abs(h_emb + r_emb - t_emb))
+        score = - torch.sum(torch.abs(h_embs + r_embs - t_embs))
 
         return score
 
@@ -71,7 +71,7 @@ class TransE(nn.Module):
         relation_emb = self.relation_embeddings(relation)
         tail_emb = self.entities_embeddings(tail)
 
-        score = self.calc_score(h_emb=head_emb, r_emb=relation_emb, t_emb=tail_emb)
+        score = self.calc_score(h_embs=head_emb, r_embs=relation_emb, t_embs=tail_emb)
 
         return score.detach().numpy()
 
@@ -100,26 +100,12 @@ class TransE(nn.Module):
         neg_t_embs = self.entities_embeddings(neg_tails)
 
 
-        pos_score = self.calc_score(h_emb=pos_h_embs, r_emb=pos_r_embs, t_emb=pos_t_embs)
-        neg_score = self.calc_score(h_emb=neg_h_embs, r_emb=neg_r_embs, t_emb=neg_t_embs)
+        pos_score = self.calc_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
+        neg_score = self.calc_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
 
-        # pos_h, pos_r, pos_t = pos_exmpl
-        # neg_h, neg_r, neg_t, = neg_exmpl
-        #
-        # pos_h_emb = self.entities_embeddings(pos_h)
-        # pos_r_emb = self.relation_embeddings(pos_r)
-        # pos_t_emb = self.entities_embeddings(pos_t)
-        #
-        # neg_h_embs = self.entities_embeddings(neg_h)
-        # neg_r_emb = self.relation_embeddings(neg_r)
-        # neg_t_embs = self.entities_embeddings(neg_t)
-        #
-        # pos_score = self.calc_score(h_emb=pos_h_emb, r_emb=pos_r_emb, t_emb=pos_t_emb)
-        # neg_score = self.calc_score(h_emb=neg_h_embs, r_emb=neg_r_emb, t_emb=neg_t_embs)
-        #
-        # loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
+
 
         return loss
