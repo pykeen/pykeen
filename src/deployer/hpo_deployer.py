@@ -20,10 +20,12 @@ def main(cfg_path):
 
     pipeline = Pipeline(config=cfg, seed=2)
 
-    trained_model, eval_summary, entity_to_embedding, relation_to_embedding = pipeline.start_hpo()
+    trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_hpo()
 
-    print(eval_summary)
+    summary = eval_summary.copy()
+    summary.update(params)
 
+    print(summary)
 
 if __name__ == '__main__':
     main()

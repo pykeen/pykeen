@@ -58,4 +58,6 @@ KERNEL_WIDTH = 'kernel_width'
 IMAGE_HEIGHT = 'image_height'
 IMAGE_WIDTH = 'image_width'
 
+# Further Constants
+SEED = 'seed'
 

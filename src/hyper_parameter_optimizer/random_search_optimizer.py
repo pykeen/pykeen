@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 
 from hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
-    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, CLASS_NAME
+    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, CLASS_NAME, SEED
 from utilities.instance_creation_utils import create_mapped_triples, create_negative_triples
 from utilities.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
@@ -40,6 +40,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
         eval_results = []
         train_entity_to_ids = []
         train_rel_to_ids = []
+        models_params = []
         pos_triples = np.loadtxt(fname=path_to_kg, dtype=str, comments='@Comment@ Subject Predicate Object')
         neg_triples = create_negative_triples(seed=seed, pos_triples=pos_triples)
 
@@ -58,6 +59,12 @@ class RandomSearchHPO(AbstractHPOptimizer):
             kg_embedding_model_config[EMBEDDING_DIM] = embedding_dim
             kg_embedding_model_config[MARGIN_LOSS] = margin
             kg_embedding_model = get_kg_embedding_model(config=kg_embedding_model_config)
+            params = kg_embedding_model_config.copy()
+            params[LEARNING_RATE] = lr
+            params[NUM_EPOCHS] = num_epochs
+            params[SEED] = seed
+            models_params.append(params)
+
 
             train_entity_to_ids.append(train_entity_to_id)
             train_rel_to_ids.append(train_rel_to_id)
@@ -76,4 +83,4 @@ class RandomSearchHPO(AbstractHPOptimizer):
         index_of_max = np.argmax(a=eval_results)
 
         return trained_models[index_of_max], train_entity_to_ids[index_of_max], train_rel_to_ids[index_of_max], \
-               eval_results[index_of_max], metric_string
+               eval_results[index_of_max], metric_string, models_params[index_of_max]

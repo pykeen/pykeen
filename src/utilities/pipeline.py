@@ -50,7 +50,7 @@ class Pipeline(object):
         if is_hpo_mode:
             hp_optimizer_config = self.config[HPO]
             hp_optimizer = get_hyper_parameter_optimizer(hp_optimizer_config, evaluator)
-            trained_model, train_entity_to_id, train_rel_to_id, eval_result, metric_string = hp_optimizer.optimize_hyperparams(
+            trained_model, train_entity_to_id, train_rel_to_id, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(
                 self.config, path_to_kg, self.device, self.seed)
         else:
             train_params = self.config['data_params']
@@ -75,8 +75,8 @@ class Pipeline(object):
             batch_size = kb_embedding_model_config[BATCH_SIZE]
             num_epochs = kb_embedding_model_config[NUM_EPOCHS]
             lr = kb_embedding_model_config[LEARNING_RATE]
+            params = kb_embedding_model_config
 
-            learning_rate = kb_embedding_model_config[LEARNING_RATE]
 
             log.info("-------------Train KG Embeddings-------------")
             print(batch_size)
@@ -101,4 +101,4 @@ class Pipeline(object):
         relation_to_embedding = {id_to_rel[id]: embedding.detach().cpu().numpy() for id, embedding in
                                  enumerate(trained_model.relation_embeddings.weight)}
 
-        return trained_model, eval_summary, entity_to_embedding, relation_to_embedding
+        return trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params
