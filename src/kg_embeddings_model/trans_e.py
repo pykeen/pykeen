@@ -73,7 +73,7 @@ class TransE(nn.Module):
 
         score = self.calc_score(h_embs=head_emb, r_embs=relation_emb, t_embs=tail_emb)
 
-        return score.detach().numpy()
+        return score.detach().cpu().numpy()
 
     def forward(self, pos_exmpl, neg_exmpl):
         """
