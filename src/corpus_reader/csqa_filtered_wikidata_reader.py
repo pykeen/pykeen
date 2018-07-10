@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 from corpus_reader.AbstractReader import AbstractReader
 
 
+
 class CSQAWikiDataReader(AbstractReader):
 
     def _extract(self, argument_tuple):

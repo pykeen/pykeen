@@ -42,7 +42,7 @@ class TransE(nn.Module):
 
         return loss
 
-    def calc_score(self, h_embs, r_embs, t_embs):
+    def compute_score(self, h_embs, r_embs, t_embs):
         """
 
         :param h_embs:
@@ -71,25 +71,25 @@ class TransE(nn.Module):
         relation_emb = self.relation_embeddings(relation)
         tail_emb = self.entities_embeddings(tail)
 
-        score = self.calc_score(h_embs=head_emb, r_embs=relation_emb, t_embs=tail_emb)
+        score = self.compute_score(h_embs=head_emb, r_embs=relation_emb, t_embs=tail_emb)
 
         return score.detach().cpu().numpy()
 
-    def forward(self, pos_exmpl, neg_exmpl):
+    def forward(self, pos_exmpls, neg_exmpls):
         """
 
-        :param pos_exmpl:
-        :param neg_exmpl:
+        :param pos_exmpls:
+        :param neg_exmpls:
         :return:
         """
 
-        pos_heads = pos_exmpl[:,0:1]
-        pos_relations = pos_exmpl[:,1:2]
-        pos_tails =  pos_exmpl[:,2:3]
+        pos_heads = pos_exmpls[:, 0:1]
+        pos_relations = pos_exmpls[:, 1:2]
+        pos_tails = pos_exmpls[:, 2:3]
 
-        neg_heads = neg_exmpl[:, 0:1]
-        neg_relations = neg_exmpl[:, 1:2]
-        neg_tails = neg_exmpl[:, 2:3]
+        neg_heads = neg_exmpls[:, 0:1]
+        neg_relations = neg_exmpls[:, 1:2]
+        neg_tails = neg_exmpls[:, 2:3]
 
         pos_h_embs = self.entities_embeddings(pos_heads)
         pos_r_embs = self.relation_embeddings(pos_relations)
@@ -100,8 +100,8 @@ class TransE(nn.Module):
         neg_t_embs = self.entities_embeddings(neg_tails)
 
 
-        pos_score = self.calc_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
-        neg_score = self.calc_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
+        pos_score = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
+        neg_score = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)

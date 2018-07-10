@@ -23,13 +23,15 @@ class TransR(nn.Module):
         self.entities_embeddings = nn.Embedding(num_entities, self.entity_embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, self.entity_embedding_dim)
         # TODO: Check
-        self.projection_matrices = nn.Embedding(num_relations, self.entity_embedding_dim * self.relation_embedding_dim)
+        self.projection_matrices = nn.Embedding(num_relations, self.relation_embedding_dim*self.entity_embedding_dim)
         self.margin_loss = margin_loss
 
-    def compute_score(self, h_embs, r_embs, t_embs):
+    def compute_scores(self, h_embs, r_embs, t_embs):
         # TODO: - torch.abs(h_emb + r_emb - t_emb)
         # Compute score and transform result to 1D tensor
-        score = - torch.sum(torch.abs(h_embs + r_embs - t_embs))
+        scores = - torch.sum(torch.abs(h_embs + r_embs - t_embs))
+
+        return scores
 
     def _project_entities(self, entity_embs, projection_embs):
         return torch.matmul(projection_embs, entity_embs)
@@ -66,7 +68,9 @@ class TransR(nn.Module):
         proj_neg_heads = self._project_entities(neg_h_embs, proj_matrix_embs)
         proj_neg_tails = self._project_entities(neg_t_embs, proj_matrix_embs)
 
-        pos_score = self.compute_score(h_embs=proj_neg_heads, r_embs=pos_r_embs, t_embs=pos_t_embs)
-        neg_score = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
+        pos_score = self.compute_scores(h_embs=proj_pos_heads, r_embs=pos_r_embs, t_embs=proj_pos_tails)
+        neg_score = self.compute_scores(h_embs=proj_neg_heads, r_embs=neg_r_embs, t_embs=proj_neg_tails)
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
+
+        return loss
