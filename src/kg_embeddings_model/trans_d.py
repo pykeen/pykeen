@@ -26,15 +26,13 @@ class TransD(nn.Module):
         self.relation_projections = nn.Embedding(num_relations, self.relation_embedding_dim)
         self.margin_loss = margin_loss
 
-
     # TODO: Add normalization
     def _project_entities(self, entity_embeddings, intermediate_entity_projs, relation_projs):
         # Compute M_r
         identity_matrix = torch.eye(self.entity_embedding_dim)
         m_r = torch.sum(torch.matmul(relation_projs, torch.transpose(intermediate_entity_projs, 1, 2)), identity_matrix)
-        entities_projected = torch.matmul(m_r,entity_embeddings)
+        entities_projected = torch.matmul(m_r, entity_embeddings)
         return entities_projected
-
 
     def _init(self):
         nn.init.xavier_uniform(self.entities_embeddings.weight.data)
@@ -67,15 +65,14 @@ class TransD(nn.Module):
 
         # Project entities
         proj_pos_heads = self._project_entities(pos_h_embs, pos_h_projs_embs, pos_r_projs_embs)
-        proj_pos_tails = self._project_entities(pos_t_projs_embs, pos_t_projs_embs, pos_t_projs_embs)
+        proj_pos_tails = self._project_entities(pos_t_embs, pos_t_projs_embs, pos_r_projs_embs)
 
         proj_neg_heads = self._project_entities(neg_h_embs, neg_h_projs_embs, neg_r_projs_embs)
-        proj_neg_tails = self._project_entities(neg_t_projs_embs, neg_t_projs_embs, neg_t_projs_embs)
+        proj_neg_tails = self._project_entities(neg_t_embs, neg_t_projs_embs, neg_r_projs_embs)
 
         pos_score = self.compute_scores(h_embs=proj_pos_heads, r_embs=pos_r_embs, t_embs=proj_pos_tails)
         neg_score = self.compute_scores(h_embs=proj_neg_heads, r_embs=neg_r_embs, t_embs=proj_neg_tails)
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
-
 
         return loss
