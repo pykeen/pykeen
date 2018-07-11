@@ -52,9 +52,11 @@ class CSQAWikiDataReader(AbstractReader):
         num_processes = multiprocessing.cpu_count()
 
         chunk_keys = self._split_list_in_chunks(input_list=keys, num_chunks=num_processes)
+        chunksize = len(chunk_keys[0])
 
         with Pool(num_processes) as p:
-            triple_lists = p.map(self._extract, [(subset_keys, data) for subset_keys in chunk_keys])
+            # triple_lists = p.map(self._extract, [(subset_keys, data) for subset_keys in chunk_keys])
+            triple_lists = p.imap(self._extract, [(subset_keys, data) for subset_keys in chunk_keys],chunksize=chunksize)
 
         tripels = [item for sublist in triple_lists for item in sublist]
 
