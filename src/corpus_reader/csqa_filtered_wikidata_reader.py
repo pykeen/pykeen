@@ -51,6 +51,7 @@ class CSQAWikiDataReader(AbstractReader):
 
         keys = list(data.keys())
         num_processes = multiprocessing.cpu_count()
+        log.info("Number of Used CPUs: ", num_processes)
 
         chunk_keys = self._split_list_in_chunks(input_list=keys, num_chunks=num_processes)
         chunksize = len(chunk_keys[0])
