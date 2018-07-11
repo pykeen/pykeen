@@ -34,6 +34,7 @@ class TransE(nn.Module):
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
         y = torch.tensor([1], dtype=torch.float, device=self.device)
+
         pos_score = pos_score.unsqueeze(0)
         neg_score = neg_score.unsqueeze(0)
         pos_score = torch.tensor(pos_score, dtype=torch.float, device=self.device)
@@ -99,13 +100,9 @@ class TransE(nn.Module):
         neg_r_embs = self.relation_embeddings(neg_relations)
         neg_t_embs = self.entities_embeddings(neg_tails)
 
-
         pos_score = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
         neg_score = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
-
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
-
-
 
         return loss
