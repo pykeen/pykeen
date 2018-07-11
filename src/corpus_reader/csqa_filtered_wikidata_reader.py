@@ -45,6 +45,7 @@ class CSQAWikiDataReader(AbstractReader):
         :return:
         """
 
+        log.info("---------Load Corpus From Disk---------")
         with open(temp_corpus, 'r', encoding='utf-8') as fp:
             data = json.load(fp)
 
@@ -54,12 +55,14 @@ class CSQAWikiDataReader(AbstractReader):
         chunk_keys = self._split_list_in_chunks(input_list=keys, num_chunks=num_processes)
         chunksize = len(chunk_keys[0])
 
+        log.info("---------Create Triples---------")
         with Pool(num_processes) as p:
             # triple_lists = p.map(self._extract, [(subset_keys, data) for subset_keys in chunk_keys])
             triple_lists = p.imap(self._extract, [(subset_keys, data) for subset_keys in chunk_keys],chunksize=chunksize)
 
         tripels = [item for sublist in triple_lists for item in sublist]
 
+        log.info("---------Write Corpus---------")
         with open(corpus_path, 'w', encoding='utf-8') as f1:
             f1.write('@Comment@ Subject Predicate Object\n')
             for triple in tripels:
