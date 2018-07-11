@@ -58,11 +58,13 @@ class CSQAWikiDataReader(AbstractReader):
         chunksize = len(chunk_keys[0])
 
         log.info("---------Create Triples---------")
-        with Pool(num_processes) as p:
-            # triple_lists = p.map(self._extract, [(subset_keys, data) for subset_keys in chunk_keys])
-            triple_lists = p.imap(self._extract, [(subset_keys, data) for subset_keys in chunk_keys],chunksize=chunksize)
+        triples = self._extract(data)
 
-        tripels = [item for sublist in triple_lists for item in sublist]
+        # with Pool(num_processes) as p:
+        #     # triple_lists = p.map(self._extract, [(subset_keys, data) for subset_keys in chunk_keys])
+        #     triple_lists = p.imap(self._extract, [(subset_keys, data) for subset_keys in chunk_keys],chunksize=chunksize)
+        #
+        # tripels = [item for sublist in triple_lists for item in sublist]
 
         log.info("---------Write Corpus---------")
         with open(corpus_path, 'w', encoding='utf-8') as f1:
