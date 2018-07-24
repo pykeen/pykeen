@@ -4,6 +4,8 @@ from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
+from utilities.constants import PREFERRED_DEVICE, GPU, CPU
+
 w_dir = os.path.dirname(os.getcwd())
 sys.path.append(w_dir)
 
@@ -63,7 +65,10 @@ def start_cli():
 
     print('Do you want to use a GPU if available?')
     user_input = prompt('> \'yes\' or \'no\': ')
-    config['preferred_device'] = user_input
+    if user_input == 'yes':
+        config[PREFERRED_DEVICE] = GPU
+    else:
+        config[PREFERRED_DEVICE] = CPU
 
     return config
 
