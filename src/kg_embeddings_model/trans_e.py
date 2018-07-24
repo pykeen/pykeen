@@ -33,6 +33,7 @@ class TransE(nn.Module):
 
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
+        # NOTE: y = 1 is important
         y = torch.tensor([1], dtype=torch.float, device=self.device)
 
         pos_score = pos_score.unsqueeze(0)
@@ -53,11 +54,13 @@ class TransE(nn.Module):
         """
         # TODO: - torch.abs(h_emb + r_emb - t_emb)
         # Compute score and transform result to 1D tensor
+        # TODO: Score is the negative of the distance
         score = - torch.sum(torch.abs(h_embs + r_embs - t_embs))
 
         return score
 
-    def predict(self, triple):
+    # FIXME: Add batching
+    def predict(self, triples):
         """
 
         :param head:
@@ -65,16 +68,18 @@ class TransE(nn.Module):
         :param tail:
         :return:
         """
-        triple = torch.tensor(triple, dtype=torch.long, device=self.device)
-        head, relation, tail = triple
+        triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        heads = triples[:, 0:1]
+        relations = triples[:, 1:2]
+        tails = triples[:, 2:3]
 
-        head_emb = self.entities_embeddings(head)
-        relation_emb = self.relation_embeddings(relation)
-        tail_emb = self.entities_embeddings(tail)
+        head_embs = self.entities_embeddings(heads)
+        relation_embs = self.relation_embeddings(relations)
+        tail_embs = self.entities_embeddings(tails)
 
-        score = self.compute_score(h_embs=head_emb, r_embs=relation_emb, t_embs=tail_emb)
+        scores = self.compute_score(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
 
-        return score.detach().cpu().numpy()
+        return scores.detach().cpu().numpy()
 
     def forward(self, pos_exmpls, neg_exmpls):
         """
@@ -99,6 +104,14 @@ class TransE(nn.Module):
         neg_h_embs = self.entities_embeddings(neg_heads)
         neg_r_embs = self.relation_embeddings(neg_relations)
         neg_t_embs = self.entities_embeddings(neg_tails)
+
+        # L2 normalization of the vectors
+        pos_h_embs = torch.nn.functional.normalize(pos_h_embs, p=2, dim=1)
+        pos_t_embs = torch.nn.functional.normalize(pos_t_embs, p=2, dim=1)
+        neg_h_embs = torch.nn.functional.normalize(neg_h_embs, p=2, dim=1)
+        neg_t_embs = torch.nn.functional.normalize(neg_t_embs, p=2, dim=1)
+
+
 
         pos_score = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
         neg_score = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
