@@ -173,14 +173,9 @@ def select_embedding_model():
 
     return user_input
 
-import pickle
-def main():
-    # config = start_cli()
-    # print(config)
 
-    config_in = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/config_files/hpo_wn_18_test_test.pkl'
-    with open(config_in, 'rb') as handle:
-        config = pickle.load(handle)
+def main():
+    config = start_cli()
 
     pipeline = Pipeline(config=config, seed=2)
 
