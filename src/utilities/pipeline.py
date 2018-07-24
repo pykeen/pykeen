@@ -10,9 +10,9 @@ from evaluation_methods.mean_rank_evaluator import MeanRankEvaluator
 from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
 from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
     GPU, HPO, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE
-from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
+from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -50,14 +50,12 @@ class Pipeline(object):
             trained_model, train_entity_to_id, train_rel_to_id, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(
                 path_to_train_data, self.config, self.device, self.seed)
         else:
-            train_params = self.config['data_params']
-            ratio_test_data = train_params['ratio_test_data']
-
             pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
             # neg_triples = create_negative_triples(seed=self.seed, pos_triples=pos_triples,
             #                                       filter_neg_triples=False)
 
-            if 'validation_set_path' in self.config:
+            if 'validation_set_path' not in self.config:
+                ratio_test_data = self.config['validation_set_ratio']
                 train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
             else:
                 train_pos = pos_triples
@@ -69,6 +67,7 @@ class Pipeline(object):
             #                                                  rel_to_id=train_rel_to_id)
 
             # Initialize KG embedding model
+
             kb_embedding_model_config = self.config[KG_EMBEDDING_MODEL]
             kb_embedding_model_config[NUM_ENTITIES] = len(train_entity_to_id)
             kb_embedding_model_config[NUM_RELATIONS] = len(train_rel_to_id)

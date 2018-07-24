@@ -30,10 +30,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
         num_epochs = hyperparams_dict[NUM_EPOCHS]
         embedding_model = hyperparams_dict[KG_EMBEDDING_MODEL]
         kg_embedding_model_config = OrderedDict()
-        kg_embedding_model_config[CLASS_NAME] = embedding_model
+        kg_embedding_model_config['model_name'] = embedding_model
         metric_string = self.evaluator.METRIC
 
-        generate_test = None
 
         if 'validation_set_ratio' in config:
             ratio_test_data = config['validation_set_ratio']

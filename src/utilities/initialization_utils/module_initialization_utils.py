@@ -3,7 +3,7 @@
 from evaluation_methods.mean_rank_evaluator import MeanRankEvaluator
 from kg_embeddings_model.trans_e import TransE
 from kg_embeddings_model.trans_h import TransH
-from utilities.constants import CLASS_NAME, TRANS_E, TRANS_H, MEAN_RANK_EVALUATOR
+from utilities.constants import CLASS_NAME, TRANS_E, TRANS_H, MEAN_RANK_EVALUATOR, KG_EMBEDDING_MODEL
 
 
 def get_evaluator(config):
@@ -19,9 +19,9 @@ def get_kg_embedding_model(config):
     :param config:
     :return:
     """
-    class_name = config[CLASS_NAME]
+    model_name = config['model_name']
 
-    if class_name == TRANS_E:
+    if model_name == TRANS_E:
         return TransE(config=config)
-    elif class_name == TRANS_H:
+    elif model_name == TRANS_H:
         return TransH(config=config)
