@@ -3,7 +3,7 @@ import numpy as np
 
 from evaluation_methods.abstract_evaluator import AbstractEvaluator
 from utilities.constants import HITS_AT_K
-from utilities.eval_utilities import get_stratey_for_corrupting
+from utilities.evaluation_utils.eval_utilities import get_stratey_for_corrupting
 
 
 class HitsAtKEvaluator(AbstractEvaluator):
