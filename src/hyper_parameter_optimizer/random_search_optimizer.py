@@ -8,8 +8,8 @@ from sklearn.model_selection import train_test_split
 from hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
     KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, CLASS_NAME, SEED
-from utilities.instance_creation_utils import create_mapped_triples, create_negative_triples
-from utilities.module_initialization_utils import get_kg_embedding_model
+from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
+from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
 
 
@@ -18,7 +18,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
     def __init__(self, evaluator):
         self.evaluator = evaluator
 
-    def optimize_hyperparams(self, config, path_to_kg, device, seed):
+    def optimize_hyperparams(self, corpus_path, config, device, seed):
         np.random.seed(seed=seed)
 
         hyperparams_dict = config['hyper_param_optimization']
@@ -33,23 +33,31 @@ class RandomSearchHPO(AbstractHPOptimizer):
         kg_embedding_model_config[CLASS_NAME] = embedding_model
         metric_string = self.evaluator.METRIC
 
-        data_params = config['data_params']
-        ratio_test_data = data_params['ratio_test_data']
+        generate_test = None
+
+        if 'validation_set_ratio' in config:
+            ratio_test_data = config['validation_set_ratio']
+            generate_test = True
+        else:
+            test_pos = np.loadtxt(fname=config['validation_set_path'], dtype=str,
+                                  comments='@Comment@ Subject Predicate Object')
+            generate_test = False
 
         trained_models = []
         eval_results = []
         train_entity_to_ids = []
         train_rel_to_ids = []
         models_params = []
-        pos_triples = np.loadtxt(fname=path_to_kg, dtype=str, comments='@Comment@ Subject Predicate Object')
-        neg_triples = create_negative_triples(seed=seed, pos_triples=pos_triples)
+        pos_triples = np.loadtxt(fname=corpus_path, dtype=str, comments='@Comment@ Subject Predicate Object')
 
         for _ in range(max_iters):
             lr = random.choice(learning_rates)
             margin = random.choice(margins)
             embedding_dim = random.choice(embedding_dims)
-            train_pos, test_pos, train_neg, test_neg = train_test_split(pos_triples, neg_triples,
-                                                                        test_size=ratio_test_data, random_state=seed)
+
+            if generate_test:
+                train_pos, test_pos = train_test_split(pos_triples,test_size=ratio_test_data, random_state=seed)
+
 
             mapped_pos_tripels, train_entity_to_id, train_rel_to_id = create_mapped_triples(pos_triples)
             mapped_neg_triples, _, _ = create_mapped_triples(pos_triples, entity_to_id=train_entity_to_id,
@@ -61,21 +69,22 @@ class RandomSearchHPO(AbstractHPOptimizer):
             kg_embedding_model = get_kg_embedding_model(config=kg_embedding_model_config)
             params = kg_embedding_model_config.copy()
             params[LEARNING_RATE] = lr
-            params[NUM_EPOCHS] = num_epochs
+            params[NUM_EPOCHS] = random.choice(num_epochs)
             params[SEED] = seed
+            batch_size = random.choice(hyperparams_dict[BATCH_SIZE])
             models_params.append(params)
-
 
             train_entity_to_ids.append(train_entity_to_id)
             train_rel_to_ids.append(train_rel_to_id)
 
-            trained_model = train(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=num_epochs,
-                                  batch_size=batch_size, pos_triples=mapped_pos_tripels, neg_triples=mapped_neg_triples,
+            trained_model = train(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=params[NUM_EPOCHS],
+                                  batch_size=batch_size, pos_triples=mapped_pos_tripels,
                                   device=device, seed=seed)
 
             # Evaluate trained model
             mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos)
-            eval_result, _ = self.evaluator.start_evaluation(test_data=mapped_pos_test_tripels, kg_embedding_model=trained_model)
+            eval_result, _ = self.evaluator.start_evaluation(test_data=mapped_pos_test_tripels,
+                                                             kg_embedding_model=trained_model)
 
             trained_models.append(trained_model)
             eval_results.append(eval_result)
