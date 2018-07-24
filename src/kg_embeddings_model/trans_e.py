@@ -17,6 +17,7 @@ class TransE(nn.Module):
         embedding_dim = config[EMBEDDING_DIM]
         margin_loss = config[MARGIN_LOSS]
 
+        self.l_p_norm = config['normalization_of_entities']
         self.entities_embeddings = nn.Embedding(num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.margin_loss = margin_loss
@@ -106,10 +107,10 @@ class TransE(nn.Module):
         neg_t_embs = self.entities_embeddings(neg_tails)
 
         # L2 normalization of the vectors
-        pos_h_embs = torch.nn.functional.normalize(pos_h_embs, p=2, dim=1)
-        pos_t_embs = torch.nn.functional.normalize(pos_t_embs, p=2, dim=1)
-        neg_h_embs = torch.nn.functional.normalize(neg_h_embs, p=2, dim=1)
-        neg_t_embs = torch.nn.functional.normalize(neg_t_embs, p=2, dim=1)
+        pos_h_embs = torch.nn.functional.normalize(pos_h_embs, p=self.l_p_norm, dim=1)
+        pos_t_embs = torch.nn.functional.normalize(pos_t_embs, p=self.l_p_norm, dim=1)
+        neg_h_embs = torch.nn.functional.normalize(neg_h_embs, p=self.l_p_norm, dim=1)
+        neg_t_embs = torch.nn.functional.normalize(neg_t_embs, p=self.l_p_norm, dim=1)
 
 
 

@@ -13,6 +13,7 @@ from utilities.pipeline import Pipeline
 mapping = {'yes': True, 'no': False}
 embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD'}
 metrics_maping = {1: 'mean_rank'}
+normalization_mapping = {1: 'l1', 2:'l2'}
 
 
 def start_cli():
@@ -82,6 +83,16 @@ def select_embedding_model_params(model_id):
         embedding_dimension = int(user_input)
 
         kg_model_params['embedding_dim'] = embedding_dimension
+
+        if model_id == 1:
+            print('Please select the normalization approach for the entities: ')
+            print('L1-Norm: 1')
+            print('L1-Norm: 2')
+            user_input = prompt('> Normalization approach: ')
+            normalization_of_entities = int(user_input)
+
+            kg_model_params['normalization_of_entities'] = normalization_of_entities
+
 
         print('Please type the maring loss: ')
         user_input = prompt('> Margin loss: ')
