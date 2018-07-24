@@ -8,6 +8,14 @@ KG_EMBEDDINGS_PIPELINE_DIR = create_base_dir()
 WROC = 'walking_rdf_and_owl_corpus'
 WROC_URL = 'http://aber-owl.net/aber-owl/bio2vec/bio-knowledge-graph.n3'
 
+# WN18 related
+WN18_URL = 'https://github.com/Mrlyk423/Relation_Extraction/raw/master/data.zip'
+WN_18 = 'wn_18'
+WN_18_TRAIN = 'train'
+WN_18_VALID = 'valid'
+WN_18_TEST = 'test'
+
+
 # Related to CSQA filtered Wikidata
 CSQA_WIKIDATA = 'csqa_wiki_data'
 
@@ -17,6 +25,7 @@ CLASS_NAME = 'class_name'
 READER = 'reader'
 WROC_READER = 'WROCReader'
 CSQA_WIKIDATA_READER = 'CSQAWikiDataReader'
+WN18_READER = 'WN18Reader'
 ## KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
 TRANS_E = 'TransE'
