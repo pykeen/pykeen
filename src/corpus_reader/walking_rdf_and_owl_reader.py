@@ -48,6 +48,7 @@ class WROCReader(AbstractReader):
         else:
             log.info('Download corpus')
             path, _ = urlretrieve(WROC_URL)
+
             self.transorm_corpus_to_id_format(temp_corpus=path, corpus_path=corpus_path)
 
         return corpus_path

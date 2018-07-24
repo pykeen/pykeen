@@ -3,7 +3,6 @@ import json
 import logging
 import multiprocessing
 import os
-from multiprocessing import Pool
 
 from utilities.constants import KG_EMBEDDINGS_PIPELINE_DIR, CSQA_WIKIDATA
 

@@ -1,14 +1,13 @@
 import os
 import sys
+
+w_dir = os.path.dirname(os.getcwd())
+sys.path.append(w_dir)
 from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
 from utilities.constants import PREFERRED_DEVICE, GPU, CPU
-
-w_dir = os.path.dirname(os.getcwd())
-sys.path.append(w_dir)
-
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
