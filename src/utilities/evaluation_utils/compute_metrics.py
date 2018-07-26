@@ -10,21 +10,16 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k):
+def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
     start = timeit.default_timer()
     ranks_subject_based, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
                                                                     kg_embedding_model=kg_embedding_model,
-                                                                    triples=triples,
-                                                                    corrupt_suject=True,
-                                                                    compute_hits_at_k=False)
+                                                                    triples=triples, corrupt_suject=True, k=k)
 
     ranks_object_based, hits_at_k_object_based = _compute_metrics(all_entities=all_entities,
                                                                   kg_embedding_model=kg_embedding_model,
-                                                                  triples=triples,
-                                                                  corrupt_suject=False,
-                                                                  compute_hits_at_k=False)
-    ranks = ranks_subject_based + ranks_object_based
-    mean_rank = np.mean(ranks)
+                                                                  triples=triples, corrupt_suject=False)
+    mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
     # TODO: Update hits@k
     hits_at_k = None
@@ -37,17 +32,11 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k
 
 def compute_mean_rank(all_entities, kg_embedding_model, triples):
     start = timeit.default_timer()
-    ranks_subject_based, _ = _compute_metrics(all_entities=all_entities,
-                                              kg_embedding_model=kg_embedding_model,
-                                              triples=triples,
-                                              corrupt_suject=True,
-                                              compute_hits_at_k=False)
+    ranks_subject_based, _ = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
+                                              triples=triples, corrupt_suject=True)
 
-    ranks_object_based, _ = _compute_metrics(all_entities=all_entities,
-                                             kg_embedding_model=kg_embedding_model,
-                                             triples=triples,
-                                             corrupt_suject=False,
-                                             compute_hits_at_k=False)
+    ranks_object_based, _ = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
+                                             triples=triples, corrupt_suject=False)
     ranks = ranks_subject_based + ranks_object_based
     mean_rank = np.mean(ranks)
 
@@ -57,18 +46,13 @@ def compute_mean_rank(all_entities, kg_embedding_model, triples):
     return mean_rank
 
 
-def compute_hits_at_k(all_entities, kg_embedding_model, triples, k):
+def compute_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
     start = timeit.default_timer()
-    _, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
-                                                  kg_embedding_model=kg_embedding_model,
-                                                  triples=triples,
-                                                  corrupt_suject=True,
-                                                  compute_hits_at_k=False)
+    _, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
+                                                  triples=triples, corrupt_suject=True, k=k)
 
-    _, hits_at_k_object_based = _compute_metrics(all_entities=all_entities,
-                                                 kg_embedding_model=kg_embedding_model,
-                                                 triples=triples,
-                                                 corrupt_suject=False, compute_hits_at_k=False)
+    _, hits_at_k_object_based = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
+                                                 triples=triples, corrupt_suject=False, k=k)
 
     # TODO: Update hits@k
     hits_at_k = None
@@ -79,7 +63,7 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, k):
     return hits_at_k
 
 
-def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, compute_hits_at_k, k=None):
+def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, k=None):
     ranks = []
     in_top_k = []
 
