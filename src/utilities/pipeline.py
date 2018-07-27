@@ -38,24 +38,23 @@ class Pipeline(object):
         :return:
         """
 
-        # Initialize reader
-        log.info("-------------Read Corpus-------------")
-
         # TODO: Adapt
         evaluator = MeanRankEvaluator()  # get_evaluator(config=evaluator_config)
         path_to_train_data = self.config['training_set_path']
 
         pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
-        # neg_triples = create_negative_triples(seed=self.seed, pos_triples=pos_triples,
-        #                                       filter_neg_triples=False)
+        has_test_set = True
 
-        if 'validation_set_path' not in self.config:
+        if 'validation_set_path' in self.config:
+            train_pos = pos_triples
+            test_pos = np.loadtxt(fname=self.config['validation_set_path'], dtype=str,
+                                  comments='@Comment@ Subject Predicate Object')
+        elif 'validation_set_path' in self.config and is_hpo_mode:
             ratio_test_data = self.config['validation_set_ratio']
             train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
         else:
             train_pos = pos_triples
-            test_pos = np.loadtxt(fname=self.config['validation_set_path'], dtype=str,
-                                  comments='@Comment@ Subject Predicate Object')
+            has_test_set = False
 
         # Create entity and relation mapping
         all_triples = np.concatenate([train_pos, test_pos], axis=0)
@@ -65,12 +64,16 @@ class Pipeline(object):
 
         if is_hpo_mode:
             hp_optimizer = RandomSearchHPO(evaluator=evaluator)
-            trained_model, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(
-                train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels,
-                self.config, self.device, self.seed)
+            trained_model, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(train_pos, test_pos,
+                                                                                                  entity_to_id,
+                                                                                                  rel_to_id,
+                                                                                                  mapped_pos_train_tripels,
+                                                                                                  self.config,
+                                                                                                  self.device,
+                                                                                                  self.seed)
+
         else:
             # Initialize KG embedding model
-
             kb_embedding_model_config = self.config[KG_EMBEDDING_MODEL]
             kb_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
             kb_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
@@ -86,18 +89,21 @@ class Pipeline(object):
                                   batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
                                   device=self.device, seed=self.seed)
 
-            log.info("-------------Start Evaluation-------------")
-            # Initialize KG evaluator
-            mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos)
-            eval_result, metric_string = evaluator.start_evaluation(test_data=mapped_pos_test_tripels,
-                                                                    kg_embedding_model=trained_model)
+            eval_summary = None
+
+            if has_test_set:
+                log.info("-------------Start Evaluation-------------")
+                # Initialize KG evaluator
+                mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos)
+                eval_result, metric_string = evaluator.start_evaluation(test_data=mapped_pos_test_tripels,
+                                                                        kg_embedding_model=trained_model)
+
+                eval_summary = OrderedDict()
+                eval_summary[metric_string] = eval_result
 
         # Prepare Output
-        eval_summary = OrderedDict()
-        eval_summary[metric_string] = eval_result
         id_to_entity = {value: key for key, value in entity_to_id.items()}
         id_to_rel = {value: key for key, value in rel_to_id.items()}
-
         entity_to_embedding = {id_to_entity[id]: embedding.detach().cpu().numpy() for id, embedding in
                                enumerate(trained_model.entities_embeddings.weight)}
         relation_to_embedding = {id_to_rel[id]: embedding.detach().cpu().numpy() for id, embedding in
