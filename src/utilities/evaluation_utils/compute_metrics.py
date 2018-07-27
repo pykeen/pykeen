@@ -21,8 +21,9 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k
                                                                   triples=triples, corrupt_suject=False)
     mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
-    # TODO: Update hits@k
-    hits_at_k = None
+    all_hits = hits_at_k_subject_based + hits_at_k_object_based
+    num_of_candidate_triples = 2 * all_entities.shape[0]
+    hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
@@ -54,8 +55,9 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
     _, hits_at_k_object_based = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
                                                  triples=triples, corrupt_suject=False, k=k)
 
-    # TODO: Update hits@k
-    hits_at_k = None
+    all_hits = hits_at_k_subject_based + hits_at_k_object_based
+    num_of_candidate_triples = 2 * all_entities.shape[0]
+    hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
