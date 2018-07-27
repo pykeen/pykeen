@@ -12,7 +12,7 @@ from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS,
     GPU, HPO, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
-from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
+from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -45,32 +45,35 @@ class Pipeline(object):
         evaluator = MeanRankEvaluator()  # get_evaluator(config=evaluator_config)
         path_to_train_data = self.config['training_set_path']
 
+        pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
+        # neg_triples = create_negative_triples(seed=self.seed, pos_triples=pos_triples,
+        #                                       filter_neg_triples=False)
+
+        if 'validation_set_path' not in self.config:
+            ratio_test_data = self.config['validation_set_ratio']
+            train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
+        else:
+            train_pos = pos_triples
+            test_pos = np.loadtxt(fname=self.config['validation_set_path'], dtype=str,
+                                  comments='@Comment@ Subject Predicate Object')
+
+        # Create entity and relation mapping
+        all_triples = np.concatenate([train_pos, test_pos], axis=0)
+        entity_to_id, rel_to_id = create_mappings(triples=all_triples)
+        mapped_pos_train_tripels, _, _ = create_mapped_triples(triples=train_pos, entity_to_id=entity_to_id,
+                                                               rel_to_id=rel_to_id)
+
         if is_hpo_mode:
             hp_optimizer = RandomSearchHPO(evaluator=evaluator)
-            trained_model, train_entity_to_id, train_rel_to_id, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(
-                path_to_train_data, self.config, self.device, self.seed)
+            trained_model, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(
+                train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels,
+                self.config, self.device, self.seed)
         else:
-            pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
-            # neg_triples = create_negative_triples(seed=self.seed, pos_triples=pos_triples,
-            #                                       filter_neg_triples=False)
-
-            if 'validation_set_path' not in self.config:
-                ratio_test_data = self.config['validation_set_ratio']
-                train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
-            else:
-                train_pos = pos_triples
-                test_pos = np.loadtxt(fname=self.config['validation_set_path'], dtype=str,
-                                      comments='@Comment@ Subject Predicate Object')
-
-            mapped_pos_tripels, train_entity_to_id, train_rel_to_id = create_mapped_triples(train_pos)
-            # mapped_neg_triples, _, _ = create_mapped_triples(pos_triples, entity_to_id=train_entity_to_id,
-            #                                                  rel_to_id=train_rel_to_id)
-
             # Initialize KG embedding model
 
             kb_embedding_model_config = self.config[KG_EMBEDDING_MODEL]
-            kb_embedding_model_config[NUM_ENTITIES] = len(train_entity_to_id)
-            kb_embedding_model_config[NUM_RELATIONS] = len(train_rel_to_id)
+            kb_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
+            kb_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
             kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
 
             batch_size = kb_embedding_model_config[BATCH_SIZE]
@@ -79,9 +82,8 @@ class Pipeline(object):
             params = kb_embedding_model_config
 
             log.info("-------------Train KG Embeddings-------------")
-            print(batch_size)
             trained_model = train(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=num_epochs,
-                                  batch_size=batch_size, pos_triples=mapped_pos_tripels,
+                                  batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
                                   device=self.device, seed=self.seed)
 
             log.info("-------------Start Evaluation-------------")
@@ -93,8 +95,8 @@ class Pipeline(object):
         # Prepare Output
         eval_summary = OrderedDict()
         eval_summary[metric_string] = eval_result
-        id_to_entity = {value: key for key, value in train_entity_to_id.items()}
-        id_to_rel = {value: key for key, value in train_rel_to_id.items()}
+        id_to_entity = {value: key for key, value in entity_to_id.items()}
+        id_to_rel = {value: key for key, value in rel_to_id.items()}
 
         entity_to_embedding = {id_to_entity[id]: embedding.detach().cpu().numpy() for id, embedding in
                                enumerate(trained_model.entities_embeddings.weight)}
