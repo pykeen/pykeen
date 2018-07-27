@@ -16,6 +16,26 @@ HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
 # TODO: Adapt
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_param_optimization'
 EMBEDDING_DIMENSION = 'embedding_dim'
+
+EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please type the range of preferred embedding dimensions comma separated (e.g. 50,100,200):'
+EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Please select the embedding dimensions:'
+EMBEDDING_DIMENSIONS_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
+
+BATCH_SIZES_PRINT_MSG = 'Please type the range of preferred batch sizes comma separated (e.g. 32, 64, 128):'
+BATCH_SIZES_PROMPT_MSG = '> Please select the embedding dimensions:'
+BATCH_SIZES_ERROR_MSG = 'Invalid input, please select integers as batch size(s)'
+
+EPOCHS_PRINT_MSG = ''
+EPOCHS_PROMPT_MSG = ''
+EPOCHS_ERROR_MSG = ''
+
+LEARNING_RATES_PRINT_MSG = 'Please type the range of preferred learning rate(s) comma separated (e.g. 0.1, 0.01, 0.0001:'
+LEARNING_RATES_PROMPT_MSG = '> Please select the learning rate(s):'
+LEARNING_RATES_ERROR_MSG = 'Invalid input, please float values for the learning rate(s).'
+
+MARGIN_LOSSES_PRINT_MSG = 'Please type the range of preferred margin losse(s) comma separated  (e.g. 1,2,10):'
+MARGIN_LOSSES_PROMPT_MSG = '> Please select the margin losse(s):'
+MARGIN_LOSSES_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
 # ---------------------------------
 
 mapping = {'yes': True, 'no': False}
@@ -116,41 +136,15 @@ def select_float_values(print_msg, prompt_msg, error_msg):
     return float_values
 
 
-def select_learning_rates():
-    print('Please type the range of preferred learning rate(s) comma separated (e.g. 0.1, 0.01, 0.0001:')
-    is_valid_input = False
-    learning_rates = []
-
-    while is_valid_input == False:
-        user_input = prompt('> Please select the learning rate(s):')
-        user_input = user_input.split(',')
-
-        for learning_rate in user_input:
-            try:
-                learning_rate = float(learning_rate)
-                learning_rates.append(int(learning_rate))
-            except ValueError:
-                print("Invalid input, please positice integer as embedding dimensions")
-                break
-
-        is_valid_input = True
-
-    return learning_rates
-
-
 def _select_trans_x_params():
     hpo_params = OrderedDict()
-    print_msg = 'Please type the range of preferred embedding dimensions comma separated (e.g. 50,100,200):'
-    prompt_msg = '> Please select the embedding dimensions:'
-    error_msg = 'Invalid input, please positice integer as embedding dimensions.'
-    embedding_dimensions = select_positive_integer_values(print_msg, prompt_msg, error_msg)
+    embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSIONS_PRINT_MSG,
+                                                          EMBEDDING_DIMENSIONS_PROMPT_MSG,
+                                                          EMBEDDING_DIMENSIONS_ERROR_MSG)
     hpo_params['embedding_dim'] = embedding_dimensions
 
     # ---------
-    print_msg = 'Please type the range of preferred margin losse(s) comma separated  (e.g. 1,2,10):'
-    prompt_msg = '> Please select the margin losse(s):'
-    error_msg = 'Invalid input, please positice integer as embedding dimensions.'
-    margin_losses = select_float_values(print_msg, prompt_msg, error_msg)
+    margin_losses = select_float_values(MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, MARGIN_LOSSES_ERROR_MSG)
     hpo_params['margin_loss'] = margin_losses
 
     return hpo_params
@@ -170,17 +164,11 @@ def select_hpo_params(model_id):
 
     # General params
     # --------
-    print_msg = 'Please type the range of preferred learning rate(s) comma separated (e.g. 0.1, 0.01, 0.0001:'
-    prompt_msg = '> Please select the learning rate(s):'
-    error_msg = 'Invalid input, please float values for the learning rate(s).'
-    learning_rates = select_float_values(print_msg, prompt_msg, error_msg)
+    learning_rates = select_float_values(LEARNING_RATES_PRINT_MSG, LEARNING_RATES_PROMPT_MSG, LEARNING_RATES_ERROR_MSG)
     hpo_params['learning_rate'] = learning_rates
 
     # --------------
-    print_msg = 'Please type the range of preferred batch sizes comma separated (e.g. 32, 64, 128):'
-    prompt_msg = '> Please select the embedding dimensions:'
-    error_msg = 'Invalid input, please select integers as batch size(s)'
-    batch_sizes = select_positive_integer_values(prompt_msg, prompt_msg, error_msg)
+    batch_sizes = select_positive_integer_values(BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG)
     hpo_params['batch_size'] = batch_sizes
 
     print('Please type the range of preferred epochs comma separated (e.g. 1, 5, 100):')
