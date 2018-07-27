@@ -10,8 +10,8 @@ class TransE(nn.Module):
 
     def __init__(self, config):
         super(TransE, self).__init__()
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
 
+        # A simple lookup table that stores embeddings of a fixed dictionary and size
         num_entities = config[NUM_ENTITIES]
         num_relations = config[NUM_RELATIONS]
         embedding_dim = config[EMBEDDING_DIM]
@@ -45,7 +45,7 @@ class TransE(nn.Module):
 
         return loss
 
-    def compute_score(self, h_embs, r_embs, t_embs):
+    def compute_score(self, h_embs, r_embs, t_embs, is_inference):
         """
 
         :param h_embs:
@@ -53,14 +53,15 @@ class TransE(nn.Module):
         :param t_embs:
         :return:
         """
-        # TODO: - torch.abs(h_emb + r_emb - t_emb)
+
         # Compute score and transform result to 1D tensor
-        # TODO: Score is the negative of the distance
-        score = - torch.sum(torch.abs(h_embs + r_embs - t_embs))
+        # Score is the negative of the distance
 
-        return score
+        if is_inference:
+            return - torch.abs(h_embs + r_embs - t_embs)
+        else:
+            return - torch.sum(torch.abs(h_embs + r_embs - t_embs))
 
-    # FIXME: Add batching
     def predict(self, triples):
         """
 
@@ -78,7 +79,10 @@ class TransE(nn.Module):
         relation_embs = self.relation_embeddings(relations)
         tail_embs = self.entities_embeddings(tails)
 
-        scores = self.compute_score(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
+        scores = self.compute_score(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs, is_inference=True)
+        shape = scores.shape
+        scores = scores.view(-1, shape[1] * shape[2])
+        scores = torch.sum(scores, 1)
 
         return scores.detach().cpu().numpy()
 
@@ -112,10 +116,8 @@ class TransE(nn.Module):
         neg_h_embs = torch.nn.functional.normalize(neg_h_embs, p=self.l_p_norm, dim=1)
         neg_t_embs = torch.nn.functional.normalize(neg_t_embs, p=self.l_p_norm, dim=1)
 
-
-
-        pos_score = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
-        neg_score = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
+        pos_score = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs, is_inference=False)
+        neg_score = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs, is_inference=False)
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
 
