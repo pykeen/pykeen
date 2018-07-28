@@ -7,35 +7,20 @@ from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
-from utilities.constants import PREFERRED_DEVICE, GPU, CPU
+from utilities.constants import PREFERRED_DEVICE, GPU, CPU, EMBEDDING_DIMENSIONS_PRINT_MSG, \
+    EMBEDDING_DIMENSIONS_PROMPT_MSG, EMBEDDING_DIMENSIONS_ERROR_MSG, MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, \
+    MARGIN_LOSSES_ERROR_MSG, LEARNING_RATES_PRINT_MSG, LEARNING_RATES_PROMPT_MSG, LEARNING_RATES_ERROR_MSG, \
+    BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG, EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, \
+    EPOCHS_ERROR_MSG, MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG, TRAINING, \
+    HYPER_PARAMTER_SEARCH, HYPER_PARAMTER_OPTIMIZATION_PARAMS, EMBEDDING_DIM, KG_EMBEDDING_MODEL, MARGIN_LOSS, \
+    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS
 from utilities.pipeline import Pipeline
 
 # ----------Constants--------------
-TRAINING = 'training'
-HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
+
 # TODO: Adapt
-HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_param_optimization'
-EMBEDDING_DIMENSION = 'embedding_dim'
 
-EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please type the range of preferred embedding dimensions comma separated (e.g. 50,100,200):'
-EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Please select the embedding dimensions:'
-EMBEDDING_DIMENSIONS_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
 
-BATCH_SIZES_PRINT_MSG = 'Please type the range of preferred batch sizes comma separated (e.g. 32, 64, 128):'
-BATCH_SIZES_PROMPT_MSG = '> Please select the embedding dimensions:'
-BATCH_SIZES_ERROR_MSG = 'Invalid input, please select integers as batch size(s)'
-
-EPOCHS_PRINT_MSG = ''
-EPOCHS_PROMPT_MSG = ''
-EPOCHS_ERROR_MSG = ''
-
-LEARNING_RATES_PRINT_MSG = 'Please type the range of preferred learning rate(s) comma separated (e.g. 0.1, 0.01, 0.0001:'
-LEARNING_RATES_PROMPT_MSG = '> Please select the learning rate(s):'
-LEARNING_RATES_ERROR_MSG = 'Invalid input, please float values for the learning rate(s).'
-
-MARGIN_LOSSES_PRINT_MSG = 'Please type the range of preferred margin losse(s) comma separated  (e.g. 1,2,10):'
-MARGIN_LOSSES_PROMPT_MSG = '> Please select the margin losse(s):'
-MARGIN_LOSSES_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
 # ---------------------------------
 
 mapping = {'yes': True, 'no': False}
@@ -81,7 +66,7 @@ def select_embedding_model():
     is_valid_input = False
 
     while is_valid_input == False:
-        user_input = int(prompt('> Please select one of the options: '))
+        user_input = prompt('> Please select one of the options: ')
 
         if user_input != '1' and user_input != '2':
             print(
@@ -99,6 +84,7 @@ def select_positive_integer_values(print_msg, prompt_msg, error_msg):
     integers = []
 
     while is_valid_input == False:
+        is_valid_input = True
         user_input = prompt(prompt_msg)
         user_input = user_input.split(',')
 
@@ -107,9 +93,8 @@ def select_positive_integer_values(print_msg, prompt_msg, error_msg):
                 integers.append(int(integer))
             else:
                 print(error_msg)
+                is_valid_input = False
                 break
-
-        is_valid_input = True
 
     return integers
 
@@ -136,53 +121,124 @@ def select_float_values(print_msg, prompt_msg, error_msg):
     return float_values
 
 
+def select_eval_metrics():
+    print('Please select the evaluation metrics you want to use:')
+    print("Mean rank: 1")
+    print("Hits@k: 2")
+
+    metrics = []
+
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt('> Please select the options comma separated:')
+        user_input = user_input.split(',')
+
+        for choice in user_input:
+            if choice.isnumeric():
+                metrics.append(int(choice))
+            else:
+                print('Invalid input, please type in a sequence of integers (\'1\' and/or \'2\')')
+                is_valid_input = False
+                break
+
+    return metrics
+
 def _select_trans_x_params():
     hpo_params = OrderedDict()
     embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSIONS_PRINT_MSG,
                                                           EMBEDDING_DIMENSIONS_PROMPT_MSG,
                                                           EMBEDDING_DIMENSIONS_ERROR_MSG)
-    hpo_params['embedding_dim'] = embedding_dimensions
+    hpo_params[EMBEDDING_DIM] = embedding_dimensions
 
     # ---------
     margin_losses = select_float_values(MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, MARGIN_LOSSES_ERROR_MSG)
-    hpo_params['margin_loss'] = margin_losses
+    hpo_params[MARGIN_LOSS] = margin_losses
 
     return hpo_params
 
 
 def select_hpo_params(model_id):
     hpo_params = OrderedDict()
-    hpo_params['kg_embedding_model'] = embedding_models_mapping[model_id]
+    hpo_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
 
     if 1 <= model_id and model_id <= 4:
         # Model is one of the TransX versions
         param_dict = _select_trans_x_params()
         hpo_params.update(param_dict)
-    else:
-        # TODO: Change
+    elif model_id == 'X':
+        # TODO: ConvE
+        exit(0)
+    elif model_id == 'Y':
+        # TODO: RESCAL
+        exit(0)
+    elif model_id == 'Z':
+        # TODO: COMPLEX
         exit(0)
 
     # General params
     # --------
     learning_rates = select_float_values(LEARNING_RATES_PRINT_MSG, LEARNING_RATES_PROMPT_MSG, LEARNING_RATES_ERROR_MSG)
-    hpo_params['learning_rate'] = learning_rates
+    hpo_params[LEARNING_RATE] = learning_rates
 
     # --------------
     batch_sizes = select_positive_integer_values(BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG)
-    hpo_params['batch_size'] = batch_sizes
+    hpo_params[BATCH_SIZE] = batch_sizes
 
-    print('Please type the range of preferred epochs comma separated (e.g. 1, 5, 100):')
-    user_input = prompt('> Epochs: ')
-    epochs = user_input.split(',')
-    epochs = [int(epoch) for epoch in epochs]
-    hpo_params['num_epochs'] = epochs
+    epochs = select_positive_integer_values(EPOCHS_PRINT_MSG,EPOCHS_PROMPT_MSG,EPOCHS_ERROR_MSG )
+    hpo_params[NUM_EPOCHS] = epochs
 
-    print('Please type the number of hyper-parameter iterations (single number):')
-    user_input = prompt('> HPO iterations: ')
-    hpo_iter = int(user_input)
-    hpo_params['max_iters'] = hpo_iter
+
+    hpo_iter = select_positive_integer_values(MAX_HPO_ITERS_PRINT_MSG,MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG)
+    hpo_params[NUM_OF_MAX_HPO_ITERS] = hpo_iter
 
     return hpo_params
+
+def get_data_input_path():
+    print('Please provide the path to the dataset:')
+
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt('> Path:')
+
+        if not os.path.exists(os.path.dirname(user_input)):
+            print('Path doesn\'t exist, please type in new path')
+        else:
+            return user_input
+
+def select_ratio_for_validation_set():
+    print('Select the ratio of the training set used for validation (e.g. 0.5):')
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt('> Ratio: ')
+
+        try:
+            ratio = float(ratio)
+            if ratio>0. and ratio<1.:
+                return ratio
+            else:
+                print('Invalid input, please type in a number > 0. and < 1.')
+            return ratio
+        except ValueError:
+            print('Invalid input, please type in a number > 0. and < 1.')
+
+    return ratio
+
+def ask_for_validation_set():
+    print('Do you provide a validation set?')
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt('> \'yes\' or \'no\': ')
+
+        if user_input != 'yes' and user_input!= 'no':
+            print('Invalid input, please type in \'yes\' or \'no\'')
+        elif user_input == 'yes':
+            return get_data_input_path()
+        elif user_input == 'no':
+            return select_ratio_for_validation_set()
 
 
 def start_cli():
@@ -201,17 +257,13 @@ def start_cli():
         config[HYPER_PARAMTER_OPTIMIZATION_PARAMS] = hpo_params
     else:
         kg_model_params = select_embedding_model_params(model_id=embedding_model_id)
-        config['kg_embedding_model'] = kg_model_params
+        config[KG_EMBEDDING_MODEL] = kg_model_params
 
     print('----------------------------')
-    eval_metrics = select_eval_metrics()
-    config['eval_metrics'] = eval_metrics
-
+    config[EVAL_METRICS] = select_eval_metrics()
     print('----------------------------')
-    print('Please provide the path to the training set')
-    training_data_path = prompt('> Path: ')
 
-    config['training_set_path'] = training_data_path
+    config['training_set_path'] = get_data_input_path()
 
     print('Do you provide a validation set?')
     user_input = prompt('> \'yes\' or \'no\': ')
@@ -282,14 +334,7 @@ def select_embedding_model_params(model_id):
     return kg_model_params
 
 
-def select_eval_metrics():
-    print('Please select the evaluation metrics you want to use:')
-    print("Mean rank: 1")
-    user_input = prompt('> Please select the options comma separated: ')
-    metrics = user_input.split(',')
-    metrics = [metrics_maping[int(metric)] for metric in metrics]
 
-    return metrics
 
 
 import pickle
