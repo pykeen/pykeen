@@ -40,8 +40,6 @@ EVAL_RESULTS ='eval_results'
 PREFERRED_DEVICE  = 'preferred_device'
 CPU = 'cpu'
 GPU = 'gpu'
-# Hyperparamters optim
-HPO = 'hyper_param_optimization'
 RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 
 ## Metrics
@@ -55,10 +53,12 @@ MARGIN_LOSS = 'margin_loss'
 NUM_ENTITIES = 'num_entities'
 NUM_RELATIONS = 'num_relations'
 NUM_EPOCHS = 'num_epochs'
+NUM_OF_MAX_HPO_ITERS = 'maximum_number_of_hpo_iters'
 LEARNING_RATE = 'learning_rate'
 INPUT_DROPOUT = 'input_dropout'
 OUTPUT_DROPOUT = 'output_dropout'
 FEATURE_MAP_DROPOUT = 'feature_map_dropout'
+EVAL_METRICS = 'eval_metrics'
 #CNN related
 NUM_IN_CHANNELS = 'num_input_channel'
 NUM_OUT_CHANNELS = 'num_output_channels'
@@ -69,4 +69,41 @@ IMAGE_WIDTH = 'image_width'
 
 # Further Constants
 SEED = 'seed'
+
+# Command line interface parameters
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions comma separated (e.g. 50,100,200):'
+EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
+EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
+
+BATCH_SIZES_PRINT_MSG = 'Please type the range of preferred batch sizes comma separated (e.g. 32, 64, 128):'
+BATCH_SIZES_PROMPT_MSG = '> Please select the batch size(s):'
+BATCH_SIZES_ERROR_MSG = 'Invalid input, please select integers as batch size(s)'
+
+EPOCHS_PRINT_MSG = 'Please type the range of preferred epochs comma separated (e.g. 1, 5, 100):'
+EPOCHS_PROMPT_MSG = '> Epochs:'
+EPOCHS_ERROR_MSG = 'Invalid input, please select integers as epoch(s)'
+
+LEARNING_RATES_PRINT_MSG = 'Please type the range of preferred learning rate(s) comma separated (e.g. 0.1, 0.01, 0.0001:'
+LEARNING_RATES_PROMPT_MSG = '> Please select the learning rate(s):'
+LEARNING_RATES_ERROR_MSG = 'Invalid input, please float values for the learning rate(s).'
+
+MARGIN_LOSSES_PRINT_MSG = 'Please type the range of preferred margin losse(s) comma separated  (e.g. 1,2,10):'
+MARGIN_LOSSES_PROMPT_MSG = '> Please select the margin losse(s):'
+MARGIN_LOSSES_ERROR_MSG = 'Invalid input, please type in positive integer as embedding dimensions.'
+
+MAX_HPO_ITERS_PRINT_MSG = 'Please type the maximum number of iterationns for they hyper-parameter search:'
+MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
+MAX_HPO_ITERS_ERROR_MSG = 'Invalid input, please type in a positive integer for the maximum number of iterations.'
+
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension:'
+EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension:'
+EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
+
+TRAINING = 'training'
+HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
+HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
+TRAINING_SET_PATH = 'training_set_path'
+VALIDATION_SET_PATH = 'validation_set_path'
+VALIDATION_SET_RATIO = 'validation_set_ratio'
+
 
