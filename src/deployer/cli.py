@@ -7,13 +7,14 @@ from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
-from utilities.constants import PREFERRED_DEVICE, GPU, CPU, EMBEDDING_DIMENSIONS_PRINT_MSG, \
-    EMBEDDING_DIMENSIONS_PROMPT_MSG, EMBEDDING_DIMENSIONS_ERROR_MSG, MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, \
+from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG, \
+    EMBEDDING_DIMENSION_PROMPT_MSG, EMBEDDING_DIMENSION_ERROR_MSG, MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, \
     MARGIN_LOSSES_ERROR_MSG, LEARNING_RATES_PRINT_MSG, LEARNING_RATES_PROMPT_MSG, LEARNING_RATES_ERROR_MSG, \
     BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG, EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, \
     EPOCHS_ERROR_MSG, MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG, TRAINING, \
     HYPER_PARAMTER_SEARCH, HYPER_PARAMTER_OPTIMIZATION_PARAMS, EMBEDDING_DIM, KG_EMBEDDING_MODEL, MARGIN_LOSS, \
-    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS
+    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS, TRAINING_SET_PATH, VALIDATION_SET_PATH, \
+    VALIDATION_SET_RATIO
 from utilities.pipeline import Pipeline
 
 # ----------Constants--------------
@@ -131,6 +132,7 @@ def select_eval_metrics():
     is_valid_input = False
 
     while is_valid_input == False:
+        is_valid_input = True
         user_input = prompt('> Please select the options comma separated:')
         user_input = user_input.split(',')
 
@@ -144,11 +146,12 @@ def select_eval_metrics():
 
     return metrics
 
+
 def _select_trans_x_params():
     hpo_params = OrderedDict()
-    embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSIONS_PRINT_MSG,
-                                                          EMBEDDING_DIMENSIONS_PROMPT_MSG,
-                                                          EMBEDDING_DIMENSIONS_ERROR_MSG)
+    embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSION_PRINT_MSG,
+                                                          EMBEDDING_DIMENSION_PROMPT_MSG,
+                                                          EMBEDDING_DIMENSION_ERROR_MSG)
     hpo_params[EMBEDDING_DIM] = embedding_dimensions
 
     # ---------
@@ -185,14 +188,15 @@ def select_hpo_params(model_id):
     batch_sizes = select_positive_integer_values(BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG)
     hpo_params[BATCH_SIZE] = batch_sizes
 
-    epochs = select_positive_integer_values(EPOCHS_PRINT_MSG,EPOCHS_PROMPT_MSG,EPOCHS_ERROR_MSG )
+    epochs = select_positive_integer_values(EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, EPOCHS_ERROR_MSG)
     hpo_params[NUM_EPOCHS] = epochs
 
-
-    hpo_iter = select_positive_integer_values(MAX_HPO_ITERS_PRINT_MSG,MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG)
+    hpo_iter = select_integer_value(MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG,
+                                    MAX_HPO_ITERS_ERROR_MSG)
     hpo_params[NUM_OF_MAX_HPO_ITERS] = hpo_iter
 
     return hpo_params
+
 
 def get_data_input_path():
     print('Please provide the path to the dataset:')
@@ -207,6 +211,7 @@ def get_data_input_path():
         else:
             return user_input
 
+
 def select_ratio_for_validation_set():
     print('Select the ratio of the training set used for validation (e.g. 0.5):')
     is_valid_input = False
@@ -215,8 +220,8 @@ def select_ratio_for_validation_set():
         user_input = prompt('> Ratio: ')
 
         try:
-            ratio = float(ratio)
-            if ratio>0. and ratio<1.:
+            ratio = float(user_input)
+            if ratio > 0. and ratio < 1.:
                 return ratio
             else:
                 print('Invalid input, please type in a number > 0. and < 1.')
@@ -226,84 +231,61 @@ def select_ratio_for_validation_set():
 
     return ratio
 
-def ask_for_validation_set():
+
+def is_validation_set_provided():
     print('Do you provide a validation set?')
     is_valid_input = False
 
     while is_valid_input == False:
         user_input = prompt('> \'yes\' or \'no\': ')
 
-        if user_input != 'yes' and user_input!= 'no':
+        if user_input != 'yes' and user_input != 'no':
             print('Invalid input, please type in \'yes\' or \'no\'')
-        elif user_input == 'yes':
-            return get_data_input_path()
-        elif user_input == 'no':
-            return select_ratio_for_validation_set()
+        else:
+            return mapping[user_input]
 
 
-def start_cli():
-    config = OrderedDict()
-
-    print_welcome_message()
-    print('----------------------------')
-    exec_mode = select_execution_mode()
-    exec_mode = execution_mode_mapping[exec_mode]
-    print('----------------------------')
-    embedding_model_id = select_embedding_model()
-    print('----------------------------')
-
-    if exec_mode == HYPER_PARAMTER_SEARCH:
-        hpo_params = select_hpo_params(model_id=embedding_model_id)
-        config[HYPER_PARAMTER_OPTIMIZATION_PARAMS] = hpo_params
-    else:
-        kg_model_params = select_embedding_model_params(model_id=embedding_model_id)
-        config[KG_EMBEDDING_MODEL] = kg_model_params
-
-    print('----------------------------')
-    config[EVAL_METRICS] = select_eval_metrics()
-    print('----------------------------')
-
-    config['training_set_path'] = get_data_input_path()
-
-    print('Do you provide a validation set?')
-    user_input = prompt('> \'yes\' or \'no\': ')
-    user_input = mapping[user_input]
-
-    if user_input:
-        print('Please provide the path to the validation set')
-        validation_data_path = prompt('> Path: ')
-        config['validation_set_path'] = validation_data_path
-    else:
-        print('Select the ratio of the training set used for validation (e.g. 0.5)')
-        user_input = prompt('> Ratio: ')
-        validation_ratio = float(user_input)
-        config['validation_set_ratio'] = validation_ratio
-
+def select_preferred_device():
     print('Do you want to use a GPU if available?')
-    user_input = prompt('> \'yes\' or \'no\': ')
-    if user_input == 'yes':
-        config[PREFERRED_DEVICE] = GPU
-    else:
-        config[PREFERRED_DEVICE] = CPU
+    is_valid_input = False
 
-    return config
+    while is_valid_input == False:
+        user_input = prompt('> \'yes\' or \'no\':')
+
+        if user_input == 'yes' or user_input == 'no':
+            return user_input
+        else:
+            print('Invalid input, please type in \'yes\' or \'no\'')
+
+
+def select_integer_value(print_msg, prompt_msg, error_msg):
+    print(print_msg)
+    is_valid_input = False
+
+    while is_valid_input == False:
+        is_valid_input = True
+        user_input = prompt(prompt_msg)
+
+        if user_input.isnumeric():
+            return int(user_input)
+        else:
+            print(error_msg)
 
 
 def select_embedding_model_params(model_id):
     kg_model_params = OrderedDict()
-    kg_model_params['model_name'] = embedding_models_mapping[model_id]
+    kg_model_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
 
     if 1 <= model_id and model_id <= 4:
-        print('Please type the embedding dimensions:')
-        user_input = prompt('> Embedding dimension: ')
-        embedding_dimension = int(user_input)
+        embedding_dimension = select_integer_value(EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PROMPT_MSG,
+                                                   EMBEDDING_DIMENSION_ERROR_MSG)
 
-        kg_model_params['embedding_dim'] = embedding_dimension
+        kg_model_params[EMBEDDING_DIM] = embedding_dimension
 
         if model_id == 1:
             print('Please select the normalization approach for the entities: ')
             print('L1-Norm: 1')
-            print('L1-Norm: 2')
+            print('L2-Norm: 2')
             user_input = prompt('> Normalization approach: ')
             normalization_of_entities = int(user_input)
 
@@ -334,21 +316,52 @@ def select_embedding_model_params(model_id):
     return kg_model_params
 
 
+def start_cli():
+    config = OrderedDict()
 
+    print_welcome_message()
+    print('----------------------------')
+    exec_mode = select_execution_mode()
+    exec_mode = execution_mode_mapping[exec_mode]
+    print('----------------------------')
+    embedding_model_id = select_embedding_model()
+    print('----------------------------')
 
+    if exec_mode == HYPER_PARAMTER_SEARCH:
+        hpo_params = select_hpo_params(model_id=embedding_model_id)
+        config[HYPER_PARAMTER_OPTIMIZATION_PARAMS] = hpo_params
+    else:
+        kg_model_params = select_embedding_model_params(model_id=embedding_model_id)
+        config[KG_EMBEDDING_MODEL] = kg_model_params
 
-import pickle
+    print('----------------------------')
+    config[EVAL_METRICS] = select_eval_metrics()
+    print('----------------------------')
+
+    config[TRAINING_SET_PATH] = get_data_input_path()
+
+    use_validation_set = is_validation_set_provided()
+
+    if use_validation_set:
+        config[VALIDATION_SET_PATH] = get_data_input_path()
+    else:
+        config[VALIDATION_SET_RATIO] = select_ratio_for_validation_set()
+
+    print('----------------------------')
+    config[PREFERRED_DEVICE] = select_preferred_device()
+
+    return config
 
 
 def main():
     config = start_cli()
 
-    config_in = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/config_files/hpo_wn_18_test_test.pkl'
-    with open(config_in, 'rb') as handle:
-        config = pickle.load(handle)
+    # config_in = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/config_files/hpo_wn_18_test_test.pkl'
+    # with open(config_in, 'rb') as handle:
+    #     config = pickle.load(handle)
     pipeline = Pipeline(config=config, seed=2)
 
-    if 'hyper_param_optimization' in config:
+    if HYPER_PARAMTER_OPTIMIZATION_PARAMS in config:
         trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_hpo()
     else:
         trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
