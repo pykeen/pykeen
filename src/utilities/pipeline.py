@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from evaluation_methods.mean_rank_evaluator import MeanRankEvaluator
 from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
 from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
-    GPU, HPO, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE
+    GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, VALIDATION_SET_PATH, VALIDATION_SET_RATIO
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
@@ -27,7 +27,6 @@ class Pipeline(object):
             'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else 'cpu')
 
     def start_hpo(self):
-        assert HPO in self.config
         return self._start_pipeline(is_hpo_mode=True)
 
     def start_training(self):
@@ -40,17 +39,17 @@ class Pipeline(object):
 
         # TODO: Adapt
         evaluator = MeanRankEvaluator()  # get_evaluator(config=evaluator_config)
-        path_to_train_data = self.config['training_set_path']
+        path_to_train_data = self.config[TRAINING_SET_PATH]
 
         pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
         has_test_set = True
 
-        if 'validation_set_path' in self.config:
+        if VALIDATION_SET_PATH in self.config:
             train_pos = pos_triples
-            test_pos = np.loadtxt(fname=self.config['validation_set_path'], dtype=str,
+            test_pos = np.loadtxt(fname=self.config[VALIDATION_SET_PATH], dtype=str,
                                   comments='@Comment@ Subject Predicate Object')
-        elif 'validation_set_path' in self.config and is_hpo_mode:
-            ratio_test_data = self.config['validation_set_ratio']
+        elif VALIDATION_SET_PATH in self.config and is_hpo_mode:
+            ratio_test_data = self.config[VALIDATION_SET_RATIO]
             train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
         else:
             train_pos = pos_triples

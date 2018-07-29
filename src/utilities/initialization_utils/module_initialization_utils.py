@@ -19,7 +19,7 @@ def get_kg_embedding_model(config):
     :param config:
     :return:
     """
-    model_name = config['model_name']
+    model_name = config[KG_EMBEDDING_MODEL]
 
     if model_name == TRANS_E:
         return TransE(config=config)

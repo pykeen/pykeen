@@ -6,7 +6,7 @@ import numpy as np
 
 from hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
-    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED
+    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
@@ -21,15 +21,15 @@ class RandomSearchHPO(AbstractHPOptimizer):
                              device, seed):
         np.random.seed(seed=seed)
 
-        hyperparams_dict = config['hyper_param_optimization']
+        hyperparams_dict = config[HYPER_PARAMTER_OPTIMIZATION_PARAMS]
         learning_rates = hyperparams_dict[LEARNING_RATE]
         margins = hyperparams_dict[MARGIN_LOSS]
         embedding_dims = hyperparams_dict[EMBEDDING_DIM]
-        max_iters = hyperparams_dict['max_iters']
+        max_iters = hyperparams_dict[NUM_OF_MAX_HPO_ITERS]
         num_epochs = hyperparams_dict[NUM_EPOCHS]
         embedding_model = hyperparams_dict[KG_EMBEDDING_MODEL]
         kg_embedding_model_config = OrderedDict()
-        kg_embedding_model_config['model_name'] = embedding_model
+        kg_embedding_model_config[KG_EMBEDDING_MODEL] = embedding_model
         metric_string = self.evaluator.METRIC
 
         trained_models = []
