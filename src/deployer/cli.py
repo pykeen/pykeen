@@ -14,7 +14,10 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     EPOCHS_ERROR_MSG, MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG, TRAINING, \
     HYPER_PARAMTER_SEARCH, HYPER_PARAMTER_OPTIMIZATION_PARAMS, EMBEDDING_DIM, KG_EMBEDDING_MODEL, MARGIN_LOSS, \
     LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS, TRAINING_SET_PATH, VALIDATION_SET_PATH, \
-    VALIDATION_SET_RATIO
+    VALIDATION_SET_RATIO, NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
+    MARGIN_LOSS_ERROR_MSG, LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, \
+    BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
+    EPOCH_ERROR_MSG
 from utilities.pipeline import Pipeline
 
 # ----------Constants--------------
@@ -147,7 +150,7 @@ def select_eval_metrics():
     return metrics
 
 
-def _select_trans_x_params():
+def _select_trans_x_params(model_id):
     hpo_params = OrderedDict()
     embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSION_PRINT_MSG,
                                                           EMBEDDING_DIMENSION_PROMPT_MSG,
@@ -158,6 +161,9 @@ def _select_trans_x_params():
     margin_losses = select_float_values(MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, MARGIN_LOSSES_ERROR_MSG)
     hpo_params[MARGIN_LOSS] = margin_losses
 
+    if model_id == 1:
+        hpo_params[NORMALIZATION_OF_ENTITIES] = select_entites_normalization()
+
     return hpo_params
 
 
@@ -167,7 +173,7 @@ def select_hpo_params(model_id):
 
     if 1 <= model_id and model_id <= 4:
         # Model is one of the TransX versions
-        param_dict = _select_trans_x_params()
+        param_dict = _select_trans_x_params(model_id)
         hpo_params.update(param_dict)
     elif model_id == 'X':
         # TODO: ConvE
@@ -272,6 +278,22 @@ def select_integer_value(print_msg, prompt_msg, error_msg):
             print(error_msg)
 
 
+def select_entites_normalization():
+    print('Please select the normalization approach for the entities:')
+    print('L1-Normalization: 1')
+    print('L2-Normalization: 2')
+    is_valid_input = False
+
+    while is_valid_input == False:
+        is_valid_input = True
+        user_input = prompt('> Normalization approach:')
+
+        if user_input == '1' or user_input == '2':
+            return int(user_input)
+        else:
+            print('Invalid input, please type in \'1\' or \'2\'')
+
+
 def select_embedding_model_params(model_id):
     kg_model_params = OrderedDict()
     kg_model_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
@@ -283,37 +305,36 @@ def select_embedding_model_params(model_id):
         kg_model_params[EMBEDDING_DIM] = embedding_dimension
 
         if model_id == 1:
-            print('Please select the normalization approach for the entities: ')
-            print('L1-Norm: 1')
-            print('L2-Norm: 2')
-            user_input = prompt('> Normalization approach: ')
-            normalization_of_entities = int(user_input)
+            kg_model_params[NORMALIZATION_OF_ENTITIES] = select_entites_normalization()
 
-            kg_model_params['normalization_of_entities'] = normalization_of_entities
+        kg_model_params[MARGIN_LOSS] = select_float_value(MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG,
+                                                          MARGIN_LOSS_ERROR_MSG)
 
-        print('Please type the maring loss: ')
-        user_input = prompt('> Margin loss: ')
-        margin_loss = int(user_input)
+    kg_model_params[LEARNING_RATE] = select_float_value(LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG,
+                                                        LEARNING_RATE_ERROR_MSG)
 
-        kg_model_params['margin_loss'] = margin_loss
+    kg_model_params[BATCH_SIZE] = select_integer_value(BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG,
+                                                       BATCH_SIZE_ERROR_MSG)
 
-    print('Please type the learning rate: ')
-    user_input = prompt('> Learning rate: ')
-    lr = float(user_input)
-    kg_model_params['learning_rate'] = lr
-
-    print('Please type the batch size: ')
-    user_input = prompt('> Batch size: ')
-    batch_size = int(user_input)
-    kg_model_params['batch_size'] = batch_size
-
-    print('Please type the number of epochs: ')
-    user_input = prompt('> Epochs: ')
-    epochs = int(user_input)
-
-    kg_model_params['num_epochs'] = epochs
+    kg_model_params[NUM_EPOCHS] = select_integer_value(EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG)
 
     return kg_model_params
+
+
+def select_float_value(print_msg, prompt_msg, error_msg):
+    print(print_msg)
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt(prompt_msg)
+
+        for float_value in user_input:
+            try:
+                float_value = float(float_value)
+                return float_value
+            except ValueError:
+                print(error_msg)
+                break
 
 
 def start_cli():
