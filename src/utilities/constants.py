@@ -99,11 +99,28 @@ EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension:'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
 
+MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losse:'
+MARGIN_LOSS_PROMPT_MSG = '> Margin losse:'
+MARGIN_LOSS_ERROR_MSG = 'Invalid input, please type in a float value.'
+
+LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate comma separated:'
+LEARNING_RATE_PROMPT_MSG = '> Learning rate:'
+LEARNING_RATE_ERROR_MSG = 'Invalid input, please type in a float value.'
+
+BATCH_SIZE_PRINT_MSG = 'Please type the batch size comma:'
+BATCH_SIZE_PROMPT_MSG = '> Batch size:'
+BATCH_SIZE_ERROR_MSG = 'Invalid input, please select a integer.'
+
+EPOCH_PRINT_MSG = 'Please type the number of epochs:'
+EPOCH_PROMPT_MSG = '> Epochs:'
+EPOCH_ERROR_MSG = 'Invalid input, please select an integers.'
+
 TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
 VALIDATION_SET_PATH = 'validation_set_path'
 VALIDATION_SET_RATIO = 'validation_set_ratio'
+NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
 
 
