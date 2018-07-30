@@ -3,7 +3,7 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS
+from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, NORMALIZATION_OF_ENTITIES
 
 
 class TransE(nn.Module):
@@ -17,7 +17,7 @@ class TransE(nn.Module):
         embedding_dim = config[EMBEDDING_DIM]
         margin_loss = config[MARGIN_LOSS]
 
-        self.l_p_norm = config['normalization_of_entities']
+        self.l_p_norm = config[NORMALIZATION_OF_ENTITIES]
         self.entities_embeddings = nn.Embedding(num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.margin_loss = margin_loss
