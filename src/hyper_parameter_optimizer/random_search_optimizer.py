@@ -6,7 +6,8 @@ import numpy as np
 
 from hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
-    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS
+    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS, \
+    NORMALIZATION_OF_ENTITIES
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
@@ -47,6 +48,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             kg_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
             kg_embedding_model_config[EMBEDDING_DIM] = embedding_dim
             kg_embedding_model_config[MARGIN_LOSS] = margin
+            kg_embedding_model_config[NORMALIZATION_OF_ENTITIES] = hyperparams_dict[NORMALIZATION_OF_ENTITIES]
             kg_embedding_model = get_kg_embedding_model(config=kg_embedding_model_config)
             params = kg_embedding_model_config.copy()
             params[LEARNING_RATE] = lr
