@@ -63,13 +63,15 @@ class Pipeline(object):
 
         if is_hpo_mode:
             hp_optimizer = RandomSearchHPO(evaluator=evaluator)
-            trained_model, eval_result, metric_string, params = hp_optimizer.optimize_hyperparams(train_pos, test_pos,
-                                                                                                  entity_to_id,
-                                                                                                  rel_to_id,
-                                                                                                  mapped_pos_train_tripels,
-                                                                                                  self.config,
-                                                                                                  self.device,
-                                                                                                  self.seed)
+
+            trained_model, entity_to_embedding, relation_to_embedding, eval_summary, metric_string, params = hp_optimizer.optimize_hyperparams(
+                train_pos, test_pos,
+                entity_to_id,
+                rel_to_id,
+                mapped_pos_train_tripels,
+                self.config,
+                self.device,
+                self.seed)
 
         else:
             # Initialize KG embedding model
