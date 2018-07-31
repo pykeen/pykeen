@@ -21,16 +21,10 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     EPOCH_ERROR_MSG, SAVE_CONFIG_PRINT_MSG, SAVE_CONFIG_PROMPT_MSG, SAVE_CONFIG_ERROR_MSG
 from utilities.pipeline import Pipeline
 
-# ----------Constants--------------
-
-# TODO: Adapt
-
-
-# ---------------------------------
 
 mapping = {'yes': True, 'no': False}
 embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD'}
-metrics_maping = {1: 'mean_rank'}
+metrics_maping = {1: 'mean_rank', 2:'hits@k'}
 normalization_mapping = {1: 'l1', 2: 'l2'}
 execution_mode_mapping = {1: TRAINING, 2: HYPER_PARAMTER_SEARCH}
 
@@ -142,7 +136,7 @@ def select_eval_metrics():
 
         for choice in user_input:
             if choice.isnumeric():
-                metrics.append(int(choice))
+                metrics.append(metrics_maping[int(choice)])
             else:
                 print('Invalid input, please type in a sequence of integers (\'1\' and/or \'2\')')
                 is_valid_input = False
@@ -454,7 +448,6 @@ def main():
 
     print(eval_summary)
 
-    # print(entity_to_embedding)
 
 
 if __name__ == '__main__':
