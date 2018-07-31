@@ -99,7 +99,7 @@ EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension:'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
 
-MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losse:'
+MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
 MARGIN_LOSS_PROMPT_MSG = '> Margin losse:'
 MARGIN_LOSS_ERROR_MSG = 'Invalid input, please type in a float value.'
 
@@ -114,6 +114,10 @@ BATCH_SIZE_ERROR_MSG = 'Invalid input, please select a integer.'
 EPOCH_PRINT_MSG = 'Please type the number of epochs:'
 EPOCH_PROMPT_MSG = '> Epochs:'
 EPOCH_ERROR_MSG = 'Invalid input, please select an integers.'
+
+SAVE_CONFIG_PRINT_MSG = 'Do you want to save the configuration file?'
+SAVE_CONFIG_PROMPT_MSG = '> \'yes\' or \'no\':'
+SAVE_CONFIG_ERROR_MSG = 'Invalid input, please type \'yes\' or \'no\'.'
 
 TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
