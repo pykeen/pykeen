@@ -23,8 +23,10 @@ def get_stratey_for_corrupting(corrupt_suject):
 
 
 def _concatenate_entites_first(candidate_entities, tuples):
+    candidate_entities = np.reshape(candidate_entities,newshape=(-1,1))
     return np.concatenate([candidate_entities, tuples], axis=1)
 
 
 def _concatenate_entites_last(candidate_entities, tuples):
+    candidate_entities = np.reshape(candidate_entities, newshape=(-1, 1))
     return np.concatenate([tuples, candidate_entities], axis=1)

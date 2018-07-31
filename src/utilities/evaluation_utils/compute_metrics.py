@@ -18,7 +18,7 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k
 
     ranks_object_based, hits_at_k_object_based = _compute_metrics(all_entities=all_entities,
                                                                   kg_embedding_model=kg_embedding_model,
-                                                                  triples=triples, corrupt_suject=False)
+                                                                  triples=triples, corrupt_suject=False, k=k)
     mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
@@ -75,17 +75,17 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
     start_of_columns_to_maintain, end_of_columns_to_maintain = column_to_maintain_offsets
 
     # Corrupt triples
-    for row in range(len(triples)):
+    for row_nmbr, row in enumerate(triples):
         candidate_entities = np.delete(arr=all_entities,
                                        obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
-        tuple = np.reshape(a=triples[row, start_of_columns_to_maintain:end_of_columns_to_maintain], newshape=(1, 2))
+        tuple = np.reshape(a=triples[row_nmbr, start_of_columns_to_maintain:end_of_columns_to_maintain], newshape=(1, 2))
         # Copy current test tuple
         tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
 
         corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
-        pos_triple = np.array(triples[row])
+        pos_triple = np.array(triples[row_nmbr])
         pos_triple = np.expand_dims(a=pos_triple, axis=0)
 
         score_of_positive = kg_embedding_model.predict(pos_triple)
@@ -94,7 +94,9 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         # Get index of first occurence that fulfills the condition
         ranks.append(np.where(scores == score_of_positive)[0][0])
 
+        # print(scores)
         top_k = scores[-k:]
+
 
         if pos_triple in top_k:
             in_top_k.append(1.)
