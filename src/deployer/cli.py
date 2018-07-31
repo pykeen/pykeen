@@ -1,4 +1,5 @@
 import os
+import pickle
 import sys
 
 w_dir = os.path.dirname(os.getcwd())
@@ -17,7 +18,7 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     VALIDATION_SET_RATIO, NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
     MARGIN_LOSS_ERROR_MSG, LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, \
     BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
-    EPOCH_ERROR_MSG
+    EPOCH_ERROR_MSG, SAVE_CONFIG_PRINT_MSG, SAVE_CONFIG_PROMPT_MSG, SAVE_CONFIG_ERROR_MSG
 from utilities.pipeline import Pipeline
 
 # ----------Constants--------------
@@ -205,7 +206,7 @@ def select_hpo_params(model_id):
 
 
 def get_data_input_path():
-    print('Please provide the path to the dataset:')
+    print('Please provide the path to the file:')
 
     is_valid_input = False
 
@@ -337,10 +338,69 @@ def select_float_value(print_msg, prompt_msg, error_msg):
                 break
 
 
+def ask_for_existing_configuration():
+    print('Do you provide an existing configuration dictionary?')
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt('> \'yes\' or \'no\':')
+        if user_input == 'yes' or user_input == 'no':
+            return mapping[user_input]
+        else:
+            print('Invalid input, type \'yes\' or \'no\'')
+
+
+def load_config_file():
+    is_valid_input = False
+    config_file_path = get_data_input_path()
+
+    while is_valid_input == False:
+        with open(config_file_path, 'rb') as f:
+            try:
+                data = pickle.load(f)
+                assert type(data) == dict or type(data) == OrderedDict
+                return data
+            except:
+                print('Invalid file, configuration file must be serialised dictionary (.pkl)')
+                config_file_path = get_data_input_path()
+
+
+def ask_binary_question(print_msg, prompt_msg, error_msg):
+    print(print_msg)
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt(prompt_msg)
+        if user_input == 'yes' or user_input == 'no':
+            return mapping[user_input]
+        else:
+            print(error_msg)
+
+
+def save_dict(config_dict):
+    print('Please type in the path to the output directory')
+    is_valid_input = False
+
+    while is_valid_input == False:
+        user_input = prompt('> Path to output director:')
+        if os.path.exists(os.path.dirname(user_input)):
+            out_path = os.path.join(user_input, 'configuration.pkl')
+            with open(out_path, 'wb') as handle:
+                pickle.dump(config_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                is_valid_input = True
+        else:
+            print('Invalid input, please type in the path to an existing directory.')
+
+
 def start_cli():
     config = OrderedDict()
 
     print_welcome_message()
+    configuration_exits = ask_for_existing_configuration()
+
+    if configuration_exits:
+        return load_config_file()
+
     print('----------------------------')
     exec_mode = select_execution_mode()
     exec_mode = execution_mode_mapping[exec_mode]
@@ -371,6 +431,11 @@ def start_cli():
     print('----------------------------')
     config[PREFERRED_DEVICE] = select_preferred_device()
 
+    save_config = ask_binary_question(SAVE_CONFIG_PRINT_MSG, SAVE_CONFIG_PROMPT_MSG, SAVE_CONFIG_ERROR_MSG)
+
+    if save_config:
+        save_dict(config)
+
     return config
 
 
@@ -387,10 +452,9 @@ def main():
     else:
         trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
 
-    summary = eval_summary.copy()
-    summary.update(params)
+    print(eval_summary)
 
-    print(summary)
+    # print(entity_to_embedding)
 
 
 if __name__ == '__main__':
