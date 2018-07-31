@@ -7,7 +7,9 @@ import numpy as np
 from hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
     KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS, \
-    NORMALIZATION_OF_ENTITIES
+    NORMALIZATION_OF_ENTITIES, EVAL_METRICS, MEAN_RANK, HITS_AT_K
+from utilities.evaluation_utils.compute_metrics import compute_mean_rank_and_hits_at_k, compute_mean_rank, \
+    compute_hits_at_k
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
@@ -15,8 +17,6 @@ from utilities.triples_creation_utils.instance_creation_utils import create_mapp
 
 class RandomSearchHPO(AbstractHPOptimizer):
 
-    def __init__(self, evaluator):
-        self.evaluator = evaluator
 
     def optimize_hyperparams(self, train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels, config,
                              device, seed):
@@ -31,13 +31,21 @@ class RandomSearchHPO(AbstractHPOptimizer):
         embedding_model = hyperparams_dict[KG_EMBEDDING_MODEL]
         kg_embedding_model_config = OrderedDict()
         kg_embedding_model_config[KG_EMBEDDING_MODEL] = embedding_model
-        metric_string = self.evaluator.METRIC
 
         trained_models = []
         eval_results = []
         entity_to_ids = []
         rel_to_ids = []
         models_params = []
+
+        eval_metrics = config[EVAL_METRICS]
+        is_mean_rank_selected = True if 'mean_rank' in eval_metrics else False
+        is_hits_at_k_selected = True if 'hits_at_k' in eval_metrics else False
+
+        eval_summary = OrderedDict()
+
+        all_entities = np.array(list(entity_to_id.values()))
+
 
         for _ in range(max_iters):
             lr = random.choice(learning_rates)
@@ -68,13 +76,16 @@ class RandomSearchHPO(AbstractHPOptimizer):
             # Evaluate trained model
             mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos, entity_to_id=entity_to_id,
                                                                   rel_to_id=rel_to_id)
-            eval_result, _ = self.evaluator.start_evaluation(test_data=mapped_pos_test_tripels,
-                                                             kg_embedding_model=trained_model)
+
+            mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
+                                                                   kg_embedding_model=trained_model,
+                                                                   triples=mapped_pos_test_tripels, k=10)
+            eval_results.append(mean_rank)
 
             trained_models.append(trained_model)
-            eval_results.append(eval_result)
+
 
         index_of_max = np.argmax(a=eval_results)
 
         return trained_models[index_of_max], entity_to_ids[index_of_max], rel_to_ids[index_of_max], \
-               eval_results[index_of_max], metric_string, models_params[index_of_max]
+               eval_results[index_of_max], MEAN_RANK, models_params[index_of_max]

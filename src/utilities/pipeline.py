@@ -6,10 +6,12 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 
-from evaluation_methods.mean_rank_evaluator import MeanRankEvaluator
 from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
 from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
-    GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, VALIDATION_SET_PATH, VALIDATION_SET_RATIO
+    GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, VALIDATION_SET_PATH, VALIDATION_SET_RATIO, \
+    EVAL_METRICS, MEAN_RANK, HITS_AT_K
+from utilities.evaluation_utils.compute_metrics import compute_mean_rank, compute_mean_rank_and_hits_at_k, \
+    compute_hits_at_k
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
@@ -38,7 +40,6 @@ class Pipeline(object):
         """
 
         # TODO: Adapt
-        evaluator = MeanRankEvaluator()  # get_evaluator(config=evaluator_config)
         path_to_train_data = self.config[TRAINING_SET_PATH]
 
         pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
@@ -62,7 +63,7 @@ class Pipeline(object):
                                                                rel_to_id=rel_to_id)
 
         if is_hpo_mode:
-            hp_optimizer = RandomSearchHPO(evaluator=evaluator)
+            hp_optimizer = RandomSearchHPO()
 
             trained_model, entity_to_embedding, relation_to_embedding, eval_summary, metric_string, params = hp_optimizer.optimize_hyperparams(
                 train_pos, test_pos,
@@ -96,11 +97,33 @@ class Pipeline(object):
                 log.info("-------------Start Evaluation-------------")
                 # Initialize KG evaluator
                 mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos)
-                eval_result, metric_string = evaluator.start_evaluation(test_data=mapped_pos_test_tripels,
-                                                                        kg_embedding_model=trained_model)
+
+                eval_metrics = self.config[EVAL_METRICS]
+
+                # compute_mean_rank(all_entities, kg_embedding_model, triples)
+
+                is_mean_rank_selected = True if 'mean_rank' in eval_metrics else False
+                is_hits_at_k_selected = True if 'hits_at_k' in eval_metrics else False
 
                 eval_summary = OrderedDict()
-                eval_summary[metric_string] = eval_result
+                all_entities = np.array(list(entity_to_id.values()))
+
+                if is_mean_rank_selected and is_hits_at_k_selected:
+                    mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
+                                                                           kg_embedding_model=trained_model,
+                                                                           triples=mapped_pos_test_tripels, k=10)
+                    eval_summary[MEAN_RANK] = mean_rank
+                    eval_summary[HITS_AT_K] = hits_at_k
+
+                elif is_mean_rank_selected:
+                    mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
+                                                  triples=mapped_pos_test_tripels)
+                    eval_summary[MEAN_RANK] = mean_rank
+                elif is_hits_at_k_selected:
+                    hits_at_k = compute_hits_at_k(all_entities=all_entities, kg_embedding_model=trained_model,
+                                                  triples=mapped_pos_test_tripels, k=10)
+                    eval_summary[HITS_AT_K] = hits_at_k
+
 
         # Prepare Output
         id_to_entity = {value: key for key, value in entity_to_id.items()}
