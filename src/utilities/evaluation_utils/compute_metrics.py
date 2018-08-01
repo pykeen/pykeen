@@ -65,7 +65,7 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
     return hits_at_k
 
 
-def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, k=None):
+def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, k=10):
     ranks = []
     in_top_k = []
 
