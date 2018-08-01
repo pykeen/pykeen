@@ -77,10 +77,27 @@ class RandomSearchHPO(AbstractHPOptimizer):
             mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos, entity_to_id=entity_to_id,
                                                                   rel_to_id=rel_to_id)
 
-            mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
-                                                                   kg_embedding_model=trained_model,
-                                                                   triples=mapped_pos_test_tripels, k=10)
-            eval_results.append(mean_rank)
+
+            if is_mean_rank_selected and is_hits_at_k_selected:
+                mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
+                                                                       kg_embedding_model=trained_model,
+                                                                       triples=mapped_pos_test_tripels, k=10)
+                eval_summary[MEAN_RANK] = mean_rank
+                eval_summary[HITS_AT_K] = hits_at_k
+                eval_results.append(mean_rank)
+
+            if is_mean_rank_selected == True and is_hits_at_k_selected==False:
+                mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
+                                              triples=mapped_pos_test_tripels)
+                eval_summary[MEAN_RANK] = mean_rank
+                eval_results.append(mean_rank)
+            if is_hits_at_k_selected == True and is_mean_rank_selected == False:
+                hits_at_k = compute_hits_at_k(all_entities=all_entities, kg_embedding_model=trained_model,
+                                              triples=mapped_pos_test_tripels, k=10)
+                eval_summary[HITS_AT_K] = hits_at_k
+                eval_results.append(hits_at_k)
+
+
 
             trained_models.append(trained_model)
 

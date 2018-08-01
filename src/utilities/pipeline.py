@@ -115,7 +115,7 @@ class Pipeline(object):
                     eval_summary[MEAN_RANK] = mean_rank
                     eval_summary[HITS_AT_K] = hits_at_k
 
-                elif is_mean_rank_selected:
+                elif is_mean_rank_selected == True and is_hits_at_k_selected==False:
                     mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
                                                   triples=mapped_pos_test_tripels)
                     eval_summary[MEAN_RANK] = mean_rank
