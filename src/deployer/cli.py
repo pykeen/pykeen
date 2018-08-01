@@ -436,9 +436,6 @@ def start_cli():
 def main():
     config = start_cli()
 
-    # config_in = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/config_files/hpo_wn_18_test_test.pkl'
-    # with open(config_in, 'rb') as handle:
-    #     config = pickle.load(handle)
     pipeline = Pipeline(config=config, seed=2)
 
     if HYPER_PARAMTER_OPTIMIZATION_PARAMS in config:
