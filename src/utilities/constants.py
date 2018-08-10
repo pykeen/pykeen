@@ -28,8 +28,6 @@ CSQA_WIKIDATA_READER = 'CSQAWikiDataReader'
 WN18_READER = 'WN18Reader'
 ## KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
-TRANS_E = 'TransE'
-TRANS_H = 'TransH'
 # Evaluator
 EVALUATOR = 'evaluator'
 MEAN_RANK_EVALUATOR = 'MeanRankEvaluator'
@@ -136,6 +134,13 @@ TRAINING_SET_PATH = 'training_set_path'
 VALIDATION_SET_PATH = 'validation_set_path'
 VALIDATION_SET_RATIO = 'validation_set_ratio'
 NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
+
+# Model names
+CONV_E = 'ConvE'
+TRANS_E = 'TransE'
+TRANS_H = 'TransH'
+TRANS_D = 'TransD'
+TRANS_R = 'TransR'
 
 OUTPUT_DIREC = 'output_direc'
 
