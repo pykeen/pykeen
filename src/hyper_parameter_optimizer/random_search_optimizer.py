@@ -11,7 +11,7 @@ from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH
 from utilities.evaluation_utils.compute_metrics import compute_mean_rank_and_hits_at_k, compute_mean_rank, \
     compute_hits_at_k
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
-from utilities.train_utils import train
+from utilities.train_utils import train_model
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 
 
@@ -66,10 +66,10 @@ class RandomSearchHPO(AbstractHPOptimizer):
             entity_to_ids.append(entity_to_id)
             rel_to_ids.append(rel_to_id)
 
-            trained_model = train(kg_embedding_model=kg_embedding_model, learning_rate=lr,
-                                  num_epochs=params[NUM_EPOCHS],
-                                  batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
-                                  device=device, seed=seed)
+            trained_model = train_model(kg_embedding_model=kg_embedding_model, learning_rate=lr,
+                                        num_epochs=params[NUM_EPOCHS],
+                                        batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
+                                        device=device, seed=seed)
 
             # Evaluate trained model
             mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos, entity_to_id=entity_to_id,

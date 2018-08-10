@@ -13,7 +13,7 @@ from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS,
 from utilities.evaluation_utils.compute_metrics import compute_mean_rank, compute_mean_rank_and_hits_at_k, \
     compute_hits_at_k
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
-from utilities.train_utils import train
+from utilities.train_utils import train_model
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
 logging.basicConfig(level=logging.INFO)
@@ -87,9 +87,9 @@ class Pipeline(object):
             params = kb_embedding_model_config
 
             log.info("-------------Train KG Embeddings-------------")
-            trained_model = train(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=num_epochs,
-                                  batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
-                                  device=self.device, seed=self.seed)
+            trained_model = train_model(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=num_epochs,
+                                        batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
+                                        device=self.device, seed=self.seed)
 
             eval_summary = None
 
@@ -115,7 +115,7 @@ class Pipeline(object):
                     eval_summary[MEAN_RANK] = mean_rank
                     eval_summary[HITS_AT_K] = hits_at_k
 
-                elif is_mean_rank_selected == True and is_hits_at_k_selected==False:
+                elif is_mean_rank_selected == True and is_hits_at_k_selected == False:
                     mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
                                                   triples=mapped_pos_test_tripels)
                     eval_summary[MEAN_RANK] = mean_rank
@@ -123,7 +123,6 @@ class Pipeline(object):
                     hits_at_k = compute_hits_at_k(all_entities=all_entities, kg_embedding_model=trained_model,
                                                   triples=mapped_pos_test_tripels, k=10)
                     eval_summary[HITS_AT_K] = hits_at_k
-
 
         # Prepare Output
         id_to_entity = {value: key for key, value in entity_to_id.items()}
