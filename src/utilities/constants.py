@@ -59,6 +59,7 @@ INPUT_DROPOUT = 'input_dropout'
 OUTPUT_DROPOUT = 'output_dropout'
 FEATURE_MAP_DROPOUT = 'feature_map_dropout'
 EVAL_METRICS = 'eval_metrics'
+K_FOR_HITS_AT_K = 'k_for_hits_at_k'
 #CNN related
 NUM_IN_CHANNELS = 'num_input_channel'
 NUM_OUT_CHANNELS = 'num_output_channels'
@@ -119,6 +120,15 @@ SAVE_CONFIG_PRINT_MSG = 'Do you want to save the configuration file?'
 SAVE_CONFIG_PROMPT_MSG = '> \'yes\' or \'no\':'
 SAVE_CONFIG_ERROR_MSG = 'Invalid input, please type \'yes\' or \'no\'.'
 
+K_FOR_HITS_AT_K_PRINT_MSG = 'Please select \'k\' for hits@k'
+K_FOR_HITS_AT_K_PROMPT_MSG = '> k:'
+K_FOR_HITS_AT_K_ERROR_MSG = 'Invalid input \'k\' must be a positive integer.'
+
+TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
+VALIDATION_SET_PRINT_MSG = 'Please provide the path to the validation file.'
+CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
+
+
 TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
@@ -126,5 +136,7 @@ TRAINING_SET_PATH = 'training_set_path'
 VALIDATION_SET_PATH = 'validation_set_path'
 VALIDATION_SET_RATIO = 'validation_set_ratio'
 NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
+
+OUTPUT_DIREC = 'output_direc'
 
 
