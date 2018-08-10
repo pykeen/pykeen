@@ -3,7 +3,7 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS
+from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, TRANS_R
 
 '''Implementation based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py'''
 
@@ -12,7 +12,7 @@ class TransR(nn.Module):
 
     def __init__(self, config):
         super(TransR, self).__init__()
-
+        self.model_name = TRANS_R
         num_entities = config[NUM_ENTITIES]
         num_relations = config[NUM_RELATIONS]
         self.entity_embedding_dim = config[EMBEDDING_DIM]
