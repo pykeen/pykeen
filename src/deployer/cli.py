@@ -18,13 +18,14 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     VALIDATION_SET_RATIO, NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
     MARGIN_LOSS_ERROR_MSG, LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, \
     BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
-    EPOCH_ERROR_MSG, SAVE_CONFIG_PRINT_MSG, SAVE_CONFIG_PROMPT_MSG, SAVE_CONFIG_ERROR_MSG
+    EPOCH_ERROR_MSG, OUTPUT_DIREC, HITS_AT_K, \
+    K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG, K_FOR_HITS_AT_K, \
+    TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG
 from utilities.pipeline import Pipeline
-
 
 mapping = {'yes': True, 'no': False}
 embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD'}
-metrics_maping = {1: 'mean_rank', 2:'hits@k'}
+metrics_maping = {1: 'mean_rank', 2: 'hits@k'}
 normalization_mapping = {1: 'l1', 2: 'l2'}
 execution_mode_mapping = {1: TRAINING, 2: HYPER_PARAMTER_SEARCH}
 
@@ -50,10 +51,7 @@ def select_execution_mode():
         if user_input != '1' and user_input != '2':
             print("Invalid input, please type \'1\' or \'2\' to chose one of the provided execution modes")
         else:
-            is_valid_input = True
-            user_input = int(user_input)
-
-    return user_input
+            return int(user_input)
 
 
 def select_embedding_model():
@@ -129,18 +127,20 @@ def select_eval_metrics():
 
     is_valid_input = False
 
-    while is_valid_input == False:
+    while not is_valid_input:
         is_valid_input = True
         user_input = prompt('> Please select the options comma separated:')
         user_input = user_input.split(',')
 
         for choice in user_input:
-            if choice.isnumeric():
+            if choice == '1' or choice == '2':
                 metrics.append(metrics_maping[int(choice)])
             else:
                 print('Invalid input, please type in a sequence of integers (\'1\' and/or \'2\')')
                 is_valid_input = False
                 break
+
+    metrics = list(set(metrics))
 
     return metrics
 
@@ -199,8 +199,8 @@ def select_hpo_params(model_id):
     return hpo_params
 
 
-def get_data_input_path():
-    print('Please provide the path to the file:')
+def get_data_input_path(print_msg):
+    print(print_msg)
 
     is_valid_input = False
 
@@ -250,7 +250,7 @@ def select_preferred_device():
     print('Do you want to use a GPU if available?')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while not is_valid_input:
         user_input = prompt('> \'yes\' or \'no\':')
 
         if user_input == 'yes' or user_input == 'no':
@@ -263,8 +263,7 @@ def select_integer_value(print_msg, prompt_msg, error_msg):
     print(print_msg)
     is_valid_input = False
 
-    while is_valid_input == False:
-        is_valid_input = True
+    while not is_valid_input:
         user_input = prompt(prompt_msg)
 
         if user_input.isnumeric():
@@ -279,7 +278,7 @@ def select_entites_normalization():
     print('L2-Normalization: 2')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while not is_valid_input:
         is_valid_input = True
         user_input = prompt('> Normalization approach:')
 
@@ -320,7 +319,7 @@ def select_float_value(print_msg, prompt_msg, error_msg):
     print(print_msg)
     is_valid_input = False
 
-    while is_valid_input == False:
+    while not is_valid_input:
         user_input = prompt(prompt_msg)
 
         for float_value in user_input:
@@ -346,7 +345,7 @@ def ask_for_existing_configuration():
 
 def load_config_file():
     is_valid_input = False
-    config_file_path = get_data_input_path()
+    config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PRINT_MSG)
 
     while is_valid_input == False:
         with open(config_file_path, 'rb') as f:
@@ -356,7 +355,7 @@ def load_config_file():
                 return data
             except:
                 print('Invalid file, configuration file must be serialised dictionary (.pkl)')
-                config_file_path = get_data_input_path()
+                config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PRINT_MSG)
 
 
 def ask_binary_question(print_msg, prompt_msg, error_msg):
@@ -371,17 +370,14 @@ def ask_binary_question(print_msg, prompt_msg, error_msg):
             print(error_msg)
 
 
-def save_dict(config_dict):
+def get_output_directory():
     print('Please type in the path to the output directory')
     is_valid_input = False
 
     while is_valid_input == False:
         user_input = prompt('> Path to output director:')
         if os.path.exists(os.path.dirname(user_input)):
-            out_path = os.path.join(user_input, 'configuration.pkl')
-            with open(out_path, 'wb') as handle:
-                pickle.dump(config_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-                is_valid_input = True
+            return user_input
         else:
             print('Invalid input, please type in the path to an existing directory.')
 
@@ -393,7 +389,9 @@ def start_cli():
     configuration_exits = ask_for_existing_configuration()
 
     if configuration_exits:
-        return load_config_file()
+        config = load_config_file()
+        config[OUTPUT_DIREC] = get_output_directory()
+        return config
 
     print('----------------------------')
     exec_mode = select_execution_mode()
@@ -410,25 +408,27 @@ def start_cli():
         config[KG_EMBEDDING_MODEL] = kg_model_params
 
     print('----------------------------')
-    config[EVAL_METRICS] = select_eval_metrics()
+    eval_metrics = select_eval_metrics()
+    config[EVAL_METRICS] = eval_metrics
+
+    if HITS_AT_K in eval_metrics:
+        k = select_integer_value(K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG)
+        config[K_FOR_HITS_AT_K] = k
     print('----------------------------')
 
-    config[TRAINING_SET_PATH] = get_data_input_path()
+    config[TRAINING_SET_PATH] = get_data_input_path(print_msg=TRAINING_SET_PRINT_MSG)
 
     use_validation_set = is_validation_set_provided()
 
     if use_validation_set:
-        config[VALIDATION_SET_PATH] = get_data_input_path()
+        config[VALIDATION_SET_PATH] = get_data_input_path(print_msg=VALIDATION_SET_PRINT_MSG)
     else:
         config[VALIDATION_SET_RATIO] = select_ratio_for_validation_set()
 
     print('----------------------------')
     config[PREFERRED_DEVICE] = select_preferred_device()
 
-    save_config = ask_binary_question(SAVE_CONFIG_PRINT_MSG, SAVE_CONFIG_PROMPT_MSG, SAVE_CONFIG_ERROR_MSG)
-
-    if save_config:
-        save_dict(config)
+    config[OUTPUT_DIREC] = get_output_directory()
 
     return config
 
@@ -445,6 +445,19 @@ def main():
 
     print(eval_summary)
 
+    output_direc = config[OUTPUT_DIREC]
+
+    out_path = os.path.join(output_direc, 'configuration.pkl')
+    with open(out_path, 'wb') as handle:
+        pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    out_path = os.path.join(output_direc, 'entities_to_embeddings.pkl')
+    with open(out_path, 'wb') as handle:
+        pickle.dump(entity_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    out_path = os.path.join(output_direc, 'relations_to_embeddings.pkl')
+    with open(out_path, 'wb') as handle:
+        pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
