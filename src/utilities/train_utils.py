@@ -5,6 +5,8 @@ import numpy as np
 import torch
 import torch.optim as optim
 
+from utilities.constants import CONV_E, TRANS_E, TRANS_H, TRANS_D, TRANS_R
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -12,8 +14,16 @@ log = logging.getLogger(__name__)
 def split_list_in_batches(input_list, batch_size):
     return [input_list[i:i + batch_size] for i in range(0, len(input_list), batch_size)]
 
+def train_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
+    model_name = kg_embedding_model.model_name
 
-def train(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
+    if model_name in [TRANS_E,TRANS_H,TRANS_D,TRANS_R]:
+        return train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
+
+    if model_name == CONV_E:
+        return train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
+
+def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     np.random.seed(seed=seed)
     indices = np.arange(pos_triples.shape[0])
     np.random.shuffle(indices)
@@ -32,7 +42,7 @@ def train(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples
     for epoch in range(num_epochs):
         start = timeit.default_timer()
         pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
-        # neg_batches = split_list_in_batches(input_list=neg_triples, batch_size=batch_size)
+
         for i in range(len(pos_batches)):
             pos_batch = pos_batches[i]
             batch_subjs = pos_batch[:, 0:1]
@@ -77,3 +87,69 @@ def train(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
 
     return kg_embedding_model
+
+def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
+    np.random.seed(seed=seed)
+    indices = np.arange(pos_triples.shape[0])
+    np.random.shuffle(indices)
+    pos_triples = pos_triples[indices]
+
+     # Create labels
+    subject_relation_pairs = pos_triples[:,0:2]
+    entities = np.arange(kg_embedding_model.num_entities)
+    labels = []
+
+    for tuple in subject_relation_pairs:
+        indices_duplicates = (subject_relation_pairs == tuple).all(axis=1).nonzero()
+        objects = pos_triples[indices_duplicates, 2:3]
+        objects = np.unique(np.ndarray.flatten(objects))
+        label_vec = np.in1d(entities,objects)*1
+        labels.append(label_vec)
+
+    kg_embedding_model = kg_embedding_model.to(device)
+    optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
+    total_loss = 0
+
+    log.info('****Run Model On %s****' % str(device).upper())
+    # Train
+    for epoch in range(num_epochs):
+        start = timeit.default_timer()
+        pos_batches = split_list_in_batches(input_list=subject_relation_pairs, batch_size=batch_size)
+        label_batches = split_list_in_batches(input_list=labels, batch_size=batch_size)
+
+        for i in range(len(pos_batches)):
+            optimizer.zero_grad()
+            pos_batch = pos_batches[i]
+            label_batch = label_batches[i]
+            pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=device)
+            label_batch = torch.tensor(label_batch, dtype=torch.long, device=device)
+            loss = kg_embedding_model(pos_batch, label_batch)
+
+            loss.backward()
+            optimizer.step()
+            # Get the Python number from a 1-element Tensor by calling tensor.item()
+            total_loss += loss.item()
+        stop = timeit.default_timer()
+        log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
+
+    return kg_embedding_model
+
+
+
+# if __name__ == '__main__':
+#     triples = np.array([[1, 0, 2], [1, 0, 3], [2, 4, 4]])
+#     subject_relations = np.array([[1, 0], [1, 0], [2, 4]])
+#     hits = []
+#     entities = np.array([0,1,2,3,4],dtype=np.int)
+#
+#
+#     for r in subject_relations:
+#         i = (subject_relations == r).all(axis=1).nonzero()
+#         objects = triples[i, 2:3]
+#         objects = np.unique(np.ndarray.flatten(objects))
+#         print(objects)
+#
+#         t = np.in1d(entities,objects)*1
+#         print(t)
+#         print()
+
