@@ -6,7 +6,7 @@ from torch.nn.init import xavier_normal
 
 from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, NUM_IN_CHANNELS, NUM_OUT_CHANNELS, \
     KERNEL_HEIGHT, KERNEL_WIDTH, INPUT_DROPOUT, OUTPUT_DROPOUT, FEATURE_MAP_DROPOUT, IMAGE_HEIGHT, IMAGE_WIDTH, \
-    BATCH_SIZE
+    BATCH_SIZE, CONV_E
 
 '''
 Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
@@ -17,7 +17,7 @@ class ConvE(nn.Module):
     def __init__(self, config):
         super(ConvE, self).__init__()
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-
+        self.model_name = CONV_E
         num_entities = config[NUM_ENTITIES]
         num_relations = config[NUM_RELATIONS]
         embedding_dim = config[EMBEDDING_DIM]
@@ -52,7 +52,7 @@ class ConvE(nn.Module):
         self.bn1 = torch.nn.BatchNorm2d(num_out_channels)
         self.bn2 = torch.nn.BatchNorm1d(embedding_dim)
         self.register_parameter('b', Parameter(torch.zeros(num_entities)))
-        num_in_features = self.batch_size * num_out_channels * (2 * self.img_height - kernel_height + 1) * (
+        num_in_features = num_out_channels * (2 * self.img_height - kernel_height + 1) * (
                     self.img_width - kernel_width + 1)
         self.fc = torch.nn.Linear(num_in_features, embedding_dim)
 
@@ -88,11 +88,12 @@ class ConvE(nn.Module):
         x = self.bn1(x)
         x = F.relu(x)
         x = self.feature_map_drop(x)
-        # batch_size * num_output_channels 2*height-kernel_height+1 * width-kernel_width+1
+        # batch_size, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
         x = x.view(self.batch_size, -1)
         x = self.fc(x)
 
         x = self.hidden_drop(x)
+
         if self.batch_size > 1:
             x = self.bn2(x)
         x = F.relu(x)
@@ -102,5 +103,39 @@ class ConvE(nn.Module):
         pred = F.sigmoid(x)
 
         return pred
+
+
+import numpy as np
+if __name__ == '__main__':
+    config = dict()
+    config[NUM_ENTITIES] = 8
+    config[NUM_RELATIONS] = 2
+    config[EMBEDDING_DIM] = 10
+    config[NUM_IN_CHANNELS] = 1
+    config[NUM_OUT_CHANNELS]= 20
+    config[KERNEL_HEIGHT] = 5
+    config[KERNEL_WIDTH] = 2
+    config[INPUT_DROPOUT] = 0.2
+    config[OUTPUT_DROPOUT] = 0.2
+    config[FEATURE_MAP_DROPOUT] = 0.2
+    config[IMAGE_HEIGHT] = 5
+    config[IMAGE_WIDTH] = 2
+    config[BATCH_SIZE] = 4
+
+    model = ConvE(config=config)
+    subjects = [1,3,5,7]
+    subjects = torch.tensor(subjects, dtype=torch.long).view(-1,1)
+    objects = [0,2,4,6]
+    objects = torch.tensor(objects, dtype=torch.long).view(-1,1)
+    relations = [0,0,1,1]
+    relations = torch.tensor(relations, dtype=torch.long).view(-1,1)
+
+    steps = 5
+
+    for _ in range(steps):
+        scores = model.forward(subjects,relations)
+        print(scores)
+        print()
+
 
 
