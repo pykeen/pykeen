@@ -99,6 +99,7 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
     entities = np.arange(kg_embedding_model.num_entities)
     labels = []
 
+
     for tuple in subject_relation_pairs:
         indices_duplicates = (subject_relation_pairs == tuple).all(axis=1).nonzero()
         objects = pos_triples[indices_duplicates, 2:3]
@@ -123,7 +124,8 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
             label_batch = label_batches[i]
             pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=device)
             label_batch = torch.tensor(label_batch, dtype=torch.long, device=device)
-            loss = kg_embedding_model(pos_batch, label_batch)
+
+            loss = kg_embedding_model(pos_batch[:,0:1],pos_batch[:,1:2])
 
             loss.backward()
             optimizer.step()
