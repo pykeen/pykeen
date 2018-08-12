@@ -24,7 +24,12 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     CONV_E_INPUT_CHANNELS_PROMPT_MSG, CONV_E_INPUT_CHANNELS_ERROR_MSG, CONV_E_OUT_CHANNELS_PRINT_MSG, \
     CONV_E_OUT_CHANNELS_PROMPT_MSG, CONV_E_OUT_CHANNELS_ERROR_MSG, CONV_E_KERNEL_HEIGHTS_PRINT_MSG, \
     CONV_E_KERNEL_HEIGHTS_PROMPT_MSG, CONV_E_KERNEL_HEIGHTS_ERROR_MSG, CONV_E_KERNEL_WIDTHS_PRINT_MSG, \
-    CONV_E_KERNEL_WIDTHS_PROMPT_MSG, CONV_E_KERNEL_WIDTHS_ERROR_MSG
+    CONV_E_KERNEL_WIDTHS_PROMPT_MSG, CONV_E_KERNEL_WIDTHS_ERROR_MSG, CONV_E_HEIGHT, CONV_E_WIDTH, \
+    CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, \
+    CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, CONV_E_INPUT_DROPOUT_PRINT_MSG, CONV_E_INPUT_DROPOUT_PROMPT_MSG, \
+    CONV_E_INPUT_DROPOUT_ERROR_MSG, CONV_E_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_OUTPUT_DROPOUT_PROMPT_MSG, \
+    CONV_E_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG, CONV_E_FEATURE_MAP_DROPOUT_PROMPT_MSG, \
+    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
@@ -235,12 +240,24 @@ def _select_conv_e_params():
     kernel_widths = select_kernel_sizes(widths, CONV_E_KERNEL_WIDTHS_PRINT_MSG, CONV_E_KERNEL_WIDTHS_PROMPT_MSG,
                                         CONV_E_KERNEL_WIDTHS_ERROR_MSG)
 
-    hpo_params['ConvE_heights'] = heights
-    hpo_params['ConvE_widths'] = widths
-    hpo_params['ConvE_input_channels'] = input_channels
-    hpo_params['ConvE_output_channels'] = output_channels
-    hpo_params['ConvE_kernel_heights'] = kernel_heights
-    hpo_params['ConvE_kernel_widths'] = kernel_widths
+    hpo_params[EMBEDDING_DIM] = embedding_dimensions
+    hpo_params[CONV_E_HEIGHT] = heights
+    hpo_params[CONV_E_WIDTH] = widths
+    hpo_params[CONV_E_INPUT_CHANNELS] = input_channels
+    hpo_params[CONV_E_OUTPUT_CHANNELS] = output_channels
+    hpo_params[CONV_E_KERNEL_HEIGHT] = kernel_heights
+    hpo_params[CONV_E_KERNEL_WIDTH] = kernel_widths
+    hpo_params[CONV_E_INPUT_DROPOUT] = select_float_values(CONV_E_INPUT_DROPOUT_PRINT_MSG,
+                                                           CONV_E_INPUT_DROPOUT_PROMPT_MSG,
+                                                           CONV_E_INPUT_DROPOUT_ERROR_MSG)
+
+    hpo_params[CONV_E_OUTPUT_DROPOUT] = select_float_values(CONV_E_OUTPUT_DROPOUT_PRINT_MSG,
+                                                            CONV_E_OUTPUT_DROPOUT_PROMPT_MSG,
+                                                            CONV_E_OUTPUT_DROPOUT_ERROR_MSG)
+
+    hpo_params[CONV_E_FEATURE_MAP_DROPOUT] = select_float_values(CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG,
+                                                                 CONV_E_FEATURE_MAP_DROPOUT_PROMPT_MSG,
+                                                                 CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG)
 
     return hpo_params
 
@@ -256,6 +273,7 @@ def select_hpo_params(model_id):
     elif model_id == 5:
         # ConvE
         param_dict = _select_conv_e_params()
+        hpo_params.update(param_dict)
     elif model_id == 'Y':
         # TODO: RESCAL
         exit(0)
@@ -519,6 +537,12 @@ def start_cli():
 def main():
     config = start_cli()
 
+    # TODO: Remove
+    output_direc = config[OUTPUT_DIREC]
+    out_path = os.path.join(output_direc, 'configuration_conv_E.pkl')
+    with open(out_path, 'wb') as handle:
+        pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     pipeline = Pipeline(config=config, seed=2)
 
     if HYPER_PARAMTER_OPTIMIZATION_PARAMS in config:
@@ -528,11 +552,10 @@ def main():
 
     print(eval_summary)
 
-    output_direc = config[OUTPUT_DIREC]
-
-    out_path = os.path.join(output_direc, 'configuration.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # output_direc = config[OUTPUT_DIREC]
+    # out_path = os.path.join(output_direc, 'configuration_conv_E.pkl')
+    # with open(out_path, 'wb') as handle:
+    #     pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     out_path = os.path.join(output_direc, 'entities_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
