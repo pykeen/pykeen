@@ -20,11 +20,15 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
     EPOCH_ERROR_MSG, OUTPUT_DIREC, HITS_AT_K, \
     K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG, K_FOR_HITS_AT_K, \
-    TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG
+    TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG, CONV_E_INPUT_CHANNELS_PRINT_MSG, \
+    CONV_E_INPUT_CHANNELS_PROMPT_MSG, CONV_E_INPUT_CHANNELS_ERROR_MSG, CONV_E_OUT_CHANNELS_PRINT_MSG, \
+    CONV_E_OUT_CHANNELS_PROMPT_MSG, CONV_E_OUT_CHANNELS_ERROR_MSG, CONV_E_KERNEL_HEIGHTS_PRINT_MSG, \
+    CONV_E_KERNEL_HEIGHTS_PROMPT_MSG, CONV_E_KERNEL_HEIGHTS_ERROR_MSG, CONV_E_KERNEL_WIDTHS_PRINT_MSG, \
+    CONV_E_KERNEL_WIDTHS_PROMPT_MSG, CONV_E_KERNEL_WIDTHS_ERROR_MSG
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
-embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD'}
+embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5:'ConvE'}
 metrics_maping = {1: 'mean_rank', 2: 'hits@k'}
 normalization_mapping = {1: 'l1', 2: 'l2'}
 execution_mode_mapping = {1: TRAINING, 2: HYPER_PARAMTER_SEARCH}
@@ -60,12 +64,13 @@ def select_embedding_model():
     print("TransH: 2")
     print("TransR: 3")
     print("TransD: 4")
+    print("ConvE: 5")
     is_valid_input = False
 
     while is_valid_input == False:
         user_input = prompt('> Please select one of the options: ')
 
-        if user_input != '1' and user_input != '2':
+        if user_input not in ['1', '2', '3', '4', '5']:
             print(
                 "Invalid input, please type a number between \'1\' and \'4\' for choosing one of the embedding models")
         else:
@@ -162,6 +167,84 @@ def _select_trans_x_params(model_id):
     return hpo_params
 
 
+def select_heights_and_widths(embedding_dimensions):
+    heights = []
+    widths = []
+
+    p_msg = 'Please select for each selected embedding dimension, corrpespoinding heights and widths.\n' \
+            'Make sure that \'embedding dimension\' = \'height * width\' '
+
+    print(p_msg)
+
+    for embedding_dim in embedding_dimensions:
+        is_valid_input = False
+        while not is_valid_input:
+            print("Select height for embedding dimension ", embedding_dim)
+            height = prompt('> Height:')
+
+            print("Select width for embedding dimension ", embedding_dim)
+            width = prompt('> Width:')
+
+            if not (height.isnumeric() and width.isnumeric() and int(height) * int(width) == embedding_dim):
+                print("Invalid input. Height and width must be positive integers, and height * width must equal "
+                      "embedding dimension \'%d\'" % embedding_dim)
+            else:
+                heights.append(int(height))
+                widths.append(int(width))
+                is_valid_input = True
+
+    return heights, widths
+
+
+def select_kernel_sizes(depending_params, print_msg, prompt_msg, error_msg):
+    kernel_params = []
+    print(print_msg)
+
+    for dep_param in depending_params:
+        is_valid_input = False
+
+        while not is_valid_input:
+            kernel_param = prompt(prompt_msg % dep_param)
+
+            if not (kernel_param.isnumeric() and int(kernel_param) <= dep_param):
+                print(error_msg % dep_param)
+            else:
+                kernel_params.append(int(kernel_param))
+                is_valid_input = True
+
+    return kernel_params
+
+
+def _select_conv_e_params():
+    hpo_params = OrderedDict()
+
+    embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSION_PRINT_MSG,
+                                                          EMBEDDING_DIMENSION_PROMPT_MSG,
+                                                          EMBEDDING_DIMENSION_ERROR_MSG)
+
+    heights, widths = select_heights_and_widths(embedding_dimensions)
+
+    input_channels = select_positive_integer_values(CONV_E_INPUT_CHANNELS_PRINT_MSG, CONV_E_INPUT_CHANNELS_PROMPT_MSG,
+                                                    CONV_E_INPUT_CHANNELS_ERROR_MSG)
+
+    output_channels = select_positive_integer_values(CONV_E_OUT_CHANNELS_PRINT_MSG, CONV_E_OUT_CHANNELS_PROMPT_MSG,
+                                                     CONV_E_OUT_CHANNELS_ERROR_MSG)
+
+    kernel_heights = select_kernel_sizes(heights, CONV_E_KERNEL_HEIGHTS_PRINT_MSG, CONV_E_KERNEL_HEIGHTS_PROMPT_MSG,
+                                         CONV_E_KERNEL_HEIGHTS_ERROR_MSG)
+    kernel_widths = select_kernel_sizes(widths, CONV_E_KERNEL_WIDTHS_PRINT_MSG, CONV_E_KERNEL_WIDTHS_PROMPT_MSG,
+                                        CONV_E_KERNEL_WIDTHS_ERROR_MSG)
+
+    hpo_params['ConvE_heights'] = heights
+    hpo_params['ConvE_widths'] = widths
+    hpo_params['ConvE_input_channels'] = input_channels
+    hpo_params['ConvE_output_channels'] = output_channels
+    hpo_params['ConvE_kernel_heights'] = kernel_heights
+    hpo_params['ConvE_kernel_widths'] = kernel_widths
+
+    return hpo_params
+
+
 def select_hpo_params(model_id):
     hpo_params = OrderedDict()
     hpo_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
@@ -170,9 +253,9 @@ def select_hpo_params(model_id):
         # Model is one of the TransX versions
         param_dict = _select_trans_x_params(model_id)
         hpo_params.update(param_dict)
-    elif model_id == 'X':
-        # TODO: ConvE
-        exit(0)
+    elif model_id == 5:
+        # ConvE
+        param_dict = _select_conv_e_params()
     elif model_id == 'Y':
         # TODO: RESCAL
         exit(0)
