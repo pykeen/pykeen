@@ -4,9 +4,10 @@ import torch.nn as nn
 from torch.nn import functional as F, Parameter
 from torch.nn.init import xavier_normal
 
-from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, NUM_IN_CHANNELS, NUM_OUT_CHANNELS, \
-    KERNEL_HEIGHT, KERNEL_WIDTH, INPUT_DROPOUT, OUTPUT_DROPOUT, FEATURE_MAP_DROPOUT, IMAGE_HEIGHT, IMAGE_WIDTH, \
-    BATCH_SIZE, CONV_E
+from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, \
+    CONV_E_FEATURE_MAP_DROPOUT, \
+    BATCH_SIZE, CONV_E, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, \
+    CONV_E_HEIGHT, CONV_E_WIDTH
 
 '''
 Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
@@ -18,23 +19,23 @@ class ConvE(nn.Module):
         super(ConvE, self).__init__()
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.model_name = CONV_E
-        num_entities = config[NUM_ENTITIES]
+        self.num_entities = config[NUM_ENTITIES]
         num_relations = config[NUM_RELATIONS]
         embedding_dim = config[EMBEDDING_DIM]
-        num_in_channels = config[NUM_IN_CHANNELS]
-        num_out_channels = config[NUM_OUT_CHANNELS]
-        kernel_height = config[KERNEL_HEIGHT]
-        kernel_width = config[KERNEL_WIDTH]
-        input_dropout = config[INPUT_DROPOUT]
-        hidden_dropout = config[OUTPUT_DROPOUT]
-        feature_map_dropout = config[FEATURE_MAP_DROPOUT]
-        self.img_height = config[IMAGE_HEIGHT]
-        self.img_width = config[IMAGE_WIDTH]
+        num_in_channels = config[CONV_E_INPUT_CHANNELS]
+        num_out_channels = config[CONV_E_OUTPUT_CHANNELS]
+        kernel_height = config[CONV_E_KERNEL_HEIGHT]
+        kernel_width = config[CONV_E_KERNEL_WIDTH]
+        input_dropout = config[CONV_E_INPUT_DROPOUT]
+        hidden_dropout = config[CONV_E_OUTPUT_DROPOUT]
+        feature_map_dropout = config[CONV_E_FEATURE_MAP_DROPOUT]
+        self.img_height = config[CONV_E_HEIGHT]
+        self.img_width = config[CONV_E_WIDTH]
         self.batch_size = config[BATCH_SIZE]
 
         assert self.img_height * self.img_width == embedding_dim
 
-        self.entity_embeddings = nn.Embedding(num_entities, embedding_dim)
+        self.entity_embeddings = nn.Embedding(self.num_entities, embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, embedding_dim)
         self.inp_drop = torch.nn.Dropout(input_dropout)
         self.hidden_drop = torch.nn.Dropout(hidden_dropout)
@@ -51,15 +52,16 @@ class ConvE(nn.Module):
         # num_features – C from an expected input of size (N,C,H,W)
         self.bn1 = torch.nn.BatchNorm2d(num_out_channels)
         self.bn2 = torch.nn.BatchNorm1d(embedding_dim)
-        self.register_parameter('b', Parameter(torch.zeros(num_entities)))
+        self.register_parameter('b', Parameter(torch.zeros(self.num_entities)))
         num_in_features = num_out_channels * (2 * self.img_height - kernel_height + 1) * (
-                    self.img_width - kernel_width + 1)
+                self.img_width - kernel_width + 1)
         self.fc = torch.nn.Linear(num_in_features, embedding_dim)
 
     def init(self):
         xavier_normal(self.entity_embeddings.weight.data)
         xavier_normal(self.relation_embeddings.weight.data)
 
+    # TODO: Implement loss fct
     def compute_loss(self, pred, targets):
         """
 
@@ -68,7 +70,7 @@ class ConvE(nn.Module):
         :return:
         """
 
-        return self.loss(pred,targets)
+        return self.loss(pred, targets)
 
     def forward(self, e1, rel):
         # batch_size, num_input_channels, width, height
@@ -105,37 +107,33 @@ class ConvE(nn.Module):
         return pred
 
 
-import numpy as np
-if __name__ == '__main__':
-    config = dict()
-    config[NUM_ENTITIES] = 8
-    config[NUM_RELATIONS] = 2
-    config[EMBEDDING_DIM] = 10
-    config[NUM_IN_CHANNELS] = 1
-    config[NUM_OUT_CHANNELS]= 20
-    config[KERNEL_HEIGHT] = 5
-    config[KERNEL_WIDTH] = 2
-    config[INPUT_DROPOUT] = 0.2
-    config[OUTPUT_DROPOUT] = 0.2
-    config[FEATURE_MAP_DROPOUT] = 0.2
-    config[IMAGE_HEIGHT] = 5
-    config[IMAGE_WIDTH] = 2
-    config[BATCH_SIZE] = 4
-
-    model = ConvE(config=config)
-    subjects = [1,3,5,7]
-    subjects = torch.tensor(subjects, dtype=torch.long).view(-1,1)
-    objects = [0,2,4,6]
-    objects = torch.tensor(objects, dtype=torch.long).view(-1,1)
-    relations = [0,0,1,1]
-    relations = torch.tensor(relations, dtype=torch.long).view(-1,1)
-
-    steps = 5
-
-    for _ in range(steps):
-        scores = model.forward(subjects,relations)
-        print(scores)
-        print()
-
-
-
+# if __name__ == '__main__':
+#     config = dict()
+#     config[NUM_ENTITIES] = 8
+#     config[NUM_RELATIONS] = 2
+#     config[EMBEDDING_DIM] = 10
+#     config[CONV_E_INPUT_CHANNELS] = 1
+#     config[CONV_E_OUTPUT_CHANNELS] = 20
+#     config[CONV_E_KERNEL_HEIGHT] = 5
+#     config[CONV_E_KERNEL_WIDTH] = 2
+#     config[CONV_E_INPUT_DROPOUT] = 0.2
+#     config[CONV_E_OUTPUT_DROPOUT] = 0.2
+#     config[CONV_E_FEATURE_MAP_DROPOUT] = 0.2
+#     config[CONV_E_HEIGHT] = 5
+#     config[CONV_E_WIDTH] = 2
+#     config[BATCH_SIZE] = 4
+#
+#     model = ConvE(config=config)
+#     subjects = [1, 3, 5, 7]
+#     subjects = torch.tensor(subjects, dtype=torch.long).view(-1, 1)
+#     objects = [0, 2, 4, 6]
+#     objects = torch.tensor(objects, dtype=torch.long).view(-1, 1)
+#     relations = [0, 0, 1, 1]
+#     relations = torch.tensor(relations, dtype=torch.long).view(-1, 1)
+#
+#     steps = 5
+#
+#     for _ in range(steps):
+#         scores = model.forward(subjects, relations)
+#         print(scores)
+#         print()
