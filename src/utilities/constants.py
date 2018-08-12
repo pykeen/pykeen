@@ -15,7 +15,6 @@ WN_18_TRAIN = 'train'
 WN_18_VALID = 'valid'
 WN_18_TEST = 'test'
 
-
 # Related to CSQA filtered Wikidata
 CSQA_WIKIDATA = 'csqa_wiki_data'
 
@@ -33,9 +32,9 @@ EVALUATOR = 'evaluator'
 MEAN_RANK_EVALUATOR = 'MeanRankEvaluator'
 # Output paths
 ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
-EVAL_RESULTS ='eval_results'
+EVAL_RESULTS = 'eval_results'
 # Device related
-PREFERRED_DEVICE  = 'preferred_device'
+PREFERRED_DEVICE = 'preferred_device'
 CPU = 'cpu'
 GPU = 'gpu'
 RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
@@ -58,7 +57,7 @@ OUTPUT_DROPOUT = 'output_dropout'
 FEATURE_MAP_DROPOUT = 'feature_map_dropout'
 EVAL_METRICS = 'eval_metrics'
 K_FOR_HITS_AT_K = 'k_for_hits_at_k'
-#CNN related
+# CNN related
 NUM_IN_CHANNELS = 'num_input_channel'
 NUM_OUT_CHANNELS = 'num_output_channels'
 KERNEL_HEIGHT = 'kernel_height'
@@ -122,10 +121,25 @@ K_FOR_HITS_AT_K_PRINT_MSG = 'Please select \'k\' for hits@k'
 K_FOR_HITS_AT_K_PROMPT_MSG = '> k:'
 K_FOR_HITS_AT_K_ERROR_MSG = 'Invalid input \'k\' must be a positive integer.'
 
+CONV_E_INPUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of input channels for ConvE'
+CONV_E_INPUT_CHANNELS_PROMPT_MSG = '> Input channels:'
+CONV_E_INPUT_CHANNELS_ERROR_MSG = 'Invalid input, input channels must be positive integers.'
+
+CONV_E_OUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of output channels for ConvE'
+CONV_E_OUT_CHANNELS_PROMPT_MSG = '> Output channels:'
+CONV_E_OUT_CHANNELS_ERROR_MSG = 'Invalid input, output channels must be positive integers.'
+
+CONV_E_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for ConvE'
+CONV_E_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
+CONV_E_KERNEL_HEIGHTS_ERROR_MSG = 'Invalid input, kernel heights must be positive integers and <= than %d (defined height).'
+
+CONV_E_KERNEL_WIDTHS_PRINT_MSG = 'Please select the kernel widths for ConvE'
+CONV_E_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d:'
+CONV_E_KERNEL_WIDTHS_ERROR_MSG = 'Invalid input, kernel widths mus be positive integers and <= than %d (defined width).'
+
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
 VALIDATION_SET_PRINT_MSG = 'Please provide the path to the validation file.'
 CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
-
 
 TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
@@ -143,5 +157,3 @@ TRANS_D = 'TransD'
 TRANS_R = 'TransR'
 
 OUTPUT_DIREC = 'output_direc'
-
-
