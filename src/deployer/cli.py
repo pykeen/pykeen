@@ -33,10 +33,11 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
-embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5:'ConvE'}
+embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'ConvE'}
 metrics_maping = {1: 'mean_rank', 2: 'hits@k'}
 normalization_mapping = {1: 'l1', 2: 'l2'}
 execution_mode_mapping = {1: TRAINING, 2: HYPER_PARAMTER_SEARCH}
+device_question_mapping = {'yes': GPU, 'no': CPU}
 
 
 def print_welcome_message():
@@ -353,12 +354,8 @@ def select_preferred_device():
 
     while not is_valid_input:
         user_input = prompt('> \'yes\' or \'no\':')
-        # TODO: Fix me
         if user_input == 'yes' or user_input == 'no':
-            if user_input == 'yes':
-                return GPU
-            else:
-                return CPU
+            device_question_mapping[user_input]
         else:
             print('Invalid input, please type in \'yes\' or \'no\'')
 
