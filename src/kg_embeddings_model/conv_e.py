@@ -6,7 +6,7 @@ from torch.nn.init import xavier_normal
 
 from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, \
     CONV_E_FEATURE_MAP_DROPOUT, \
-    BATCH_SIZE, CONV_E, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, \
+    CONV_E, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, \
     CONV_E_HEIGHT, CONV_E_WIDTH
 
 '''
@@ -31,7 +31,6 @@ class ConvE(nn.Module):
         feature_map_dropout = config[CONV_E_FEATURE_MAP_DROPOUT]
         self.img_height = config[CONV_E_HEIGHT]
         self.img_width = config[CONV_E_WIDTH]
-        self.batch_size = config[BATCH_SIZE]
 
         assert self.img_height * self.img_width == embedding_dim
 
@@ -61,7 +60,48 @@ class ConvE(nn.Module):
         xavier_normal(self.entity_embeddings.weight.data)
         xavier_normal(self.relation_embeddings.weight.data)
 
-    # TODO: Implement loss fct
+
+    def predict(self,triple_batch):
+        batch_size = triple_batch.shape[0]
+        triple_batch = torch.tensor(triple_batch, dtype=torch.long, device=self.device)
+        subject_batch = triple_batch[:,0:1]
+        relation_batch = triple_batch[:,1:2]
+        object_batch = triple_batch[:,2:3].view(-1)
+
+        subject_batch_embedded = self.entity_embeddings(subject_batch).view(-1, 1, self.img_height, self.img_width)
+        relation_batch_embedded = self.entity_embeddings(relation_batch).view(-1, 1, self.img_height, self.img_width)
+        candidate_object_emebddings = self.entity_embeddings(object_batch)
+
+        # batch_size, num_input_channels, 2*height, width
+        stacked_inputs = torch.cat([subject_batch_embedded, relation_batch_embedded], 2)
+
+        # batch_size, num_input_channels, 2*height, width
+        stacked_inputs = self.bn0(stacked_inputs)
+
+        # batch_size, num_input_channels, 2*height, width
+        x = self.inp_drop(stacked_inputs)
+        # (N,C_out,H_out,W_out)
+        x = self.conv1(x)
+
+        x = self.bn1(x)
+        x = F.relu(x)
+        x = self.feature_map_drop(x)
+        # batch_size, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
+        x = x.view(batch_size, -1)
+        x = self.fc(x)
+        x = self.hidden_drop(x)
+
+        if batch_size > 1:
+            x = self.bn2(x)
+        x = F.relu(x)
+        x = torch.mm(x, candidate_object_emebddings.transpose(1, 0))
+        scores = F.sigmoid(x)
+
+        max_scores, predicted_entities = torch.max(scores,dim=1)
+
+
+        return predicted_entities
+
     def compute_loss(self, pred, targets):
         """
 
@@ -72,10 +112,12 @@ class ConvE(nn.Module):
 
         return self.loss(pred, targets)
 
-    def forward(self, e1, rel):
+    def forward(self, subject_batch, relation_batch):
+        batch_size = subject_batch.shape[0]
+
         # batch_size, num_input_channels, width, height
-        e1_embedded = self.entity_embeddings(e1).view(-1, 1, self.img_height, self.img_width)
-        rel_embedded = self.relation_embeddings(rel).view(-1, 1, self.img_height, self.img_width)
+        e1_embedded = self.entity_embeddings(subject_batch).view(-1, 1, self.img_height, self.img_width)
+        rel_embedded = self.relation_embeddings(relation_batch).view(-1, 1, self.img_height, self.img_width)
 
         # batch_size, num_input_channels, 2*height, width
         stacked_inputs = torch.cat([e1_embedded, rel_embedded], 2)
@@ -87,25 +129,26 @@ class ConvE(nn.Module):
         x = self.inp_drop(stacked_inputs)
         # (N,C_out,H_out,W_out)
         x = self.conv1(x)
+
         x = self.bn1(x)
         x = F.relu(x)
         x = self.feature_map_drop(x)
         # batch_size, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
-        x = x.view(self.batch_size, -1)
+        x = x.view(batch_size, -1)
         x = self.fc(x)
-
         x = self.hidden_drop(x)
 
-        if self.batch_size > 1:
+        if batch_size > 1:
             x = self.bn2(x)
         x = F.relu(x)
+
         x = torch.mm(x, self.entity_embeddings.weight.transpose(1, 0))
+
         # TODO: Why this?
         x += self.b.expand_as(x)
         pred = F.sigmoid(x)
 
         return pred
-
 
 # if __name__ == '__main__':
 #     config = dict()
