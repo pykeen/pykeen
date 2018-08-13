@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
 from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
     GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, VALIDATION_SET_PATH, VALIDATION_SET_RATIO, \
-    EVAL_METRICS, MEAN_RANK, HITS_AT_K
+    EVAL_METRICS, MEAN_RANK, HITS_AT_K, CPU
 from utilities.evaluation_utils.compute_metrics import compute_mean_rank, compute_mean_rank_and_hits_at_k, \
     compute_hits_at_k
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
@@ -26,7 +26,7 @@ class Pipeline(object):
         self.config = config
         self.seed = seed
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else 'cpu')
+            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
 
     def start_hpo(self):
         return self._start_pipeline(is_hpo_mode=True)
