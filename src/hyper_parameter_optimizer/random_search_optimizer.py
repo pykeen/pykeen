@@ -50,6 +50,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
         entity_to_ids = []
         rel_to_ids = []
         models_params = []
+        eval_summaries = []
 
         # general params
         hyperparams_dict = config[HYPER_PARAMTER_OPTIMIZATION_PARAMS]
@@ -119,22 +120,27 @@ class RandomSearchHPO(AbstractHPOptimizer):
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_summary[HITS_AT_K] = hits_at_k
                 eval_results.append(mean_rank)
+                eval_summaries.append(eval_summary)
 
             if is_mean_rank_selected == True and is_hits_at_k_selected == False:
                 mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
                                               triples=mapped_pos_test_tripels)
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_results.append(mean_rank)
+                eval_summaries.append(eval_summary)
             if is_hits_at_k_selected == True and is_mean_rank_selected == False:
                 k = config[K_FOR_HITS_AT_K]
                 hits_at_k = compute_hits_at_k(all_entities=all_entities, kg_embedding_model=trained_model,
                                               triples=mapped_pos_test_tripels, k=k)
                 eval_summary[HITS_AT_K] = hits_at_k
                 eval_results.append(hits_at_k)
+                eval_summaries.append(eval_summary)
 
             trained_models.append(trained_model)
 
         index_of_max = np.argmax(a=eval_results)
 
+
+
         return trained_models[index_of_max], entity_to_ids[index_of_max], rel_to_ids[index_of_max], \
-               eval_results[index_of_max], MEAN_RANK, models_params[index_of_max]
+               eval_summaries[index_of_max], MEAN_RANK, models_params[index_of_max]
