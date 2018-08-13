@@ -29,7 +29,7 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, CONV_E_INPUT_DROPOUT_PRINT_MSG, CONV_E_INPUT_DROPOUT_PROMPT_MSG, \
     CONV_E_INPUT_DROPOUT_ERROR_MSG, CONV_E_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_OUTPUT_DROPOUT_PROMPT_MSG, \
     CONV_E_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG, CONV_E_FEATURE_MAP_DROPOUT_PROMPT_MSG, \
-    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG
+    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG, GPU, CPU
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
@@ -353,9 +353,12 @@ def select_preferred_device():
 
     while not is_valid_input:
         user_input = prompt('> \'yes\' or \'no\':')
-
+        # TODO: Fix me
         if user_input == 'yes' or user_input == 'no':
-            return user_input
+            if user_input == 'yes':
+                return GPU
+            else:
+                return CPU
         else:
             print('Invalid input, please type in \'yes\' or \'no\'')
 
