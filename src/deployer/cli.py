@@ -539,7 +539,7 @@ def main():
 
     # TODO: Remove
     output_direc = config[OUTPUT_DIREC]
-    out_path = os.path.join(output_direc, 'configuration_conv_E.pkl')
+    out_path = os.path.join(output_direc, 'configuration.pkl')
     with open(out_path, 'wb') as handle:
         pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -549,8 +549,6 @@ def main():
         trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_hpo()
     else:
         trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
-
-    print(eval_summary)
 
     # output_direc = config[OUTPUT_DIREC]
     # out_path = os.path.join(output_direc, 'configuration_conv_E.pkl')
@@ -564,6 +562,10 @@ def main():
     out_path = os.path.join(output_direc, 'relations_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
         pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    out_path = os.path.join(output_direc, 'evaluation_summary.pkl')
+    with open(out_path, 'wb') as handle:
+        pickle.dump(eval_summary, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
