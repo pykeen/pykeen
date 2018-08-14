@@ -588,14 +588,19 @@ def main():
             handle.write("%s: %s \n" % (str(key),str(val)))
 
 
-    out_path = os.path.join(output_direc, 'losses.png')
-    epochs = np.arange(len(loss_per_epoch))
-    plt.title(r'Loss Per Epoch')
-    plt.xlabel('epoch')
-    plt.ylabel('loss')
 
-    plt.plot(epochs, loss_per_epoch)
-    plt.savefig(out_path)
+    out_path = os.path.join(output_direc, 'losses.txt')
+    with open(out_path, 'w') as handle:
+        handle.write(json.dumps(loss_per_epoch))
+
+    # out_path = os.path.join(output_direc, 'losses.png')
+    # epochs = np.arange(len(loss_per_epoch))
+    # plt.title(r'Loss Per Epoch')
+    # plt.xlabel('epoch')
+    # plt.ylabel('loss')
+    #
+    # plt.plot(epochs, loss_per_epoch)
+    # plt.savefig(out_path)
 
 
 if __name__ == '__main__':
