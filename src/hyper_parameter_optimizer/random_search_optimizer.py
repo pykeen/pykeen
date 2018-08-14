@@ -51,6 +51,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
         rel_to_ids = []
         models_params = []
         eval_summaries = []
+        epoch_losses = []
 
         # general params
         hyperparams_dict = config[HYPER_PARAMTER_OPTIMIZATION_PARAMS]
@@ -101,7 +102,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             entity_to_ids.append(entity_to_id)
             rel_to_ids.append(rel_to_id)
 
-            trained_model = train_model(kg_embedding_model=kg_embedding_model,
+            trained_model, epoch_loss = train_model(kg_embedding_model=kg_embedding_model,
                                         learning_rate=kg_embedding_model_config[LEARNING_RATE],
                                         num_epochs=kg_embedding_model_config[NUM_EPOCHS],
                                         batch_size=kg_embedding_model_config[BATCH_SIZE],
@@ -137,10 +138,12 @@ class RandomSearchHPO(AbstractHPOptimizer):
                 eval_summaries.append(eval_summary)
 
             trained_models.append(trained_model)
+            epoch_losses.append(epoch_loss)
 
         index_of_max = np.argmax(a=eval_results)
 
 
 
-        return trained_models[index_of_max], entity_to_ids[index_of_max], rel_to_ids[index_of_max], \
+
+        return trained_models[index_of_max],epoch_losses[index_of_max], entity_to_ids[index_of_max], rel_to_ids[index_of_max], \
                eval_summaries[index_of_max], MEAN_RANK, models_params[index_of_max]
