@@ -49,12 +49,11 @@ class Pipeline(object):
             train_pos = pos_triples
             test_pos = np.loadtxt(fname=self.config[VALIDATION_SET_PATH], dtype=str,
                                   comments='@Comment@ Subject Predicate Object')
-        elif VALIDATION_SET_PATH in self.config and is_hpo_mode:
-            ratio_test_data = self.config[VALIDATION_SET_RATIO]
-            train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
         else:
             train_pos = pos_triples
-            has_test_set = False
+            ratio_test_data = self.config[VALIDATION_SET_RATIO]
+            train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
+            # has_test_set = False
 
         # Create entity and relation mapping
         all_triples = np.concatenate([train_pos, test_pos], axis=0)
