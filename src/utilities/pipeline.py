@@ -65,7 +65,7 @@ class Pipeline(object):
         if is_hpo_mode:
             hp_optimizer = RandomSearchHPO()
 
-            trained_model, entity_to_embedding, relation_to_embedding, eval_summary, metric_string, params = hp_optimizer.optimize_hyperparams(
+            trained_model, loss_per_epoch, entity_to_embedding, relation_to_embedding, eval_summary, metric_string, params = hp_optimizer.optimize_hyperparams(
                 train_pos, test_pos,
                 entity_to_id,
                 rel_to_id,
@@ -87,9 +87,11 @@ class Pipeline(object):
             params = kb_embedding_model_config
 
             log.info("-------------Train KG Embeddings-------------")
-            trained_model = train_model(kg_embedding_model=kg_embedding_model, learning_rate=lr, num_epochs=num_epochs,
-                                        batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
-                                        device=self.device, seed=self.seed)
+            trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model, learning_rate=lr,
+                                                        num_epochs=num_epochs,
+                                                        batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
+                                                        device=self.device, seed=self.seed)
+
 
             eval_summary = None
 
@@ -132,4 +134,4 @@ class Pipeline(object):
         relation_to_embedding = {id_to_rel[id]: embedding.detach().cpu().numpy() for id, embedding in
                                  enumerate(trained_model.relation_embeddings.weight)}
 
-        return trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params
+        return trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params

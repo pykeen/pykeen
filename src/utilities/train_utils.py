@@ -33,6 +33,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
 
     total_loss = 0
+    loss_per_epoch = []
 
     log.info('****Run Model On %s****' % str(device).upper())
 
@@ -42,6 +43,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
     for epoch in range(num_epochs):
         start = timeit.default_timer()
         pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
+        current_epoch_loss = 0.
 
         for i in range(len(pos_batches)):
             pos_batch = pos_batches[i]
@@ -77,6 +79,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             optimizer.zero_grad()
 
             loss = kg_embedding_model(pos_batch, neg_batch)
+            current_epoch_loss += loss.item()
 
             loss.backward()
             optimizer.step()
@@ -85,8 +88,10 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             total_loss += loss.item()
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
+        # Track epoch loss
+        loss_per_epoch.append(current_epoch_loss)
 
-    return kg_embedding_model
+    return kg_embedding_model, loss_per_epoch
 
 def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     np.random.seed(seed=seed)
@@ -109,6 +114,7 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
     kg_embedding_model = kg_embedding_model.to(device)
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
     total_loss = 0
+    loss_per_epoch = []
 
     log.info('****Run Model On %s****' % str(device).upper())
     # Train
@@ -116,6 +122,7 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
         start = timeit.default_timer()
         pos_batches = split_list_in_batches(input_list=subject_relation_pairs, batch_size=batch_size)
         label_batches = split_list_in_batches(input_list=labels, batch_size=batch_size)
+        current_epoch_loss = 0.
 
         for i in range(len(pos_batches)):
             optimizer.zero_grad()
@@ -130,10 +137,13 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
             optimizer.step()
             # Get the Python number from a 1-element Tensor by calling tensor.item()
             total_loss += loss.item()
+            current_epoch_loss += loss.item()
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
+        loss_per_epoch.append(current_epoch_loss)
+        print(current_epoch_loss)
 
-    return kg_embedding_model
+    return kg_embedding_model, loss_per_epoch
 
 
 

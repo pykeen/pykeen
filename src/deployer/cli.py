@@ -1,6 +1,12 @@
 import os
 import pickle
 import sys
+import time
+import json
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.matplotlib_fname()
 
 w_dir = os.path.dirname(os.getcwd())
 sys.path.append(w_dir)
@@ -355,7 +361,7 @@ def select_preferred_device():
     while not is_valid_input:
         user_input = prompt('> \'yes\' or \'no\':')
         if user_input == 'yes' or user_input == 'no':
-            device_question_mapping[user_input]
+            return device_question_mapping[user_input]
         else:
             print('Invalid input, please type in \'yes\' or \'no\'')
 
@@ -539,16 +545,25 @@ def main():
 
     # TODO: Remove
     output_direc = config[OUTPUT_DIREC]
+
+    current_time = time.strftime("%H:%M:%S")
+    current_date = time.strftime("%d/%m/%Y").replace('/', '-')
+    output_direc = os.path.join(output_direc, current_date + '_' + current_time + '')
+
+    os.makedirs(output_direc, exist_ok=True)
+
     out_path = os.path.join(output_direc, 'configuration.pkl')
     with open(out_path, 'wb') as handle:
         pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+
+
     pipeline = Pipeline(config=config, seed=2)
 
     if HYPER_PARAMTER_OPTIMIZATION_PARAMS in config:
-        trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_hpo()
+        trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_hpo()
     else:
-        trained_model, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
+        trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
 
     # output_direc = config[OUTPUT_DIREC]
     # out_path = os.path.join(output_direc, 'configuration_conv_E.pkl')
@@ -563,9 +578,24 @@ def main():
     with open(out_path, 'wb') as handle:
         pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out_path = os.path.join(output_direc, 'evaluation_summary.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(eval_summary, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    out_path = os.path.join(output_direc, 'evaluation_summary.txt')
+    with open(out_path, 'w') as handle:
+        handle.write(json.dumps(eval_summary))
+
+    out_path = os.path.join(output_direc, 'hyper_parameters.txt')
+    with open(out_path, 'w') as handle:
+        for key, val in params.items():
+            handle.write("%s: %s \n" % (str(key),str(val)))
+
+
+    out_path = os.path.join(output_direc, 'losses.png')
+    epochs = np.arange(len(loss_per_epoch))
+    plt.title(r'Loss Per Epoch')
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+
+    plt.plot(epochs, loss_per_epoch)
+    plt.savefig(out_path)
 
 
 if __name__ == '__main__':
