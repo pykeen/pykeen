@@ -4,9 +4,9 @@ import sys
 import time
 import json
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-matplotlib.matplotlib_fname()
+# import matplotlib
+# import matplotlib.pyplot as plt
+# matplotlib.matplotlib_fname()
 
 w_dir = os.path.dirname(os.getcwd())
 sys.path.append(w_dir)
