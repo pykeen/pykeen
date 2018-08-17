@@ -14,20 +14,23 @@ log = logging.getLogger(__name__)
 def split_list_in_batches(input_list, batch_size):
     return [input_list[i:i + batch_size] for i in range(0, len(input_list), batch_size)]
 
+
 def train_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     model_name = kg_embedding_model.model_name
 
-    if model_name in [TRANS_E,TRANS_H,TRANS_D,TRANS_R]:
+    if model_name in [TRANS_E, TRANS_H, TRANS_D, TRANS_R]:
         return train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
 
     if model_name == CONV_E:
         return train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
+
 
 def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     np.random.seed(seed=seed)
     indices = np.arange(pos_triples.shape[0])
     np.random.shuffle(indices)
     pos_triples = pos_triples[indices]
+
     kg_embedding_model = kg_embedding_model.to(device)
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
@@ -93,14 +96,15 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
     return kg_embedding_model, loss_per_epoch
 
+
 def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     np.random.seed(seed=seed)
     indices = np.arange(pos_triples.shape[0])
     np.random.shuffle(indices)
     pos_triples = pos_triples[indices]
 
-     # Create labels
-    subject_relation_pairs = pos_triples[:,0:2]
+    # Create labels
+    subject_relation_pairs = pos_triples[:, 0:2]
     entities = np.arange(kg_embedding_model.num_entities)
     labels = []
 
@@ -108,7 +112,7 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
         indices_duplicates = (subject_relation_pairs == tuple).all(axis=1).nonzero()
         objects = pos_triples[indices_duplicates, 2:3]
         objects = np.unique(np.ndarray.flatten(objects))
-        label_vec = np.in1d(entities,objects)*1
+        label_vec = np.in1d(entities, objects) * 1
         labels.append(label_vec)
 
     kg_embedding_model = kg_embedding_model.to(device)
@@ -131,7 +135,7 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
             pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=device)
             label_batch = torch.tensor(label_batch, dtype=torch.float, device=device)
 
-            predictions = kg_embedding_model(pos_batch[:,0:1],pos_batch[:,1:2])
+            predictions = kg_embedding_model(pos_batch[:, 0:1], pos_batch[:, 1:2])
             loss = kg_embedding_model.compute_loss(pred=predictions, targets=label_batch)
             loss.backward()
             optimizer.step()
@@ -141,11 +145,8 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         loss_per_epoch.append(current_epoch_loss)
-        print(current_epoch_loss)
 
     return kg_embedding_model, loss_per_epoch
-
-
 
 # if __name__ == '__main__':
 #     triples = np.array([[1, 0, 2], [1, 0, 3], [2, 4, 4]])
@@ -163,4 +164,3 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
 #         t = np.in1d(entities,objects)*1
 #         print(t)
 #         print()
-
