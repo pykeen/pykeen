@@ -69,6 +69,7 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
     ranks = []
     in_top_k = []
 
+
     column_to_maintain_offsets, corrupted_column_offsets, concatenate_fct = get_stratey_for_corrupting(
         corrupt_suject=corrupt_suject)
 
@@ -89,10 +90,14 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         pos_triple = np.expand_dims(a=pos_triple, axis=0)
 
         score_of_positive = kg_embedding_model.predict(pos_triple)
+
         scores = np.append(arr=scores_of_corrupted, values=score_of_positive)
-        scores = np.sort(a=scores)
+        indice_of_pos = scores.size-1
+
+        scores = np.argsort(a=scores)
+
         # Get index of first occurence that fulfills the condition
-        ranks.append(np.where(scores == score_of_positive)[0][0])
+        ranks.append(np.where(scores == indice_of_pos)[0][0])
 
         # print(scores)
         top_k = scores[-k:]
