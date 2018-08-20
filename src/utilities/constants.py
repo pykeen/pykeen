@@ -91,10 +91,10 @@ EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
 
 MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
-MARGIN_LOSS_PROMPT_MSG = '> Margin losse:'
+MARGIN_LOSS_PROMPT_MSG = '> Margin loss:'
 MARGIN_LOSS_ERROR_MSG = 'Invalid input, please type in a float value.'
 
-LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate comma separated:'
+LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate:'
 LEARNING_RATE_PROMPT_MSG = '> Learning rate:'
 LEARNING_RATE_ERROR_MSG = 'Invalid input, please type in a float value.'
 
