@@ -1,9 +1,9 @@
+import json
 import os
 import pickle
 import sys
 import time
-import json
-import numpy as np
+
 # import matplotlib
 # import matplotlib.pyplot as plt
 # matplotlib.matplotlib_fname()
@@ -428,14 +428,12 @@ def select_float_value(print_msg, prompt_msg, error_msg):
 
     while not is_valid_input:
         user_input = prompt(prompt_msg)
-
-        for float_value in user_input:
-            try:
-                float_value = float(float_value)
-                return float_value
-            except ValueError:
-                print(error_msg)
-                break
+        try:
+            float_value = float(user_input)
+            return float_value
+        except ValueError:
+            print(error_msg)
+            break
 
 
 def ask_for_existing_configuration():
@@ -556,8 +554,6 @@ def main():
     with open(out_path, 'wb') as handle:
         pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-
     pipeline = Pipeline(config=config, seed=2)
 
     if HYPER_PARAMTER_OPTIMIZATION_PARAMS in config:
@@ -585,9 +581,7 @@ def main():
     out_path = os.path.join(output_direc, 'hyper_parameters.txt')
     with open(out_path, 'w') as handle:
         for key, val in params.items():
-            handle.write("%s: %s \n" % (str(key),str(val)))
-
-
+            handle.write("%s: %s \n" % (str(key), str(val)))
 
     out_path = os.path.join(output_direc, 'losses.txt')
     with open(out_path, 'w') as handle:
