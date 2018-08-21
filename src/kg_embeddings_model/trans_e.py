@@ -22,7 +22,7 @@ class TransE(nn.Module):
         self.entities_embeddings = nn.Embedding(num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
         self.margin_loss = margin_loss
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     def compute_loss(self, pos_scores, neg_scores):
@@ -38,10 +38,10 @@ class TransE(nn.Module):
         # NOTE: y = 1 is important
         y = torch.tensor([1], dtype=torch.float, device=self.device)
 
-        # pos_score = pos_score.unsqueeze(0)
-        # neg_score = neg_score.unsqueeze(0)
+        # Scores for the psotive and negative triples
         pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
+
         loss = self.criterion(pos_scores, neg_scores, y)
 
         return loss
