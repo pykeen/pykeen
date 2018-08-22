@@ -4,7 +4,7 @@ import torch.autograd
 import torch.nn as nn
 
 from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, NORMALIZATION_OF_ENTITIES, \
-    TRANS_E
+    TRANS_E, PREFERRED_DEVICE, GPU, CPU
 
 
 class TransE(nn.Module):
@@ -23,7 +23,8 @@ class TransE(nn.Module):
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
         self.margin_loss = margin_loss
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
 
     def compute_loss(self, pos_scores, neg_scores):
         """
