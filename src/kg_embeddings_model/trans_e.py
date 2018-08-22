@@ -26,6 +26,13 @@ class TransE(nn.Module):
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
+        # self._init()
+
+
+    def _init(self):
+        nn.init.xavier_uniform(self.entities_embeddings.weight.data)
+        nn.init.xavier_uniform(self.relation_embeddings.weight.data)
+
     def compute_loss(self, pos_scores, neg_scores):
         """
 
@@ -44,6 +51,7 @@ class TransE(nn.Module):
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
+
 
         return loss
 
