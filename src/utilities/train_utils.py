@@ -94,16 +94,20 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             #             # print('################')
 
 
-            sum_w = []
+            sum_grads = []
+            sum_ws = []
             for p in kg_embedding_model.parameters():
                 # print(p.shape)
                 # print(torch.sum(p))
                 if p.grad is not None:
-                    sum_w.append(torch.sum(p.grad))
+                    sum_grads.append(torch.sum(torch.abs(p.grad)))
+                sum_ws.append(torch.sum(torch.abs(p)))
 
-            sum_w = torch.tensor(sum_w)
+            sum_grads = torch.tensor(sum_grads)
+            sum_ws = torch.tensor(sum_ws)
             # print(torch.sum(sum_w))
-            log.info("Sum of grads: %f", np.sum(np.array(sum_w)))
+            log.info("Absoulte sum of grads: %f", np.sum(np.array(sum_grads)))
+            log.info("Absolute sum of weights: %f", np.sum(np.array(sum_ws)))
 
             log.info("+++++++")
 
