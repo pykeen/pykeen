@@ -78,6 +78,7 @@ class Pipeline(object):
             kb_embedding_model_config = self.config[KG_EMBEDDING_MODEL]
             kb_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
             kb_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
+            kb_embedding_model_config[PREFERRED_DEVICE] = self.device
             kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
 
             batch_size = kb_embedding_model_config[BATCH_SIZE]
