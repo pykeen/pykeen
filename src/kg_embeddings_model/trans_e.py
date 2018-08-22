@@ -89,10 +89,8 @@ class TransE(nn.Module):
 
         scores = self.compute_score(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
 
-        if self.device == 'cuda':
-            return scores.detach().cpu().numpy()
-        else:
-            return scores.detach().numpy()
+        return scores.detach().cpu().numpy()
+
 
 
     def forward(self, pos_exmpls, neg_exmpls):
