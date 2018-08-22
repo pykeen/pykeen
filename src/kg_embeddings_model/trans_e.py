@@ -24,7 +24,7 @@ class TransE(nn.Module):
         self.margin_loss = margin_loss
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
         self.device = torch.device(
-            'cuda' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
+            'cuda' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
     def compute_loss(self, pos_scores, neg_scores):
         """
