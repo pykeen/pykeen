@@ -40,6 +40,8 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
     log.info('****Run Model On %s****' % str(device).upper())
 
+    model_params = kg_embedding_model.parameters()
+
     subjects = pos_triples[:, 0:1]
     objects = pos_triples[:, 2:3]
 
@@ -79,10 +81,44 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             # instance
             # model.zero_grad()
             # When to use model.zero_grad() and when optimizer.zero_grad() ?
-            optimizer.zero_grad()
+
+            # optimizer.zero_grad()
+            kg_embedding_model.zero_grad()
 
             loss = kg_embedding_model(pos_batch, neg_batch)
             current_epoch_loss += loss.item()
+
+            # model_params = kg_embedding_model.parameters()
+            #             # for p in model_params:
+            #             #     print(p.grad)
+            #             # print('################')
+
+
+            sum_w = []
+            for p in kg_embedding_model.parameters():
+                # print(p.shape)
+                # print(torch.sum(p))
+                if p.grad is not None:
+                    sum_w.append(torch.sum(p.grad))
+
+            sum_w = torch.tensor(sum_w)
+            # print(torch.sum(sum_w))
+            log.info("Sum of grads: %f", np.sum(np.array(sum_w)))
+
+            log.info("+++++++")
+
+
+
+
+            # for p in kg_embedding_model.parameters():
+            #     if p.grad is not None:
+            #         # print("Param: ", p)
+            #         # print("Gradient: ", p.grad)
+            #         # print("Shape of gradient:", p.grad.shape)
+            #         # print(p.grad[0].numpy().tolist())
+            #         if p.grad[0].numpy().tolist() != [0.,0.,0.,0.] or p.grad[1].numpy().tolist() != [0.,0.,0.,0.]:
+            #             print("Good: ", p.grad[0].numpy().tolist())
+
 
             loss.backward()
             optimizer.step()
