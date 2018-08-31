@@ -117,7 +117,8 @@ class RandomSearchHPO(AbstractHPOptimizer):
                 k = config[K_FOR_HITS_AT_K]
                 mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
                                                                        kg_embedding_model=trained_model,
-                                                                       triples=mapped_pos_test_tripels, k=k)
+                                                                       triples=mapped_pos_test_tripels,
+                                                                       device=device, k=k)
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_summary[HITS_AT_K] = hits_at_k
                 eval_results.append(mean_rank)
@@ -125,14 +126,14 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
             if is_mean_rank_selected == True and is_hits_at_k_selected == False:
                 mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
-                                              triples=mapped_pos_test_tripels)
+                                              triples=mapped_pos_test_tripels, device=device)
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_results.append(mean_rank)
                 eval_summaries.append(eval_summary)
             if is_hits_at_k_selected == True and is_mean_rank_selected == False:
                 k = config[K_FOR_HITS_AT_K]
                 hits_at_k = compute_hits_at_k(all_entities=all_entities, kg_embedding_model=trained_model,
-                                              triples=mapped_pos_test_tripels, k=k)
+                                              triples=mapped_pos_test_tripels, device=device, k=k)
                 eval_summary[HITS_AT_K] = hits_at_k
                 eval_results.append(hits_at_k)
                 eval_summaries.append(eval_summary)

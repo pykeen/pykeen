@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import timeit
-
+import torch
 import numpy as np
 
 from utilities.evaluation_utils.evaluation_helper import get_stratey_for_corrupting
@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
+def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
     start = timeit.default_timer()
     ranks_subject_based, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
                                                                     kg_embedding_model=kg_embedding_model,
@@ -31,7 +31,7 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, k
     return mean_rank, hits_at_k
 
 
-def compute_mean_rank(all_entities, kg_embedding_model, triples):
+def compute_mean_rank(all_entities, kg_embedding_model, triples, device):
     start = timeit.default_timer()
     ranks_subject_based, _ = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
                                               triples=triples, corrupt_suject=True)
@@ -40,6 +40,8 @@ def compute_mean_rank(all_entities, kg_embedding_model, triples):
                                              triples=triples, corrupt_suject=False)
     ranks = ranks_subject_based + ranks_object_based
     mean_rank = np.mean(ranks)
+    log.info("Ranks in compute: %s" % ranks)
+    log.info("MEan rank in compute: %s" % mean_rank)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
@@ -47,7 +49,7 @@ def compute_mean_rank(all_entities, kg_embedding_model, triples):
     return mean_rank
 
 
-def compute_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
+def compute_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
     start = timeit.default_timer()
     _, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
                                                   triples=triples, corrupt_suject=True, k=k)
@@ -65,7 +67,7 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, k=10):
     return hits_at_k
 
 
-def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, k=10):
+def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, device, k=10):
     ranks = []
     in_top_k = []
 
@@ -88,16 +90,18 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
         pos_triple = np.array(triples[row_nmbr])
         pos_triple = np.expand_dims(a=pos_triple, axis=0)
+        pos_triple = torch.tensor(pos_triple,dtype=torch.long,device=device)
 
         score_of_positive = kg_embedding_model.predict(pos_triple)
 
         scores = np.append(arr=scores_of_corrupted, values=score_of_positive)
-        indice_of_pos = scores.size-1
+        indice_of_pos = scores.size - 1
 
         scores = np.argsort(a=scores)
 
         # Get index of first occurence that fulfills the condition
         ranks.append(np.where(scores == indice_of_pos)[0][0])
+        log.info("Ranks: %s" % ranks)
 
         # print(scores)
         top_k = scores[-k:]

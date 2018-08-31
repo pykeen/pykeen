@@ -19,17 +19,12 @@ class TransE(nn.Module):
         margin_loss = config[MARGIN_LOSS]
 
         self.device = torch.device(
-            'cuda' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
         self.l_p_norm = config[NORMALIZATION_OF_ENTITIES]
         self.entities_embeddings = nn.Embedding(num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
 
-        if self.device == 'cuda':
-            self.entities_embeddings.cuda(device=self.device)
-            self.relation_embeddings.cuda(device=self.device)
-            print("Yes")
-            exit(0)
 
         self.margin_loss = margin_loss
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
@@ -100,10 +95,6 @@ class TransE(nn.Module):
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
-
-        # heads = torch.tensor(triples[:, 0:1], dtype=torch.long, device=self.device)
-        # relations = torch.tensor(triples[:, 1:2], dtype=torch.long, device=self.device)
-        # tails = torch.tensor(triples[:, 2:3], dtype=torch.long, device=self.device)
 
         head_embs = self.entities_embeddings(heads).view(-1, self.embedding_dim)
         relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
