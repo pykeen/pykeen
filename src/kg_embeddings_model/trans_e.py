@@ -88,12 +88,9 @@ class TransE(nn.Module):
         """
         triples = torch.tensor(triples, dtype=torch.long, device=self.device)
 
-        print(self.device)
-        exit(0)
-
-        heads = triples[:, 0:1]
-        relations = triples[:, 1:2]
-        tails = triples[:, 2:3]
+        heads = torch.tensor(triples[:, 0:1], dtype=torch.long, device=self.device)
+        relations = torch.tensor(triples[:, 1:2], dtype=torch.long, device=self.device)
+        tails = torch.tensor(triples[:, 2:3], dtype=torch.long, device=self.device)
 
         head_embs = self.entities_embeddings(heads).view(-1, self.embedding_dim)
         relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
