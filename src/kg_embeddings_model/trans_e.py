@@ -88,6 +88,9 @@ class TransE(nn.Module):
         """
         triples = torch.tensor(triples, dtype=torch.long, device=self.device)
 
+        print(self.device)
+        exit(0)
+
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
