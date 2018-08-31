@@ -26,7 +26,7 @@ class Pipeline(object):
         self.config = config
         self.seed = seed
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
+            'cuda' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
 
     def start_hpo(self):
         return self._start_pipeline(is_hpo_mode=True)
