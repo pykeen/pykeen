@@ -117,10 +117,6 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
             log.info("+++++++")
 
-            if i == 50:
-                exit(0)
-
-
 
 
             # for p in kg_embedding_model.parameters():
