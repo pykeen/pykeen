@@ -90,13 +90,13 @@ class TransE(nn.Module):
         :param tail:
         :return:
         """
-        triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
 
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
 
-        head_embs = torch.tensor(self.entities_embeddings(heads).view(-1, self.embedding_dim), dtype=torch.long, device=self.device)
+        head_embs = self.entities_embeddings(heads).view(-1, self.embedding_dim)
         relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
         tail_embs = self.entities_embeddings(tails).view(-1, self.embedding_dim)
 

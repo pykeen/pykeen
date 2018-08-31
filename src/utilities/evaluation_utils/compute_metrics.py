@@ -71,6 +71,8 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
     ranks = []
     in_top_k = []
 
+    kg_embedding_model = kg_embedding_model.to(device)
+
 
     column_to_maintain_offsets, corrupted_column_offsets, concatenate_fct = get_stratey_for_corrupting(
         corrupt_suject=corrupt_suject)
