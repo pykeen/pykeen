@@ -14,11 +14,11 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, d
     start = timeit.default_timer()
     ranks_subject_based, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
                                                                     kg_embedding_model=kg_embedding_model,
-                                                                    triples=triples, corrupt_suject=True, k=k)
+                                                                    triples=triples, corrupt_suject=True,device=device, k=k)
 
     ranks_object_based, hits_at_k_object_based = _compute_metrics(all_entities=all_entities,
                                                                   kg_embedding_model=kg_embedding_model,
-                                                                  triples=triples, corrupt_suject=False, k=k)
+                                                                  triples=triples, corrupt_suject=False, device=device,k=k)
     mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
@@ -34,10 +34,10 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, d
 def compute_mean_rank(all_entities, kg_embedding_model, triples, device):
     start = timeit.default_timer()
     ranks_subject_based, _ = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
-                                              triples=triples, corrupt_suject=True)
+                                              triples=triples, corrupt_suject=True, device=device)
 
     ranks_object_based, _ = _compute_metrics(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
-                                             triples=triples, corrupt_suject=False)
+                                             triples=triples, corrupt_suject=False, device=device)
     ranks = ranks_subject_based + ranks_object_based
     mean_rank = np.mean(ranks)
     log.info("Ranks in compute: %s" % ranks)
