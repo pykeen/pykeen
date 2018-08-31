@@ -104,7 +104,7 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
 
         # Get index of first occurence that fulfills the condition
         ranks.append(np.where(scores_indices == indice_of_pos)[0][0])
-        log.info("Ranks: %s" % ranks)
+        # log.info("Ranks: %s" % ranks)
 
         # print(scores)
         top_k_indices = scores[-k:]
