@@ -54,6 +54,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
         for i in range(len(pos_batches)):
             pos_batch = pos_batches[i]
+            current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
             batch_preds = pos_batch[:, 1:2]
             batch_objs = pos_batch[:, 2:3]
@@ -92,7 +93,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             # kg_embedding_model.zero_grad()
 
             loss = kg_embedding_model(pos_batch, neg_batch)
-            current_epoch_loss += loss.item()
+            current_epoch_loss += (loss.item() * current_batch_size)
 
             # model_params = kg_embedding_model.parameters()
             #             # for p in model_params:
@@ -114,6 +115,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             # print(torch.sum(sum_w))
             log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_grads))))
             log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
+            log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
 
             log.info("+++++++")
 
@@ -137,7 +139,7 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
-        loss_per_epoch.append(current_epoch_loss)
+        loss_per_epoch.append(current_epoch_loss/len(pos_triples))
 
     return kg_embedding_model, loss_per_epoch
 
