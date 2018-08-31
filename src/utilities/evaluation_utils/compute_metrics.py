@@ -100,17 +100,17 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         scores = np.append(arr=scores_of_corrupted, values=score_of_positive)
         indice_of_pos = scores.size - 1
 
-        scores = np.argsort(a=scores)
+        scores_indices = np.argsort(a=scores)
 
         # Get index of first occurence that fulfills the condition
-        ranks.append(np.where(scores == indice_of_pos)[0][0])
+        ranks.append(np.where(scores_indices == indice_of_pos)[0][0])
         log.info("Ranks: %s" % ranks)
 
         # print(scores)
-        top_k = scores[-k:]
+        top_k_indices = scores[-k:]
 
 
-        if pos_triple in top_k:
+        if indice_of_pos in top_k_indices:
             in_top_k.append(1.)
 
     return ranks, in_top_k
