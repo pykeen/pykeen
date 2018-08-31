@@ -89,6 +89,7 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
 
         corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
+        corrupted = torch.tensor(corrupted,dtype=torch.long,device=device)
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
         pos_triple = np.array(triples[row_nmbr])
         pos_triple = np.expand_dims(a=pos_triple, axis=0)
