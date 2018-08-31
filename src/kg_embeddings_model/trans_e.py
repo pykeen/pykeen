@@ -96,7 +96,7 @@ class TransE(nn.Module):
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
 
-        head_embs = self.entities_embeddings(heads).view(-1, self.embedding_dim)
+        head_embs = torch.tensor(self.entities_embeddings(heads).view(-1, self.embedding_dim), dtype=torch.long, device=self.device)
         relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
         tail_embs = self.entities_embeddings(tails).view(-1, self.embedding_dim)
 
