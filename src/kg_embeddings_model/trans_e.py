@@ -26,12 +26,12 @@ class TransE(nn.Module):
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
-        # self._init()
+        self._init()
 
 
     def _init(self):
-        nn.init.xavier_uniform(self.entities_embeddings.weight.data)
-        nn.init.xavier_uniform(self.relation_embeddings.weight.data)
+        nn.init.xavier_uniform_(self.entities_embeddings.weight.data)
+        nn.init.xavier_uniform_(self.relation_embeddings.weight.data)
 
     def compute_loss(self, pos_scores, neg_scores):
         """
