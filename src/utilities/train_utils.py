@@ -1,6 +1,6 @@
 import logging
 import timeit
-
+import json
 import numpy as np
 import torch
 import torch.optim as optim
@@ -45,6 +45,8 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
     subjects = pos_triples[:, 0:1]
     objects = pos_triples[:, 2:3]
 
+    neg_trips = []
+
     for epoch in range(num_epochs):
         start = timeit.default_timer()
         pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
@@ -76,14 +78,18 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
             neg_batch = torch.tensor(neg_batch, dtype=torch.long, device=device)
 
+            # for neg_elem in neg_batch:
+            #     neg_trips.append(neg_elem.numpy().tolist())
+
+
             # Recall that torch *accumulates* gradients. Before passing in a
             # new instance, you need to zero out the gradients from the old
             # instance
             # model.zero_grad()
             # When to use model.zero_grad() and when optimizer.zero_grad() ?
 
-            # optimizer.zero_grad()
-            kg_embedding_model.zero_grad()
+            optimizer.zero_grad()
+            # kg_embedding_model.zero_grad()
 
             loss = kg_embedding_model(pos_batch, neg_batch)
             current_epoch_loss += loss.item()
@@ -106,10 +112,13 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             sum_grads = torch.tensor(sum_grads)
             sum_ws = torch.tensor(sum_ws)
             # print(torch.sum(sum_w))
-            log.info("Absoulte sum of grads: %f", np.sum(np.array(sum_grads)))
-            log.info("Absolute sum of weights: %f", np.sum(np.array(sum_ws)))
+            log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_grads))))
+            log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
 
             log.info("+++++++")
+
+            if i == 50:
+                exit(0)
 
 
 
