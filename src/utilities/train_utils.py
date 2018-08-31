@@ -113,9 +113,9 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             sum_grads = torch.tensor(sum_grads)
             sum_ws = torch.tensor(sum_ws)
             # print(torch.sum(sum_w))
-            # log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_grads))))
-            # log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
-            # log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
+            log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_grads))))
+            log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
+            log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
 
             # log.info("+++++++
 
