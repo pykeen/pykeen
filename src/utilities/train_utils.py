@@ -93,24 +93,23 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             loss.backward()
             optimizer.step()
 
-            # sum_grads = []
-            # sum_ws = []
-            # for p in kg_embedding_model.parameters():
-            #     # print(p.shape)
-            #     # print(torch.sum(p))
-            #     if p.grad is not None:
-            #         # print(p.grad)
-            #         sum_grads.append(torch.sum(torch.abs(p.grad)))
-            #     sum_ws.append(torch.sum(torch.abs(p)))
+            sum_grads = []
+            sum_ws = []
+            for p in kg_embedding_model.parameters():
+                # print(p.shape)
+                # print(torch.sum(p))
+                if p.grad is not None:
+                    # print(p.grad)
+                    sum_grads.append(torch.sum(torch.abs(p.grad)))
+                sum_ws.append(torch.sum(torch.abs(p)))
 
-            # sum_grads = torch.tensor(sum_grads)
-            # sum_ws = torch.tensor(sum_ws)
+            sum_grads = torch.tensor(sum_grads)
+            sum_ws = torch.tensor(sum_ws)
             # print(torch.sum(sum_w))
-            #             log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch, i, np.sum(np.array(sum_grads))))
+            # log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch, i, np.sum(np.array(sum_grads))))
             # log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
             # log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
-
-            log.info("+++++++")
+            # log.info("+++++++")
 
 
 
