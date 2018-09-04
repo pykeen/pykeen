@@ -65,8 +65,6 @@ class TransE(nn.Module):
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
-        print("pos scores: ", pos_scores)
-        print("neg scores: ", neg_scores)
 
         loss = self.criterion(pos_scores, neg_scores, y)
 
@@ -128,7 +126,6 @@ class TransE(nn.Module):
         """
 
         # Normalise embeddings of entities
-
         norms = torch.norm(self.entities_embeddings.weight, p=self.l_p_norm, dim=1).data
         self.entities_embeddings.weight.data = self.entities_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entities_embeddings.weight))
@@ -159,8 +156,6 @@ class TransE(nn.Module):
         pos_scores = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
         neg_scores = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
-        print('Pos exmpls: ', (pos_exmpls))
-        print('Neg exmpls: ', (neg_exmpls))
 
         loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
