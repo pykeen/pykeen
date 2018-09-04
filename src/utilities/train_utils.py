@@ -35,7 +35,6 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
 
-    total_loss = 0
     loss_per_epoch = []
 
     log.info('****Run Model On %s****' % str(device).upper())
@@ -63,13 +62,14 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             num_obj_corrupt = len(pos_batch) - num_subj_corrupt
             pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=device)
 
-            corrupted_subj_indices = np.random.choice(np.arange(0, len(pos_batch)), size=num_subj_corrupt)
+
+            corrupted_subj_indices = np.random.choice(np.arange(0, len(pos_triples)), size=num_subj_corrupt)
             corrupted_subjects = subjects[corrupted_subj_indices]
 
             subject_based_corrupted_triples = np.concatenate(
                 [corrupted_subjects, batch_preds[:num_subj_corrupt], batch_objs[:num_subj_corrupt]], axis=1)
 
-            corrupted_obj_indices = np.random.choice(np.arange(0, len(pos_batch)), size=num_obj_corrupt)
+            corrupted_obj_indices = np.random.choice(np.arange(0, len(pos_triples)), size=num_obj_corrupt)
             corrupted_objects = objects[corrupted_obj_indices]
 
             object_based_corrupted_triples = np.concatenate(
@@ -86,55 +86,36 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             # Recall that torch *accumulates* gradients. Before passing in a
             # new instance, you need to zero out the gradients from the old
             # instance
-            # model.zero_grad()
-            # When to use model.zero_grad() and when optimizer.zero_grad() ?
-
             optimizer.zero_grad()
-            # kg_embedding_model.zero_grad()
-
             loss = kg_embedding_model(pos_batch, neg_batch)
             current_epoch_loss += (loss.item() * current_batch_size)
-
-            # model_params = kg_embedding_model.parameters()
-            #             # for p in model_params:
-            #             #     print(p.grad)
-            #             # print('################')
-
-
-            sum_grads = []
-            sum_ws = []
-            for p in kg_embedding_model.parameters():
-                # print(p.shape)
-                # print(torch.sum(p))
-                if p.grad is not None:
-                    sum_grads.append(torch.sum(torch.abs(p.grad)))
-                sum_ws.append(torch.sum(torch.abs(p)))
-
-            sum_grads = torch.tensor(sum_grads)
-            sum_ws = torch.tensor(sum_ws)
-            # print(torch.sum(sum_w))
-            log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_grads))))
-            log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
-            log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
-
-            # log.info("+++++++
-
-
-            # for p in kg_embedding_model.parameters():
-            #     if p.grad is not None:
-            #         # print("Param: ", p)
-            #         # print("Gradient: ", p.grad)
-            #         # print("Shape of gradient:", p.grad.shape)
-            #         # print(p.grad[0].numpy().tolist())
-            #         if p.grad[0].numpy().tolist() != [0.,0.,0.,0.] or p.grad[1].numpy().tolist() != [0.,0.,0.,0.]:
-            #             print("Good: ", p.grad[0].numpy().tolist())
-
 
             loss.backward()
             optimizer.step()
 
+            # sum_grads = []
+            # sum_ws = []
+            # for p in kg_embedding_model.parameters():
+            #     # print(p.shape)
+            #     # print(torch.sum(p))
+            #     if p.grad is not None:
+            #         # print(p.grad)
+            #         sum_grads.append(torch.sum(torch.abs(p.grad)))
+            #     sum_ws.append(torch.sum(torch.abs(p)))
+
+            # sum_grads = torch.tensor(sum_grads)
+            # sum_ws = torch.tensor(sum_ws)
+            # print(torch.sum(sum_w))
+            #             log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch, i, np.sum(np.array(sum_grads))))
+            # log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
+            # log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
+
+            log.info("+++++++")
+
+
+
+
             # Get the Python number from a 1-element Tensor by calling tensor.item()
-            total_loss += loss.item()
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
