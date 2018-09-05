@@ -92,13 +92,13 @@ class Pipeline(object):
                                                         batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
                                                         device=self.device, seed=self.seed)
 
-
             eval_summary = None
 
             if has_test_set:
                 log.info("-------------Start Evaluation-------------")
                 # Initialize KG evaluator
-                mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos)
+                mapped_pos_test_tripels, _, _ = create_mapped_triples(triples=test_pos, entity_to_id=entity_to_id,
+                                                                      rel_to_id=rel_to_id)
 
                 eval_metrics = self.config[EVAL_METRICS]
 
