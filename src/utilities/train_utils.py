@@ -52,7 +52,8 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
         current_epoch_loss = 0.
 
         for i in range(len(pos_batches)):
-            pos_batch = pos_batches[i]
+            index_of_batch = np.random.choice(np.arange(0,len(pos_batches)))
+            pos_batch = pos_batches[index_of_batch]
             current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
             batch_preds = pos_batch[:, 1:2]
