@@ -433,7 +433,6 @@ def select_float_value(print_msg, prompt_msg, error_msg):
             return float_value
         except ValueError:
             print(error_msg)
-            break
 
 
 def ask_for_existing_configuration():
