@@ -79,21 +79,11 @@ class TransE(nn.Module):
         :return:
         """
 
-        # print('h_embs: ', (h_embs))
-
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
+        distances = torch.norm(sum_res, dim=1).view(size=(-1,))
 
-        # Square root
-        square_res = torch.mul(sum_res, sum_res).view(-1, self.embedding_dim)
-        reduced_sum_res = torch.sum(square_res, 1)
-
-        # Take the square root element wise
-        # TODO: Add p norm
-        # sqrt_res = torch.sqrt(reduced_sum_res)
-        # The scores are the distance
-
-        return reduced_sum_res
+        return distances
 
     def predict(self, triples):
         """
