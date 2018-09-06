@@ -89,11 +89,11 @@ class TransE(nn.Module):
         reduced_sum_res = torch.sum(square_res, 1)
 
         # Take the square root element wise
-        sqrt_res = torch.sqrt(reduced_sum_res)
+        # TODO: Add p norm
+        # sqrt_res = torch.sqrt(reduced_sum_res)
         # The scores are the distance
-        distances = sqrt_res
 
-        return distances
+        return reduced_sum_res
 
     def predict(self, triples):
         """
