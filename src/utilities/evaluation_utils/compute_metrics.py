@@ -40,8 +40,6 @@ def compute_mean_rank(all_entities, kg_embedding_model, triples, device):
                                              triples=triples, corrupt_suject=False, device=device)
     ranks = ranks_subject_based + ranks_object_based
     mean_rank = np.mean(ranks)
-    log.info("Ranks in compute: %s" % ranks)
-    log.info("MEan rank in compute: %s" % mean_rank)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
