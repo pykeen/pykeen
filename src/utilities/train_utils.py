@@ -26,10 +26,7 @@ def train_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_t
 
 
 def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
-    np.random.seed(seed=seed)
-    indices = np.arange(pos_triples.shape[0])
-    np.random.shuffle(indices)
-    pos_triples = pos_triples[indices]
+
 
     kg_embedding_model = kg_embedding_model.to(device)
 
@@ -39,14 +36,17 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
     log.info('****Run Model On %s****' % str(device).upper())
 
-    model_params = kg_embedding_model.parameters()
 
     subjects = pos_triples[:, 0:1]
     objects = pos_triples[:, 2:3]
 
-    neg_trips = []
+    num_pos_triples = pos_triples.shape[0]
 
     for epoch in range(num_epochs):
+        np.random.seed(seed=seed)
+        indices = np.arange(num_pos_triples)
+        np.random.shuffle(indices)
+        pos_triples = pos_triples[indices]
         start = timeit.default_timer()
         pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
         current_epoch_loss = 0.
