@@ -82,6 +82,7 @@ class TransE(nn.Module):
 
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
+        # TODO: Add paramter for slecting L_1 norm indicated by 'p'
         distances = torch.norm(sum_res, dim=1, p=1).view(size=(-1,))
 
         return distances
