@@ -39,7 +39,7 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
-embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'ConvE'}
+embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'RotE', 6: 'ConvE'}
 metrics_maping = {1: 'mean_rank', 2: 'hits@k'}
 normalization_mapping = {1: 'l1', 2: 'l2'}
 execution_mode_mapping = {1: TRAINING, 2: HYPER_PARAMTER_SEARCH}
@@ -76,15 +76,16 @@ def select_embedding_model():
     print("TransH: 2")
     print("TransR: 3")
     print("TransD: 4")
-    print("ConvE: 5")
+    print("RotE: 5")
+    print("ConvE: 6")
     is_valid_input = False
 
     while is_valid_input == False:
         user_input = prompt('> Please select one of the options: ')
 
-        if user_input not in ['1', '2', '3', '4', '5']:
+        if user_input not in ['1', '2', '3', '4', '5', '6']:
             print(
-                "Invalid input, please type a number between \'1\' and \'4\' for choosing one of the embedding models")
+                "Invalid input, please type a number between \'1\' and \'6\' for choosing one of the embedding models")
         else:
             is_valid_input = True
             user_input = int(user_input)
@@ -273,11 +274,11 @@ def select_hpo_params(model_id):
     hpo_params = OrderedDict()
     hpo_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
 
-    if 1 <= model_id and model_id <= 4:
+    if 1 <= model_id and model_id <= 5:
         # Model is one of the TransX versions
         param_dict = _select_trans_x_params(model_id)
         hpo_params.update(param_dict)
-    elif model_id == 5:
+    elif model_id == 6:
         # ConvE
         param_dict = _select_conv_e_params()
         hpo_params.update(param_dict)
@@ -399,7 +400,7 @@ def select_embedding_model_params(model_id):
     kg_model_params = OrderedDict()
     kg_model_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
 
-    if 1 <= model_id and model_id <= 4:
+    if 1 <= model_id and model_id <= 5:
         embedding_dimension = select_integer_value(EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PROMPT_MSG,
                                                    EMBEDDING_DIMENSION_ERROR_MSG)
 
