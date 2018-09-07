@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+import logging
+
 import numpy as np
 import torch
 import torch.autograd
 import torch.nn as nn
-import logging
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -65,7 +67,6 @@ class TransE(nn.Module):
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
-
         loss = self.criterion(pos_scores, neg_scores, y)
 
         return loss
@@ -81,7 +82,7 @@ class TransE(nn.Module):
 
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
-        distances = torch.norm(sum_res, dim=1).view(size=(-1,))
+        distances = torch.norm(sum_res, dim=1, p=1).view(size=(-1,))
 
         return distances
 
@@ -137,15 +138,8 @@ class TransE(nn.Module):
         neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.embedding_dim)
         neg_t_embs = self.entities_embeddings(neg_tails).view(-1, self.embedding_dim)
 
-        # L-P normalization of the vectors
-        # pos_h_embs = torch.nn.functional.normalize(pos_h_embs, p=self.l_p_norm, dim=1).view(-1, self.embedding_dim)
-        # pos_t_embs = torch.nn.functional.normalize(pos_t_embs, p=self.l_p_norm, dim=1).view(-1, self.embedding_dim)
-        # neg_h_embs = torch.nn.functional.normalize(neg_h_embs, p=self.l_p_norm, dim=1).view(-1, self.embedding_dim)
-        # neg_t_embs = torch.nn.functional.normalize(neg_t_embs, p=self.l_p_norm, dim=1).view(-1, self.embedding_dim)
-
         pos_scores = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
         neg_scores = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
-
 
         loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
