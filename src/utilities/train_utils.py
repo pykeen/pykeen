@@ -15,17 +15,17 @@ def split_list_in_batches(input_list, batch_size):
     return [input_list[i:i + batch_size] for i in range(0, len(input_list), batch_size)]
 
 
-def train_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
+def train_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     model_name = kg_embedding_model.model_name
 
     if model_name in [TRANS_E, TRANS_H, TRANS_D, TRANS_R, ROT_E]:
-        return train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
+        return train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
 
     if model_name == CONV_E:
         return train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
 
 
-def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
+def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
 
 
     kg_embedding_model = kg_embedding_model.to(device)
@@ -41,6 +41,8 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
     objects = pos_triples[:, 2:3]
 
     num_pos_triples = pos_triples.shape[0]
+    num_entities = all_entities.shape[0]
+
 
     for epoch in range(num_epochs):
         np.random.seed(seed=seed)
@@ -64,14 +66,13 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=device)
 
 
-            corrupted_subj_indices = np.random.choice(np.arange(0, len(pos_triples)), size=num_subj_corrupt)
-            corrupted_subjects = subjects[corrupted_subj_indices]
-
+            corrupted_subj_indices = np.random.choice(np.arange(0, num_entities), size=num_subj_corrupt)
+            corrupted_subjects = np.reshape(all_entities[corrupted_subj_indices],newshape=(-1,1))#subjects[corrupted_subj_indices]
             subject_based_corrupted_triples = np.concatenate(
                 [corrupted_subjects, batch_preds[:num_subj_corrupt], batch_objs[:num_subj_corrupt]], axis=1)
 
-            corrupted_obj_indices = np.random.choice(np.arange(0, len(pos_triples)), size=num_obj_corrupt)
-            corrupted_objects = objects[corrupted_obj_indices]
+            corrupted_obj_indices = np.random.choice(np.arange(0, num_entities), size=num_obj_corrupt)
+            corrupted_objects = np.reshape(all_entities[corrupted_obj_indices],newshape=(-1,1))#objects[corrupted_obj_indices]
 
             object_based_corrupted_triples = np.concatenate(
                 [batch_subjs[num_subj_corrupt:], batch_preds[num_subj_corrupt:], corrupted_objects], axis=1)
@@ -79,9 +80,6 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
             neg_batch = np.concatenate([subject_based_corrupted_triples, object_based_corrupted_triples], axis=0)
 
             neg_batch = torch.tensor(neg_batch, dtype=torch.long, device=device)
-
-            # for neg_elem in neg_batch:
-            #     neg_trips.append(neg_elem.numpy().tolist())
 
 
             # Recall that torch *accumulates* gradients. Before passing in a
@@ -93,26 +91,6 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
 
             loss.backward()
             optimizer.step()
-
-            sum_grads = []
-            sum_ws = []
-            for p in kg_embedding_model.parameters():
-                # print(p.shape)
-                # print(torch.sum(p))
-                if p.grad is not None:
-                    # print(p.grad)
-                    sum_grads.append(torch.sum(torch.abs(p.grad)))
-                sum_ws.append(torch.sum(torch.abs(p)))
-
-            sum_grads = torch.tensor(sum_grads)
-            sum_ws = torch.tensor(sum_ws)
-            # print(torch.sum(sum_w))
-            # log.info("Absoulte sum of grads in epoch %d for batch %d is %f" % (epoch, i, np.sum(np.array(sum_grads))))
-            # log.info("Absolute sum of weights in epoch %d for batch %d is %f" % (epoch,i,np.sum(np.array(sum_ws))))
-            # log.info("Loss in epoch %d for batch %d is %f" % (epoch, i, loss.item()))
-            # log.info("+++++++")
-
-
 
 
             # Get the Python number from a 1-element Tensor by calling tensor.item()
