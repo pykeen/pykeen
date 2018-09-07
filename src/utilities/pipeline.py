@@ -61,6 +61,8 @@ class Pipeline(object):
         mapped_pos_train_tripels, _, _ = create_mapped_triples(triples=train_pos, entity_to_id=entity_to_id,
                                                                rel_to_id=rel_to_id)
 
+        all_entities = np.array(list(entity_to_id.values()))
+
         if is_hpo_mode:
             hp_optimizer = RandomSearchHPO()
 
@@ -87,7 +89,8 @@ class Pipeline(object):
             params = kb_embedding_model_config
 
             log.info("-------------Train KG Embeddings-------------")
-            trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model, learning_rate=lr,
+            trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model,
+                                                        all_entities=all_entities, learning_rate=lr,
                                                         num_epochs=num_epochs,
                                                         batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
                                                         device=self.device, seed=self.seed)
@@ -102,13 +105,12 @@ class Pipeline(object):
 
                 eval_metrics = self.config[EVAL_METRICS]
 
-                # compute_mean_rank(all_entities, kg_embedding_model, triples)
 
                 is_mean_rank_selected = True if 'mean_rank' in eval_metrics else False
-                is_hits_at_k_selected = True if 'hits_at_k' in eval_metrics else False
+                # TODO: Chage to 'hits_at_k'
+                is_hits_at_k_selected = True if 'hits@k' in eval_metrics else False
 
                 eval_summary = OrderedDict()
-                all_entities = np.array(list(entity_to_id.values()))
 
                 if is_mean_rank_selected and is_hits_at_k_selected:
                     mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
@@ -117,6 +119,8 @@ class Pipeline(object):
                                                                            device=self.device, k=10)
                     eval_summary[MEAN_RANK] = mean_rank
                     eval_summary[HITS_AT_K] = hits_at_k
+
+
 
                 elif is_mean_rank_selected == True and is_hits_at_k_selected == False:
                     mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
