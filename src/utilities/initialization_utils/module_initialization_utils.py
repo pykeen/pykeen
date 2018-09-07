@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from kg_embeddings_model.conv_e import ConvE
+from kg_embeddings_model.rot_e import RotE
 from kg_embeddings_model.trans_d import TransD
 from kg_embeddings_model.trans_e import TransE
 from kg_embeddings_model.trans_h import TransH
 from kg_embeddings_model.trans_r import TransR
-from utilities.constants import TRANS_E, TRANS_H, KG_EMBEDDING_MODEL, TRANS_D, TRANS_R, CONV_E
+from utilities.constants import TRANS_E, TRANS_H, KG_EMBEDDING_MODEL, TRANS_D, TRANS_R, CONV_E, ROT_E
 
 
 def get_kg_embedding_model(config):
@@ -25,5 +26,7 @@ def get_kg_embedding_model(config):
         return TransR(config=config)
     if model_name == CONV_E:
         return ConvE(config=config)
+    if model_name == ROT_E:
+        return RotE(config=config)
 
 
