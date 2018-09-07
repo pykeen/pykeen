@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from utilities.constants import CONV_E, TRANS_E, TRANS_H, TRANS_D, TRANS_R
+from utilities.constants import CONV_E, TRANS_E, TRANS_H, TRANS_D, TRANS_R, ROT_E
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def split_list_in_batches(input_list, batch_size):
 def train_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     model_name = kg_embedding_model.model_name
 
-    if model_name in [TRANS_E, TRANS_H, TRANS_D, TRANS_R]:
+    if model_name in [TRANS_E, TRANS_H, TRANS_D, TRANS_R, ROT_E]:
         return train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_size, pos_triples, device, seed)
 
     if model_name == CONV_E:
@@ -52,8 +52,8 @@ def train_trans_x_model(kg_embedding_model, learning_rate, num_epochs, batch_siz
         current_epoch_loss = 0.
 
         for i in range(len(pos_batches)):
-            index_of_batch = np.random.choice(np.arange(0,len(pos_batches)))
-            pos_batch = pos_batches[index_of_batch]
+            # index_of_batch = np.random.choice(np.arange(0,len(pos_batches)))
+            pos_batch = pos_batches[i]
             current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
             batch_preds = pos_batch[:, 1:2]
