@@ -26,16 +26,25 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
     EPOCH_ERROR_MSG, OUTPUT_DIREC, HITS_AT_K, \
     K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG, K_FOR_HITS_AT_K, \
-    TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG, CONV_E_INPUT_CHANNELS_PRINT_MSG, \
-    CONV_E_INPUT_CHANNELS_PROMPT_MSG, CONV_E_INPUT_CHANNELS_ERROR_MSG, CONV_E_OUT_CHANNELS_PRINT_MSG, \
-    CONV_E_OUT_CHANNELS_PROMPT_MSG, CONV_E_OUT_CHANNELS_ERROR_MSG, CONV_E_KERNEL_HEIGHTS_PRINT_MSG, \
-    CONV_E_KERNEL_HEIGHTS_PROMPT_MSG, CONV_E_KERNEL_HEIGHTS_ERROR_MSG, CONV_E_KERNEL_WIDTHS_PRINT_MSG, \
-    CONV_E_KERNEL_WIDTHS_PROMPT_MSG, CONV_E_KERNEL_WIDTHS_ERROR_MSG, CONV_E_HEIGHT, CONV_E_WIDTH, \
+    TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG, CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG, \
+    CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG, CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG, CONV_E_HPO_OUT_CHANNELS_PRINT_MSG, \
+    CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG, CONV_E_HPO_OUT_CHANNELS_ERROR_MSG, CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG, \
+    CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG, CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG, CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG, \
+    CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG, CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG, CONV_E_HEIGHT, CONV_E_WIDTH, \
     CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, \
-    CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, CONV_E_INPUT_DROPOUT_PRINT_MSG, CONV_E_INPUT_DROPOUT_PROMPT_MSG, \
+    CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG, \
+    CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG, \
+    CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG, CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG, \
+    CONV_E_HPO_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG, \
+    CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG, \
+    CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG, GPU, CPU, CONV_E_INPUT_CHANNEL_PRINT_MSG, CONV_E_INPUT_CHANNEL_PROMPT_MSG, \
+    CONV_E_INPUT_CHANNEL_ERROR_MSG, CONV_E_OUT_CHANNEL_PRINT_MSG, CONV_E_OUT_CHANNEL_PROMPT_MSG, \
+    CONV_E_OUT_CHANNEL_ERROR_MSG, CONV_E_KERNEL_HEIGHT_PRINT_MSG, CONV_E_KERNEL_HEIGHT_PROMPT_MSG, \
+    CONV_E_KERNEL_HEIGHT_ERROR_MSG, CONV_E_KERNEL_WIDTH_PRINT_MSG, CONV_E_KERNEL_WIDTH_PROMPT_MSG, \
+    CONV_E_KERNEL_WIDTH_ERROR_MSG, CONV_E_INPUT_DROPOUT_PRINT_MSG, CONV_E_INPUT_DROPOUT_PROMPT_MSG, \
     CONV_E_INPUT_DROPOUT_ERROR_MSG, CONV_E_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_OUTPUT_DROPOUT_PROMPT_MSG, \
-    CONV_E_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG, CONV_E_FEATURE_MAP_DROPOUT_PROMPT_MSG, \
-    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG, GPU, CPU
+    CONV_E_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG, CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG, \
+    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
@@ -180,14 +189,32 @@ def _select_trans_x_params(model_id):
     return hpo_params
 
 
+def _select_height_and_width(embedding_dim):
+    is_valid_input = False
+
+    print(
+        "Note: Height and width must be positive integers, and height * width must equal embedding dimension \'%d\'" % embedding_dim)
+
+    while not is_valid_input:
+        print("Select height for embedding dimension ", embedding_dim)
+        height = prompt('> Height:')
+
+        print("Select width for embedding dimension ", embedding_dim)
+        width = prompt('> Width:')
+
+        if not (height.isnumeric() and width.isnumeric() and int(height) * int(width) == embedding_dim):
+            print("Invalid input. Height and width must be positive integers, and height * width must equal "
+                  "embedding dimension \'%d\'" % embedding_dim)
+        else:
+            return int(height), int(width)
+
+
 def select_heights_and_widths(embedding_dimensions):
     heights = []
     widths = []
 
     p_msg = 'Please select for each selected embedding dimension, corrpespoinding heights and widths.\n' \
             'Make sure that \'embedding dimension\' = \'height * width\' '
-
-    print(p_msg)
 
     for embedding_dim in embedding_dimensions:
         is_valid_input = False
@@ -207,6 +234,19 @@ def select_heights_and_widths(embedding_dimensions):
                 is_valid_input = True
 
     return heights, widths
+
+
+def _select_kernel_size(depending_param, print_msg, prompt_msg, error_msg):
+    print(print_msg)
+    is_valid_input = False
+
+    while not is_valid_input:
+        kernel_param = prompt(prompt_msg % depending_param)
+
+        if not (kernel_param.isnumeric() and int(kernel_param) <= depending_param):
+            print(error_msg % depending_param)
+        else:
+            return kernel_param
 
 
 def select_kernel_sizes(depending_params, print_msg, prompt_msg, error_msg):
@@ -229,6 +269,47 @@ def select_kernel_sizes(depending_params, print_msg, prompt_msg, error_msg):
 
 
 def _select_conv_e_params():
+    conv_e_params = OrderedDict()
+    embedding_dim = select_integer_value(EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PROMPT_MSG,
+                                         EMBEDDING_DIMENSION_ERROR_MSG)
+    height, width = _select_height_and_width(embedding_dim)
+    num_input_channels = select_integer_value(CONV_E_INPUT_CHANNEL_PRINT_MSG, CONV_E_INPUT_CHANNEL_PROMPT_MSG,
+                                              CONV_E_INPUT_CHANNEL_ERROR_MSG)
+
+    num_output_channels = select_integer_value(CONV_E_OUT_CHANNEL_PRINT_MSG, CONV_E_OUT_CHANNEL_PROMPT_MSG,
+                                               CONV_E_OUT_CHANNEL_ERROR_MSG)
+
+    kernel_height = _select_kernel_size(height, CONV_E_KERNEL_HEIGHT_PRINT_MSG, CONV_E_KERNEL_HEIGHT_PROMPT_MSG,
+                                        CONV_E_KERNEL_HEIGHT_ERROR_MSG)
+    kernel_width = _select_kernel_size(width, CONV_E_KERNEL_WIDTH_PRINT_MSG, CONV_E_KERNEL_WIDTH_PROMPT_MSG,
+                                       CONV_E_KERNEL_WIDTH_ERROR_MSG)
+
+    input_dropout = select_float_value(CONV_E_INPUT_DROPOUT_PRINT_MSG,
+                                       CONV_E_INPUT_DROPOUT_PROMPT_MSG,
+                                       CONV_E_INPUT_DROPOUT_ERROR_MSG)
+
+    output_dropout = select_float_value(CONV_E_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_OUTPUT_DROPOUT_PROMPT_MSG,
+                                        CONV_E_OUTPUT_DROPOUT_ERROR_MSG)
+
+    feature_map_dropout = select_float_value(CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG,
+                                             CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG,
+                                             CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG)
+
+    conv_e_params[EMBEDDING_DIM] = embedding_dim
+    conv_e_params[CONV_E_HEIGHT] = height
+    conv_e_params[CONV_E_WIDTH] = width
+    conv_e_params[CONV_E_INPUT_CHANNELS] = num_input_channels
+    conv_e_params[CONV_E_OUTPUT_CHANNELS] = num_output_channels
+    conv_e_params[CONV_E_KERNEL_HEIGHT] = kernel_height
+    conv_e_params[CONV_E_KERNEL_WIDTH] = kernel_width
+    conv_e_params[CONV_E_INPUT_DROPOUT] = input_dropout
+    conv_e_params[CONV_E_OUTPUT_DROPOUT] = output_dropout
+    conv_e_params[CONV_E_FEATURE_MAP_DROPOUT] = feature_map_dropout
+
+    return conv_e_params
+
+
+def _select_conv_e_hyper_params():
     hpo_params = OrderedDict()
 
     embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSION_PRINT_MSG,
@@ -237,16 +318,19 @@ def _select_conv_e_params():
 
     heights, widths = select_heights_and_widths(embedding_dimensions)
 
-    input_channels = select_positive_integer_values(CONV_E_INPUT_CHANNELS_PRINT_MSG, CONV_E_INPUT_CHANNELS_PROMPT_MSG,
-                                                    CONV_E_INPUT_CHANNELS_ERROR_MSG)
+    input_channels = select_positive_integer_values(CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG,
+                                                    CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG,
+                                                    CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG)
 
-    output_channels = select_positive_integer_values(CONV_E_OUT_CHANNELS_PRINT_MSG, CONV_E_OUT_CHANNELS_PROMPT_MSG,
-                                                     CONV_E_OUT_CHANNELS_ERROR_MSG)
+    output_channels = select_positive_integer_values(CONV_E_HPO_OUT_CHANNELS_PRINT_MSG,
+                                                     CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG,
+                                                     CONV_E_HPO_OUT_CHANNELS_ERROR_MSG)
 
-    kernel_heights = select_kernel_sizes(heights, CONV_E_KERNEL_HEIGHTS_PRINT_MSG, CONV_E_KERNEL_HEIGHTS_PROMPT_MSG,
-                                         CONV_E_KERNEL_HEIGHTS_ERROR_MSG)
-    kernel_widths = select_kernel_sizes(widths, CONV_E_KERNEL_WIDTHS_PRINT_MSG, CONV_E_KERNEL_WIDTHS_PROMPT_MSG,
-                                        CONV_E_KERNEL_WIDTHS_ERROR_MSG)
+    kernel_heights = select_kernel_sizes(heights, CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG,
+                                         CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG,
+                                         CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG)
+    kernel_widths = select_kernel_sizes(widths, CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG, CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG,
+                                        CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG)
 
     hpo_params[EMBEDDING_DIM] = embedding_dimensions
     hpo_params[CONV_E_HEIGHT] = heights
@@ -255,17 +339,17 @@ def _select_conv_e_params():
     hpo_params[CONV_E_OUTPUT_CHANNELS] = output_channels
     hpo_params[CONV_E_KERNEL_HEIGHT] = kernel_heights
     hpo_params[CONV_E_KERNEL_WIDTH] = kernel_widths
-    hpo_params[CONV_E_INPUT_DROPOUT] = select_float_values(CONV_E_INPUT_DROPOUT_PRINT_MSG,
-                                                           CONV_E_INPUT_DROPOUT_PROMPT_MSG,
-                                                           CONV_E_INPUT_DROPOUT_ERROR_MSG)
+    hpo_params[CONV_E_INPUT_DROPOUT] = select_float_values(CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG,
+                                                           CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG,
+                                                           CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG)
 
-    hpo_params[CONV_E_OUTPUT_DROPOUT] = select_float_values(CONV_E_OUTPUT_DROPOUT_PRINT_MSG,
-                                                            CONV_E_OUTPUT_DROPOUT_PROMPT_MSG,
-                                                            CONV_E_OUTPUT_DROPOUT_ERROR_MSG)
+    hpo_params[CONV_E_OUTPUT_DROPOUT] = select_float_values(CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG,
+                                                            CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG,
+                                                            CONV_E_HPO_OUTPUT_DROPOUT_ERROR_MSG)
 
-    hpo_params[CONV_E_FEATURE_MAP_DROPOUT] = select_float_values(CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG,
-                                                                 CONV_E_FEATURE_MAP_DROPOUT_PROMPT_MSG,
-                                                                 CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG)
+    hpo_params[CONV_E_FEATURE_MAP_DROPOUT] = select_float_values(CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG,
+                                                                 CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG,
+                                                                 CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG)
 
     return hpo_params
 
@@ -280,7 +364,7 @@ def select_hpo_params(model_id):
         hpo_params.update(param_dict)
     elif model_id == 6:
         # ConvE
-        param_dict = _select_conv_e_params()
+        param_dict = _select_conv_e_hyper_params()
         hpo_params.update(param_dict)
     elif model_id == 'Y':
         # TODO: RESCAL
@@ -411,6 +495,9 @@ def select_embedding_model_params(model_id):
 
         kg_model_params[MARGIN_LOSS] = select_float_value(MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG,
                                                           MARGIN_LOSS_ERROR_MSG)
+    if model_id == 6:
+        # ConvE
+        kg_model_params.update(_select_conv_e_params())
 
     kg_model_params[LEARNING_RATE] = select_float_value(LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG,
                                                         LEARNING_RATE_ERROR_MSG)
@@ -561,11 +648,6 @@ def main():
     else:
         trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
 
-    # output_direc = config[OUTPUT_DIREC]
-    # out_path = os.path.join(output_direc, 'configuration_conv_E.pkl')
-    # with open(out_path, 'wb') as handle:
-    #     pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
     out_path = os.path.join(output_direc, 'entities_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
         pickle.dump(entity_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -586,15 +668,6 @@ def main():
     out_path = os.path.join(output_direc, 'losses.txt')
     with open(out_path, 'w') as handle:
         handle.write(json.dumps(loss_per_epoch))
-
-    # out_path = os.path.join(output_direc, 'losses.png')
-    # epochs = np.arange(len(loss_per_epoch))
-    # plt.title(r'Loss Per Epoch')
-    # plt.xlabel('epoch')
-    # plt.ylabel('loss')
-    #
-    # plt.plot(epochs, loss_per_epoch)
-    # plt.savefig(out_path)
 
 
 if __name__ == '__main__':
