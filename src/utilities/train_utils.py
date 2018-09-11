@@ -67,12 +67,12 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
 
 
             corrupted_subj_indices = np.random.choice(np.arange(0, num_entities), size=num_subj_corrupt)
-            corrupted_subjects = np.reshape(all_entities[corrupted_subj_indices],newshape=(-1,1))#subjects[corrupted_subj_indices]
+            corrupted_subjects = np.reshape(all_entities[corrupted_subj_indices],newshape=(-1,1))
             subject_based_corrupted_triples = np.concatenate(
                 [corrupted_subjects, batch_preds[:num_subj_corrupt], batch_objs[:num_subj_corrupt]], axis=1)
 
             corrupted_obj_indices = np.random.choice(np.arange(0, num_entities), size=num_obj_corrupt)
-            corrupted_objects = np.reshape(all_entities[corrupted_obj_indices],newshape=(-1,1))#objects[corrupted_obj_indices]
+            corrupted_objects = np.reshape(all_entities[corrupted_obj_indices],newshape=(-1,1))
 
             object_based_corrupted_triples = np.concatenate(
                 [batch_subjs[num_subj_corrupt:], batch_preds[num_subj_corrupt:], corrupted_objects], axis=1)
@@ -93,7 +93,6 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
             optimizer.step()
 
 
-            # Get the Python number from a 1-element Tensor by calling tensor.item()
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
