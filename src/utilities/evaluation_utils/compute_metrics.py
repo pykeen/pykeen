@@ -105,7 +105,7 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         # log.info("Ranks: %s" % ranks)
 
         # print(scores)
-        top_k_indices = scores[-k:]
+        top_k_indices = scores_indices[-k:]
 
 
         if indice_of_pos in top_k_indices:
