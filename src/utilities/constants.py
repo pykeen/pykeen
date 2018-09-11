@@ -114,37 +114,66 @@ K_FOR_HITS_AT_K_PRINT_MSG = 'Please select \'k\' for hits@k'
 K_FOR_HITS_AT_K_PROMPT_MSG = '> k:'
 K_FOR_HITS_AT_K_ERROR_MSG = 'Invalid input \'k\' must be a positive integer.'
 
-CONV_E_INPUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of input channels for ConvE'
-CONV_E_INPUT_CHANNELS_PROMPT_MSG = '> Input channels:'
-CONV_E_INPUT_CHANNELS_ERROR_MSG = 'Invalid input, input channels must be positive integers.'
+CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of input channels for ConvE'
+CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG = '> Input channels:'
+CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG = 'Invalid input, input channels must be positive integers.'
 
-CONV_E_OUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of output channels for ConvE'
-CONV_E_OUT_CHANNELS_PROMPT_MSG = '> Output channels:'
-CONV_E_OUT_CHANNELS_ERROR_MSG = 'Invalid input, output channels must be positive integers.'
+CONV_E_INPUT_CHANNEL_PRINT_MSG = 'Please select the number of input channels'
+CONV_E_INPUT_CHANNEL_PROMPT_MSG = '> Input channels:'
+CONV_E_INPUT_CHANNEL_ERROR_MSG = 'Invalid input, the number of input channels must be a positive number'
 
-CONV_E_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for ConvE'
-CONV_E_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
-CONV_E_KERNEL_HEIGHTS_ERROR_MSG = 'Invalid input, kernel heights must be positive integers and <= than %d (defined height).'
+CONV_E_HPO_OUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of output channels for ConvE'
+CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG = '> Output channels:'
+CONV_E_HPO_OUT_CHANNELS_ERROR_MSG = 'Invalid input, output channels must be positive integers.'
 
-CONV_E_KERNEL_WIDTHS_PRINT_MSG = 'Please select the kernel widths for ConvE'
-CONV_E_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d:'
-CONV_E_KERNEL_WIDTHS_ERROR_MSG = 'Invalid input, kernel widths mus be positive integers and <= than %d (defined width).'
+CONV_E_OUT_CHANNEL_PRINT_MSG = 'Please select the number of output channels.'
+CONV_E_OUT_CHANNEL_PROMPT_MSG = '> Output channels:'
+CONV_E_OUT_CHANNEL_ERROR_MSG = 'Invalid input, the number of output channels must be a positive number.'
+
+CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for ConvE'
+CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
+CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG = 'Invalid input, kernel heights must be positive integers and <= than %d (defined height).'
+
+
+CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the kernel height for ConvE.'
+CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Kernel height for defined height %d:'
+CONV_E_KERNEL_HEIGHT_ERROR_MSG = 'Invalid input, the kernel height must be a positive integer and <= than %d (defined height).'
+
+CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG = 'Please select the kernel widths for ConvE'
+CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d:'
+CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG = 'Invalid input, kernel widths mus be positive integers and <= than %d (defined width).'
+
+CONV_E_KERNEL_WIDTH_PRINT_MSG = 'Please select the kernel width for ConvE'
+CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width for defined width %d:'
+CONV_E_KERNEL_WIDTH_ERROR_MSG = 'Invalid input, kernel width mus be a positive integer and <= than %d (defined width).'
 
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
 VALIDATION_SET_PRINT_MSG = 'Please provide the path to the validation file.'
 CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
 
-CONV_E_INPUT_DROPOUT_PRINT_MSG = 'Please select (comma separated) the input dropout value(s)'
-CONV_E_INPUT_DROPOUT_PROMPT_MSG = '> Input dropout value(s):'
-CONV_E_INPUT_DROPOUT_ERROR_MSG = 'Invalid input, input must be positive float values.'
+CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG = 'Please select (comma separated) the input dropout value(s)'
+CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG = '> Input dropout value(s):'
+CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG = 'Invalid input, input must be positive float values.'
 
-CONV_E_OUTPUT_DROPOUT_PRINT_MSG = 'Please select (comma separated) the output dropout value(s)'
-CONV_E_OUTPUT_DROPOUT_PROMPT_MSG = '> Output dropout value(s):'
+CONV_E_INPUT_DROPOUT_PRINT_MSG = 'Please select the input dropout value'
+CONV_E_INPUT_DROPOUT_PROMPT_MSG = '> Input dropout value:'
+CONV_E_INPUT_DROPOUT_ERROR_MSG = 'Invalid input, input dropout must be a positive float value.'
+
+CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG = 'Please select (comma separated) the output dropout value(s)'
+CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG = '> Output dropout value(s):'
+CONV_E_HPO_OUTPUT_DROPOUT_ERROR_MSG = 'Invalid output, input must be positive float values.'
+
+CONV_E_OUTPUT_DROPOUT_PRINT_MSG = 'Please select the output dropout value'
+CONV_E_OUTPUT_DROPOUT_PROMPT_MSG = '> Output dropout value:'
 CONV_E_OUTPUT_DROPOUT_ERROR_MSG = 'Invalid output, input must be positive float values.'
 
-CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select (comma separated) the feature map dropout value(s)'
-CONV_E_FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value(s):'
-CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be positive float values.'
+CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select (comma separated) the feature map dropout value(s)'
+CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value(s):'
+CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be positive float values.'
+
+CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select the feature map dropout value'
+CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value:'
+CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be a positive float value.'
 
 TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
