@@ -88,6 +88,7 @@ class Pipeline(object):
             lr = kb_embedding_model_config[LEARNING_RATE]
             params = kb_embedding_model_config
 
+
             log.info("-------------Train KG Embeddings-------------")
             trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model,
                                                         all_entities=all_entities, learning_rate=lr,
