@@ -25,8 +25,9 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, d
     mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
-    num_of_candidate_triples = 2 * all_entities.shape[0]
-    hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
+    # num_of_candidate_triples = 2 * all_entities.shape[0]
+    #hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
+    hits_at_k = all_hits / triples.size
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
@@ -70,7 +71,8 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
 
 def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, device, k=10):
     ranks = []
-    in_top_k = []
+    #in_top_k = []
+    count_in_top_k = 0
 
     kg_embedding_model = kg_embedding_model.to(device)
 
@@ -109,7 +111,14 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
 
         top_k_indices = sorted_score_indices[:k]
 
-        if indice_of_pos in top_k_indices:
-            in_top_k.append(1.)
+        print("top_k_indices: ", top_k_indices)
+        print("indice_of_pos: ", indice_of_pos)
 
-    return ranks, in_top_k
+        if rank_of_positive < k:
+            count_in_top_k += 1
+
+        # if indice_of_pos in top_k_indices:
+        #     in_top_k.append(1.)
+        #     print("yes")
+        print('+++++++++++++')
+    return ranks, count_in_top_k
