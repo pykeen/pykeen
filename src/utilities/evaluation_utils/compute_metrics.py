@@ -111,8 +111,8 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
 
         top_k_indices = sorted_score_indices[:k]
 
-        print("top_k_indices: ", top_k_indices)
-        print("indice_of_pos: ", indice_of_pos)
+        # print("top_k_indices: ", top_k_indices)
+        # print("indice_of_pos: ", indice_of_pos)
 
         if rank_of_positive < k:
             count_in_top_k += 1
