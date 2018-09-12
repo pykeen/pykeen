@@ -246,7 +246,7 @@ def _select_kernel_size(depending_param, print_msg, prompt_msg, error_msg):
         if not (kernel_param.isnumeric() and int(kernel_param) <= depending_param):
             print(error_msg % depending_param)
         else:
-            return kernel_param
+            return int(kernel_param)
 
 
 def select_kernel_sizes(depending_params, print_msg, prompt_msg, error_msg):
