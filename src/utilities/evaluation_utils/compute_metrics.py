@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 import timeit
-import torch
+
 import numpy as np
+import torch
 
 from utilities.evaluation_utils.evaluation_helper import get_stratey_for_corrupting
 
@@ -14,11 +15,13 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, d
     start = timeit.default_timer()
     ranks_subject_based, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
                                                                     kg_embedding_model=kg_embedding_model,
-                                                                    triples=triples, corrupt_suject=True,device=device, k=k)
+                                                                    triples=triples, corrupt_suject=True, device=device,
+                                                                    k=k)
 
     ranks_object_based, hits_at_k_object_based = _compute_metrics(all_entities=all_entities,
                                                                   kg_embedding_model=kg_embedding_model,
-                                                                  triples=triples, corrupt_suject=False, device=device,k=k)
+                                                                  triples=triples, corrupt_suject=False, device=device,
+                                                                  k=k)
     mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
@@ -71,7 +74,6 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
 
     kg_embedding_model = kg_embedding_model.to(device)
 
-
     column_to_maintain_offsets, corrupted_column_offsets, concatenate_fct = get_stratey_for_corrupting(
         corrupt_suject=corrupt_suject)
 
@@ -82,31 +84,30 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         candidate_entities = np.delete(arr=all_entities,
                                        obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
-        tuple = np.reshape(a=triples[row_nmbr, start_of_columns_to_maintain:end_of_columns_to_maintain], newshape=(1, 2))
+        tuple = np.reshape(a=triples[row_nmbr, start_of_columns_to_maintain:end_of_columns_to_maintain],
+                           newshape=(1, 2))
         # Copy current test tuple
         tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
 
         corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
-        corrupted = torch.tensor(corrupted,dtype=torch.long,device=device)
+        corrupted = torch.tensor(corrupted, dtype=torch.long, device=device)
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
         pos_triple = np.array(triples[row_nmbr])
         pos_triple = np.expand_dims(a=pos_triple, axis=0)
-        pos_triple = torch.tensor(pos_triple,dtype=torch.long,device=device)
+        pos_triple = torch.tensor(pos_triple, dtype=torch.long, device=device)
 
         score_of_positive = kg_embedding_model.predict(pos_triple)
 
         scores = np.append(arr=scores_of_corrupted, values=score_of_positive)
         indice_of_pos = scores.size - 1
 
-        scores_indices = np.argsort(a=scores)
+        sorted_score_indices = np.argsort(a=scores)
 
         # Get index of first occurence that fulfills the condition
-        ranks.append(np.where(scores_indices == indice_of_pos)[0][0])
-        # log.info("Ranks: %s" % ranks)
+        rank_of_positive = np.where(sorted_score_indices == indice_of_pos)[0][0]
+        ranks.append(rank_of_positive)
 
-        # print(scores)
-        top_k_indices = scores_indices[-k:]
-
+        top_k_indices = sorted_score_indices[:k]
 
         if indice_of_pos in top_k_indices:
             in_top_k.append(1.)
