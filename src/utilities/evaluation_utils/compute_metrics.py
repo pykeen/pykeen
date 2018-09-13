@@ -26,8 +26,8 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, d
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
     # num_of_candidate_triples = 2 * all_entities.shape[0]
-    #hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
-    hits_at_k = all_hits / triples.size
+    # hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
+    hits_at_k = all_hits / (2. * triples.size)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
@@ -61,7 +61,7 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
     num_of_candidate_triples = 2 * all_entities.shape[0]
-    hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
+    hits_at_k = all_hits / (2. * triples.size)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
@@ -71,7 +71,6 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
 
 def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, device, k=10):
     ranks = []
-    #in_top_k = []
     count_in_top_k = 0
 
     kg_embedding_model = kg_embedding_model.to(device)
@@ -83,15 +82,21 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
 
     # Corrupt triples
     for row_nmbr, row in enumerate(triples):
-        candidate_entities = np.delete(arr=all_entities,
-                                       obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
+        # TODO: Replace
+        # candidate_entities = np.delete(arr=all_entities,
+        #                                obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
+
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
         tuple = np.reshape(a=triples[row_nmbr, start_of_columns_to_maintain:end_of_columns_to_maintain],
                            newshape=(1, 2))
         # Copy current test tuple
-        tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
+        # TODO: Replace
+        # tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
+        tuples = np.repeat(a=tuple, repeats=all_entities.shape[0], axis=0)
 
-        corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
+        # TODO: Replace
+        # corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
+        corrupted = concatenate_fct(candidate_entities=all_entities, tuples=tuples)
         corrupted = torch.tensor(corrupted, dtype=torch.long, device=device)
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
         pos_triple = np.array(triples[row_nmbr])
@@ -109,16 +114,10 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         rank_of_positive = np.where(sorted_score_indices == indice_of_pos)[0][0]
         ranks.append(rank_of_positive)
 
-        top_k_indices = sorted_score_indices[:k]
-
         # print("top_k_indices: ", top_k_indices)
         # print("indice_of_pos: ", indice_of_pos)
 
         if rank_of_positive < k:
-            count_in_top_k += 1
+            count_in_top_k += 1.
 
-        # if indice_of_pos in top_k_indices:
-        #     in_top_k.append(1.)
-        #     print("yes")
-        print('+++++++++++++')
     return ranks, count_in_top_k

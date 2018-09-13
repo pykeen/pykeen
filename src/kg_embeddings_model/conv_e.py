@@ -7,7 +7,7 @@ from torch.nn.init import xavier_normal
 from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, \
     CONV_E_FEATURE_MAP_DROPOUT, \
     CONV_E, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, \
-    CONV_E_HEIGHT, CONV_E_WIDTH
+    CONV_E_HEIGHT, CONV_E_WIDTH, BATCH_SIZE
 
 '''
 Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
@@ -150,33 +150,33 @@ class ConvE(nn.Module):
 
         return pred
 
-# if __name__ == '__main__':
-#     config = dict()
-#     config[NUM_ENTITIES] = 8
-#     config[NUM_RELATIONS] = 2
-#     config[EMBEDDING_DIM] = 10
-#     config[CONV_E_INPUT_CHANNELS] = 1
-#     config[CONV_E_OUTPUT_CHANNELS] = 20
-#     config[CONV_E_KERNEL_HEIGHT] = 5
-#     config[CONV_E_KERNEL_WIDTH] = 2
-#     config[CONV_E_INPUT_DROPOUT] = 0.2
-#     config[CONV_E_OUTPUT_DROPOUT] = 0.2
-#     config[CONV_E_FEATURE_MAP_DROPOUT] = 0.2
-#     config[CONV_E_HEIGHT] = 5
-#     config[CONV_E_WIDTH] = 2
-#     config[BATCH_SIZE] = 4
-#
-#     model = ConvE(config=config)
-#     subjects = [1, 3, 5, 7]
-#     subjects = torch.tensor(subjects, dtype=torch.long).view(-1, 1)
-#     objects = [0, 2, 4, 6]
-#     objects = torch.tensor(objects, dtype=torch.long).view(-1, 1)
-#     relations = [0, 0, 1, 1]
-#     relations = torch.tensor(relations, dtype=torch.long).view(-1, 1)
-#
-#     steps = 5
-#
-#     for _ in range(steps):
-#         scores = model.forward(subjects, relations)
-#         print(scores)
-#         print()
+if __name__ == '__main__':
+    config = dict()
+    config[NUM_ENTITIES] = 8
+    config[NUM_RELATIONS] = 2
+    config[EMBEDDING_DIM] = 10
+    config[CONV_E_INPUT_CHANNELS] = 1
+    config[CONV_E_OUTPUT_CHANNELS] = 20
+    config[CONV_E_KERNEL_HEIGHT] = 5
+    config[CONV_E_KERNEL_WIDTH] = 2
+    config[CONV_E_INPUT_DROPOUT] = 0.2
+    config[CONV_E_OUTPUT_DROPOUT] = 0.2
+    config[CONV_E_FEATURE_MAP_DROPOUT] = 0.2
+    config[CONV_E_HEIGHT] = 5
+    config[CONV_E_WIDTH] = 2
+    config[BATCH_SIZE] = 4
+
+    model = ConvE(config=config)
+    subjects = [1, 3, 5, 7]
+    subjects = torch.tensor(subjects, dtype=torch.long).view(-1, 1)
+    objects = [0, 2, 4, 6]
+    objects = torch.tensor(objects, dtype=torch.long).view(-1, 1)
+    relations = [0, 0, 1, 1]
+    relations = torch.tensor(relations, dtype=torch.long).view(-1, 1)
+
+    steps = 5
+
+    for _ in range(steps):
+        scores = model.forward(subjects, relations)
+        print(scores)
+        print()
