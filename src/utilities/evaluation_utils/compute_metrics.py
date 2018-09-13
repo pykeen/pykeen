@@ -82,21 +82,16 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
 
     # Corrupt triples
     for row_nmbr, row in enumerate(triples):
-        # TODO: Replace
-        # candidate_entities = np.delete(arr=all_entities,
-        #                                obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
+        candidate_entities = np.delete(arr=all_entities,
+                                       obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
 
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
         tuple = np.reshape(a=triples[row_nmbr, start_of_columns_to_maintain:end_of_columns_to_maintain],
                            newshape=(1, 2))
         # Copy current test tuple
-        # TODO: Replace
-        # tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
-        tuples = np.repeat(a=tuple, repeats=all_entities.shape[0], axis=0)
+        tuples = np.repeat(a=tuple, repeats=candidate_entities.shape[0], axis=0)
 
-        # TODO: Replace
-        # corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
-        corrupted = concatenate_fct(candidate_entities=all_entities, tuples=tuples)
+        corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
         corrupted = torch.tensor(corrupted, dtype=torch.long, device=device)
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
         pos_triple = np.array(triples[row_nmbr])
