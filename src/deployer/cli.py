@@ -20,8 +20,8 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG, EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, \
     EPOCHS_ERROR_MSG, MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG, TRAINING, \
     HYPER_PARAMTER_SEARCH, HYPER_PARAMTER_OPTIMIZATION_PARAMS, EMBEDDING_DIM, KG_EMBEDDING_MODEL, MARGIN_LOSS, \
-    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS, TRAINING_SET_PATH, VALIDATION_SET_PATH, \
-    VALIDATION_SET_RATIO, NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
+    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS, TRAINING_SET_PATH, TEST_SET_PATH, \
+    TEST_SET_RATIO, NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
     MARGIN_LOSS_ERROR_MSG, LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, \
     BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
     EPOCH_ERROR_MSG, OUTPUT_DIREC, HITS_AT_K, \
@@ -406,8 +406,8 @@ def get_data_input_path(print_msg):
             return user_input
 
 
-def select_ratio_for_validation_set():
-    print('Select the ratio of the training set used for validation (e.g. 0.5):')
+def select_ratio_for_test_set():
+    print('Select the ratio of the training set used for test (e.g. 0.5):')
     is_valid_input = False
 
     while is_valid_input == False:
@@ -426,8 +426,8 @@ def select_ratio_for_validation_set():
     return ratio
 
 
-def is_validation_set_provided():
-    print('Do you provide a validation set?')
+def is_test_set_provided():
+    print('Do you provide a test set?')
     is_valid_input = False
 
     while is_valid_input == False:
@@ -610,12 +610,12 @@ def start_cli():
 
     config[TRAINING_SET_PATH] = get_data_input_path(print_msg=TRAINING_SET_PRINT_MSG)
 
-    use_validation_set = is_validation_set_provided()
+    use_test_set = is_test_set_provided()
 
-    if use_validation_set:
-        config[VALIDATION_SET_PATH] = get_data_input_path(print_msg=VALIDATION_SET_PRINT_MSG)
+    if use_test_set:
+        config[TEST_SET_PATH] = get_data_input_path(print_msg=VALIDATION_SET_PRINT_MSG)
     else:
-        config[VALIDATION_SET_RATIO] = select_ratio_for_validation_set()
+        config[TEST_SET_RATIO] = select_ratio_for_test_set()
 
     print('----------------------------')
     config[PREFERRED_DEVICE] = select_preferred_device()
