@@ -599,13 +599,13 @@ def start_cli():
         kg_model_params = select_embedding_model_params(model_id=embedding_model_id)
         config[KG_EMBEDDING_MODEL] = kg_model_params
 
-    print('----------------------------')
-    eval_metrics = select_eval_metrics()
-    config[EVAL_METRICS] = eval_metrics
-
-    if HITS_AT_K in eval_metrics:
-        k = select_integer_value(K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG)
-        config[K_FOR_HITS_AT_K] = k
+    # print('----------------------------')
+    # eval_metrics = select_eval_metrics()
+    # config[EVAL_METRICS] = eval_metrics
+    #
+    # if HITS_AT_K in eval_metrics:
+    #     k = select_integer_value(K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG)
+    #     config[K_FOR_HITS_AT_K] = k
     print('----------------------------')
 
     config[TRAINING_SET_PATH] = get_data_input_path(print_msg=TRAINING_SET_PRINT_MSG)
