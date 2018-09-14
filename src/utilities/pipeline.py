@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 
 from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
 from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
-    GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, VALIDATION_SET_PATH, VALIDATION_SET_RATIO, \
+    GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, \
     EVAL_METRICS, MEAN_RANK, HITS_AT_K, CPU
 from utilities.evaluation_utils.compute_metrics import compute_mean_rank, compute_mean_rank_and_hits_at_k, \
     compute_hits_at_k
@@ -45,13 +45,13 @@ class Pipeline(object):
         pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
         has_test_set = True
 
-        if VALIDATION_SET_PATH in self.config:
+        if TEST_SET_PATH in self.config:
             train_pos = pos_triples
-            test_pos = np.loadtxt(fname=self.config[VALIDATION_SET_PATH], dtype=str,
+            test_pos = np.loadtxt(fname=self.config[TEST_SET_PATH], dtype=str,
                                   comments='@Comment@ Subject Predicate Object')
         else:
             train_pos = pos_triples
-            ratio_test_data = self.config[VALIDATION_SET_RATIO]
+            ratio_test_data = self.config[TEST_SET_RATIO]
             train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
             # has_test_set = False
 
@@ -103,6 +103,7 @@ class Pipeline(object):
                 # Initialize KG evaluator
                 mapped_pos_test_tripels, _, _ = create_mapped_triples(triples=test_pos, entity_to_id=entity_to_id,
                                                                       rel_to_id=rel_to_id)
+
 
                 eval_metrics = self.config[EVAL_METRICS]
 

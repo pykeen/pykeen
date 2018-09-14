@@ -28,6 +28,7 @@ def train_model(kg_embedding_model, all_entities, learning_rate, num_epochs, bat
 
 def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device,
                         seed):
+
     kg_embedding_model = kg_embedding_model.to(device)
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)

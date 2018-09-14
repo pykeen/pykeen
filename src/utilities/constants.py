@@ -179,8 +179,8 @@ TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
-VALIDATION_SET_PATH = 'validation_set_path'
-VALIDATION_SET_RATIO = 'validation_set_ratio'
+TEST_SET_PATH = 'test_set_path'
+TEST_SET_RATIO = 'validation_set_ratio'
 NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
 
 # Model names
