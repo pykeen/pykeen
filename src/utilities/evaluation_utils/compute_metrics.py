@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
     start = timeit.default_timer()
     mean_rank, hits_at_k = _compute_metrics_new(all_entities=all_entities, kg_embedding_model=kg_embedding_model,
-                                                triples=triples, device=device, k=k)
+                                                triples=triples, device=device)
 
     # ranks_subject_based, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
     #                                                                 kg_embedding_model=kg_embedding_model,
@@ -119,9 +119,25 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
     return ranks, count_in_top_k
 
 
-def _compute_metrics_new(all_entities, kg_embedding_model, triples, device, k=10):
+def _compute_hits_at_k_new(hits_at_k_dict, rank_of_positive_subject_based, rank_of_positive_object_based):
+    for k, value in hits_at_k_dict.items():
+        if rank_of_positive_subject_based < k:
+            value.append(1.)
+        else:
+            value.append(0.)
+
+        if rank_of_positive_object_based < k:
+            value.append(1.)
+        else:
+            value.append(0.)
+
+    return hits_at_k_dict
+
+
+def _compute_metrics_new(all_entities, kg_embedding_model, triples, device):
     ranks = []
     count_in_top_k = 0.
+    hits_at_k_dict = {k: [] for k in [1, 3, 5, 10]}
 
     kg_embedding_model = kg_embedding_model.to(device)
 
@@ -179,13 +195,14 @@ def _compute_metrics_new(all_entities, kg_embedding_model, triples, device, k=10
         rank_of_positive_object_based = np.where(sorted_score_indices_object_based == indice_of_pos_object_based)[0][0]
         ranks.append(rank_of_positive_object_based)
 
-        if rank_of_positive_subject_based < k:
-            count_in_top_k += 1.
-
-        if rank_of_positive_object_based < k:
-            count_in_top_k += 1.
+        # Compute hits@k for k in {1,3,5,10}
+        hits_at_k_dict.update(
+            _compute_hits_at_k_new(hits_at_k_dict, rank_of_positive_subject_based=rank_of_positive_subject_based,
+                                   rank_of_positive_object_based=rank_of_positive_object_based))
 
     mean_rank = np.mean(ranks)
-    hits_at_k = count_in_top_k / (2 * triples.size)
 
-    return mean_rank, hits_at_k
+    for k, value in hits_at_k_dict.items():
+        hits_at_k_dict[k] = np.mean(value)
+
+    return mean_rank, hits_at_k_dict
