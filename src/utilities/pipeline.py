@@ -9,9 +9,8 @@ from sklearn.model_selection import train_test_split
 from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
 from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
     GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, \
-    EVAL_METRICS, MEAN_RANK, HITS_AT_K, CPU
-from utilities.evaluation_utils.compute_metrics import compute_mean_rank, compute_mean_rank_and_hits_at_k, \
-    compute_hits_at_k
+    MEAN_RANK, HITS_AT_K, CPU
+from utilities.evaluation_utils.compute_metrics import compute_metrics
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train_model
 from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
@@ -88,7 +87,6 @@ class Pipeline(object):
             lr = kb_embedding_model_config[LEARNING_RATE]
             params = kb_embedding_model_config
 
-
             log.info("-------------Train KG Embeddings-------------")
             trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model,
                                                         all_entities=all_entities, learning_rate=lr,
@@ -104,34 +102,13 @@ class Pipeline(object):
                 mapped_pos_test_tripels, _, _ = create_mapped_triples(triples=test_pos, entity_to_id=entity_to_id,
                                                                       rel_to_id=rel_to_id)
 
-
-                eval_metrics = self.config[EVAL_METRICS]
-
-
-                is_mean_rank_selected = True if 'mean_rank' in eval_metrics else False
-                # TODO: Chage to 'hits_at_k'
-                is_hits_at_k_selected = True if 'hits@k' in eval_metrics else False
-
                 eval_summary = OrderedDict()
+                mean_rank, hits_at_k = compute_metrics(all_entities=all_entities,
+                                                       kg_embedding_model=kg_embedding_model,
+                                                       triples=mapped_pos_test_tripels, device=self.device)
 
-                if is_mean_rank_selected and is_hits_at_k_selected:
-                    mean_rank, hits_at_k = compute_mean_rank_and_hits_at_k(all_entities=all_entities,
-                                                                           kg_embedding_model=trained_model,
-                                                                           triples=mapped_pos_test_tripels,
-                                                                           device=self.device, k=10)
-                    eval_summary[MEAN_RANK] = mean_rank
-                    eval_summary[HITS_AT_K] = hits_at_k
-
-
-
-                elif is_mean_rank_selected == True and is_hits_at_k_selected == False:
-                    mean_rank = compute_mean_rank(all_entities=all_entities, kg_embedding_model=trained_model,
-                                                  triples=mapped_pos_test_tripels, device=self.device)
-                    eval_summary[MEAN_RANK] = mean_rank
-                elif is_hits_at_k_selected:
-                    hits_at_k = compute_hits_at_k(all_entities=all_entities, kg_embedding_model=trained_model,
-                                                  triples=mapped_pos_test_tripels, device=self.device, k=10)
-                    eval_summary[HITS_AT_K] = hits_at_k
+                eval_summary[MEAN_RANK] = mean_rank
+                eval_summary[HITS_AT_K] = hits_at_k
 
         # Prepare Output
         id_to_entity = {value: key for key, value in entity_to_id.items()}
