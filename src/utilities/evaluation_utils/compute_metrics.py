@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 
 
 def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
+
     start = timeit.default_timer()
     ranks_subject_based, hits_at_k_subject_based = _compute_metrics(all_entities=all_entities,
                                                                     kg_embedding_model=kg_embedding_model,
@@ -25,9 +26,10 @@ def compute_mean_rank_and_hits_at_k(all_entities, kg_embedding_model, triples, d
     mean_rank = np.mean(ranks_subject_based + ranks_object_based)
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
-    # num_of_candidate_triples = 2 * all_entities.shape[0]
-    # hits_at_k = np.sum(all_hits) / (num_of_candidate_triples)
     hits_at_k = all_hits / (2. * triples.size)
+
+    print("hits_at_k_subject_based: ", hits_at_k_subject_based / triples.size)
+    print("hits_at_k_object_based: ", hits_at_k_object_based / triples.size)
 
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
@@ -60,9 +62,7 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
                                                  triples=triples, corrupt_suject=False, k=k)
 
     all_hits = hits_at_k_subject_based + hits_at_k_object_based
-    num_of_candidate_triples = 2 * all_entities.shape[0]
     hits_at_k = all_hits / (2. * triples.size)
-
     stop = timeit.default_timer()
     log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
 
@@ -71,7 +71,7 @@ def compute_hits_at_k(all_entities, kg_embedding_model, triples, device, k=10):
 
 def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, device, k=10):
     ranks = []
-    count_in_top_k = 0
+    count_in_top_k = 0.
 
     kg_embedding_model = kg_embedding_model.to(device)
 
@@ -79,11 +79,13 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         corrupt_suject=corrupt_suject)
 
     start_of_columns_to_maintain, end_of_columns_to_maintain = column_to_maintain_offsets
+    start_of_corrupted_column, end_of_corrupted_column = corrupted_column_offsets
 
     # Corrupt triples
     for row_nmbr, row in enumerate(triples):
+
         candidate_entities = np.delete(arr=all_entities,
-                                       obj=row[start_of_columns_to_maintain:start_of_columns_to_maintain + 1])
+                                       obj=row[end_of_corrupted_column-1:end_of_corrupted_column])
 
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
         tuple = np.reshape(a=triples[row_nmbr, start_of_columns_to_maintain:end_of_columns_to_maintain],
@@ -94,7 +96,7 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         corrupted = concatenate_fct(candidate_entities=candidate_entities, tuples=tuples)
         corrupted = torch.tensor(corrupted, dtype=torch.long, device=device)
         scores_of_corrupted = kg_embedding_model.predict(corrupted)
-        pos_triple = np.array(triples[row_nmbr])
+        pos_triple = np.array(row)
         pos_triple = np.expand_dims(a=pos_triple, axis=0)
         pos_triple = torch.tensor(pos_triple, dtype=torch.long, device=device)
 
@@ -109,8 +111,6 @@ def _compute_metrics(all_entities, kg_embedding_model, triples, corrupt_suject, 
         rank_of_positive = np.where(sorted_score_indices == indice_of_pos)[0][0]
         ranks.append(rank_of_positive)
 
-        # print("top_k_indices: ", top_k_indices)
-        # print("indice_of_pos: ", indice_of_pos)
 
         if rank_of_positive < k:
             count_in_top_k += 1.
