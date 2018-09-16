@@ -40,6 +40,8 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
     num_pos_triples = pos_triples.shape[0]
     num_entities = all_entities.shape[0]
 
+    start_training = timeit.default_timer()
+
     for epoch in range(num_epochs):
         np.random.seed(seed=seed)
         indices = np.arange(num_pos_triples)
@@ -50,11 +52,12 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
         current_epoch_loss = 0.
 
         for i in range(len(pos_batches)):
+            # TODO: Remove original subject and object from entity set
             # index_of_batch = np.random.choice(np.arange(0,len(pos_batches)))
             pos_batch = pos_batches[i]
             current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
-            batch_preds = pos_batch[:, 1:2]
+            batch_relations = pos_batch[:, 1:2]
             batch_objs = pos_batch[:, 2:3]
 
             num_subj_corrupt = len(pos_batch) // 2
@@ -63,14 +66,15 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
 
             corrupted_subj_indices = np.random.choice(np.arange(0, num_entities), size=num_subj_corrupt)
             corrupted_subjects = np.reshape(all_entities[corrupted_subj_indices], newshape=(-1, 1))
+            # TODO:
             subject_based_corrupted_triples = np.concatenate(
-                [corrupted_subjects, batch_preds[:num_subj_corrupt], batch_objs[:num_subj_corrupt]], axis=1)
+                [corrupted_subjects, batch_relations[:num_subj_corrupt], batch_objs[:num_subj_corrupt]], axis=1)
 
             corrupted_obj_indices = np.random.choice(np.arange(0, num_entities), size=num_obj_corrupt)
             corrupted_objects = np.reshape(all_entities[corrupted_obj_indices], newshape=(-1, 1))
 
             object_based_corrupted_triples = np.concatenate(
-                [batch_subjs[num_subj_corrupt:], batch_preds[num_subj_corrupt:], corrupted_objects], axis=1)
+                [batch_subjs[num_subj_corrupt:], batch_relations[num_subj_corrupt:], corrupted_objects], axis=1)
 
             neg_batch = np.concatenate([subject_based_corrupted_triples, object_based_corrupted_triples], axis=0)
 
@@ -90,6 +94,9 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
         loss_per_epoch.append(current_epoch_loss / len(pos_triples))
+
+    stop_training = timeit.default_timer()
+    log.info("Training took %s seconds \n" % (str(round(stop_training - start_training))))
 
     return kg_embedding_model, loss_per_epoch
 
@@ -149,6 +156,8 @@ def train_conv_e_model(kg_embedding_model, learning_rate, num_epochs, batch_size
         stop = timeit.default_timer()
         log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         loss_per_epoch.append(current_epoch_loss)
+
+
 
     return kg_embedding_model, loss_per_epoch
 
