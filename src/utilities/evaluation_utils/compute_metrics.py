@@ -5,8 +5,6 @@ import timeit
 import numpy as np
 import torch
 
-from utilities.evaluation_utils.evaluation_helper import get_stratey_for_corrupting
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -144,7 +142,6 @@ def compute_metrics(all_entities, kg_embedding_model, triples, device):
 
     # Corrupt triples
     for row_nmbr, row in enumerate(triples):
-
         candidate_entities_subject_based = np.delete(arr=all_entities, obj=row[0:1])
         candidate_entities_subject_based = np.reshape(candidate_entities_subject_based, newshape=(-1, 1))
         candidate_entities_object_based = np.delete(arr=all_entities, obj=row[2:3])
