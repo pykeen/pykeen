@@ -9,8 +9,8 @@ import torch.nn as nn
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, NORMALIZATION_OF_ENTITIES, \
-    TRANS_E, PREFERRED_DEVICE, GPU, CPU
+from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, NORM_FOR_NORMALIZATION_OF_ENTITIES, \
+    TRANS_E, PREFERRED_DEVICE, GPU, CPU, SCORING_FUNCTION_NORM
 
 
 class TransE(nn.Module):
@@ -27,7 +27,8 @@ class TransE(nn.Module):
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
-        self.l_p_norm = config[NORMALIZATION_OF_ENTITIES]
+        self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
+        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entities_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
@@ -83,7 +84,7 @@ class TransE(nn.Module):
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         # TODO: Add paramter for slecting L_1 norm indicated by 'p'
-        distances = torch.norm(sum_res, dim=1, p=1).view(size=(-1,))
+        distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
 
         return distances
 
@@ -118,7 +119,7 @@ class TransE(nn.Module):
         """
 
         # Normalise embeddings of entities
-        norms = torch.norm(self.entities_embeddings.weight, p=self.l_p_norm, dim=1).data
+        norms = torch.norm(self.entities_embeddings.weight, p=self.l_p_norm_entities, dim=1).data
         self.entities_embeddings.weight.data = self.entities_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entities_embeddings.weight))
 
