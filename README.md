@@ -1,5 +1,5 @@
-# kg_embeddings_pipeline
-KEEN is a package for training and evaluating knowledge graph embeddings.
+# KEEN
+KEEN (KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings.
 The system has a modular architecture, and can be configured by the user through the command line interface. 
 
 ## Project Structure
