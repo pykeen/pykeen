@@ -9,7 +9,8 @@ from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH
     KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS, \
     NORM_FOR_NORMALIZATION_OF_ENTITIES, MEAN_RANK, HITS_AT_K, TRANS_E, TRANS_H, TRANS_D, TRANS_R, \
     CONV_E, CONV_E_HEIGHT, CONV_E_WIDTH, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, \
-    CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, SCORING_FUNCTION_NORM
+    CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, SCORING_FUNCTION_NORM, \
+    PREFERRED_DEVICE
 from utilities.evaluation_utils.compute_metrics import compute_metrics
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train_model
@@ -87,6 +88,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             kg_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
             kg_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
             kg_embedding_model_config[SEED] = seed
+            kg_embedding_model_config[PREFERRED_DEVICE] = config[PREFERRED_DEVICE]
 
             # Sample model specific hyper-params
             kg_embedding_model_config.update(param_sampling_fct(hyperparams_dict))
