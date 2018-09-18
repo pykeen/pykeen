@@ -82,6 +82,14 @@ MARGIN_LOSSES_PRINT_MSG = 'Please type the range of preferred margin losse(s) co
 MARGIN_LOSSES_PROMPT_MSG = '> Please select the margin losse(s):'
 MARGIN_LOSSES_ERROR_MSG = 'Invalid input, please type in positive integer as embedding dimensions.'
 
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG  = 'Please select L-p norm(s) for the normalization of entities comma separated (e.g. 0.5, 1, 2):'
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG = '> L-p norm(s):'
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG = 'Invalid input, please provide float value(s).'
+
+NORMS_SCROING_FUNCTION_PRINT_MSG = 'Please select L-p norm(s) used as scoring function comma separated (e.g. 0.5, 1, 2):'
+NORMS_SCROING_FUNCTION_PROMPT_MSG = '> L-p norm(s):'
+NORMS_SCROING_FUNCTION_ERROR_MSG = 'Invalid input, please provide float value(s).'
+
 MAX_HPO_ITERS_PRINT_MSG = 'Please type the maximum number of iterationns for they hyper-parameter search:'
 MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
 MAX_HPO_ITERS_ERROR_MSG = 'Invalid input, please type in a positive integer for the maximum number of iterations.'
@@ -105,6 +113,10 @@ BATCH_SIZE_ERROR_MSG = 'Invalid input, please select a integer.'
 EPOCH_PRINT_MSG = 'Please type the number of epochs:'
 EPOCH_PROMPT_MSG = '> Epochs:'
 EPOCH_ERROR_MSG = 'Invalid input, please select an integers.'
+
+ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select the normalization approach for the entities:'
+
+SCORING_FUNCTION_PRINT_MSG = 'Please select a scoring function:'
 
 SAVE_CONFIG_PRINT_MSG = 'Do you want to save the configuration file?'
 SAVE_CONFIG_PROMPT_MSG = '> \'yes\' or \'no\':'
@@ -181,7 +193,8 @@ HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
 TEST_SET_PATH = 'test_set_path'
 TEST_SET_RATIO = 'validation_set_ratio'
-NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
+NORM_FOR_NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
+SCORING_FUNCTION_NORM = 'scoring_function'
 
 # Model names
 CONV_E = 'ConvE'
