@@ -49,7 +49,6 @@ class Pipeline(object):
             test_pos = np.loadtxt(fname=self.config[TEST_SET_PATH], dtype=str,
                                   comments='@Comment@ Subject Predicate Object')
         else:
-            train_pos = pos_triples
             ratio_test_data = self.config[TEST_SET_RATIO]
             train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
             # has_test_set = False
@@ -65,7 +64,7 @@ class Pipeline(object):
         if is_hpo_mode:
             hp_optimizer = RandomSearchHPO()
 
-            trained_model, loss_per_epoch, entity_to_embedding, relation_to_embedding, eval_summary, metric_string, params = hp_optimizer.optimize_hyperparams(
+            trained_model, loss_per_epoch, entity_to_embedding, relation_to_embedding, eval_summary, params = hp_optimizer.optimize_hyperparams(
                 train_pos, test_pos,
                 entity_to_id,
                 rel_to_id,
