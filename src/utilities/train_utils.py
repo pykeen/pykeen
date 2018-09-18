@@ -53,7 +53,6 @@ def train_trans_x_model(kg_embedding_model, all_entities, learning_rate, num_epo
 
         for i in range(len(pos_batches)):
             # TODO: Remove original subject and object from entity set
-            # index_of_batch = np.random.choice(np.arange(0,len(pos_batches)))
             pos_batch = pos_batches[i]
             current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
