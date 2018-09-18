@@ -7,9 +7,9 @@ import numpy as np
 from hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
     KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS, \
-    NORMALIZATION_OF_ENTITIES, EVAL_METRICS, MEAN_RANK, HITS_AT_K, TRANS_E, TRANS_H, TRANS_D, TRANS_R, \
+    NORM_FOR_NORMALIZATION_OF_ENTITIES, MEAN_RANK, HITS_AT_K, TRANS_E, TRANS_H, TRANS_D, TRANS_R, \
     CONV_E, CONV_E_HEIGHT, CONV_E_WIDTH, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, \
-    CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT
+    CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, SCORING_FUNCTION_NORM
 from utilities.evaluation_utils.compute_metrics import compute_metrics
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train_model
@@ -36,8 +36,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
     def _sample_trans_x_specifc_params(self, hyperparams_dict):
         kg_embedding_model_config = OrderedDict()
         kg_embedding_model_config[MARGIN_LOSS] = random.choice(hyperparams_dict[MARGIN_LOSS])
-        kg_embedding_model_config[MARGIN_LOSS] = random.choice(hyperparams_dict[MARGIN_LOSS])
-        kg_embedding_model_config[NORMALIZATION_OF_ENTITIES] = hyperparams_dict[NORMALIZATION_OF_ENTITIES]
+        kg_embedding_model_config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = random.choice(
+            hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES])
+        kg_embedding_model_config[SCORING_FUNCTION_NORM] = random.choice(hyperparams_dict[SCORING_FUNCTION_NORM])
 
         return kg_embedding_model_config
 
@@ -65,10 +66,6 @@ class RandomSearchHPO(AbstractHPOptimizer):
         # Configuration
         kg_embedding_model_config = OrderedDict()
         kg_embedding_model_config[KG_EMBEDDING_MODEL] = embedding_model
-
-        eval_metrics = config[EVAL_METRICS]
-        is_mean_rank_selected = True if 'mean_rank' in eval_metrics else False
-        is_hits_at_k_selected = True if 'hits_at_k' in eval_metrics else False
 
         eval_summary = OrderedDict()
 
@@ -101,7 +98,10 @@ class RandomSearchHPO(AbstractHPOptimizer):
             entity_to_ids.append(entity_to_id)
             rel_to_ids.append(rel_to_id)
 
+            all_entities = np.array(list(entity_to_id.values()))
+
             trained_model, epoch_loss = train_model(kg_embedding_model=kg_embedding_model,
+                                                    all_entities=all_entities,
                                                     learning_rate=kg_embedding_model_config[LEARNING_RATE],
                                                     num_epochs=kg_embedding_model_config[NUM_EPOCHS],
                                                     batch_size=kg_embedding_model_config[BATCH_SIZE],
@@ -116,7 +116,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
             eval_summary[MEAN_RANK] = mean_rank
             eval_summary[HITS_AT_K] = hits_at_k
-            eval_results.append(mean_rank)
+            eval_results.append(hits_at_k)
             eval_summaries.append(eval_summary)
             trained_models.append(trained_model)
             epoch_losses.append(epoch_loss)
@@ -124,5 +124,4 @@ class RandomSearchHPO(AbstractHPOptimizer):
         index_of_max = np.argmax(a=eval_results)
 
         return trained_models[index_of_max], epoch_losses[index_of_max], entity_to_ids[index_of_max], rel_to_ids[
-            index_of_max], \
-               eval_summaries[index_of_max], MEAN_RANK, models_params[index_of_max]
+            index_of_max], eval_summaries[index_of_max], models_params[index_of_max]
