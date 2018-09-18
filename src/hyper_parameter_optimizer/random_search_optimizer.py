@@ -114,9 +114,10 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
             mean_rank, hits_at_k = compute_metrics(all_entities, trained_model, mapped_pos_test_tripels, device)
 
+            # TODO: Define HPO metric
             eval_summary[MEAN_RANK] = mean_rank
             eval_summary[HITS_AT_K] = hits_at_k
-            eval_results.append(hits_at_k)
+            eval_results.append(hits_at_k[10])
             eval_summaries.append(eval_summary)
             trained_models.append(trained_model)
             epoch_losses.append(epoch_loss)
