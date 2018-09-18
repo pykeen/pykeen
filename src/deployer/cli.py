@@ -20,13 +20,12 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG, EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, \
     EPOCHS_ERROR_MSG, MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG, TRAINING, \
     HYPER_PARAMTER_SEARCH, HYPER_PARAMTER_OPTIMIZATION_PARAMS, EMBEDDING_DIM, KG_EMBEDDING_MODEL, MARGIN_LOSS, \
-    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, EVAL_METRICS, TRAINING_SET_PATH, TEST_SET_PATH, \
-    TEST_SET_RATIO, NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
+    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, TRAINING_SET_PATH, TEST_SET_PATH, \
+    TEST_SET_RATIO, NORM_FOR_NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
     MARGIN_LOSS_ERROR_MSG, LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, \
     BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
-    EPOCH_ERROR_MSG, OUTPUT_DIREC, HITS_AT_K, \
-    K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG, K_FOR_HITS_AT_K, \
-    TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG, CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG, \
+    EPOCH_ERROR_MSG, OUTPUT_DIREC, TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG, \
+    CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG, \
     CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG, CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG, CONV_E_HPO_OUT_CHANNELS_PRINT_MSG, \
     CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG, CONV_E_HPO_OUT_CHANNELS_ERROR_MSG, CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG, \
     CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG, CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG, CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG, \
@@ -44,7 +43,10 @@ from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG,
     CONV_E_KERNEL_WIDTH_ERROR_MSG, CONV_E_INPUT_DROPOUT_PRINT_MSG, CONV_E_INPUT_DROPOUT_PROMPT_MSG, \
     CONV_E_INPUT_DROPOUT_ERROR_MSG, CONV_E_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_OUTPUT_DROPOUT_PROMPT_MSG, \
     CONV_E_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG, CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG, \
-    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG
+    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG, ENTITIES_NORMALIZATION_PRINT_MSG, SCORING_FUNCTION_PRINT_MSG, \
+    SCORING_FUNCTION_NORM, NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG, \
+    NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG, NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG, \
+    NORMS_SCROING_FUNCTION_PRINT_MSG, NORMS_SCROING_FUNCTION_PROMPT_MSG, NORMS_SCROING_FUNCTION_ERROR_MSG
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
@@ -135,7 +137,7 @@ def select_float_values(print_msg, prompt_msg, error_msg):
         for float_value in user_input:
             try:
                 float_value = float(float_value)
-                float_values.append(int(float_value))
+                float_values.append(float_value)
             except ValueError:
                 print(error_msg)
                 break
@@ -184,7 +186,15 @@ def _select_trans_x_params(model_id):
     hpo_params[MARGIN_LOSS] = margin_losses
 
     if model_id == 1:
-        hpo_params[NORMALIZATION_OF_ENTITIES] = select_entites_normalization()
+        hpo_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_float_values(
+            NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG,
+            NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG, NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG)
+
+        print('----------------------------')
+
+        hpo_params[SCORING_FUNCTION_NORM] = select_float_values(NORMS_SCROING_FUNCTION_PRINT_MSG,
+                                                                NORMS_SCROING_FUNCTION_PROMPT_MSG,
+                                                                NORMS_SCROING_FUNCTION_ERROR_MSG)
 
     return hpo_params
 
@@ -464,15 +474,15 @@ def select_integer_value(print_msg, prompt_msg, error_msg):
             print(error_msg)
 
 
-def select_entites_normalization():
-    print('Please select the normalization approach for the entities:')
-    print('L1-Normalization: 1')
-    print('L2-Normalization: 2')
+def select_norm(print_msg):
+    print(print_msg)
+    print('L1-Norm: 1')
+    print('L2-Norm: 2')
     is_valid_input = False
 
     while not is_valid_input:
         is_valid_input = True
-        user_input = prompt('> Normalization approach:')
+        user_input = prompt('> L-p Norm:')
 
         if user_input == '1' or user_input == '2':
             return int(user_input)
@@ -491,7 +501,9 @@ def select_embedding_model_params(model_id):
         kg_model_params[EMBEDDING_DIM] = embedding_dimension
 
         if model_id == 1:
-            kg_model_params[NORMALIZATION_OF_ENTITIES] = select_entites_normalization()
+            kg_model_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_norm(ENTITIES_NORMALIZATION_PRINT_MSG)
+            print('----------------------------')
+            kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
 
         kg_model_params[MARGIN_LOSS] = select_float_value(MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG,
                                                           MARGIN_LOSS_ERROR_MSG)
@@ -599,13 +611,6 @@ def start_cli():
         kg_model_params = select_embedding_model_params(model_id=embedding_model_id)
         config[KG_EMBEDDING_MODEL] = kg_model_params
 
-    # print('----------------------------')
-    # eval_metrics = select_eval_metrics()
-    # config[EVAL_METRICS] = eval_metrics
-    #
-    # if HITS_AT_K in eval_metrics:
-    #     k = select_integer_value(K_FOR_HITS_AT_K_PRINT_MSG, K_FOR_HITS_AT_K_PROMPT_MSG, K_FOR_HITS_AT_K_ERROR_MSG)
-    #     config[K_FOR_HITS_AT_K] = k
     print('----------------------------')
 
     config[TRAINING_SET_PATH] = get_data_input_path(print_msg=TRAINING_SET_PRINT_MSG)
@@ -628,11 +633,9 @@ def start_cli():
 def main():
     config = start_cli()
 
-    # TODO: Remove
-    output_direc = config[OUTPUT_DIREC]
-
     current_time = time.strftime("%H:%M:%S")
     current_date = time.strftime("%d/%m/%Y").replace('/', '-')
+    output_direc = config[OUTPUT_DIREC]
     output_direc = os.path.join(output_direc, current_date + '_' + current_time + '')
 
     os.makedirs(output_direc, exist_ok=True)
