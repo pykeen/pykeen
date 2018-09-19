@@ -113,7 +113,7 @@ class Pipeline(object):
         id_to_entity = {value: key for key, value in entity_to_id.items()}
         id_to_rel = {value: key for key, value in rel_to_id.items()}
         entity_to_embedding = {id_to_entity[id]: embedding.detach().cpu().numpy() for id, embedding in
-                               enumerate(trained_model.entities_embeddings.weight)}
+                               enumerate(trained_model.entity_embeddings.weight)}
         relation_to_embedding = {id_to_rel[id]: embedding.detach().cpu().numpy() for id, embedding in
                                  enumerate(trained_model.relation_embeddings.weight)}
 
