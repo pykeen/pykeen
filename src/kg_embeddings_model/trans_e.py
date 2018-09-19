@@ -30,7 +30,7 @@ class TransE(nn.Module):
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
-        self.entities_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         self.margin_loss = margin_loss
@@ -42,7 +42,7 @@ class TransE(nn.Module):
     def _init(self):
         lower_bound = -6 / np.sqrt(self.embedding_dim)
         upper_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(self.entities_embeddings.weight.data, a=lower_bound, b=upper_bound)
+        nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
         nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
 
         norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
@@ -103,9 +103,9 @@ class TransE(nn.Module):
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
 
-        head_embs = self.entities_embeddings(heads).view(-1, self.embedding_dim)
+        head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
         relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
-        tail_embs = self.entities_embeddings(tails).view(-1, self.embedding_dim)
+        tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
         scores = self.compute_score(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
 
@@ -120,9 +120,9 @@ class TransE(nn.Module):
         """
 
         # Normalise embeddings of entities
-        norms = torch.norm(self.entities_embeddings.weight, p=self.l_p_norm_entities, dim=1).data
-        self.entities_embeddings.weight.data = self.entities_embeddings.weight.data.div(
-            norms.view(self.num_entities, 1).expand_as(self.entities_embeddings.weight))
+        norms = torch.norm(self.entity_embeddings.weight, p=self.l_p_norm_entities, dim=1).data
+        self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
+            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
 
         pos_heads = batch_positives[:, 0:1]
         pos_relations = batch_positives[:, 1:2]
@@ -132,13 +132,13 @@ class TransE(nn.Module):
         neg_relations = batch_negatives[:, 1:2]
         neg_tails = batch_negatives[:, 2:3]
 
-        pos_h_embs = self.entities_embeddings(pos_heads).view(-1, self.embedding_dim)
+        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
         pos_r_embs = self.relation_embeddings(pos_relations).view(-1, self.embedding_dim)
-        pos_t_embs = self.entities_embeddings(pos_tails).view(-1, self.embedding_dim)
+        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
 
-        neg_h_embs = self.entities_embeddings(neg_heads).view(-1, self.embedding_dim)
+        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
         neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.embedding_dim)
-        neg_t_embs = self.entities_embeddings(neg_tails).view(-1, self.embedding_dim)
+        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
 
         pos_scores = self.compute_score(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
         neg_scores = self.compute_score(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
