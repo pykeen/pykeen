@@ -111,11 +111,11 @@ class TransE(nn.Module):
 
         return scores.detach().cpu().numpy()
 
-    def forward(self, pos_exmpls, neg_exmpls):
+    def forward(self, batch_positives, batch_negatives):
         """
 
-        :param pos_exmpls:
-        :param neg_exmpls:
+        :param batch_positives:
+        :param batch_negatives:
         :return:
         """
 
@@ -124,17 +124,16 @@ class TransE(nn.Module):
         self.entities_embeddings.weight.data = self.entities_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entities_embeddings.weight))
 
-        pos_heads = pos_exmpls[:, 0:1]
-        pos_relations = pos_exmpls[:, 1:2]
-        pos_tails = pos_exmpls[:, 2:3]
+        pos_heads = batch_positives[:, 0:1]
+        pos_relations = batch_positives[:, 1:2]
+        pos_tails = batch_positives[:, 2:3]
 
-        neg_heads = neg_exmpls[:, 0:1]
-        neg_relations = neg_exmpls[:, 1:2]
-        neg_tails = neg_exmpls[:, 2:3]
+        neg_heads = batch_negatives[:, 0:1]
+        neg_relations = batch_negatives[:, 1:2]
+        neg_tails = batch_negatives[:, 2:3]
 
         pos_h_embs = self.entities_embeddings(pos_heads).view(-1, self.embedding_dim)
         pos_r_embs = self.relation_embeddings(pos_relations).view(-1, self.embedding_dim)
-
         pos_t_embs = self.entities_embeddings(pos_tails).view(-1, self.embedding_dim)
 
         neg_h_embs = self.entities_embeddings(neg_heads).view(-1, self.embedding_dim)
