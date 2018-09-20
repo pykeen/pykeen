@@ -36,17 +36,22 @@ class TransH(nn.Module):
 
         return projection
 
-    def compute_score(self, h_emb, r_emb, t_emb):
+    def compute_score(self, h_embs, r_embs, t_embs):
         """
 
-        :param h_emb:
-        :param r_emb:
-        :param t_emb:
+        :param h_embs:
+        :param r_embs:
+        :param t_embs:
         :return:
         """
-        score = - (torch.sum(torch.abs(h_emb + r_emb - t_emb)) ** 2)
 
-        return score
+        # Add the vector element wise
+        sum_res = h_embs + r_embs - t_embs
+        # TODO: Add paramter for slecting L_1 norm indicated by 'p'
+        distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+
+        return distances
+
 
     def compute_loss(self, pos_scores, neg_scores):
         """
