@@ -41,7 +41,8 @@ class Pipeline(object):
         # TODO: Adapt
         path_to_train_data = self.config[TRAINING_SET_PATH]
 
-        pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object')
+        pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object',
+                                 delimiter='\t')
         has_test_set = True
 
         if TEST_SET_PATH in self.config:
