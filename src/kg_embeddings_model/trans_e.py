@@ -36,10 +36,9 @@ class TransE(nn.Module):
         self.margin_loss = margin_loss
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
 
-        # TODO: FIXME
-        self._init()
+        self._initialize()
 
-    def _init(self):
+    def _initialize(self):
         lower_bound = -6 / np.sqrt(self.embedding_dim)
         upper_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
