@@ -29,7 +29,8 @@ class TransH(nn.Module):
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, embedding_dim)
         self.margin_loss = margin_loss
         self.weightning_soft_constraint = torch.tensor([config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]], dtype=torch.float,
-                                                       requires_grad=True)
+                                                       requires_grad=False, device=self.device)
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         self.epsilon = 0.05
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
@@ -54,9 +55,9 @@ class TransH(nn.Module):
 
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
-        distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
 
-        return distances
+        return scores
 
     def compute_loss(self, pos_scores, neg_scores):
         """
@@ -65,11 +66,10 @@ class TransH(nn.Module):
         :param neg_scores:
         :return:
         """
-        criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         # y == -1 indicates that second input to criterion should get a larger loss
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
-        margin_ranking_loss = criterion(pos_scores, neg_scores, y)
+        margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
 
         norm_of_entities = torch.norm(self.entity_embeddings.weight, p=2, dim=1)
         square_norms_entities = torch.mul(norm_of_entities, norm_of_entities)
