@@ -14,43 +14,12 @@ from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
-from utilities.constants import PREFERRED_DEVICE, EMBEDDING_DIMENSION_PRINT_MSG, \
-    EMBEDDING_DIMENSION_PROMPT_MSG, EMBEDDING_DIMENSION_ERROR_MSG, MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, \
-    MARGIN_LOSSES_ERROR_MSG, LEARNING_RATES_PRINT_MSG, LEARNING_RATES_PROMPT_MSG, LEARNING_RATES_ERROR_MSG, \
-    BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG, BATCH_SIZES_ERROR_MSG, EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, \
-    EPOCHS_ERROR_MSG, MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG, MAX_HPO_ITERS_ERROR_MSG, TRAINING, \
-    HYPER_PARAMTER_SEARCH, HYPER_PARAMTER_OPTIMIZATION_PARAMS, EMBEDDING_DIM, KG_EMBEDDING_MODEL, MARGIN_LOSS, \
-    LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, NUM_OF_MAX_HPO_ITERS, TRAINING_SET_PATH, TEST_SET_PATH, \
-    TEST_SET_RATIO, NORM_FOR_NORMALIZATION_OF_ENTITIES, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, \
-    MARGIN_LOSS_ERROR_MSG, LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, \
-    BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, \
-    EPOCH_ERROR_MSG, OUTPUT_DIREC, TRAINING_SET_PRINT_MSG, VALIDATION_SET_PRINT_MSG, CONFIG_FILE_PRINT_MSG, \
-    CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG, \
-    CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG, CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG, CONV_E_HPO_OUT_CHANNELS_PRINT_MSG, \
-    CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG, CONV_E_HPO_OUT_CHANNELS_ERROR_MSG, CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG, \
-    CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG, CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG, CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG, \
-    CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG, CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG, CONV_E_HEIGHT, CONV_E_WIDTH, \
-    CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, \
-    CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG, \
-    CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG, \
-    CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG, CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG, \
-    CONV_E_HPO_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG, \
-    CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG, \
-    CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG, GPU, CPU, CONV_E_INPUT_CHANNEL_PRINT_MSG, CONV_E_INPUT_CHANNEL_PROMPT_MSG, \
-    CONV_E_INPUT_CHANNEL_ERROR_MSG, CONV_E_OUT_CHANNEL_PRINT_MSG, CONV_E_OUT_CHANNEL_PROMPT_MSG, \
-    CONV_E_OUT_CHANNEL_ERROR_MSG, CONV_E_KERNEL_HEIGHT_PRINT_MSG, CONV_E_KERNEL_HEIGHT_PROMPT_MSG, \
-    CONV_E_KERNEL_HEIGHT_ERROR_MSG, CONV_E_KERNEL_WIDTH_PRINT_MSG, CONV_E_KERNEL_WIDTH_PROMPT_MSG, \
-    CONV_E_KERNEL_WIDTH_ERROR_MSG, CONV_E_INPUT_DROPOUT_PRINT_MSG, CONV_E_INPUT_DROPOUT_PROMPT_MSG, \
-    CONV_E_INPUT_DROPOUT_ERROR_MSG, CONV_E_OUTPUT_DROPOUT_PRINT_MSG, CONV_E_OUTPUT_DROPOUT_PROMPT_MSG, \
-    CONV_E_OUTPUT_DROPOUT_ERROR_MSG, CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG, CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG, \
-    CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG, ENTITIES_NORMALIZATION_PRINT_MSG, SCORING_FUNCTION_PRINT_MSG, \
-    SCORING_FUNCTION_NORM, NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG, \
-    NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG, NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG, \
-    NORMS_SCROING_FUNCTION_PRINT_MSG, NORMS_SCROING_FUNCTION_PROMPT_MSG, NORMS_SCROING_FUNCTION_ERROR_MSG
+from utilities.constants import *
 from utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
-embedding_models_mapping = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'RotE', 6: 'ConvE'}
+id_to_embedding_models = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'RotE', 6: 'ConvE'}
+embedding_models_to_ids = {value: key for key, value in id_to_embedding_models.items()}
 metrics_maping = {1: 'mean_rank', 2: 'hits@k'}
 normalization_mapping = {1: 'l1', 2: 'l2'}
 execution_mode_mapping = {1: TRAINING, 2: HYPER_PARAMTER_SEARCH}
@@ -174,7 +143,7 @@ def select_eval_metrics():
     return metrics
 
 
-def _select_trans_x_params(model_id):
+def _select_translational_based_hpo_params(selected_model):
     hpo_params = OrderedDict()
     embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSION_PRINT_MSG,
                                                           EMBEDDING_DIMENSION_PROMPT_MSG,
@@ -185,16 +154,21 @@ def _select_trans_x_params(model_id):
     margin_losses = select_float_values(MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, MARGIN_LOSSES_ERROR_MSG)
     hpo_params[MARGIN_LOSS] = margin_losses
 
-    if model_id == 1:
+    if selected_model == TRANS_E:
         hpo_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_float_values(
             NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG,
             NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG, NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG)
 
+    if selected_model == TRANS_E or selected_model == TRANS_H:
         print('----------------------------')
 
         hpo_params[SCORING_FUNCTION_NORM] = select_float_values(NORMS_SCROING_FUNCTION_PRINT_MSG,
                                                                 NORMS_SCROING_FUNCTION_PROMPT_MSG,
                                                                 NORMS_SCROING_FUNCTION_ERROR_MSG)
+    if selected_model == TRANS_H:
+        hpo_params[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = select_float_values(WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG,
+                                                                         WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG,
+                                                                         WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG)
 
     return hpo_params
 
@@ -319,7 +293,7 @@ def _select_conv_e_params():
     return conv_e_params
 
 
-def _select_conv_e_hyper_params():
+def _select_conv_e_hpo_params():
     hpo_params = OrderedDict()
 
     embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSION_PRINT_MSG,
@@ -366,15 +340,16 @@ def _select_conv_e_hyper_params():
 
 def select_hpo_params(model_id):
     hpo_params = OrderedDict()
-    hpo_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
+    hpo_params[KG_EMBEDDING_MODEL] = id_to_embedding_models[model_id]
+    selected_model = id_to_embedding_models[model_id]
 
-    if 1 <= model_id and model_id <= 5:
-        # Model is one of the TransX versions
-        param_dict = _select_trans_x_params(model_id)
+    if selected_model in [TRANS_D, TRANS_E, TRANS_H, TRANS_R]:
+        # Model is one of the the translational based models
+        param_dict = _select_translational_based_hpo_params(selected_model)
         hpo_params.update(param_dict)
-    elif model_id == 6:
+    elif selected_model == CONV_E:
         # ConvE
-        param_dict = _select_conv_e_hyper_params()
+        param_dict = _select_conv_e_hpo_params()
         hpo_params.update(param_dict)
     elif model_id == 'Y':
         # TODO: RESCAL
@@ -490,24 +465,32 @@ def select_norm(print_msg):
             print('Invalid input, please type in \'1\' or \'2\'')
 
 
-def select_embedding_model_params(model_id):
+def select_training_model_params(model_id):
     kg_model_params = OrderedDict()
-    kg_model_params[KG_EMBEDDING_MODEL] = embedding_models_mapping[model_id]
+    selected_model = id_to_embedding_models[model_id]
+    kg_model_params[KG_EMBEDDING_MODEL] = selected_model
 
-    if 1 <= model_id and model_id <= 5:
+    if selected_model in [TRANS_D, TRANS_E, TRANS_H, TRANS_R]:
         embedding_dimension = select_integer_value(EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PROMPT_MSG,
                                                    EMBEDDING_DIMENSION_ERROR_MSG)
 
         kg_model_params[EMBEDDING_DIM] = embedding_dimension
 
-        if model_id == 1:
+        if selected_model == TRANS_E:
             kg_model_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_norm(ENTITIES_NORMALIZATION_PRINT_MSG)
+
+        if selected_model == TRANS_E or selected_model == TRANS_H:
             print('----------------------------')
             kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
 
+        if selected_model == TRANS_H:
+            kg_model_params[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = select_float_value(
+                WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG, WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG,
+                WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG)
+
         kg_model_params[MARGIN_LOSS] = select_float_value(MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG,
                                                           MARGIN_LOSS_ERROR_MSG)
-    if model_id == 6:
+    if selected_model == CONV_E:
         # ConvE
         kg_model_params.update(_select_conv_e_params())
 
@@ -608,7 +591,7 @@ def start_cli():
         hpo_params = select_hpo_params(model_id=embedding_model_id)
         config[HYPER_PARAMTER_OPTIMIZATION_PARAMS] = hpo_params
     else:
-        kg_model_params = select_embedding_model_params(model_id=embedding_model_id)
+        kg_model_params = select_training_model_params(model_id=embedding_model_id)
         config[KG_EMBEDDING_MODEL] = kg_model_params
 
     print('----------------------------')
