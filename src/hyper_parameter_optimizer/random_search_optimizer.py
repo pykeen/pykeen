@@ -10,7 +10,7 @@ from utilities.constants import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH
     NORM_FOR_NORMALIZATION_OF_ENTITIES, MEAN_RANK, HITS_AT_K, TRANS_E, TRANS_H, TRANS_D, TRANS_R, \
     CONV_E, CONV_E_HEIGHT, CONV_E_WIDTH, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, \
     CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, SCORING_FUNCTION_NORM, \
-    PREFERRED_DEVICE
+    PREFERRED_DEVICE, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from utilities.evaluation_utils.compute_metrics import compute_metrics
 from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from utilities.train_utils import train_model
@@ -19,7 +19,7 @@ from utilities.triples_creation_utils.instance_creation_utils import create_mapp
 
 class RandomSearchHPO(AbstractHPOptimizer):
 
-    def _sample_conv_e_specifc_params(self, hyperparams_dict):
+    def _sample_conv_e_params(self, hyperparams_dict):
         kg_embedding_model_config = OrderedDict()
         kg_embedding_model_config[CONV_E_HEIGHT] = random.choice(hyperparams_dict[CONV_E_HEIGHT])
         kg_embedding_model_config[CONV_E_WIDTH] = random.choice(hyperparams_dict[CONV_E_WIDTH])
@@ -34,12 +34,19 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         return kg_embedding_model_config
 
-    def _sample_trans_x_specifc_params(self, hyperparams_dict):
+    def _sample_translational_based_model_params(self, hyperparams_dict):
         kg_embedding_model_config = OrderedDict()
         kg_embedding_model_config[MARGIN_LOSS] = random.choice(hyperparams_dict[MARGIN_LOSS])
-        kg_embedding_model_config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = random.choice(
-            hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES])
         kg_embedding_model_config[SCORING_FUNCTION_NORM] = random.choice(hyperparams_dict[SCORING_FUNCTION_NORM])
+        selected_model = hyperparams_dict[KG_EMBEDDING_MODEL]
+
+        if selected_model == TRANS_E:
+            kg_embedding_model_config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = random.choice(
+                hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES])
+
+        if selected_model == TRANS_H:
+            kg_embedding_model_config[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = random.choice(
+                hyperparams_dict[WEIGHT_SOFT_CONSTRAINT_TRANS_H])
 
         return kg_embedding_model_config
 
@@ -74,10 +81,10 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         if embedding_model in [TRANS_E, TRANS_H, TRANS_D, TRANS_R]:
             # Sample TransX (where X is element of {E,H,R,D})
-            param_sampling_fct = self._sample_trans_x_specifc_params
+            param_sampling_fct = self._sample_translational_based_model_params
 
         if embedding_model == CONV_E:
-            param_sampling_fct = self._sample_conv_e_specifc_params
+            param_sampling_fct = self._sample_conv_e_params
 
         for _ in range(max_iters):
             # Sample general hyper-params
