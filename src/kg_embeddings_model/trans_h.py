@@ -119,7 +119,7 @@ class TransH(nn.Module):
 
         scores = self.compute_scores(h_embs=head_emb_projected, r_embs=relation_embs, t_embs=tail_emb_projected)
 
-        return scores
+        return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
         """
