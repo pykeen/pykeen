@@ -28,8 +28,7 @@ class TransH(nn.Module):
         self.projected_relation_embeddings = nn.Embedding(self.num_relations, embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, embedding_dim)
         self.margin_loss = margin_loss
-        self.weightning_soft_constraint = torch.tensor([config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]], dtype=torch.float,
-                                                       requires_grad=False, device=self.device)
+        self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         self.epsilon = 0.05
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
