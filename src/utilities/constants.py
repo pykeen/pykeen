@@ -181,11 +181,19 @@ CONV_E_OUTPUT_DROPOUT_ERROR_MSG = 'Invalid output, input must be positive float 
 
 CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select (comma separated) the feature map dropout value(s)'
 CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value(s):'
-CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be positive float values.'
+CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid input, input must be positive float values.'
 
 CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select the feature map dropout value'
 CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value:'
 CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be a positive float value.'
+
+WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please select (comma separated) the weight value(s) for the soft constraints of the loss function'
+WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight value(s) for soft constraints: '
+WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'Invalid input, input must be positive float values.'
+
+WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please select the weight value for the soft constraints of the loss function'
+WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight value for soft constraints: '
+WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'Invalid input, input must be positive a float value.'
 
 TRAINING = 'training'
 HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
