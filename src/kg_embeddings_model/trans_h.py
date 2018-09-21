@@ -31,6 +31,7 @@ class TransH(nn.Module):
         self.epsilon = 0.05
 
     def _initialize(self):
+        # TODO: Add initialization
         pass
 
     def project_to_hyperplane(self, entity_emb, normal_vec_emb):
