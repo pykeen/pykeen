@@ -5,7 +5,7 @@ import torch.autograd
 import torch.nn as nn
 
 from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, TRANS_H, \
-    WEIGHT_SOFT_CONSTRAINT_TRANS_H
+    WEIGHT_SOFT_CONSTRAINT_TRANS_H, SCORING_FUNCTION_NORM, PREFERRED_DEVICE, GPU, CPU
 
 'Based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransH.py'
 
@@ -15,6 +15,8 @@ class TransH(nn.Module):
     def __init__(self, config):
         super(TransH, self).__init__()
         self.model_name = TRANS_H
+        self.device = torch.device(
+            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         embedding_dim = config[EMBEDDING_DIM]
@@ -29,17 +31,19 @@ class TransH(nn.Module):
         self.weightning_soft_constraint = torch.tensor([config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]], dtype=torch.float,
                                                        requires_grad=True)
         self.epsilon = 0.05
+        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
     def _initialize(self):
         # TODO: Add initialization
         pass
 
-    def project_to_hyperplane(self, entity_emb, normal_vec_emb):
-        projection = entity_emb - (normal_vec_emb.T * entity_emb) * normal_vec_emb
+    def project_to_hyperplane(self, entity_embs, normal_vec_embs):
+        # TODO: Check
+        projections = entity_embs - torch.sum(torch.mul(normal_vec_embs, entity_embs), dim=1)
 
-        return projection
+        return projections
 
-    def compute_score(self, h_embs, r_embs, t_embs):
+    def compute_scores(self, h_embs, r_embs, t_embs):
         """
 
         :param h_embs:
@@ -73,7 +77,7 @@ class TransH(nn.Module):
         entity_constraint = torch.abs(entity_constraint)
         entity_constraint = torch.sum(entity_constraint)
 
-        orthogonalty_constraint_numerator = torch.mul(self.normal_vector_embeddings,
+        orthogonalty_constraint_numerator = torch.mul(self.normal_vector_embeddings.weight,
                                                       self.projected_relation_embeddings.weight)
         orthogonalty_constraint_numerator = torch.sum(orthogonalty_constraint_numerator, dim=1)
         orthogonalty_constraint_numerator = torch.mul(orthogonalty_constraint_numerator,
@@ -101,16 +105,19 @@ class TransH(nn.Module):
         :return:
         """
 
-        heads, relations, tails = triples
+        heads = triples[:, 0:1]
+        relations = triples[:, 1:2]
+        tails = triples[:, 2:3]
+
         head_embs = self.entity_embeddings(heads)
         tail_embs = self.entity_embeddings(tails)
         relation_embs = self.relation_embeddings(relations)
         normal_vec_embs = self.normal_vector_embeddings(relations)
 
-        head_emb_projected = self.project_to_hyperplane(entity_emb=head_embs, normal_vec_emb=normal_vec_embs)
-        tail_emb_projected = self.project_to_hyperplane(entity_emb=tail_embs, normal_vec_emb=normal_vec_embs)
+        head_emb_projected = self.project_to_hyperplane(entity_embs=head_embs, normal_vec_embs=normal_vec_embs)
+        tail_emb_projected = self.project_to_hyperplane(entity_embs=tail_embs, normal_vec_embs=normal_vec_embs)
 
-        scores = self.compute_score(h_emb=head_emb_projected, relation_emb=relation_embs, t_emb=tail_emb_projected)
+        scores = self.compute_scores(h_embs=head_emb_projected, r_embs=relation_embs, t_embs=tail_emb_projected)
 
         return scores
 
@@ -124,31 +131,35 @@ class TransH(nn.Module):
 
         # Normalise embeddings of normal vectors
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
-        self.self.normal_vector_embeddings.weight.data = self.self.normal_vector_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.self.normal_vector_embeddings.weight))
+        self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
+            norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))
 
-        # TODO: Check indexing
-        pos_heads, pos_rels, pos_tails = batch_positives
-        neg_head, neg_rel, neg_tail = batch_negatives
+        pos_heads = batch_positives[:, 0:1]
+        pos_rels = batch_positives[:, 1:2]
+        pos_tails = batch_positives[:, 2:3]
 
-        pos_head_emb = self.entity_embeddings(pos_heads)
-        pos_rel_emb = self.relation_embeddings(pos_rels)
-        pos_tail_emb = self.entity_embeddings(pos_tails)
-        pos_normal_emb = self.normal_vector_embeddings(pos_rels)
+        neg_heads = batch_negatives[:, 0:1]
+        neg_rels = batch_negatives[:, 1:2]
+        neg_tails = batch_negatives[:, 2:3]
 
-        neg_head_emb = self.entity_embeddings(neg_head)
-        neg_rel_emb = self.relation_embeddings(neg_rel)
-        neg_tail_emb = self.entity_embeddings(neg_tail)
-        neg_normal_emb = self.normal_vector_embeddings(neg_rel)
+        pos_head_embs = self.entity_embeddings(pos_heads)
+        pos_rel_embs = self.relation_embeddings(pos_rels)
+        pos_tail_embs = self.entity_embeddings(pos_tails)
+        pos_normal_embs = self.normal_vector_embeddings(pos_rels)
 
-        projected_heads_pos = self.project_to_hyperplane(entity_emb=pos_head_emb, normal_vec_emb=pos_normal_emb)
-        projected_tails_pos = self.project_to_hyperplane(entity_emb=pos_tail_emb, normal_vec_emb=pos_normal_emb)
+        neg_head_embs = self.entity_embeddings(neg_heads)
+        neg_rel_embs = self.relation_embeddings(neg_rels)
+        neg_tail_embs = self.entity_embeddings(neg_tails)
+        neg_normal_embs = self.normal_vector_embeddings(neg_rels)
 
-        projected_heads_neg = self.project_to_hyperplane(entity_emb=neg_head_emb, normal_vec_emb=neg_normal_emb)
-        projected_tails_neg = self.project_to_hyperplane(entity_emb=neg_tail_emb, normal_vec_emb=neg_normal_emb)
+        projected_heads_pos = self.project_to_hyperplane(entity_embs=pos_head_embs, normal_vec_embs=pos_normal_embs)
+        projected_tails_pos = self.project_to_hyperplane(entity_embs=pos_tail_embs, normal_vec_embs=pos_normal_embs)
 
-        pos_scores = self.calc_score(h_emb=projected_heads_pos, r_emb=pos_rel_emb, t_emb=projected_tails_pos)
-        neg_scores = self.calc_score(h_emb=projected_heads_neg, r_emb=neg_rel_emb, t_emb=projected_tails_neg)
+        projected_heads_neg = self.project_to_hyperplane(entity_embs=neg_head_embs, normal_vec_embs=neg_normal_embs)
+        projected_tails_neg = self.project_to_hyperplane(entity_embs=neg_tail_embs, normal_vec_embs=neg_normal_embs)
+
+        pos_scores = self.compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
+        neg_scores = self.compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
         loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
