@@ -211,4 +211,7 @@ CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
 CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
 CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
 
+# TransH related
+WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weigthing_soft_constraint'
+
 OUTPUT_DIREC = 'output_direc'
