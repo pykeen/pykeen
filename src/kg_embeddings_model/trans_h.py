@@ -54,6 +54,7 @@ class TransH(nn.Module):
 
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
+        # TODO: In the paper they proposed squared l2-norm
         scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
 
         return scores
