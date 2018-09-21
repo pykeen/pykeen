@@ -66,6 +66,10 @@ class TransH(nn.Module):
         :param neg_scores:
         :return:
         """
+
+        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
+        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
+
         # y == -1 indicates that second input to criterion should get a larger loss
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
