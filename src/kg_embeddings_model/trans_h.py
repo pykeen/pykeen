@@ -95,9 +95,6 @@ class TransH(nn.Module):
         orthogonalty_constraint = torch.sum(orthogonalty_constraint)
         soft_constraints = self.weightning_soft_constraint * (entity_constraint + orthogonalty_constraint)
 
-        print(margin_ranking_loss)
-        print(soft_constraints)
-        exit(0)
         loss = margin_ranking_loss + soft_constraints.detach().cpu()
 
         return loss
