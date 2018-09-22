@@ -43,7 +43,7 @@ class TransH(nn.Module):
 
         return projections
 
-    def compute_scores(self, h_embs, r_embs, t_embs):
+    def _compute_scores(self, h_embs, r_embs, t_embs):
         """
 
         :param h_embs:
@@ -121,7 +121,7 @@ class TransH(nn.Module):
         head_emb_projected = self.project_to_hyperplane(entity_embs=head_embs, normal_vec_embs=normal_vec_embs)
         tail_emb_projected = self.project_to_hyperplane(entity_embs=tail_embs, normal_vec_embs=normal_vec_embs)
 
-        scores = self.compute_scores(h_embs=head_emb_projected, r_embs=relation_embs, t_embs=tail_emb_projected)
+        scores = self._compute_scores(h_embs=head_emb_projected, r_embs=relation_embs, t_embs=tail_emb_projected)
 
         return scores.detach().cpu().numpy()
 
@@ -162,8 +162,8 @@ class TransH(nn.Module):
         projected_heads_neg = self.project_to_hyperplane(entity_embs=neg_head_embs, normal_vec_embs=neg_normal_embs)
         projected_tails_neg = self.project_to_hyperplane(entity_embs=neg_tail_embs, normal_vec_embs=neg_normal_embs)
 
-        pos_scores = self.compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
-        neg_scores = self.compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
+        pos_scores = self._compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
+        neg_scores = self._compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
         loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
