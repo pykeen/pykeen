@@ -48,7 +48,7 @@ class TransE(nn.Module):
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
-    def compute_loss(self, pos_scores, neg_scores):
+    def _compute_loss(self, pos_scores, neg_scores):
         """
 
         :param pos_scores:
@@ -72,7 +72,7 @@ class TransE(nn.Module):
 
         return loss
 
-    def compute_scores(self, h_embs, r_embs, t_embs):
+    def _compute_scores(self, h_embs, r_embs, t_embs):
         """
 
         :param h_embs:
@@ -105,7 +105,7 @@ class TransE(nn.Module):
         relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
         tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
-        scores = self.compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
+        scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
 
         return scores.detach().cpu().numpy()
 
@@ -138,9 +138,9 @@ class TransE(nn.Module):
         neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.embedding_dim)
         neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
 
-        pos_scores = self.compute_scores(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
-        neg_scores = self.compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
+        pos_scores = self._compute_scores(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
+        neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
-        loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
+        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
         return loss
