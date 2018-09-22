@@ -479,7 +479,7 @@ def select_training_model_params(model_id):
         if selected_model == TRANS_E:
             kg_model_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_norm(ENTITIES_NORMALIZATION_PRINT_MSG)
 
-        if selected_model == TRANS_E or selected_model == TRANS_H:
+        if selected_model == TRANS_E or selected_model == TRANS_H or selected_model == TRANS_R:
             print('----------------------------')
             kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
 
@@ -487,6 +487,14 @@ def select_training_model_params(model_id):
             kg_model_params[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = select_float_value(
                 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG, WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG,
                 WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG)
+
+            print('----------------------------')
+
+        if selected_model == TRANS_R:
+            relation_embedding_dim = select_integer_value(RELATION_EMBEDDING_DIMENSION_PRINT_MSG,
+                                                          RELATION_EMBEDDING_DIMENSION_PROMPT_MSG,
+                                                          EMBEDDING_DIMENSION_ERROR_MSG)
+            kg_model_params[RELATION_EMBEDDING_DIM] = relation_embedding_dim
 
         kg_model_params[MARGIN_LOSS] = select_float_value(MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG,
                                                           MARGIN_LOSS_ERROR_MSG)
