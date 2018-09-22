@@ -46,6 +46,7 @@ HITS_AT_K = 'hits@k'
 BATCH_SIZE = 'batch_size'
 VOCAB_SIZE = 'vocab_size'
 EMBEDDING_DIM = 'embedding_dim'
+RELATION_EMBEDDING_DIM = 'relation_embedding_dim'
 MARGIN_LOSS = 'margin_loss'
 NUM_ENTITIES = 'num_entities'
 NUM_RELATIONS = 'num_relations'
@@ -62,7 +63,7 @@ K_FOR_HITS_AT_K = 'k_for_hits_at_k'
 SEED = 'seed'
 
 # Command line interface parameters
-EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions comma separated (e.g. 50,100,200):'
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
 
@@ -82,7 +83,7 @@ MARGIN_LOSSES_PRINT_MSG = 'Please type the range of preferred margin losse(s) co
 MARGIN_LOSSES_PROMPT_MSG = '> Please select the margin losse(s):'
 MARGIN_LOSSES_ERROR_MSG = 'Invalid input, please type in positive integer as embedding dimensions.'
 
-NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG  = 'Please select L-p norm(s) for the normalization of entities comma separated (e.g. 0.5, 1, 2):'
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG = 'Please select L-p norm(s) for the normalization of entities comma separated (e.g. 0.5, 1, 2):'
 NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG = '> L-p norm(s):'
 NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG = 'Invalid input, please provide float value(s).'
 
@@ -94,8 +95,12 @@ MAX_HPO_ITERS_PRINT_MSG = 'Please type the maximum number of iterationns for the
 MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
 MAX_HPO_ITERS_ERROR_MSG = 'Invalid input, please type in a positive integer for the maximum number of iterations.'
 
-EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension:'
-EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension:'
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of entities:'
+EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
+EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
+
+RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of relations:'
+RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
 
 MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
@@ -145,7 +150,6 @@ CONV_E_OUT_CHANNEL_ERROR_MSG = 'Invalid input, the number of output channels mus
 CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for ConvE'
 CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
 CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG = 'Invalid input, kernel heights must be positive integers and <= than %d (defined height).'
-
 
 CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the kernel height for ConvE.'
 CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Kernel height for defined height %d:'
@@ -223,3 +227,4 @@ CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
 WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weigthing_soft_constraint'
 
 OUTPUT_DIREC = 'output_direc'
+
