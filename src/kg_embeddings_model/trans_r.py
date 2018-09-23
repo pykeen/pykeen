@@ -91,6 +91,7 @@ class TransR(nn.Module):
 
         return projected_entity_embs
 
+    # TODO: Initilaize relation matrices as identiy matrices
     def _initialize(self):
         lower_bound = -6 / np.sqrt(self.entity_embedding_dim)
         upper_bound = 6 / np.sqrt(self.entity_embedding_dim)
