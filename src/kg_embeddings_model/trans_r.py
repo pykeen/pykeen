@@ -121,7 +121,7 @@ class TransR(nn.Module):
         tail_embs = self.entity_embeddings(tails).view(-1, self.entity_embedding_dim)
 
         proj_matrix_embs = self.projection_matrix_embs(relations).view(-1, self.entity_embedding_dim,
-                                                                           self.relation_embedding_dim)
+                                                                       self.relation_embedding_dim)
 
         proj_heads_embs = self._project_entities(head_embs, proj_matrix_embs)
         proj_tails_embs = self._project_entities(tail_embs, proj_matrix_embs)
