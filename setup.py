@@ -1,13 +1,29 @@
 # -*- coding: utf-8 -*-
 
+"""KEEN setup.py."""
+
 import codecs
 import os
 import re
 
 import setuptools
 
+MODULE = 'keen'
 PACKAGES = setuptools.find_packages(where='src')
-META_PATH = os.path.join('src', 'deployer', '__init__.py')
+META_PATH = os.path.join('src', MODULE, '__init__.py')
+KEYWORDS = ['Knowledge Graph Embeddings', 'Machine Learning', 'Data Mining', 'Linked Data']
+CLASSIFIERS = [
+    'Development Status :: 4 - Beta',
+    'Environment :: Console',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Topic :: Scientific/Engineering :: Bio-Informatics'
+]
 INSTALL_REQUIRES = [
     'numpy==1.14.2',
     'scikit-learn==0.19.1',
@@ -16,11 +32,9 @@ INSTALL_REQUIRES = [
     'torch==0.4.0',
     'torchvision==0.2.1',
 ]
-
 ENTRY_POINTS = {
-    # Add later deployer_utils scripts
     'console_scripts': [
-        'start-walking-rdf-owl=deployer.walking_rdf_and_owl_deployer:main',
+        'keen = keen.cli:main',
     ]
 }
 
@@ -37,7 +51,7 @@ META_FILE = read(META_PATH)
 
 
 def find_meta(meta):
-    """Extract __*meta*__ from META_FILE"""
+    """Extract __*meta*__ from META_FILE."""
     meta_match = re.search(
         r'^__{meta}__ = ["\']([^"\']*)["\']'.format(meta=meta),
         META_FILE, re.M
@@ -49,8 +63,9 @@ def find_meta(meta):
 
 def get_long_description():
     """Get the long_description from the README.rst file. Assume UTF-8 encoding."""
-    with codecs.open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
+    with codecs.open(os.path.join(HERE, 'README.rst'), encoding='utf-8') as f:
         long_description = f.read()
+    return long_description
 
 
 if __name__ == '__main__':
@@ -64,8 +79,12 @@ if __name__ == '__main__':
         author_email=find_meta('email'),
         maintainer=find_meta('author'),
         maintainer_email=find_meta('email'),
+        license=find_meta('license'),
+        classifiers=CLASSIFIERS,
+        keywords=KEYWORDS,
         packages=PACKAGES,
         package_dir={'': 'src'},
+        include_package_data=True,
         install_requires=INSTALL_REQUIRES,
         entry_points=ENTRY_POINTS,
     )
