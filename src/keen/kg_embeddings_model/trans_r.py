@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+'''Implementation of TransR.'''
+
 import numpy as np
 import torch
 import torch.autograd

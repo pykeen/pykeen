@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-# Basic Directory
-from keen.utilities.config_utils import create_base_dir
 
-KG_EMBEDDINGS_PIPELINE_DIR = create_base_dir()
+'''Constants defined for KEEN.'''
 
 # Related to corpus Walking RDF and OWL
 WROC = 'walking_rdf_and_owl_corpus'
@@ -20,12 +18,12 @@ CSQA_WIKIDATA = 'csqa_wiki_data'
 
 # Configuration related
 CLASS_NAME = 'class_name'
-## Reader
+# Reader
 READER = 'reader'
 WROC_READER = 'WROCReader'
 CSQA_WIKIDATA_READER = 'CSQAWikiDataReader'
 WN18_READER = 'WN18Reader'
-## KG embedding model
+# KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
 # Evaluator
 EVALUATOR = 'evaluator'
@@ -39,7 +37,7 @@ CPU = 'cpu'
 GPU = 'gpu'
 RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 
-## Metrics
+# Metrics
 MEAN_RANK = 'mean_rank'
 HITS_AT_K = 'hits@k'
 # ML params
@@ -227,4 +225,3 @@ CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
 WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weigthing_soft_constraint'
 
 OUTPUT_DIREC = 'output_direc'
-

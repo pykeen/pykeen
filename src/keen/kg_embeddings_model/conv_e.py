@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import torch
 import torch.autograd
 import torch.nn as nn
@@ -39,9 +41,14 @@ class ConvE(nn.Module):
         self.loss = torch.nn.BCELoss()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.conv1 = torch.nn.Conv2d(in_channels=num_in_channels, out_channels=num_out_channels,
-                                     kernel_size=(kernel_height, kernel_width), stride=1, padding=0,
-                                     bias=True)
+        self.conv1 = torch.nn.Conv2d(
+            in_channels=num_in_channels,
+            out_channels=num_out_channels,
+            kernel_size=(kernel_height, kernel_width),
+            stride=1,
+            padding=0,
+            bias=True
+        )
 
         # num_features – C from an expected input of size (N,C,L)
         self.bn0 = torch.nn.BatchNorm2d(num_in_channels)
@@ -49,8 +56,9 @@ class ConvE(nn.Module):
         self.bn1 = torch.nn.BatchNorm2d(num_out_channels)
         self.bn2 = torch.nn.BatchNorm1d(self.embedding_dim)
         self.register_parameter('b', Parameter(torch.zeros(self.num_entities)))
-        num_in_features = num_out_channels * (2 * self.img_height - kernel_height + 1) * (
-                self.img_width - kernel_width + 1)
+        num_in_features = num_out_channels * \
+                          (2 * self.img_height - kernel_height + 1) * \
+                          (self.img_width - kernel_width + 1)
         self.fc = torch.nn.Linear(num_in_features, self.embedding_dim)
 
     def init(self):

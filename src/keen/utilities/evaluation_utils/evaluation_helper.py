@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 
 
@@ -23,7 +25,7 @@ def get_stratey_for_corrupting(corrupt_suject):
 
 
 def _concatenate_entites_first(candidate_entities, tuples):
-    candidate_entities = np.reshape(candidate_entities,newshape=(-1,1))
+    candidate_entities = np.reshape(candidate_entities, newshape=(-1, 1))
     return np.concatenate([candidate_entities, tuples], axis=1)
 
 
