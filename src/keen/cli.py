@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
+
+'''KEEN's command line interface.'''
+
 import json
 import os
 import pickle
-import sys
 import time
-
-import click
-
-from keen.constants import *
-
-w_dir = os.path.dirname(os.getcwd())
-sys.path.append(w_dir)
 from collections import OrderedDict
 
+import click
 from prompt_toolkit import prompt
 
+from keen.constants import *
 from keen.utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
@@ -41,7 +38,7 @@ def select_execution_mode():
     print('Hyper-parameter search: 2')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> Please select one of the options: ')
 
         if user_input != '1' and user_input != '2':
@@ -60,7 +57,7 @@ def select_embedding_model():
     print("ConvE: 6")
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> Please select one of the options: ')
 
         if user_input not in ['1', '2', '3', '4', '5', '6']:
@@ -78,7 +75,7 @@ def select_positive_integer_values(print_msg, prompt_msg, error_msg):
     is_valid_input = False
     integers = []
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         is_valid_input = True
         user_input = prompt(prompt_msg)
         user_input = user_input.split(',')
@@ -99,7 +96,7 @@ def select_float_values(print_msg, prompt_msg, error_msg):
     is_valid_input = False
     float_values = []
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt(prompt_msg)
         user_input = user_input.split(',')
 
@@ -382,7 +379,7 @@ def get_data_input_path(print_msg):
 
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> Path:')
 
         if not os.path.exists(os.path.dirname(user_input)):
@@ -395,7 +392,7 @@ def select_ratio_for_test_set():
     print('Select the ratio of the training set used for test (e.g. 0.5):')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> Ratio: ')
 
         try:
@@ -415,7 +412,7 @@ def is_test_set_provided():
     print('Do you provide a test set?')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> \'yes\' or \'no\': ')
 
         if user_input != 'yes' and user_input != 'no':
@@ -527,7 +524,7 @@ def ask_for_existing_configuration():
     print('Do you provide an existing configuration dictionary?')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> \'yes\' or \'no\':')
         if user_input == 'yes' or user_input == 'no':
             return mapping[user_input]
@@ -539,7 +536,7 @@ def load_config_file():
     is_valid_input = False
     config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PRINT_MSG)
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         with open(config_file_path, 'rb') as f:
             try:
                 data = pickle.load(f)
@@ -554,7 +551,7 @@ def ask_binary_question(print_msg, prompt_msg, error_msg):
     print(print_msg)
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt(prompt_msg)
         if user_input == 'yes' or user_input == 'no':
             return mapping[user_input]
@@ -566,7 +563,7 @@ def get_output_directory():
     print('Please type in the path to the output directory')
     is_valid_input = False
 
-    while is_valid_input == False:
+    while is_valid_input is False:
         user_input = prompt('> Path to output director:')
         if os.path.exists(os.path.dirname(user_input)):
             return user_input
@@ -649,15 +646,15 @@ def main():
     with open(out_path, 'wb') as handle:
         pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out_path = os.path.join(output_direc, 'evaluation_summary.txt')
+    out_path = os.path.join(output_direc, 'evaluation_summary.json')
     with open(out_path, 'w') as handle:
         handle.write(json.dumps(eval_summary))
 
-    out_path = os.path.join(output_direc, 'hyper_parameters.txt')
+    out_path = os.path.join(output_direc, 'hyper_parameters.json')
     with open(out_path, 'w') as handle:
         for key, val in params.items():
             handle.write("%s: %s \n" % (str(key), str(val)))
 
-    out_path = os.path.join(output_direc, 'losses.txt')
+    out_path = os.path.join(output_direc, 'losses.json')
     with open(out_path, 'w') as handle:
         handle.write(json.dumps(loss_per_epoch))
