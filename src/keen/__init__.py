@@ -26,7 +26,3 @@ __author__ = 'Mehdi Ali'
 __email__ = 'mehdi.ali@cs.uni-bonn.de'
 __license__ = 'MIT License'
 __copyright__ = 'Copyright (c) 2018 Mehdi Ali'
-
-
-
-

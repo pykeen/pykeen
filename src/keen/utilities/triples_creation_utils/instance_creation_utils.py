@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
+
+import logging
 
 import numpy as np
-import logging
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
 
 def create_mapped_triples(triples, entity_to_id=None, rel_to_id=None):
     """
@@ -65,11 +68,9 @@ def create_negative_triples(seed, pos_triples, filter_neg_triples=False):
 
     if filter_neg_triples:
         filtered_neg_triples = np.setdiff1d(neg_triples, pos_triples)
-        log.info("Filtered out %d " % (len(neg_triples)-len(filtered_neg_triples)))
+        log.info("Filtered out %d " % (len(neg_triples) - len(filtered_neg_triples)))
         neg_triples = filtered_neg_triples
         print(filtered_neg_triples)
         exit(0)
-
-
 
     return neg_triples
