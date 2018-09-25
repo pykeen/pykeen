@@ -7,5 +7,5 @@ import unittest
 
 class SimpleTest(unittest.TestCase):
 
-    def stupid_test(self):
+    def test_stupid(self):
         pass
