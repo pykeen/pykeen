@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-'''Constants defined for KEEN.'''
+"""Constants defined for KEEN."""
+
+VERSION = '0.0.1-dev'
 
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'

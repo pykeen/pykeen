@@ -86,4 +86,5 @@ if __name__ == '__main__':
         include_package_data=True,
         install_requires=INSTALL_REQUIRES,
         entry_points=ENTRY_POINTS,
+        zip_safe=False,
     )

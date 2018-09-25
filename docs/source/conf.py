@@ -14,6 +14,7 @@
 #
 import os
 import sys
+import re
 sys.path.insert(0, os.path.abspath('../../src'))
 
 # -- Project information -----------------------------------------------------
@@ -22,11 +23,18 @@ project = 'KEEN'
 copyright = '2018, Mehdi Ali'
 author = 'Mehdi Ali'
 
-# The short X.Y version
-version = ''
-# The full version, including alpha/beta/rc tags
-release = '0.0.1-dev'
+# The full version, including alpha/beta/rc tags.
+release = '0.12.2-dev'
 
+# The short X.Y version.
+parsed_version = re.match(
+    '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?',
+    release
+)
+version = parsed_version.expand('\g<major>.\g<minor>.\g<patch>')
+
+if parsed_version.group('release'):
+tags.add('prerelease')
 
 # -- General configuration ---------------------------------------------------
 
