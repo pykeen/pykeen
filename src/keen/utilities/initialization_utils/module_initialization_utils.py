@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from kg_embeddings_model.conv_e import ConvE
-from kg_embeddings_model.rot_e import RotE
-from kg_embeddings_model.trans_d import TransD
-from kg_embeddings_model.trans_e import TransE
-from kg_embeddings_model.trans_h import TransH
-from kg_embeddings_model.trans_r import TransR
-from utilities.constants import TRANS_E, TRANS_H, KG_EMBEDDING_MODEL, TRANS_D, TRANS_R, CONV_E, ROT_E
+from keen.kg_embeddings_model.conv_e import ConvE
+from keen.kg_embeddings_model.rot_e import RotE
+from keen.kg_embeddings_model.trans_d import TransD
+from keen.kg_embeddings_model.trans_e import TransE
+from keen.kg_embeddings_model.trans_h import TransH
+from keen.kg_embeddings_model.trans_r import TransR
+from keen.utilities import TRANS_E, TRANS_H, KG_EMBEDDING_MODEL, TRANS_D, TRANS_R, CONV_E, ROT_E
 
 
 def get_kg_embedding_model(config):

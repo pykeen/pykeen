@@ -4,7 +4,7 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS
+from keen.utilities import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS
 
 
 class GenericEmbeddings(nn.Module):

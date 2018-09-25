@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Basic Directory
-from utilities.config_utils import create_base_dir
+from keen.utilities.config_utils import create_base_dir
 
 KG_EMBEDDINGS_PIPELINE_DIR = create_base_dir()
 

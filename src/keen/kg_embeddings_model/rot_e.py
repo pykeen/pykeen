@@ -9,7 +9,7 @@ import torch.nn as nn
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, GPU, CPU, \
+from keen.utilities import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, GPU, CPU, \
     ROT_E
 
 

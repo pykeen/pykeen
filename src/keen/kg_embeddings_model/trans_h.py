@@ -4,7 +4,7 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, TRANS_H, \
+from keen.utilities import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, TRANS_H, \
     WEIGHT_SOFT_CONSTRAINT_TRANS_H, SCORING_FUNCTION_NORM, PREFERRED_DEVICE, GPU, CPU
 
 'Based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransH.py'
