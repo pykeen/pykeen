@@ -8,7 +8,7 @@ The system has a modular architecture, and can be configured by the user through
 
 Installation
 ------------
-1. ``keen`` can be installed with the following commmands:
+1. ``KEEN`` can be installed with the following commmands:
 
 .. code-block:: sh
 
