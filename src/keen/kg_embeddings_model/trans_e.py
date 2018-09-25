@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+'''Implementation of TransE.'''
+
 import logging
 
 import numpy as np
