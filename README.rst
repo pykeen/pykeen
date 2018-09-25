@@ -27,9 +27,20 @@ Installation
 .. code-block:: sh
 
     python3 -m pip install -e .
-    
-## Project Structure
 
-* In 'src/deployer' all deployer scripts are contained.
-* In 'src/kg_embeddings_model' all knowledge graph embedding models are defined.
-* In 'src/utilities' all utilities such as building the pipelines.
+How to use
+----------
+
+To start KEEN, please run the following command:
+    
+.. code-block:: sh
+
+    keen
+    
+or alternatively:    
+
+.. code-block:: python
+
+    python3 -m keen
+    
+then the command line interface with assist you to configure your experiments.
