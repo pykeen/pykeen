@@ -110,3 +110,5 @@ venv.bak/
 /dist/
 /t_s.py
 /corpora/
+/src/keen/kg_embeddings_model/rot_e.py
+/src/keen/kg_embeddings_model/generic_embeddings.py
