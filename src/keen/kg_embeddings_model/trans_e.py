@@ -40,6 +40,10 @@ class TransE(nn.Module):
         self._initialize()
 
     def _initialize(self):
+        """
+
+        :return:
+        """
         lower_bound = -6 / np.sqrt(self.embedding_dim)
         upper_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
