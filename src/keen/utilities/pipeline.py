@@ -32,28 +32,43 @@ class Pipeline(object):
     def start_training(self):
         return self._start_pipeline(is_hpo_mode=False)
 
-    def _start_pipeline(self, is_hpo_mode):
+    @property
+    def has_test_set(self) -> bool:
+        return TEST_SET_PATH in self.config
+
+
+    def _get_data(self):
+        path_to_train_data = self.config[TRAINING_SET_PATH]
+
+        pos_triples = np.loadtxt(
+            fname=path_to_train_data,
+            dtype=str,
+            comments='@Comment@ Subject Predicate Object',
+            delimiter='\t',
+        )
+
+        if self.has_test_set:
+            train_pos = pos_triples
+            test_pos = np.loadtxt(
+                fname=self.config[TEST_SET_PATH],
+                dtype=str,
+                comments='@Comment@ Subject Predicate Object',
+                delimiter='\t',
+            )
+        else:
+            train_pos, test_pos = train_test_split(
+                pos_triples,
+                test_size=self.config[TEST_SET_RATIO],
+                random_state=self.seed,
+            )
+
+        return train_pos, test_pos
+
+    def _start_pipeline(self, is_hpo_mode: bool):
         """
         :return:
         """
-
-        # TODO: Adapt
-        path_to_train_data = self.config[TRAINING_SET_PATH]
-
-        pos_triples = np.loadtxt(fname=path_to_train_data, dtype=str, comments='@Comment@ Subject Predicate Object',
-                                 delimiter='\t')
-        has_test_set = True
-
-        if TEST_SET_PATH in self.config:
-            train_pos = pos_triples
-            test_pos = np.loadtxt(fname=self.config[TEST_SET_PATH], dtype=str,
-                                  comments='@Comment@ Subject Predicate Object')
-        else:
-            ratio_test_data = self.config[TEST_SET_RATIO]
-            train_pos, test_pos = train_test_split(pos_triples, test_size=ratio_test_data, random_state=self.seed)
-            # has_test_set = False
-
-        # Create entity and relation mapping
+        train_pos, test_pos = self._get_data()
         all_triples = np.concatenate([train_pos, test_pos], axis=0)
         entity_to_id, rel_to_id = create_mappings(triples=all_triples)
         mapped_pos_train_tripels, _, _ = create_mapped_triples(triples=train_pos, entity_to_id=entity_to_id,
@@ -95,7 +110,7 @@ class Pipeline(object):
 
             eval_summary = None
 
-            if has_test_set:
+            if self.has_test_set or TEST_SET_RATIO in self.config:
                 log.info("-------------Start Evaluation-------------")
                 # Initialize KG evaluator
                 mapped_pos_test_tripels, _, _ = create_mapped_triples(triples=test_pos, entity_to_id=entity_to_id,
