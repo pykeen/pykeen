@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import logging
 from collections import OrderedDict
 
@@ -6,14 +7,12 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 
-from hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
-from utilities.constants import KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
-    GPU, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, \
-    MEAN_RANK, HITS_AT_K, CPU
-from utilities.evaluation_utils.compute_metrics import compute_metrics
-from utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
-from utilities.train_utils import train_model
-from utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
+from keen.constants import *
+from keen.hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
+from keen.utilities.evaluation_utils.metrics_computations import compute_metrics
+from keen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
+from keen.utilities.train_utils import train_model
+from keen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)

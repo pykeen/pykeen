@@ -1,10 +1,9 @@
-
 # -*- coding: utf-8 -*-
 import torch
 import torch.autograd
 import torch.nn as nn
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS
+from keen.constants import *
 
 
 class GenericEmbeddings(nn.Module):
@@ -20,13 +19,12 @@ class GenericEmbeddings(nn.Module):
 
         self.entities_embeddings = nn.Embedding(num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
-        self.R_k_s_embeddings = nn.Embedding(num_relations, self.embedding_dim*self.embedding_dim)
-        self.alpha_k_s = nn.Embedding(num_relations,1)
-        self.W_k_s = nn.Embedding(num_relations,self.embedding_dim*self.embedding_dim)
+        self.R_k_s_embeddings = nn.Embedding(num_relations, self.embedding_dim * self.embedding_dim)
+        self.alpha_k_s = nn.Embedding(num_relations, 1)
+        self.W_k_s = nn.Embedding(num_relations, self.embedding_dim * self.embedding_dim)
         self.margin_loss = margin_loss
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
     def forward(self, pos_exmpls, neg_exmpls):
         pos_heads = pos_exmpls[:, 0:1]
@@ -46,9 +44,9 @@ class GenericEmbeddings(nn.Module):
         neg_t_embs = self.entities_embeddings(neg_tails)
 
         R_k_s = self.self.R_k_s_embeddings(pos_relations).view(-1, self.embedding_dim,
-                                                                          self.embedding_dim)
-        W_k_s = self.self.W_k_s(pos_relations).view(-1, self.embedding_dim,
                                                                self.embedding_dim)
+        W_k_s = self.self.W_k_s(pos_relations).view(-1, self.embedding_dim,
+                                                    self.embedding_dim)
         alpha_k_s = self.alpha_k_s(pos_relations)
 
         # Project entities into relation space
@@ -58,14 +56,14 @@ class GenericEmbeddings(nn.Module):
         proj_neg_heads = self._project_entities(neg_h_embs, W_k_s)
         proj_neg_tails = self._project_entities(neg_t_embs, W_k_s)
 
-        pos_score = self.compute_scores(projected_head=proj_pos_heads, projected_tail=proj_pos_tails, R_k=R_k_s, alpha_k=alpha_k_s)
+        pos_score = self.compute_scores(projected_head=proj_pos_heads, projected_tail=proj_pos_tails, R_k=R_k_s,
+                                        alpha_k=alpha_k_s)
         neg_score = self.compute_scores(projected_head=proj_neg_heads, projected_tail=proj_neg_tails, R_k=R_k_s,
                                         alpha_k=alpha_k_s)
 
         loss = self.compute_loss(pos_score=pos_score, neg_score=neg_score)
 
         return loss
-
 
     def _project_entities(self, head_emb, W_k):
         projected_head = torch.mm(W_k, head_emb)

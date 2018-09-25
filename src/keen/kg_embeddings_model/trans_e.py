@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import logging
 
 import numpy as np
@@ -9,9 +10,7 @@ import torch.nn as nn
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, \
-    NORM_FOR_NORMALIZATION_OF_ENTITIES, \
-    TRANS_E, PREFERRED_DEVICE, GPU, CPU, SCORING_FUNCTION_NORM
+from keen.constants import *
 
 
 class TransE(nn.Module):

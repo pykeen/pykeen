@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 from sklearn.utils import shuffle
 
-from utilities.constants import CONV_E, TRANS_E, TRANS_H, TRANS_D, TRANS_R, ROT_E
+from keen.constants import *
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)

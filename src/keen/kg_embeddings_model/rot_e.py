@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import logging
 
 import numpy as np
@@ -6,11 +7,10 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
+from keen.constants import *
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
-
-from utilities.constants import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, GPU, CPU, \
-    ROT_E
 
 
 class RotE(nn.Module):
@@ -143,9 +143,9 @@ class RotE(nn.Module):
         neg_t_embs = self.entities_embeddings(neg_tails).view(-1, self.embedding_dim)
 
         R_k_s = self.R_k_s_embeddings(pos_relations).view(-1, self.embedding_dim,
-                                                               self.embedding_dim)
+                                                          self.embedding_dim)
         W_k_s = self.W_k_s(pos_relations).view(-1, self.embedding_dim,
-                                                    self.embedding_dim)
+                                               self.embedding_dim)
 
         print("W_k_s shape: ", W_k_s.shape)
         print("pos_h_embs shape: ", pos_h_embs.t().shape)

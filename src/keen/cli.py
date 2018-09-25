@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 import json
 import os
 import pickle
 import sys
 import time
 
-# import matplotlib
-# import matplotlib.pyplot as plt
-# matplotlib.matplotlib_fname()
+import click
+
+from keen.constants import *
 
 w_dir = os.path.dirname(os.getcwd())
 sys.path.append(w_dir)
@@ -14,8 +15,7 @@ from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
-from utilities.constants import *
-from utilities.pipeline import Pipeline
+from keen.utilities.pipeline import Pipeline
 
 mapping = {'yes': True, 'no': False}
 id_to_embedding_models = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'RotE', 6: 'ConvE'}
@@ -475,13 +475,10 @@ def select_training_model_params(model_id):
                                                    EMBEDDING_DIMENSION_ERROR_MSG)
 
         kg_model_params[EMBEDDING_DIM] = embedding_dimension
+        kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
 
         if selected_model == TRANS_E:
             kg_model_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_norm(ENTITIES_NORMALIZATION_PRINT_MSG)
-
-        if selected_model == TRANS_E or selected_model == TRANS_H or selected_model == TRANS_R:
-            print('----------------------------')
-            kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
 
         if selected_model == TRANS_H:
             kg_model_params[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = select_float_value(
@@ -490,7 +487,7 @@ def select_training_model_params(model_id):
 
             print('----------------------------')
 
-        if selected_model == TRANS_R:
+        if selected_model == TRANS_R or selected_model == TRANS_D:
             relation_embedding_dim = select_integer_value(RELATION_EMBEDDING_DIMENSION_PRINT_MSG,
                                                           RELATION_EMBEDDING_DIMENSION_PROMPT_MSG,
                                                           EMBEDDING_DIMENSION_ERROR_MSG)
@@ -621,7 +618,9 @@ def start_cli():
     return config
 
 
+@click.command()
 def main():
+    """KEEN: A software for training and evaluating knowledge graph embeddings."""
     config = start_cli()
 
     current_time = time.strftime("%H:%M:%S")
@@ -662,7 +661,3 @@ def main():
     out_path = os.path.join(output_direc, 'losses.txt')
     with open(out_path, 'w') as handle:
         handle.write(json.dumps(loss_per_epoch))
-
-
-if __name__ == '__main__':
-    main()

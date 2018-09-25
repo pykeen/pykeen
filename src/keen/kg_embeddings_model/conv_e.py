@@ -4,10 +4,7 @@ import torch.nn as nn
 from torch.nn import functional as F, Parameter
 from torch.nn.init import xavier_normal
 
-from utilities.constants import NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, \
-    CONV_E_FEATURE_MAP_DROPOUT, \
-    CONV_E, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, \
-    CONV_E_HEIGHT, CONV_E_WIDTH
+from keen.constants import *
 
 '''
 Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
