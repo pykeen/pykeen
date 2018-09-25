@@ -22,7 +22,7 @@ Installation
 
 .. code-block:: sh
 
-    cd pathme
+    cd keen
 
 .. code-block:: sh
 
