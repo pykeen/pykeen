@@ -603,7 +603,7 @@ def start_cli():
     use_test_set = is_test_set_provided()
 
     if use_test_set:
-        config[TEST_SET_PATH] = get_data_input_path(print_msg=VALIDATION_SET_PRINT_MSG)
+        config[TEST_SET_PATH] = get_data_input_path(print_msg=TEST_SET_PRINT_MSG)
     else:
         config[TEST_SET_RATIO] = select_ratio_for_test_set()
 
