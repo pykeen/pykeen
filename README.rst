@@ -43,4 +43,4 @@ or alternatively:
 
     python3 -m keen
     
-then the command line interface with assist you to configure your experiments.
+then the command line interface will assist you to configure your experiments.
