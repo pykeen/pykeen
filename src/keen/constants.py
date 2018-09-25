@@ -2,44 +2,35 @@
 
 '''Constants defined for KEEN.'''
 
-# Related to corpus Walking RDF and OWL
-WROC = 'walking_rdf_and_owl_corpus'
-WROC_URL = 'http://aber-owl.net/aber-owl/bio2vec/bio-knowledge-graph.n3'
-
-# WN18 related
-WN18_URL = 'https://github.com/Mrlyk423/Relation_Extraction/raw/master/data.zip'
-WN_18 = 'wn_18'
-WN_18_TRAIN = 'train'
-WN_18_VALID = 'valid'
-WN_18_TEST = 'test'
-
-# Related to CSQA filtered Wikidata
-CSQA_WIKIDATA = 'csqa_wiki_data'
-
-# Configuration related
-CLASS_NAME = 'class_name'
-# Reader
-READER = 'reader'
-WROC_READER = 'WROCReader'
-CSQA_WIKIDATA_READER = 'CSQAWikiDataReader'
-WN18_READER = 'WN18Reader'
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
+
+# Model names
+CONV_E = 'ConvE'
+TRANS_E = 'TransE'
+TRANS_H = 'TransH'
+TRANS_D = 'TransD'
+TRANS_R = 'TransR'
+ROT_E = 'RotE'
+
 # Evaluator
 EVALUATOR = 'evaluator'
 MEAN_RANK_EVALUATOR = 'MeanRankEvaluator'
+RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
+EVAL_METRICS = 'eval_metrics'
+MEAN_RANK = 'mean_rank'
+HITS_AT_K = 'hits@k'
+
 # Output paths
 ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
 EVAL_RESULTS = 'eval_results'
+
 # Device related
 PREFERRED_DEVICE = 'preferred_device'
 CPU = 'cpu'
 GPU = 'gpu'
-RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 
-# Metrics
-MEAN_RANK = 'mean_rank'
-HITS_AT_K = 'hits@k'
+
 # ML params
 BATCH_SIZE = 'batch_size'
 VOCAB_SIZE = 'vocab_size'
@@ -51,16 +42,35 @@ NUM_RELATIONS = 'num_relations'
 NUM_EPOCHS = 'num_epochs'
 NUM_OF_MAX_HPO_ITERS = 'maximum_number_of_hpo_iters'
 LEARNING_RATE = 'learning_rate'
+TRAINING = 'training'
+HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
+HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
+TRAINING_SET_PATH = 'training_set_path'
+TEST_SET_PATH = 'test_set_path'
+TEST_SET_RATIO = 'validation_set_ratio'
+NORM_FOR_NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
+SCORING_FUNCTION_NORM = 'scoring_function'
+# TransH related
+WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weigthing_soft_constraint'
+# ConvE related
 CONV_E_INPUT_DROPOUT = 'conv_e_input_dropout'
 CONV_E_OUTPUT_DROPOUT = 'conv_e_output_dropout'
 CONV_E_FEATURE_MAP_DROPOUT = 'conv_e_feature_map_dropout'
-EVAL_METRICS = 'eval_metrics'
-K_FOR_HITS_AT_K = 'k_for_hits_at_k'
+CONV_E_HEIGHT = 'ConvE_height'
+CONV_E_WIDTH = 'ConvE_width'
+CONV_E_INPUT_CHANNELS = 'ConvE_input_channels'
+CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
+CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
+CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
+
+
 
 # Further Constants
 SEED = 'seed'
+OUTPUT_DIREC = 'output_direc'
 
-# Command line interface parameters
+# -----------------Command line interface messages-----------------
+
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
@@ -162,7 +172,7 @@ CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width for defined width %d:'
 CONV_E_KERNEL_WIDTH_ERROR_MSG = 'Invalid input, kernel width mus be a positive integer and <= than %d (defined width).'
 
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
-VALIDATION_SET_PRINT_MSG = 'Please provide the path to the validation file.'
+TEST_SET_PRINT_MSG = 'Please provide the path to the test set.'
 CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
 
 CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG = 'Please select (comma separated) the input dropout value(s)'
@@ -197,31 +207,5 @@ WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please select the weight value for t
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight value for soft constraints: '
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'Invalid input, input must be positive a float value.'
 
-TRAINING = 'training'
-HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
-HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
-TRAINING_SET_PATH = 'training_set_path'
-TEST_SET_PATH = 'test_set_path'
-TEST_SET_RATIO = 'validation_set_ratio'
-NORM_FOR_NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
-SCORING_FUNCTION_NORM = 'scoring_function'
+# ----------------------------------
 
-# Model names
-CONV_E = 'ConvE'
-TRANS_E = 'TransE'
-TRANS_H = 'TransH'
-TRANS_D = 'TransD'
-TRANS_R = 'TransR'
-ROT_E = 'RotE'
-
-CONV_E_HEIGHT = 'ConvE_height'
-CONV_E_WIDTH = 'ConvE_width'
-CONV_E_INPUT_CHANNELS = 'ConvE_input_channels'
-CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
-CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
-CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
-
-# TransH related
-WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weigthing_soft_constraint'
-
-OUTPUT_DIREC = 'output_direc'
