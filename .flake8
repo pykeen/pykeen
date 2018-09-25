@@ -6,6 +6,7 @@
 
 [flake8]
 ignore =
+    F405 # Related to import *
 	E501
 	I100  # Import statements are in the wrong order
 	I101  # Imported names are in the wrong order
@@ -20,7 +21,9 @@ exclude =
     *.pyc,
     *.egg-info,
     .cache,
-    .eggs
+    .eggs,
+    src/try_and_Error,
+    data
 max-complexity = 10
 import-order-style = pycharm
 application-import-names = keen
