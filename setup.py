@@ -8,6 +8,7 @@ import re
 
 import setuptools
 
+NOPE = "3.6"
 MODULE = 'keen'
 PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', MODULE, '__init__.py')
@@ -19,14 +20,13 @@ CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 3.4',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
+    f'Programming Language :: Python :: {NOPE}',
     'Topic :: Scientific/Engineering :: Bio-Informatics'
 ]
 INSTALL_REQUIRES = [
     'numpy==1.14.2',
     'scikit-learn==0.19.1',
+    'scipy',
     'click==6.7',
     'torch==0.4.0',
     'torchvision==0.2.1',

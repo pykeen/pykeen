@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
 '''KEEN's command line interface.'''
-
 import json
 import os
 import pickle
-import time
 from collections import OrderedDict
 
 import click
 from prompt_toolkit import prompt
 
 from keen.constants import *
-from keen.utilities.pipeline import Pipeline
+from keen.run import run
 
 mapping = {'yes': True, 'no': False}
 id_to_embedding_models = {1: 'TransE', 2: 'TransH', 3: 'TransR', 4: 'TransD', 5: 'RotE', 6: 'ConvE'}
@@ -382,10 +380,11 @@ def get_data_input_path(print_msg):
     while is_valid_input is False:
         user_input = prompt('> Path:')
 
-        if not os.path.exists(os.path.dirname(user_input)):
-            print('Path doesn\'t exist, please type in new path')
-        else:
+        if os.path.exists(os.path.dirname(user_input)):
             return user_input
+
+        print('Path doesn\'t exist, please type in new path')
+
 
 
 def select_ratio_for_test_set():
@@ -397,15 +396,13 @@ def select_ratio_for_test_set():
 
         try:
             ratio = float(user_input)
-            if ratio > 0. and ratio < 1.:
+            if 0. < ratio < 1.:
                 return ratio
-            else:
-                print('Invalid input, please type in a number > 0. and < 1.')
-            return ratio
         except ValueError:
-            print('Invalid input, please type in a number > 0. and < 1.')
+            pass
 
-    return ratio
+        print('Invalid input, please type in a number > 0. and < 1.')
+
 
 
 def is_test_set_provided():
@@ -539,11 +536,11 @@ def load_config_file():
     while is_valid_input is False:
         with open(config_file_path, 'rb') as f:
             try:
-                data = pickle.load(f)
+                data = json.load(f)
                 assert type(data) == dict or type(data) == OrderedDict
                 return data
             except:
-                print('Invalid file, configuration file must be serialised dictionary (.pkl)')
+                print('Invalid file, configuration file must be serialised dictionary (.json)')
                 config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PRINT_MSG)
 
 
@@ -619,42 +616,6 @@ def start_cli():
 def main():
     """KEEN: A software for training and evaluating knowledge graph embeddings."""
     config = start_cli()
+    run(config)
 
-    current_time = time.strftime("%H:%M:%S")
-    current_date = time.strftime("%d/%m/%Y").replace('/', '-')
-    output_direc = config[OUTPUT_DIREC]
-    output_direc = os.path.join(output_direc, current_date + '_' + current_time + '')
 
-    os.makedirs(output_direc, exist_ok=True)
-
-    out_path = os.path.join(output_direc, 'configuration.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(config, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    pipeline = Pipeline(config=config, seed=2)
-
-    if HYPER_PARAMTER_OPTIMIZATION_PARAMS in config:
-        trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_hpo()
-    else:
-        trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params = pipeline.start_training()
-
-    out_path = os.path.join(output_direc, 'entities_to_embeddings.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(entity_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    out_path = os.path.join(output_direc, 'relations_to_embeddings.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    out_path = os.path.join(output_direc, 'evaluation_summary.json')
-    with open(out_path, 'w') as handle:
-        handle.write(json.dumps(eval_summary))
-
-    out_path = os.path.join(output_direc, 'hyper_parameters.json')
-    with open(out_path, 'w') as handle:
-        for key, val in params.items():
-            handle.write("%s: %s \n" % (str(key), str(val)))
-
-    out_path = os.path.join(output_direc, 'losses.json')
-    with open(out_path, 'w') as handle:
-        handle.write(json.dumps(loss_per_epoch))

@@ -131,3 +131,8 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         return trained_models[index_of_max], epoch_losses[index_of_max], entity_to_ids[index_of_max], rel_to_ids[
             index_of_max], eval_summaries[index_of_max], models_params[index_of_max]
+
+    @staticmethod
+    def run(train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels, config, device, seed):
+        hpo = RandomSearchHPO()
+        return hpo.optimize_hyperparams(train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels, config, device, seed)
