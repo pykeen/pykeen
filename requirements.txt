@@ -1,6 +1,5 @@
 numpy==1.14.2
 scikit-learn==0.19.1
-click==6.7
-spacy==2.0.11
+click
 torch==0.4.0
 torchvision==0.2.1

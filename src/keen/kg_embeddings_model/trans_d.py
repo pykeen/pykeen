@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
+
 import numpy as np
 import torch
 import torch.autograd
 import torch.nn as nn
 
-from keen.utilities import EMBEDDING_DIM, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, TRANS_D, PREFERRED_DEVICE, GPU, \
-    CPU, SCORING_FUNCTION_NORM
+from keen.constants import *
 
 '''
 TODO: Check, whether it makes sense to integrate identity matrices.
@@ -73,7 +73,6 @@ class TransD(nn.Module):
         loss = self.criterion(pos_scores, neg_scores, y)
 
         return loss
-
 
     def _project_entities(self, entity_embs, entity_proj_vecs, relation_projs):
         # batch_size = entity_embs.shape[0]

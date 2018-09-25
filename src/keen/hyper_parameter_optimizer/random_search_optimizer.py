@@ -4,15 +4,10 @@ from collections import OrderedDict
 
 import numpy as np
 
-from keen.hyper_parameter_optimizer import AbstractHPOptimizer
-from keen.utilities import LEARNING_RATE, MARGIN_LOSS, EMBEDDING_DIM, BATCH_SIZE, NUM_EPOCHS, \
-    KG_EMBEDDING_MODEL, NUM_ENTITIES, NUM_RELATIONS, SEED, HYPER_PARAMTER_OPTIMIZATION_PARAMS, NUM_OF_MAX_HPO_ITERS, \
-    NORM_FOR_NORMALIZATION_OF_ENTITIES, MEAN_RANK, HITS_AT_K, TRANS_E, TRANS_H, TRANS_D, TRANS_R, \
-    CONV_E, CONV_E_HEIGHT, CONV_E_WIDTH, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_KERNEL_HEIGHT, \
-    CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_OUTPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT, SCORING_FUNCTION_NORM, \
-    PREFERRED_DEVICE, WEIGHT_SOFT_CONSTRAINT_TRANS_H
-from keen.utilities.evaluation_utils import compute_metrics
-from keen.utilities.initialization_utils import get_kg_embedding_model
+from keen.constants import *
+from keen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
+from keen.utilities.evaluation_utils.metrics_computations import compute_metrics
+from keen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from keen.utilities.train_utils import train_model
 from keen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 
