@@ -9,7 +9,7 @@ import torch.optim as optim
 from sklearn.utils import shuffle
 
 from keen.constants import *
-
+from tqdm import tqdm
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def _train_translational_based_model(kg_embedding_model, all_entities, learning_
 
     start_training = timeit.default_timer()
 
-    for epoch in range(num_epochs):
+    for epoch in tqdm(range(num_epochs)):
         np.random.seed(seed=seed)
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
