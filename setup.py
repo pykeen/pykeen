@@ -30,6 +30,7 @@ INSTALL_REQUIRES = [
     'click==6.7',
     'torch==0.4.0',
     'torchvision==0.2.1',
+    'prompt_toolkit'
 ]
 ENTRY_POINTS = {
     'console_scripts': [
