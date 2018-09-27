@@ -111,11 +111,6 @@ class DistMult(nn.Module):
         :return:
         """
 
-        # Normalise embeddings of entities
-        norms = torch.norm(self.entity_embeddings.weight, p=self.l_p_norm_entities, dim=1).data
-        self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
-            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
-
         pos_heads = batch_positives[:, 0:1]
         pos_relations = batch_positives[:, 1:2]
         pos_tails = batch_positives[:, 2:3]
