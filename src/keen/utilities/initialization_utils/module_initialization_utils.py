@@ -2,7 +2,6 @@
 
 from keen.constants import *
 from keen.kg_embeddings_model.conv_e import ConvE
-from keen.kg_embeddings_model.rot_e import RotE
 from keen.kg_embeddings_model.trans_d import TransD
 from keen.kg_embeddings_model.trans_e import TransE
 from keen.kg_embeddings_model.trans_h import TransH
@@ -27,5 +26,3 @@ def get_kg_embedding_model(config):
         return TransR(config=config)
     if model_name == CONV_E:
         return ConvE(config=config)
-    if model_name == ROT_E:
-        return RotE(config=config)
