@@ -55,11 +55,8 @@ class DistMult(nn.Module):
         :return:
         """
 
-        # y == -1 indicates that second input to criterion should get a larger loss
-        # y = torch.Tensor([-1]).cuda()
-        # NOTE: y = 1 is important
-        # y = torch.tensor([-1], dtype=torch.float, device=self.device)
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
+        # TODO: Check
+        y = np.repeat([1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
         # Scores for the psotive and negative triples
