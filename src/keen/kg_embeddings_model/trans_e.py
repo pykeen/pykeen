@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 
 from keen.constants import *
 
+'''Based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py'''
 
 class TransE(nn.Module):
 
