@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+'''Implementation of ConvE.'''
+
 import torch
 import torch.autograd
 import torch.nn as nn
