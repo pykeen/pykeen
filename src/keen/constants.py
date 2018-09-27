@@ -13,7 +13,7 @@ TRANS_E = 'TransE'
 TRANS_H = 'TransH'
 TRANS_D = 'TransD'
 TRANS_R = 'TransR'
-ROT_E = 'RotE'
+RESCAL = 'RESCAL'
 
 # Evaluator
 EVALUATOR = 'evaluator'
