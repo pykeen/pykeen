@@ -24,7 +24,6 @@ class TransE(nn.Module):
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
-        margin_loss = config[MARGIN_LOSS]
 
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
@@ -34,7 +33,7 @@ class TransE(nn.Module):
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        self.margin_loss = margin_loss
+        self.margin_loss = config[MARGIN_LOSS]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
 
         self._initialize()
