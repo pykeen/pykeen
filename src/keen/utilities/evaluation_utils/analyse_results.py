@@ -17,8 +17,8 @@ def plot_losses(losses, output_direc):
     plt.savefig(out_path)
 
 if __name__ == '__main__':
-    input_path = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/corpora/out/25-09-2018_09:29:12/losses.txt'
-    output_direc = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/corpora/out/25-09-2018_09:29:12'
+    input_path = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/experiments/server/28-09-2018_03:20:45/losses.json'
+    output_direc = '/Users/mehdi/PycharmProjects/kg_embeddings_pipeline/data/experiments/server/28-09-2018_03:20:45'
 
     with open(input_path) as json_data:
         losses = json.load(json_data)
