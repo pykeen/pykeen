@@ -10,6 +10,10 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
+def _hash_triples(triples):
+    return hash(tuple(triples))
+
+
 def _compute_hits_at_k_new(hits_at_k_dict, rank_of_positive_subject_based, rank_of_positive_object_based):
     for k, value in hits_at_k_dict.items():
         if rank_of_positive_subject_based < k:
@@ -25,23 +29,25 @@ def _compute_hits_at_k_new(hits_at_k_dict, rank_of_positive_subject_based, rank_
     return hits_at_k_dict
 
 
-def compute_metrics(all_entities, kg_embedding_model, triples, device):
+def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapped_test_triples, device,
+                    filter_scores=False):
     start = timeit.default_timer()
     ranks = []
     hits_at_k_dict = {k: [] for k in [1, 3, 5, 10]}
-
     kg_embedding_model = kg_embedding_model.to(device)
+    all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
+    all_pos_triples_hashed = np.apply_along_axis(_hash_triples(), 1, all_pos_triples)
 
     # Corrupt triples
-    for row_nmbr, row in enumerate(triples):
+    for row_nmbr, row in enumerate(mapped_test_triples):
         candidate_entities_subject_based = np.delete(arr=all_entities, obj=row[0:1])
         candidate_entities_subject_based = np.reshape(candidate_entities_subject_based, newshape=(-1, 1))
         candidate_entities_object_based = np.delete(arr=all_entities, obj=row[2:3])
         candidate_entities_object_based = np.reshape(candidate_entities_object_based, newshape=(-1, 1))
 
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
-        tuple_subject_based = np.reshape(a=triples[row_nmbr, 1:3], newshape=(1, 2))
-        tuple_object_based = np.reshape(a=triples[row_nmbr, 0:2], newshape=(1, 2))
+        tuple_subject_based = np.reshape(a=mapped_test_triples[row_nmbr, 1:3], newshape=(1, 2))
+        tuple_object_based = np.reshape(a=mapped_test_triples[row_nmbr, 0:2], newshape=(1, 2))
 
         # Copy current test tuple
         tuples_subject_based = np.repeat(a=tuple_subject_based, repeats=candidate_entities_subject_based.shape[0],
@@ -53,6 +59,18 @@ def compute_metrics(all_entities, kg_embedding_model, triples, device):
 
         corrupted_object_based = np.concatenate([tuples_object_based, candidate_entities_object_based], axis=1)
         corrupted_object_based = torch.tensor(corrupted_object_based, dtype=torch.long, device=device)
+
+        if filter_scores:
+            # TODO: Deal case, in which all corrupted triples are also positives
+            corrupted_subject_based_hashed = np.apply_along_axis(_hash_triples, 1, corrupted_subject_based)
+            mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
+            mask = np.where(mask)[0]
+            corrupted_subject_based = corrupted_subject_based[mask]
+
+            corrupted_object_based_hashed = np.apply_along_axis(_hash_triples, 1, corrupted_object_based)
+            mask = np.in1d(corrupted_object_based_hashed, all_pos_triples_hashed, invert=True)
+            mask = np.where(mask)[0]
+            corrupted_object_based = corrupted_object_based[mask]
 
         scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
         scores_of_corrupted_objects = kg_embedding_model.predict(corrupted_object_based)
