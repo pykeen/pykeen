@@ -77,13 +77,13 @@ class TransD(nn.Module):
         return loss
 
     def _project_entities(self, entity_embs, entity_proj_vecs, relation_projs):
-        # batch_size = entity_embs.shape[0]
-        # identity_matrices = torch.eye(batch_size,self.relation_embedding_dim,self.entity_embedding_dim)
-        transfer_matrices = torch.einsum('nm,nk->nmk',
-                                         [relation_projs, entity_proj_vecs])  # TODO: Check + identity_matrices
+        entity_embs = entity_embs
+        relation_projs = relation_projs.unsqueeze(-1)
+        entity_proj_vecs = entity_proj_vecs.unsqueeze(-1).permute([0, 2, 1])
+
+        transfer_matrices = torch.matmul(relation_projs, entity_proj_vecs)
 
         projected_entity_embs = torch.einsum('nmk,nk->nm', [transfer_matrices, entity_embs])
-        # projected_entity_embs = F.normalize(projected_entity_embs, 2, 1)
 
         return projected_entity_embs
 
@@ -135,9 +135,6 @@ class TransD(nn.Module):
         # pos_scores = self._compute_scores(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
         # neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
-        print(pos_scores)
-        print(neg_scores)
-        exit(0)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
