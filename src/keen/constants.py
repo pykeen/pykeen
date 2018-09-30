@@ -80,6 +80,10 @@ TRAINING_FILE_PROMPT_MSG = '> Please provide here the path to your training file
 TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
                           'Please try again.'
 
+TEST_FILE_PROMPT_MSG = '> Please provide here the path to your test file: '
+TEST_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the test file doesn\'t exist.\n' \
+                          'Please try again.'
+
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please positice integer as embedding dimensions.'
@@ -189,7 +193,8 @@ CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width for defined width %d:'
 CONV_E_KERNEL_WIDTH_ERROR_MSG = 'Invalid input, kernel width mus be a positive integer and <= than %d (defined width).'
 
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
-TEST_SET_PRINT_MSG = 'Please provide the path to the test set.'
+TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
+                          'Please try again.'
 CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
 
 CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG = 'Please select (comma separated) the input dropout value(s)'

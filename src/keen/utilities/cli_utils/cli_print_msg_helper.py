@@ -97,3 +97,7 @@ def test_set_message():
     print("Here you can specify whether you provide a test set yourself, or whether the test set\n"
           "should be randomly extracted from training set.")
     print()
+
+def test_ratio_message():
+    print('Here you are asked to select the ratio of the training set that should be used as a test\n'
+          '(e.g. 0.5 meaning half of the training set is used as a test set):')

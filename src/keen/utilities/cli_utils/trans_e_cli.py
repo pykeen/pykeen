@@ -9,13 +9,13 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     SCORING_FUNCTION_PROMPT_MSG, SCORING_FUNCTION_ERROR_MSG, ENTITIES_NORMALIZATION_PRINT_MSG, \
     ENTITIES_NORMALIZATION_PROMPT_MSG, ENTITIES_NORMALIZATION_ERROR_MSG, LEARNING_RATE_PRINT_MSG, \
     LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, \
-    BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG
+    BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_FILE_ERROR_MSG
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
     print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
-    print_number_epochs_message, ask_for_evlauation_message, test_set_message
+    print_number_epochs_message, ask_for_evlauation_message, test_set_message, test_ratio_message
 from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value, \
-    ask_for_evaluation, ask_for_test_set
+    ask_for_evaluation, ask_for_test_set, get_input_path, select_ratio_for_test_set, select_preferred_device
 
 
 def configure_trans_e_training_pipeline():
@@ -83,10 +83,16 @@ def configure_trans_e_training_pipeline():
         print_section_divider()
 
         if provide_test_set:
-            pass
+            test_set_path = get_input_path(prompt_msg=TEST_FILE_PROMPT_MSG,
+                                           error_msg=TEST_FILE_ERROR_MSG)
         else:
-            pass
+            test_ratio_message()
+            test_set_ratio = select_ratio_for_test_set()
 
+        print_section_divider()
+
+    # Step 10: Query device to train on
+    prefered_device = select_preferred_device()
 
 def configure_trans_hpo_pipeline():
     pass

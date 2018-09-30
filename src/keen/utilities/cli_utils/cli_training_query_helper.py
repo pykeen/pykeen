@@ -7,7 +7,7 @@ import os
 from prompt_toolkit import prompt
 
 from keen.constants import EXECUTION_MODE_MAPPING, KG_MODEL_TO_ID_MAPPING, ID_TO_KG_MODEL_MAPPING, \
-    BINARY_QUESTION_MAPPING
+    BINARY_QUESTION_MAPPING, GPU, CPU
 
 
 def get_input_path(prompt_msg, error_msg):
@@ -97,6 +97,7 @@ def ask_for_evaluation():
         else:
             return BINARY_QUESTION_MAPPING[user_input]
 
+
 def ask_for_test_set():
     print('Do you provide a test set yourself?')
 
@@ -108,3 +109,28 @@ def ask_for_test_set():
                   'If you type \'yes\' it means that you provide a test set yourself.')
         else:
             return BINARY_QUESTION_MAPPING[user_input]
+
+
+def select_ratio_for_test_set():
+    while True:
+        user_input = prompt('> Please select the ratio: ')
+
+        try:
+            ratio = float(user_input)
+            if 0. < ratio < 1.:
+                return ratio
+        except ValueError:
+            pass
+
+        print('Invalid input, the ratio should be 0.< ratio < 1. (e.g. 0.2).\n'
+              'Please try again.')
+
+def select_preferred_device():
+    print('Please select the preferred device (GPU or CPU).')
+
+    while True:
+        user_input = prompt('> Please type \'GPU\' or \'CPU\': ').lower()
+        if user_input == GPU or user_input == CPU:
+            return user_input
+        else:
+            print('Invalid input, please type in \'GPU\' or \'CPU\' and press enter.')
