@@ -57,7 +57,6 @@ def _train_translational_based_model(kg_embedding_model, all_entities, learning_
         current_epoch_loss = 0.
 
         for i in range(len(pos_batches)):
-            # TODO: Remove original subject and object from entity set
             pos_batch = pos_batches[i]
             current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
@@ -70,7 +69,6 @@ def _train_translational_based_model(kg_embedding_model, all_entities, learning_
 
             corrupted_subj_indices = np.random.choice(np.arange(0, num_entities), size=num_subj_corrupt)
             corrupted_subjects = np.reshape(all_entities[corrupted_subj_indices], newshape=(-1, 1))
-            # TODO:
             subject_based_corrupted_triples = np.concatenate(
                 [corrupted_subjects, batch_relations[:num_subj_corrupt], batch_objs[:num_subj_corrupt]], axis=1)
 
@@ -85,8 +83,7 @@ def _train_translational_based_model(kg_embedding_model, all_entities, learning_
             neg_batch = torch.tensor(neg_batch, dtype=torch.long, device=device)
 
             # Recall that torch *accumulates* gradients. Before passing in a
-            # new instance, you need to zero out the gradients from the old
-            # instance
+            # new instance, you need to zero out the gradients from the old instance
             optimizer.zero_grad()
             loss = kg_embedding_model(pos_batch, neg_batch)
             current_epoch_loss += (loss.item() * current_batch_size)

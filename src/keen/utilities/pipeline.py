@@ -52,6 +52,12 @@ class Pipeline(object):
             rel_to_id=rel_to_id,
         )
 
+        mapped_pos_test_tripels, _, _ = create_mapped_triples(
+            triples=test_pos,
+            entity_to_id=entity_to_id,
+            rel_to_id=rel_to_id,
+        )
+
         all_entities = np.array(list(entity_to_id.values()))
 
         if is_hpo_mode:
@@ -61,14 +67,13 @@ class Pipeline(object):
              relation_to_embedding,
              eval_summary,
              params) = RandomSearchHPO.run(
-                train_pos,
-                test_pos,
-                entity_to_id,
-                rel_to_id,
-                mapped_pos_train_tripels,
-                self.config,
-                self.device,
-                self.seed,
+                mapped_train_tripels=mapped_pos_train_tripels,
+                mapped_test_tripels=mapped_pos_test_tripels,
+                entity_to_id=entity_to_id,
+                rel_to_id=rel_to_id,
+                config=self.config,
+                device=self.device,
+                seed=self.seed
             )
 
         else:
@@ -102,7 +107,9 @@ class Pipeline(object):
                 eval_summary = OrderedDict()
                 mean_rank, hits_at_k = compute_metrics(all_entities=all_entities,
                                                        kg_embedding_model=kg_embedding_model,
-                                                       triples=mapped_pos_test_tripels, device=self.device)
+                                                       mapped_train_triples=mapped_pos_train_tripels,
+                                                       mapped_test_triples=mapped_pos_test_tripels,
+                                                       device=self.device)
 
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_summary[HITS_AT_K] = hits_at_k

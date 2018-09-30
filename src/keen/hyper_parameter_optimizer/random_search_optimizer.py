@@ -10,7 +10,6 @@ from keen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import Abstr
 from keen.utilities.evaluation_utils.metrics_computations import compute_metrics
 from keen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from keen.utilities.train_utils import train_model
-from keen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 
 
 class RandomSearchHPO(AbstractHPOptimizer):
@@ -46,7 +45,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         return kg_embedding_model_config
 
-    def optimize_hyperparams(self, train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels, config,
+    def optimize_hyperparams(self, mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config,
                              device, seed):
         np.random.seed(seed=seed)
 
@@ -72,8 +71,6 @@ class RandomSearchHPO(AbstractHPOptimizer):
         kg_embedding_model_config[KG_EMBEDDING_MODEL] = embedding_model
 
         eval_summary = OrderedDict()
-
-        all_entities = np.array(list(entity_to_id.values()))
 
         if embedding_model in [TRANS_E, TRANS_H, TRANS_D, TRANS_R]:
             # Sample TransX (where X is element of {E,H,R,D})
@@ -110,14 +107,15 @@ class RandomSearchHPO(AbstractHPOptimizer):
                                                     learning_rate=kg_embedding_model_config[LEARNING_RATE],
                                                     num_epochs=kg_embedding_model_config[NUM_EPOCHS],
                                                     batch_size=kg_embedding_model_config[BATCH_SIZE],
-                                                    pos_triples=mapped_pos_train_tripels,
+                                                    pos_triples=mapped_train_tripels,
                                                     device=device, seed=seed)
 
             # Evaluate trained model
-            mapped_pos_test_tripels, _, _ = create_mapped_triples(test_pos, entity_to_id=entity_to_id,
-                                                                  rel_to_id=rel_to_id)
-
-            mean_rank, hits_at_k = compute_metrics(all_entities, trained_model, mapped_pos_test_tripels, device)
+            mean_rank, hits_at_k = compute_metrics(all_entities=all_entities,
+                                                   kg_embedding_model=trained_model,
+                                                   mapped_train_triples=mapped_train_tripels,
+                                                   mapped_test_triples=mapped_test_tripels,
+                                                   device=device)
 
             # TODO: Define HPO metric
             eval_summary[MEAN_RANK] = mean_rank
@@ -129,10 +127,20 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         index_of_max = np.argmax(a=eval_results)
 
-        return trained_models[index_of_max], epoch_losses[index_of_max], entity_to_ids[index_of_max], rel_to_ids[
-            index_of_max], eval_summaries[index_of_max], models_params[index_of_max]
+        return trained_models[index_of_max], \
+               epoch_losses[index_of_max], \
+               entity_to_ids[index_of_max], \
+               rel_to_ids[index_of_max], \
+               eval_summaries[index_of_max], \
+               models_params[index_of_max]
 
     @staticmethod
-    def run(train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels, config, device, seed):
+    def run(mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config, device, seed):
         hpo = RandomSearchHPO()
-        return hpo.optimize_hyperparams(train_pos, test_pos, entity_to_id, rel_to_id, mapped_pos_train_tripels, config, device, seed)
+        return hpo.optimize_hyperparams(mapped_train_tripels=mapped_train_tripels,
+                                        mapped_test_tripels=mapped_test_tripels,
+                                        entity_to_id=entity_to_id,
+                                        rel_to_id=rel_to_id,
+                                        config=config,
+                                        device=device,
+                                        seed=seed)

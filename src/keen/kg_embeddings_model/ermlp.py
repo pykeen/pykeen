@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+'''Implementation of ERMLP.'''
+
 import numpy as np
 import torch
 import torch.autograd
