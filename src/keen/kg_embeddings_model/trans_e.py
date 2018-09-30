@@ -20,7 +20,7 @@ class TransE(nn.Module):
 
     def __init__(self, config):
         super(TransE, self).__init__()
-        self.model_name = TRANS_E
+        self.model_name = TRANS_E_NAME
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]

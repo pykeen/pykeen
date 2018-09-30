@@ -13,7 +13,7 @@ from keen.constants import *
 class ERMLP(nn.Module):
 
     def __init__(self, config):
-        super(ERMLP, self).__init__()
+        super(ERMLP_NAME, self).__init__()
         # A simple lookup table that stores embeddings of a fixed dictionary and size
 
         num_entities = config[NUM_ENTITIES]

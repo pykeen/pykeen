@@ -16,7 +16,7 @@ class TransH(nn.Module):
 
     def __init__(self, config):
         super(TransH, self).__init__()
-        self.model_name = TRANS_H
+        self.model_name = TRANS_H_NAME
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
         self.num_entities = config[NUM_ENTITIES]

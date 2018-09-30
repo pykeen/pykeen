@@ -15,11 +15,11 @@ log = logging.getLogger(__name__)
 from keen.constants import *
 
 
-class UM(nn.Module):
+class UnstructuredModel(nn.Module):
 
     def __init__(self, config):
-        super(UM, self).__init__()
-        self.model_name = TRANS_E
+        super(UnstructuredModel, self).__init__()
+        self.model_name = TRANS_E_NAME
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]

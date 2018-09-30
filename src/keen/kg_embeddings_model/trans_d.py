@@ -18,7 +18,7 @@ class TransD(nn.Module):
 
     def __init__(self, config):
         super(TransD, self).__init__()
-        self.model_name = TRANS_D
+        self.model_name = TRANS_D_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.entity_embedding_dim = config[EMBEDDING_DIM]

@@ -19,7 +19,7 @@ class ConvE(nn.Module):
     def __init__(self, config):
         super(ConvE, self).__init__()
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.model_name = CONV_E
+        self.model_name = CONV_E_NAME
         self.num_entities = config[NUM_ENTITIES]
         num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
