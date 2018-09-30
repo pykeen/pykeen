@@ -112,9 +112,10 @@ MAX_HPO_ITERS_PRINT_MSG = 'Please type the maximum number of iterationns for the
 MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
 MAX_HPO_ITERS_ERROR_MSG = 'Invalid input, please type in a positive integer for the maximum number of iterations.'
 
-EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of entities:'
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of entities and relations, and press enter.'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
-EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
+EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, the embedding dimension must be a positive integer such as 20.\n' \
+                                'Please try again.'
 
 RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of relations:'
 RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
@@ -124,9 +125,10 @@ MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
 MARGIN_LOSS_PROMPT_MSG = '> Margin loss:'
 MARGIN_LOSS_ERROR_MSG = 'Invalid input, please type in a float value.'
 
-LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate:'
+LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate.'
 LEARNING_RATE_PROMPT_MSG = '> Learning rate:'
-LEARNING_RATE_ERROR_MSG = 'Invalid input, please type in a float value.'
+LEARNING_RATE_ERROR_MSG = 'Invalid input, the learning rate should be a positive float value.\n' \
+                          'Please try again.'
 
 BATCH_SIZE_PRINT_MSG = 'Please type the batch size comma:'
 BATCH_SIZE_PROMPT_MSG = '> Batch size:'
@@ -136,9 +138,15 @@ EPOCH_PRINT_MSG = 'Please type the number of epochs:'
 EPOCH_PROMPT_MSG = '> Epochs:'
 EPOCH_ERROR_MSG = 'Invalid input, please select an integers.'
 
-ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select the normalization approach for the entities:'
+ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select a norm to use to normalize the entities. The norm should be a positive integer greater than 0'
+ENTITIES_NORMALIZATION_PROMPT_MSG = '> Norm to use for normalization of the entities: '
+ENTITIES_NORMALIZATION_ERROR_MSG = 'Invalid input, the norm should be an integer greater than 0, such as 1\n' \
+                             'Please try again.'
 
-SCORING_FUNCTION_PRINT_MSG = 'Please select a scoring function:'
+SCORING_FUNCTION_PRINT_MSG = 'Please select a norm to use as a scoring function. The norm should be a positive integer greater than 0'
+SCORING_FUNCTION_PROMPT_MSG = '> Norm to use as scoring function: '
+SCORING_FUNCTION_ERROR_MSG = 'Invalid input, the norm for the scoring function should be an integer greater than 0, such as 1\n' \
+                             'Please try again.'
 
 SAVE_CONFIG_PRINT_MSG = 'Do you want to save the configuration file?'
 SAVE_CONFIG_PROMPT_MSG = '> \'yes\' or \'no\':'
@@ -247,3 +255,5 @@ ID_TO_KG_MODEL_MAPPING = OrderedDict({
 })
 
 KG_MODEL_TO_ID_MAPPING = OrderedDict({value: key for key, value in ID_TO_KG_MODEL_MAPPING.items()})
+
+BINARY_QUESTION_MAPPING = OrderedDict({'yes':1, 'no':0})
