@@ -8,18 +8,19 @@ VERSION = '0.0.1-dev'
 
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
+KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 
 # Model names
-SE = 'Structure Embeddings (SE)'
-UM = 'Unstructured Model (UM)'
-TRANS_E = 'TransE'
-TRANS_H = 'TransH'
-TRANS_D = 'TransD'
-TRANS_R = 'TransR'
-DISTMULT = 'DistMult'
-ERMLP = 'ERMLP'
-CONV_E = 'ConvE'
-RESCAL = 'RESCAL'
+SE_NAME = 'Structure Embeddings (SE)'
+UM_NAME = 'Unstructured Model (UM)'
+TRANS_E_NAME = 'TransE'
+TRANS_H_NAME = 'TransH'
+TRANS_D_NAME = 'TransD'
+TRANS_R_NAME = 'TransR'
+DISTMULT_NAME = 'DistMult'
+ERMLP_NAME = 'ERMLP'
+CONV_E_NAME = 'ConvE'
+RESCAL_NAME = 'RESCAL'
 
 # Evaluator
 EVALUATOR = 'evaluator'
@@ -234,29 +235,29 @@ WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'Invalid input, input must be positiv
 # ----------KEEN CLI mappings ----------
 EXECUTION_MODE_MAPPING = OrderedDict({1: TRAINING_MODE, 2: HPO_MODE})
 KG_MODEL_PAPER_INFO_MAPPING = OrderedDict({
-    TRANS_E: "Bordes, Antoine, et al. \"Translating embeddings for modeling multi-relational data.\"",
-    TRANS_H: "Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes.\"",
-    TRANS_R: "Lin, Yankai, et al. \"Learning entity and relation embeddings for knowledge graph completion.\"",
-    TRANS_D: "Ji, Guoliang, et al. \"Knowledge graph embedding via dynamic mapping matrix.\"",
-    SE: "Bordes, Antoine, et al. \"Learning Structured Embeddings of Knowledge Bases.\"",
-    UM: "Bordes, Antoine, et al. \"A semantic matching energy function for learning with multi-relational data.\"",
-    DISTMULT: "Yang, Bishan, et al. \"Embedding entities and relations for learning and inference in knowledge bases.\"",
-    ERMLP: "Dong, Xin, et al. \"Knowledge vault: A web-scale approach to probabilistic knowledge fusion.\"",
-    RESCAL: "Nickel, Maximilian, Volker Tresp, and Hans-Peter Kriegel. \"A Three-Way Model for Collective Learning on Multi-Relational Data.\"",
-    CONV_E: "Dettmers, Tim, et al. \"Convolutional 2d knowledge graph embeddings.\""
+    TRANS_E_NAME: "Bordes, Antoine, et al. \"Translating embeddings for modeling multi-relational data.\"",
+    TRANS_H_NAME: "Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes.\"",
+    TRANS_R_NAME: "Lin, Yankai, et al. \"Learning entity and relation embeddings for knowledge graph completion.\"",
+    TRANS_D_NAME: "Ji, Guoliang, et al. \"Knowledge graph embedding via dynamic mapping matrix.\"",
+    SE_NAME: "Bordes, Antoine, et al. \"Learning Structured Embeddings of Knowledge Bases.\"",
+    UM_NAME: "Bordes, Antoine, et al. \"A semantic matching energy function for learning with multi-relational data.\"",
+    DISTMULT_NAME: "Yang, Bishan, et al. \"Embedding entities and relations for learning and inference in knowledge bases.\"",
+    ERMLP_NAME: "Dong, Xin, et al. \"Knowledge vault: A web-scale approach to probabilistic knowledge fusion.\"",
+    RESCAL_NAME: "Nickel, Maximilian, Volker Tresp, and Hans-Peter Kriegel. \"A Three-Way Model for Collective Learning on Multi-Relational Data.\"",
+    CONV_E_NAME: "Dettmers, Tim, et al. \"Convolutional 2d knowledge graph embeddings.\""
 })
 
 ID_TO_KG_MODEL_MAPPING = OrderedDict({
-    '1': TRANS_E,
-    '2': TRANS_H,
-    '3': TRANS_R,
-    '4': TRANS_D,
-    '5': SE,
-    '6': UM,
-    '7': DISTMULT,
-    '8': ERMLP,
-    '9': RESCAL,
-    '10': CONV_E
+    '1': TRANS_E_NAME,
+    '2': TRANS_H_NAME,
+    '3': TRANS_R_NAME,
+    '4': TRANS_D_NAME,
+    '5': SE_NAME,
+    '6': UM_NAME,
+    '7': DISTMULT_NAME,
+    '8': ERMLP_NAME,
+    '9': RESCAL_NAME,
+    '10': CONV_E_NAME
 })
 
 KG_MODEL_TO_ID_MAPPING = OrderedDict({value: key for key, value in ID_TO_KG_MODEL_MAPPING.items()})
