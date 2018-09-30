@@ -9,7 +9,9 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     SCORING_FUNCTION_PROMPT_MSG, SCORING_FUNCTION_ERROR_MSG, ENTITIES_NORMALIZATION_PRINT_MSG, \
     ENTITIES_NORMALIZATION_PROMPT_MSG, ENTITIES_NORMALIZATION_ERROR_MSG, LEARNING_RATE_PRINT_MSG, \
     LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, \
-    BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_FILE_ERROR_MSG
+    BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_FILE_ERROR_MSG, \
+    TEST_SET_PATH, TEST_SET_RATIO, PREFERRED_DEVICE, EMBEDDING_DIM, SCORING_FUNCTION_NORM, \
+    NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
     print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
@@ -18,8 +20,13 @@ from keen.utilities.cli_utils.cli_training_query_helper import select_integer_va
     ask_for_evaluation, ask_for_test_set, get_input_path, select_ratio_for_test_set, select_preferred_device
 
 
-def configure_trans_e_training_pipeline():
+def configure_trans_e_training_pipeline(model_name):
+    """
+
+    :return:
+    """
     config = OrderedDict()
+    config[KG_EMBEDDING_MODEL_NAME] = model_name
 
     # Step 1: Query embedding dimension
     print_training_embedding_dimension_message()
@@ -27,6 +34,7 @@ def configure_trans_e_training_pipeline():
     embedding_dimension = select_integer_value(print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
                                                prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
                                                error_msg=EMBEDDING_DIMENSION_ERROR_MSG)
+    config[EMBEDDING_DIM] = embedding_dimension
     print_section_divider()
 
     # Step 2: Query margin loss
@@ -41,6 +49,7 @@ def configure_trans_e_training_pipeline():
     scoring_fct_norm = select_integer_value(print_msg=SCORING_FUNCTION_PRINT_MSG,
                                             prompt_msg=SCORING_FUNCTION_PROMPT_MSG,
                                             error_msg=SCORING_FUNCTION_ERROR_MSG)
+    config[SCORING_FUNCTION_NORM] = scoring_fct_norm
     print_section_divider()
 
     # Step 4: Query L_p norm for normalizing the entities
@@ -48,6 +57,7 @@ def configure_trans_e_training_pipeline():
     entity_normalization_norm = select_integer_value(print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
                                                      prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
                                                      error_msg=ENTITIES_NORMALIZATION_ERROR_MSG)
+    config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
     print_section_divider()
 
     # Step 5: Query learning rate
@@ -55,6 +65,7 @@ def configure_trans_e_training_pipeline():
     learning_rate = select_float_value(print_msg=LEARNING_RATE_PRINT_MSG,
                                        prompt_msg=LEARNING_RATE_PROMPT_MSG,
                                        error_msg=LEARNING_RATE_ERROR_MSG)
+    config[LEARNING_RATE] = learning_rate
     print_section_divider()
 
     # Step 6: Query batch size
@@ -62,6 +73,7 @@ def configure_trans_e_training_pipeline():
     batch_size = select_integer_value(print_msg=BATCH_SIZE_PRINT_MSG,
                                       prompt_msg=BATCH_SIZE_PROMPT_MSG,
                                       error_msg=BATCH_SIZE_ERROR_MSG)
+    config[BATCH_SIZE] = batch_size
     print_section_divider()
 
     # Step 7: Query number of epochs
@@ -69,6 +81,7 @@ def configure_trans_e_training_pipeline():
     number_epochs = select_integer_value(print_msg=EPOCH_PRINT_MSG,
                                          prompt_msg=EPOCH_PROMPT_MSG,
                                          error_msg=EPOCH_ERROR_MSG)
+    config[NUM_EPOCHS] = number_epochs
     print_section_divider()
 
     # Step 8: Ask whether to evaluate the model
@@ -85,14 +98,19 @@ def configure_trans_e_training_pipeline():
         if provide_test_set:
             test_set_path = get_input_path(prompt_msg=TEST_FILE_PROMPT_MSG,
                                            error_msg=TEST_FILE_ERROR_MSG)
+            config[TEST_SET_PATH] = test_set_path
         else:
             test_ratio_message()
             test_set_ratio = select_ratio_for_test_set()
+            config[TEST_SET_RATIO] = test_set_ratio
 
         print_section_divider()
 
     # Step 10: Query device to train on
     prefered_device = select_preferred_device()
+    config[PREFERRED_DEVICE] = prefered_device
+
+    return config
 
 def configure_trans_hpo_pipeline():
     pass

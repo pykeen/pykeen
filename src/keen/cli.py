@@ -6,7 +6,7 @@ import click
 from collections import OrderedDict
 
 from keen.constants import TRAINING_FILE_PROMPT_MSG, TRAINING_FILE_ERROR_MSG, TRAINING_SET_PATH, TRAINING_MODE, \
-    HPO_MODE, TRANS_E, TRANS_H, TRANS_R, TRANS_D, SE, UM, DISTMULT, ERMLP, RESCAL, CONV_E
+    HPO_MODE, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME, TRANS_D_NAME, SE_NAME, UM_NAME, DISTMULT_NAME, ERMLP_NAME, RESCAL_NAME, CONV_E_NAME
 from keen.utilities.cli_utils.cli_print_msg_helper import print_welcome_message, print_section_divider, print_intro, \
     print_training_set_message, print_execution_mode_message
 from keen.utilities.cli_utils.cli_training_query_helper import get_input_path, select_keen_execution_mode, \
@@ -15,47 +15,47 @@ from keen.utilities.cli_utils.trans_e_cli import configure_trans_e_training_pipe
 
 
 def _configure_training_pipeline(model_name):
-    if model_name == TRANS_E:
-        config = configure_trans_e_training_pipeline()
-    elif model_name == TRANS_H:
+    if model_name == TRANS_E_NAME:
+        config = configure_trans_e_training_pipeline(model_name)
+    elif model_name == TRANS_H_NAME:
         pass
-    elif model_name == TRANS_R:
+    elif model_name == TRANS_R_NAME:
         pass
-    elif model_name == TRANS_D:
+    elif model_name == TRANS_D_NAME:
         pass
-    elif model_name == SE:
+    elif model_name == SE_NAME:
         pass
-    elif model_name == UM:
+    elif model_name == UM_NAME:
         pass
-    elif model_name == DISTMULT:
+    elif model_name == DISTMULT_NAME:
         pass
-    elif model_name == ERMLP:
+    elif model_name == ERMLP_NAME:
         pass
-    elif model_name == RESCAL:
+    elif model_name == RESCAL_NAME:
         pass
-    elif model_name == CONV_E:
+    elif model_name == CONV_E_NAME:
         pass
 
 def _configure_hpo_pipeline(model_name):
-    if model_name == TRANS_E:
+    if model_name == TRANS_E_NAME:
         pass
-    elif model_name == TRANS_H:
+    elif model_name == TRANS_H_NAME:
         pass
-    elif model_name == TRANS_R:
+    elif model_name == TRANS_R_NAME:
         pass
-    elif model_name == TRANS_D:
+    elif model_name == TRANS_D_NAME:
         pass
-    elif model_name == SE:
+    elif model_name == SE_NAME:
         pass
-    elif model_name == UM:
+    elif model_name == UM_NAME:
         pass
-    elif model_name == DISTMULT:
+    elif model_name == DISTMULT_NAME:
         pass
-    elif model_name == ERMLP:
+    elif model_name == ERMLP_NAME:
         pass
-    elif model_name == RESCAL:
+    elif model_name == RESCAL_NAME:
         pass
-    elif model_name == CONV_E:
+    elif model_name == CONV_E_NAME:
         pass
 
 def start_cli():
@@ -88,9 +88,11 @@ def start_cli():
 
     # Step 6:
     if keen_exec_mode == TRAINING_MODE:
-        _configure_training_pipeline(model_name)
+        config.update(_configure_training_pipeline(model_name))
+
     if keen_exec_mode == HPO_MODE:
-        _configure_hpo_pipeline(model_name)
+        config.update(_configure_hpo_pipeline(model_name))
+
 
     return config
 
