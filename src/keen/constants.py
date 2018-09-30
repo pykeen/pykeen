@@ -2,17 +2,23 @@
 
 """Constants defined for KEEN."""
 
+from collections import OrderedDict
+
 VERSION = '0.0.1-dev'
 
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
 
 # Model names
-CONV_E = 'ConvE'
+SE = 'Structure Embeddings (SE)'
+UM = 'Unstructured Model (UM)'
 TRANS_E = 'TransE'
 TRANS_H = 'TransH'
 TRANS_D = 'TransD'
 TRANS_R = 'TransR'
+DISTMULT = 'DistMult'
+ERMLP = 'ERMLP'
+CONV_E = 'ConvE'
 RESCAL = 'RESCAL'
 
 # Evaluator
@@ -32,7 +38,6 @@ PREFERRED_DEVICE = 'preferred_device'
 CPU = 'cpu'
 GPU = 'gpu'
 
-
 # ML params
 BATCH_SIZE = 'batch_size'
 VOCAB_SIZE = 'vocab_size'
@@ -44,8 +49,8 @@ NUM_RELATIONS = 'num_relations'
 NUM_EPOCHS = 'num_epochs'
 NUM_OF_MAX_HPO_ITERS = 'maximum_number_of_hpo_iters'
 LEARNING_RATE = 'learning_rate'
-TRAINING = 'training'
-HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
+TRAINING_MODE = 'Training mode'
+HPO_MODE = 'HPO mode'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
 TEST_SET_PATH = 'test_set_path'
@@ -65,13 +70,15 @@ CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
 CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
 CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
 
-
-
 # Further Constants
 SEED = 'seed'
 OUTPUT_DIREC = 'output_direc'
 
 # -----------------Command line interface messages-----------------
+
+TRAINING_FILE_PROMPT_MSG = '> Please provide here the path to your training file: '
+TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
+                          'Please try again.'
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
@@ -211,3 +218,32 @@ WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'Invalid input, input must be positiv
 
 # ----------------------------------
 
+# ----------KEEN CLI mappings ----------
+EXECUTION_MODE_MAPPING = OrderedDict({1: TRAINING_MODE, 2: HPO_MODE})
+KG_MODEL_PAPER_INFO_MAPPING = OrderedDict({
+    TRANS_E: "Bordes, Antoine, et al. \"Translating embeddings for modeling multi-relational data.\"",
+    TRANS_H: "Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes.\"",
+    TRANS_R: "Lin, Yankai, et al. \"Learning entity and relation embeddings for knowledge graph completion.\"",
+    TRANS_D: "Ji, Guoliang, et al. \"Knowledge graph embedding via dynamic mapping matrix.\"",
+    SE: "Bordes, Antoine, et al. \"Learning Structured Embeddings of Knowledge Bases.\"",
+    UM: "Bordes, Antoine, et al. \"A semantic matching energy function for learning with multi-relational data.\"",
+    DISTMULT: "Yang, Bishan, et al. \"Embedding entities and relations for learning and inference in knowledge bases.\"",
+    ERMLP: "Dong, Xin, et al. \"Knowledge vault: A web-scale approach to probabilistic knowledge fusion.\"",
+    RESCAL: "Nickel, Maximilian, Volker Tresp, and Hans-Peter Kriegel. \"A Three-Way Model for Collective Learning on Multi-Relational Data.\"",
+    CONV_E: "Dettmers, Tim, et al. \"Convolutional 2d knowledge graph embeddings.\""
+})
+
+ID_TO_KG_MODEL_MAPPING = OrderedDict({
+    '1': TRANS_E,
+    '2': TRANS_H,
+    '3': TRANS_R,
+    '4': TRANS_D,
+    '5': SE,
+    '6': UM,
+    '7': DISTMULT,
+    '8': ERMLP,
+    '9': RESCAL,
+    '10': CONV_E
+})
+
+KG_MODEL_TO_ID_MAPPING = OrderedDict({value: key for key, value in ID_TO_KG_MODEL_MAPPING.items()})
