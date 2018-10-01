@@ -2,12 +2,14 @@
 
 '''Helper script to query parameters needed in training mode.'''
 
+import json
 import os
+from collections import OrderedDict
 
 from prompt_toolkit import prompt
 
 from keen.constants import EXECUTION_MODE_MAPPING, KG_MODEL_TO_ID_MAPPING, ID_TO_KG_MODEL_MAPPING, \
-    BINARY_QUESTION_MAPPING, GPU, CPU
+    BINARY_QUESTION_MAPPING, GPU, CPU, CONFIG_FILE_PRINT_MSG, CONFIG_FILE_ERROR_MSG
 
 
 def get_input_path(prompt_msg, error_msg):
@@ -21,7 +23,7 @@ def get_input_path(prompt_msg, error_msg):
 
 
 def select_keen_execution_mode():
-    print('If KEEN should be executed in training mode please type 1, and press enter, for hyper-parameter search,\n'
+    print('If KEEN should be executed in training mode please type 1, for hyper-parameter search,\n'
           'please type 2 and press enter.')
     print()
     print('Training: 1')
@@ -125,6 +127,7 @@ def select_ratio_for_test_set():
         print('Invalid input, the ratio should be 0.< ratio < 1. (e.g. 0.2).\n'
               'Please try again.')
 
+
 def select_preferred_device():
     print('Please select the preferred device (GPU or CPU).')
 
@@ -134,3 +137,42 @@ def select_preferred_device():
             return user_input
         else:
             print('Invalid input, please type in \'GPU\' or \'CPU\' and press enter.')
+
+
+def ask_for_filtering_of_negatives():
+    print('Do you want to filter out negative triples during evaluation of your model?')
+
+    while True:
+        user_input = prompt('> Please type \'yes\' or \'no\': ')
+
+        if user_input != 'yes' and user_input != 'no':
+            print('Invalid input, please type \'yes\' or \'no\' and press enter.\n'
+                  'If you type \'yes\' it means that you provide a test set yourself.')
+        else:
+            return BINARY_QUESTION_MAPPING[user_input]
+
+
+def load_config_file():
+    path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PRINT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
+    while True:
+        with open(path_to_config_file, 'rb') as f:
+            try:
+                config = json.load(f)
+                assert type(config) == dict or type(config) == OrderedDict
+                return config
+            except:
+                print('Invalid file, the configuration must be a JSON file.\n'
+                      'Please try again.')
+                path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PRINT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
+
+def ask_for_existing_config_file():
+    print('Do you provide an existing configuration file?')
+
+    while True:
+        user_input = prompt('> Please type \'yes\' or \'no\': ')
+
+        if user_input != 'yes' and user_input != 'no':
+            print('Invalid input, please type \'yes\' or \'no\' and press enter.\n'
+                  'If you type \'yes\' it means that you provide a configuration file.')
+        else:
+            return BINARY_QUESTION_MAPPING[user_input]

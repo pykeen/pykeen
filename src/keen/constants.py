@@ -29,6 +29,7 @@ RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 EVAL_METRICS = 'eval_metrics'
 MEAN_RANK = 'mean_rank'
 HITS_AT_K = 'hits@k'
+FILTER_NEG_TRIPLES = 'filter_negative_triples'
 
 # Output paths
 ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
@@ -196,7 +197,10 @@ CONV_E_KERNEL_WIDTH_ERROR_MSG = 'Invalid input, kernel width mus be a positive i
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
 TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
                           'Please try again.'
-CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
+
+CONFIG_FILE_PRINT_MSG = 'Please provide the path to your existing configuration file.'
+CONFIG_FILE_ERROR_MSG = 'An error occured, please make sure that the file exists, and that it is JSON file.\n' \
+                        'Please try again.'
 
 CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG = 'Please select (comma separated) the input dropout value(s)'
 CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG = '> Input dropout value(s):'

@@ -1,6 +1,3 @@
-from keen.constants import KG_MODEL_PAPER_INFO_MAPPING
-
-
 def print_section_divider():
     print('--------------------------------------------------------------------------------------------------------')
 
@@ -10,7 +7,7 @@ def print_welcome_message():
     print('#\t\t\t\t\t\t#')
     print('#\t\tWelcome to KEEN\t\t\t#')
     print('#\t\t\t\t\t\t#')
-    print('##################################################')
+    print('#################################################')
     print()
 
 
@@ -21,9 +18,14 @@ def print_intro():
     print()
     print("In training mode KEEN trains a model based on a set of user-defined hyper-parameters.")
     print()
-    print("In HPO mode KEEN the user defines for each hyper-parameter a set of possible values, and KEEN runs \n"
+    print("In HPO mode the user defines for each hyper-parameter a set of possible values, and KEEN runs \n"
           "Random Search to determine the most appropriate set of hyper-parameter values")
 
+
+def print_existing_config_message():
+    print("Here you are asked whether you have already an exisiing configuration that was created for a previous experiment.\n"
+          "The configuration is saved as JSON file (.json)")
+    print()
 
 def print_training_set_message():
     print("Here you are asked to provide the path to your training data.")
@@ -49,14 +51,17 @@ def print_model_selection_message():
     print("Depending on which model you select, KEEN will assist you to configure the required hyper-parameters.")
     print()
 
+
 def print_training_embedding_dimension_message():
     print("Here you are asked to specify the embedding dimension to use for learning the entities and relations\n"
           "of the knowedge graph. The embedding dimension must be a positive integer e.g. 20.")
     print()
 
+
 def print_trans_e_embedding_dimension_info_message():
     print("In TransE the embedding dimension of entiteis and relations are the same.")
     print()
+
 
 def print_training_margin_loss_message():
     print("Here you are asked to specify the value of the margin loss used for the margin-ranking-loss function.")
@@ -69,35 +74,50 @@ def print_scoring_fct_message():
     print("The norm should be a positive integer value such as a value of 1")
     print()
 
+
 def print_entity_normalization_message():
     print("Here you asked to specify the norm used to normalize the entities.")
-    print("The norm should be a positive integer value such as a value of 1")
+    print("The norm should be a positive integer value such as a value of 2")
     print()
+
 
 def print_learning_rate_message():
     print("Here you are asked to specify the learning rate.")
     print("The learning rate should be a positive float value such as 0.01")
     print()
 
+
 def print_batch_size_message():
     print("Here you are asked to specify the batch size.")
     print("Typical batch sizes are 32,64 and 128")
     print()
+
 
 def print_number_epochs_message():
     print("Here you are asked to specify the number of epochs.")
     print("The number of epochs defines how often to iterte over the whole training set during the training the model.")
     print()
 
+
 def ask_for_evlauation_message():
     print("Here you can specify whether you want to evaluate your model after training or not.")
     print()
 
+
 def test_set_message():
     print("Here you can specify whether you provide a test set yourself, or whether the test set\n"
-          "should be randomly extracted from training set.")
+          "should be randomly extracted from the training set.")
     print()
+
 
 def test_ratio_message():
     print('Here you are asked to select the ratio of the training set that should be used as a test\n'
           '(e.g. 0.5 meaning half of the training set is used as a test set):')
+    print()
+
+
+def filter_negative_triples_message():
+    print('Here you are asked to specify whether you want to filter negative triples out during evaluation.\n'
+          'Filtered evaluation is more expressive, for further information we refer to \n'
+          'Bordes et al. \"Translating embeddings for modeling multi-relational data.\"')
+    print()

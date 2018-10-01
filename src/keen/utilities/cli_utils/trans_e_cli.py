@@ -9,15 +9,13 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     SCORING_FUNCTION_PROMPT_MSG, SCORING_FUNCTION_ERROR_MSG, ENTITIES_NORMALIZATION_PRINT_MSG, \
     ENTITIES_NORMALIZATION_PROMPT_MSG, ENTITIES_NORMALIZATION_ERROR_MSG, LEARNING_RATE_PRINT_MSG, \
     LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, \
-    BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_FILE_ERROR_MSG, \
-    TEST_SET_PATH, TEST_SET_RATIO, PREFERRED_DEVICE, EMBEDDING_DIM, SCORING_FUNCTION_NORM, \
+    BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, EMBEDDING_DIM, SCORING_FUNCTION_NORM, \
     NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
     print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
-    print_number_epochs_message, ask_for_evlauation_message, test_set_message, test_ratio_message
-from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value, \
-    ask_for_evaluation, ask_for_test_set, get_input_path, select_ratio_for_test_set, select_preferred_device
+    print_number_epochs_message
+from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
 
 
 def configure_trans_e_training_pipeline(model_name):
@@ -84,33 +82,8 @@ def configure_trans_e_training_pipeline(model_name):
     config[NUM_EPOCHS] = number_epochs
     print_section_divider()
 
-    # Step 8: Ask whether to evaluate the model
-    ask_for_evlauation_message()
-    is_evaluation_mode = ask_for_evaluation()
-    print_section_divider()
-
-    # Step 9: Specify test set, if is_evaluation_mode==True
-    if is_evaluation_mode:
-        test_set_message()
-        provide_test_set = ask_for_test_set()
-        print_section_divider()
-
-        if provide_test_set:
-            test_set_path = get_input_path(prompt_msg=TEST_FILE_PROMPT_MSG,
-                                           error_msg=TEST_FILE_ERROR_MSG)
-            config[TEST_SET_PATH] = test_set_path
-        else:
-            test_ratio_message()
-            test_set_ratio = select_ratio_for_test_set()
-            config[TEST_SET_RATIO] = test_set_ratio
-
-        print_section_divider()
-
-    # Step 10: Query device to train on
-    prefered_device = select_preferred_device()
-    config[PREFERRED_DEVICE] = prefered_device
-
     return config
+
 
 def configure_trans_hpo_pipeline():
     pass
