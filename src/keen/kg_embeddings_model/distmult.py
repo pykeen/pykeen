@@ -14,8 +14,8 @@ class DistMult(nn.Module):
 
     def __init__(self, config):
         super(DistMult, self).__init__()
+        self.model_name = DISTMULT_NAME
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
@@ -81,7 +81,7 @@ class DistMult(nn.Module):
 
         return scores
 
-    def predict(self, triple):
+    def predict(self, triples):
         """
 
         :param head:
@@ -89,16 +89,19 @@ class DistMult(nn.Module):
         :param tail:
         :return:
         """
-        triple = torch.tensor(triple, dtype=torch.long, device=self.device)
-        head, relation, tail = triple
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
 
-        head_emb = self.entities_embeddings(head)
-        relation_emb = self.relation_embeddings(relation)
-        tail_emb = self.entities_embeddings(tail)
+        heads = triples[:, 0:1]
+        relations = triples[:, 1:2]
+        tails = triples[:, 2:3]
 
-        score = self._compute_scores(h_embs=head_emb, r_embs=relation_emb, t_embs=tail_emb)
+        head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
+        relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
+        tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
-        return score.detach().numpy()
+        scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
+
+        return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
         """
