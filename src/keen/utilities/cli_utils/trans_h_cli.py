@@ -10,15 +10,17 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     ENTITIES_NORMALIZATION_PROMPT_MSG, ENTITIES_NORMALIZATION_ERROR_MSG, LEARNING_RATE_PRINT_MSG, \
     LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, \
     BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, EMBEDDING_DIM, SCORING_FUNCTION_NORM, \
-    NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME, MARGIN_LOSS
+    NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME, MARGIN_LOSS, \
+    WEIGHT_SOFT_CONSTRAINT_TRANS_H, WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG, \
+    WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG, WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
     print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
-    print_number_epochs_message
+    print_number_epochs_message, trans_h_soft_constraints_weight_message
 from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
 
 
-def configure_trans_e_training_pipeline(model_name):
+def configure_trans_h_training_pipeline(model_name):
     """
 
     :return:
@@ -51,12 +53,12 @@ def configure_trans_e_training_pipeline(model_name):
     config[SCORING_FUNCTION_NORM] = scoring_fct_norm
     print_section_divider()
 
-    # Step 4: Query L_p norm for normalizing the entities
-    print_entity_normalization_message()
-    entity_normalization_norm = select_integer_value(print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
-                                                     prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
-                                                     error_msg=ENTITIES_NORMALIZATION_ERROR_MSG)
-    config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
+    # Step 4: Query weight for the soft constraints
+    trans_h_soft_constraints_weight_message()
+    soft_constraints_weight = select_float_value(print_msg=WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG,
+                                                 prompt_msg=WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG,
+                                                 error_msg=WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG)
+    config[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = soft_constraints_weight
     print_section_divider()
 
     # Step 5: Query learning rate
@@ -86,5 +88,5 @@ def configure_trans_e_training_pipeline(model_name):
     return config
 
 
-def configure_trans_e_hpo_pipeline():
+def configure_trans_h_hpo_pipeline():
     pass

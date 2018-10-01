@@ -60,7 +60,7 @@ def print_training_embedding_dimension_message():
 
 
 def print_trans_e_embedding_dimension_info_message():
-    print("In TransE the embedding dimension of entiteis and relations are the same.")
+    print("In TransE/TransH the embedding dimension of entiteis and relations are the same.")
     print()
 
 
@@ -128,5 +128,13 @@ def output_directory_message():
     print('Here you are asked to specify the path to your output directory.\n'
           'In the output directory, the trained model, the learned embeddings, the evaluation results,\n'
           'the configuration are exported.\n')
+    print("Example of a valid path: /Users/david/output_direc")
+    print()
+
+def trans_h_soft_constraints_weight_message():
+    print('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
+          'The authors proposed to weight the soft constraints.\n'
+          'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes.\"\n'
+          'Here you are asked, to specify the weight value for the soft constraints.\n')
     print("Example of a valid path: /Users/david/output_direc")
     print()

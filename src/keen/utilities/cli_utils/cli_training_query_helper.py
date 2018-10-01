@@ -188,3 +188,4 @@ def query_output_directory():
         else:
             print('Invalid input, please make sure that the path to the directory exists.\n'
                   'Please try again.')
+
