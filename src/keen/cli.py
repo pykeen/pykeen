@@ -21,6 +21,7 @@ from keen.utilities.cli_utils.trans_d_cli import configure_trans_d_training_pipe
 from keen.utilities.cli_utils.trans_e_cli import configure_trans_e_training_pipeline
 from keen.utilities.cli_utils.trans_h_cli import configure_trans_h_training_pipeline
 from keen.utilities.cli_utils.trans_r_cli import configure_trans_r_training_pipeline
+from keen.utilities.cli_utils.unstructured_model_cli import configure_um_training_pipeline
 
 
 def _configure_training_pipeline(model_name):
@@ -40,7 +41,7 @@ def _configure_training_pipeline(model_name):
         pass
 
     elif model_name == UM_NAME:
-        pass
+        config = configure_um_training_pipeline(model_name)
 
     elif model_name == DISTMULT_NAME:
         config = configure_distmult_training_pipeline(model_name)
