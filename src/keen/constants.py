@@ -123,12 +123,12 @@ MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
 MAX_HPO_ITERS_ERROR_MSG = 'An error occurred, please type in a positive integer for the maximum number of iterations.'
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of entities and relations, and press enter.'
-EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
+EMBEDDING_DIMENSION_PROMPT_MSG = '> Embedding dimension: '
 EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, the embedding dimension must be a positive integer such as 20.\n' \
                                 'Please try again.'
 
 RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of relations:'
-RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
+RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Relation embedding dimension: '
 RELATION_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please type in integer as embedding dimension such as 30.'
 
 MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
