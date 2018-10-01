@@ -165,7 +165,7 @@ def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corru
 
 
 def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapped_test_triples, device,
-                    filter_scores=False):
+                    filter_neg_triples=False):
     """
 
     :param all_entities:
@@ -173,7 +173,7 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
     :param mapped_train_triples:
     :param mapped_test_triples:
     :param device:
-    :param filter_scores:
+    :param filter_neg_triples:
     :return:
     """
     start = timeit.default_timer()
@@ -183,7 +183,7 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
     all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
     all_pos_triples_hashed = np.apply_along_axis(_hash_triples, 1, all_pos_triples)
 
-    compute_rank_fct = _compute_filtered_rank if filter_scores else _compute_rank
+    compute_rank_fct = _compute_filtered_rank if filter_neg_triples else _compute_rank
 
     # Corrupt triples
     for triple_nmbr, pos_triple in enumerate(mapped_test_triples):

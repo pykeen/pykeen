@@ -35,11 +35,11 @@ class RandomSearchHPO(AbstractHPOptimizer):
         kg_embedding_model_config[SCORING_FUNCTION_NORM] = random.choice(hyperparams_dict[SCORING_FUNCTION_NORM])
         selected_model = hyperparams_dict[KG_EMBEDDING_MODEL]
 
-        if selected_model == TRANS_E:
+        if selected_model == TRANS_E_NAME:
             kg_embedding_model_config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = random.choice(
                 hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES])
 
-        if selected_model == TRANS_H:
+        if selected_model == TRANS_H_NAME:
             kg_embedding_model_config[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = random.choice(
                 hyperparams_dict[WEIGHT_SOFT_CONSTRAINT_TRANS_H])
 
@@ -72,11 +72,11 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         eval_summary = OrderedDict()
 
-        if embedding_model in [TRANS_E, TRANS_H, TRANS_D, TRANS_R]:
+        if embedding_model in [TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME]:
             # Sample TransX (where X is element of {E,H,R,D})
             param_sampling_fct = self._sample_translational_based_model_params
 
-        if embedding_model == CONV_E:
+        if embedding_model == CONV_E_NAME:
             param_sampling_fct = self._sample_conv_e_params
 
         for _ in range(max_iters):

@@ -36,7 +36,7 @@ def run(config: Mapping, seed: int = 2):
 
     out_path = os.path.join(output_direc, 'evaluation_summary.json')
     with open(out_path, 'w') as handle:
-        handle.write(json.dumps(eval_summary))
+        json.dump(eval_summary, handle, indent=2)
 
     out_path = os.path.join(output_direc, 'hyper_parameters.json')
     with open(out_path, 'w') as handle:
@@ -45,4 +45,4 @@ def run(config: Mapping, seed: int = 2):
 
     out_path = os.path.join(output_direc, 'losses.json')
     with open(out_path, 'w') as handle:
-        handle.write(json.dumps(loss_per_epoch))
+        json.dump(loss_per_epoch, handle, indent=2)

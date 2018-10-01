@@ -23,7 +23,7 @@ class TransR(nn.Module):
 
     def __init__(self, config):
         super(TransR, self).__init__()
-        self.model_name = TRANS_R
+        self.model_name = TRANS_R_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.entity_embedding_dim = config[EMBEDDING_DIM]

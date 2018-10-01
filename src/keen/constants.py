@@ -2,18 +2,25 @@
 
 """Constants defined for KEEN."""
 
+from collections import OrderedDict
+
 VERSION = '0.0.1-dev'
 
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
+KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 
 # Model names
-CONV_E = 'ConvE'
-TRANS_E = 'TransE'
-TRANS_H = 'TransH'
-TRANS_D = 'TransD'
-TRANS_R = 'TransR'
-RESCAL = 'RESCAL'
+SE_NAME = 'Structure Embeddings (SE)'
+UM_NAME = 'Unstructured Model (UM)'
+TRANS_E_NAME = 'TransE'
+TRANS_H_NAME = 'TransH'
+TRANS_D_NAME = 'TransD'
+TRANS_R_NAME = 'TransR'
+DISTMULT_NAME = 'DistMult'
+ERMLP_NAME = 'ERMLP'
+CONV_E_NAME = 'ConvE'
+RESCAL_NAME = 'RESCAL'
 
 # Evaluator
 EVALUATOR = 'evaluator'
@@ -22,6 +29,7 @@ RANDOM_SEARCH_OPTIMIZER = 'random_search_optimizer'
 EVAL_METRICS = 'eval_metrics'
 MEAN_RANK = 'mean_rank'
 HITS_AT_K = 'hits@k'
+FILTER_NEG_TRIPLES = 'filter_negative_triples'
 
 # Output paths
 ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
@@ -31,7 +39,6 @@ EVAL_RESULTS = 'eval_results'
 PREFERRED_DEVICE = 'preferred_device'
 CPU = 'cpu'
 GPU = 'gpu'
-
 
 # ML params
 BATCH_SIZE = 'batch_size'
@@ -44,8 +51,8 @@ NUM_RELATIONS = 'num_relations'
 NUM_EPOCHS = 'num_epochs'
 NUM_OF_MAX_HPO_ITERS = 'maximum_number_of_hpo_iters'
 LEARNING_RATE = 'learning_rate'
-TRAINING = 'training'
-HYPER_PARAMTER_SEARCH = 'hyper_parameter_search'
+TRAINING_MODE = 'Training mode'
+HPO_MODE = 'HPO mode'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
 TEST_SET_PATH = 'test_set_path'
@@ -65,13 +72,19 @@ CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
 CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
 CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
 
-
-
 # Further Constants
 SEED = 'seed'
 OUTPUT_DIREC = 'output_direc'
 
 # -----------------Command line interface messages-----------------
+
+TRAINING_FILE_PROMPT_MSG = '> Please provide here the path to your training file: '
+TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
+                          'Please try again.'
+
+TEST_FILE_PROMPT_MSG = '> Please provide here the path to your test file: '
+TEST_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the test file doesn\'t exist.\n' \
+                          'Please try again.'
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
@@ -105,9 +118,10 @@ MAX_HPO_ITERS_PRINT_MSG = 'Please type the maximum number of iterationns for the
 MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
 MAX_HPO_ITERS_ERROR_MSG = 'Invalid input, please type in a positive integer for the maximum number of iterations.'
 
-EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of entities:'
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of entities and relations, and press enter.'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
-EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, please type in integer as embedding dimension.'
+EMBEDDING_DIMENSION_ERROR_MSG = 'Invalid input, the embedding dimension must be a positive integer such as 20.\n' \
+                                'Please try again.'
 
 RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the preferred embedding dimension of relations:'
 RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimension: '
@@ -117,9 +131,10 @@ MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
 MARGIN_LOSS_PROMPT_MSG = '> Margin loss:'
 MARGIN_LOSS_ERROR_MSG = 'Invalid input, please type in a float value.'
 
-LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate:'
+LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate.'
 LEARNING_RATE_PROMPT_MSG = '> Learning rate:'
-LEARNING_RATE_ERROR_MSG = 'Invalid input, please type in a float value.'
+LEARNING_RATE_ERROR_MSG = 'Invalid input, the learning rate should be a positive float value.\n' \
+                          'Please try again.'
 
 BATCH_SIZE_PRINT_MSG = 'Please type the batch size comma:'
 BATCH_SIZE_PROMPT_MSG = '> Batch size:'
@@ -129,9 +144,15 @@ EPOCH_PRINT_MSG = 'Please type the number of epochs:'
 EPOCH_PROMPT_MSG = '> Epochs:'
 EPOCH_ERROR_MSG = 'Invalid input, please select an integers.'
 
-ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select the normalization approach for the entities:'
+ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select a norm to use to normalize the entities. The norm should be a positive integer greater than 0'
+ENTITIES_NORMALIZATION_PROMPT_MSG = '> Norm to use for normalization of the entities: '
+ENTITIES_NORMALIZATION_ERROR_MSG = 'Invalid input, the norm should be an integer greater than 0, such as 1\n' \
+                             'Please try again.'
 
-SCORING_FUNCTION_PRINT_MSG = 'Please select a scoring function:'
+SCORING_FUNCTION_PRINT_MSG = 'Please select a norm to use as a scoring function. The norm should be a positive integer greater than 0'
+SCORING_FUNCTION_PROMPT_MSG = '> Norm to use as scoring function: '
+SCORING_FUNCTION_ERROR_MSG = 'Invalid input, the norm for the scoring function should be an integer greater than 0, such as 1\n' \
+                             'Please try again.'
 
 SAVE_CONFIG_PRINT_MSG = 'Do you want to save the configuration file?'
 SAVE_CONFIG_PROMPT_MSG = '> \'yes\' or \'no\':'
@@ -174,8 +195,12 @@ CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width for defined width %d:'
 CONV_E_KERNEL_WIDTH_ERROR_MSG = 'Invalid input, kernel width mus be a positive integer and <= than %d (defined width).'
 
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
-TEST_SET_PRINT_MSG = 'Please provide the path to the test set.'
-CONFIG_FILE_PRINT_MSG = 'Please provide the path to the configuration file.'
+TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
+                          'Please try again.'
+
+CONFIG_FILE_PROMPT_MSG = '> Please provide the path to your existing configuration file: '
+CONFIG_FILE_ERROR_MSG = 'An error occured, please make sure that the file exists, and that it is JSON file.\n' \
+                        'Please try again.'
 
 CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG = 'Please select (comma separated) the input dropout value(s)'
 CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG = '> Input dropout value(s):'
@@ -211,3 +236,34 @@ WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'Invalid input, input must be positiv
 
 # ----------------------------------
 
+# ----------KEEN CLI mappings ----------
+EXECUTION_MODE_MAPPING = OrderedDict({1: TRAINING_MODE, 2: HPO_MODE})
+KG_MODEL_PAPER_INFO_MAPPING = OrderedDict({
+    TRANS_E_NAME: "Bordes, Antoine, et al. \"Translating embeddings for modeling multi-relational data.\"",
+    TRANS_H_NAME: "Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes.\"",
+    TRANS_R_NAME: "Lin, Yankai, et al. \"Learning entity and relation embeddings for knowledge graph completion.\"",
+    TRANS_D_NAME: "Ji, Guoliang, et al. \"Knowledge graph embedding via dynamic mapping matrix.\"",
+    SE_NAME: "Bordes, Antoine, et al. \"Learning Structured Embeddings of Knowledge Bases.\"",
+    UM_NAME: "Bordes, Antoine, et al. \"A semantic matching energy function for learning with multi-relational data.\"",
+    DISTMULT_NAME: "Yang, Bishan, et al. \"Embedding entities and relations for learning and inference in knowledge bases.\"",
+    ERMLP_NAME: "Dong, Xin, et al. \"Knowledge vault: A web-scale approach to probabilistic knowledge fusion.\"",
+    RESCAL_NAME: "Nickel, Maximilian, Volker Tresp, and Hans-Peter Kriegel. \"A Three-Way Model for Collective Learning on Multi-Relational Data.\"",
+    CONV_E_NAME: "Dettmers, Tim, et al. \"Convolutional 2d knowledge graph embeddings.\""
+})
+
+ID_TO_KG_MODEL_MAPPING = OrderedDict({
+    '1': TRANS_E_NAME,
+    '2': TRANS_H_NAME,
+    '3': TRANS_R_NAME,
+    '4': TRANS_D_NAME,
+    '5': SE_NAME,
+    '6': UM_NAME,
+    '7': DISTMULT_NAME,
+    '8': ERMLP_NAME,
+    '9': RESCAL_NAME,
+    '10': CONV_E_NAME
+})
+
+KG_MODEL_TO_ID_MAPPING = OrderedDict({value: key for key, value in ID_TO_KG_MODEL_MAPPING.items()})
+
+BINARY_QUESTION_MAPPING = OrderedDict({'yes':1, 'no':0})

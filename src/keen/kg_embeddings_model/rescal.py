@@ -10,12 +10,12 @@ import torch.nn as nn
 from keen.constants import *
 
 
-class Rescal(nn.Module):
+class RESCAL(nn.Module):
 
     def __init__(self, config):
-        super(Rescal, self).__init__()
+        super(RESCAL, self).__init__()
 
-        self.model_name = RESCAL
+        self.model_name = RESCAL_NAME
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
