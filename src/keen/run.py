@@ -34,9 +34,6 @@ def run(config: Mapping, seed: int = 2):
     with open(out_path, 'wb') as handle:
         pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out_path = os.path.join(output_direc, 'evaluation_summary.json')
-    with open(out_path, 'w') as handle:
-        json.dump(eval_summary, handle, indent=2)
 
     out_path = os.path.join(output_direc, 'hyper_parameters.json')
     with open(out_path, 'w') as handle:
@@ -46,3 +43,8 @@ def run(config: Mapping, seed: int = 2):
     out_path = os.path.join(output_direc, 'losses.json')
     with open(out_path, 'w') as handle:
         json.dump(loss_per_epoch, handle, indent=2)
+
+    if eval_summary != None:
+        out_path = os.path.join(output_direc, 'evaluation_summary.json')
+        with open(out_path, 'w') as handle:
+            json.dump(eval_summary, handle, indent=2)

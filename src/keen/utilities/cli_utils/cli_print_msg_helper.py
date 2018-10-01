@@ -23,10 +23,12 @@ def print_intro():
 
 
 def print_existing_config_message():
-    print("Here you are asked whether you have already an exisiing configuration that was created for a previous experiment.\n"
-          "The configuration is saved as a JSON file (.json)\n")
+    print(
+        "Here you are asked whether you have already an exisiing configuration that was created for a previous experiment.\n"
+        "The configuration is saved as a JSON file (.json)\n")
     print("Example of a valid path: /Users/david/data/configuration.json")
     print()
+
 
 def print_training_set_message():
     print("Here you are asked to provide the path to your training data.")
@@ -60,7 +62,7 @@ def print_training_embedding_dimension_message():
 
 
 def print_trans_e_embedding_dimension_info_message():
-    print("In TransE the embedding dimension of entiteis and relations are the same.")
+    print("In TransE/TransH the embedding dimension of entiteis and relations are the same.")
     print()
 
 
@@ -100,33 +102,55 @@ def print_number_epochs_message():
     print()
 
 
-def ask_for_evlauation_message():
+def print_ask_for_evlauation_message():
     print("Here you can specify whether you want to evaluate your model after training or not.")
     print()
 
 
-def test_set_message():
+def print_test_set_message():
     print("Here you can specify whether you provide a test set yourself, or whether the test set\n"
           "should be randomly extracted from the training set.")
     print()
 
 
-def test_ratio_message():
+def print_test_ratio_message():
     print('Here you are asked to select the ratio of the training set that should be used as a test\n'
           '(e.g. 0.5 meaning half of the training set is used as a test set):')
     print()
 
 
-def filter_negative_triples_message():
+def print_filter_negative_triples_message():
     print('Here you are asked to specify whether you want to filter negative triples out during evaluation.\n'
           'Filtered evaluation is more expressive, for further information we refer to \n'
           'Bordes et al. \"Translating embeddings for modeling multi-relational data.\"')
     print()
 
 
-def output_directory_message():
+def print_output_directory_message():
     print('Here you are asked to specify the path to your output directory.\n'
           'In the output directory, the trained model, the learned embeddings, the evaluation results,\n'
           'the configuration are exported.\n')
     print("Example of a valid path: /Users/david/output_direc")
+    print()
+
+
+def print_trans_h_soft_constraints_weight_message():
+    print('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
+          'The authors proposed to weight the soft constraints.\n'
+          'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes.\"\n'
+          'Here you are asked, to specify the weight value for the soft constraints.\n')
+    print("Example of a valid path: /Users/david/output_direc")
+    print()
+
+
+def print_entities_embedding_dimension_message():
+    print(
+        "Here you are asked to specify the embedding dimension to use for learning the entities of the knowedge graph.\n"
+        "The embedding dimension must be a positive integer e.g. 20.")
+    print()
+
+def print_relations_embedding_dimension_message():
+    print(
+        "Here you are asked to specify the embedding dimension to use for learning the relations of the knowedge graph.\n"
+        "The embedding dimension must be a positive integer e.g. 30.")
     print()

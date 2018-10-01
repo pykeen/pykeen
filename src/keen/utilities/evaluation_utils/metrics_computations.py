@@ -91,7 +91,8 @@ def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, a
     corrupted_object_based_hashed = np.apply_along_axis(_hash_triples, 1, corrupted_object_based)
     mask = np.in1d(corrupted_object_based_hashed, all_pos_triples_hashed, invert=True)
     mask = np.where(mask)[0]
-    if not mask:
+
+    if mask.size == 0:
         raise Exception("User selected filtered metric computation, but all corrupted triples exists"
                         "also a positive triples.")
     corrupted_object_based = corrupted_object_based[mask]
@@ -111,13 +112,16 @@ def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_bas
     :param all_pos_triples_hashed:
     :return:
     """
-    corrupted_subject_based, corrupted_object_based = _filter_corrupted_triples(corrupted_subject_based,
-                                                                                corrupted_object_based,
-                                                                                all_pos_triples_hashed)
+    corrupted_subject_based, corrupted_object_based = _filter_corrupted_triples(
+        corrupted_subject_based=corrupted_subject_based,
+        corrupted_object_based=corrupted_object_based,
+        all_pos_triples_hashed=all_pos_triples_hashed)
 
-    rank_of_positive_subject_based, rank_of_positive_object_based = _compute_rank(pos_triple, kg_embedding_model,
-                                                                                  corrupted_subject_based,
-                                                                                  corrupted_object_based, device)
+    rank_of_positive_subject_based, rank_of_positive_object_based = _compute_rank(kg_embedding_model=kg_embedding_model,
+                                                                                  pos_triple=pos_triple,
+                                                                                  corrupted_subject_based=corrupted_subject_based,
+                                                                                  corrupted_object_based=corrupted_object_based,
+                                                                                  device=device)
 
     return rank_of_positive_subject_based, rank_of_positive_object_based
 

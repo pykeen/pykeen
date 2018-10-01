@@ -11,33 +11,45 @@ from keen.constants import TRAINING_FILE_PROMPT_MSG, TRAINING_FILE_ERROR_MSG, TR
     TEST_SET_RATIO, FILTER_NEG_TRIPLES, CONFIG_FILE_PROMPT_MSG, CONFIG_FILE_ERROR_MSG, OUTPUT_DIREC
 from keen.run import run
 from keen.utilities.cli_utils.cli_print_msg_helper import print_welcome_message, print_section_divider, print_intro, \
-    print_training_set_message, print_execution_mode_message, ask_for_evlauation_message, test_set_message, \
-    test_ratio_message, filter_negative_triples_message, print_existing_config_message, output_directory_message
+    print_training_set_message, print_execution_mode_message, print_ask_for_evlauation_message, print_test_set_message, \
+    print_test_ratio_message, print_filter_negative_triples_message, print_existing_config_message, print_output_directory_message
 from keen.utilities.cli_utils.cli_training_query_helper import get_input_path, select_keen_execution_mode, \
     select_embedding_model, select_preferred_device, ask_for_evaluation, ask_for_test_set, select_ratio_for_test_set, \
     ask_for_filtering_of_negatives, load_config_file, ask_for_existing_config_file, query_output_directory
+from keen.utilities.cli_utils.trans_d_cli import configure_trans_d_training_pipeline
 from keen.utilities.cli_utils.trans_e_cli import configure_trans_e_training_pipeline
+from keen.utilities.cli_utils.trans_h_cli import configure_trans_h_training_pipeline
+from keen.utilities.cli_utils.trans_r_cli import configure_trans_r_training_pipeline
 
 
 def _configure_training_pipeline(model_name):
     if model_name == TRANS_E_NAME:
         config = configure_trans_e_training_pipeline(model_name)
+
     elif model_name == TRANS_H_NAME:
-        pass
+        config = configure_trans_h_training_pipeline(model_name)
+
     elif model_name == TRANS_R_NAME:
-        pass
+        config = configure_trans_r_training_pipeline(model_name)
+
     elif model_name == TRANS_D_NAME:
-        pass
+        config = configure_trans_d_training_pipeline(model_name)
+
     elif model_name == SE_NAME:
         pass
+
     elif model_name == UM_NAME:
         pass
+
     elif model_name == DISTMULT_NAME:
         pass
+
     elif model_name == ERMLP_NAME:
         pass
+
     elif model_name == RESCAL_NAME:
         pass
+
     elif model_name == CONV_E_NAME:
         pass
 
@@ -75,13 +87,13 @@ def _configure_training_specific_parameters():
     config = OrderedDict()
 
     # Step 1: Ask whether to evaluate the model
-    ask_for_evlauation_message()
+    print_ask_for_evlauation_message()
     is_evaluation_mode = ask_for_evaluation()
     print_section_divider()
 
     # Step 2: Specify test set, if is_evaluation_mode==True
     if is_evaluation_mode:
-        test_set_message()
+        print_test_set_message()
         provide_test_set = ask_for_test_set()
         print_section_divider()
 
@@ -90,14 +102,14 @@ def _configure_training_specific_parameters():
                                            error_msg=TEST_FILE_ERROR_MSG)
             config[TEST_SET_PATH] = test_set_path
         else:
-            test_ratio_message()
+            print_test_ratio_message()
             test_set_ratio = select_ratio_for_test_set()
             config[TEST_SET_RATIO] = test_set_ratio
 
         print_section_divider()
 
         # Ask whether to use filtered negative triples
-        filter_negative_triples_message()
+        print_filter_negative_triples_message()
         filter_negative_triples = ask_for_filtering_of_negatives()
         config[FILTER_NEG_TRIPLES] = filter_negative_triples
         print_section_divider()
@@ -153,7 +165,7 @@ def start_cli():
     config[PREFERRED_DEVICE] = prefered_device
 
     # Step 8: Define output directory
-    output_directory_message()
+    print_output_directory_message()
     out_put_direc = query_output_directory()
     config[OUTPUT_DIREC] = out_put_direc
     print_section_divider()

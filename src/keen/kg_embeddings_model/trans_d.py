@@ -87,15 +87,34 @@ class TransD(nn.Module):
 
         return projected_entity_embs
 
-    # def _initialize(self):
-    #     lower_bound = -6 / np.sqrt(self.entity_embedding_dim)
-    #     upper_bound = 6 / np.sqrt(self.entity_embedding_dim)
-    #     nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
-    #     nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
-    #
-    #     norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
-    #     self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-    #         norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
+    def predict(self, triples):
+        """
+
+        :param head:
+        :param relation:
+        :param tail:
+        :return:
+        """
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+
+        heads = triples[:, 0:1]
+        relations = triples[:, 1:2]
+        tails = triples[:, 2:3]
+
+        h_embs = self.entity_embeddings(heads).view(-1, self.entity_embedding_dim)
+        r_embs = self.relation_embeddings(relations).view(-1, self.relation_embedding_dim)
+        t_embs = self.entity_embeddings(tails).view(-1, self.entity_embedding_dim)
+
+        h_proj_vec_embs = self.entity_projections(heads).view(-1, self.entity_embedding_dim)
+        r_projs_embs = self.relation_projections(relations).view(-1, self.relation_embedding_dim)
+        t_proj_vec_embs = self.entity_projections(tails).view(-1, self.entity_embedding_dim)
+
+        proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
+        proj_tails = self._project_entities(t_embs, t_proj_vec_embs, r_projs_embs)
+
+        scores = self._compute_scores(h_embs=proj_heads, r_embs=r_embs, t_embs=proj_tails)
+
+        return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
         pos_heads = batch_positives[:, 0:1]
@@ -131,10 +150,6 @@ class TransD(nn.Module):
 
         pos_scores = self._compute_scores(h_embs=proj_pos_heads, r_embs=pos_r_embs, t_embs=proj_pos_tails)
         neg_scores = self._compute_scores(h_embs=proj_neg_heads, r_embs=neg_r_embs, t_embs=proj_neg_tails)
-
-        # pos_scores = self._compute_scores(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
-        # neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
-
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
