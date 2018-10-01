@@ -62,7 +62,7 @@ def print_training_embedding_dimension_message():
 
 
 def print_trans_e_embedding_dimension_info_message():
-    print("In TransE/TransH the embedding dimension of entiteis and relations are the same.")
+    print("In TransE/TransH/DistMult the embedding dimension of entiteis and relations are the same.")
     print()
 
 

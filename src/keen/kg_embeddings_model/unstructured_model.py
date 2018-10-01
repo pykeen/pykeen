@@ -19,7 +19,7 @@ class UnstructuredModel(nn.Module):
 
     def __init__(self, config):
         super(UnstructuredModel, self).__init__()
-        self.model_name = TRANS_E_NAME
+        self.model_name = UM_NAME
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
@@ -102,10 +102,9 @@ class UnstructuredModel(nn.Module):
         tails = triples[:, 2:3]
 
         head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
-        relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
         tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
-        scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
+        scores = self._compute_scores(h_embs=head_embs, t_embs=tail_embs)
 
         return scores.detach().cpu().numpy()
 
