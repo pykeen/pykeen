@@ -21,19 +21,19 @@ def _split_list_in_batches(input_list, batch_size):
 def train_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
     model_name = kg_embedding_model.model_name
 
-    if model_name in [TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME]:
-        return _train_translational_based_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
-                                                pos_triples,
-                                                device, seed)
+    if model_name in [TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME, DISTMULT_NAME]:
+        return _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
+                                  pos_triples,
+                                  device, seed)
 
     if model_name == CONV_E_NAME:
         return _train_conv_e_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples,
                                    device, seed)
 
 
-def _train_translational_based_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
-                                     pos_triples, device,
-                                     seed):
+def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
+                       pos_triples, device,
+                       seed):
     kg_embedding_model = kg_embedding_model.to(device)
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
