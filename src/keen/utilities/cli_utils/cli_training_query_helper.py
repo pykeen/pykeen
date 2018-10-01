@@ -9,7 +9,7 @@ from collections import OrderedDict
 from prompt_toolkit import prompt
 
 from keen.constants import EXECUTION_MODE_MAPPING, KG_MODEL_TO_ID_MAPPING, ID_TO_KG_MODEL_MAPPING, \
-    BINARY_QUESTION_MAPPING, GPU, CPU, CONFIG_FILE_PRINT_MSG, CONFIG_FILE_ERROR_MSG
+    BINARY_QUESTION_MAPPING, GPU, CPU, CONFIG_FILE_PROMPT_MSG, CONFIG_FILE_ERROR_MSG
 
 
 def get_input_path(prompt_msg, error_msg):
@@ -153,7 +153,7 @@ def ask_for_filtering_of_negatives():
 
 
 def load_config_file():
-    path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PRINT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
+    path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PROMPT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
     while True:
         with open(path_to_config_file, 'rb') as f:
             try:
@@ -163,10 +163,10 @@ def load_config_file():
             except:
                 print('Invalid file, the configuration must be a JSON file.\n'
                       'Please try again.')
-                path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PRINT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
+                path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PROMPT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
 
 def ask_for_existing_config_file():
-    print('Do you provide an existing configuration file?')
+    print('Do you provide an existing configuration file?\n')
 
     while True:
         user_input = prompt('> Please type \'yes\' or \'no\': ')
@@ -176,3 +176,15 @@ def ask_for_existing_config_file():
                   'If you type \'yes\' it means that you provide a configuration file.')
         else:
             return BINARY_QUESTION_MAPPING[user_input]
+
+def query_output_directory():
+    print('Please provide the path to your output directory.\n')
+    print()
+
+    while True:
+        user_input = prompt('> Path to output director:')
+        if os.path.exists(os.path.dirname(user_input)):
+            return user_input
+        else:
+            print('Invalid input, please make sure that the path to the directory exists.\n'
+                  'Please try again.')

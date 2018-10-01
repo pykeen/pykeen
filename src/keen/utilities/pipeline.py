@@ -78,23 +78,25 @@ class Pipeline(object):
 
         else:
             # Initialize KG embedding model
-            kb_embedding_model_config = self.config[KG_EMBEDDING_MODEL]
-            kb_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
-            kb_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
-            kb_embedding_model_config[PREFERRED_DEVICE] = self.device
-            kg_embedding_model = get_kg_embedding_model(config=kb_embedding_model_config)
+            self.config[NUM_ENTITIES] = len(entity_to_id)
+            self.config[NUM_RELATIONS] = len(rel_to_id)
+            self.config[PREFERRED_DEVICE] = self.device
+            kg_embedding_model = get_kg_embedding_model(config=self.config)
 
-            batch_size = kb_embedding_model_config[BATCH_SIZE]
-            num_epochs = kb_embedding_model_config[NUM_EPOCHS]
-            lr = kb_embedding_model_config[LEARNING_RATE]
-            params = kb_embedding_model_config
+            batch_size = self.config[BATCH_SIZE]
+            num_epochs = self.config[NUM_EPOCHS]
+            learning_rate = self.config[LEARNING_RATE]
+            params = self.config
 
             log.info("-------------Train KG Embeddings-------------")
             trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model,
-                                                        all_entities=all_entities, learning_rate=lr,
+                                                        all_entities=all_entities,
+                                                        learning_rate=learning_rate,
                                                         num_epochs=num_epochs,
-                                                        batch_size=batch_size, pos_triples=mapped_pos_train_tripels,
-                                                        device=self.device, seed=self.seed)
+                                                        batch_size=batch_size,
+                                                        pos_triples=mapped_pos_train_tripels,
+                                                        device=self.device,
+                                                        seed=self.seed)
 
             eval_summary = None
 
@@ -109,7 +111,8 @@ class Pipeline(object):
                                                        kg_embedding_model=kg_embedding_model,
                                                        mapped_train_triples=mapped_pos_train_tripels,
                                                        mapped_test_triples=mapped_pos_test_tripels,
-                                                       device=self.device)
+                                                       device=self.device,
+                                                       filter_neg_triples=self.config[FILTER_NEG_TRIPLES])
 
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_summary[HITS_AT_K] = hits_at_k

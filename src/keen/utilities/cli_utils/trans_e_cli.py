@@ -10,7 +10,7 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     ENTITIES_NORMALIZATION_PROMPT_MSG, ENTITIES_NORMALIZATION_ERROR_MSG, LEARNING_RATE_PRINT_MSG, \
     LEARNING_RATE_PROMPT_MSG, LEARNING_RATE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, \
     BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, EMBEDDING_DIM, SCORING_FUNCTION_NORM, \
-    NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME
+    NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME, MARGIN_LOSS
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
     print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
@@ -40,6 +40,7 @@ def configure_trans_e_training_pipeline(model_name):
     magin_loss = select_float_value(print_msg=MARGIN_LOSS_PRINT_MSG,
                                     prompt_msg=MARGIN_LOSS_PROMPT_MSG,
                                     error_msg=MARGIN_LOSS_ERROR_MSG)
+    config[MARGIN_LOSS] = magin_loss
     print_section_divider()
 
     # Step 3: Query L_p norm as scoring function

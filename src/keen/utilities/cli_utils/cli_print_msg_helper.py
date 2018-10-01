@@ -24,7 +24,8 @@ def print_intro():
 
 def print_existing_config_message():
     print("Here you are asked whether you have already an exisiing configuration that was created for a previous experiment.\n"
-          "The configuration is saved as JSON file (.json)")
+          "The configuration is saved as a JSON file (.json)\n")
+    print("Example of a valid path: /Users/david/data/configuration.json")
     print()
 
 def print_training_set_message():
@@ -120,4 +121,12 @@ def filter_negative_triples_message():
     print('Here you are asked to specify whether you want to filter negative triples out during evaluation.\n'
           'Filtered evaluation is more expressive, for further information we refer to \n'
           'Bordes et al. \"Translating embeddings for modeling multi-relational data.\"')
+    print()
+
+
+def output_directory_message():
+    print('Here you are asked to specify the path to your output directory.\n'
+          'In the output directory, the trained model, the learned embeddings, the evaluation results,\n'
+          'the configuration are exported.\n')
+    print("Example of a valid path: /Users/david/output_direc")
     print()
