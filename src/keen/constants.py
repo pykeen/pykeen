@@ -198,7 +198,7 @@ TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
 TRAINING_FILE_ERROR_MSG = 'An error occured, either the path is not correct or the training file doesn\'t exist.\n' \
                           'Please try again.'
 
-CONFIG_FILE_PRINT_MSG = 'Please provide the path to your existing configuration file.'
+CONFIG_FILE_PROMPT_MSG = '> Please provide the path to your existing configuration file: '
 CONFIG_FILE_ERROR_MSG = 'An error occured, please make sure that the file exists, and that it is JSON file.\n' \
                         'Please try again.'
 
