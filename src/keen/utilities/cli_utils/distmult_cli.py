@@ -43,15 +43,7 @@ def configure_distmult_training_pipeline(model_name):
     config[MARGIN_LOSS] = magin_loss
     print_section_divider()
 
-    # Step 3: Query L_p norm as scoring function
-    print_scoring_fct_message()
-    scoring_fct_norm = select_integer_value(print_msg=SCORING_FUNCTION_PRINT_MSG,
-                                            prompt_msg=SCORING_FUNCTION_PROMPT_MSG,
-                                            error_msg=SCORING_FUNCTION_ERROR_MSG)
-    config[SCORING_FUNCTION_NORM] = scoring_fct_norm
-    print_section_divider()
-
-    # Step 4: Query L_p norm for normalizing the entities
+    # Step 3: Query L_p norm for normalizing the entities
     print_entity_normalization_message()
     entity_normalization_norm = select_integer_value(print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
                                                      prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
@@ -59,7 +51,7 @@ def configure_distmult_training_pipeline(model_name):
     config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
     print_section_divider()
 
-    # Step 5: Query learning rate
+    # Step 4: Query learning rate
     print_learning_rate_message()
     learning_rate = select_float_value(print_msg=LEARNING_RATE_PRINT_MSG,
                                        prompt_msg=LEARNING_RATE_PROMPT_MSG,
@@ -67,7 +59,7 @@ def configure_distmult_training_pipeline(model_name):
     config[LEARNING_RATE] = learning_rate
     print_section_divider()
 
-    # Step 6: Query batch size
+    # Step 5: Query batch size
     print_batch_size_message()
     batch_size = select_integer_value(print_msg=BATCH_SIZE_PRINT_MSG,
                                       prompt_msg=BATCH_SIZE_PROMPT_MSG,
@@ -75,7 +67,7 @@ def configure_distmult_training_pipeline(model_name):
     config[BATCH_SIZE] = batch_size
     print_section_divider()
 
-    # Step 7: Query number of epochs
+    # Step 6: Query number of epochs
     print_number_epochs_message()
     number_epochs = select_integer_value(print_msg=EPOCH_PRINT_MSG,
                                          prompt_msg=EPOCH_PROMPT_MSG,
