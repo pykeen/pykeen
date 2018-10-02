@@ -4,8 +4,12 @@
 
 import unittest
 
+from keen.constants import VERSION
+
 
 class SimpleTest(unittest.TestCase):
+    """Simple sanity tests."""
 
-    def test_stupid(self):
-        pass
+    def test_version(self):
+        """Check the version string can be loaded."""
+        self.assertIsInstance(VERSION, str)

@@ -24,14 +24,17 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Bio-Informatics'
 ]
 INSTALL_REQUIRES = [
-    'numpy==1.14.2',
-    'scikit-learn==0.19.1',
+    'numpy==1.14.2; python_version == "3.6"',
+    'numpy; python_version == "3.7"',
+    'scikit-learn==0.19.1; python_version == "3.6"',
+    'scikit-learn; python_version == "3.7"',
     'scipy',
     'click==6.7',
-    'torch==0.4.0',
+    'torch==0.4.0; python_version == "3.6"',
+    'torch==0.4.1; python_version == "3.7"',
     'torchvision==0.2.1',
     'prompt_toolkit',
-    'tqdm'
+    'tqdm',
 ]
 ENTRY_POINTS = {
     'console_scripts': [
