@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
-"""KEEN is a package for training and evaluating knowledge graph embedding. The central module
-is called 'Pipeline' which starts the workflow. The pipeline is configured by the user through a configuration file.
+"""KEEN is a package for training and evaluating knowledge graph embedding.
+
+The central module is called 'Pipeline' which starts the workflow. The pipeline is configured by the user through a
+configuration file.
 
 Installation
 ------------
@@ -9,12 +11,12 @@ Get the Latest
 ~~~~~~~~~~~~~~~
 Download the most recent code from ... with:
 
-
 For Developers
 ~~~~~~~~~~~~~~
 Clone the repository from `GitHub <https://github.com/SmartDataAnalytics/KEEN.git>'
-
 """
+
+from .run import run
 
 __version__ = '0.0.1-dev'
 
