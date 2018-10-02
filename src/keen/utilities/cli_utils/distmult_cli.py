@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation the command line interface needed for DistMult.'''
+"""Implementation the command line interface needed for DistMult."""
 
 from collections import OrderedDict
 

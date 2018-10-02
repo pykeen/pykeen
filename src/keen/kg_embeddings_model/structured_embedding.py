@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of structured model (SE).'''
+"""Implementation of structured model (SE)."""
 
 import logging
 

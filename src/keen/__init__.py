@@ -14,7 +14,6 @@ For Developers
 ~~~~~~~~~~~~~~
 Clone the repository from `GitHub <https://github.com/SmartDataAnalytics/KEEN.git>'
 
-
 """
 
 __version__ = '0.0.1-dev'

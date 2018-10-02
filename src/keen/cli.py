@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
-'''KEEN's command line interface.'''
+"""KEEN's command line interface."""
+
+from collections import OrderedDict
 
 import click
-from collections import OrderedDict
 
 from keen.constants import TRAINING_FILE_PROMPT_MSG, TRAINING_FILE_ERROR_MSG, TRAINING_SET_PATH, TRAINING_MODE, \
     HPO_MODE, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME, TRANS_D_NAME, SE_NAME, UM_NAME, DISTMULT_NAME, ERMLP_NAME, \
     RESCAL_NAME, CONV_E_NAME, PREFERRED_DEVICE, TEST_FILE_PROMPT_MSG, TEST_FILE_ERROR_MSG, TEST_SET_PATH, \
-    TEST_SET_RATIO, FILTER_NEG_TRIPLES, CONFIG_FILE_PROMPT_MSG, CONFIG_FILE_ERROR_MSG, OUTPUT_DIREC
+    TEST_SET_RATIO, FILTER_NEG_TRIPLES, OUTPUT_DIREC
 from keen.run import run
 from keen.utilities.cli_utils.cli_print_msg_helper import print_welcome_message, print_section_divider, print_intro, \
     print_training_set_message, print_execution_mode_message, print_ask_for_evlauation_message, print_test_set_message, \
-    print_test_ratio_message, print_filter_negative_triples_message, print_existing_config_message, print_output_directory_message
+    print_test_ratio_message, print_filter_negative_triples_message, print_existing_config_message, \
+    print_output_directory_message
 from keen.utilities.cli_utils.cli_training_query_helper import get_input_path, select_keen_execution_mode, \
     select_embedding_model, select_preferred_device, ask_for_evaluation, ask_for_test_set, select_ratio_for_test_set, \
     ask_for_filtering_of_negatives, load_config_file, ask_for_existing_config_file, query_output_directory
@@ -58,6 +60,7 @@ def _configure_training_pipeline(model_name):
 
     return config
 
+
 def _configure_hpo_pipeline(model_name):
     if model_name == TRANS_E_NAME:
         pass
@@ -79,6 +82,7 @@ def _configure_hpo_pipeline(model_name):
         pass
     elif model_name == CONV_E_NAME:
         pass
+
 
 def _configure_training_specific_parameters():
     """
@@ -119,6 +123,7 @@ def _configure_training_specific_parameters():
 
     return config
 
+
 def start_cli():
     config = OrderedDict()
 
@@ -136,7 +141,6 @@ def start_cli():
         return load_config_file()
 
     print_section_divider()
-
 
     # Step 3: Ask for training file
     print_training_set_message()
@@ -175,11 +179,13 @@ def start_cli():
 
     return config
 
+
 @click.command()
 def main():
     """KEEN: A software for training and evaluating knowledge graph embeddings."""
     config = start_cli()
     run(config)
+
 
 if __name__ == '__main__':
     main()

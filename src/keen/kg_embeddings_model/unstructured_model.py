@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of UM.'''
+"""Implementation of UM."""
 
 import logging
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of TransR.'''
+"""Implementation of TransR."""
 
 import numpy as np
 import torch
@@ -9,14 +9,14 @@ import torch.nn as nn
 
 from keen.constants import *
 
-'''
+"""
 Constraints: 
  * ||h||_2 <= 1: Done
  * ||r||_2 <= 1: Done
  * ||t||_2 <= 1: Done
  * ||h*M_r||_2 <= 1: TODO
  * ||t*M_r||_2 <= 1: TODO
-'''
+"""
 
 
 class TransR(nn.Module):

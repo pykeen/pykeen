@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Script to compute mean rank and hits@k.'''
+"""Script to compute mean rank and hits@k."""
 
 import logging
 import timeit

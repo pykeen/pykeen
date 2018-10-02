@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Script for initializing the knowledge graph embedding models.'''
+"""Script for initializing the knowledge graph embedding models."""
 
 from keen.constants import KG_EMBEDDING_MODEL_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME, CONV_E_NAME, \
     SE_NAME, UM_NAME, DISTMULT_NAME, ERMLP_NAME, \

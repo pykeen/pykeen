@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of DistMult.'''
+"""Implementation of DistMult."""
 
 import numpy as np
 import torch
