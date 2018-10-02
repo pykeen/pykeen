@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from collections import OrderedDict
+from typing import Optional
 
 import numpy as np
 import torch
@@ -19,31 +19,32 @@ log = logging.getLogger(__name__)
 
 
 class Pipeline(object):
-
     def __init__(self, config, seed):
         self.config = config
         self.seed = seed
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
+            'cuda:0'
+            if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else
+            CPU
+        )
 
-    def start(self):
-        if HYPER_PARAMTER_OPTIMIZATION_PARAMS in self.config:
-            return self.start_hpo()
-        else:
-            return self.start_training()
-
-    def start_hpo(self):
-        return self._start_pipeline(is_hpo_mode=True)
-
-    def start_training(self):
-        return self._start_pipeline(is_hpo_mode=False)
+    def start(self, path_to_train_data: Optional[str] = None):
+        is_hpo_mode = HYPER_PARAMTER_OPTIMIZATION_PARAMS in self.config
+        return self._start_pipeline(is_hpo_mode=is_hpo_mode, path_to_train_data=path_to_train_data)
 
     @property
     def has_test_set(self) -> bool:
         return TEST_SET_PATH in self.config
 
-    def _start_pipeline(self, is_hpo_mode: bool):
-        train_pos, test_pos = _get_data(self.config, self.seed)
+    def _start_pipeline(self, is_hpo_mode: bool, path_to_train_data: Optional[str] = None):
+        if path_to_train_data is None:
+            path_to_train_data = self.config[TRAINING_SET_PATH]
+
+        train_pos, test_pos = _get_data(
+            self.config,
+            self.seed,
+            path_to_train_data=path_to_train_data,
+        )
         all_triples = np.concatenate([train_pos, test_pos], axis=0)
         entity_to_id, rel_to_id = create_mappings(triples=all_triples)
         mapped_pos_train_tripels, _, _ = create_mapped_triples(
@@ -132,9 +133,7 @@ class Pipeline(object):
         return trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params
 
 
-def _get_data(config, seed):
-    path_to_train_data = config[TRAINING_SET_PATH]
-
+def _get_data(config, seed, path_to_train_data: str):
     pos_triples = np.loadtxt(
         fname=path_to_train_data,
         dtype=str,
