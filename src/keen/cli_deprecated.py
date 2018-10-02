@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """KEEN's command line interface."""
+
 import json
 import os
 from collections import OrderedDict
@@ -147,18 +148,18 @@ def _select_translational_based_hpo_params(selected_model):
     margin_losses = select_float_values(MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG, MARGIN_LOSSES_ERROR_MSG)
     hpo_params[MARGIN_LOSS] = margin_losses
 
-    if selected_model == TRANS_E:
+    if selected_model == TRANS_E_NAME:
         hpo_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_float_values(
             NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG,
             NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG, NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG)
 
-    if selected_model == TRANS_E or selected_model == TRANS_H:
+    if selected_model == TRANS_E_NAME or selected_model == TRANS_H_NAME:
         print('----------------------------')
 
         hpo_params[SCORING_FUNCTION_NORM] = select_float_values(NORMS_SCROING_FUNCTION_PRINT_MSG,
                                                                 NORMS_SCROING_FUNCTION_PROMPT_MSG,
                                                                 NORMS_SCROING_FUNCTION_ERROR_MSG)
-    if selected_model == TRANS_H:
+    if selected_model == TRANS_H_NAME:
         hpo_params[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = select_float_values(WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG,
                                                                          WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG,
                                                                          WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG)
@@ -336,11 +337,11 @@ def select_hpo_params(model_id):
     hpo_params[KG_EMBEDDING_MODEL] = id_to_embedding_models[model_id]
     selected_model = id_to_embedding_models[model_id]
 
-    if selected_model in [TRANS_D, TRANS_E, TRANS_H, TRANS_R]:
+    if selected_model in [TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME]:
         # Model is one of the the translational based models
         param_dict = _select_translational_based_hpo_params(selected_model)
         hpo_params.update(param_dict)
-    elif selected_model == CONV_E:
+    elif selected_model == CONV_E_NAME:
         # ConvE
         param_dict = _select_conv_e_hpo_params()
         hpo_params.update(param_dict)
@@ -460,24 +461,24 @@ def select_training_model_params(model_id):
     selected_model = id_to_embedding_models[model_id]
     kg_model_params[KG_EMBEDDING_MODEL] = selected_model
 
-    if selected_model in [TRANS_D, TRANS_E, TRANS_H, TRANS_R]:
+    if selected_model in [TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME]:
         embedding_dimension = select_integer_value(EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PROMPT_MSG,
                                                    EMBEDDING_DIMENSION_ERROR_MSG)
 
         kg_model_params[EMBEDDING_DIM] = embedding_dimension
         kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
 
-        if selected_model == TRANS_E:
+        if selected_model == TRANS_E_NAME:
             kg_model_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_norm(ENTITIES_NORMALIZATION_PRINT_MSG)
 
-        if selected_model == TRANS_H:
+        if selected_model == TRANS_H_NAME:
             kg_model_params[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = select_float_value(
                 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG, WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG,
                 WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG)
 
             print('----------------------------')
 
-        if selected_model == TRANS_R or selected_model == TRANS_D:
+        if selected_model == TRANS_R_NAME or selected_model == TRANS_D_NAME:
             relation_embedding_dim = select_integer_value(RELATION_EMBEDDING_DIMENSION_PRINT_MSG,
                                                           RELATION_EMBEDDING_DIMENSION_PROMPT_MSG,
                                                           EMBEDDING_DIMENSION_ERROR_MSG)
@@ -485,7 +486,7 @@ def select_training_model_params(model_id):
 
         kg_model_params[MARGIN_LOSS] = select_float_value(MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG,
                                                           MARGIN_LOSS_ERROR_MSG)
-    if selected_model == CONV_E:
+    if selected_model == CONV_E_NAME:
         # ConvE
         kg_model_params.update(_select_conv_e_params())
 
@@ -527,7 +528,7 @@ def ask_for_existing_configuration():
 
 def load_config_file():
     is_valid_input = False
-    config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PRINT_MSG)
+    config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PROMPT_MSG)
 
     while is_valid_input is False:
         with open(config_file_path, 'rb') as f:
@@ -537,7 +538,7 @@ def load_config_file():
                 return data
             except:
                 print('Invalid file, configuration file must be serialised dictionary (.json)')
-                config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PRINT_MSG)
+                config_file_path = get_data_input_path(print_msg=CONFIG_FILE_PROMPT_MSG)
 
 
 def ask_binary_question(print_msg, prompt_msg, error_msg):
@@ -596,7 +597,7 @@ def start_cli():
     use_test_set = is_test_set_provided()
 
     if use_test_set:
-        config[TEST_SET_PATH] = get_data_input_path(print_msg=TEST_SET_PRINT_MSG)
+        config[TEST_SET_PATH] = get_data_input_path(print_msg=TEST_FILE_PROMPT_MSG)
     else:
         config[TEST_SET_RATIO] = select_ratio_for_test_set()
 
