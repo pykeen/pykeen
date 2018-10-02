@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import random
-from collections import OrderedDict
 
 import numpy as np
 
@@ -25,7 +24,8 @@ class RandomSearchHPO(AbstractHPOptimizer):
         kg_embedding_model_config[CONV_E_INPUT_DROPOUT] = random.choice(hyperparams_dict[CONV_E_INPUT_DROPOUT])
         kg_embedding_model_config[CONV_E_OUTPUT_DROPOUT] = random.choice(hyperparams_dict[CONV_E_OUTPUT_DROPOUT])
         kg_embedding_model_config[CONV_E_FEATURE_MAP_DROPOUT] = random.choice(
-            hyperparams_dict[CONV_E_FEATURE_MAP_DROPOUT])
+            hyperparams_dict[CONV_E_FEATURE_MAP_DROPOUT]
+        )
 
         return kg_embedding_model_config
 
@@ -37,11 +37,13 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         if selected_model == TRANS_E_NAME:
             kg_embedding_model_config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = random.choice(
-                hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES])
+                hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES]
+            )
 
         if selected_model == TRANS_H_NAME:
             kg_embedding_model_config[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = random.choice(
-                hyperparams_dict[WEIGHT_SOFT_CONSTRAINT_TRANS_H])
+                hyperparams_dict[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
+            )
 
         return kg_embedding_model_config
 
@@ -102,20 +104,25 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
             all_entities = np.array(list(entity_to_id.values()))
 
-            trained_model, epoch_loss = train_model(kg_embedding_model=kg_embedding_model,
-                                                    all_entities=all_entities,
-                                                    learning_rate=kg_embedding_model_config[LEARNING_RATE],
-                                                    num_epochs=kg_embedding_model_config[NUM_EPOCHS],
-                                                    batch_size=kg_embedding_model_config[BATCH_SIZE],
-                                                    pos_triples=mapped_train_tripels,
-                                                    device=device, seed=seed)
+            trained_model, epoch_loss = train_model(
+                kg_embedding_model=kg_embedding_model,
+                all_entities=all_entities,
+                learning_rate=kg_embedding_model_config[LEARNING_RATE],
+                num_epochs=kg_embedding_model_config[NUM_EPOCHS],
+                batch_size=kg_embedding_model_config[BATCH_SIZE],
+                pos_triples=mapped_train_tripels,
+                device=device,
+                seed=seed
+            )
 
             # Evaluate trained model
-            mean_rank, hits_at_k = compute_metrics(all_entities=all_entities,
-                                                   kg_embedding_model=trained_model,
-                                                   mapped_train_triples=mapped_train_tripels,
-                                                   mapped_test_triples=mapped_test_tripels,
-                                                   device=device)
+            mean_rank, hits_at_k = compute_metrics(
+                all_entities=all_entities,
+                kg_embedding_model=trained_model,
+                mapped_train_triples=mapped_train_tripels,
+                mapped_test_triples=mapped_test_tripels,
+                device=device
+            )
 
             # TODO: Define HPO metric
             eval_summary[MEAN_RANK] = mean_rank
@@ -137,10 +144,12 @@ class RandomSearchHPO(AbstractHPOptimizer):
     @staticmethod
     def run(mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config, device, seed):
         hpo = RandomSearchHPO()
-        return hpo.optimize_hyperparams(mapped_train_tripels=mapped_train_tripels,
-                                        mapped_test_tripels=mapped_test_tripels,
-                                        entity_to_id=entity_to_id,
-                                        rel_to_id=rel_to_id,
-                                        config=config,
-                                        device=device,
-                                        seed=seed)
+        return hpo.optimize_hyperparams(
+            mapped_train_tripels=mapped_train_tripels,
+            mapped_test_tripels=mapped_test_tripels,
+            entity_to_id=entity_to_id,
+            rel_to_id=rel_to_id,
+            config=config,
+            device=device,
+            seed=seed
+        )
