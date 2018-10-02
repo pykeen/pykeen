@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of ConvE.'''
+"""Implementation of ConvE."""
 
 import torch
 import torch.autograd
@@ -10,9 +10,9 @@ from torch.nn.init import xavier_normal
 
 from keen.constants import *
 
-'''
+"""
 Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
-'''
+"""
 
 
 class ConvE(nn.Module):

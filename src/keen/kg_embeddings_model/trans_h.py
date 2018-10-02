@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of TransH.'''
+"""Implementation of TransH."""
 
 import numpy as np
 import torch

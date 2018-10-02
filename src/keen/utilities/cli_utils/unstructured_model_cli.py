@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation the command line interface needed for Unstructured Model.'''
+"""Implementation the command line interface needed for Unstructured Model."""
 
 from collections import OrderedDict
 

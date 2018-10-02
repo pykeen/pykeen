@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of RESCAL.'''
+"""Implementation of RESCAL."""
 
 import numpy as np
 import torch

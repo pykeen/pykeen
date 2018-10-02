@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation the command line interface needed for Structured Model (SM).'''
+"""Implementation the command line interface needed for Structured Model (SM)."""
 
 from collections import OrderedDict
 
@@ -29,57 +29,71 @@ def configure_se_training_pipeline(model_name):
     # Step 1: Query embedding dimension
     print_training_embedding_dimension_message()
     print_trans_e_embedding_dimension_info_message()
-    embedding_dimension = select_integer_value(print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
-                                               prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
-                                               error_msg=EMBEDDING_DIMENSION_ERROR_MSG)
+    embedding_dimension = select_integer_value(
+        print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
+        prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
+        error_msg=EMBEDDING_DIMENSION_ERROR_MSG
+    )
     config[EMBEDDING_DIM] = embedding_dimension
     print_section_divider()
 
     # Step 2: Query margin loss
     print_training_margin_loss_message()
-    magin_loss = select_float_value(print_msg=MARGIN_LOSS_PRINT_MSG,
-                                    prompt_msg=MARGIN_LOSS_PROMPT_MSG,
-                                    error_msg=MARGIN_LOSS_ERROR_MSG)
+    magin_loss = select_float_value(
+        print_msg=MARGIN_LOSS_PRINT_MSG,
+        prompt_msg=MARGIN_LOSS_PROMPT_MSG,
+        error_msg=MARGIN_LOSS_ERROR_MSG
+    )
     config[MARGIN_LOSS] = magin_loss
     print_section_divider()
 
     # Step 3: Query L_p norm as scoring function
     print_scoring_fct_message()
-    scoring_fct_norm = select_integer_value(print_msg=SCORING_FUNCTION_PRINT_MSG,
-                                            prompt_msg=SCORING_FUNCTION_PROMPT_MSG,
-                                            error_msg=SCORING_FUNCTION_ERROR_MSG)
+    scoring_fct_norm = select_integer_value(
+        print_msg=SCORING_FUNCTION_PRINT_MSG,
+        prompt_msg=SCORING_FUNCTION_PROMPT_MSG,
+        error_msg=SCORING_FUNCTION_ERROR_MSG
+    )
     config[SCORING_FUNCTION_NORM] = scoring_fct_norm
     print_section_divider()
 
     # Step 4: Query L_p norm for normalizing the entities
     print_entity_normalization_message()
-    entity_normalization_norm = select_integer_value(print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
-                                                     prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
-                                                     error_msg=ENTITIES_NORMALIZATION_ERROR_MSG)
+    entity_normalization_norm = select_integer_value(
+        print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
+        prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
+        error_msg=ENTITIES_NORMALIZATION_ERROR_MSG
+    )
     config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
     print_section_divider()
 
     # Step 5: Query learning rate
     print_learning_rate_message()
-    learning_rate = select_float_value(print_msg=LEARNING_RATE_PRINT_MSG,
-                                       prompt_msg=LEARNING_RATE_PROMPT_MSG,
-                                       error_msg=LEARNING_RATE_ERROR_MSG)
+    learning_rate = select_float_value(
+        print_msg=LEARNING_RATE_PRINT_MSG,
+        prompt_msg=LEARNING_RATE_PROMPT_MSG,
+        error_msg=LEARNING_RATE_ERROR_MSG
+    )
     config[LEARNING_RATE] = learning_rate
     print_section_divider()
 
     # Step 6: Query batch size
     print_batch_size_message()
-    batch_size = select_integer_value(print_msg=BATCH_SIZE_PRINT_MSG,
-                                      prompt_msg=BATCH_SIZE_PROMPT_MSG,
-                                      error_msg=BATCH_SIZE_ERROR_MSG)
+    batch_size = select_integer_value(
+        print_msg=BATCH_SIZE_PRINT_MSG,
+        prompt_msg=BATCH_SIZE_PROMPT_MSG,
+        error_msg=BATCH_SIZE_ERROR_MSG
+    )
     config[BATCH_SIZE] = batch_size
     print_section_divider()
 
     # Step 7: Query number of epochs
     print_number_epochs_message()
-    number_epochs = select_integer_value(print_msg=EPOCH_PRINT_MSG,
-                                         prompt_msg=EPOCH_PROMPT_MSG,
-                                         error_msg=EPOCH_ERROR_MSG)
+    number_epochs = select_integer_value(
+        print_msg=EPOCH_PRINT_MSG,
+        prompt_msg=EPOCH_PROMPT_MSG,
+        error_msg=EPOCH_ERROR_MSG
+    )
     config[NUM_EPOCHS] = number_epochs
     print_section_divider()
 

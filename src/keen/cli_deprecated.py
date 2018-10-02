@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''KEEN's command line interface.'''
+"""KEEN's command line interface."""
 import json
 import os
 from collections import OrderedDict

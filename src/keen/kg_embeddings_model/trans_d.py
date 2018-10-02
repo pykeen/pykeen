@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation of TransD.'''
+"""Implementation of TransD."""
 
 import numpy as np
 import torch
@@ -9,9 +9,9 @@ import torch.nn as nn
 
 from keen.constants import *
 
-'''
+"""
 TODO: Check, whether it makes sense to integrate identity matrices.
-'''
+"""
 
 
 class TransD(nn.Module):
