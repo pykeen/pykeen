@@ -11,7 +11,7 @@ KG_EMBEDDING_MODEL = 'kg_embedding_model'
 KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 
 # Model names
-SE_NAME = 'Structure Embeddings (SE)'
+SE_NAME = 'Structure Embedding (SE)'
 UM_NAME = 'Unstructured Model (UM)'
 TRANS_E_NAME = 'TransE'
 TRANS_H_NAME = 'TransH'

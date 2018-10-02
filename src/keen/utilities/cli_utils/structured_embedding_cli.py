@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Implementation the command line interface needed for TransE.'''
+'''Implementation the command line interface needed for Structured Model (SM).'''
 
 from collections import OrderedDict
 
@@ -18,7 +18,7 @@ from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embeddi
 from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
 
 
-def configure_trans_e_training_pipeline(model_name):
+def configure_se_training_pipeline(model_name):
     """
 
     :return:
@@ -29,8 +29,7 @@ def configure_trans_e_training_pipeline(model_name):
     # Step 1: Query embedding dimension
     print_training_embedding_dimension_message()
     print_trans_e_embedding_dimension_info_message()
-    embedding_dimension = select_integer_value(
-        print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
+    embedding_dimension = select_integer_value(print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
                                                prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
                                                error_msg=EMBEDDING_DIMENSION_ERROR_MSG)
     config[EMBEDDING_DIM] = embedding_dimension
@@ -87,5 +86,5 @@ def configure_trans_e_training_pipeline(model_name):
     return config
 
 
-def configure_trans_e_hpo_pipeline():
+def configure_se_hpo_pipeline():
     pass

@@ -17,6 +17,7 @@ from keen.utilities.cli_utils.cli_training_query_helper import get_input_path, s
     select_embedding_model, select_preferred_device, ask_for_evaluation, ask_for_test_set, select_ratio_for_test_set, \
     ask_for_filtering_of_negatives, load_config_file, ask_for_existing_config_file, query_output_directory
 from keen.utilities.cli_utils.distmult_cli import configure_distmult_training_pipeline
+from keen.utilities.cli_utils.structured_embedding_cli import configure_se_training_pipeline
 from keen.utilities.cli_utils.trans_d_cli import configure_trans_d_training_pipeline
 from keen.utilities.cli_utils.trans_e_cli import configure_trans_e_training_pipeline
 from keen.utilities.cli_utils.trans_h_cli import configure_trans_h_training_pipeline
@@ -38,7 +39,7 @@ def _configure_training_pipeline(model_name):
         config = configure_trans_d_training_pipeline(model_name)
 
     elif model_name == SE_NAME:
-        pass
+        config = configure_se_training_pipeline(model_name)
 
     elif model_name == UM_NAME:
         config = configure_um_training_pipeline(model_name)

@@ -9,7 +9,8 @@ from keen.kg_embeddings_model.conv_e import ConvE
 from keen.kg_embeddings_model.distmult import DistMult
 from keen.kg_embeddings_model.ermlp import ERMLP
 from keen.kg_embeddings_model.rescal import RESCAL
-from keen.kg_embeddings_model.structured_model import StructuredEmbeddings
+from keen.kg_embeddings_model.structured_embedding import StructuredEmbedding
+
 from keen.kg_embeddings_model.trans_d import TransD
 from keen.kg_embeddings_model.trans_e import TransE
 from keen.kg_embeddings_model.trans_h import TransH
@@ -38,7 +39,7 @@ def get_kg_embedding_model(config):
         return TransR(config=config)
 
     if model_name == SE_NAME:
-        return StructuredEmbeddings(config=config)
+        return StructuredEmbedding(config=config)
 
     if model_name == UM_NAME:
         return UnstructuredModel(config=config)
