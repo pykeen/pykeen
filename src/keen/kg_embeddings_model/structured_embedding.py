@@ -31,8 +31,8 @@ class StructuredEmbedding(nn.Module):
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.m_left_rel_embeddings = nn.Embedding(self.num_relations, 2 * self.embedding_dim)
-        self.m_right_rel_embeddings = nn.Embedding(self.num_relations, 2 * self.embedding_dim)
+        self.m_left_rel_embeddings = nn.Embedding(self.num_relations, 20 * self.embedding_dim)
+        self.m_right_rel_embeddings = nn.Embedding(self.num_relations, 20 * self.embedding_dim)
 
         self.margin_loss = config[MARGIN_LOSS]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
@@ -67,13 +67,12 @@ class StructuredEmbedding(nn.Module):
         # Scores for the psotive and negative triples
         pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-        # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
 
         return loss
 
-    def _compute_scores(self, h_embs, m_left_r_embs, m_right_r_embs, t_embs):
+    def _compute_scores(self, projected_head_embs, projected_tail_embs):
         """
 
         :param h_embs:
@@ -82,12 +81,19 @@ class StructuredEmbedding(nn.Module):
         :return:
         """
 
-        # Add the vector element wise
-        sum_res = torch.einsum('ndd,nd->nd', [m_left_r_embs, h_embs]) + torch.einsum('ndd,nd->nd',
-                                                                                     [m_right_r_embs, t_embs])
-        distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        # Subtract the vector element wise
+        difference = projected_head_embs - projected_tail_embs
+
+        distances = torch.norm(difference, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
 
         return distances
+
+    def _project_entities(self, entity_embs, projection_matrix_embs):
+        entity_embs = entity_embs.unsqueeze(-1)
+
+        projected_entity_embs = torch.matmul(projection_matrix_embs, entity_embs)
+
+        return projected_entity_embs
 
     def predict(self, triples):
         """
@@ -104,10 +110,18 @@ class StructuredEmbedding(nn.Module):
         tails = triples[:, 2:3]
 
         head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
-        relation_embs = self.m_left_rel_embeddings(relations).view(-1, self.embedding_dim)
         tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
-        scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
+        m_left_r_embs = self.m_left_rel_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+        m_right_r_embs = self.m_right_rel_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+
+        projected_head_embs = self._project_entities(entity_embs=head_embs,
+                                                     projection_matrix_embs=m_left_r_embs)
+        projected_tails_embs = self._project_entities(entity_embs=tail_embs,
+                                                      projection_matrix_embs=m_right_r_embs)
+
+        scores = self._compute_scores(projected_head_embs=projected_head_embs,
+                                      projected_tail_embs=projected_tails_embs)
 
         return scores.detach().cpu().numpy()
 
@@ -133,19 +147,31 @@ class StructuredEmbedding(nn.Module):
         neg_tails = batch_negatives[:, 2:3]
 
         pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
-        pos_m_left_r_embs = self.m_left_rel_embeddings(pos_relations).view(-1, self.embedding_dim)
-        pos_m_right_r_embs = self.m_right_rel_embeddings(pos_relations).view(-1, self.embedding_dim)
+        pos_m_left_r_embs = self.m_left_rel_embeddings(pos_relations).view(-1, self.embedding_dim, self.embedding_dim)
+        pos_m_right_r_embs = self.m_right_rel_embeddings(pos_relations).view(-1, self.embedding_dim, self.embedding_dim)
+
         pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
 
         neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
-        neg_m_left_r_embs = self.m_left_rel_embeddings(neg_relations).view(-1, self.embedding_dim)
-        neg_m_right_r_embs = self.m_right_rel_embeddings(neg_relations).view(-1, self.embedding_dim)
+        neg_m_left_r_embs = self.m_left_rel_embeddings(neg_relations).view(-1, self.embedding_dim, self.embedding_dim)
+        neg_m_right_r_embs = self.m_right_rel_embeddings(neg_relations).view(-1, self.embedding_dim, self.embedding_dim)
         neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
 
-        pos_scores = self._compute_scores(h_embs=pos_h_embs, m_left_r_embs=pos_m_left_r_embs,
-                                          m_right_r_embs=pos_m_right_r_embs, t_embs=pos_t_embs)
-        neg_scores = self._compute_scores(h_embs=neg_h_embs, m_left_r_embs=neg_m_left_r_embs,
-                                          m_right_r_embs=neg_m_right_r_embs, t_embs=neg_t_embs)
+        projected_pos_head_embs = self._project_entities(entity_embs=pos_h_embs,
+                                                         projection_matrix_embs=pos_m_left_r_embs)
+        projected_pos_tails_embs = self._project_entities(entity_embs=pos_t_embs,
+                                                          projection_matrix_embs=pos_m_right_r_embs)
+
+        projected_neg_head_embs = self._project_entities(entity_embs=neg_h_embs,
+                                                         projection_matrix_embs=neg_m_left_r_embs)
+        projected_neg_tails_embs = self._project_entities(entity_embs=neg_t_embs,
+                                                          projection_matrix_embs=neg_m_right_r_embs)
+
+        pos_scores = self._compute_scores(projected_head_embs=projected_pos_head_embs,
+                                          projected_tail_embs=projected_pos_tails_embs)
+
+        neg_scores = self._compute_scores(projected_head_embs=projected_neg_head_embs,
+                                          projected_tail_embs=projected_neg_tails_embs)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
