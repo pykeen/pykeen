@@ -31,7 +31,6 @@ class UnstructuredModel(nn.Module):
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         self.margin_loss = config[MARGIN_LOSS]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
@@ -46,11 +45,6 @@ class UnstructuredModel(nn.Module):
         lower_bound = -6 / np.sqrt(self.embedding_dim)
         upper_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
-        nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
-
-        norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
-        self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
     def _compute_loss(self, pos_scores, neg_scores):
         """

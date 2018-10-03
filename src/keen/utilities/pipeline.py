@@ -125,10 +125,15 @@ class Pipeline(object):
             id_to_entity[id]: embedding.detach().cpu().numpy()
             for id, embedding in enumerate(trained_model.entity_embeddings.weight)
         }
-        relation_to_embedding = {
-            id_to_rel[id]: embedding.detach().cpu().numpy()
-            for id, embedding in enumerate(trained_model.relation_embeddings.weight)
-        }
+
+        if self.config[KG_EMBEDDING_MODEL_NAME] in [SE_NAME,UM_NAME]:
+            relation_to_embedding = None
+        else:
+            relation_to_embedding = {
+                id_to_rel[id]: embedding.detach().cpu().numpy()
+                for id, embedding in enumerate(trained_model.relation_embeddings.weight)
+            }
+
 
         return trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params
 
