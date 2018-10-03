@@ -24,10 +24,9 @@ class RESCAL(nn.Module):
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
-        self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, 2 * self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
         self.margin_loss = config[MARGIN_LOSS]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
@@ -63,7 +62,10 @@ class RESCAL(nn.Module):
         """
         # Compute score and transform result to 1D tensor
         M = r_embs.view(-1, self.embedding_dim, self.embedding_dim)
-        scores = torch.einsum('nd,ndd,nd->n', [h_embs, M, t_embs])
+        h_embs = h_embs.unsqueeze(-1).permute([0, 2, 1])
+        h_M_embs = torch.matmul(h_embs, M)
+        t_embs = t_embs.unsqueeze(-1)
+        scores = torch.matmul(h_M_embs, t_embs).view(-1)
 
         # scores = torch.bmm(torch.transpose(h_emb, 1, 2), M)  # h^T M
         # scores = torch.bmm(scores, t_emb)  # (h^T M) h
