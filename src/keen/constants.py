@@ -270,4 +270,4 @@ ID_TO_KG_MODEL_MAPPING = OrderedDict({
 
 KG_MODEL_TO_ID_MAPPING = OrderedDict({value: key for key, value in ID_TO_KG_MODEL_MAPPING.items()})
 
-BINARY_QUESTION_MAPPING = OrderedDict({'yes':1, 'no':0})
+BINARY_QUESTION_MAPPING = OrderedDict({'yes':True, 'no':False})
