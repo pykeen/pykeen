@@ -19,7 +19,7 @@ from keen.utilities.cli_utils.utils import get_config_dict
 
 
 def configure_trans_e_training_pipeline(model_name):
-    """Configure Trans E from pipeline.
+    """Configure TransE from pipeline.
 
     :param str model_name: name of the model
     :rtype: OrderedDict
