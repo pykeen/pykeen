@@ -13,7 +13,7 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     WEIGHT_SOFT_CONSTRAINT_TRANS_H, WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG, \
     WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG, WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
-    print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
+    print_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message, print_trans_h_soft_constraints_weight_message
 from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
@@ -31,7 +31,7 @@ def configure_trans_h_training_pipeline(model_name):
 
     # Step 1: Query embedding dimension
     print_training_embedding_dimension_message()
-    print_trans_e_embedding_dimension_info_message()
+    print_embedding_dimension_info_message()
     embedding_dimension = select_integer_value(
         print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
         prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,

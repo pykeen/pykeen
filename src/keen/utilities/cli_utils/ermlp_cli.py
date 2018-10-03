@@ -9,7 +9,7 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     NUM_EPOCHS, \
     MARGIN_LOSS
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
-    print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_section_divider, \
+    print_embedding_dimension_info_message, print_training_margin_loss_message, print_section_divider, \
     print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message
 from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
@@ -27,7 +27,7 @@ def configure_ermlp_training_pipeline(model_name):
 
     # Step 1: Query embedding dimension
     print_training_embedding_dimension_message()
-    print_trans_e_embedding_dimension_info_message()
+    print_embedding_dimension_info_message()
     embedding_dimension = select_integer_value(
         print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
         prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
@@ -79,5 +79,5 @@ def configure_ermlp_training_pipeline(model_name):
     return config
 
 
-def configure_trans_e_hpo_pipeline():
+def configure_ermlp_hpo_pipeline():
     pass

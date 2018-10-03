@@ -12,7 +12,7 @@ from keen.constants import EMBEDDING_DIMENSION_PRINT_MSG, EMBEDDING_DIMENSION_PR
     BATCH_SIZE_ERROR_MSG, EPOCH_PRINT_MSG, EPOCH_PROMPT_MSG, EPOCH_ERROR_MSG, EMBEDDING_DIM, SCORING_FUNCTION_NORM, \
     NORM_FOR_NORMALIZATION_OF_ENTITIES, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS, KG_EMBEDDING_MODEL_NAME, MARGIN_LOSS
 from keen.utilities.cli_utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
-    print_trans_e_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
+    print_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message
 from keen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
@@ -28,7 +28,7 @@ def configure_distmult_training_pipeline(model_name):
 
     # Step 1: Query embedding dimension
     print_training_embedding_dimension_message()
-    print_trans_e_embedding_dimension_info_message()
+    print_embedding_dimension_info_message()
     embedding_dimension = select_integer_value(print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
                                                prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
                                                error_msg=EMBEDDING_DIMENSION_ERROR_MSG)
