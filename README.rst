@@ -1,6 +1,7 @@
 KEEN |build|
 ============
 KEEN (KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings.
+
 The system has a modular architecture, and can be configured by the user through the command line interface.
  
 **Currently, the framework is under heavy development.**
@@ -24,17 +25,17 @@ Installation
 How to Use
 ----------
 To start KEEN, please run the following command:
-    
+
 .. code-block:: sh
 
     keen
-    
-or alternatively:    
+
+or alternatively:
 
 .. code-block:: python
 
     python3 -m keen
-    
+
 then the command line interface will assist you to configure your experiments.
 
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/KEEN.svg?branch=master
