@@ -13,9 +13,10 @@ from keen.constants import *
 class ERMLP(nn.Module):
 
     def __init__(self, config):
-        super(ERMLP_NAME, self).__init__()
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
+        super(ERMLP, self).__init__()
+        self.model_name = ERMLP_NAME
 
+        # A simple lookup table that stores embeddings of a fixed dictionary and size
         num_entities = config[NUM_ENTITIES]
         num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
