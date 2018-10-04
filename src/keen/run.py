@@ -49,7 +49,7 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
     with open(out_path, 'w') as handle:
         json.dump(loss_per_epoch, handle, indent=2)
 
-    if eval_summary != None:
+    if eval_summary is not None:
         out_path = os.path.join(output_directory, 'evaluation_summary.json')
         with open(out_path, 'w') as handle:
             json.dump(eval_summary, handle, indent=2)
