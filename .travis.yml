@@ -29,6 +29,7 @@ matrix:
       - env: TOXENV=flake8
       - env: TOXENV=vulture
       - env: TOXENV=xenon
+      - python: 3.7
 install:
     - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov; else pip install tox; fi'
 script:
