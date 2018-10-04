@@ -36,6 +36,13 @@ INSTALL_REQUIRES = [
     'prompt_toolkit',
     'tqdm',
 ]
+EXTRAS_REQUIRE = {
+    'docs': [
+        'sphinx',
+        'sphinx-rtd-theme',
+        'sphinx-click',
+    ],
+}
 ENTRY_POINTS = {
     'console_scripts': [
         'keen = keen.cli:main',
