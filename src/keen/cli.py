@@ -6,60 +6,50 @@ from collections import OrderedDict
 
 import click
 
-from keen.constants import TRAINING_FILE_PROMPT_MSG, TRAINING_FILE_ERROR_MSG, TRAINING_SET_PATH, TRAINING_MODE, \
-    HPO_MODE, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME, TRANS_D_NAME, SE_NAME, UM_NAME, DISTMULT_NAME, ERMLP_NAME, \
-    RESCAL_NAME, CONV_E_NAME, PREFERRED_DEVICE, TEST_FILE_PROMPT_MSG, TEST_FILE_ERROR_MSG, TEST_SET_PATH, \
-    TEST_SET_RATIO, FILTER_NEG_TRIPLES, OUTPUT_DIREC
+from keen.constants import (
+    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
+    SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
+    TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
+    UM_NAME,
+)
 from keen.run import run
-from keen.utilities.cli_utils.cli_print_msg_helper import print_welcome_message, print_section_divider, print_intro, \
-    print_training_set_message, print_execution_mode_message, print_ask_for_evlauation_message, print_test_set_message, \
-    print_test_ratio_message, print_filter_negative_triples_message, print_existing_config_message, \
-    print_output_directory_message
-from keen.utilities.cli_utils.cli_training_query_helper import get_input_path, select_keen_execution_mode, \
-    select_embedding_model, select_preferred_device, ask_for_evaluation, ask_for_test_set, select_ratio_for_test_set, \
-    ask_for_filtering_of_negatives, load_config_file, ask_for_existing_config_file, query_output_directory
-from keen.utilities.cli_utils.distmult_cli import configure_distmult_training_pipeline
-from keen.utilities.cli_utils.ermlp_cli import configure_ermlp_training_pipeline
-from keen.utilities.cli_utils.rescal_cli import configure_rescal_training_pipeline
-from keen.utilities.cli_utils.structured_embedding_cli import configure_se_training_pipeline
-from keen.utilities.cli_utils.trans_d_cli import configure_trans_d_training_pipeline
-from keen.utilities.cli_utils.trans_e_cli import configure_trans_e_training_pipeline
-from keen.utilities.cli_utils.trans_h_cli import configure_trans_h_training_pipeline
-from keen.utilities.cli_utils.trans_r_cli import configure_trans_r_training_pipeline
-from keen.utilities.cli_utils.unstructured_model_cli import configure_um_training_pipeline
+from keen.utilities.cli_utils import (
+    configure_distmult_training_pipeline, configure_ermlp_training_pipeline, configure_rescal_training_pipeline,
+    configure_se_training_pipeline, configure_trans_d_training_pipeline, configure_trans_e_training_pipeline,
+    configure_trans_h_training_pipeline, configure_trans_r_training_pipeline, configure_um_training_pipeline,
+)
+from keen.utilities.cli_utils.cli_print_msg_helper import (
+    print_ask_for_evlauation_message, print_execution_mode_message, print_existing_config_message,
+    print_filter_negative_triples_message, print_intro, print_output_directory_message, print_section_divider,
+    print_test_ratio_message, print_test_set_message, print_training_set_message, print_welcome_message,
+)
+from keen.utilities.cli_utils.cli_training_query_helper import (
+    ask_for_evaluation, ask_for_existing_config_file, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path,
+    load_config_file, query_output_directory, select_embedding_model, select_keen_execution_mode,
+    select_preferred_device, select_ratio_for_test_set,
+)
+
+MODEL_CONFIG_FUNCS = {
+    TRANS_E_NAME: configure_trans_e_training_pipeline,
+    TRANS_H_NAME: configure_trans_h_training_pipeline,
+    TRANS_R_NAME: configure_trans_r_training_pipeline,
+    TRANS_D_NAME: configure_trans_d_training_pipeline,
+    SE_NAME: configure_se_training_pipeline,
+    UM_NAME: configure_um_training_pipeline,
+    DISTMULT_NAME: configure_distmult_training_pipeline,
+    ERMLP_NAME: configure_ermlp_training_pipeline,
+    RESCAL_NAME: configure_rescal_training_pipeline,
+    CONV_E_NAME: None
+}
 
 
 def _configure_training_pipeline(model_name):
-    if model_name == TRANS_E_NAME:
-        config = configure_trans_e_training_pipeline(model_name)
-
-    elif model_name == TRANS_H_NAME:
-        config = configure_trans_h_training_pipeline(model_name)
-
-    elif model_name == TRANS_R_NAME:
-        config = configure_trans_r_training_pipeline(model_name)
-
-    elif model_name == TRANS_D_NAME:
-        config = configure_trans_d_training_pipeline(model_name)
-
-    elif model_name == SE_NAME:
-        config = configure_se_training_pipeline(model_name)
-
-    elif model_name == UM_NAME:
-        config = configure_um_training_pipeline(model_name)
-
-    elif model_name == DISTMULT_NAME:
-        config = configure_distmult_training_pipeline(model_name)
-
-    elif model_name == ERMLP_NAME:
-        config = configure_ermlp_training_pipeline(model_name)
-
-    elif model_name == RESCAL_NAME:
-        config = configure_rescal_training_pipeline(model_name)
-
-    elif model_name == CONV_E_NAME:
-        pass
-
+    model_config_func = MODEL_CONFIG_FUNCS.get(model_name)
+    if model_config_func is None:
+        raise KeyError(f'invalid model given: {model_name}')
+    config = model_config_func(model_name)
+    if config is None:
+        raise NotImplementedError(f'{model_name} has not yet been implemented')
     return config
 
 
@@ -92,7 +82,6 @@ def _configure_training_specific_parameters():
     :param config:
     :return:
     """
-
     config = OrderedDict()
 
     # Step 1: Ask whether to evaluate the model

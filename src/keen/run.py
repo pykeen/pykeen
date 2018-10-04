@@ -11,11 +11,8 @@ from keen.utilities.pipeline import Pipeline
 
 
 def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, training_path: Optional[str] = None):
-    current_time = time.strftime("%H:%M:%S")
-    current_date = time.strftime("%d/%m/%Y").replace('/', '-')
     if output_directory is None:
-        output_directory = config[OUTPUT_DIREC]
-        output_directory = os.path.join(output_directory, current_date + '_' + current_time + '')
+        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%d-%m-%Y_%H:%M:%S"))
 
     os.makedirs(output_directory, exist_ok=True)
 
@@ -49,7 +46,7 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
     with open(out_path, 'w') as handle:
         json.dump(loss_per_epoch, handle, indent=2)
 
-    if eval_summary != None:
+    if eval_summary is not None:
         out_path = os.path.join(output_directory, 'evaluation_summary.json')
         with open(out_path, 'w') as handle:
             json.dump(eval_summary, handle, indent=2)
