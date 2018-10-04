@@ -2,6 +2,7 @@
 
 """KEEN's command line interface."""
 
+import json
 from collections import OrderedDict
 
 import click
@@ -19,14 +20,13 @@ from keen.utilities.cli_utils import (
     configure_trans_h_training_pipeline, configure_trans_r_training_pipeline, configure_um_training_pipeline,
 )
 from keen.utilities.cli_utils.cli_print_msg_helper import (
-    print_ask_for_evlauation_message, print_execution_mode_message, print_existing_config_message,
-    print_filter_negative_triples_message, print_intro, print_output_directory_message, print_section_divider,
-    print_test_ratio_message, print_test_set_message, print_training_set_message, print_welcome_message,
+    print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
+    print_output_directory_message, print_section_divider, print_test_ratio_message, print_test_set_message,
+    print_training_set_message, print_welcome_message,
 )
 from keen.utilities.cli_utils.cli_training_query_helper import (
-    ask_for_evaluation, ask_for_existing_config_file, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path,
-    load_config_file, query_output_directory, select_embedding_model, select_keen_execution_mode,
-    select_preferred_device, select_ratio_for_test_set,
+    ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
+    select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
 )
 
 MODEL_CONFIG_FUNCS = {
@@ -115,7 +115,7 @@ def _configure_training_specific_parameters():
     return config
 
 
-def start_cli():
+def prompt_config():
     config = OrderedDict()
 
     # Step 1: Welcome + Intro
@@ -124,57 +124,52 @@ def start_cli():
     print_intro()
     print_section_divider()
 
-    # Step 2: Ask for existing configuration
-    print_existing_config_message()
-    use_existing_config = ask_for_existing_config_file()
-
-    if use_existing_config:
-        return load_config_file()
-
-    print_section_divider()
-
-    # Step 3: Ask for training file
+    # Step 2: Ask for training file
     print_training_set_message()
-    path_to_training_data = get_input_path(prompt_msg=TRAINING_FILE_PROMPT_MSG, error_msg=TRAINING_FILE_ERROR_MSG)
-    config[TRAINING_SET_PATH] = path_to_training_data
+    config[TRAINING_SET_PATH] = get_input_path(
+        prompt_msg=TRAINING_FILE_PROMPT_MSG,
+        error_msg=TRAINING_FILE_ERROR_MSG,
+    )
     print_section_divider()
 
-    # Step 4: Ask for execution mode
+    # Step 3: Ask for execution mode
     print_execution_mode_message()
     keen_exec_mode = select_keen_execution_mode()
     print_section_divider()
 
-    # Step 5: Ask for model
+    # Step 4: Ask for model
     model_name = select_embedding_model()
     print_section_divider()
 
-    # Step 6: Query parameters depending on the selected execution mode
+    # Step 5: Query parameters depending on the selected execution mode
     if keen_exec_mode == TRAINING_MODE:
         config.update(_configure_training_pipeline(model_name))
         config.update(_configure_training_specific_parameters())
-
-    if keen_exec_mode == HPO_MODE:
+    elif keen_exec_mode == HPO_MODE:
         config.update(_configure_hpo_pipeline(model_name))
 
     print_section_divider()
 
-    # Step 7: Query device to train on
-    prefered_device = select_preferred_device()
-    config[PREFERRED_DEVICE] = prefered_device
+    # Step 6: Query device to train on
+    config[PREFERRED_DEVICE] = select_preferred_device()
 
-    # Step 8: Define output directory
+    # Step 7: Define output directory
     print_output_directory_message()
-    out_put_direc = query_output_directory()
-    config[OUTPUT_DIREC] = out_put_direc
+    config[OUTPUT_DIREC] = query_output_directory()
     print_section_divider()
 
     return config
 
 
 @click.command()
-def main():
+@click.option('-c', '--config', type=click.File(), help='A KEEN JSON configuration file')
+def main(config):
     """KEEN: A software for training and evaluating knowledge graph embeddings."""
-    config = start_cli()
+    if config is not None:
+        config = json.load(config)
+    else:
+        config = prompt_config()
+
     run(config)
 
 
