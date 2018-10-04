@@ -154,3 +154,32 @@ def print_relations_embedding_dimension_message():
         "Here you are asked to specify the embedding dimension to use for learning the relations of the knowedge graph.\n"
         "The embedding dimension must be a positive integer e.g. 30.")
     print()
+
+def print_conv_width_height_message():
+    print("In ConvE, the input is of the CNN is the embedding of the head and of the relation.\n"
+          "Those are transformed into an \"image\" representation. The constraint is that height*width must equal\n"
+          "to the embedding dimension. If the embedding dimension is for example 100, then valied values for\n"
+          "height and width are 5 and 20 since 5*20 = 100.")
+    print()
+
+def print_conv_input_channels_message():
+    print("Here you are asked to provide the number of input channels for the convolutional layer.\n"
+          "The number of input channels is an positive integer.")
+    print()
+
+def print_conv_kernel_height_message():
+    print("Here you are asked to provide the height of the convolution kernel.\n"
+          "Important note: The kernel height must be smaller or equal to the input height, specified before.")
+    print()
+
+def print_conv_kernel_width_message():
+    print("Here you are asked to provide the width of the convolution kernel.\n"
+          "Important note: The kernel width must be smaller or equal to the input width, specified before.")
+    print()
+
+def print_input_dropout_message():
+    print("Here you are asked to provide the dropout rate for the input layer.\n"
+          "The dropout rate must be a value between 0 and 1")
+    print()
+
+

@@ -2,9 +2,6 @@
 
 """KEEN is a package for training and evaluating knowledge graph embedding.
 
-The central module is called 'Pipeline' which starts the workflow. The pipeline is configured by the user through a
-configuration file.
-
 Installation
 ------------
 Get the Latest

@@ -170,9 +170,10 @@ CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the numbe
 CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG = '> Input channels:'
 CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG = 'An error occurred, input channels must be positive integers.'
 
-CONV_E_INPUT_CHANNEL_PRINT_MSG = 'Please select the number of input channels'
-CONV_E_INPUT_CHANNEL_PROMPT_MSG = '> Input channels:'
-CONV_E_INPUT_CHANNEL_ERROR_MSG = 'An error occurred, the number of input channels must be a positive number'
+CONV_E_INPUT_CHANNEL_PRINT_MSG = 'Please select the number of input channels.'
+CONV_E_INPUT_CHANNEL_PROMPT_MSG = '> Number of input channels:'
+CONV_E_INPUT_CHANNEL_ERROR_MSG = 'An error occurred, the number of input channels must be a positive integer.\n' \
+                                 'Please try again.'
 
 CONV_E_HPO_OUT_CHANNELS_PRINT_MSG = 'Please select (comma seperated) the number of output channels for ConvE'
 CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG = '> Output channels:'
@@ -186,11 +187,11 @@ CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for Conv
 CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
 CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG = 'An error occurred, kernel heights must be positive integers and <= than %d (defined height).'
 
-CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the kernel height for ConvE.'
-CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Kernel height for defined height %d:'
+CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the height for the convolution kernel.'
+CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Convolution kernel height: '
 CONV_E_KERNEL_HEIGHT_ERROR_MSG = 'An error occurred, the kernel height must be a positive integer and <= than %d (defined height).'
 
-CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG = 'Please select the kernel widths for ConvE'
+CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG = 'Please select the wifth for the convolution kernel.'
 CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d:'
 CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG = 'An error occurred, kernel widths mus be positive integers and <= than %d (defined width).'
 
@@ -210,9 +211,9 @@ CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG = 'Please select (comma separated) the input
 CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG = '> Input dropout value(s):'
 CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG = 'An error occurred, input must be positive float values.'
 
-CONV_E_INPUT_DROPOUT_PRINT_MSG = 'Please select the input dropout value'
-CONV_E_INPUT_DROPOUT_PROMPT_MSG = '> Input dropout value:'
-CONV_E_INPUT_DROPOUT_ERROR_MSG = 'An error occurred, input dropout must be a positive float value.'
+CONV_E_INPUT_DROPOUT_PRINT_MSG = 'Please select the dropout rate for the input layer.'
+CONV_E_INPUT_DROPOUT_PROMPT_MSG = '> Dropout rate: '
+CONV_E_INPUT_DROPOUT_ERROR_MSG = 'An error occurred, the dropout rate must be a positive float value between 0 and 1.'
 
 CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG = 'Please select (comma separated) the output dropout value(s)'
 CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG = '> Output dropout value(s):'

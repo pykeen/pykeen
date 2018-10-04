@@ -87,6 +87,19 @@ def select_float_value(print_msg, prompt_msg, error_msg):
         except ValueError:
             print(error_msg)
 
+def select_zero_one_float_value(print_msg, prompt_msg, error_msg):
+    print(print_msg)
+
+    while True:
+        user_input = prompt(prompt_msg)
+        try:
+            float_value = float(user_input)
+            if not (0<= float_value<=1):
+                continue
+            return float_value
+        except ValueError:
+            print(error_msg)
+
 
 def ask_for_evaluation():
     print('Do you want to evaluate your model?')
@@ -189,3 +202,39 @@ def query_output_directory():
             print('Invalid input, please make sure that the path to the directory exists.\n'
                   'Please try again.')
 
+
+def query_height_and_width_for_conv_e(embedding_dim):
+
+    print("Note: Height and width must be positive positive integers.\n"
+        "Besides, height * width must equal to  embedding dimension \'%d\'" % embedding_dim)
+    print()
+
+    while True:
+        height = prompt('> Height:')
+
+        if not height.isnumeric():
+            print("Invalid input, please make sure that height is a positive integer.")
+            continue
+
+        width = prompt('> Width:')
+
+        if not width.isnumeric():
+            print("Invalid input, please make sure that height is a positive integer.")
+            continue
+
+        if not (int(height) * int(width) == embedding_dim):
+            print("Invalid input, height * width are not equal to \'%d\' (your provided embedding dimension.\n"
+                  "Please try again, and fulfill the constraint)" % embedding_dim)
+        else:
+            return int(height), int(width)
+
+def query_kernel_param(depending_param, print_msg, prompt_msg, error_msg):
+    print(print_msg)
+
+    while True:
+        kernel_param = prompt(prompt_msg % depending_param)
+
+        if not (kernel_param.isnumeric() and int(kernel_param) <= depending_param):
+            print(error_msg % depending_param)
+        else:
+            return int(kernel_param)
