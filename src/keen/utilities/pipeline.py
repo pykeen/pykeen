@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Implementation of the basic pipeline."""
+
 import logging
 from typing import Optional
 
@@ -40,6 +42,7 @@ class Pipeline(object):
         if path_to_train_data is None:
             path_to_train_data = self.config[TRAINING_SET_PATH]
 
+        # FIXME: Check whether evaluation is requested
         train_pos, test_pos = _get_data(
             self.config,
             self.seed,
@@ -126,14 +129,13 @@ class Pipeline(object):
             for id, embedding in enumerate(trained_model.entity_embeddings.weight)
         }
 
-        if self.config[KG_EMBEDDING_MODEL_NAME] in [SE_NAME,UM_NAME]:
+        if self.config[KG_EMBEDDING_MODEL_NAME] in [SE_NAME, UM_NAME]:
             relation_to_embedding = None
         else:
             relation_to_embedding = {
                 id_to_rel[id]: embedding.detach().cpu().numpy()
                 for id, embedding in enumerate(trained_model.relation_embeddings.weight)
             }
-
 
         return trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params
 
