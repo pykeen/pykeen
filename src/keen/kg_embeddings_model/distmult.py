@@ -54,7 +54,8 @@ class DistMult(nn.Module):
         :return:
         """
 
-        # TODO: Check
+        # Choose y = 1 since a higher score is better.
+        # In TransE for exampel the scores represent distances
         y = np.repeat([1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
@@ -75,8 +76,7 @@ class DistMult(nn.Module):
         :param t_embs:
         :return:
         """
-        intermediates = torch.mul(h_embs, r_embs)
-        scores = torch.einsum('nd,nd->n', [intermediates, t_embs])
+        scores = torch.sum(h_embs * r_embs * t_embs,dim=1)
 
         return scores
 
