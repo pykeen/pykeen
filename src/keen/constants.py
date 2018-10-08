@@ -9,6 +9,7 @@ VERSION = '0.0.1-dev'
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
 KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
+EXECUTION_MODE = 'execution_mode'
 
 # Model names
 SE_NAME = 'Structure Embedding (SE)'
@@ -49,10 +50,10 @@ MARGIN_LOSS = 'margin_loss'
 NUM_ENTITIES = 'num_entities'
 NUM_RELATIONS = 'num_relations'
 NUM_EPOCHS = 'num_epochs'
-NUM_OF_MAX_HPO_ITERS = 'maximum_number_of_hpo_iters'
+NUM_OF_HPO_ITERS = 'maximum_number_of_hpo_iters'
 LEARNING_RATE = 'learning_rate'
-TRAINING_MODE = 'Training mode'
-HPO_MODE = 'HPO mode'
+TRAINING_MODE = 'Training_mode'
+HPO_MODE = 'HPO_mode'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
 TEST_SET_PATH = 'test_set_path'
@@ -84,7 +85,7 @@ TRAINING_FILE_ERROR_MSG = 'An error occurred, either the path is not correct or 
 
 TEST_FILE_PROMPT_MSG = '> Please provide here the path to your test file: '
 TEST_FILE_ERROR_MSG = 'An error occurred, either the path is not correct or the test file doesn\'t exist.\n' \
-                          'Please try again.'
+                      'Please try again.'
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
@@ -94,42 +95,42 @@ ENTITIES_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension
 ENTITIES_EMBEDDING_DIMENSION_PROMPT_MSG = '> Entity embedding dimension: '
 ENTITIES_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please proive and positive integer as embedding dimension (e.g. 50).'
 
-BATCH_SIZES_PRINT_MSG = 'Please type the range of preferred batch sizes comma separated (e.g. 32, 64, 128):'
-BATCH_SIZES_PROMPT_MSG = '> Please select the batch size(s):'
-BATCH_SIZES_ERROR_MSG = 'An error occurred, please select integers as batch size(s)'
+BATCH_SIZES_PRINT_MSG = 'Please type (comma separated) the batch size(s) (e.g. 32, 64, 128):'
+BATCH_SIZES_PROMPT_MSG = '> Batch size(s):'
+BATCH_SIZES_ERROR_MSG = 'An error occurred, the batch sizes must be positive integers and separated by a comma.\n' \
+                        'Please try again.'
 
-EPOCHS_PRINT_MSG = 'Please type the range of preferred epochs comma separated (e.g. 1, 5, 100):'
+EPOCHS_PRINT_MSG = 'Please type (comma separated) the number of epochs (e.g. 50,100,500).'
 EPOCHS_PROMPT_MSG = '> Epochs:'
-EPOCHS_ERROR_MSG = 'An error occurred, please select integers as epoch(s)'
+EPOCHS_ERROR_MSG = 'An error occurred, the numebr of epochs must be positive integers and separated by a comma.\n' \
+                   'Please try again.'
 
-LEARNING_RATES_PRINT_MSG = 'Please type the range of preferred learning rate(s) comma separated (e.g. 0.1, 0.01, 0.0001:'
-LEARNING_RATES_PROMPT_MSG = '> Please select the learning rate(s):'
-LEARNING_RATES_ERROR_MSG = 'An error occurred, please float values for the learning rate(s).'
+LEARNING_RATES_PRINT_MSG = 'Please type (comma separated) the learning rate(s) (e.g. 0.1, 0.01, 0.0001).'
+LEARNING_RATES_PROMPT_MSG = '> Learning rate(s):'
+LEARNING_RATES_ERROR_MSG = 'An error occurred, the learning rates must be float values and separated by a comma.\n' \
+                           'Please try again.'
 
-MARGIN_LOSSES_PRINT_MSG = 'Please type the range of preferred margin losse(s) comma separated  (e.g. 1,2,10):'
-MARGIN_LOSSES_PROMPT_MSG = '> Please select the margin losse(s):'
-MARGIN_LOSSES_ERROR_MSG = 'An error occurred, please type in positive integer as embedding dimensions.'
+MARGIN_LOSSES_PRINT_MSG = 'Please type (comma separated) the margin losses(s) comma separated  (e.g. 1,2,10), and press enter-'
+MARGIN_LOSSES_PROMPT_MSG = '> Margin losse(s):'
+MARGIN_LOSSES_ERROR_MSG = 'An error occurred, the margin losses must be positive float values and separated by a comma (e.g. 0.5,3)'
 
-NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG = 'Please select L-p norm(s) for the normalization of entities comma separated (e.g. 0.5, 1, 2):'
-NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG = '> L-p norm(s):'
-NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG = 'An error occurred, please provide float value(s).'
-
-NORMS_SCROING_FUNCTION_PRINT_MSG = 'Please select L-p norm(s) used as scoring function comma separated (e.g. 0.5, 1, 2):'
-NORMS_SCROING_FUNCTION_PROMPT_MSG = '> L-p norm(s):'
-NORMS_SCROING_FUNCTION_ERROR_MSG = 'An error occurred, please provide float value(s).'
-
-MAX_HPO_ITERS_PRINT_MSG = 'Please type the maximum number of iterationns for they hyper-parameter search:'
-MAX_HPO_ITERS_PROMPT_MSG = '> Maximum number of iterations: '
-MAX_HPO_ITERS_ERROR_MSG = 'An error occurred, please type in a positive integer for the maximum number of iterations.'
+HPO_ITERS_PRINT_MSG = 'Please type (comma separated) the number of iterations of hyper-parameter search (e.g. 5)'
+HPO_ITERS_PROMPT_MSG = '> Number of iterations: '
+HPO_ITERS_ERROR_MSG = 'An error occurred, please type in a positive integer for the maximum number of iterations.'
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of entities and relations, and press enter.'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Embedding dimension: '
-EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, the embedding dimension must be a positive integer such as 20.\n' \
-                                'Please try again.'
+EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please provide an integer as the number of iterations (e.g. 5).'
+
+EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimension(s), and press enter.'
+EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Embedding dimensions: '
+EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the embedding dimensions must be positive integers and separated\n' \
+                                 'by a comma e.g. 50,100,200' \
+                                 'Please try again. \n'
 
 RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of relations:'
 RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Relation embedding dimension: '
-RELATION_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please type in integer as embedding dimension such as 30.'
+RELATION_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please type in an integer as embedding dimension such as 30.'
 
 MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
 MARGIN_LOSS_PROMPT_MSG = '> Margin loss:'
@@ -151,12 +152,22 @@ EPOCH_ERROR_MSG = 'An error occurred, please select an integers.'
 ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select a norm to use to normalize the entities. The norm should be a positive integer greater than 0'
 ENTITIES_NORMALIZATION_PROMPT_MSG = '> Norm to use for normalization of the entities: '
 ENTITIES_NORMALIZATION_ERROR_MSG = 'An error occurred, the norm should be an integer greater than 0, such as 1\n' \
-                             'Please try again.'
+                                   'Please try again.'
 
-SCORING_FUNCTION_PRINT_MSG = 'Please select a norm to use as a scoring function. The norm should be a positive integer greater than 0'
-SCORING_FUNCTION_PROMPT_MSG = '> Norm to use as scoring function: '
-SCORING_FUNCTION_ERROR_MSG = 'An error occurred, the norm for the scoring function should be an integer greater than 0, such as 1\n' \
-                             'Please try again.'
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG = 'Please select (comma separated) a list of norms to use for normalizing the entities.'
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG = '> Norms: '
+NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG = 'An error occurred, the normalization norms should integers, greater than 0, \n' \
+                                                ' and separated by a comma (e.g. 1,2,3). Please try again.'
+
+NORM_SCORING_FUNCTION_PRINT_MSG = 'Please select a norm to use as a scoring function. The norm should be a positive integer greater than 0'
+NORM_SCORING_FUNCTION_PROMPT_MSG = '> Norm to use as scoring function: '
+NORM_SCORING_FUNCTION_ERROR_MSG = 'An error occurred, the norm for the scoring function should be an integer greater than 0, such as 1\n' \
+                                  'Please try again.'
+
+NORMS_SCORING_FUNCTION_PRINT_MSG = 'Please select (comma separated) a list of norms to use as a scoring functions. The norms should be a positive integers greater than 0'
+NORMS_SCORING_FUNCTION_PROMPT_MSG = '> Norms to use as scoring function: '
+NORMS_SCORING_FUNCTION_ERROR_MSG = 'An error occurred, the norms for the scoring functions should integers, greater than 0, \n' \
+                                   ' and separated by a comma (e.g. 1,2,3). Please try again.'
 
 SAVE_CONFIG_PRINT_MSG = 'Do you want to save the configuration file?'
 SAVE_CONFIG_PROMPT_MSG = '> \'yes\' or \'no\':'
@@ -274,4 +285,4 @@ KG_MODEL_TO_ID_MAPPING = OrderedDict({
     for key, value in ID_TO_KG_MODEL_MAPPING.items()
 })
 
-BINARY_QUESTION_MAPPING = OrderedDict({'yes':True, 'no':False})
+BINARY_QUESTION_MAPPING = OrderedDict({'yes': True, 'no': False})

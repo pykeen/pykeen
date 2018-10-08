@@ -364,9 +364,9 @@ def select_hpo_params(model_id):
     epochs = select_positive_integer_values(EPOCHS_PRINT_MSG, EPOCHS_PROMPT_MSG, EPOCHS_ERROR_MSG)
     hpo_params[NUM_EPOCHS] = epochs
 
-    hpo_iter = select_integer_value(MAX_HPO_ITERS_PRINT_MSG, MAX_HPO_ITERS_PROMPT_MSG,
-                                    MAX_HPO_ITERS_ERROR_MSG)
-    hpo_params[NUM_OF_MAX_HPO_ITERS] = hpo_iter
+    hpo_iter = select_integer_value(HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG,
+                                    HPO_ITERS_ERROR_MSG)
+    hpo_params[NUM_OF_HPO_ITERS] = hpo_iter
 
     return hpo_params
 
@@ -466,7 +466,7 @@ def select_training_model_params(model_id):
                                                    EMBEDDING_DIMENSION_ERROR_MSG)
 
         kg_model_params[EMBEDDING_DIM] = embedding_dimension
-        kg_model_params[SCORING_FUNCTION_NORM] = select_norm(SCORING_FUNCTION_PRINT_MSG)
+        kg_model_params[SCORING_FUNCTION_NORM] = select_norm(NORM_SCORING_FUNCTION_PRINT_MSG)
 
         if selected_model == TRANS_E_NAME:
             kg_model_params[NORM_FOR_NORMALIZATION_OF_ENTITIES] = select_norm(ENTITIES_NORMALIZATION_PRINT_MSG)

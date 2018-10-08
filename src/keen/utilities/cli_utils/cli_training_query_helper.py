@@ -87,6 +87,7 @@ def select_float_value(print_msg, prompt_msg, error_msg):
         except ValueError:
             print(error_msg)
 
+
 def select_zero_one_float_value(print_msg, prompt_msg, error_msg):
     print(print_msg)
 
@@ -94,7 +95,7 @@ def select_zero_one_float_value(print_msg, prompt_msg, error_msg):
         user_input = prompt(prompt_msg)
         try:
             float_value = float(user_input)
-            if not (0<= float_value<=1):
+            if not (0 <= float_value <= 1):
                 continue
             return float_value
         except ValueError:
@@ -178,6 +179,7 @@ def load_config_file():
                       'Please try again.')
                 path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PROMPT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
 
+
 def ask_for_existing_config_file():
     print('Do you provide an existing configuration file?\n')
 
@@ -189,6 +191,7 @@ def ask_for_existing_config_file():
                   'If you type \'yes\' it means that you provide a configuration file.')
         else:
             return BINARY_QUESTION_MAPPING[user_input]
+
 
 def query_output_directory():
     print('Please provide the path to your output directory.\n')
@@ -204,9 +207,8 @@ def query_output_directory():
 
 
 def query_height_and_width_for_conv_e(embedding_dim):
-
     print("Note: Height and width must be positive positive integers.\n"
-        "Besides, height * width must equal to  embedding dimension \'%d\'" % embedding_dim)
+          "Besides, height * width must equal to  embedding dimension \'%d\'" % embedding_dim)
     print()
 
     while True:
@@ -228,6 +230,7 @@ def query_height_and_width_for_conv_e(embedding_dim):
         else:
             return int(height), int(width)
 
+
 def query_kernel_param(depending_param, print_msg, prompt_msg, error_msg):
     print(print_msg)
 
@@ -238,3 +241,45 @@ def query_kernel_param(depending_param, print_msg, prompt_msg, error_msg):
             print(error_msg % depending_param)
         else:
             return int(kernel_param)
+
+
+def select_float_values(print_msg, prompt_msg, error_msg):
+    print(print_msg)
+    float_values = []
+    is_valid_input = False
+
+    while not is_valid_input:
+        user_input = prompt(prompt_msg)
+        user_input = user_input.split(',')
+        is_valid_input = True
+
+        for float_value in user_input:
+            try:
+                float_value = float(float_value)
+                float_values.append(float_value)
+            except ValueError:
+                print(error_msg)
+                is_valid_input = False
+                break
+
+    return float_values
+
+def select_positive_integer_values(print_msg, prompt_msg, error_msg):
+    print(print_msg)
+    integers = []
+    is_valid_input = False
+
+    while not is_valid_input:
+        user_input = prompt(prompt_msg)
+        user_input = user_input.split(',')
+        is_valid_input = True
+
+        for integer in user_input:
+            if integer.isnumeric():
+                integers.append(int(integer))
+            else:
+                print(error_msg)
+                is_valid_input = False
+                break
+
+    return integers

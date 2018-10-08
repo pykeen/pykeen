@@ -13,39 +13,15 @@ from keen.utilities.train_utils import train_model
 
 class RandomSearchHPO(AbstractHPOptimizer):
 
-    def _sample_conv_e_params(self, hyperparams_dict):
-        kg_embedding_model_config = OrderedDict()
-        kg_embedding_model_config[CONV_E_HEIGHT] = random.choice(hyperparams_dict[CONV_E_HEIGHT])
-        kg_embedding_model_config[CONV_E_WIDTH] = random.choice(hyperparams_dict[CONV_E_WIDTH])
-        kg_embedding_model_config[CONV_E_INPUT_CHANNELS] = random.choice(hyperparams_dict[CONV_E_INPUT_CHANNELS])
-        kg_embedding_model_config[CONV_E_OUTPUT_CHANNELS] = random.choice(hyperparams_dict[CONV_E_OUTPUT_CHANNELS])
-        kg_embedding_model_config[CONV_E_KERNEL_HEIGHT] = random.choice(hyperparams_dict[CONV_E_KERNEL_HEIGHT])
-        kg_embedding_model_config[CONV_E_KERNEL_WIDTH] = random.choice(hyperparams_dict[CONV_E_KERNEL_WIDTH])
-        kg_embedding_model_config[CONV_E_INPUT_DROPOUT] = random.choice(hyperparams_dict[CONV_E_INPUT_DROPOUT])
-        kg_embedding_model_config[CONV_E_OUTPUT_DROPOUT] = random.choice(hyperparams_dict[CONV_E_OUTPUT_DROPOUT])
-        kg_embedding_model_config[CONV_E_FEATURE_MAP_DROPOUT] = random.choice(
-            hyperparams_dict[CONV_E_FEATURE_MAP_DROPOUT]
-        )
+    def _sample_params(self, hyperparams_dict):
+        kg_model_config = OrderedDict()
+        for param, values in hyperparams_dict.items():
+            if isinstance(values, list):
+                kg_model_config[param] = random.choice(values)
+            else:
+                kg_model_config[param] = values
 
-        return kg_embedding_model_config
-
-    def _sample_translational_based_model_params(self, hyperparams_dict):
-        kg_embedding_model_config = OrderedDict()
-        kg_embedding_model_config[MARGIN_LOSS] = random.choice(hyperparams_dict[MARGIN_LOSS])
-        kg_embedding_model_config[SCORING_FUNCTION_NORM] = random.choice(hyperparams_dict[SCORING_FUNCTION_NORM])
-        selected_model = hyperparams_dict[KG_EMBEDDING_MODEL]
-
-        if selected_model == TRANS_E_NAME:
-            kg_embedding_model_config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = random.choice(
-                hyperparams_dict[NORM_FOR_NORMALIZATION_OF_ENTITIES]
-            )
-
-        if selected_model == TRANS_H_NAME:
-            kg_embedding_model_config[WEIGHT_SOFT_CONSTRAINT_TRANS_H] = random.choice(
-                hyperparams_dict[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
-            )
-
-        return kg_embedding_model_config
+        return kg_model_config
 
     def optimize_hyperparams(self, mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config,
                              device, seed):
@@ -59,41 +35,16 @@ class RandomSearchHPO(AbstractHPOptimizer):
         eval_summaries = []
         epoch_losses = []
 
-        # general params
-        hyperparams_dict = config[HYPER_PARAMTER_OPTIMIZATION_PARAMS]
-        num_epochs = hyperparams_dict[NUM_EPOCHS]
-        embedding_dims = hyperparams_dict[EMBEDDING_DIM]
-        learning_rates = hyperparams_dict[LEARNING_RATE]
-        batch_sizes = hyperparams_dict[BATCH_SIZE]
-        max_iters = hyperparams_dict[NUM_OF_MAX_HPO_ITERS]
-        embedding_model = hyperparams_dict[KG_EMBEDDING_MODEL]
-
-        # Configuration
-        kg_embedding_model_config = OrderedDict()
-        kg_embedding_model_config[KG_EMBEDDING_MODEL] = embedding_model
+        max_iters = config[NUM_OF_HPO_ITERS]
 
         eval_summary = OrderedDict()
 
-        if embedding_model in [TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME]:
-            # Sample TransX (where X is element of {E,H,R,D})
-            param_sampling_fct = self._sample_translational_based_model_params
-
-        if embedding_model == CONV_E_NAME:
-            param_sampling_fct = self._sample_conv_e_params
-
         for _ in range(max_iters):
-            # Sample general hyper-params
-            kg_embedding_model_config[LEARNING_RATE] = random.choice(learning_rates)
-            kg_embedding_model_config[EMBEDDING_DIM] = random.choice(embedding_dims)
-            kg_embedding_model_config[NUM_EPOCHS] = random.choice(num_epochs)
-            kg_embedding_model_config[BATCH_SIZE] = random.choice(batch_sizes)
+            # Sample hyper-params
+            kg_embedding_model_config = self._sample_params(config)
             kg_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
             kg_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
             kg_embedding_model_config[SEED] = seed
-            kg_embedding_model_config[PREFERRED_DEVICE] = config[PREFERRED_DEVICE]
-
-            # Sample model specific hyper-params
-            kg_embedding_model_config.update(param_sampling_fct(hyperparams_dict))
 
             # Configure defined model
             kg_embedding_model = get_kg_embedding_model(config=kg_embedding_model_config)

@@ -182,4 +182,24 @@ def print_input_dropout_message():
           "The dropout rate must be a value between 0 and 1")
     print()
 
+def print_hpo_embedding_dimensions_message():
+    print("Here you are asked to specify a list of embedding dimensions for the entities and relations. \n"
+          "The embedding dimensions need to be positive integers. Please separate your input by a \',\':\n"
+          "50,100,200\n"
+          "You can also provide just a single value, in this case the \'\' is not required."
+          "")
+    print()
+
+def print_hpo_margin_losses_message():
+    print("Here you are asked to specify a list of margin losses used for the margin-ranking-loss function.")
+    print("The margin ranking losses need to be float values. Please separate your input by a \',\':\n"
+          "0.5,1,2.4\n")
+    print()
+
+def print_hpo_scoring_fcts_message():
+    print("Here you asked to specify a list of norms used as scoring function.")
+    print("The norms should be positive integer values. Please separate your input by a \',\':\n"
+          "1,2,3\n")
+    print()
+
 

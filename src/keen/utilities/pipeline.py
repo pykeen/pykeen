@@ -31,7 +31,7 @@ class Pipeline(object):
         )
 
     def start(self, path_to_train_data: Optional[str] = None):
-        is_hpo_mode = HYPER_PARAMTER_OPTIMIZATION_PARAMS in self.config
+        is_hpo_mode = True if self.config[EXECUTION_MODE] == HPO_MODE else False
         return self._start_pipeline(is_hpo_mode=is_hpo_mode, path_to_train_data=path_to_train_data)
 
     @property

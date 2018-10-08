@@ -16,10 +16,6 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
 
     os.makedirs(output_directory, exist_ok=True)
 
-    out_path = os.path.join(output_directory, 'configuration.json')
-    with open(out_path, 'w') as handle:
-        json.dump(config, handle, indent=2)
-
     pipeline = Pipeline(config=config, seed=seed)
 
     (trained_model,
@@ -28,6 +24,10 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
      entity_to_embedding,
      relation_to_embedding,
      params) = pipeline.start(path_to_train_data=training_path)
+
+    out_path = os.path.join(output_directory, 'configuration.json')
+    with open(out_path, 'w') as handle:
+        json.dump(params, handle, indent=2)
 
     out_path = os.path.join(output_directory, 'entities_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
