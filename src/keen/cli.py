@@ -12,7 +12,7 @@ from keen.constants import (
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
     UM_NAME,
-)
+    EXECUTION_MODE)
 from keen.run import run
 from keen.utilities.cli_utils import (
     configure_distmult_training_pipeline, configure_ermlp_training_pipeline, configure_rescal_training_pipeline,
@@ -28,8 +28,17 @@ from keen.utilities.cli_utils.cli_training_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
     select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
 )
+from keen.utilities.cli_utils.distmult_cli import configure_distmult_hpo_pipeline
+from keen.utilities.cli_utils.ermlp_cli import configure_ermlp_hpo_pipeline
+from keen.utilities.cli_utils.rescal_cli import configure_rescal_hpo_pipeline
+from keen.utilities.cli_utils.structured_embedding_cli import configure_se_hpo_pipeline
+from keen.utilities.cli_utils.trans_d_cli import configure_trans_d_hpo_pipeline
+from keen.utilities.cli_utils.trans_e_cli import configure_trans_e_hpo_pipeline
+from keen.utilities.cli_utils.trans_h_cli import configure_trans_h_hpo_pipeline
+from keen.utilities.cli_utils.trans_r_cli import configure_trans_r_hpo_pipeline
+from keen.utilities.cli_utils.unstructured_model_cli import configure_um_hpo_pipeline
 
-MODEL_CONFIG_FUNCS = {
+MODEL_TRAINING_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_training_pipeline,
     TRANS_H_NAME: configure_trans_h_training_pipeline,
     TRANS_R_NAME: configure_trans_r_training_pipeline,
@@ -42,9 +51,22 @@ MODEL_CONFIG_FUNCS = {
     CONV_E_NAME: None
 }
 
+MODEL_HPO_CONFIG_FUNCS = {
+    TRANS_E_NAME: configure_trans_e_hpo_pipeline,
+    TRANS_H_NAME: configure_trans_h_hpo_pipeline,
+    TRANS_R_NAME: configure_trans_r_hpo_pipeline,
+    TRANS_D_NAME: configure_trans_d_hpo_pipeline,
+    SE_NAME: configure_se_hpo_pipeline,
+    UM_NAME: configure_um_hpo_pipeline,
+    DISTMULT_NAME: configure_distmult_hpo_pipeline,
+    ERMLP_NAME: configure_ermlp_hpo_pipeline,
+    RESCAL_NAME: configure_rescal_hpo_pipeline,
+    CONV_E_NAME: None
+}
+
 
 def _configure_training_pipeline(model_name):
-    model_config_func = MODEL_CONFIG_FUNCS.get(model_name)
+    model_config_func = MODEL_TRAINING_CONFIG_FUNCS.get(model_name)
     if model_config_func is None:
         raise KeyError(f'invalid model given: {model_name}')
     config = model_config_func(model_name)
@@ -54,29 +76,15 @@ def _configure_training_pipeline(model_name):
 
 
 def _configure_hpo_pipeline(model_name):
-    if model_name == TRANS_E_NAME:
-        pass
-    elif model_name == TRANS_H_NAME:
-        pass
-    elif model_name == TRANS_R_NAME:
-        pass
-    elif model_name == TRANS_D_NAME:
-        pass
-    elif model_name == SE_NAME:
-        pass
-    elif model_name == UM_NAME:
-        pass
-    elif model_name == DISTMULT_NAME:
-        pass
-    elif model_name == ERMLP_NAME:
-        pass
-    elif model_name == RESCAL_NAME:
-        pass
-    elif model_name == CONV_E_NAME:
-        pass
+    model_config_func = MODEL_HPO_CONFIG_FUNCS.get(model_name)
+    if model_config_func is None:
+        raise KeyError(f'invalid model given: {model_name}')
+    config = model_config_func(model_name)
+    if config is None:
+        raise NotImplementedError(f'{model_name} has not yet been implemented')
+    return config
 
-
-def _configure_training_specific_parameters():
+def _configure_evaluation_specific_parameters():
     """
 
     :param config:
@@ -135,6 +143,7 @@ def prompt_config():
     # Step 3: Ask for execution mode
     print_execution_mode_message()
     keen_exec_mode = select_keen_execution_mode()
+    config[EXECUTION_MODE] = keen_exec_mode
     print_section_divider()
 
     # Step 4: Ask for model
@@ -144,9 +153,10 @@ def prompt_config():
     # Step 5: Query parameters depending on the selected execution mode
     if keen_exec_mode == TRAINING_MODE:
         config.update(_configure_training_pipeline(model_name))
-        config.update(_configure_training_specific_parameters())
     elif keen_exec_mode == HPO_MODE:
         config.update(_configure_hpo_pipeline(model_name))
+
+    config.update(_configure_evaluation_specific_parameters())
 
     print_section_divider()
 
