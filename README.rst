@@ -1,5 +1,5 @@
 PyKEEN |build|
-============
+==============
 PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings.
 
 The system has a modular architecture, and can be configured by the user through the command line interface.
