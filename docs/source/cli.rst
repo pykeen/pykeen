@@ -1,5 +1,5 @@
 Command Line Interface
 ======================
-.. click:: keen.cli:main
-   :prog: keen
+.. click:: pykeen.cli:main
+   :prog: pykeen
    :show-nested:

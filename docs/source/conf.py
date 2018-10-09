@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'KEEN'
+project = 'pykeen'
 copyright = '2018, Mehdi Ali'
 author = 'Mehdi Ali'
 
@@ -140,7 +140,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'KEEN.tex', 'KEEN Documentation',
+    (master_doc, 'pykeen.tex', 'pykeen Documentation',
      'Mehdi Ali', 'manual'),
 ]
 
@@ -150,7 +150,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'keen', 'KEEN Documentation',
+    (master_doc, 'pykeen', 'pykeen Documentation',
      [author], 1)
 ]
 
@@ -161,8 +161,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'KEEN', 'KEEN Documentation',
-     author, 'KEEN', 'One line description of project.',
+    (master_doc, 'pykeen', 'pykeen Documentation',
+     author, 'pykeen', 'One line description of project.',
      'Miscellaneous'),
 ]
 

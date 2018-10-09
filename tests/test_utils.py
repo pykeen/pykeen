@@ -4,7 +4,7 @@
 
 import unittest
 
-from keen.constants import VERSION
+from pykeen.constants import VERSION
 
 
 class SimpleTest(unittest.TestCase):

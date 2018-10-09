@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""KEEN setup.py."""
+"""pykeen setup.py."""
 
 import codecs
 import os
@@ -9,7 +9,7 @@ import re
 import setuptools
 
 PYTHON_VERSION = "3.6"
-MODULE = 'keen'
+MODULE = 'pykeen'
 PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', MODULE, '__init__.py')
 KEYWORDS = ['Knowledge Graph Embeddings', 'Machine Learning', 'Data Mining', 'Linked Data']
@@ -45,7 +45,7 @@ EXTRAS_REQUIRE = {
 }
 ENTRY_POINTS = {
     'console_scripts': [
-        'keen = keen.cli:main',
+        'pykeen = pykeen.cli:main',
     ]
 }
 

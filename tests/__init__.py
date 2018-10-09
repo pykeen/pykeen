@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-"""Tests for :mod:`keen`."""
+"""Tests for :mod:`pykeen`."""
