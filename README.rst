@@ -18,7 +18,7 @@ Installation
 
 .. code-block:: sh
 
-    $ git clone https://github.com/SmartDataAnalytics/PyKEEN.git keen
+    $ git clone https://github.com/SmartDataAnalytics/PyKEEN.git pykeen
     $ cd pykeen
     $ python3 -m pip install -e .
 
