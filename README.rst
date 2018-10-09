@@ -19,7 +19,7 @@ Installation
 .. code-block:: sh
 
     $ git clone https://github.com/SmartDataAnalytics/PyKEEN.git keen
-    $ cd keen
+    $ cd pykeen
     $ python3 -m pip install -e .
 
 How to Use
@@ -38,5 +38,5 @@ or alternatively:
 
 then the command line interface will assist you to configure your experiments.
 
-.. |build| image:: https://travis-ci.org/SmartDataAnalytics/KEEN.svg?branch=master
-    :target: https://travis-ci.org/SmartDataAnalytics/KEEN
+.. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
+    :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
