@@ -20,7 +20,7 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import print_training_embed
     print_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message, print_hpo_embedding_dimensions_message, print_hpo_margin_losses_message, \
-    print_hpo_scoring_fcts_message
+    print_hpo_scoring_fcts_message, print_hpo_entity_normalization_norms_message, print_hpo_learning_rates_message
 from pykeen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value, \
     select_float_values, select_positive_integer_values
 from pykeen.utilities.cli_utils.utils import get_config_dict
@@ -140,8 +140,8 @@ def configure_trans_e_hpo_pipeline(model_name):
     config[SCORING_FUNCTION_NORM] = scoring_fct_norm
     print_section_divider()
 
-    # Step 4: Query L_p normw for normalizing the entities
-    # TODO: Add message
+    # Step 4: Query L_p norms for normalizing the entities
+    print_hpo_entity_normalization_norms_message()
     entity_normalization_norm = select_positive_integer_values(
         print_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG,
         prompt_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG,
@@ -151,7 +151,7 @@ def configure_trans_e_hpo_pipeline(model_name):
     print_section_divider()
 
     # Step 5: Query learning rate
-    # TODO: Add message
+    print_hpo_learning_rates_message()
     learning_rate = select_float_values(
         print_msg=LEARNING_RATES_PRINT_MSG,
         prompt_msg=LEARNING_RATES_PROMPT_MSG,

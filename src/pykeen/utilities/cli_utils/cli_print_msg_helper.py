@@ -202,4 +202,21 @@ def print_hpo_scoring_fcts_message():
           "1,2,3\n")
     print()
 
+def print_hpo_entity_normalization_norms_message():
+    print("Here you asked to specify a list of norms used for normalizing the entities.")
+    print("The norms should be positive integer values. Please separate your input by a \',\':\n"
+          "1,2,3\n")
+    print()
+
+def print_hpo_learning_rates_message():
+    print("Here you are asked to specify a list of learning rates.")
+    print("The learning rates need to be float values. Please separate your input by a \',\':\n"
+          "0.1,0.01,0.001\n")
+    print()
+
+def print_hpo_batch_sizes_message():
+    print("Here you asked to specify a list of batch sizes.")
+    print("The batch sizes should be positive integer values. Please separate your input by a \',\':\n"
+          "1,2,3\n")
+    print()
 
