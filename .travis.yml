@@ -36,5 +36,3 @@ script:
 - tox
 after_success:
     - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'
-notifications:
-  slack: pybel:n2KbWKBum3musnBg3L76gGwq

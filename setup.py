@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""pykeen setup.py."""
+"""Setup.py for pykeen ."""
 
 import codecs
 import os

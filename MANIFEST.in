@@ -1,4 +1,4 @@
-graft src/keen
+graft src/pykeen
 graft tests
 
 recursive-include docs/source *.py
