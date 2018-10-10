@@ -248,7 +248,20 @@ def print_hpo_learning_rates_message():
 
 
 def print_hpo_batch_sizes_message():
-    click.secho(click.style("Current Step: Please provide a list of of batch sizes.", fg='blue'))
+    click.secho(click.style("Current Step: Please provide a list of batch sizes.", fg='blue'))
     click.secho("The batch sizes should be positive integer values. Please separate your input by a \',\':\n"
+                "1,2,3\n")
+    click.secho("")
+
+def print_hpo_epochs_message():
+    click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
+    click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
+                "1,2,3\n")
+    click.secho("")
+
+
+def print_hpo_iterations_message():
+    click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
+    click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
                 "1,2,3\n")
     click.secho("")

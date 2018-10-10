@@ -12,7 +12,7 @@ from pykeen.constants import (
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
     UM_NAME,
-    EXECUTION_MODE)
+    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS)
 from pykeen.run import run
 from pykeen.utilities.cli_utils import (
     configure_distmult_training_pipeline, configure_ermlp_training_pipeline, configure_rescal_training_pipeline,
@@ -27,7 +27,7 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import (
 from pykeen.utilities.cli_utils.cli_training_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
     select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
-)
+    select_integer_value)
 from pykeen.utilities.cli_utils.distmult_cli import configure_distmult_hpo_pipeline
 from pykeen.utilities.cli_utils.ermlp_cli import configure_ermlp_hpo_pipeline
 from pykeen.utilities.cli_utils.rescal_cli import configure_rescal_hpo_pipeline
@@ -156,6 +156,13 @@ def prompt_config():
         config.update(_configure_training_pipeline(model_name))
     elif keen_exec_mode == HPO_MODE:
         config.update(_configure_hpo_pipeline(model_name))
+
+        # Query number of HPO iterations
+        hpo_iter = select_integer_value(
+            print_msg=HPO_ITERS_PRINT_MSG,
+            prompt_msg=HPO_ITERS_PROMPT_MSG,
+            error_msg=HPO_ITERS_ERROR_MSG)
+        config[NUM_OF_HPO_ITERS] = hpo_iter
 
     config.update(_configure_evaluation_specific_parameters())
 
