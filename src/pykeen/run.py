@@ -29,6 +29,11 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
      relation_to_embedding,
      params) = pipeline.start(path_to_train_data=training_path)
 
+    # TODO: Check why this doesn't work
+    # out_path = os.path.join(output_directory, 'configuration.json')
+    # with open(out_path, 'w') as handle:
+    #     json.dump(config, handle, indent=2)
+
     out_path = os.path.join(output_directory, 'entities_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
         pickle.dump(entity_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
