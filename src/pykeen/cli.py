@@ -84,6 +84,7 @@ def _configure_hpo_pipeline(model_name):
         raise NotImplementedError(f'{model_name} has not yet been implemented')
     return config
 
+
 def _configure_evaluation_specific_parameters():
     """
 
@@ -172,9 +173,10 @@ def prompt_config():
 
 
 @click.command()
-@click.option('-c', '--config', type=click.File(), help='A pykeen JSON configuration file')
+@click.option('-c', '--config', type=click.File(), help='A PyKEEN JSON configuration file')
 def main(config):
-    """pykeen: A software for training and evaluating knowledge graph embeddings."""
+    """PyKEEN: A software for training and evaluating knowledge graph embeddings."""
+
     if config is not None:
         config = json.load(config)
     else:
