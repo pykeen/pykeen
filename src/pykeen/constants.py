@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Constants defined for pykeen."""
+"""Constants defined for PyKEEN."""
 
 from collections import OrderedDict
 
@@ -72,6 +72,12 @@ CONV_E_INPUT_CHANNELS = 'ConvE_input_channels'
 CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
 CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
 CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
+
+# OPTIMIZER
+OPTMIZER_NAME = 'optimizer'
+SGD_OPTIMIZER_NAME = 'sgd_optimizer'
+ADAGRAD_OPTIMIZER_NAME = 'adagrad_optimizer'
+ADAM_OPTIMIZER_NAME = 'adam_optimizer'
 
 # Further Constants
 SEED = 'seed'
