@@ -42,13 +42,13 @@ To start PyKEEN with an existing configuration file, please run the following co
 
 .. code-block:: sh
 
-    pykeen -c path/to/config.json
+    pykeen -c /path/to/config.json
 
 or alternatively:
 
 .. code-block:: python
 
-    python3 -m pykeen -c path/to/config.json
+    python3 -m pykeen -c /path/to/config.json
 
 then the command line interface will assist you to configure your experiments.
 
