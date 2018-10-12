@@ -24,6 +24,8 @@ class Pipeline(object):
     def __init__(self, config, seed):
         self.config = config
         self.seed = seed
+        self.entity_to_id = None
+        self.rel_to_id = None
         self.device = torch.device(
             'cuda:0'
             if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else
@@ -35,55 +37,42 @@ class Pipeline(object):
         return self._start_pipeline(is_hpo_mode=is_hpo_mode, path_to_train_data=path_to_train_data)
 
     @property
-    def has_test_set(self) -> bool:
-        return TEST_SET_PATH in self.config
+    def is_evaluation_required(self) -> bool:
+        return TEST_SET_PATH in self.config or TEST_SET_RATIO in self.config
 
+    # TODO: Remove path_to_train_data
     def _start_pipeline(self, is_hpo_mode: bool, path_to_train_data: Optional[str] = None):
-        if path_to_train_data is None:
-            path_to_train_data = self.config[TRAINING_SET_PATH]
-
-        # FIXME: Check whether evaluation is requested
-        train_pos, test_pos = _get_data(
-            self.config,
-            self.seed,
-            path_to_train_data=path_to_train_data,
-        )
-        all_triples = np.concatenate([train_pos, test_pos], axis=0)
-        entity_to_id, rel_to_id = create_mappings(triples=all_triples)
-        mapped_pos_train_tripels, _, _ = create_mapped_triples(
-            triples=train_pos,
-            entity_to_id=entity_to_id,
-            rel_to_id=rel_to_id,
-        )
-
-        mapped_pos_test_tripels, _, _ = create_mapped_triples(
-            triples=test_pos,
-            entity_to_id=entity_to_id,
-            rel_to_id=rel_to_id,
-        )
-
-        all_entities = np.array(list(entity_to_id.values()))
 
         if is_hpo_mode:
+            mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
+
             (trained_model,
              loss_per_epoch,
              entity_to_embedding,
              relation_to_embedding,
              eval_summary,
              params) = RandomSearchHPO.run(
-                mapped_train_tripels=mapped_pos_train_tripels,
-                mapped_test_tripels=mapped_pos_test_tripels,
-                entity_to_id=entity_to_id,
-                rel_to_id=rel_to_id,
+                mapped_train_tripels=mapped_pos_train_triples,
+                mapped_test_tripels=mapped_pos_test_triples,
+                entity_to_id=self.entity_to_id,
+                rel_to_id=self.rel_to_id,
                 config=self.config,
                 device=self.device,
                 seed=self.seed
             )
 
         else:
+            # Training Mode
+            if self.is_evaluation_required:
+                mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
+            else:
+                mapped_pos_train_triples = self._get_train_triples()
+
+            all_entities = np.array(list(self.entity_to_id.values()))
+
             # Initialize KG embedding model
-            self.config[NUM_ENTITIES] = len(entity_to_id)
-            self.config[NUM_RELATIONS] = len(rel_to_id)
+            self.config[NUM_ENTITIES] = len(self.entity_to_id)
+            self.config[NUM_RELATIONS] = len(self.rel_to_id)
             self.config[PREFERRED_DEVICE] = self.device
             kg_embedding_model = get_kg_embedding_model(config=self.config)
 
@@ -98,23 +87,20 @@ class Pipeline(object):
                                                         learning_rate=learning_rate,
                                                         num_epochs=num_epochs,
                                                         batch_size=batch_size,
-                                                        pos_triples=mapped_pos_train_tripels,
+                                                        pos_triples=mapped_pos_train_triples,
                                                         device=self.device,
                                                         seed=self.seed)
 
             eval_summary = None
 
-            if self.has_test_set or TEST_SET_RATIO in self.config:
+            if self.is_evaluation_required:
                 log.info("-------------Start Evaluation-------------")
-                # Initialize KG evaluator
-                mapped_pos_test_tripels, _, _ = create_mapped_triples(triples=test_pos, entity_to_id=entity_to_id,
-                                                                      rel_to_id=rel_to_id)
 
                 eval_summary = OrderedDict()
                 mean_rank, hits_at_k = compute_metrics(all_entities=all_entities,
                                                        kg_embedding_model=kg_embedding_model,
-                                                       mapped_train_triples=mapped_pos_train_tripels,
-                                                       mapped_test_triples=mapped_pos_test_tripels,
+                                                       mapped_train_triples=mapped_pos_train_triples,
+                                                       mapped_test_triples=mapped_pos_test_triples,
                                                        device=self.device,
                                                        filter_neg_triples=self.config[FILTER_NEG_TRIPLES])
 
@@ -122,8 +108,8 @@ class Pipeline(object):
                 eval_summary[HITS_AT_K] = hits_at_k
 
         # Prepare Output
-        id_to_entity = {value: key for key, value in entity_to_id.items()}
-        id_to_rel = {value: key for key, value in rel_to_id.items()}
+        id_to_entity = {value: key for key, value in self.entity_to_id.items()}
+        id_to_rel = {value: key for key, value in self.rel_to_id.items()}
         entity_to_embedding = {
             id_to_entity[id]: embedding.detach().cpu().numpy()
             for id, embedding in enumerate(trained_model.entity_embeddings.weight)
@@ -139,28 +125,57 @@ class Pipeline(object):
 
         return trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params
 
+    def _get_train_and_test_triples(self):
 
-def _get_data(config, seed, path_to_train_data: str):
-    pos_triples = np.loadtxt(
-        fname=path_to_train_data,
+        pos_triples = _load_data(self.config[TRAINING_SET_PATH])
+
+        if TEST_SET_PATH in self.config:
+            train_pos = pos_triples
+            test_pos = _load_data(path_to_data=self.config[TEST_SET_PATH])
+
+        else:
+            train_pos, test_pos = train_test_split(
+                pos_triples,
+                test_size=self.config[TEST_SET_RATIO],
+                random_state=self.seed,
+            )
+
+        all_triples = np.concatenate([train_pos, test_pos], axis=0)
+        self.entity_to_id, self.rel_to_id = create_mappings(triples=all_triples)
+        mapped_pos_train_triples, _, _ = create_mapped_triples(
+            triples=train_pos,
+            entity_to_id=self.entity_to_id,
+            rel_to_id=self.rel_to_id,
+        )
+
+        mapped_pos_test_triples, _, _ = create_mapped_triples(
+            triples=test_pos,
+            entity_to_id=self.entity_to_id,
+            rel_to_id=self.rel_to_id,
+        )
+
+        return mapped_pos_train_triples, mapped_pos_test_triples
+
+    def _get_train_triples(self):
+        train_pos = _load_data(self.config[TRAINING_SET_PATH])
+
+        self.entity_to_id, self.rel_to_id = create_mappings(triples=train_pos)
+
+        mapped_pos_train_triples, _, _ = create_mapped_triples(
+            triples=train_pos,
+            entity_to_id=self.entity_to_id,
+            rel_to_id=self.rel_to_id,
+        )
+
+        return mapped_pos_train_triples
+
+
+def _load_data(path_to_data: str):
+    triples = np.loadtxt(
+        fname=path_to_data,
         dtype=str,
         comments='@Comment@ Subject Predicate Object',
         delimiter='\t',
     )
 
-    if TEST_SET_PATH in config:
-        train_pos = pos_triples
-        test_pos = np.loadtxt(
-            fname=config[TEST_SET_PATH],
-            dtype=str,
-            comments='@Comment@ Subject Predicate Object',
-            delimiter='\t',
-        )
-    else:
-        train_pos, test_pos = train_test_split(
-            pos_triples,
-            test_size=config[TEST_SET_RATIO],
-            random_state=seed,
-        )
-
-    return train_pos, test_pos
+    return triples
