@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""pykeen's command line interface."""
+"""PyKEEN's command line interface."""
 
 import json
 from collections import OrderedDict
@@ -125,6 +125,10 @@ def _configure_evaluation_specific_parameters():
 
 
 def prompt_config():
+    """
+
+    :return:
+    """
     config = OrderedDict()
 
     # Step 1: Welcome + Intro
