@@ -38,5 +38,19 @@ or alternatively:
 
 then the command line interface will assist you to configure your experiments.
 
+To start PyKEEN with an existing configuration file, please run the following command:
+
+.. code-block:: sh
+
+    pykeen -c path/to/config.json
+
+or alternatively:
+
+.. code-block:: python
+
+    python3 -m pykeen -c path/to/config.json
+
+then the command line interface will assist you to configure your experiments.
+
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
     :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
