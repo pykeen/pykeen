@@ -100,5 +100,7 @@ def configure_se_training_pipeline(model_name):
     return config
 
 
-def configure_se_hpo_pipeline():
-    pass
+def configure_se_hpo_pipeline(model_name):
+    print("Command linter interface vor SE (HPO mode) is under development.\n"
+          "Please select, a different model or execute PyKEEN in training mode.")
+    exit(0)

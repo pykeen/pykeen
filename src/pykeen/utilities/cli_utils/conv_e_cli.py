@@ -27,6 +27,8 @@ from pykeen.utilities.cli_utils.utils import get_config_dict
 
 def configure_conv_e_training_pipeline(model_name):
     # TODO: Finish
+    print("Command linter interface vor ConvE (training mode) is under development.\n"
+          "Please select, a different model or execute PyKEEN in training mode.")
     exit(0)
     """Configure TransE from pipeline.
 

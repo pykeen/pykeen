@@ -89,5 +89,7 @@ def configure_rescal_training_pipeline(model_name):
     return config
 
 
-def configure_rescal_hpo_pipeline():
-    pass
+def configure_rescal_hpo_pipeline(model_name):
+    print("Command linter interface vor RESCAL (HPO mode) is under development.\n"
+          "Please select, a different model or execute PyKEEN in training mode.")
+    exit(0)

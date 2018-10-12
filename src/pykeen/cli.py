@@ -28,6 +28,7 @@ from pykeen.utilities.cli_utils.cli_training_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
     select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
     select_integer_value)
+from pykeen.utilities.cli_utils.conv_e_cli import configure_conv_e_training_pipeline
 from pykeen.utilities.cli_utils.distmult_cli import configure_distmult_hpo_pipeline
 from pykeen.utilities.cli_utils.ermlp_cli import configure_ermlp_hpo_pipeline
 from pykeen.utilities.cli_utils.rescal_cli import configure_rescal_hpo_pipeline
@@ -53,7 +54,7 @@ MODEL_TRAINING_CONFIG_FUNCS = {
 
 MODEL_HPO_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_hpo_pipeline,
-    TRANS_H_NAME: configure_trans_h_hpo_pipeline,
+    TRANS_H_NAME:  configure_trans_h_hpo_pipeline,
     TRANS_R_NAME: configure_trans_r_hpo_pipeline,
     TRANS_D_NAME: configure_trans_d_hpo_pipeline,
     SE_NAME: configure_se_hpo_pipeline,
@@ -61,7 +62,7 @@ MODEL_HPO_CONFIG_FUNCS = {
     DISTMULT_NAME: configure_distmult_hpo_pipeline,
     ERMLP_NAME: configure_ermlp_hpo_pipeline,
     RESCAL_NAME: configure_rescal_hpo_pipeline,
-    CONV_E_NAME: None
+    CONV_E_NAME: configure_conv_e_training_pipeline
 }
 
 
@@ -85,7 +86,7 @@ def _configure_hpo_pipeline(model_name):
     return config
 
 
-def _configure_evaluation_specific_parameters():
+def _configure_evaluation_specific_parameters(pykeen_exec_mode):
     """
 
     :param config:
@@ -93,10 +94,15 @@ def _configure_evaluation_specific_parameters():
     """
     config = OrderedDict()
 
-    # Step 1: Ask whether to evaluate the model
-    print_ask_for_evlauation_message()
-    is_evaluation_mode = ask_for_evaluation()
-    print_section_divider()
+    if pykeen_exec_mode == TRAINING_MODE:
+        # Step 1: Ask whether to evaluate the model
+        print_ask_for_evlauation_message()
+        is_evaluation_mode = ask_for_evaluation()
+        print_section_divider()
+    else:
+        is_evaluation_mode = True
+
+
 
     # Step 2: Specify test set, if is_evaluation_mode==True
     if is_evaluation_mode:
@@ -147,8 +153,8 @@ def prompt_config():
 
     # Step 3: Ask for execution mode
     print_execution_mode_message()
-    keen_exec_mode = select_keen_execution_mode()
-    config[EXECUTION_MODE] = keen_exec_mode
+    pykeen_exec_mode = select_keen_execution_mode()
+    config[EXECUTION_MODE] = pykeen_exec_mode
     print_section_divider()
 
     # Step 4: Ask for model
@@ -156,9 +162,9 @@ def prompt_config():
     print_section_divider()
 
     # Step 5: Query parameters depending on the selected execution mode
-    if keen_exec_mode == TRAINING_MODE:
+    if pykeen_exec_mode == TRAINING_MODE:
         config.update(_configure_training_pipeline(model_name))
-    elif keen_exec_mode == HPO_MODE:
+    elif pykeen_exec_mode == HPO_MODE:
         config.update(_configure_hpo_pipeline(model_name))
 
         # Query number of HPO iterations
@@ -167,8 +173,10 @@ def prompt_config():
             prompt_msg=HPO_ITERS_PROMPT_MSG,
             error_msg=HPO_ITERS_ERROR_MSG)
         config[NUM_OF_HPO_ITERS] = hpo_iter
+        print_section_divider()
 
-    config.update(_configure_evaluation_specific_parameters())
+
+    config.update(_configure_evaluation_specific_parameters(pykeen_exec_mode))
 
     print_section_divider()
 

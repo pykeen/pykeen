@@ -103,5 +103,8 @@ def configure_trans_h_training_pipeline(model_name):
     return config
 
 
-def configure_trans_h_hpo_pipeline():
+def configure_trans_h_hpo_pipeline(model_name):
+    print("Command linter interface vor TransH (HPO mode) is under development.\n"
+          "Please select, a different model or execute PyKEEN in training mode.")
+    exit(0)
     pass

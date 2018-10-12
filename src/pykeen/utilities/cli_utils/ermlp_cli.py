@@ -79,5 +79,7 @@ def configure_ermlp_training_pipeline(model_name):
     return config
 
 
-def configure_ermlp_hpo_pipeline():
-    pass
+def configure_ermlp_hpo_pipeline(model_name):
+    print("Command linter interface vor ERMLP (HPO mode) is under development.\n"
+          "Please select, a different model or execute PyKEEN in training mode.")
+    exit(0)

@@ -86,5 +86,6 @@ def configure_um_training_pipeline(model_name):
     return config
 
 
-def configure_um_hpo_pipeline():
-    pass
+def configure_um_hpo_pipeline(model_name):
+    print("Command linter interface vor UM (HPO mode) is under development. Please select, a different model")
+    exit(0)
