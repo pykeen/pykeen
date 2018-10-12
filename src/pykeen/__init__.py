@@ -15,7 +15,7 @@ Clone the repository from `GitHub <https://github.com/SmartDataAnalytics/pykeen.
 
 from .run import run
 
-__version__ = '0.0.4-dev'
+__version__ = '0.0.5-dev'
 
 __title__ = 'pykeen'
 __description__ = "A package for training and evaluating knowledge graph embeddings"
