@@ -50,7 +50,7 @@ or alternatively:
 
     python3 -m pykeen -c /path/to/config.json
 
-then the command line interface will assist you to configure your experiments.
+then the command line interface won't be called, and the pipeline will be started iimmediately.
 
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
     :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
