@@ -66,6 +66,8 @@ def _create_corrupted_triples(triple, all_entities, device):
 
 
 def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, all_pos_triples):
+    print("Hi")
+    exit(0)
     """
 
     :param corrupted_subject_based:
