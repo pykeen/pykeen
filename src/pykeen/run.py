@@ -10,7 +10,7 @@ from pykeen.constants import OUTPUT_DIREC
 from pykeen.utilities.pipeline import Pipeline
 
 
-def run(config: Mapping, seed: int = 5, output_directory: Optional[str] = None, training_path: Optional[str] = None):
+def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, training_path: Optional[str] = None):
     if output_directory is None:
         output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%d-%m-%Y_%H:%M:%S"))
 
