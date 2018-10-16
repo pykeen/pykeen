@@ -75,15 +75,15 @@ def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, a
     """
     # TODO: Check
     mask = np.isin(element=corrupted_subject_based, test_elements=all_pos_triples) * 1.
+
     mask = np.sum(mask, axis=1)
-    mask = mask / 3.
-    mask = np.where(mask == 1.)
+    mask = np.where(mask == 3.)
+
     corrupted_subject_based = corrupted_subject_based[mask]
 
     mask = np.isin(element=corrupted_object_based, test_elements=all_pos_triples) * 1.
     mask = np.sum(mask, axis=1)
-    mask = mask / 3.
-    mask = np.where(mask == 1.)
+    mask = np.where(mask == 3.)
     corrupted_object_based = corrupted_subject_based[mask]
 
     if corrupted_subject_based.size == 0 or corrupted_object_based.size == 0:
