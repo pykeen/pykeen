@@ -35,6 +35,7 @@ INSTALL_REQUIRES = [
     'torchvision==0.2.1',
     'prompt_toolkit',
     'tqdm',
+    'pandas',
 ]
 EXTRAS_REQUIRE = {
     'docs': [
@@ -46,6 +47,7 @@ EXTRAS_REQUIRE = {
 ENTRY_POINTS = {
     'console_scripts': [
         'pykeen = pykeen.cli:main',
+        'pykeen-summarize = pykeen.cli:summarize',
     ]
 }
 
