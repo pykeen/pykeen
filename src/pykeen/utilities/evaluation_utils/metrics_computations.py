@@ -12,6 +12,15 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
+def _hash_triples(triples):
+    """
+
+    :param triples:
+    :return:
+    """
+    return hash(tuple(triples))
+
+
 def _compute_hits_at_k(hits_at_k_dict, rank_of_positive_subject_based, rank_of_positive_object_based):
     """
 
@@ -65,36 +74,34 @@ def _create_corrupted_triples(triple, all_entities, device):
     return corrupted_subject_based, corrupted_object_based
 
 
-def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, all_pos_triples):
+def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, all_pos_triples_hashed):
     """
 
     :param corrupted_subject_based:
     :param corrupted_object_based:
-    :param all_pos_triples:
+    :param all_pos_triples_hashed:
     :return:
     """
     # TODO: Check
-    mask = np.isin(element=corrupted_subject_based, test_elements=all_pos_triples) * 1.
-
-    mask = np.sum(mask, axis=1)
-    mask = np.where(mask == 3.)
-
+    corrupted_subject_based_hashed = np.apply_along_axis(_hash_triples, 1, corrupted_subject_based)
+    mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
+    mask = np.where(mask)[0]
     corrupted_subject_based = corrupted_subject_based[mask]
 
-    mask = np.isin(element=corrupted_object_based, test_elements=all_pos_triples) * 1.
-    mask = np.sum(mask, axis=1)
-    mask = np.where(mask == 3.)
-    corrupted_object_based = corrupted_subject_based[mask]
+    corrupted_object_based_hashed = np.apply_along_axis(_hash_triples, 1, corrupted_object_based)
+    mask = np.in1d(corrupted_object_based_hashed, all_pos_triples_hashed, invert=True)
+    mask = np.where(mask)[0]
 
-    if corrupted_subject_based.size == 0 or corrupted_object_based.size == 0:
+    if mask.size == 0:
         raise Exception("User selected filtered metric computation, but all corrupted triples exists"
                         "also a positive triples.")
+    corrupted_object_based = corrupted_object_based[mask]
 
     return corrupted_subject_based, corrupted_object_based
 
 
 def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corrupted_object_based, device,
-                           all_pos_triples):
+                           all_pos_triples_hashed):
     """
 
     :param kg_embedding_model:
@@ -102,13 +109,13 @@ def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_bas
     :param corrupted_subject_based:
     :param corrupted_object_based:
     :param device:
-    :param all_pos_triples:
+    :param all_pos_triples_hashed:
     :return:
     """
     corrupted_subject_based, corrupted_object_based = _filter_corrupted_triples(
         corrupted_subject_based=corrupted_subject_based,
         corrupted_object_based=corrupted_object_based,
-        all_pos_triples=all_pos_triples)
+        all_pos_triples_hashed=all_pos_triples_hashed)
 
     rank_of_positive_subject_based, rank_of_positive_object_based = _compute_rank(kg_embedding_model=kg_embedding_model,
                                                                                   pos_triple=pos_triple,
@@ -120,7 +127,7 @@ def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_bas
 
 
 def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corrupted_object_based, device,
-                  all_pos_triples=None):
+                  all_pos_triples_hashed=None):
     """
 
     :param kg_embedding_model:
@@ -128,7 +135,7 @@ def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corru
     :param corrupted_subject_based:
     :param corrupted_object_based:
     :param device:
-    :param all_pos_triples:
+    :param all_pos_triples_hashed:
     :return:
     """
     scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
@@ -173,12 +180,12 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
     :param filter_neg_triples:
     :return:
     """
-
     start = timeit.default_timer()
     ranks = []
     hits_at_k_dict = {k: [] for k in [1, 3, 5, 10]}
     kg_embedding_model = kg_embedding_model.to(device)
     all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
+    all_pos_triples_hashed = np.apply_along_axis(_hash_triples, 1, all_pos_triples)
 
     compute_rank_fct = _compute_filtered_rank if filter_neg_triples else _compute_rank
 
@@ -194,7 +201,7 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
             device=device,
-            all_pos_triples=all_pos_triples)
+            all_pos_triples_hashed=all_pos_triples_hashed)
 
         ranks.append(rank_of_positive_subject_based)
 
