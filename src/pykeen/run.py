@@ -12,13 +12,13 @@ from pykeen.utilities.pipeline import Pipeline
 
 def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, training_path: Optional[str] = None):
     if output_directory is None:
-        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%d-%m-%Y_%H:%M:%S"))
+        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d_%H:%M:%S"))
 
     os.makedirs(output_directory, exist_ok=True)
 
-    out_path = os.path.join(output_directory, 'configuration.json')
-    with open(out_path, 'w') as handle:
-        json.dump(config, handle, indent=2)
+    # out_path = os.path.join(output_directory, 'configuration.json')
+    # with open(out_path, 'w') as handle:
+    #     json.dump(config, handle, indent=2)
 
     pipeline = Pipeline(config=config, seed=seed)
 
@@ -30,9 +30,9 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
      params) = pipeline.start(path_to_train_data=training_path)
 
     # TODO: Check why this doesn't work
-    # out_path = os.path.join(output_directory, 'configuration.json')
-    # with open(out_path, 'w') as handle:
-    #     json.dump(config, handle, indent=2)
+    out_path = os.path.join(output_directory, 'configuration.json')
+    with open(out_path, 'w') as handle:
+        json.dump(params, handle, indent=2)
 
     out_path = os.path.join(output_directory, 'entities_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:

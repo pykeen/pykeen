@@ -26,14 +26,15 @@ class Pipeline(object):
         self.seed = seed
         self.entity_to_id = None
         self.rel_to_id = None
-        self.device = torch.device(
+        self.device_name=(
             'cuda:0'
             if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else
             CPU
         )
+        self.device = torch.device(self.device_name)
 
     def start(self, path_to_train_data: Optional[str] = None):
-        is_hpo_mode = True if self.config[EXECUTION_MODE] == HPO_MODE else False
+        is_hpo_mode = self.config[EXECUTION_MODE] == HPO_MODE
         return self._start_pipeline(is_hpo_mode=is_hpo_mode, path_to_train_data=path_to_train_data)
 
     @property
@@ -73,7 +74,7 @@ class Pipeline(object):
             # Initialize KG embedding model
             self.config[NUM_ENTITIES] = len(self.entity_to_id)
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
-            self.config[PREFERRED_DEVICE] = self.device
+            self.config[PREFERRED_DEVICE] = self.device_name
             kg_embedding_model = get_kg_embedding_model(config=self.config)
 
             batch_size = self.config[BATCH_SIZE]

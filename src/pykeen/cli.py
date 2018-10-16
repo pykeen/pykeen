@@ -3,9 +3,11 @@
 """PyKEEN's command line interface."""
 
 import json
+import os
 from collections import OrderedDict
 
 import click
+import pandas as pd
 
 from pykeen.constants import (
     CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
@@ -54,7 +56,7 @@ MODEL_TRAINING_CONFIG_FUNCS = {
 
 MODEL_HPO_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_hpo_pipeline,
-    TRANS_H_NAME:  configure_trans_h_hpo_pipeline,
+    TRANS_H_NAME: configure_trans_h_hpo_pipeline,
     TRANS_R_NAME: configure_trans_r_hpo_pipeline,
     TRANS_D_NAME: configure_trans_d_hpo_pipeline,
     SE_NAME: configure_se_hpo_pipeline,
@@ -101,8 +103,6 @@ def _configure_evaluation_specific_parameters(pykeen_exec_mode):
         print_section_divider()
     else:
         is_evaluation_mode = True
-
-
 
     # Step 2: Specify test set, if is_evaluation_mode==True
     if is_evaluation_mode:
@@ -175,15 +175,14 @@ def prompt_config():
         config[NUM_OF_HPO_ITERS] = hpo_iter
         print_section_divider()
 
-
     config.update(_configure_evaluation_specific_parameters(pykeen_exec_mode))
 
     print_section_divider()
 
-    # Step 6: Query device to train on
+    # Step 7: Query device to train on
     config[PREFERRED_DEVICE] = select_preferred_device()
 
-    # Step 7: Define output directory
+    # Step 8: Define output directory
     print_output_directory_message()
     config[OUTPUT_DIREC] = query_output_directory()
     print_section_divider()
@@ -202,6 +201,33 @@ def main(config):
         config = prompt_config()
 
     run(config)
+
+
+@click.command()
+@click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
+@click.option('-o', '--output', type=click.File('w'))
+def summarize(directory: str, output):
+    """Summarize contents of training and evaluation"""
+    r = []
+    for subdirectory_name in os.listdir(directory):
+        subdirectory = os.path.join(directory, subdirectory_name)
+        if not os.path.isdir(subdirectory):
+            continue
+        configuration_path = os.path.join(subdirectory, 'configuration.json')
+        if not os.path.exists(configuration_path):
+            click.echo("missing configuration")
+            continue
+        with open(configuration_path) as file:
+            configuration = json.load(file)
+        evaluation_path = os.path.join(subdirectory, 'evaluation_summary.json')
+        if not os.path.exists(evaluation_path):
+            click.echo("missing evaluation summary")
+            continue
+        with open(evaluation_path) as file:
+            evaluation = json.load(file)
+        r.append(dict(**configuration, **evaluation))
+    df = pd.DataFrame(r)
+    df.to_csv(output, sep='\t')
 
 
 if __name__ == '__main__':
