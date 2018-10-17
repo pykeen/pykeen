@@ -112,6 +112,7 @@ def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_bas
     :param all_pos_triples_hashed:
     :return:
     """
+
     corrupted_subject_based, corrupted_object_based = _filter_corrupted_triples(
         corrupted_subject_based=corrupted_subject_based,
         corrupted_object_based=corrupted_object_based,
