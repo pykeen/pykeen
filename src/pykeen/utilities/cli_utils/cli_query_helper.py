@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Helper script to query parameters needed in training mode."""
+"""Helper script to query parameters."""
 
 import json
 import os

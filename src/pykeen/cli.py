@@ -23,10 +23,10 @@ from pykeen.utilities.cli_utils import (
 )
 from pykeen.utilities.cli_utils.cli_print_msg_helper import (
     print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
-    print_output_directory_message, print_section_divider, print_test_ratio_message, print_test_set_message,
+    print_section_divider, print_test_ratio_message, print_test_set_message,
     print_training_set_message, print_welcome_message,
 )
-from pykeen.utilities.cli_utils.cli_training_query_helper import (
+from pykeen.utilities.cli_utils.cli_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
     select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
     select_integer_value)
@@ -130,38 +130,41 @@ def _configure_evaluation_specific_parameters(pykeen_exec_mode):
     return config
 
 
-def prompt_config():
-    """
-
-    :return:
-    """
-    config = OrderedDict()
-
-    # Step 1: Welcome + Intro
+def welcome_prompt():
+    # Step: Welcome + Intro
     print_welcome_message()
     print_section_divider()
     print_intro()
     print_section_divider()
 
-    # Step 2: Ask for training file
+
+def training_file_prompt(config):
     print_training_set_message()
     config[TRAINING_SET_PATH] = get_input_path(
         prompt_msg=TRAINING_FILE_PROMPT_MSG,
         error_msg=TRAINING_FILE_ERROR_MSG,
     )
-    print_section_divider()
 
-    # Step 3: Ask for execution mode
+    return config
+
+
+def execution_mode_prompt(config):
     print_execution_mode_message()
     pykeen_exec_mode = select_keen_execution_mode()
     config[EXECUTION_MODE] = pykeen_exec_mode
     print_section_divider()
 
-    # Step 4: Ask for model
+    return config
+
+
+def model_selection_prompt():
     model_name = select_embedding_model()
     print_section_divider()
+    return model_name
 
-    # Step 5: Query parameters depending on the selected execution mode
+
+def execution_mode_specific_prompt(config, model_name):
+    pykeen_exec_mode = config[EXECUTION_MODE]
     if pykeen_exec_mode == TRAINING_MODE:
         config.update(_configure_training_pipeline(model_name))
     elif pykeen_exec_mode == HPO_MODE:
@@ -174,17 +177,55 @@ def prompt_config():
             error_msg=HPO_ITERS_ERROR_MSG)
         config[NUM_OF_HPO_ITERS] = hpo_iter
         print_section_divider()
+    return config
 
-    config.update(_configure_evaluation_specific_parameters(pykeen_exec_mode))
+
+def device_prompt(config):
+    config[PREFERRED_DEVICE] = select_preferred_device()
+    return config
+
+
+def output_direc_prompt(config):
+    config[OUTPUT_DIREC] = query_output_directory()
+    return config
+
+
+def prompt_config():
+    """
+
+    :return:
+    """
+    config = OrderedDict()
+
+    # Step 1: Welcome + Intro
+    welcome_prompt()
+
+    # Step 2: Ask for training file
+    config = training_file_prompt(config=config)
+    print_section_divider()
+
+    # Step 3: Ask for execution mode
+    config = execution_mode_prompt(config=config)
+    print_section_divider()
+
+    # Step 4: Ask for model
+    model_name = model_selection_prompt()
+    print_section_divider()
+
+    # Step 5: Query parameters depending on the selected execution mode
+    config = execution_mode_specific_prompt(config=config, model_name=model_name)
+    print_section_divider()
+
+    config.update(_configure_evaluation_specific_parameters(config[EXECUTION_MODE]))
 
     print_section_divider()
 
     # Step 7: Query device to train on
-    config[PREFERRED_DEVICE] = select_preferred_device()
+    config = device_prompt(config=config)
+    print_section_divider()
 
     # Step 8: Define output directory
-    print_output_directory_message()
-    config[OUTPUT_DIREC] = query_output_directory()
+    config = output_direc_prompt(config=config)
     print_section_divider()
 
     return config

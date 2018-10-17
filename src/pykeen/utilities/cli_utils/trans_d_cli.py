@@ -16,7 +16,7 @@ from pykeen.constants import MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, MARG
 from pykeen.utilities.cli_utils.cli_print_msg_helper import print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message, print_entities_embedding_dimension_message, print_relations_embedding_dimension_message
-from pykeen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
+from pykeen.utilities.cli_utils.cli_query_helper import select_integer_value, select_float_value
 from pykeen.utilities.cli_utils.utils import get_config_dict
 
 

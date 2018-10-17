@@ -23,7 +23,7 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import print_training_embed
     print_number_epochs_message, print_hpo_embedding_dimensions_message, print_hpo_margin_losses_message, \
     print_hpo_scoring_fcts_message, print_hpo_entity_normalization_norms_message, print_hpo_learning_rates_message, \
     print_hpo_batch_sizes_message, print_hpo_epochs_message
-from pykeen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value, \
+from pykeen.utilities.cli_utils.cli_query_helper import select_integer_value, select_float_value, \
     select_float_values, select_positive_integer_values
 from pykeen.utilities.cli_utils.utils import get_config_dict
 

@@ -20,7 +20,7 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import print_training_embed
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message, print_conv_width_height_message, print_conv_input_channels_message, \
     print_conv_kernel_height_message, print_conv_kernel_width_message, print_input_dropout_message
-from pykeen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value, \
+from pykeen.utilities.cli_utils.cli_query_helper import select_integer_value, select_float_value, \
     query_height_and_width_for_conv_e, query_kernel_param, select_zero_one_float_value
 from pykeen.utilities.cli_utils.utils import get_config_dict
 

@@ -15,7 +15,7 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import print_training_embed
     print_embedding_dimension_info_message, print_training_margin_loss_message, print_scoring_fct_message, \
     print_section_divider, print_entity_normalization_message, print_learning_rate_message, print_batch_size_message, \
     print_number_epochs_message
-from pykeen.utilities.cli_utils.cli_training_query_helper import select_integer_value, select_float_value
+from pykeen.utilities.cli_utils.cli_query_helper import select_integer_value, select_float_value
 
 
 def configure_se_training_pipeline(model_name):
