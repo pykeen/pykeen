@@ -131,6 +131,10 @@ def _configure_evaluation_specific_parameters(pykeen_exec_mode):
 
 
 def welcome_prompt():
+    """
+
+    :return:
+    """
     # Step: Welcome + Intro
     print_welcome_message()
     print_section_divider()
@@ -139,6 +143,11 @@ def welcome_prompt():
 
 
 def training_file_prompt(config):
+    """
+
+    :param config:
+    :return:
+    """
     print_training_set_message()
     config[TRAINING_SET_PATH] = get_input_path(
         prompt_msg=TRAINING_FILE_PROMPT_MSG,
@@ -149,6 +158,11 @@ def training_file_prompt(config):
 
 
 def execution_mode_prompt(config):
+    """
+
+    :param config:
+    :return:
+    """
     print_execution_mode_message()
     pykeen_exec_mode = select_keen_execution_mode()
     config[EXECUTION_MODE] = pykeen_exec_mode
@@ -158,12 +172,22 @@ def execution_mode_prompt(config):
 
 
 def model_selection_prompt():
+    """
+
+    :return:
+    """
     model_name = select_embedding_model()
     print_section_divider()
     return model_name
 
 
 def execution_mode_specific_prompt(config, model_name):
+    """
+
+    :param config:
+    :param model_name:
+    :return:
+    """
     pykeen_exec_mode = config[EXECUTION_MODE]
     if pykeen_exec_mode == TRAINING_MODE:
         config.update(_configure_training_pipeline(model_name))
@@ -181,11 +205,21 @@ def execution_mode_specific_prompt(config, model_name):
 
 
 def device_prompt(config):
+    """
+
+    :param config:
+    :return:
+    """
     config[PREFERRED_DEVICE] = select_preferred_device()
     return config
 
 
 def output_direc_prompt(config):
+    """
+
+    :param config:
+    :return:
+    """
     config[OUTPUT_DIREC] = query_output_directory()
     return config
 
