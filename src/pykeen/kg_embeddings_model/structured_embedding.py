@@ -31,8 +31,8 @@ class StructuredEmbedding(nn.Module):
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.m_left_rel_embeddings = nn.Embedding(self.num_relations, 20 * self.embedding_dim)
-        self.m_right_rel_embeddings = nn.Embedding(self.num_relations, 20 * self.embedding_dim)
+        self.m_left_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
+        self.m_right_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
         self.margin_loss = config[MARGIN_LOSS]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
