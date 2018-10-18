@@ -122,6 +122,7 @@ def configure_trans_d_hpo_pipeline(model_name):
     config[EMBEDDING_DIM] = entity_embedding_dimensions
     print_section_divider()
 
+    # Step 2: Query embedding dimensions for relations
     print_relations_embedding_dimension_message()
     relation_embedding_dimensions = select_positive_integer_values(
         print_msg=RELATION_EMBEDDING_DIMENSIONS_PRINT_MSG,
@@ -131,7 +132,7 @@ def configure_trans_d_hpo_pipeline(model_name):
     config[RELATION_EMBEDDING_DIM] = relation_embedding_dimensions
     print_section_divider()
 
-    # Step 2: Query margin loss
+    # Step 3: Query margin losses
     print_hpo_margin_losses_message()
     magin_loss = select_float_values(
         print_msg=MARGIN_LOSSES_PRINT_MSG,
@@ -140,7 +141,7 @@ def configure_trans_d_hpo_pipeline(model_name):
     config[MARGIN_LOSS] = magin_loss
     print_section_divider()
 
-    # Step 3: Query L_p norms to use as scoring function
+    # Step 4: Query L_p norms to use as scoring function
     print_hpo_scoring_fcts_message()
     scoring_fct_norm = select_positive_integer_values(
         print_msg=NORMS_SCORING_FUNCTION_PRINT_MSG,
