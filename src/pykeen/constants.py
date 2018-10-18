@@ -101,6 +101,11 @@ ENTITIES_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension
 ENTITIES_EMBEDDING_DIMENSION_PROMPT_MSG = '> Entity embedding dimension: '
 ENTITIES_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please proive and positive integer as embedding dimension (e.g. 50).'
 
+ENTITIES_EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimension(s) for entities (e.g. 50,100). '
+ENTITIES_EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Entity embedding dimensions: '
+ENTITIES_EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the embedding dimensions must be positive integers and separated by a comma.\n' \
+                                          'Please try again.'
+
 BATCH_SIZES_PRINT_MSG = 'Please type (comma separated) the batch size(s) (e.g. 32, 64, 128):'
 BATCH_SIZES_PROMPT_MSG = '> Batch size(s):'
 BATCH_SIZES_ERROR_MSG = 'An error occurred, the batch sizes must be positive integers and separated by a comma.\n' \
@@ -108,7 +113,7 @@ BATCH_SIZES_ERROR_MSG = 'An error occurred, the batch sizes must be positive int
 
 EPOCHS_PRINT_MSG = 'Please type (comma separated) the number of epochs (e.g. 50,100,500).'
 EPOCHS_PROMPT_MSG = '> Epochs:'
-EPOCHS_ERROR_MSG = 'An error occurred, the numebr of epochs must be positive integers and separated by a comma.\n' \
+EPOCHS_ERROR_MSG = 'An error occurred, the number of epochs must be positive integers and separated by a comma.\n' \
                    'Please try again.'
 
 LEARNING_RATES_PRINT_MSG = 'Please type (comma separated) the learning rate(s) (e.g. 0.1, 0.01, 0.0001).'
@@ -137,6 +142,12 @@ EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the embedding dimensions mu
 RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of relations:'
 RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Relation embedding dimension: '
 RELATION_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please type in an integer as embedding dimension such as 30.'
+
+RELATION_EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimensions of relations:'
+RELATION_EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Relation embedding dimensions: '
+RELATION_EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the relation embedding dimensions must be positive integers and separated\n' \
+                                          'by a comma e.g. 50,100,200' \
+                                          'Please try again. \n'
 
 MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
 MARGIN_LOSS_PROMPT_MSG = '> Margin loss:'
