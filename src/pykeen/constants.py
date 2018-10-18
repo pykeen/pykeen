@@ -4,7 +4,7 @@
 
 from collections import OrderedDict
 
-VERSION = '0.0.5'
+VERSION = '0.0.5-dev'
 
 # KG embedding model
 KG_EMBEDDING_MODEL = 'kg_embedding_model'
