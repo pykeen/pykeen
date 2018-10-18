@@ -37,9 +37,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         max_iters = config[NUM_OF_HPO_ITERS]
 
-        eval_summary = OrderedDict()
-
         for _ in range(max_iters):
+            eval_summary = OrderedDict()
+
             # Sample hyper-params
             kg_embedding_model_config = self._sample_params(config)
             kg_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
