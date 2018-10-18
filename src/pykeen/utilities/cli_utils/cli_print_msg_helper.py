@@ -226,7 +226,7 @@ def print_hpo_margin_losses_message():
 
 
 def print_hpo_scoring_fcts_message():
-    click.secho(click.style("Current Step: Please provide a list of orms used as scoring function", fg='blue'))
+    click.secho(click.style("Current Step: Please provide a list of norms used as scoring function", fg='blue'))
     click.secho("The norms should be positive integer values. Please separate your input by a \',\':\n"
                 "1,2,3\n")
     click.secho("")
@@ -253,6 +253,7 @@ def print_hpo_batch_sizes_message():
                 "1,2,3\n")
     click.secho("")
 
+
 def print_hpo_epochs_message():
     click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
     click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
@@ -264,4 +265,11 @@ def print_hpo_iterations_message():
     click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
     click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
                 "1,2,3\n")
+    click.secho("")
+
+def print_hpo_trans_h_soft_constraints_weights_message():
+    click.secho(
+        click.style("Current Step: Please provide a list of weight values for the soft constraints.", fg='blue'))
+    click.secho('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
+                'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes')
     click.secho("")

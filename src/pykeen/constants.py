@@ -259,13 +259,15 @@ CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select the feature map dropout va
 CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value:'
 CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be a positive float value.'
 
-WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please provide the value for weighting the soft constraints of the loss function'
-WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight value for soft constraints: '
-WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, the weight value must be a float value such as 0.5'
 
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please select the weight value for the soft constraints of the loss function'
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight value for soft constraints: '
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, input must be positive a float value.'
+
+WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please provide (comma separated) the weight values for weighting the soft constraints of the loss function'
+WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight values for soft constraints: '
+WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, the weight values for the soft constraint must be float values, \n' \
+                                   ' and separated by a comma (e.g. 0.1,0.5). Please try again.'
 
 # ----------------------------------
 
