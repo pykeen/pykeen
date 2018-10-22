@@ -23,7 +23,7 @@ class DistMult(nn.Module):
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
-        self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
+        # self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
