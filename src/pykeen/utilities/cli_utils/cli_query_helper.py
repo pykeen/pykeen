@@ -10,7 +10,8 @@ import click
 from prompt_toolkit import prompt
 
 from pykeen.constants import EXECUTION_MODE_MAPPING, KG_MODEL_TO_ID_MAPPING, ID_TO_KG_MODEL_MAPPING, \
-    BINARY_QUESTION_MAPPING, GPU, CPU, CONFIG_FILE_PROMPT_MSG, CONFIG_FILE_ERROR_MSG
+    BINARY_QUESTION_MAPPING, GPU, CPU, CONFIG_FILE_PROMPT_MSG, CONFIG_FILE_ERROR_MSG, ID_TO_OPTIMIZER_MAPPING, \
+    OPTIMIZER_TO_ID_MAPPING
 
 
 def get_input_path(prompt_msg, error_msg):
@@ -281,3 +282,23 @@ def select_positive_integer_values(print_msg, prompt_msg, error_msg):
                 break
 
     return integers
+
+def select_optimizer():
+    click.echo('Please select the optimizer you want to train your model with:')
+    for optimizer, id in OPTIMIZER_TO_ID_MAPPING.items():
+        click.echo("%s: %s" % (optimizer, id))
+
+    ids = list(OPTIMIZER_TO_ID_MAPPING.values())
+    available_optimizers = list(OPTIMIZER_TO_ID_MAPPING.keys())
+
+    while True:
+        user_input = prompt('> Please select one of the options: ')
+
+        if user_input not in ids:
+            click.echo(
+                "Invalid input, please type in a number between %s and %s indicating the optimizer id.\n"
+                "For example type %s to select the model %s and press enter" % (
+                available_optimizers[0], ids[0], ids[0], available_optimizers[0]))
+            click.echo()
+        else:
+            return ID_TO_OPTIMIZER_MAPPING[user_input]

@@ -273,3 +273,8 @@ def print_hpo_trans_h_soft_constraints_weights_message():
     click.secho('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
                 'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes')
     click.secho("")
+
+def print_optimizer_message():
+    click.secho(
+        click.style("Current Step: Please select the optimizer you want to use to train your model.", fg='blue'))
+    click.secho("")
