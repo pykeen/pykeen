@@ -83,6 +83,9 @@ ADAM_OPTIMIZER_NAME = 'Adam'
 SEED = 'seed'
 OUTPUT_DIREC = 'output_direc'
 
+# Pipeline outcome parameters
+TRAINED_MODEL = 'trained_model'
+LOSSES = 'losses'
 # -----------------Command line interface messages-----------------
 
 TRAINING_FILE_PROMPT_MSG = '> Please provide here the path to your training file: '
