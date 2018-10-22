@@ -164,8 +164,8 @@ def execution_mode_prompt(config):
     :return:
     """
     print_execution_mode_message()
-    pykeen_exec_mode = select_keen_execution_mode()
-    config[EXECUTION_MODE] = pykeen_exec_mode
+    exec_mode = select_keen_execution_mode()
+    config[EXECUTION_MODE] = exec_mode
     print_section_divider()
 
     return config
