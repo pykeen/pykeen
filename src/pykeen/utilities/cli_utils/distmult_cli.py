@@ -55,12 +55,12 @@ def configure_distmult_training_pipeline(model_name):
     print_section_divider()
 
     # Step 3: Query L_p norm for normalizing the entities
-    print_entity_normalization_message()
-    entity_normalization_norm = select_integer_value(print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
-                                                     prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
-                                                     error_msg=ENTITIES_NORMALIZATION_ERROR_MSG)
-    config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
-    print_section_divider()
+    # print_entity_normalization_message()
+    # entity_normalization_norm = select_integer_value(print_msg=ENTITIES_NORMALIZATION_PRINT_MSG,
+    #                                                  prompt_msg=ENTITIES_NORMALIZATION_PROMPT_MSG,
+    #                                                  error_msg=ENTITIES_NORMALIZATION_ERROR_MSG)
+    # config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
+    # print_section_divider()
 
     # Step 4: Query learning rate
     print_learning_rate_message()
@@ -112,14 +112,14 @@ def configure_distmult_hpo_pipeline(model_name):
 
 
     # Step 3: Query L_p norms for normalizing the entities
-    print_hpo_entity_normalization_norms_message()
-    entity_normalization_norm = select_positive_integer_values(
-        print_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG,
-        prompt_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG,
-        error_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG
-    )
-    config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
-    print_section_divider()
+    # print_hpo_entity_normalization_norms_message()
+    # entity_normalization_norm = select_positive_integer_values(
+    #     print_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_PRINT_MSG,
+    #     prompt_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG,
+    #     error_msg=NORMS_FOR_NORMALIZATION_OF_ENTITIES_ERROR_MSG
+    # )
+    # config[NORM_FOR_NORMALIZATION_OF_ENTITIES] = entity_normalization_norm
+    # print_section_divider()
 
     # Step 4: Query learning rate
     print_hpo_learning_rates_message()
