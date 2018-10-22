@@ -75,9 +75,9 @@ CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
 
 # OPTIMIZER
 OPTMIZER_NAME = 'optimizer'
-SGD_OPTIMIZER_NAME = 'sgd_optimizer'
-ADAGRAD_OPTIMIZER_NAME = 'adagrad_optimizer'
-ADAM_OPTIMIZER_NAME = 'adam_optimizer'
+SGD_OPTIMIZER_NAME = 'SGD'
+ADAGRAD_OPTIMIZER_NAME = 'Adagrad'
+ADAM_OPTIMIZER_NAME = 'Adam'
 
 # Further Constants
 SEED = 'seed'
@@ -259,7 +259,6 @@ CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG = 'Please select the feature map dropout va
 CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG = '> Feature map dropout value:'
 CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG = 'Invalid output, input must be a positive float value.'
 
-
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please select the weight value for the soft constraints of the loss function'
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight value for soft constraints: '
 WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, input must be positive a float value.'
@@ -267,7 +266,7 @@ WEIGHT_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, input must be pos
 WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please provide (comma separated) the weight values for weighting the soft constraints of the loss function'
 WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight values for soft constraints: '
 WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, the weight values for the soft constraint must be float values, \n' \
-                                   ' and separated by a comma (e.g. 0.1,0.5). Please try again.'
+                                            ' and separated by a comma (e.g. 0.1,0.5). Please try again.'
 
 # ----------------------------------
 
@@ -302,6 +301,17 @@ ID_TO_KG_MODEL_MAPPING = OrderedDict({
 KG_MODEL_TO_ID_MAPPING = OrderedDict({
     value: key
     for key, value in ID_TO_KG_MODEL_MAPPING.items()
+})
+
+ID_TO_OPTIMIZER_MAPPING = OrderedDict({
+    '1': SGD_OPTIMIZER_NAME,
+    '2': ADAGRAD_OPTIMIZER_NAME,
+    '3': ADAM_OPTIMIZER_NAME,
+})
+
+OPTIMIZER_TO_ID_MAPPING = OrderedDict({
+    value: key
+    for key, value in ID_TO_OPTIMIZER_MAPPING.items()
 })
 
 BINARY_QUESTION_MAPPING = OrderedDict({'yes': True, 'no': False})
