@@ -19,7 +19,7 @@ __version__ = '0.0.7-dev'
 
 __title__ = 'pykeen'
 __description__ = "A package for training and evaluating knowledge graph embeddings"
-__url__ = 'https://github.com/SmartDataAnalytics/kg_embeddings_pipeline.git'
+__url__ = 'https://github.com/SmartDataAnalytics/PyKEEN.git'
 __author__ = 'Mehdi Ali'
 __email__ = 'mehdi.ali@cs.uni-bonn.de'
 __license__ = 'MIT License'
