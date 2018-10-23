@@ -16,7 +16,7 @@ from pykeen.constants import EXECUTION_MODE_MAPPING, KG_MODEL_TO_ID_MAPPING, ID_
 
 def get_input_path(prompt_msg, error_msg):
     while True:
-        user_input = prompt(prompt_msg,).strip('"').strip("'")
+        user_input = prompt(prompt_msg, ).strip('"').strip("'")
 
         if os.path.exists(os.path.dirname(user_input)):
             return user_input
@@ -56,7 +56,7 @@ def select_embedding_model():
             click.echo(
                 "Invalid input, please type in a number between %s and %s indicating the model id.\n"
                 "For example type %s to select the model %s and press enter" % (
-                available_models[0], ids[0], ids[0], available_models[0]))
+                    available_models[0], ids[0], ids[0], available_models[0]))
             click.echo()
         else:
             return ID_TO_KG_MODEL_MAPPING[user_input]
@@ -141,7 +141,7 @@ def select_ratio_for_test_set():
 
 
 def select_preferred_device():
-    click.echo('Please select the preferred device (GPU or CPU).')
+    click.secho(click.style("Current Step: Please specify tthe preferred device (GPU or CPU).", fg='blue'))
 
     while True:
         user_input = prompt('> Please type \'GPU\' or \'CPU\': ').lower()
@@ -223,17 +223,17 @@ def query_height_and_width_for_conv_e(embedding_dim):
             continue
 
         if not (int(height) * int(width) == embedding_dim):
-            click.echo("Invalid input, height * width are not equal to \'%d\' (your provided embedding dimension.\n"
+            click.echo("Invalid input, height * width are not equal to \'%d\' (your specified embedding dimension).\n"
                        "Please try again, and fulfill the constraint)" % embedding_dim)
         else:
             return int(height), int(width)
 
 
 def query_kernel_param(depending_param, print_msg, prompt_msg, error_msg):
-    click.echo(print_msg)
+    click.echo(print_msg % depending_param)
 
     while True:
-        kernel_param = prompt(prompt_msg % depending_param)
+        kernel_param = prompt(prompt_msg)
 
         if not (kernel_param.isnumeric() and int(kernel_param) <= depending_param):
             click.echo(error_msg % depending_param)
@@ -283,6 +283,7 @@ def select_positive_integer_values(print_msg, prompt_msg, error_msg):
 
     return integers
 
+
 def select_optimizer():
     click.echo('Please select the optimizer you want to train your model with:')
     for optimizer, id in OPTIMIZER_TO_ID_MAPPING.items():
@@ -298,7 +299,7 @@ def select_optimizer():
             click.echo(
                 "Invalid input, please type in a number between %s and %s indicating the optimizer id.\n"
                 "For example type %s to select the model %s and press enter" % (
-                available_optimizers[0], ids[0], ids[0], available_optimizers[0]))
+                    available_optimizers[0], ids[0], ids[0], available_optimizers[0]))
             click.echo()
         else:
             return ID_TO_OPTIMIZER_MAPPING[user_input]

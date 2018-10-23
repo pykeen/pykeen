@@ -51,7 +51,7 @@ MODEL_TRAINING_CONFIG_FUNCS = {
     DISTMULT_NAME: configure_distmult_training_pipeline,
     ERMLP_NAME: configure_ermlp_training_pipeline,
     RESCAL_NAME: configure_rescal_training_pipeline,
-    CONV_E_NAME: None
+    CONV_E_NAME: configure_conv_e_training_pipeline
 }
 
 MODEL_HPO_CONFIG_FUNCS = {

@@ -176,16 +176,26 @@ def print_relations_embedding_dimension_message():
 
 
 def print_conv_width_height_message():
-    click.secho("In ConvE, the input is of the CNN is the embedding of the head and of the relation.\n"
+    click.secho(
+        click.style(
+            "Current Step: Please specify the embedding width and height based on your specified embedding dimension.",
+            fg='blue'))
+    click.secho("In ConvE, the input of the CNN is the embedding of the head and of the relation.\n"
                 "Those are transformed into an \"image\" representation. The constraint is that height*width must equal\n"
-                "to the embedding dimension. If the embedding dimension is for example 100, then valied values for\n"
-                "height and width are 5 and 20 since 5*20 = 100.")
+                "to the embedding dimension. If the embedding dimension is for example 100, then valid values for\n"
+                "height and width are e.g. 5 and 20 since 5*20 = 100.")
     click.secho("")
 
 
 def print_conv_input_channels_message():
     click.secho(
-        click.style("Current Step: Please specify the number of input channels for the convolutional layer.",
+        click.style("Current Step: Please specify the number of input channels for the convolution layer.",
+                    fg='blue'))
+    click.secho("")
+
+def print_conv_output_channels_message():
+    click.secho(
+        click.style("Current Step: Please specify the number of output channels for the convolution layer.",
                     fg='blue'))
     click.secho("")
 
@@ -204,6 +214,20 @@ def print_conv_kernel_width_message():
 
 def print_input_dropout_message():
     click.secho(click.style("Current Step: Please specify the dropout rate for the input layer.", fg='blue'))
+    click.secho("The dropout rate must be a value between 0 and 1")
+    click.secho("")
+
+
+def print_output_dropout_message():
+    click.secho(click.style("Current Step: Please specify the dropout rate for the output layer.", fg='blue'))
+    click.secho("The dropout rate must be a value between 0 and 1")
+    click.secho("")
+
+
+def print_feature_map_dropout_message():
+    click.secho(click.style(
+        "Current Step: Please specify the dropout rate for the feature maps created by the convolution layer.",
+        fg='blue'))
     click.secho("The dropout rate must be a value between 0 and 1")
     click.secho("")
 
@@ -267,12 +291,14 @@ def print_hpo_iterations_message():
                 "1,2,3\n")
     click.secho("")
 
+
 def print_hpo_trans_h_soft_constraints_weights_message():
     click.secho(
         click.style("Current Step: Please provide a list of weight values for the soft constraints.", fg='blue'))
     click.secho('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
                 'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes')
     click.secho("")
+
 
 def print_optimizer_message():
     click.secho(

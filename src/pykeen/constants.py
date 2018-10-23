@@ -222,16 +222,16 @@ CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for Conv
 CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
 CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG = 'An error occurred, kernel heights must be positive integers and <= than %d (defined height).'
 
-CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the height for the convolution kernel.'
-CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Convolution kernel height: '
+CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the height for the convolution kernel based on the specified embedding height of %d.'
+CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Convolution kernel: '
 CONV_E_KERNEL_HEIGHT_ERROR_MSG = 'An error occurred, the kernel height must be a positive integer and <= than %d (defined height).'
 
 CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG = 'Please select the wifth for the convolution kernel.'
 CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d:'
 CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG = 'An error occurred, kernel widths mus be positive integers and <= than %d (defined width).'
 
-CONV_E_KERNEL_WIDTH_PRINT_MSG = 'Please select the kernel width for ConvE'
-CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width for defined width %d:'
+CONV_E_KERNEL_WIDTH_PRINT_MSG = 'Please select the kernel width for ConvE based on the specified embedding width of %d'
+CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width:'
 CONV_E_KERNEL_WIDTH_ERROR_MSG = 'An error occurred, kernel width mus be a positive integer and <= than %d (defined width).'
 
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
