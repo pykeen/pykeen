@@ -30,7 +30,7 @@ from pykeen.utilities.cli_utils.cli_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
     select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
     select_integer_value)
-from pykeen.utilities.cli_utils.conv_e_cli import configure_conv_e_training_pipeline
+from pykeen.utilities.cli_utils.conv_e_cli import configure_conv_e_training_pipeline, configure_conv_e_hpo_pipeline
 from pykeen.utilities.cli_utils.distmult_cli import configure_distmult_hpo_pipeline
 from pykeen.utilities.cli_utils.ermlp_cli import configure_ermlp_hpo_pipeline
 from pykeen.utilities.cli_utils.rescal_cli import configure_rescal_hpo_pipeline
@@ -64,7 +64,7 @@ MODEL_HPO_CONFIG_FUNCS = {
     DISTMULT_NAME: configure_distmult_hpo_pipeline,
     ERMLP_NAME: configure_ermlp_hpo_pipeline,
     RESCAL_NAME: configure_rescal_hpo_pipeline,
-    CONV_E_NAME: configure_conv_e_training_pipeline
+    CONV_E_NAME: configure_conv_e_hpo_pipeline
 }
 
 

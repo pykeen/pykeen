@@ -196,7 +196,7 @@ def query_output_directory():
     click.echo()
 
     while True:
-        user_input = prompt('> Path to output director:')
+        user_input = prompt('> Path to output directory:')
         if os.path.exists(os.path.dirname(user_input)):
             return user_input
         else:
@@ -262,6 +262,33 @@ def select_float_values(print_msg, prompt_msg, error_msg):
 
     return float_values
 
+def select_zero_one_range_float_values(print_msg, prompt_msg, error_msg):
+    click.echo(print_msg)
+    float_values = []
+    is_valid_input = False
+
+    while not is_valid_input:
+        user_input = prompt(prompt_msg)
+        user_input = user_input.split(',')
+        is_valid_input = True
+
+        for float_value in user_input:
+            try:
+                float_value = float(float_value)
+            except ValueError:
+                click.echo(error_msg)
+                is_valid_input = False
+                break
+
+            if 0.<=float_value<=1.:
+                print("hey")
+                float_values.append(float_value)
+            else:
+                click.echo(error_msg)
+                is_valid_input = False
+                break
+
+    return float_values
 
 def select_positive_integer_values(print_msg, prompt_msg, error_msg):
     click.echo(print_msg)
@@ -303,3 +330,47 @@ def select_optimizer():
             click.echo()
         else:
             return ID_TO_OPTIMIZER_MAPPING[user_input]
+
+
+def select_heights_and_widths(embedding_dimensions):
+    heights = []
+    widths = []
+
+    for embedding_dim in embedding_dimensions:
+        is_valid_input = False
+        while not is_valid_input:
+            print("Specify height for specified embedding dimension %d ." % embedding_dim)
+            height = prompt('> Height:')
+
+            print("Specify width for specified embedding dimension %d ." % embedding_dim)
+            width = prompt('> Width:')
+
+            if not (height.isnumeric() and width.isnumeric() and int(height) * int(width) == embedding_dim):
+                print("Invalid input, height and width must be positive integers, and height * width must equal the "
+                      " specified embedding dimension of \'%d\'." % embedding_dim)
+            else:
+                heights.append(int(height))
+                widths.append(int(width))
+                is_valid_input = True
+        print()
+
+    return heights, widths
+
+def select_kernel_sizes(depending_params, print_msg, prompt_msg, error_msg):
+    kernel_params = []
+    print(print_msg)
+
+    for dep_param in depending_params:
+        is_valid_input = False
+
+        while not is_valid_input:
+            kernel_param = prompt(prompt_msg % dep_param)
+
+            if not (kernel_param.isnumeric() and int(kernel_param) <= dep_param):
+                print(error_msg % dep_param)
+            else:
+                kernel_params.append(int(kernel_param))
+                is_valid_input = True
+        print()
+
+    return kernel_params

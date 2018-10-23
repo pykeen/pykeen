@@ -175,7 +175,7 @@ def print_relations_embedding_dimension_message():
     click.secho("")
 
 
-def print_conv_width_height_message():
+def print_conv_e_width_height_message():
     click.secho(
         click.style(
             "Current Step: Please specify the embedding width and height based on your specified embedding dimension.",
@@ -193,7 +193,8 @@ def print_conv_input_channels_message():
                     fg='blue'))
     click.secho("")
 
-def print_conv_output_channels_message():
+
+def print_conv_e_output_channels_message():
     click.secho(
         click.style("Current Step: Please specify the number of output channels for the convolution layer.",
                     fg='blue'))
@@ -299,6 +300,45 @@ def print_hpo_trans_h_soft_constraints_weights_message():
                 'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes')
     click.secho("")
 
+
+def print_hpo_conv_e_width_height_message():
+    click.secho(
+        click.style(
+            "Current step: Please provide for each specified embedding dimension, the corrpespoinding embedding height and width.\n' \
+            'Make sure that \'embedding dimension\' is equal to \'height * width\' ", fg='blue'))
+
+    click.secho("In ConvE, the input of the CNN is the embedding of the head and of the relation.\n"
+                "Those are transformed into an \"image\" representation. The constraint is that height*width must equal\n"
+                "to the embedding dimension. If the embedding dimension is for example 100, then valid values for\n"
+                "height and width are e.g. 5 and 20 since 5*20 = 100.")
+    click.secho("")
+
+def print_conv_e_hpo_kernel_height_message():
+    click.secho(click.style("Current Step: Please specify the heights of the convolution kernel.", fg='blue'))
+    click.secho("Important note: The kernel heights must be smaller or equal to the input heights specified before.")
+    click.secho("")
+
+def print_conv_e_hpo_kernel_width_message():
+    click.secho(click.style("Current Step: Please specify the widths of the convolution kernel.", fg='blue'))
+    click.secho("Important note: The kernel heights must be smaller or equal to the input heights specified before.")
+    click.secho("")
+
+def print_hpo_input_dropout_message():
+    click.secho(click.style("Current Step: Please specify the dropout rates for the input layer.", fg='blue'))
+    click.secho("The dropout rate must be a value between 0 and 1")
+    click.secho("")
+
+def print_hpo_output_dropout_message():
+    click.secho(click.style("Current Step: Please specify the dropout rates for the output layer.", fg='blue'))
+    click.secho("The dropout rate must be a value between 0 and 1")
+    click.secho("")
+
+def print_hpo_feature_maps_dropouts_message():
+    click.secho(click.style(
+        "Current Step: Please specify the dropout rates for the feature maps created by the convolution layer.",
+        fg='blue'))
+    click.secho("The dropout rate must be a value between 0 and 1")
+    click.secho("")
 
 def print_optimizer_message():
     click.secho(

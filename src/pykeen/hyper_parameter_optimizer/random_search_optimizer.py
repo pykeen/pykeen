@@ -13,6 +13,27 @@ from pykeen.utilities.train_utils import train_model
 
 class RandomSearchHPO(AbstractHPOptimizer):
 
+    def _sample_conv_e_params(self, hyparams_dict):
+        kg_model_config = OrderedDict()
+        # Sample params which are dependent on each other
+        embedding_dimensions = hyparams_dict[EMBEDDING_DIM]
+        sampled_index = random.choice(range(len(embedding_dimensions)))
+        kg_model_config[EMBEDDING_DIM] = embedding_dimensions[sampled_index]
+        kg_model_config[CONV_E_HEIGHT] = hyparams_dict[CONV_E_HEIGHT][sampled_index]
+        kg_model_config[CONV_E_WIDTH] = hyparams_dict[CONV_E_WIDTH][sampled_index]
+        kg_model_config[CONV_E_KERNEL_HEIGHT] = hyparams_dict[CONV_E_KERNEL_HEIGHT][sampled_index]
+        kg_model_config[CONV_E_KERNEL_WIDTH] = hyparams_dict[CONV_E_KERNEL_WIDTH][sampled_index]
+
+        del hyparams_dict[EMBEDDING_DIM]
+        del hyparams_dict[CONV_E_HEIGHT]
+        del hyparams_dict[CONV_E_WIDTH]
+        del hyparams_dict[CONV_E_KERNEL_HEIGHT]
+        del hyparams_dict[CONV_E_KERNEL_WIDTH]
+
+        kg_model_config.update(self._sample_params(hyparams_dict))
+
+        return kg_model_config
+
     def _sample_params(self, hyperparams_dict):
         kg_model_config = OrderedDict()
         for param, values in hyperparams_dict.items():
@@ -35,13 +56,17 @@ class RandomSearchHPO(AbstractHPOptimizer):
         eval_summaries = []
         epoch_losses = []
 
+        config = config.copy()
         max_iters = config[NUM_OF_HPO_ITERS]
+
+        sample_fct = self._sample_conv_e_params if config[
+                                                       KG_EMBEDDING_MODEL_NAME] == CONV_E_NAME else self._sample_params
 
         for _ in range(max_iters):
             eval_summary = OrderedDict()
 
             # Sample hyper-params
-            kg_embedding_model_config = self._sample_params(config)
+            kg_embedding_model_config = sample_fct(config)
             kg_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
             kg_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
             kg_embedding_model_config[SEED] = seed

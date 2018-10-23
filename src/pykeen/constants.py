@@ -7,7 +7,6 @@ from collections import OrderedDict
 VERSION = '0.0.7-dev'
 
 # KG embedding model
-KG_EMBEDDING_MODEL = 'kg_embedding_model'
 KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 EXECUTION_MODE = 'execution_mode'
 
@@ -70,8 +69,8 @@ CONV_E_HEIGHT = 'ConvE_height'
 CONV_E_WIDTH = 'ConvE_width'
 CONV_E_INPUT_CHANNELS = 'ConvE_input_channels'
 CONV_E_OUTPUT_CHANNELS = 'ConvE_output_channels'
-CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_heights'
-CONV_E_KERNEL_WIDTH = 'ConvE_kernel_widths'
+CONV_E_KERNEL_HEIGHT = 'ConvE_kernel_height'
+CONV_E_KERNEL_WIDTH = 'ConvE_kernel_width'
 
 # OPTIMIZER
 OPTMIZER_NAME = 'optimizer'
@@ -219,7 +218,7 @@ CONV_E_OUT_CHANNEL_PROMPT_MSG = '> Output channels:'
 CONV_E_OUT_CHANNEL_ERROR_MSG = 'An error occurred, the number of output channels must be a positive number.'
 
 CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG = 'Please select the kernel heights for ConvE'
-CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined height %d:'
+CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG = '> Kernel height for defined of height \'%d\':'
 CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG = 'An error occurred, kernel heights must be positive integers and <= than %d (defined height).'
 
 CONV_E_KERNEL_HEIGHT_PRINT_MSG = 'Please select the height for the convolution kernel based on the specified embedding height of %d.'
@@ -227,11 +226,11 @@ CONV_E_KERNEL_HEIGHT_PROMPT_MSG = '> Convolution kernel: '
 CONV_E_KERNEL_HEIGHT_ERROR_MSG = 'An error occurred, the kernel height must be a positive integer and <= than %d (defined height).'
 
 CONV_E_HPO_KERNEL_WIDTHS_PRINT_MSG = 'Please select the wifth for the convolution kernel.'
-CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d:'
+CONV_E_HPO_KERNEL_WIDTHS_PROMPT_MSG = '> Kernel width for defined width %d: '
 CONV_E_HPO_KERNEL_WIDTHS_ERROR_MSG = 'An error occurred, kernel widths mus be positive integers and <= than %d (defined width).'
 
 CONV_E_KERNEL_WIDTH_PRINT_MSG = 'Please select the kernel width for ConvE based on the specified embedding width of %d'
-CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width:'
+CONV_E_KERNEL_WIDTH_PROMPT_MSG = '> Kernel width for defined width of \'%d\': '
 CONV_E_KERNEL_WIDTH_ERROR_MSG = 'An error occurred, kernel width mus be a positive integer and <= than %d (defined width).'
 
 TRAINING_SET_PRINT_MSG = 'Please provide the path to the training file.'
