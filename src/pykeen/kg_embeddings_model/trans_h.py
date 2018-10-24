@@ -9,8 +9,6 @@ import torch.nn as nn
 
 from pykeen.constants import *
 
-'Based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransH.py'
-
 
 class TransH(nn.Module):
 
@@ -21,14 +19,14 @@ class TransH(nn.Module):
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
-        embedding_dim = config[EMBEDDING_DIM]
+        self.embedding_dim = config[EMBEDDING_DIM]
         margin_loss = config[MARGIN_LOSS]
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.entity_embeddings = nn.Embedding(self.num_entities, embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, embedding_dim)
-        self.projected_relation_embeddings = nn.Embedding(self.num_relations, embedding_dim)
-        self.normal_vector_embeddings = nn.Embedding(self.num_relations, embedding_dim)
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.projected_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.margin_loss = margin_loss
         self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
@@ -40,8 +38,16 @@ class TransH(nn.Module):
         pass
 
     def project_to_hyperplane(self, entity_embs, normal_vec_embs):
-        # TODO: Check
-        projections = entity_embs - torch.sum(torch.mul(normal_vec_embs, entity_embs), dim=1)
+        """
+
+        :param entity_embs:
+        :param normal_vec_embs:
+        :return:
+        """
+
+        scaling_factors = torch.sum(normal_vec_embs * entity_embs, dim=-1).unsqueeze(1)
+        heads_projected_on_normal_vecs = scaling_factors * normal_vec_embs
+        projections = (entity_embs - heads_projected_on_normal_vecs).view(-1, self.embedding_dim)
 
         return projections
 
@@ -56,7 +62,6 @@ class TransH(nn.Module):
 
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
-        # TODO: In the paper they proposed squared l2-norm
         scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
 
         return scores
@@ -117,13 +122,13 @@ class TransH(nn.Module):
 
         head_embs = self.entity_embeddings(heads)
         tail_embs = self.entity_embeddings(tails)
-        relation_embs = self.relation_embeddings(relations)
+        relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
         normal_vec_embs = self.normal_vector_embeddings(relations)
 
-        head_emb_projected = self.project_to_hyperplane(entity_embs=head_embs, normal_vec_embs=normal_vec_embs)
-        tail_emb_projected = self.project_to_hyperplane(entity_embs=tail_embs, normal_vec_embs=normal_vec_embs)
+        head_embs_projected = self.project_to_hyperplane(entity_embs=head_embs, normal_vec_embs=normal_vec_embs)
+        tail_embs_projected = self.project_to_hyperplane(entity_embs=tail_embs, normal_vec_embs=normal_vec_embs)
 
-        scores = self._compute_scores(h_embs=head_emb_projected, r_embs=relation_embs, t_embs=tail_emb_projected)
+        scores = self._compute_scores(h_embs=head_embs_projected, r_embs=relation_embs, t_embs=tail_embs_projected)
 
         return scores.detach().cpu().numpy()
 
@@ -135,7 +140,7 @@ class TransH(nn.Module):
         :return:
         """
 
-        # Normalise embeddings of normal vectors
+        # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))
@@ -148,13 +153,16 @@ class TransH(nn.Module):
         neg_rels = batch_negatives[:, 1:2]
         neg_tails = batch_negatives[:, 2:3]
 
+        # Shape: (batch_size, 1, embedding_dimension)
         pos_head_embs = self.entity_embeddings(pos_heads)
-        pos_rel_embs = self.relation_embeddings(pos_rels)
+        # Reshape relation embeddings to the same shape of the projected entities
+        pos_rel_embs = self.relation_embeddings(pos_rels).view(-1, self.embedding_dim)
         pos_tail_embs = self.entity_embeddings(pos_tails)
         pos_normal_embs = self.normal_vector_embeddings(pos_rels)
 
         neg_head_embs = self.entity_embeddings(neg_heads)
-        neg_rel_embs = self.relation_embeddings(neg_rels)
+        # Reshape relation embeddings to the same shape of the projected entities
+        neg_rel_embs = self.relation_embeddings(neg_rels).view(-1, self.embedding_dim)
         neg_tail_embs = self.entity_embeddings(neg_tails)
         neg_normal_embs = self.normal_vector_embeddings(neg_rels)
 
