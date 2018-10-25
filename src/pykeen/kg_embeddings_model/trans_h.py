@@ -25,7 +25,6 @@ class TransH(nn.Module):
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.projected_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.margin_loss = margin_loss
         self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
@@ -40,9 +39,9 @@ class TransH(nn.Module):
     def project_to_hyperplane(self, entity_embs, normal_vec_embs):
         """
 
-        :param entity_embs:
-        :param normal_vec_embs:
-        :return:
+        :param entity_embs: Embeddings of entities with shape batch_size x 1 x embedding_dimension
+        :param normal_vec_embs: Normal vectors with shape batch_size x 1 x embedding_dimension
+        :return: Projected entities of shape batch_size x embedding_dim
         """
 
         scaling_factors = torch.sum(normal_vec_embs * entity_embs, dim=-1).unsqueeze(1)
@@ -66,6 +65,36 @@ class TransH(nn.Module):
 
         return scores
 
+    def compute_soft_constraint_loss(self):
+        """
+        Compute the soft constraints.
+        :return:
+        """
+        norm_of_entities = torch.norm(self.entity_embeddings.weight, p=2, dim=1)
+        square_norms_entities = torch.mul(norm_of_entities, norm_of_entities)
+        entity_constraint = square_norms_entities - self.num_entities * 1.
+        entity_constraint = torch.abs(entity_constraint)
+        entity_constraint = torch.sum(entity_constraint)
+
+        orthogonalty_constraint_numerator = torch.mul(self.normal_vector_embeddings.weight,
+                                                      self.relation_embeddings.weight)
+        orthogonalty_constraint_numerator = torch.sum(orthogonalty_constraint_numerator, dim=1)
+        orthogonalty_constraint_numerator = torch.mul(orthogonalty_constraint_numerator,
+                                                      orthogonalty_constraint_numerator)
+
+        orthogonalty_constraint_denominator = torch.norm(self.relation_embeddings.weight, p=2, dim=1)
+        orthogonalty_constraint_denominator = torch.mul(orthogonalty_constraint_denominator,
+                                                        orthogonalty_constraint_denominator)
+
+        orthogonalty_constraint = (orthogonalty_constraint_numerator / orthogonalty_constraint_denominator) - \
+                                  (self.num_relations * self.epsilon)
+        orthogonalty_constraint = torch.abs(orthogonalty_constraint)
+        orthogonalty_constraint = torch.sum(orthogonalty_constraint)
+
+        soft_constraints_loss = self.weightning_soft_constraint * (entity_constraint + orthogonalty_constraint)
+
+        return soft_constraints_loss
+
     def compute_loss(self, pos_scores, neg_scores):
         """
 
@@ -81,29 +110,9 @@ class TransH(nn.Module):
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
         margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
+        soft_constraint_loss = self.compute_soft_constraint_loss().detach().cpu()
 
-        norm_of_entities = torch.norm(self.entity_embeddings.weight, p=2, dim=1)
-        square_norms_entities = torch.mul(norm_of_entities, norm_of_entities)
-        entity_constraint = square_norms_entities - self.num_entities * 1.
-        entity_constraint = torch.abs(entity_constraint)
-        entity_constraint = torch.sum(entity_constraint)
-
-        orthogonalty_constraint_numerator = torch.mul(self.normal_vector_embeddings.weight,
-                                                      self.projected_relation_embeddings.weight)
-        orthogonalty_constraint_numerator = torch.sum(orthogonalty_constraint_numerator, dim=1)
-        orthogonalty_constraint_numerator = torch.mul(orthogonalty_constraint_numerator,
-                                                      orthogonalty_constraint_numerator)
-
-        orthogonalty_constraint_denominator = torch.norm(self.projected_relation_embeddings.weight, p=2, dim=1)
-        orthogonalty_constraint_denominator = torch.mul(orthogonalty_constraint_denominator,
-                                                        orthogonalty_constraint_denominator)
-        orthogonalty_constraint = (orthogonalty_constraint_numerator / orthogonalty_constraint_denominator) - (
-                self.num_relations * self.epsilon)
-        orthogonalty_constraint = torch.abs(orthogonalty_constraint)
-        orthogonalty_constraint = torch.sum(orthogonalty_constraint)
-        soft_constraints = self.weightning_soft_constraint * (entity_constraint + orthogonalty_constraint)
-
-        loss = margin_ranking_loss + soft_constraints.detach().cpu()
+        loss = margin_ranking_loss + soft_constraint_loss
 
         return loss
 
