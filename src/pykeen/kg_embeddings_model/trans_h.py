@@ -188,9 +188,10 @@ class TransH(nn.Module):
         pos_scores = self._compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
         neg_scores = self._compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
-        batch_entities = torch.unique(
-            torch.cat([pos_heads.view(-1), pos_tails.view(-1), neg_heads.view(-1), neg_tails.view(-1)]))
-        batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]))
+        batch_entities = torch.cat([pos_heads.view(-1), pos_tails.view(-1), neg_heads.view(-1), neg_tails.view(-1)])
+        batch_entities = torch.tensor(torch.unique(batch_entities.cpu()), device=self.device)
+        batch_relations = torch.tensor(torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu()),
+                                       device=self.device)
 
         loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores, batch_entities=batch_entities,
                                  batch_relations=batch_relations)
