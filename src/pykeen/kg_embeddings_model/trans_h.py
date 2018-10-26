@@ -155,6 +155,8 @@ class TransH(nn.Module):
         """
 
         print("Hi")
+        print(self.config[PREFERRED_DEVICE])
+        print(self.device)
 
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
@@ -196,7 +198,7 @@ class TransH(nn.Module):
         batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu())
 
         if self.use_cuda:
-            print("Cude")
+            print("Cuda")
             batch_entities = torch.unique(batch_entities.cpu()).cuda()
             batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu()).cuda()
 
