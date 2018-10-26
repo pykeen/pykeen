@@ -21,6 +21,7 @@ class TransH(nn.Module):
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
+        self.config = config
         margin_loss = config[MARGIN_LOSS]
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
