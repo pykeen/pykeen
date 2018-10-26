@@ -116,7 +116,7 @@ class TransH(nn.Module):
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
         margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
-        soft_constraint_loss = self.compute_soft_constraint_loss(batch_entities, batch_relations).detach().cpu()
+        soft_constraint_loss = self.compute_soft_constraint_loss(batch_entities, batch_relations)
 
         loss = margin_ranking_loss + soft_constraint_loss
 
@@ -200,8 +200,8 @@ class TransH(nn.Module):
 
         if self.use_cuda:
             print("Cuda")
-            batch_entities = torch.unique(batch_entities.cpu()).cuda()
-            batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu()).cuda()
+            batch_entities = batch_entities.cuda()
+            batch_relations = batch_relations.cuda()
 
 
 
