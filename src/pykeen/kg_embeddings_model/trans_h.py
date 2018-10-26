@@ -17,6 +17,7 @@ class TransH(nn.Module):
         self.model_name = TRANS_H_NAME
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+        self.use_cuda = True if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else False
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
@@ -189,9 +190,13 @@ class TransH(nn.Module):
         neg_scores = self._compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
         batch_entities = torch.cat([pos_heads.view(-1), pos_tails.view(-1), neg_heads.view(-1), neg_tails.view(-1)])
-        batch_entities = torch.tensor(torch.unique(batch_entities.cpu()), device=self.device)
-        batch_relations = torch.tensor(torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu()),
-                                       device=self.device)
+        batch_entities = torch.unique(batch_entities.cpu())
+        batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu())
+
+        if self.use_cuda:
+            batch_entities = torch.unique(batch_entities.cpu()).cuda()
+            batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu()).cuda()
+
 
         loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores, batch_entities=batch_entities,
                                  batch_relations=batch_relations)
