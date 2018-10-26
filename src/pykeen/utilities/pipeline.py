@@ -74,7 +74,7 @@ class Pipeline(object):
             # Initialize KG embedding model
             self.config[NUM_ENTITIES] = len(self.entity_to_id)
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
-            self.config[PREFERRED_DEVICE] = self.device_name
+            self.config[PREFERRED_DEVICE] = CPU if self.device_name == CPU else GPU
             kg_embedding_model = get_kg_embedding_model(config=self.config)
 
             batch_size = self.config[BATCH_SIZE]
