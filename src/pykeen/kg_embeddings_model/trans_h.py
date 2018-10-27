@@ -111,11 +111,11 @@ class TransH(nn.Module):
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
         margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
-        soft_constraint_loss = self.compute_soft_constraint_loss().detach().cpu()
+        soft_constraint_loss = self.compute_soft_constraint_loss()
 
         loss = margin_ranking_loss + soft_constraint_loss
 
-        return loss
+        return loss.detach().cpu()
 
     def predict(self, triples):
         """
