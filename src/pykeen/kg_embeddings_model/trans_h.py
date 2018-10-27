@@ -61,7 +61,8 @@ class TransH(nn.Module):
 
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
-        scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        scores = torch.mul(norms,norms)
 
         return scores
 
