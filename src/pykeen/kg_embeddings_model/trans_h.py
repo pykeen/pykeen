@@ -17,11 +17,9 @@ class TransH(nn.Module):
         self.model_name = TRANS_H_NAME
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-        self.use_cuda = True if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else False
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
-        self.config = config
         margin_loss = config[MARGIN_LOSS]
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
@@ -67,28 +65,24 @@ class TransH(nn.Module):
 
         return scores
 
-    def compute_soft_constraint_loss(self, batch_entities, batch_relations):
+    def compute_soft_constraint_loss(self):
         """
         Compute the soft constraints.
         :return:
         """
-
-        entity_embs = self.entity_embeddings(batch_entities)
-        normal_vector_embeddings = self.normal_vector_embeddings(batch_relations)
-        relation_embeddings = self.relation_embeddings(batch_relations)
-
-        norm_of_entities = torch.norm(entity_embs, p=2, dim=1)
+        norm_of_entities = torch.norm(self.entity_embeddings.weight, p=2, dim=1)
         square_norms_entities = torch.mul(norm_of_entities, norm_of_entities)
         entity_constraint = square_norms_entities - self.num_entities * 1.
         entity_constraint = torch.abs(entity_constraint)
         entity_constraint = torch.sum(entity_constraint)
 
-        orthogonalty_constraint_numerator = torch.mul(normal_vector_embeddings, relation_embeddings)
+        orthogonalty_constraint_numerator = torch.mul(self.normal_vector_embeddings.weight,
+                                                      self.relation_embeddings.weight)
         orthogonalty_constraint_numerator = torch.sum(orthogonalty_constraint_numerator, dim=1)
         orthogonalty_constraint_numerator = torch.mul(orthogonalty_constraint_numerator,
                                                       orthogonalty_constraint_numerator)
 
-        orthogonalty_constraint_denominator = torch.norm(relation_embeddings, p=2, dim=1)
+        orthogonalty_constraint_denominator = torch.norm(self.relation_embeddings.weight, p=2, dim=1)
         orthogonalty_constraint_denominator = torch.mul(orthogonalty_constraint_denominator,
                                                         orthogonalty_constraint_denominator)
 
@@ -101,7 +95,7 @@ class TransH(nn.Module):
 
         return soft_constraints_loss
 
-    def compute_loss(self, pos_scores, neg_scores, batch_entities, batch_relations):
+    def compute_loss(self, pos_scores, neg_scores):
         """
 
         :param pos_scores:
@@ -116,7 +110,7 @@ class TransH(nn.Module):
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
         margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
-        soft_constraint_loss = self.compute_soft_constraint_loss(batch_entities, batch_relations)
+        soft_constraint_loss = self.compute_soft_constraint_loss().detach().cpu()
 
         loss = margin_ranking_loss + soft_constraint_loss
 
@@ -168,6 +162,7 @@ class TransH(nn.Module):
         neg_rels = batch_negatives[:, 1:2]
         neg_tails = batch_negatives[:, 2:3]
 
+
         # Shape: (batch_size, 1, embedding_dimension)
         pos_head_embs = self.entity_embeddings(pos_heads)
         # Reshape relation embeddings to the same shape of the projected entities
@@ -190,14 +185,6 @@ class TransH(nn.Module):
         pos_scores = self._compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
         neg_scores = self._compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
-        batch_entities = torch.cat([pos_heads.view(-1), pos_tails.view(-1), neg_heads.view(-1), neg_tails.view(-1)])
-        batch_entities = torch.unique(batch_entities.cpu())
-        batch_relations = torch.unique(torch.cat([pos_rels.view(-1), neg_rels.view(-1)]).cpu())
+        loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
-        if self.use_cuda:
-            batch_entities = batch_entities.cuda()
-            batch_relations = batch_relations.cuda()
-
-        loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores, batch_entities=batch_entities,
-                                 batch_relations=batch_relations)
         return loss
