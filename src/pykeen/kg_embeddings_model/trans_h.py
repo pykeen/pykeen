@@ -115,7 +115,7 @@ class TransH(nn.Module):
 
         loss = margin_ranking_loss + soft_constraint_loss
 
-        return loss.detach().cpu()
+        return loss
 
     def predict(self, triples):
         """
