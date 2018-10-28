@@ -311,27 +311,21 @@ def predict(model_direc: str, data_direc: str):
     trained_model.load_state_dict(torch.load(path_to_model))
 
     in_path = os.path.join(data_direc, 'entities.tsv')
-    entities = np.loadtxt(
-        fname=in_path,
-        dtype=str,
-    )
+    entities = np.loadtxt(fname=in_path, dtype=str)
 
     in_path = os.path.join(data_direc, 'relations.tsv')
-    relations = np.loadtxt(
-        fname=in_path,
-        dtype=str,
-    )
+    relations = np.loadtxt(fname=in_path, dtype=str)
 
     device_name = 'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU
 
     device = torch.device(device_name)
 
     ranked_triples = make_predictions(kg_model=trained_model,
-                     entities=entities,
-                     relations=relations,
-                     entity_to_id=entity_to_id,
-                     rel_to_id=relation_to_id,
-                     device=device)
+                                      entities=entities,
+                                      relations=relations,
+                                      entity_to_id=entity_to_id,
+                                      rel_to_id=relation_to_id,
+                                      device=device)
 
     out_path = os.path.join(data_direc, 'predictions.tsv')
     np.savetxt(out_path, ranked_triples, fmt='%s')
