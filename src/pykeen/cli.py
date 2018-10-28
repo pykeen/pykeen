@@ -5,16 +5,18 @@
 import json
 import os
 from collections import OrderedDict
-import torch
+
 import click
+import numpy as np
 import pandas as pd
+import torch
 
 from pykeen.constants import (
     CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
     UM_NAME,
-    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS)
+    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS, GPU, CPU)
 from pykeen.run import run
 from pykeen.utilities.cli_utils import (
     configure_distmult_training_pipeline, configure_ermlp_training_pipeline, configure_rescal_training_pipeline,
@@ -278,9 +280,12 @@ def main(config):
 
     run(config)
 
+
 @click.command()
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
-def predict(directory: str):
+@click.option('-c', '--candidates_file', type=click.File(),
+              help='File containing entities and relations for which tripels should be made.')
+def predict(directory: str, candidates_file):
     """
     Predict new links based on trained model.
     :return:
@@ -291,13 +296,39 @@ def predict(directory: str):
 
     # Load configuration file
     out_path = os.path.join(directory, 'configuration.json')
-    config = json.loads(out_path)
+    with open(out_path) as f:
+        config = json.load(f)
+
+    # Load configuration file
+    out_path = os.path.join(directory, 'entity_to_id.json')
+    with open(out_path) as f:
+        entity_to_id = json.load(f)
+
+    # Load configuration file
+    out_path = os.path.join(directory, 'relation_to_id.json')
+    with open(out_path) as f:
+        relation_to_id = json.load(f)
+
     trained_model = get_kg_embedding_model(config=config)
     path_to_model = os.path.join(directory, 'trained_model.pkl')
     trained_model.load_state_dict(torch.load(path_to_model))
 
-    print(trained_model)
+    if candidates_file is None:
+        pass
 
+    candidates = np.loadtxt(
+        fname=candidates_file,
+        dtype=str,
+        comments='@Comment@ Subjects Predicates',
+        delimiter='\t',
+    )
+
+    device_name = 'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU
+
+    device = torch.device(device_name)
+
+    predict(kg_model=trained_model, candidates=candidates, entity_to_id=entity_to_id, rel_to_id=relation_to_id,
+            device=device)
 
 
 @click.command()
