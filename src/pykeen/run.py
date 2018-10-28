@@ -6,6 +6,7 @@ import json
 import os
 import pickle
 import time
+import torch
 from typing import Mapping, Optional
 
 from pykeen.constants import OUTPUT_DIREC
@@ -52,3 +53,7 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
         out_path = os.path.join(output_directory, 'evaluation_summary.json')
         with open(out_path, 'w') as handle:
             json.dump(eval_summary, handle, indent=2)
+
+    # Save trained model
+    out_path = os.path.join(output_directory, 'trained_model.pkl')
+    torch.save(trained_model.state_dict(), out_path)
