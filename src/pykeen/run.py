@@ -11,7 +11,7 @@ from typing import Mapping, Optional
 import torch
 
 from pykeen.constants import OUTPUT_DIREC, ENTITY_TO_EMBEDDING, RELATION_TO_EMBEDDING, LOSSES, EVAL_SUMMARY, \
-    TRAINED_MODEL
+    TRAINED_MODEL, ENTITY_TO_ID, RELATION_TO_ID
 from pykeen.utilities.pipeline import Pipeline
 
 
@@ -36,6 +36,14 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
     out_path = os.path.join(output_directory, 'relations_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
         pickle.dump(pipeline_outcome[RELATION_TO_EMBEDDING], handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    out_path = os.path.join(output_directory, 'entity_to_id.json')
+    with open(out_path, 'w') as handle:
+        json.dump(pipeline_outcome[ENTITY_TO_ID], handle, indent=2)
+
+    out_path = os.path.join(output_directory, 'relation_to_id.json')
+    with open(out_path, 'w') as handle:
+        json.dump(pipeline_outcome[RELATION_TO_ID], handle, indent=2)
 
     out_path = os.path.join(output_directory, 'hyper_parameters.json')
     with open(out_path, 'w') as handle:
