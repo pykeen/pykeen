@@ -43,6 +43,7 @@ from pykeen.utilities.cli_utils.trans_h_cli import configure_trans_h_hpo_pipelin
 from pykeen.utilities.cli_utils.trans_r_cli import configure_trans_r_hpo_pipeline
 from pykeen.utilities.cli_utils.unstructured_model_cli import configure_um_hpo_pipeline
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
+from pykeen.utilities.prediction_utils import make_predictions
 
 MODEL_TRAINING_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_training_pipeline,
@@ -282,53 +283,58 @@ def main(config):
 
 
 @click.command()
-@click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
-@click.option('-c', '--candidates_file', type=click.File(),
-              help='File containing entities and relations for which tripels should be made.')
-def predict(directory: str, candidates_file):
+@click.option('-m', '--model_direc', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
+@click.option('-d', '--data_direc', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
+def predict(model_direc: str, data_direc: str):
     """
     Predict new links based on trained model.
     :return:
     """
 
-    if directory is None:
-        pass
-
     # Load configuration file
-    out_path = os.path.join(directory, 'configuration.json')
-    with open(out_path) as f:
+    in_path = os.path.join(model_direc, 'configuration.json')
+    with open(in_path) as f:
         config = json.load(f)
 
-    # Load configuration file
-    out_path = os.path.join(directory, 'entity_to_id.json')
-    with open(out_path) as f:
+    # Load entity to id mapping
+    in_path = os.path.join(model_direc, 'entity_to_id.json')
+    with open(in_path) as f:
         entity_to_id = json.load(f)
 
-    # Load configuration file
-    out_path = os.path.join(directory, 'relation_to_id.json')
-    with open(out_path) as f:
+    # Load relation to id mapping
+    in_path = os.path.join(model_direc, 'relation_to_id.json')
+    with open(in_path) as f:
         relation_to_id = json.load(f)
 
     trained_model = get_kg_embedding_model(config=config)
-    path_to_model = os.path.join(directory, 'trained_model.pkl')
+    path_to_model = os.path.join(model_direc, 'trained_model.pkl')
     trained_model.load_state_dict(torch.load(path_to_model))
 
-    if candidates_file is None:
-        pass
-
-    candidates = np.loadtxt(
-        fname=candidates_file,
+    in_path = os.path.join(data_direc, 'entities.tsv')
+    entities = np.loadtxt(
+        fname=in_path,
         dtype=str,
-        comments='@Comment@ Subjects Predicates',
-        delimiter='\t',
+    )
+
+    in_path = os.path.join(data_direc, 'relations.tsv')
+    relations = np.loadtxt(
+        fname=in_path,
+        dtype=str,
     )
 
     device_name = 'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU
 
     device = torch.device(device_name)
 
-    predict(kg_model=trained_model, candidates=candidates, entity_to_id=entity_to_id, rel_to_id=relation_to_id,
-            device=device)
+    ranked_triples = make_predictions(kg_model=trained_model,
+                     entities=entities,
+                     relations=relations,
+                     entity_to_id=entity_to_id,
+                     rel_to_id=relation_to_id,
+                     device=device)
+
+    out_path = os.path.join(data_direc, 'predictions.tsv')
+    np.savetxt(out_path, ranked_triples, fmt='%s')
 
 
 @click.command()
