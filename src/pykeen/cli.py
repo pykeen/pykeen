@@ -5,7 +5,7 @@
 import json
 import os
 from collections import OrderedDict
-
+import torch
 import click
 import pandas as pd
 
@@ -40,6 +40,7 @@ from pykeen.utilities.cli_utils.trans_e_cli import configure_trans_e_hpo_pipelin
 from pykeen.utilities.cli_utils.trans_h_cli import configure_trans_h_hpo_pipeline
 from pykeen.utilities.cli_utils.trans_r_cli import configure_trans_r_hpo_pipeline
 from pykeen.utilities.cli_utils.unstructured_model_cli import configure_um_hpo_pipeline
+from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 
 MODEL_TRAINING_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_training_pipeline,
@@ -278,8 +279,27 @@ def main(config):
     run(config)
 
 @click.command()
-def predict():
-    pass
+@click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
+def predict(directory: str):
+    """
+    Predict new links based on trained model.
+    :return:
+    """
+
+    if directory is None:
+        pass
+
+    # Load configuration file
+    out_path = os.path.join(directory, 'configuration.json')
+    config = json.loads(out_path)
+    trained_model = get_kg_embedding_model(config=config)
+    path_to_model = os.path.join(directory, 'trained_model.pkl')
+    trained_model.load_state_dict(torch.load(path_to_model))
+
+    print(trained_model)
+
+
+
 @click.command()
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
 @click.option('-o', '--output', type=click.File('w'))
