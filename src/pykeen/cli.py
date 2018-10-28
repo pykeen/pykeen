@@ -277,7 +277,9 @@ def main(config):
 
     run(config)
 
-
+@click.command()
+def predict():
+    pass
 @click.command()
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
 @click.option('-o', '--output', type=click.File('w'))

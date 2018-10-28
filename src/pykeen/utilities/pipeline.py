@@ -26,7 +26,7 @@ class Pipeline(object):
         self.seed = seed
         self.entity_to_id = None
         self.rel_to_id = None
-        self.device_name=(
+        self.device_name = (
             'cuda:0'
             if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else
             CPU
@@ -43,6 +43,7 @@ class Pipeline(object):
 
     # TODO: Remove path_to_train_data
     def _start_pipeline(self, is_hpo_mode: bool, path_to_train_data: Optional[str] = None):
+        pipeline_outcome = OrderedDict()
 
         if is_hpo_mode:
             mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
@@ -124,7 +125,16 @@ class Pipeline(object):
                 for id, embedding in enumerate(trained_model.relation_embeddings.weight)
             }
 
-        return trained_model, loss_per_epoch, eval_summary, entity_to_embedding, relation_to_embedding, params
+        pipeline_outcome[TRAINED_MODEL] = trained_model
+        pipeline_outcome[LOSSES] = loss_per_epoch
+        pipeline_outcome[ENTITY_TO_EMBEDDING] = entity_to_embedding
+        pipeline_outcome[RELATION_TO_EMBEDDING] = relation_to_embedding
+        pipeline_outcome[EVAL_SUMMARY] = eval_summary
+        pipeline_outcome[ENTITY_TO_ID] = self.entity_to_id
+        pipeline_outcome[RELATION_TO_ID] = self.rel_to_id
+
+
+        return pipeline_outcome, params
 
     def _get_train_and_test_triples(self):
 

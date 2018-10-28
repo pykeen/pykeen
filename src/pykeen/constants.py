@@ -34,6 +34,9 @@ FILTER_NEG_TRIPLES = 'filter_negative_triples'
 # Output paths
 ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
 EVAL_RESULTS = 'eval_results'
+ENTITY_TO_ID = 'entity_to_id'
+RELATION_TO_ID = 'relation_to_id'
+
 
 # Device related
 PREFERRED_DEVICE = 'preferred_device'

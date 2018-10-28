@@ -48,6 +48,7 @@ ENTRY_POINTS = {
     'console_scripts': [
         'pykeen = pykeen.cli:main',
         'pykeen-summarize = pykeen.cli:summarize',
+        'pykeen-predict = '
     ]
 }
 

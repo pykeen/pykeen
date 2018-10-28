@@ -15,8 +15,8 @@ class TransH(nn.Module):
     def __init__(self, config):
         super(TransH, self).__init__()
         self.model_name = TRANS_H_NAME
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+        # self.device = torch.device(
+        #     'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
@@ -104,12 +104,15 @@ class TransH(nn.Module):
         :return:
         """
 
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
+        device = torch.device(
+            'cuda:0' if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else CPU)
+
+        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=device)
+        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=device)
 
         # y == -1 indicates that second input to criterion should get a larger loss
         y = np.repeat([-1], repeats=pos_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
+        y = torch.tensor(y, dtype=torch.float, device=device)
         margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
         soft_constraint_loss = self.compute_soft_constraint_loss()
 

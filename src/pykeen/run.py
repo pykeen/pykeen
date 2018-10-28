@@ -6,10 +6,12 @@ import json
 import os
 import pickle
 import time
-import torch
 from typing import Mapping, Optional
 
-from pykeen.constants import OUTPUT_DIREC
+import torch
+
+from pykeen.constants import OUTPUT_DIREC, ENTITY_TO_EMBEDDING, RELATION_TO_EMBEDDING, LOSSES, EVAL_SUMMARY, \
+    TRAINED_MODEL
 from pykeen.utilities.pipeline import Pipeline
 
 
@@ -21,12 +23,7 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
 
     pipeline = Pipeline(config=config, seed=seed)
 
-    (trained_model,
-     loss_per_epoch,
-     eval_summary,
-     entity_to_embedding,
-     relation_to_embedding,
-     params) = pipeline.start(path_to_train_data=training_path)
+    pipeline_outcome, params = pipeline.start(path_to_train_data=training_path)
 
     out_path = os.path.join(output_directory, 'configuration.json')
     with open(out_path, 'w') as handle:
@@ -34,11 +31,11 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
 
     out_path = os.path.join(output_directory, 'entities_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
-        pickle.dump(entity_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(pipeline_outcome[ENTITY_TO_EMBEDDING], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     out_path = os.path.join(output_directory, 'relations_to_embeddings.pkl')
     with open(out_path, 'wb') as handle:
-        pickle.dump(relation_to_embedding, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(pipeline_outcome[RELATION_TO_EMBEDDING], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     out_path = os.path.join(output_directory, 'hyper_parameters.json')
     with open(out_path, 'w') as handle:
@@ -47,8 +44,9 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
 
     out_path = os.path.join(output_directory, 'losses.json')
     with open(out_path, 'w') as handle:
-        json.dump(loss_per_epoch, handle, indent=2)
+        json.dump(pipeline_outcome[LOSSES], handle, indent=2)
 
+    eval_summary = pipeline_outcome[EVAL_SUMMARY]
     if eval_summary is not None:
         out_path = os.path.join(output_directory, 'evaluation_summary.json')
         with open(out_path, 'w') as handle:
@@ -56,4 +54,4 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
 
     # Save trained model
     out_path = os.path.join(output_directory, 'trained_model.pkl')
-    torch.save(trained_model.state_dict(), out_path)
+    torch.save(pipeline_outcome[TRAINED_MODEL].state_dict(), out_path)
