@@ -29,7 +29,7 @@ class TransH(nn.Module):
         self.margin_loss = margin_loss
         self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
-        self.epsilon = 0.005
+        self.epsilon = torch.nn.Parameter(torch.tensor(0.005,requires_grad=True))
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
     def _initialize(self):
