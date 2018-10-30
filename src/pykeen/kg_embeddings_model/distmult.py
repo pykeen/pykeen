@@ -54,9 +54,9 @@ class DistMult(nn.Module):
         :return:
         """
 
-        # Choose y = 1 since a higher score is better.
+        # Choose y = -1 since a smaller score is better.
         # In TransE for exampel the scores represent distances
-        y = np.repeat([1], repeats=pos_scores.shape[0])
+        y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
         # Scores for the psotive and negative triples
@@ -76,7 +76,7 @@ class DistMult(nn.Module):
         :param t_embs:
         :return:
         """
-        scores = torch.sum(h_embs * r_embs * t_embs,dim=1)
+        scores =  - torch.sum(h_embs * r_embs * t_embs,dim=1)
 
         return scores
 
