@@ -24,7 +24,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Bio-Informatics'
 ]
 INSTALL_REQUIRES = [
-    'numpy==1.14.2; python_version == "3.6"',
+    'numpy; python_version == "3.6"',
     'numpy; python_version == "3.7"',
     'scikit-learn==0.19.1; python_version == "3.6"',
     'scikit-learn; python_version == "3.7"',
