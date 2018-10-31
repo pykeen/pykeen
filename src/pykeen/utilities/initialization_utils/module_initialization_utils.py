@@ -67,11 +67,13 @@ def get_optimizer(config, kg_embedding_model):
 
     optimizer_name = config[OPTMIZER_NAME]
 
+    parameters = filter(lambda p: p.requires_grad, kg_embedding_model.parameters())
+
     if optimizer_name == SGD_OPTIMIZER_NAME:
-        return optim.SGD(kg_embedding_model.parameters(), lr=config[LEARNING_RATE])
+        return optim.SGD(parameters, lr=config[LEARNING_RATE])
 
     if optimizer_name == ADAGRAD_OPTIMIZER_NAME:
-        optim.Adagrad(kg_embedding_model.parameters(), lr=config[LEARNING_RATE])
+        optim.Adagrad(parameters, lr=config[LEARNING_RATE])
 
     if optimizer_name == ADAM_OPTIMIZER_NAME:
-        optim.Adam(kg_embedding_model.parameters(), lr=config[LEARNING_RATE])
+        optim.Adam(parameters, lr=config[LEARNING_RATE])
