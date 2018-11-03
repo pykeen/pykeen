@@ -52,5 +52,34 @@ or alternatively:
 
 then the command line interface won't be called, instead the pipeline will be started immediately.
 
+Starting PyKEEN's prediction pipeline
+**************************************
+To make prediction based on a trained model, please run following command:
+
+.. code-block:: sh
+
+    pykeen-predict -m /path/to/model/directory -d /path/to/data/directory
+
+or alternatively:
+
+.. code-block:: python
+
+    python3 -m pykeen-predict -m /path/to/model/directory -d /path/to/data/directory
+
+Summarize all experiment results
+********************************
+To summarize the results of all experiments, please enter switch to root directory containing directories for each
+experiment, and run following command:
+
+.. code-block:: sh
+
+    pykeen-summarize
+
+or alternatively:
+
+.. code-block:: python
+
+    python3 -m pykeen-summarize
+
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
     :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
