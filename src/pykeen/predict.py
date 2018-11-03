@@ -10,7 +10,7 @@ from pykeen.utilities.prediction_utils import make_predictions
 import numpy as np
 
 
-def predict(model_direc, data_direc):
+def start_predictions_piepline(model_direc, data_direc):
     # Load configuration file
     in_path = os.path.join(model_direc, 'configuration.json')
     with open(in_path) as f:

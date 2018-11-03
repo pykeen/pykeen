@@ -7,19 +7,16 @@ import os
 from collections import OrderedDict
 
 import click
-import numpy as np
 import pandas as pd
-import pykeen
-import torch
 
 from pykeen.constants import (
     CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
     UM_NAME,
-    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS, GPU, CPU)
+    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS)
+from pykeen.predict import start_predictions_piepline
 from pykeen.run import run
-
 from pykeen.utilities.cli_utils import (
     configure_distmult_training_pipeline, configure_ermlp_training_pipeline, configure_rescal_training_pipeline,
     configure_se_training_pipeline, configure_trans_d_training_pipeline, configure_trans_e_training_pipeline,
@@ -44,8 +41,6 @@ from pykeen.utilities.cli_utils.trans_e_cli import configure_trans_e_hpo_pipelin
 from pykeen.utilities.cli_utils.trans_h_cli import configure_trans_h_hpo_pipeline
 from pykeen.utilities.cli_utils.trans_r_cli import configure_trans_r_hpo_pipeline
 from pykeen.utilities.cli_utils.unstructured_model_cli import configure_um_hpo_pipeline
-from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
-from pykeen.utilities.prediction_utils import make_predictions
 
 MODEL_TRAINING_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_training_pipeline,
@@ -285,16 +280,15 @@ def main(config):
 
 
 @click.command()
-@click.option('-m', '--model_direc', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
-@click.option('-d', '--data_direc', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
+@click.option('-m', '--model_direc', type=click.Path(file_okay=False, dir_okay=True))
+@click.option('-d', '--data_direc', type=click.Path(file_okay=False, dir_okay=True))
 def predict(model_direc: str, data_direc: str):
     """
     Predict new links based on trained model.
     :return:
     """
 
-    pykeen.predict.predict(model_direc, data_direc)
-
+    start_predictions_piepline(model_direc, data_direc)
 
 
 @click.command()
