@@ -2,7 +2,6 @@ from itertools import product
 
 import numpy as np
 import torch
-
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 
 
@@ -33,7 +32,7 @@ def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, dev
 
         for relation in relations[1:]:
             triples = create_triples(entity_pairs=all_entity_pairs, relation=relation)
-            np.append(all_triples, triples, axis=0)
+            all_triples = np.append(all_triples, triples, axis=0)
 
     mapped_triples, _, _ = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
 

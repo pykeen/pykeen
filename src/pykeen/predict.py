@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 '''Script for predicting links based on a trained model.'''
-import os
 import json
+import os
+
+import numpy as np
 import torch
 from pykeen.constants import PREFERRED_DEVICE, GPU, CPU
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from pykeen.utilities.prediction_utils import make_predictions
-import numpy as np
 
 
 def start_predictions_piepline(model_direc, data_direc):
