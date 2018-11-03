@@ -25,11 +25,15 @@ def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, dev
     """
 
     all_entity_pairs = np.array(list(product(entities, entities)))
-    all_triples = create_triples(entity_pairs=all_entity_pairs, relation=relations[0])
 
-    for relation in relations[1:]:
-        triples = create_triples(entity_pairs=all_entity_pairs, relation=relation)
-        np.append(all_triples, triples, axis=0)
+    if relations.size == 1:
+        all_triples = create_triples(entity_pairs=all_entity_pairs, relation=relations)
+    else:
+        all_triples = create_triples(entity_pairs=all_entity_pairs, relation=relations[0])
+
+        for relation in relations[1:]:
+            triples = create_triples(entity_pairs=all_entity_pairs, relation=relation)
+            np.append(all_triples, triples, axis=0)
 
     mapped_triples, _, _ = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
 
