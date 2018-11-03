@@ -31,7 +31,7 @@ def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, dev
         triples = create_triples(entity_pairs=all_entity_pairs, relation=relation)
         np.append(all_triples, triples, axis=0)
 
-    mapped_triples, _, _ = create_mapped_triples(triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
+    mapped_triples, _, _ = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
 
     mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=device)
 
