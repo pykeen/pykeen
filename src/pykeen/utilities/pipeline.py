@@ -133,7 +133,6 @@ class Pipeline(object):
         pipeline_outcome[ENTITY_TO_ID] = self.entity_to_id
         pipeline_outcome[RELATION_TO_ID] = self.rel_to_id
 
-
         return pipeline_outcome, params
 
     def _get_train_and_test_triples(self):

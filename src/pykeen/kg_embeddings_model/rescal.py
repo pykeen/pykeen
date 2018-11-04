@@ -40,7 +40,7 @@ class RESCAL(nn.Module):
         """
 
         # TODO: Check
-        y = np.repeat([1], repeats=pos_scores.shape[0])
+        y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
         # Scores for the psotive and negative triples
@@ -65,7 +65,7 @@ class RESCAL(nn.Module):
         h_embs = h_embs.unsqueeze(-1).permute([0, 2, 1])
         h_M_embs = torch.matmul(h_embs, M)
         t_embs = t_embs.unsqueeze(-1)
-        scores = torch.matmul(h_M_embs, t_embs).view(-1)
+        scores = -torch.matmul(h_M_embs, t_embs).view(-1)
 
         # scores = torch.bmm(torch.transpose(h_emb, 1, 2), M)  # h^T M
         # scores = torch.bmm(scores, t_emb)  # (h^T M) h

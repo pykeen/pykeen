@@ -43,7 +43,7 @@ class ERMLP(nn.Module):
         :return:
         """
 
-        y = np.repeat([1], repeats=pos_scores.shape[0])
+        y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
         # Scores for the psotive and negative triples
@@ -65,7 +65,7 @@ class ERMLP(nn.Module):
         """
 
         x_s = torch.cat([h_embs, r_embs, t_embs], 1)
-        scores = self.mlp(x_s)
+        scores = - self.mlp(x_s)
 
         return scores
 
