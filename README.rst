@@ -68,7 +68,7 @@ or alternatively:
 
 Summarize the results of all experiments
 ****************************************
-To summarize the results of all experiments, please enter switch to root directory containing directories for each
+To summarize the results of all experiments, please switch to root directory containing the directories for each
 experiment, and run following command:
 
 .. code-block:: sh
