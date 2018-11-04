@@ -66,8 +66,8 @@ or alternatively:
 
     python3 -m pykeen-predict -m /path/to/model/directory -d /path/to/data/directory
 
-Summarize all experiment results
-********************************
+Summarize the results of all experiments
+****************************************
 To summarize the results of all experiments, please enter switch to root directory containing directories for each
 experiment, and run following command:
 
