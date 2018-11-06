@@ -38,12 +38,16 @@ def print_existing_config_message():
 def print_training_set_message():
     click.secho(click.style("Current Step: Please provide the path to your training data.", fg='blue'))
     click.secho("")
-    click.secho("The training file must be a TSV file (.tsv) containing three columns:")
+    click.secho(click.style("The training file can be a TSV file (.tsv) containing three columns:", bold=True))
     click.secho("Column 1: Contains the subjects of the triples.")
     click.secho("Column 2: Contains the predicates of the triples.")
     click.secho("Column 3: Contains the objects of the triples.")
     click.secho("")
     click.secho("Example of a valid path: \"/Users/david/data/corpora/fb15k/fb_15k_train.tsv\"")
+    click.secho("")
+    click.secho(click.style("Alternatively, the training file can be a RDF file (.nt).", bold=True))
+    click.secho("")
+    click.secho("Example of a valid path: \"/Users/david/data/corpora/fb15k/fb_15k_train.net\"")
     click.secho("")
 
 
