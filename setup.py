@@ -36,6 +36,7 @@ INSTALL_REQUIRES = [
     'prompt_toolkit',
     'tqdm',
     'pandas',
+    'rdflib',
 ]
 EXTRAS_REQUIRE = {
     'docs': [
