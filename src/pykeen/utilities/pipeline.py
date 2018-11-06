@@ -3,6 +3,7 @@
 """Implementation of the basic pipeline."""
 
 import logging
+import rdflib
 from typing import Optional
 
 import numpy as np
@@ -180,12 +181,47 @@ class Pipeline(object):
         return mapped_pos_train_triples
 
 
-def _load_data(path_to_data: str):
-    triples = np.loadtxt(
-        fname=path_to_data,
-        dtype=str,
-        comments='@Comment@ Subject Predicate Object',
-        delimiter='\t',
-    )
+# def _load_data(path_to_data: str):
+#     triples = np.loadtxt(
+#         fname=path_to_data,
+#         dtype=str,
+#         comments='@Comment@ Subject Predicate Object',
+#         delimiter='\t',
+#     )
+#
+#     return triples
+
+def _extract_tripels_from_graph(graph):
+    """
+
+    :param graph:
+    :return:
+    """
+    triples = []
+
+    for s, p, o in graph:
+        triples.append([str(s), str(p), str(o)])
+
+    triples = np.array(triples, dtype=np.str)
 
     return triples
+
+def _load_data(path_to_data:str):
+    try:
+        g = rdflib.Graph()
+        g.parse(path_to_data, format="nt")
+        triples = _extract_tripels_from_graph(g)
+
+    except:
+        try:
+            triples = np.loadtxt(
+                fname=path_to_data,
+                dtype=str,
+                comments='@Comment@ Subject Predicate Object',
+                delimiter='\t',
+            )
+        except:
+            raise ValueError('Dataset must be either a .tsv file of .nt (serilaized rdf) file')
+
+    return triples
+
