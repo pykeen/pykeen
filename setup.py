@@ -50,7 +50,6 @@ ENTRY_POINTS = {
         'pykeen = pykeen.cli:main',
         'pykeen-summarize = pykeen.cli:summarize',
         'pykeen-predict = pykeen.cli:predict',
-        'rdflib',
     ]
 }
 
