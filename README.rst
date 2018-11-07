@@ -4,8 +4,6 @@ PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating kn
 
 The system has a modular architecture, and can be configured by the user through the command line interface.
 
-**Currently, the framework is under development.**
-
 Installation
 ------------
 1. ``PyKEEN`` can be installed with the following commands:
