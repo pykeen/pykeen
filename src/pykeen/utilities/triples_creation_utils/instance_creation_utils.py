@@ -4,7 +4,6 @@ import logging
 
 import numpy as np
 
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 

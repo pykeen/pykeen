@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of TransE."""
+"""Implementation of TransE based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py."""
 
 import logging
 
@@ -9,12 +9,10 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
-
 from pykeen.constants import *
 
-"""Based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py"""
+log = logging.getLogger(__name__)
+
 
 class TransE(nn.Module):
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 def _transform_subj_obj_pred_to_internal_foramt(data_path_in, data_path_out):
     with open(data_path_in, 'r', encoding='utf-8') as f1, open(data_path_out, 'w', encoding='utf-8') as f2:
         lines = f1.readlines()

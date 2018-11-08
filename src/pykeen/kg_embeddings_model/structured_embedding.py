@@ -9,10 +9,9 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
-
 from pykeen.constants import *
+
+log = logging.getLogger(__name__)
 
 
 class StructuredEmbedding(nn.Module):

@@ -3,10 +3,10 @@
 """Implementation of the basic pipeline."""
 
 import logging
-import rdflib
 from typing import Optional
 
 import numpy as np
+import rdflib
 import torch
 from sklearn.model_selection import train_test_split
 
@@ -17,7 +17,6 @@ from pykeen.utilities.initialization_utils.module_initialization_utils import ge
 from pykeen.utilities.train_utils import train_model
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
@@ -206,7 +205,8 @@ def _extract_tripels_from_graph(graph):
 
     return triples
 
-def _load_data(path_to_data:str):
+
+def _load_data(path_to_data: str):
     try:
         g = rdflib.Graph()
         g.parse(path_to_data, format="nt")
@@ -224,4 +224,3 @@ def _load_data(path_to_data:str):
             raise ValueError('Dataset must be either a .tsv file of .nt (serilaized rdf) file')
 
     return triples
-

@@ -11,7 +11,6 @@ from tqdm import tqdm
 
 from pykeen.constants import *
 
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 

@@ -8,7 +8,6 @@ import timeit
 import numpy as np
 import torch
 
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 

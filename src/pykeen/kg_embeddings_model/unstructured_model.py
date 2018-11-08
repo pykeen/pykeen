@@ -9,10 +9,9 @@ import torch
 import torch.autograd
 import torch.nn as nn
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
-
 from pykeen.constants import *
+
+log = logging.getLogger(__name__)
 
 
 class UnstructuredModel(nn.Module):
@@ -78,7 +77,7 @@ class UnstructuredModel(nn.Module):
         # Add the vector element wise
         sum_res = h_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        distances = distances**2
+        distances = distances ** 2
         return distances
 
     def predict(self, triples):

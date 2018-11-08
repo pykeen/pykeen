@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from itertools import product
 
 import numpy as np
