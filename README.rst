@@ -1,8 +1,8 @@
 PyKEEN |build| 
 ==============
 
-|zenodo| 
-========
+.. image:: https://zenodo.org/badge/136345023.svg
+   :target: https://zenodo.org/badge/latestdoi/136345023
 
 PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings.
 
