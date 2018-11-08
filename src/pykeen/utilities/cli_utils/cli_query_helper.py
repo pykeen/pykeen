@@ -9,9 +9,10 @@ from collections import OrderedDict
 import click
 from prompt_toolkit import prompt
 
-from pykeen.constants import EXECUTION_MODE_MAPPING, KG_MODEL_TO_ID_MAPPING, ID_TO_KG_MODEL_MAPPING, \
-    BINARY_QUESTION_MAPPING, GPU, CPU, CONFIG_FILE_PROMPT_MSG, CONFIG_FILE_ERROR_MSG, ID_TO_OPTIMIZER_MAPPING, \
-    OPTIMIZER_TO_ID_MAPPING
+from pykeen.constants import (
+    BINARY_QUESTION_MAPPING, CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE,
+    ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, TRAINING_MODE,
+)
 
 
 def get_input_path(prompt_msg, error_msg):
@@ -25,20 +26,8 @@ def get_input_path(prompt_msg, error_msg):
 
 
 def select_keen_execution_mode():
-    click.echo('Training: 1')
-    click.echo('Hyper-parameter search: 2')
-    click.echo()
-
-    while True:
-        user_input = prompt('> Please select one of the above mentioned options: ')
-
-        if user_input != '1' and user_input != '2':
-            click.echo("Invalid input, please type \'1\' for training or \'2\' for hyper-parameter search.\n"
-                       "Please try again.")
-            click.echo()
-        else:
-            user_input = int(user_input)
-            return EXECUTION_MODE_MAPPING[user_input]
+    r = click.confirm('Do you have hyper-parameters? If not, will begin hyper-parameter search.', default=False)
+    return TRAINING_MODE if r else HPO_MODE
 
 
 def select_embedding_model():
