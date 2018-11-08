@@ -1,5 +1,5 @@
-PyKEEN |build|   |zenodo|
-==============   ========
+PyKEEN |build| |zenodo|
+=======================
 
 .. image:: https://zenodo.org/badge/136345023.svg
    :target: https://zenodo.org/badge/latestdoi/136345023
