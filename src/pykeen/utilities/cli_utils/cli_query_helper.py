@@ -262,6 +262,7 @@ def select_float_values(print_msg, prompt_msg, error_msg):
 
     return float_values
 
+
 def select_zero_one_range_float_values(print_msg, prompt_msg, error_msg):
     click.echo(print_msg)
     float_values = []
@@ -280,7 +281,7 @@ def select_zero_one_range_float_values(print_msg, prompt_msg, error_msg):
                 is_valid_input = False
                 break
 
-            if 0.<=float_value<=1.:
+            if 0. <= float_value <= 1.:
                 print("hey")
                 float_values.append(float_value)
             else:
@@ -289,6 +290,7 @@ def select_zero_one_range_float_values(print_msg, prompt_msg, error_msg):
                 break
 
     return float_values
+
 
 def select_positive_integer_values(print_msg, prompt_msg, error_msg):
     click.echo(print_msg)
@@ -355,6 +357,7 @@ def select_heights_and_widths(embedding_dimensions):
         print()
 
     return heights, widths
+
 
 def select_kernel_sizes(depending_params, print_msg, prompt_msg, error_msg):
     kernel_params = []
