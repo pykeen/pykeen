@@ -82,6 +82,6 @@ or alternatively:
 
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
     :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
-    
+
 .. |zenodo| image:: https://zenodo.org/badge/136345023.svg
    :target: https://zenodo.org/badge/latestdoi/136345023
