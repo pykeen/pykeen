@@ -64,6 +64,7 @@ class Pipeline(object):
             )
 
         else:
+
             # Training Mode
             if self.is_evaluation_required:
                 mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
@@ -179,16 +180,6 @@ class Pipeline(object):
 
         return mapped_pos_train_triples
 
-
-# def _load_data(path_to_data: str):
-#     triples = np.loadtxt(
-#         fname=path_to_data,
-#         dtype=str,
-#         comments='@Comment@ Subject Predicate Object',
-#         delimiter='\t',
-#     )
-#
-#     return triples
 
 def _extract_tripels_from_graph(graph):
     """
