@@ -166,7 +166,6 @@ def execution_mode_prompt(config):
     print_execution_mode_message()
     exec_mode = select_keen_execution_mode()
     config[EXECUTION_MODE] = exec_mode
-    print_section_divider()
 
     return config
 

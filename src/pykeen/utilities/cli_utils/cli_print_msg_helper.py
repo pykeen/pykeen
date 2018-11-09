@@ -48,7 +48,7 @@ def print_training_set_message():
 
 def print_execution_mode_message():
     click.secho(
-        "Current Step: Please choose the execution mode: training mode (1) or hyper-parameter search mode (2)",
+        "Current Step: Please choose the execution mode: (1) training mode or (2) hyper-parameter search mode.",
         fg='blue'
     )
 
