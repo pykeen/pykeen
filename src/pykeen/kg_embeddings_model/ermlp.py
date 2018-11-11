@@ -33,7 +33,8 @@ class ERMLP(nn.Module):
         )
         self.margin_loss = margin_loss
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(
+            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
     def _compute_loss(self, pos_scores, neg_scores):
         """
