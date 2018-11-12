@@ -24,8 +24,8 @@ def get_input_path(prompt_msg, error_msg):
         click.echo(error_msg)
 
 
-def select_keen_execution_mode():
-    r = click.confirm('Do you have hyper-parameters? If not, PyKEEN will be configured for hyper-parameter search.',
+def select_keen_execution_mode(lib_name='PyKEEN'):
+    r = click.confirm('Do you have hyper-parameters? If not, %s will be configured for hyper-parameter search.' % (lib_name),
                       default=False)
     return TRAINING_MODE if r else HPO_MODE
 
