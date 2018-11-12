@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Setup.py for pykeen ."""
+"""Setup.py for pykeen."""
 
 import codecs
 import os
@@ -8,7 +8,6 @@ import re
 
 import setuptools
 
-PYTHON_VERSION = "3.6"
 MODULE = 'pykeen'
 PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', MODULE, '__init__.py')
@@ -20,8 +19,14 @@ CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
-    f'Programming Language :: Python :: {PYTHON_VERSION}',
-    'Topic :: Scientific/Engineering :: Bio-Informatics'
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3 :: Only',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Scientific/Engineering :: Chemistry',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    'Topic :: Scientific/Engineering :: Mathematics',
+    'Topic :: Scientific/Engineering :: Information Analysis',
 ]
 INSTALL_REQUIRES = [
     'numpy; python_version == "3.6"',
