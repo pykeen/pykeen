@@ -6,6 +6,8 @@ from collections import OrderedDict
 
 VERSION = '0.0.10-dev'
 
+PYKEEN = 'PyKEEN'
+
 # KG embedding model
 KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 EXECUTION_MODE = 'execution_mode'

@@ -11,7 +11,7 @@ from prompt_toolkit import prompt
 from pykeen.constants import (
     BINARY_QUESTION_MAPPING, CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE,
     ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, TRAINING_MODE,
-)
+    PYKEEN)
 
 
 def get_input_path(prompt_msg, error_msg):
@@ -24,7 +24,7 @@ def get_input_path(prompt_msg, error_msg):
         click.echo(error_msg)
 
 
-def select_keen_execution_mode(lib_name='PyKEEN'):
+def select_keen_execution_mode(lib_name=PYKEEN):
     r = click.confirm('Do you have hyper-parameters? If not, %s will be configured for hyper-parameter search.' % (lib_name),
                       default=False)
     return TRAINING_MODE if r else HPO_MODE

@@ -13,7 +13,7 @@ from pykeen.constants import (
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
     UM_NAME,
-    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS)
+    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS, PYKEEN)
 from pykeen.predict import start_predictions_piepline
 from pykeen.run import run
 from pykeen.utilities.cli_utils import (
@@ -157,14 +157,14 @@ def training_file_prompt(config):
     return config
 
 
-def execution_mode_prompt(config):
+def execution_mode_prompt(config, lib_name=PYKEEN):
     """
 
     :param config:
     :return:
     """
     print_execution_mode_message()
-    exec_mode = select_keen_execution_mode()
+    exec_mode = select_keen_execution_mode(lib_name=lib_name)
     config[EXECUTION_MODE] = exec_mode
 
     return config
