@@ -6,3 +6,5 @@ python:
   pip_install: true
   extra_requirements:
   - docs
+
+requirements_file: requirements-rtfd.txt
