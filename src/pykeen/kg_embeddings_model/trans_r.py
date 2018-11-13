@@ -14,8 +14,8 @@ Constraints:
  * ||h||_2 <= 1: Done
  * ||r||_2 <= 1: Done
  * ||t||_2 <= 1: Done
- * ||h*M_r||_2 <= 1: TODO
- * ||t*M_r||_2 <= 1: TODO
+ * ||h*M_r||_2 <= 1: Done
+ * ||t*M_r||_2 <= 1: Done
 """
 
 
@@ -34,9 +34,11 @@ class TransR(nn.Module):
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
         # max_norm = 1 according to the paper
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.entity_embedding_dim, max_norm=1)
+        # TODO: max_norm <
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.entity_embedding_dim, norm_type=2, max_norm=1)
         # max_norm = 1 according to the paper
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2,
+                                                max_norm=1)
         self.projection_matrix_embs = nn.Embedding(self.num_relations,
                                                    self.relation_embedding_dim * self.entity_embedding_dim)
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
@@ -90,6 +92,8 @@ class TransR(nn.Module):
         :return:
         """
         projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])
+
+        projected_entity_embs = torch.clamp(projected_entity_embs, max=1.)
 
         return projected_entity_embs
 
