@@ -48,7 +48,6 @@ EXTRAS_REQUIRE = {
         'sphinx',
         'sphinx-rtd-theme',
         'sphinx-click',
-        'mock'
     ],
 }
 ENTRY_POINTS = {
