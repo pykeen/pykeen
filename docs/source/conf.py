@@ -16,14 +16,20 @@ import os
 import re
 import sys
 
-import mock
+# -- Mockup PyTorch to exclude it while compiling the docs--------------------------------------------------------------
+from unittest.mock import MagicMock
 
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+
+MOCK_MODULES = ['torch', 'gobject', 'argparse', 'numpy', 'pandas', 'scipy']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath('../../src'))
-# -- Mockup PyTorch to exclude it while compiling the docs--------------------------------------------------------------
-MOCK_MODULES = ['torch', 'numpy', 'scipy', 'pandas']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
 
 # -- Project information -----------------------------------------------------
 
