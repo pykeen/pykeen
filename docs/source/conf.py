@@ -13,8 +13,15 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
 import re
+import sys
+
+import mock
+
+# -- Mockup PyTorch to exclude it while compiling the docs--------------------------------------------------------------
+MOCK_MODULES = ['torch', 'numpy', 'scipy', 'pandas']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
 sys.path.insert(0, os.path.abspath('../../src'))
 
 # -- Project information -----------------------------------------------------
@@ -80,7 +87,6 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -113,8 +119,7 @@ html_theme = 'sphinx_rtd_theme'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'KEENdoc'
-
+htmlhelp_basename = 'PyKEENdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -144,7 +149,6 @@ latex_documents = [
      'Mehdi Ali', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -153,7 +157,6 @@ man_pages = [
     (master_doc, 'pykeen', 'pykeen Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -165,7 +168,6 @@ texinfo_documents = [
      author, 'pykeen', 'One line description of project.',
      'Miscellaneous'),
 ]
-
 
 # -- Options for Epub output -------------------------------------------------
 
@@ -183,7 +185,6 @@ epub_title = project
 
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
-
 
 # -- Extension configuration -------------------------------------------------
 
