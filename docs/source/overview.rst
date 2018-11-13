@@ -5,17 +5,17 @@ Knowledge Graph Embeddings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Knowledge graphs (KGs) are multi-relational, directed graphs in which nodes represent entities and edges represent their
- relations (Bordes *et al.* 2013). While they have been successfully applied for question answering, information
- extraction, and named entity disambiguation outside of the biomedical domain, their usage in biomedical applications
- remains limited (Malone *et al.* 2018; Nickel *et al.*, 2016).
+relations (Bordes *et al.* 2013). While they have been successfully applied for question answering, information
+extraction, and named entity disambiguation outside of the biomedical domain, their usage in biomedical applications
+remains limited (Malone *et al.* 2018; Nickel *et al.*, 2016).
 
 Because KGs are inherently incomplete and noisy, several methods have been developed for deriving or predicting missing
 edges (Nickel *et al.*, 2016).  One is to apply reasoning based on formal logic to derive missing edges, but it usually
 requires a large set of user-defined formulas to achieve generalization. Another is to train knowledge graph embedding
-(KGE) models, which encode the nodes and relations in a KG into a low-dimensional,
-continuous vector-space that best preserves the structural characteristics of the KG (Wang *et al.*., 2017).
-These embeddings can be used to predict new relations between entities. In a biological setting, relation
-prediction not only enables researchers to expand their KGs, but also to generate new hypotheses that can be
+(KGE) models, which encode the nodes and relations in a KG into a low-dimensional, continuous vector-space that best
+preserves the structural characteristics of the KG (Wang *et al.*., 2017). These embeddings can be used to predict new
+relations between entities. In a biological setting, relation prediction not only enables researchers to expand their
+KGs, but also to generate new hypotheses that can be
 tested experimentally.
 
 
