@@ -4,12 +4,14 @@ Installation |pypi_version| |python_versions| |pypi_license|
 Easiest
 ~~~~~~~
 Download the latest stable code from `PyPI <https://pypi.python.org/pypi/pykeen>`_ with:
+
 .. code-block:: python
    python3 -m pip install pykeen
 
 Get the Latest
 ~~~~~~~~~~~~~~~
 Download the most recent code from `GitHub <https://github.com/pybel/pybel>`_ with:
+
 .. code-block:: python
    python3 -m pip install git+https://github.com/SmartDataAnalytics/PyKEEN.git@develop
 
