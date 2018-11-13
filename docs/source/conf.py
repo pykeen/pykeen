@@ -26,7 +26,7 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ['torch', 'gobject', 'argparse', 'numpy', 'pandas', 'scipy']
+MOCK_MODULES = ['torch', 'gobject', 'argparse', 'numpy', 'pandas', 'scipy','scikit-learn','torchvision','pandas',]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath('../../src'))
