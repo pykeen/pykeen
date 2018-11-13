@@ -20,7 +20,8 @@ import sys
 
 # MOCK_MODULES = ['torch', 'numpy', 'scipy', 'torchvision', 'scikit-learn', 'click', 'prompt_toolkit', 'tqdm', 'rdflib',
 #                 'pandas', ]
-autodoc_mock_imports = ['torch','torchvision']
+autodoc_mock_imports = ['torch', 'numpy', 'scipy', 'torchvision', 'scikit-learn', 'click', 'prompt_toolkit', 'tqdm',
+                        'rdflib', 'pandas', ]
 
 sys.path.insert(0, os.path.abspath('../../src'))
 
