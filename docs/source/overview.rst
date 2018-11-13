@@ -28,7 +28,7 @@ To the best of our knowledge, BioKEEN is the first framework specifically design
  for users in the bioinformatics community.
 
 References
-----------
+~~~~~~~~~~
 
 - Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS..
 - Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14.
