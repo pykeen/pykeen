@@ -9,23 +9,23 @@ This page contains all the Knowledge Graph Embedding Models included in PyKEEN.
 +========================+=====================+
 | TransE                 | Bordes_ *et al.*    |
 +------------------------+---------------------+
-| TransH                 | Wang_ *et al.*    |
+| TransH                 | Wang_ *et al.*      |
 +------------------------+---------------------+
-| TransR                 | Lin_ *et al.*    |
+| TransR                 | Lin_ *et al.*       |
 +------------------------+---------------------+
-| TransD                 | Ji_ *et al.*    |
+| TransD                 | Ji_ *et al.*        |
 +------------------------+---------------------+
-| ConvE                  | Dettermers_ *et al.*    |
+| ConvE                  | Dettermers_ *et al.*|
 +------------------------+---------------------+
-| SE                     | Bordes2_ *et al.*    |
+| SE                     | Bordes2_ *et al.*   |
 +------------------------+---------------------+
-| UM                     | Bordes3_ *et al.*    |
+| UM                     | Bordes3_ *et al.*   |
 +------------------------+---------------------+
 | RESCAL                 | Nickel_ *et al.*    |
 +------------------------+---------------------+
-| ERMLP                  | Dong_ *et al.*    |
+| ERMLP                  | Dong_ *et al.*      |
 +------------------------+---------------------+
-| DistMult               | Yang_ *et al.*    |
+| DistMult               | Yang_ *et al.*      |
 +------------------------+---------------------+
 
 TransE
@@ -99,8 +99,8 @@ Unstructured Model (UM)
 .. _Bordes: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
 .. _Wang: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
 .. _Lin: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/ 
-.. _Jin: http://www.aclweb.org/anthology/P15-1067 
-.. _Dettmers: https://arxiv.org/pdf/1707.01476.pdf
+.. _Ji: http://www.aclweb.org/anthology/P15-1067 
+.. _Dettermers: https://arxiv.org/pdf/1707.01476.pdf
 .. _Bordes2: http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898 
 .. _Bordes3: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf 
 .. _Nickel: http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf 
