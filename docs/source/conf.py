@@ -18,7 +18,8 @@ import sys
 
 # -- Mockup PyTorch to exclude it while compiling the docs--------------------------------------------------------------
 
-MOCK_MODULES = ['torch', 'numpy', 'scipy', 'torchvision',]
+MOCK_MODULES = ['torch', 'numpy', 'scipy', 'torchvision', 'scikit-learn', 'click', 'prompt_toolkit', 'tqdm', 'rdflib',
+                'pandas', ]
 
 sys.path.insert(0, os.path.abspath('../../src'))
 
