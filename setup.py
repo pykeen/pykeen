@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     'click==6.7',
     # 'torch==0.4.0; python_version == "3.6"',
     # 'torch==0.4.1; python_version == "3.7"',
-    'torchvision==0.2.1',
+    # 'torchvision==0.2.1',
     'prompt_toolkit',
     'tqdm',
     'pandas',
