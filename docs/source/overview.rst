@@ -32,4 +32,5 @@ References
 - Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS..
 - Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14.
 - Nickel, M., *et al.* (2011) A Three-Way Model for Collective Learning on Multi-Relational Data. ICML. Vol. 11.
-- Malone, B., *et al.* (2018). Knowledge Graph Completion to Predict Polypharmacy Side Effects. arXiv preprint arXiv:1810.09227
+- Malone, B., *et al.* (2018). Knowledge Graph Completion to Predict Polypharmacy Side Effects. arXiv preprint
+arXiv:1810.09227.
