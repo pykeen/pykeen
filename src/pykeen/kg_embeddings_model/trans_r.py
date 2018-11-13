@@ -34,7 +34,7 @@ class TransR(nn.Module):
             'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
         # max_norm = 1 according to the paper
-        # TODO: max_norm <
+        # TODO: max_norm < 1.
         self.entity_embeddings = nn.Embedding(self.num_entities, self.entity_embedding_dim, norm_type=2, max_norm=1)
         # max_norm = 1 according to the paper
         self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2,
