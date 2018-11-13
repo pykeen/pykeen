@@ -1,12 +1,12 @@
-PyKEEN |build| |zenodo|
-=======================
+PyKEEN |build| |docs| |zenodo|
+==============================
 
 PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings.
 
 The system has a modular architecture, and can be configured by the user through the command line interface.
 
-Installation
-------------
+Installation |pypi_version| |python_versions| |pypi_license|
+------------------------------------------------------------
 1. ``PyKEEN`` can be installed with the following commands:
 
 .. code-block:: sh
@@ -85,3 +85,13 @@ or alternatively:
 
 .. |zenodo| image:: https://zenodo.org/badge/136345023.svg
    :target: https://zenodo.org/badge/latestdoi/136345023
+
+.. |docs| image:: http://readthedocs.org/projects/pykeen/badge/?version=latest
+    :target: https://pykeen.readthedocs.io/en/latest/
+    :alt: Documentation Status
+.. |python_versions| image:: https://img.shields.io/pypi/pyversions/pykeen.svg
+    :alt: Stable Supported Python Versions
+.. |pypi_version| image:: https://img.shields.io/pypi/v/pykeen.svg
+    :alt: Current version on PyPI
+.. |pypi_license| image:: https://img.shields.io/pypi/l/pykeen.svg
+    :alt: MIT License
