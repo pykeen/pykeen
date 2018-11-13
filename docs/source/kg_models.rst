@@ -28,6 +28,20 @@ This page contains all the Knowledge Graph Embedding Models included in PyKEEN.
 | DistMult               | Yang_ *et al.*      |
 +------------------------+---------------------+
 
+References
+----------
+
+- Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS..
+- Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14. 
+- Lin, Y., *et al.* (2015). Learning entity and relation embeddings for knowledge graph completion. AAAI. Vol. 15.
+- Ji, G., *et al.* (2015). Knowledge graph embedding via dynamic mapping matrix. ACL.
+- Dettmers, T., *et al.* (2017) Convolutional 2d knowledge graph embeddings. arXiv preprint arXiv:1707.01476.
+- Bordes, A., *et al.* (2011). Learning Structured Embeddings of Knowledge Bases. AAAI. Vol. 6. No. 1.
+- Bordes, A., *et al.* (2014). A semantic matching energy function for learning with multi-relational data. Machine Learning 94.2 : 233-259.
+- Nickel, M., *et al.* (2011) A Three-Way Model for Collective Learning on Multi-Relational Data. ICML. Vol. 11.
+- Dong, X., *et al.* (2014) Knowledge vault: A web-scale approach to probabilistic knowledge fusion. ACM.
+- Yang, B. *et al.* Embedding entities and relations for learning and inference in knowledge bases. arXiv preprint arXiv:1412.6575
+
 TransE
 ------
 Considers a relation as a translation from the head to the tail entity.
