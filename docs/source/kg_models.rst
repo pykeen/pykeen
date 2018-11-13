@@ -32,7 +32,7 @@ References
 ----------
 
 - Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS..
-- Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14. 
+- Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14.
 - Lin, Y., *et al.* (2015). Learning entity and relation embeddings for knowledge graph completion. AAAI. Vol. 15.
 - Ji, G., *et al.* (2015). Knowledge graph embedding via dynamic mapping matrix. ACL.
 - Dettmers, T., *et al.* (2017) Convolutional 2d knowledge graph embeddings. arXiv preprint arXiv:1707.01476.
@@ -83,21 +83,21 @@ Uses a convolutional neural network (CNN).
 
 .. automodule:: pykeen.kg_embeddings_model.conv_e
     :members:
-    
+
 ERMPL
 -----
 Neural network based approach.
 
 .. automodule:: pykeen.kg_embeddings_model.ermlp
     :members:
-   
+
 RESCAL
 ------
 Represents relations as matrices and models interactions between latent features.
 
 .. automodule:: pykeen.kg_embeddings_model.rescal
     :members:
-    
+
 Structured Embedding (SE)
 -------------------------
 For each relation head and tail entity are projected by different matrices.
@@ -109,14 +109,14 @@ Unstructured Model (UM)
 -------------------------
 .. automodule:: pykeen.kg_embeddings_model.unstructured_model
     :members:
-    
+
 .. _Bordes: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
 .. _Wang: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
-.. _Lin: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/ 
-.. _Ji: http://www.aclweb.org/anthology/P15-1067 
+.. _Lin: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
+.. _Ji: http://www.aclweb.org/anthology/P15-1067
 .. _Dettermers: https://arxiv.org/pdf/1707.01476.pdf
-.. _Bordes2: http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898 
-.. _Bordes3: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf 
-.. _Nickel: http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf 
+.. _Bordes2: http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898
+.. _Bordes3: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf
+.. _Nickel: http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf
 .. _Dong: https://dl.acm.org/citation.cfm?id=2623623
 .. _Yang: https://arxiv.org/pdf/1412.6575.pdf

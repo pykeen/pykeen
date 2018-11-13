@@ -12,8 +12,7 @@ Citation
 --------
 If you use PyKEEN in your work, please cite [1]_:
 
-.. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
-<https://zenodo.org/badge/latestdoi/136345023>`_.
+.. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings <https://zenodo.org/badge/latestdoi/136345023>`_.
 
 .. toctree::
    :maxdepth: 2
