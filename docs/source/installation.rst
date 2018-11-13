@@ -11,7 +11,7 @@ Download the latest stable code from `PyPI <https://pypi.python.org/pypi/pykeen>
 
 Get the Latest
 ~~~~~~~~~~~~~~~
-Download the most recent code from `GitHub <https://github.com/pybel/pybel>`_ with:
+Download the most recent code from `GitHub <https://github.com/SmartDataAnalytics/PyKEEN>`_ with:
 
 .. code-block:: python
 
