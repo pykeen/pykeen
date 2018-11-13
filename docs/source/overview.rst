@@ -15,8 +15,7 @@ requires a large set of user-defined formulas to achieve generalization. Another
 (KGE) models, which encode the nodes and relations in a KG into a low-dimensional, continuous vector-space that best
 preserves the structural characteristics of the KG (Wang *et al.*., 2017). These embeddings can be used to predict new
 relations between entities. In a biological setting, relation prediction not only enables researchers to expand their
-KGs, but also to generate new hypotheses that can be
-tested experimentally.
+KGs, but also to generate new hypotheses that can be tested experimentally.
 
 
 Existing Software
