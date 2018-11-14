@@ -7,7 +7,6 @@ import os
 from collections import OrderedDict
 
 import click
-import pandas as pd
 from pykeen.constants import (
     CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
@@ -40,6 +39,7 @@ from pykeen.utilities.cli_utils.trans_e_cli import configure_trans_e_hpo_pipelin
 from pykeen.utilities.cli_utils.trans_h_cli import configure_trans_h_hpo_pipeline
 from pykeen.utilities.cli_utils.trans_r_cli import configure_trans_r_hpo_pipeline
 from pykeen.utilities.cli_utils.unstructured_model_cli import configure_um_hpo_pipeline
+from pykeen.utilities.cli_utils.utils import summarize_results
 
 MODEL_TRAINING_CONFIG_FUNCS = {
     TRANS_E_NAME: configure_trans_e_training_pipeline,
@@ -153,7 +153,6 @@ def training_file_prompt(config):
         prompt_msg=TRAINING_FILE_PROMPT_MSG,
         error_msg=TRAINING_FILE_ERROR_MSG,
     )
-
     return config
 
 
@@ -294,26 +293,7 @@ def predict(model_direc: str, data_direc: str):
 @click.option('-o', '--output', type=click.File('w'))
 def summarize(directory: str, output):
     """Summarize contents of training and evaluation"""
-    r = []
-    for subdirectory_name in os.listdir(directory):
-        subdirectory = os.path.join(directory, subdirectory_name)
-        if not os.path.isdir(subdirectory):
-            continue
-        configuration_path = os.path.join(subdirectory, 'configuration.json')
-        if not os.path.exists(configuration_path):
-            click.echo("missing configuration")
-            continue
-        with open(configuration_path) as file:
-            configuration = json.load(file)
-        evaluation_path = os.path.join(subdirectory, 'evaluation_summary.json')
-        if not os.path.exists(evaluation_path):
-            click.echo("missing evaluation summary")
-            continue
-        with open(evaluation_path) as file:
-            evaluation = json.load(file)
-        r.append(dict(**configuration, **evaluation))
-    df = pd.DataFrame(r)
-    df.to_csv(output, sep='\t')
+    summarize_results(directory, output)
 
 
 if __name__ == '__main__':
