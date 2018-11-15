@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''Script for starting the pipeline and saving the results.'''
+"""Script for starting the pipeline and saving the results."""
 
 import json
 import os
@@ -10,15 +10,20 @@ from typing import Mapping, Optional
 
 import torch
 
-from pykeen.constants import OUTPUT_DIREC, ENTITY_TO_EMBEDDING, RELATION_TO_EMBEDDING, LOSSES, EVAL_SUMMARY, \
-    TRAINED_MODEL, ENTITY_TO_ID, RELATION_TO_ID
+from pykeen.constants import (
+    ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING, RELATION_TO_ID,
+    TRAINED_MODEL,
+)
 from pykeen.utilities.pipeline import Pipeline
 
 
-def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, training_path: Optional[str] = None):
+def run(config: Mapping,
+        seed: Optional[int] = 2,
+        output_directory: Optional[str] = None,
+        training_path: Optional[str] = None):
+    """Run PyKEEN using a given configuration."""
     if output_directory is None:
         output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d_%H:%M:%S"))
-
     os.makedirs(output_directory, exist_ok=True)
 
     pipeline = Pipeline(config=config, seed=seed)
@@ -54,7 +59,7 @@ def run(config: Mapping, seed: int = 2, output_directory: Optional[str] = None, 
     with open(out_path, 'w') as handle:
         json.dump(pipeline_outcome[LOSSES], handle, indent=2)
 
-    eval_summary = pipeline_outcome[EVAL_SUMMARY]
+    eval_summary = pipeline_outcome.get(EVAL_SUMMARY)
     if eval_summary is not None:
         out_path = os.path.join(output_directory, 'evaluation_summary.json')
         with open(out_path, 'w') as handle:

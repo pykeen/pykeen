@@ -267,7 +267,6 @@ def prompt_config():
 @click.option('-c', '--config', type=click.File(), help='A PyKEEN JSON configuration file')
 def main(config):
     """PyKEEN: A software for training and evaluating knowledge graph embeddings."""
-
     if config is not None:
         config = json.load(config)
     else:
@@ -277,22 +276,18 @@ def main(config):
 
 
 @click.command()
-@click.option('-m', '--model_direc', type=click.Path(file_okay=False, dir_okay=True))
-@click.option('-d', '--data_direc', type=click.Path(file_okay=False, dir_okay=True))
-def predict(model_direc: str, data_direc: str):
-    """
-    Predict new links based on trained model.
-    :return:
-    """
-
-    start_predictions_piepline(model_direc, data_direc)
+@click.option('-m', '--model-directory', type=click.Path(file_okay=False, dir_okay=True))
+@click.option('-d', '--data-directory', type=click.Path(file_okay=False, dir_okay=True))
+def predict(model_directory: str, data_directory: str):
+    """Predict new links based on trained model."""
+    start_predictions_piepline(model_directory, data_directory)
 
 
 @click.command()
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
 @click.option('-o', '--output', type=click.File('w'))
 def summarize(directory: str, output):
-    """Summarize contents of training and evaluation"""
+    """Summarize contents of training and evaluation."""
     summarize_results(directory, output)
 
 
