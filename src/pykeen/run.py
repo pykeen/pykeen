@@ -18,7 +18,7 @@ from pykeen.utilities.pipeline import Pipeline
 
 
 def run(config: Mapping,
-        seed: Optional[int] = 2,
+        seed: Optional[int] = None,
         output_directory: Optional[str] = None,
         training_path: Optional[str] = None):
     """Run PyKEEN using a given configuration."""
