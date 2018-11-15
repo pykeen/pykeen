@@ -9,6 +9,8 @@ import torch.nn as nn
 
 from pykeen.constants import *
 
+__all__ = ['TransD']
+
 """
 TODO: Check, whether it makes sense to integrate identity matrices.
 """

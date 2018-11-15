@@ -7,12 +7,14 @@ import os
 from collections import OrderedDict
 
 import click
+
 from pykeen.constants import (
-    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
-    SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
-    TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
-    UM_NAME,
-    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS, PYKEEN)
+    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, EXECUTION_MODE, FILTER_NEG_TRIPLES, HPO_ITERS_ERROR_MSG,
+    HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_MODE, NUM_OF_HPO_ITERS, OUTPUT_DIREC, PREFERRED_DEVICE, PYKEEN,
+    RESCAL_NAME, SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO,
+    TRAINING_FILE_ERROR_MSG, TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME,
+    TRANS_H_NAME, TRANS_R_NAME, UM_NAME,
+)
 from pykeen.predict import start_predictions_piepline
 from pykeen.run import run
 from pykeen.utilities.cli_utils import (
@@ -27,9 +29,10 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import (
 )
 from pykeen.utilities.cli_utils.cli_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
-    select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
-    select_integer_value)
-from pykeen.utilities.cli_utils.conv_e_cli import configure_conv_e_training_pipeline, configure_conv_e_hpo_pipeline
+    select_embedding_model, select_integer_value, select_keen_execution_mode, select_preferred_device,
+    select_ratio_for_test_set,
+)
+from pykeen.utilities.cli_utils.conv_e_cli import configure_conv_e_hpo_pipeline, configure_conv_e_training_pipeline
 from pykeen.utilities.cli_utils.distmult_cli import configure_distmult_hpo_pipeline
 from pykeen.utilities.cli_utils.ermlp_cli import configure_ermlp_hpo_pipeline
 from pykeen.utilities.cli_utils.rescal_cli import configure_rescal_hpo_pipeline

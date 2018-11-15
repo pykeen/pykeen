@@ -17,6 +17,8 @@ from pykeen.utilities.initialization_utils.module_initialization_utils import ge
 from pykeen.utilities.train_utils import train_model
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
+__all__ = ['Pipeline']
+
 log = logging.getLogger(__name__)
 
 

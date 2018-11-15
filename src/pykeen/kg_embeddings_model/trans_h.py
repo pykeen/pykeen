@@ -9,6 +9,8 @@ import torch.nn as nn
 
 from pykeen.constants import *
 
+__all__ = ['TransH']
+
 
 class TransH(nn.Module):
 
@@ -29,7 +31,7 @@ class TransH(nn.Module):
         self.margin_loss = margin_loss
         self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
         self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
-        self.epsilon = torch.nn.Parameter(torch.tensor(0.005,requires_grad=True))
+        self.epsilon = torch.nn.Parameter(torch.tensor(0.005, requires_grad=True))
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
     def _initialize(self):
@@ -62,7 +64,7 @@ class TransH(nn.Module):
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = torch.mul(norms,norms)
+        scores = torch.mul(norms, norms)
 
         return scores
 
@@ -103,7 +105,6 @@ class TransH(nn.Module):
         :param neg_scores:
         :return:
         """
-
 
         pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
@@ -163,7 +164,6 @@ class TransH(nn.Module):
         neg_heads = batch_negatives[:, 0:1]
         neg_rels = batch_negatives[:, 1:2]
         neg_tails = batch_negatives[:, 2:3]
-
 
         # Shape: (batch_size, 1, embedding_dimension)
         pos_head_embs = self.entity_embeddings(pos_heads)

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Implementations of various knowledge graph embedding models."""
+
 from pykeen.kg_embeddings_model.conv_e import ConvE
 from pykeen.kg_embeddings_model.distmult import DistMult
 from pykeen.kg_embeddings_model.ermlp import ERMLP

@@ -10,6 +10,8 @@ from pykeen.utilities.evaluation_utils.metrics_computations import compute_metri
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from pykeen.utilities.train_utils import train_model
 
+__all__ = ['RandomSearchHPO']
+
 
 class RandomSearchHPO(AbstractHPOptimizer):
 

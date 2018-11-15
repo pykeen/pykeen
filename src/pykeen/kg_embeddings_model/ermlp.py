@@ -9,6 +9,8 @@ import torch.nn as nn
 
 from pykeen.constants import *
 
+__all__ = ['ERMLP']
+
 
 class ERMLP(nn.Module):
 
