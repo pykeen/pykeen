@@ -20,8 +20,8 @@ from pykeen.utilities.triples_creation_utils.instance_creation_utils import crea
 log = logging.getLogger(__name__)
 
 
-class Pipeline(object):
-    def __init__(self, config, seed):
+class Pipeline:
+    def __init__(self, config, seed: Optional[int] = None):
         self.config = config
         self.seed = seed
         self.entity_to_id = None
@@ -60,7 +60,7 @@ class Pipeline(object):
                 rel_to_id=self.rel_to_id,
                 config=self.config,
                 device=self.device,
-                seed=self.seed
+                seed=self.seed,
             )
 
         else:

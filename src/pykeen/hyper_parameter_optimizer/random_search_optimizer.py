@@ -45,8 +45,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
         return kg_model_config
 
     def optimize_hyperparams(self, mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config,
-                             device, seed):
-        np.random.seed(seed=seed)
+                             device, seed=None):
+        if seed is not None:
+            np.random.seed(seed=seed)
 
         trained_models = []
         eval_results = []
