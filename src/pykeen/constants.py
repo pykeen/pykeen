@@ -177,6 +177,10 @@ EPOCH_PRINT_MSG = 'Please type the number of epochs:'
 EPOCH_PROMPT_MSG = '> Epochs:'
 EPOCH_ERROR_MSG = 'An error occurred, please select an integers.'
 
+SEED_PRINT_MSG = 'Please specify the random seed.'
+SEED_PROMPT_MSG = '> Random seed: '
+SEED_ERROR_MSG = 'An error occurred, please proive and positive integer as the random seed.'
+
 ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select a norm to use to normalize the entities. The norm should be a positive integer greater than 0'
 ENTITIES_NORMALIZATION_PROMPT_MSG = '> Norm to use for normalization of the entities: '
 ENTITIES_NORMALIZATION_ERROR_MSG = 'An error occurred, the norm should be an integer greater than 0, such as 1\n' \

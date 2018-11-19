@@ -54,7 +54,7 @@ def print_execution_mode_message():
 
 
 def print_model_selection_message():
-    click.secho("Current Step: Please choose one of the provide models.", fg='blue')
+    click.secho("Current Step: Please choose one of the provided models.", fg='blue')
     click.echo(
         "Depending on which model you select, PyKEEN will assist you to configure the required hyper-parameters.\n")
 

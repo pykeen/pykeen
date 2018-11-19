@@ -7,12 +7,14 @@ import os
 from collections import OrderedDict
 
 import click
+
 from pykeen.constants import (
     CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, FILTER_NEG_TRIPLES, HPO_MODE, OUTPUT_DIREC, PREFERRED_DEVICE, RESCAL_NAME,
     SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME,
     UM_NAME,
-    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS, PYKEEN)
+    EXECUTION_MODE, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_ITERS_ERROR_MSG, NUM_OF_HPO_ITERS, PYKEEN, SEED,
+    SEED_PRINT_MSG, SEED_PROMPT_MSG, SEED_ERROR_MSG)
 from pykeen.predict import start_predictions_piepline
 from pykeen.run import run
 from pykeen.utilities.cli_utils import (
@@ -24,7 +26,7 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import (
     print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
     print_section_divider, print_test_ratio_message, print_test_set_message,
     print_training_set_message, print_welcome_message,
-)
+    print_model_selection_message)
 from pykeen.utilities.cli_utils.cli_query_helper import (
     ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
     select_embedding_model, select_keen_execution_mode, select_preferred_device, select_ratio_for_test_set,
@@ -174,6 +176,7 @@ def model_selection_prompt():
 
     :return:
     """
+    print_model_selection_message()
     model_name = select_embedding_model()
     print_section_divider()
     return model_name
@@ -199,6 +202,16 @@ def execution_mode_specific_prompt(config, model_name):
             error_msg=HPO_ITERS_ERROR_MSG)
         config[NUM_OF_HPO_ITERS] = hpo_iter
         print_section_divider()
+    return config
+
+
+def random_seed_prompt(config):
+    """Query random seed."""
+
+    config[SEED] = select_integer_value(print_msg=SEED_PRINT_MSG,
+                                        prompt_msg=SEED_PROMPT_MSG,
+                                        error_msg=SEED_ERROR_MSG)
+
     return config
 
 
@@ -251,6 +264,8 @@ def prompt_config():
     config.update(_configure_evaluation_specific_parameters(config[EXECUTION_MODE]))
 
     print_section_divider()
+
+    # Step 6: Please select a random seed
 
     # Step 7: Query device to train on
     config = device_prompt(config=config)
