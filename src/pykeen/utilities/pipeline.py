@@ -166,12 +166,7 @@ class Pipeline(object):
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
         )
-        train = '/Users/mehdi/PycharmProjects/PyKEEN/data/train_d.txt'
-        test = '/Users/mehdi/PycharmProjects/PyKEEN/data/test_d.txt'
 
-        np.savetxt(fname=train,fmt='%s')
-        np.savetxt(fname=test, fmt='%s')
-        exit(0)
         return mapped_pos_train_triples, mapped_pos_test_triples
 
     def _get_train_triples(self):
