@@ -33,8 +33,8 @@ def train_model(kg_embedding_model, all_entities, learning_rate, num_epochs, bat
 
 
 def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
-                       pos_triples, device,
-                       seed):
+                       pos_triples, device, seed):
+    np.random.seed(seed=seed)
     kg_embedding_model = kg_embedding_model.to(device)
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
@@ -49,7 +49,7 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
     start_training = timeit.default_timer()
 
     for epoch in tqdm(range(num_epochs)):
-        np.random.seed(seed=seed)
+
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
