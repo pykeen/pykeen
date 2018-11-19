@@ -32,7 +32,7 @@ copyright = '2018, Mehdi Ali'
 author = 'Mehdi Ali'
 
 # The full version, including alpha/beta/rc tags.
-release = '0.0.11-dev'
+release = '0.0.11'
 
 # The short X.Y version.
 parsed_version = re.match(
