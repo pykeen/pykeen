@@ -4,7 +4,7 @@
 
 from collections import OrderedDict
 
-VERSION = '0.0.11'
+VERSION = '0.0.12-dev'
 
 PYKEEN = 'PyKEEN'
 
