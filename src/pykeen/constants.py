@@ -84,7 +84,7 @@ ADAGRAD_OPTIMIZER_NAME = 'Adagrad'
 ADAM_OPTIMIZER_NAME = 'Adam'
 
 # Further Constants
-SEED = 'seed'
+SEED = 'random_seed'
 OUTPUT_DIREC = 'output_direc'
 
 # Pipeline outcome parameters

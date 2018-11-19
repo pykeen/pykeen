@@ -21,9 +21,9 @@ log = logging.getLogger(__name__)
 
 
 class Pipeline(object):
-    def __init__(self, config, seed):
+    def __init__(self, config):
         self.config = config
-        self.seed = seed
+        self.seed = config[SEED]
         self.entity_to_id = None
         self.rel_to_id = None
         self.device_name = (
