@@ -53,8 +53,17 @@ def print_execution_mode_message():
     )
 
 
+def print_random_seed_message():
+    click.secho(
+        "Current Step: Please specify a random seed (positive integer).",
+        fg='blue'
+    )
+    click.secho("The random seed is used for negative sampling, and for the random train and test split if requested.")
+    click.secho("")
+
+
 def print_model_selection_message():
-    click.secho("Current Step: Please choose one of the provide models.", fg='blue')
+    click.secho("Current Step: Please choose one of the provided models.", fg='blue')
     click.echo(
         "Depending on which model you select, PyKEEN will assist you to configure the required hyper-parameters.\n")
 
@@ -205,7 +214,7 @@ def print_hpo_embedding_dimensions_message():
     click.secho(
         click.style("Current Step: Please specify a list of embedding dimensions for the entities and relations.",
                     fg='blue'))
-    click.secho("You can also provide just a single value, in this case the \'\' is not required.\n")
+    click.secho("You can also provide just a single value, in this case the \',\' is not required.\n")
 
 
 def print_hpo_margin_losses_message():

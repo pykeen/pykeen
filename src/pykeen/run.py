@@ -18,7 +18,6 @@ from pykeen.utilities.pipeline import Pipeline
 
 
 def run(config: Mapping,
-        seed: Optional[int] = None,
         output_directory: Optional[str] = None,
         training_path: Optional[str] = None):
     """Run PyKEEN using a given configuration."""
@@ -26,7 +25,7 @@ def run(config: Mapping,
         output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d_%H:%M:%S"))
     os.makedirs(output_directory, exist_ok=True)
 
-    pipeline = Pipeline(config=config, seed=seed)
+    pipeline = Pipeline(config=config)
 
     pipeline_outcome, params = pipeline.start(path_to_train_data=training_path)
 
@@ -49,11 +48,6 @@ def run(config: Mapping,
     out_path = os.path.join(output_directory, 'relation_to_id.json')
     with open(out_path, 'w') as handle:
         json.dump(pipeline_outcome[RELATION_TO_ID], handle, indent=2)
-
-    out_path = os.path.join(output_directory, 'hyper_parameters.json')
-    with open(out_path, 'w') as handle:
-        for key, val in params.items():
-            handle.write("%s: %s \n" % (str(key), str(val)))
 
     out_path = os.path.join(output_directory, 'losses.json')
     with open(out_path, 'w') as handle:

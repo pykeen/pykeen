@@ -84,7 +84,7 @@ ADAGRAD_OPTIMIZER_NAME = 'Adagrad'
 ADAM_OPTIMIZER_NAME = 'Adam'
 
 # Further Constants
-SEED = 'seed'
+SEED = 'random_seed'
 OUTPUT_DIREC = 'output_direc'
 
 # Pipeline outcome parameters
@@ -176,6 +176,10 @@ BATCH_SIZE_ERROR_MSG = 'An error occurred, please select a integer.'
 EPOCH_PRINT_MSG = 'Please type the number of epochs:'
 EPOCH_PROMPT_MSG = '> Epochs:'
 EPOCH_ERROR_MSG = 'An error occurred, please select an integers.'
+
+SEED_PRINT_MSG = 'Please specify the random seed.'
+SEED_PROMPT_MSG = '> Random seed: '
+SEED_ERROR_MSG = 'An error occurred, please proive and positive integer as the random seed.'
 
 ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select a norm to use to normalize the entities. The norm should be a positive integer greater than 0'
 ENTITIES_NORMALIZATION_PROMPT_MSG = '> Norm to use for normalization of the entities: '
