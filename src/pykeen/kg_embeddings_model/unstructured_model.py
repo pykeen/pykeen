@@ -11,6 +11,8 @@ import torch.nn as nn
 
 from pykeen.constants import *
 
+__all__ = ['UnstructuredModel']
+
 log = logging.getLogger(__name__)
 
 

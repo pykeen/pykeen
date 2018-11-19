@@ -9,8 +9,11 @@ import torch.nn as nn
 
 from pykeen.constants import *
 
+__all__ = ['DistMult']
+
 
 class DistMult(nn.Module):
+    """An implementation of DistMult."""
 
     def __init__(self, config):
         super(DistMult, self).__init__()
@@ -76,7 +79,7 @@ class DistMult(nn.Module):
         :param t_embs:
         :return:
         """
-        scores =  - torch.sum(h_embs * r_embs * t_embs,dim=1)
+        scores = - torch.sum(h_embs * r_embs * t_embs, dim=1)
 
         return scores
 

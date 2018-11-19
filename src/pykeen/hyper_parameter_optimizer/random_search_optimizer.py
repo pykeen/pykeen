@@ -10,6 +10,8 @@ from pykeen.utilities.evaluation_utils.metrics_computations import compute_metri
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from pykeen.utilities.train_utils import train_model
 
+__all__ = ['RandomSearchHPO']
+
 
 class RandomSearchHPO(AbstractHPOptimizer):
 
@@ -45,8 +47,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
         return kg_model_config
 
     def optimize_hyperparams(self, mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config,
-                             device, seed):
-        np.random.seed(seed=seed)
+                             device, seed=None):
+        if seed is not None:
+            np.random.seed(seed=seed)
 
         trained_models = []
         eval_results = []

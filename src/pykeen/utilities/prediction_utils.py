@@ -4,6 +4,7 @@ from itertools import product
 
 import numpy as np
 import torch
+
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
 
 

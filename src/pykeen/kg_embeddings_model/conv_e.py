@@ -5,17 +5,16 @@
 import torch
 import torch.autograd
 import torch.nn as nn
-from torch.nn import functional as F, Parameter
+from torch.nn import Parameter, functional as F
 from torch.nn.init import xavier_normal
 
 from pykeen.constants import *
 
-"""
-Based on https://github.com/TimDettmers/ConvE/blob/master/model.py
-"""
-
+__all__ = ['ConvE']
 
 class ConvE(nn.Module):
+    """An implementation of ConvE based on https://github.com/TimDettmers/ConvE/blob/master/model.py."""
+
     def __init__(self, config):
         super(ConvE, self).__init__()
         # A simple lookup table that stores embeddings of a fixed dictionary and size

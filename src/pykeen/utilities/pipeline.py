@@ -17,6 +17,8 @@ from pykeen.utilities.initialization_utils.module_initialization_utils import ge
 from pykeen.utilities.train_utils import train_model
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
+__all__ = ['Pipeline']
+
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +62,7 @@ class Pipeline(object):
                 rel_to_id=self.rel_to_id,
                 config=self.config,
                 device=self.device,
-                seed=self.seed
+                seed=self.seed,
             )
 
         else:

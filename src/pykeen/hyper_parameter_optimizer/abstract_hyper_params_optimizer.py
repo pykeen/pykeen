@@ -1,10 +1,12 @@
-# -*- coding: utf-8 -*-add # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-import abc
+from abc import ABC, abstractmethod
+
+__all__ = ['AbstractHPOptimizer']
 
 
-class AbstractHPOptimizer(object):
+class AbstractHPOptimizer(ABC):
 
-    @abc.abstractmethod
+    @abstractmethod
     def optimize_hyperparams(self, config, path_to_kg, device, seed):
-        return
+        pass
