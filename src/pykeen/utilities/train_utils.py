@@ -49,7 +49,6 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
     start_training = timeit.default_timer()
 
     for epoch in tqdm(range(num_epochs)):
-
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
@@ -105,6 +104,7 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
 
 def _train_conv_e_model(conv_e_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device,
                         seed):
+    np.random.seed(seed=seed)
     conv_e_model = conv_e_model.to(device)
 
     optimizer = optim.Adam(conv_e_model.parameters(), lr=learning_rate)
@@ -119,7 +119,6 @@ def _train_conv_e_model(conv_e_model, all_entities, learning_rate, num_epochs, b
     start_training = timeit.default_timer()
 
     for epoch in range(num_epochs):
-        np.random.seed(seed=seed)
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
