@@ -49,6 +49,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
     def optimize_hyperparams(self, mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config,
                              device, seed=None):
         if seed is not None:
+            # FIXME np.random is not used
             np.random.seed(seed=seed)
 
         trained_models = []
