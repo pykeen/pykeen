@@ -50,11 +50,6 @@ def run(config: Mapping,
     with open(out_path, 'w') as handle:
         json.dump(pipeline_outcome[RELATION_TO_ID], handle, indent=2)
 
-    out_path = os.path.join(output_directory, 'hyper_parameters.json')
-    with open(out_path, 'w') as handle:
-        for key, val in params.items():
-            handle.write("%s: %s \n" % (str(key), str(val)))
-
     out_path = os.path.join(output_directory, 'losses.json')
     with open(out_path, 'w') as handle:
         json.dump(pipeline_outcome[LOSSES], handle, indent=2)
