@@ -14,8 +14,7 @@ from pykeen.constants import (
     RESCAL_NAME, SE_NAME, TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO,
     TRAINING_FILE_ERROR_MSG, TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME,
     TRANS_H_NAME, TRANS_R_NAME, UM_NAME,
-)
-
+    SEED, SEED_PRINT_MSG, SEED_PROMPT_MSG, SEED_ERROR_MSG)
 from pykeen.predict import start_predictions_piepline
 from pykeen.run import run
 from pykeen.utilities.cli_utils import (
