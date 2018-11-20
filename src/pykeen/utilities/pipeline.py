@@ -183,37 +183,63 @@ class Pipeline(object):
         return mapped_pos_train_triples
 
 
-def _extract_tripels_from_graph(graph):
-    """
+def _load_data(path: str) -> np.ndarray:
+    if isinstance(path, rdflib.Graph):
+        return np.array(
+            [
+                [str(s), str(p), str(o)]
+                for s, p, o in path
+            ],
+            dtype=np.str,
+        )
 
-    :param graph:
-    :return:
+    if path.startswith('ndex:'):
+        return _load_ndex(path[len('ndex:'):])
+
+    if path.endswith('.tsv'):
+        return np.loadtxt(
+            fname=path,
+            dtype=str,
+            comments='@Comment@ Subject Predicate Object',
+            delimiter='\t',
+        )
+
+    if path.endswith('.nt'):
+        g = rdflib.Graph()
+        g.parse(path, format='nt')
+        return _load_data(path)
+
+    raise ValueError('''The argument to _load_data must be one of the following:
+    
+    - An instance of rdflib.Graph
+    - A string path to a .tsv file containing 3 columns corresponding to subject, predicate, and object
+    - A string path to a .nt RDF file serialized in N-Triples format 
+    - A string NDEx network UUID prefixed by "ndex:" like in ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf
+    ''')
+
+
+def _load_ndex(network_uuid: str) -> np.ndarray:
+    """Load a network from NDEx.
+
+    Example network UUID: f93f402c-86d4-11e7-a10d-0ac135e8bacf
     """
+    import ndex2
+
+    ndex_client = ndex2.Ndex2()
+
+    res = ndex_client.get_network_as_cx_stream(network_uuid)
+    res_json = res.json()
+
     triples = []
 
-    for s, p, o in graph:
-        triples.append([str(s), str(p), str(o)])
+    for entry in res_json:
+        for aspect, data in entry.items():
+            if aspect == 'edges':
+                for edge in data:
+                    triples.append([
+                        str(edge['s']),
+                        edge.get('i', default='interacts'),
+                        str(edge['t']),
+                    ])
 
-    triples = np.array(triples, dtype=np.str)
-
-    return triples
-
-
-def _load_data(path_to_data: str):
-    try:
-        g = rdflib.Graph()
-        g.parse(path_to_data, format="nt")
-        triples = _extract_tripels_from_graph(g)
-
-    except:
-        try:
-            triples = np.loadtxt(
-                fname=path_to_data,
-                dtype=str,
-                comments='@Comment@ Subject Predicate Object',
-                delimiter='\t',
-            )
-        except:
-            raise ValueError('Dataset must be either a .tsv file of .nt (serilaized rdf) file')
-
-    return triples
+    return np.array(triples)
