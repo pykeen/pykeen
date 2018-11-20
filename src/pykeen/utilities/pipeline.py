@@ -6,7 +6,6 @@ import logging
 from typing import Optional
 
 import numpy as np
-import rdflib
 import torch
 from sklearn.model_selection import train_test_split
 
@@ -36,7 +35,7 @@ class Pipeline(object):
         self.device = torch.device(self.device_name)
 
     def start(self, path_to_train_data: Optional[str] = None):
-        is_hpo_mode = self.config[EXECUTION_MODE] == HPO_MODE
+        is_hpo_mode = self.config.get('hpo_mode') or self.config[EXECUTION_MODE] == HPO_MODE
         return self._start_pipeline(is_hpo_mode=is_hpo_mode, path_to_train_data=path_to_train_data)
 
     @property
@@ -146,7 +145,7 @@ class Pipeline(object):
         else:
             train_pos, test_pos = train_test_split(
                 train_pos,
-                test_size=self.config[TEST_SET_RATIO],
+                test_size=self.config.get(TEST_SET_RATIO, 0.1),
                 random_state=self.seed,
             )
 
@@ -184,15 +183,6 @@ class Pipeline(object):
 
 
 def _load_data(path: str) -> np.ndarray:
-    if isinstance(path, rdflib.Graph):
-        return np.array(
-            [
-                [str(s), str(p), str(o)]
-                for s, p, o in path
-            ],
-            dtype=np.str,
-        )
-
     if path.startswith('ndex:'):
         return _load_ndex(path[len('ndex:'):])
 
@@ -205,13 +195,19 @@ def _load_data(path: str) -> np.ndarray:
         )
 
     if path.endswith('.nt'):
+        import rdflib
         g = rdflib.Graph()
         g.parse(path, format='nt')
-        return _load_data(path)
+        return np.array(
+            [
+                [str(s), str(p), str(o)]
+                for s, p, o in path
+            ],
+            dtype=np.str,
+        )
 
     raise ValueError('''The argument to _load_data must be one of the following:
     
-    - An instance of rdflib.Graph
     - A string path to a .tsv file containing 3 columns corresponding to subject, predicate, and object
     - A string path to a .nt RDF file serialized in N-Triples format 
     - A string NDEx network UUID prefixed by "ndex:" like in ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf
@@ -224,9 +220,9 @@ def _load_ndex(network_uuid: str) -> np.ndarray:
     Example network UUID: f93f402c-86d4-11e7-a10d-0ac135e8bacf
     """
     import ndex2
-
     ndex_client = ndex2.Ndex2()
 
+    log.info(f'downloading {network_uuid} from ndex')
     res = ndex_client.get_network_as_cx_stream(network_uuid)
     res_json = res.json()
 
@@ -238,7 +234,7 @@ def _load_ndex(network_uuid: str) -> np.ndarray:
                 for edge in data:
                     triples.append([
                         str(edge['s']),
-                        edge.get('i', default='interacts'),
+                        edge.get('i', 'interacts'),
                         str(edge['t']),
                     ])
 

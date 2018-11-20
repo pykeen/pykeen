@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from sklearn.utils import shuffle
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from pykeen.constants import *
 
@@ -38,17 +38,15 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
     kg_embedding_model = kg_embedding_model.to(device)
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
+    log.debug(f'****running model on {device}****')
 
     loss_per_epoch = []
-
-    log.info('****Run Model On %s****' % str(device).upper())
-
     num_pos_triples = pos_triples.shape[0]
     num_entities = all_entities.shape[0]
 
     start_training = timeit.default_timer()
 
-    for epoch in tqdm(range(num_epochs), desc="Training the model (epochs)"):
+    for _ in trange(num_epochs, desc="Training the model (epochs)"):
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
@@ -56,8 +54,7 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
         pos_batches = _split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
         current_epoch_loss = 0.
 
-        for i in range(len(pos_batches)):
-            pos_batch = pos_batches[i]
+        for i, pos_batch in enumerate(pos_batches):
             current_batch_size = len(pos_batch)
             batch_subjs = pos_batch[:, 0:1]
             batch_relations = pos_batch[:, 1:2]
@@ -97,7 +94,7 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
         loss_per_epoch.append(current_epoch_loss / len(pos_triples))
 
     stop_training = timeit.default_timer()
-    log.info("Training took %s seconds \n" % (str(round(stop_training - start_training))))
+    log.debug("training took %.2fs seconds", stop_training - start_training)
 
     return kg_embedding_model, loss_per_epoch
 

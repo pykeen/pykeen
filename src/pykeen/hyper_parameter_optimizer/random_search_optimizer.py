@@ -63,8 +63,11 @@ class RandomSearchHPO(AbstractHPOptimizer):
         config = config.copy()
         max_iters = config[NUM_OF_HPO_ITERS]
 
-        sample_fct = self._sample_conv_e_params if config[
-                                                       KG_EMBEDDING_MODEL_NAME] == CONV_E_NAME else self._sample_params
+        sample_fct = (
+            self._sample_conv_e_params
+            if config[KG_EMBEDDING_MODEL_NAME] == CONV_E_NAME else
+            self._sample_params
+        )
 
         for _ in range(max_iters):
             eval_summary = OrderedDict()
@@ -131,5 +134,5 @@ class RandomSearchHPO(AbstractHPOptimizer):
             rel_to_id=rel_to_id,
             config=config,
             device=device,
-            seed=seed
+            seed=seed,
         )

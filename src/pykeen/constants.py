@@ -6,6 +6,12 @@ from collections import OrderedDict
 
 VERSION = '0.0.13-dev'
 
+
+def get_version() -> str:
+    """Get the version."""
+    return VERSION
+
+
 PYKEEN = 'PyKEEN'
 
 # KG embedding model
@@ -38,7 +44,6 @@ ENTITY_TO_EMBEDDINGS = 'entity_to_embeddings'
 EVAL_RESULTS = 'eval_results'
 ENTITY_TO_ID = 'entity_to_id'
 RELATION_TO_ID = 'relation_to_id'
-
 
 # Device related
 PREFERRED_DEVICE = 'preferred_device'

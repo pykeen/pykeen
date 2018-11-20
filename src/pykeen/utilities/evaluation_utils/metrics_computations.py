@@ -168,7 +168,11 @@ def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corru
     return rank_of_positive_subject_based, rank_of_positive_object_based
 
 
-def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapped_test_triples, device,
+def compute_metrics(all_entities,
+                    kg_embedding_model,
+                    mapped_train_triples,
+                    mapped_test_triples,
+                    device,
                     filter_neg_triples=False):
     """
 
@@ -191,9 +195,11 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
 
     # Corrupt triples
     for triple_nmbr, pos_triple in enumerate(mapped_test_triples):
-        corrupted_subject_based, corrupted_object_based = _create_corrupted_triples(triple=pos_triple,
-                                                                                    all_entities=all_entities,
-                                                                                    device=device)
+        corrupted_subject_based, corrupted_object_based = _create_corrupted_triples(
+            triple=pos_triple,
+            all_entities=all_entities,
+            device=device,
+        )
 
         rank_of_positive_subject_based, rank_of_positive_object_based = compute_rank_fct(
             kg_embedding_model=kg_embedding_model,
@@ -201,16 +207,18 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
             device=device,
-            all_pos_triples_hashed=all_pos_triples_hashed)
+            all_pos_triples_hashed=all_pos_triples_hashed,
+        )
 
         ranks.append(rank_of_positive_subject_based)
-
         ranks.append(rank_of_positive_object_based)
 
         # Compute hits@k for k in {1,3,5,10}
-        hits_at_k_dict.update(
-            _compute_hits_at_k(hits_at_k_dict, rank_of_positive_subject_based=rank_of_positive_subject_based,
-                               rank_of_positive_object_based=rank_of_positive_object_based))
+        hits_at_k_dict.update(_compute_hits_at_k(
+            hits_at_k_dict,
+            rank_of_positive_subject_based=rank_of_positive_subject_based,
+            rank_of_positive_object_based=rank_of_positive_object_based,
+        ))
 
     mean_rank = np.mean(ranks)
 
@@ -218,6 +226,6 @@ def compute_metrics(all_entities, kg_embedding_model, mapped_train_triples, mapp
         hits_at_k_dict[k] = np.mean(value)
 
     stop = timeit.default_timer()
-    log.info("Evaluation took %s seconds \n" % (str(round(stop - start))))
+    log.debug("evaluation took %.2fs seconds", stop - start)
 
     return mean_rank, hits_at_k_dict
