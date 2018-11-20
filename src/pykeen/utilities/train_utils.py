@@ -48,7 +48,7 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
 
     start_training = timeit.default_timer()
 
-    for epoch in tqdm(range(num_epochs)):
+    for epoch in tqdm(range(num_epochs), desc="Training the model (epochs)"):
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
@@ -92,7 +92,7 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
             optimizer.step()
 
         stop = timeit.default_timer()
-        log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
+        # log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
         loss_per_epoch.append(current_epoch_loss / len(pos_triples))
 
@@ -178,7 +178,7 @@ def _train_conv_e_model(conv_e_model, all_entities, learning_rate, num_epochs, b
             optimizer.step()
 
         stop = timeit.default_timer()
-        log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
+        # log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
         loss_per_epoch.append(current_epoch_loss / len(pos_triples))
 
