@@ -139,20 +139,20 @@ class Pipeline(object):
         return pipeline_outcome, params
 
     def _get_train_and_test_triples(self):
-
-        pos_triples = _load_data(self.config[TRAINING_SET_PATH])
+        train_pos = _load_data(self.config[TRAINING_SET_PATH])
 
         if TEST_SET_PATH in self.config:
-            train_pos = pos_triples
-            test_pos = _load_data(path_to_data=self.config[TEST_SET_PATH])
-
+            test_pos = _load_data(self.config[TEST_SET_PATH])
         else:
             train_pos, test_pos = train_test_split(
-                pos_triples,
+                train_pos,
                 test_size=self.config[TEST_SET_RATIO],
                 random_state=self.seed,
             )
 
+        return self._handle_train_and_test(train_pos, test_pos)
+
+    def _handle_train_and_test(self, train_pos, test_pos):
         all_triples = np.concatenate([train_pos, test_pos], axis=0)
         self.entity_to_id, self.rel_to_id = create_mappings(triples=all_triples)
         mapped_pos_train_triples, _, _ = create_mapped_triples(
