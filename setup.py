@@ -34,7 +34,7 @@ INSTALL_REQUIRES = [
     'scikit-learn==0.19.1; python_version == "3.6"',
     'scikit-learn; python_version == "3.7"',
     'scipy',
-    'click==6.7',
+    'click',
     'torch==0.4.0; python_version == "3.6"',
     'torch==0.4.1; python_version == "3.7"',
     'torchvision==0.2.1',
