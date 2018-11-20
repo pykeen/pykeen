@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 import torch
+
 from pykeen.constants import PREFERRED_DEVICE, GPU, CPU
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from pykeen.utilities.prediction_utils import make_predictions
@@ -32,10 +33,10 @@ def start_predictions_piepline(model_direc, data_direc):
     trained_model.load_state_dict(torch.load(path_to_model))
 
     in_path = os.path.join(data_direc, 'entities.tsv')
-    entities = np.loadtxt(fname=in_path, dtype=str)
+    entities = np.loadtxt(fname=in_path, dtype=str, delimiter='\t')
 
     in_path = os.path.join(data_direc, 'relations.tsv')
-    relations = np.loadtxt(fname=in_path, dtype=str)
+    relations = np.loadtxt(fname=in_path, dtype=str, delimiter='\t')
 
     device_name = 'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU
 
