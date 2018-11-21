@@ -132,6 +132,7 @@ def prompt_training_file(config: Dict) -> None:
     config[TRAINING_SET_PATH] = get_input_path(
         prompt_msg=TRAINING_FILE_PROMPT_MSG,
         error_msg=TRAINING_FILE_ERROR_MSG,
+        is_dataset=True,
     )
 
 
