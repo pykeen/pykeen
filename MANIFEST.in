@@ -3,6 +3,7 @@ graft tests
 
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
+recursive-include notebooks *.ipynb
 include docs/Makefile
 include config/config.ini
 
