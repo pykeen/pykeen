@@ -13,15 +13,30 @@ from pykeen.constants import (
     ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, TRAINING_MODE,
     PYKEEN)
 
+def _is_correct_format(path):
+    if path.startswith('ndex:') or path.endswith('.tsv') or path.endswith('.nt'):
+        return True
+    else:
+        return False
 
-def get_input_path(prompt_msg, error_msg):
+def get_input_path(prompt_msg, error_msg, is_dataset=False):
     while True:
         user_input = prompt(prompt_msg, ).strip('"').strip("'")
 
-        if os.path.exists(os.path.dirname(user_input)):
-            return user_input
+        if not os.path.exists(os.path.dirname(user_input)):
+            click.echo(error_msg)
+            continue
+        if is_dataset:
+            if not _is_correct_format(path=user_input):
+                click.echo()
+                click.echo('Invalid data source, following data sources are supported:\n'
+                           'A string path to a .tsv file containing 3 columns corresponding to subject, predicate, and object.\n'
+                           'A string path to a .nt RDF file serialized in N-Triples format.\n'
+                           'A string NDEx network UUID prefixed by "ndex:" like in ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf')
+                click.echo()
+                continue
 
-        click.echo(error_msg)
+        return user_input
 
 
 def select_keen_execution_mode(lib_name=PYKEEN):

@@ -44,6 +44,8 @@ def print_training_set_message():
     click.echo("Example of a valid path: \"/Users/david/data/corpora/fb15k/fb_15k_train.tsv\"\n")
     click.secho("Alternatively, the training file can be a RDF file (.nt).\n", bold=True)
     click.echo("Example of a valid path: \"/Users/david/data/corpora/fb15k/fb_15k_train.net\"\n")
+    click.secho("In addition, you can provide a string NDEx network UUID prefixed by \"ndex\" \n",bold=True)
+    click.echo("Example of a valid NDEx network UUID: \"ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf\"\n")
 
 
 def print_execution_mode_message():
