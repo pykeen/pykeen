@@ -42,6 +42,7 @@ INSTALL_REQUIRES = [
     'tqdm',
     'pandas',
     'rdflib',
+    'ndex2',
 ]
 EXTRAS_REQUIRE = {
     'docs': [
