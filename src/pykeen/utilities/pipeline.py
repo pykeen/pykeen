@@ -7,6 +7,7 @@ from typing import Optional
 
 import numpy as np
 import torch
+import ndex2
 from sklearn.model_selection import train_test_split
 
 from pykeen.constants import *
@@ -219,7 +220,7 @@ def _load_ndex(network_uuid: str) -> np.ndarray:
 
     Example network UUID: f93f402c-86d4-11e7-a10d-0ac135e8bacf
     """
-    import ndex2
+
     ndex_client = ndex2.Ndex2()
 
     log.info(f'downloading {network_uuid} from ndex')
