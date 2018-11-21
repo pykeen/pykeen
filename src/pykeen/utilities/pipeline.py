@@ -201,7 +201,7 @@ def _load_data(path: str) -> np.ndarray:
         return np.array(
             [
                 [str(s), str(p), str(o)]
-                for s, p, o in path
+                for s, p, o in g
             ],
             dtype=np.str,
         )
