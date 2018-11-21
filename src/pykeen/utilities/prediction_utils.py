@@ -25,7 +25,6 @@ def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, dev
     :param candidates: numpy array with two columns: 1.) Entites 2.) Relations
     :return:
     """
-
     all_entity_pairs = np.array(list(product(entities, entities)))
 
     if relations.size == 1:
@@ -41,14 +40,30 @@ def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, dev
 
     mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=device)
 
+    id_to_entity = {value: key for key, value in entity_to_id.items()}
+    id_to_relation = {value: key for key, value in rel_to_id.items()}
+    subject_column = np.vectorize(id_to_entity.get)(mapped_triples[:, 0:1])
+    predicate_column = np.vectorize(id_to_relation.get)(mapped_triples[:, 1:2])
+    object_column = np.vectorize(id_to_entity.get)(mapped_triples[:, 2:3])
+
+    triples_ordered_by_ids = np.concatenate([subject_column, predicate_column, object_column], axis=1)
+
     predicted_scores = kg_model.predict(mapped_triples)
 
     _, sorted_indices = torch.sort(torch.tensor(predicted_scores, dtype=torch.float),
                                    descending=False)
+
     sorted_indices = sorted_indices.cpu().numpy()
 
-    ranked_triples = all_triples[sorted_indices, :]
+    ranked_triples = triples_ordered_by_ids[sorted_indices, :]
+
+    subs = np.reshape(ranked_triples[:, 0:1], newshape=(-1))
+    preds = np.reshape(ranked_triples[:, 1:2], newshape=(-1))
+    objs = np.reshape(ranked_triples[:, 2:3], newshape=(-1))
+
+    indices = np.where(subs != objs)[0]
+
     ranked_scores = np.reshape(predicted_scores[sorted_indices], newshape=(-1, 1))
     ranked_triples = np.concatenate([ranked_triples, ranked_scores], axis=1)
 
-    return ranked_triples
+    return ranked_triples[indices, :]
