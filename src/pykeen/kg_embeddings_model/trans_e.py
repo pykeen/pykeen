@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of TransE based on https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py."""
+"""Implementation of TransE inspired by https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py."""
 
 import logging
 
