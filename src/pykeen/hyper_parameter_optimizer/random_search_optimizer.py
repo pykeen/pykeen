@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import random
-from typing import Optional
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
+from torch.nn import Module
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
@@ -12,6 +13,8 @@ from pykeen.utilities.initialization_utils.module_initialization_utils import ge
 from pykeen.utilities.train_utils import train_model
 
 __all__ = ['RandomSearchHPO']
+
+OptimizeResult = Tuple[Module, List[float], Any, Any, Any, Any]
 
 
 class RandomSearchHPO(AbstractHPOptimizer):
@@ -56,18 +59,18 @@ class RandomSearchHPO(AbstractHPOptimizer):
                              rel_to_id,
                              config,
                              device,
-                             seed: Optional[int] = None):
+                             seed: Optional[int] = None) -> OptimizeResult:
         if seed is not None:
             # FIXME np.random is not used
             np.random.seed(seed=seed)
 
-        trained_models = []
-        eval_results = []
-        entity_to_ids = []
-        rel_to_ids = []
-        models_params = []
-        eval_summaries = []
-        epoch_losses = []
+        trained_models: List[Module] = []
+        epoch_losses: List[List[float]] = []
+        eval_results: List = []
+        entity_to_ids: List = []
+        rel_to_ids: List = []
+        models_params: List = []
+        eval_summaries: List = []
 
         config = config.copy()
         max_iters = config[NUM_OF_HPO_ITERS]
@@ -88,7 +91,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             kg_embedding_model_config[SEED] = seed
 
             # Configure defined model
-            kg_embedding_model = get_kg_embedding_model(config=kg_embedding_model_config)
+            kg_embedding_model: Module = get_kg_embedding_model(config=kg_embedding_model_config)
 
             models_params.append(kg_embedding_model_config)
             entity_to_ids.append(entity_to_id)

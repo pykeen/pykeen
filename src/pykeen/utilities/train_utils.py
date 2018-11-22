@@ -2,14 +2,17 @@
 
 import logging
 import timeit
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
 import torch.optim as optim
 from sklearn.utils import shuffle
-from tqdm import tqdm, trange
+from torch.nn import Module
+from tqdm import trange
 
 from pykeen.constants import *
+from pykeen.kg_embeddings_model import ConvE
 
 log = logging.getLogger(__name__)
 
@@ -18,23 +21,54 @@ def _split_list_in_batches(input_list, batch_size):
     return [input_list[i:i + batch_size] for i in range(0, len(input_list), batch_size)]
 
 
-def train_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device, seed):
-    model_name = kg_embedding_model.model_name
+def train_model(
+        kg_embedding_model: Module,
+        all_entities,
+        learning_rate,
+        num_epochs,
+        batch_size,
+        pos_triples,
+        device,
+        seed: Optional[int] = None) -> Tuple[Module, List[float]]:
+    """Train the model."""
+    if CONV_E_NAME == kg_embedding_model.model_name:
+        return _train_conv_e_model(
+            kg_embedding_model,
+            all_entities,
+            learning_rate,
+            num_epochs,
+            batch_size,
+            pos_triples,
+            device,
+            seed=seed,
+        )
 
-    if model_name in [TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME, DISTMULT_NAME, UM_NAME, SE_NAME,
-                      ERMLP_NAME, RESCAL_NAME]:
-        return _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
-                                  pos_triples,
-                                  device, seed)
+    # model_name in {TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME, DISTMULT_NAME, UM_NAME, SE_NAME, ERMLP_NAME, RESCAL_NAME}
+    return _train_basic_model(
+        kg_embedding_model,
+        all_entities,
+        learning_rate,
+        num_epochs,
+        batch_size,
+        pos_triples,
+        device,
+        seed=seed,
+    )
 
-    if model_name == CONV_E_NAME:
-        return _train_conv_e_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples,
-                                   device, seed)
 
+def _train_basic_model(
+        kg_embedding_model: Module,
+        all_entities,
+        learning_rate,
+        num_epochs,
+        batch_size,
+        pos_triples,
+        device,
+        seed: Optional[int] = None) -> Tuple[Module, List[float]]:
+    """"""
+    if seed is not None:
+        np.random.seed(seed=seed)
 
-def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epochs, batch_size,
-                       pos_triples, device, seed):
-    np.random.seed(seed=seed)
     kg_embedding_model = kg_embedding_model.to(device)
 
     optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
@@ -99,14 +133,23 @@ def _train_basic_model(kg_embedding_model, all_entities, learning_rate, num_epoc
     return kg_embedding_model, loss_per_epoch
 
 
-def _train_conv_e_model(conv_e_model, all_entities, learning_rate, num_epochs, batch_size, pos_triples, device,
-                        seed):
-    np.random.seed(seed=seed)
+def _train_conv_e_model(
+        conv_e_model: ConvE,
+        all_entities,
+        learning_rate,
+        num_epochs,
+        batch_size,
+        pos_triples, device,
+        seed: Optional[int] = None) -> Tuple[ConvE, List[float]]:
+    """"""
+    if seed is not None:
+        np.random.seed(seed=seed)
+
     conv_e_model = conv_e_model.to(device)
 
     optimizer = optim.Adam(conv_e_model.parameters(), lr=learning_rate)
 
-    loss_per_epoch = []
+    loss_per_epoch: List[float] = []
 
     log.info('****Run Model On %s****' % str(device).upper())
 

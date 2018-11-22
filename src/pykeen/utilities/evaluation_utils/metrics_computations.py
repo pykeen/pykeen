@@ -4,6 +4,7 @@
 
 import logging
 import timeit
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -173,7 +174,7 @@ def compute_metrics(all_entities,
                     mapped_train_triples,
                     mapped_test_triples,
                     device,
-                    filter_neg_triples=False):
+                    filter_neg_triples=False) -> Tuple:
     """
 
     :param all_entities:
@@ -222,10 +223,12 @@ def compute_metrics(all_entities,
 
     mean_rank = np.mean(ranks)
 
-    for k, value in hits_at_k_dict.items():
-        hits_at_k_dict[k] = np.mean(value)
+    hits_at_k_dict_result = {
+        k: np.mean(values)
+        for k, values in hits_at_k_dict.items()
+    }
 
     stop = timeit.default_timer()
     log.debug("evaluation took %.2fs seconds", stop - start)
 
-    return mean_rank, hits_at_k_dict
+    return mean_rank, hits_at_k_dict_result

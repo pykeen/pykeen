@@ -9,6 +9,7 @@ from typing import Dict, Mapping
 import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
+from torch.nn import Module
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
@@ -79,7 +80,7 @@ class Pipeline(object):
             self.config[NUM_ENTITIES] = len(self.entity_to_id)
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
             self.config[PREFERRED_DEVICE] = CPU if self.device_name == CPU else GPU
-            kg_embedding_model = get_kg_embedding_model(config=self.config)
+            kg_embedding_model: Module = get_kg_embedding_model(config=self.config)
 
             batch_size = self.config[BATCH_SIZE]
             num_epochs = self.config[NUM_EPOCHS]

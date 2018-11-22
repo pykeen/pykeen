@@ -2,7 +2,10 @@
 
 """Script for initializing the knowledge graph embedding models."""
 
+from typing import Dict
+
 import torch.optim as optim
+from torch.nn import Module
 
 from pykeen.constants import (
     ADAGRAD_OPTIMIZER_NAME, ADAM_OPTIMIZER_NAME, CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, KG_EMBEDDING_MODEL_NAME,
@@ -10,17 +13,12 @@ from pykeen.constants import (
     TRANS_R_NAME, UM_NAME,
 )
 from pykeen.kg_embeddings_model import (
-    ConvE, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH,
-    TransR, UnstructuredModel,
+    ConvE, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
 
 
-def get_kg_embedding_model(config):
-    """
-
-    :param config:
-    :return:
-    """
+def get_kg_embedding_model(config: Dict) -> Module:
+    """Get an instance of a knowledge graph embedding model with the given configuration."""
     model_name = config[KG_EMBEDDING_MODEL_NAME]
 
     if model_name == TRANS_E_NAME:
@@ -52,6 +50,8 @@ def get_kg_embedding_model(config):
 
     if model_name == CONV_E_NAME:
         return ConvE(config=config)
+
+    raise ValueError(f'Invalid KGE model name: {model_name}')
 
 
 def get_optimizer(config, kg_embedding_model):
