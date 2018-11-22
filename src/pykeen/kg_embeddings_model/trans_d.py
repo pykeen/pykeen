@@ -11,11 +11,6 @@ from pykeen.constants import *
 
 __all__ = ['TransD']
 
-"""
-TODO: Check, whether it makes sense to integrate identity matrices.
-"""
-
-
 class TransD(nn.Module):
 
     def __init__(self, config):
