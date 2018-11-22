@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import random
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from torch.nn import Module
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
-from pykeen.utilities.evaluation_utils.metrics_computations import compute_metrics
+from pykeen.utilities.evaluation_utils.metrics_computations import compute_metric_results
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from pykeen.utilities.train_utils import train_model
 
@@ -37,20 +37,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
         del hyperparams_dict[CONV_E_KERNEL_HEIGHT]
         del hyperparams_dict[CONV_E_KERNEL_WIDTH]
 
-        kg_model_config.update(self._sample_params(hyperparams_dict))
+        kg_model_config.update(self._sample_parameter_value(hyperparams_dict))
 
         return kg_model_config
-
-    @staticmethod
-    def _sample_params(hyperparams_dict):
-        return {
-            param: (
-                random.choice(values)
-                if isinstance(values, list) else
-                values
-            )
-            for param, values in hyperparams_dict.items()
-        }
 
     def optimize_hyperparams(self,
                              mapped_train_triples,
@@ -59,17 +48,19 @@ class RandomSearchHPO(AbstractHPOptimizer):
                              rel_to_id,
                              config,
                              device,
-                             seed: Optional[int] = None) -> OptimizeResult:
+                             seed: Optional[int] = None,
+                             k_evaluation: int = 10) -> OptimizeResult:
+        """"""
         if seed is not None:
             # FIXME np.random is not used
             np.random.seed(seed=seed)
 
         trained_models: List[Module] = []
         epoch_losses: List[List[float]] = []
-        eval_results: List = []
+        hits_at_k_evaluation: List[float] = []
         entity_to_ids: List = []
         rel_to_ids: List = []
-        models_params: List = []
+        models_params: List[Dict] = []
         eval_summaries: List = []
 
         config = config.copy()
@@ -78,17 +69,15 @@ class RandomSearchHPO(AbstractHPOptimizer):
         sample_fct = (
             self._sample_conv_e_params
             if config[KG_EMBEDDING_MODEL_NAME] == CONV_E_NAME else
-            self._sample_params
+            self._sample_parameter_value
         )
 
         for _ in range(max_iters):
-            eval_summary = OrderedDict()
-
             # Sample hyper-params
-            kg_embedding_model_config = sample_fct(config)
-            kg_embedding_model_config[NUM_ENTITIES] = len(entity_to_id)
-            kg_embedding_model_config[NUM_RELATIONS] = len(rel_to_id)
-            kg_embedding_model_config[SEED] = seed
+            kg_embedding_model_config: Dict[int, Any] = sample_fct(config)
+            kg_embedding_model_config[NUM_ENTITIES]: int = len(entity_to_id)
+            kg_embedding_model_config[NUM_RELATIONS]: int = len(rel_to_id)
+            kg_embedding_model_config[SEED]: int = seed
 
             # Configure defined model
             kg_embedding_model: Module = get_kg_embedding_model(config=kg_embedding_model_config)
@@ -107,27 +96,30 @@ class RandomSearchHPO(AbstractHPOptimizer):
                 batch_size=kg_embedding_model_config[BATCH_SIZE],
                 pos_triples=mapped_train_triples,
                 device=device,
-                seed=seed
+                seed=seed,
             )
 
             # Evaluate trained model
-            mean_rank, hits_at_k = compute_metrics(
+            mean_rank, hits_at_k = compute_metric_results(
                 all_entities=all_entities,
                 kg_embedding_model=trained_model,
                 mapped_train_triples=mapped_train_triples,
                 mapped_test_triples=mapped_test_triples,
-                device=device
+                device=device,
             )
 
             # TODO: Define HPO metric
-            eval_summary[MEAN_RANK] = mean_rank
-            eval_summary[HITS_AT_K] = hits_at_k
-            eval_results.append(hits_at_k[10])
+            eval_summary = OrderedDict()
+            eval_summary[MEAN_RANK]: float = mean_rank
+            eval_summary[HITS_AT_K]: Dict[int, float] = hits_at_k
             eval_summaries.append(eval_summary)
+
             trained_models.append(trained_model)
             epoch_losses.append(epoch_loss)
 
-        index_of_max = int(np.argmax(a=eval_results))
+            hits_at_k_evaluation.append(hits_at_k[k_evaluation])
+
+        index_of_max = int(np.argmax(a=hits_at_k_evaluation))
 
         return (
             trained_models[index_of_max],
@@ -138,10 +130,16 @@ class RandomSearchHPO(AbstractHPOptimizer):
             models_params[index_of_max],
         )
 
-    @staticmethod
-    def run(mapped_train_triples, mapped_test_triples, entity_to_id, rel_to_id, config, device, seed):
-        hpo = RandomSearchHPO()
-        return hpo.optimize_hyperparams(
+    @classmethod
+    def run(cls,
+            mapped_train_triples,
+            mapped_test_triples,
+            entity_to_id,
+            rel_to_id,
+            config,
+            device,
+            seed) -> OptimizeResult:
+        return cls().optimize_hyperparams(
             mapped_train_triples=mapped_train_triples,
             mapped_test_triples=mapped_test_triples,
             entity_to_id=entity_to_id,

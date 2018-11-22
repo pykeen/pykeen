@@ -4,12 +4,15 @@
 
 import logging
 import timeit
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Tuple, Optional
 
 import numpy as np
 import torch
 
 log = logging.getLogger(__name__)
+
+DEFAULT_HITS_AT_K = [1, 3, 5, 10]
 
 
 def _hash_triples(triples):
@@ -21,26 +24,21 @@ def _hash_triples(triples):
     return hash(tuple(triples))
 
 
-def _compute_hits_at_k(hits_at_k_dict, rank_of_positive_subject_based, rank_of_positive_object_based):
-    """
-
-    :param hits_at_k_dict:
-    :param rank_of_positive_subject_based:
-    :param rank_of_positive_object_based:
-    :return:
-    """
-    for k, value in hits_at_k_dict.items():
+def update_hits_at_k(
+        hits_at_k_values: Dict[int, List[float]],
+        rank_of_positive_subject_based: int,
+        rank_of_positive_object_based: int) -> None:
+    """Update the Hits@K dictionary for two values."""
+    for k, values in hits_at_k_values.items():
         if rank_of_positive_subject_based < k:
-            value.append(1.)
+            values.append(1.0)
         else:
-            value.append(0.)
+            values.append(0.0)
 
         if rank_of_positive_object_based < k:
-            value.append(1.)
+            values.append(1.0)
         else:
-            value.append(0.)
-
-    return hits_at_k_dict
+            values.append(0.0)
 
 
 def _create_corrupted_triples(triple, all_entities, device):
@@ -100,8 +98,13 @@ def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, a
     return corrupted_subject_based, corrupted_object_based
 
 
-def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corrupted_object_based, device,
-                           all_pos_triples_hashed):
+def _compute_filtered_rank(
+        kg_embedding_model,
+        pos_triple,
+        corrupted_subject_based,
+        corrupted_object_based,
+        device,
+        all_pos_triples_hashed) -> Tuple[int, int]:
     """
 
     :param kg_embedding_model:
@@ -110,25 +113,29 @@ def _compute_filtered_rank(kg_embedding_model, pos_triple, corrupted_subject_bas
     :param corrupted_object_based:
     :param device:
     :param all_pos_triples_hashed:
-    :return:
     """
-
     corrupted_subject_based, corrupted_object_based = _filter_corrupted_triples(
         corrupted_subject_based=corrupted_subject_based,
         corrupted_object_based=corrupted_object_based,
         all_pos_triples_hashed=all_pos_triples_hashed)
 
-    rank_of_positive_subject_based, rank_of_positive_object_based = _compute_rank(kg_embedding_model=kg_embedding_model,
-                                                                                  pos_triple=pos_triple,
-                                                                                  corrupted_subject_based=corrupted_subject_based,
-                                                                                  corrupted_object_based=corrupted_object_based,
-                                                                                  device=device)
+    return _compute_rank(
+        kg_embedding_model=kg_embedding_model,
+        pos_triple=pos_triple,
+        corrupted_subject_based=corrupted_subject_based,
+        corrupted_object_based=corrupted_object_based,
+        device=device,
+        all_pos_triples_hashed=all_pos_triples_hashed,
+    )
 
-    return rank_of_positive_subject_based, rank_of_positive_object_based
 
-
-def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corrupted_object_based, device,
-                  all_pos_triples_hashed=None):
+def _compute_rank(
+        kg_embedding_model,
+        pos_triple,
+        corrupted_subject_based,
+        corrupted_object_based,
+        device,
+        all_pos_triples_hashed=None) -> Tuple[int, int]:
     """
 
     :param kg_embedding_model:
@@ -136,8 +143,7 @@ def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corru
     :param corrupted_subject_based:
     :param corrupted_object_based:
     :param device:
-    :param all_pos_triples_hashed:
-    :return:
+    :param all_pos_triples_hashed: This parameter isn't used but is necessary for compatability
     """
     scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
     scores_of_corrupted_objects = kg_embedding_model.predict(corrupted_object_based)
@@ -162,19 +168,30 @@ def _compute_rank(kg_embedding_model, pos_triple, corrupted_subject_based, corru
                                                       descending=False)
     sorted_score_indices_object_based = sorted_score_indices_object_based.cpu().numpy()
 
-    # Get index of first occurence that fulfills the condition
+    # Get index of first occurrence that fulfills the condition
     rank_of_positive_subject_based = np.where(sorted_score_indices_subject_based == indice_of_pos_subject_based)[0][0]
     rank_of_positive_object_based = np.where(sorted_score_indices_object_based == indice_of_pos_object_based)[0][0]
 
-    return rank_of_positive_subject_based, rank_of_positive_object_based
+    return (
+        rank_of_positive_subject_based,
+        rank_of_positive_object_based,
+    )
 
 
-def compute_metrics(all_entities,
-                    kg_embedding_model,
-                    mapped_train_triples,
-                    mapped_test_triples,
-                    device,
-                    filter_neg_triples=False) -> Tuple:
+@dataclass
+class MetricResult:
+    """Results from computing metrics."""
+    mean_rank: float
+    hits_at_k: Dict[int, float]
+
+
+def compute_metric_results(all_entities,
+                           kg_embedding_model,
+                           mapped_train_triples,
+                           mapped_test_triples,
+                           device,
+                           filter_neg_triples=False,
+                           ks: Optional[List[int]] = None) -> MetricResult:
     """
 
     :param all_entities:
@@ -183,19 +200,30 @@ def compute_metrics(all_entities,
     :param mapped_test_triples:
     :param device:
     :param filter_neg_triples:
+    :param ks:
     :return:
     """
     start = timeit.default_timer()
-    ranks = []
-    hits_at_k_dict = {k: [] for k in [1, 3, 5, 10]}
+
+    ranks: List[int] = []
+    hits_at_k_values = {
+        k: []
+        for k in (ks or DEFAULT_HITS_AT_K)
+    }
+
     kg_embedding_model = kg_embedding_model.to(device)
+
     all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
     all_pos_triples_hashed = np.apply_along_axis(_hash_triples, 1, all_pos_triples)
 
-    compute_rank_fct = _compute_filtered_rank if filter_neg_triples else _compute_rank
+    compute_rank_fct: Callable[..., Tuple[int, int]] = (
+        _compute_filtered_rank
+        if filter_neg_triples else
+        _compute_rank
+    )
 
     # Corrupt triples
-    for triple_nmbr, pos_triple in enumerate(mapped_test_triples):
+    for pos_triple in mapped_test_triples:
         corrupted_subject_based, corrupted_object_based = _create_corrupted_triples(
             triple=pos_triple,
             all_entities=all_entities,
@@ -215,20 +243,19 @@ def compute_metrics(all_entities,
         ranks.append(rank_of_positive_object_based)
 
         # Compute hits@k for k in {1,3,5,10}
-        hits_at_k_dict.update(_compute_hits_at_k(
-            hits_at_k_dict,
+        update_hits_at_k(
+            hits_at_k_values,
             rank_of_positive_subject_based=rank_of_positive_subject_based,
             rank_of_positive_object_based=rank_of_positive_object_based,
-        ))
+        )
 
-    mean_rank = np.mean(ranks)
-
-    hits_at_k_dict_result = {
+    mean_rank = float(np.mean(ranks))
+    hits_at_k: Dict[int, float] = {
         k: np.mean(values)
-        for k, values in hits_at_k_dict.items()
+        for k, values in hits_at_k_values.items()
     }
 
     stop = timeit.default_timer()
     log.debug("evaluation took %.2fs seconds", stop - start)
 
-    return mean_rank, hits_at_k_dict_result
+    return mean_rank, hits_at_k

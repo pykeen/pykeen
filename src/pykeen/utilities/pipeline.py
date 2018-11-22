@@ -13,7 +13,7 @@ from torch.nn import Module
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
-from pykeen.utilities.evaluation_utils.metrics_computations import compute_metrics
+from pykeen.utilities.evaluation_utils.metrics_computations import compute_metric_results
 from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
 from pykeen.utilities.train_utils import train_model
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
@@ -103,8 +103,7 @@ class Pipeline(object):
             if self.is_evaluation_required:
                 log.info("-------------Start Evaluation-------------")
 
-                eval_summary = OrderedDict()
-                mean_rank, hits_at_k = compute_metrics(
+                mean_rank, hits_at_k = compute_metric_results(
                     all_entities=all_entities,
                     kg_embedding_model=kg_embedding_model,
                     mapped_train_triples=mapped_pos_train_triples,
@@ -113,6 +112,7 @@ class Pipeline(object):
                     filter_neg_triples=self.config[FILTER_NEG_TRIPLES],
                 )
 
+                eval_summary = OrderedDict()
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_summary[HITS_AT_K] = hits_at_k
 
