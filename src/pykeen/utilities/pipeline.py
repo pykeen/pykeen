@@ -3,7 +3,8 @@
 """Implementation of the basic pipeline."""
 
 import logging
-from typing import Optional
+from dataclasses import dataclass
+from typing import Dict, Mapping
 
 import numpy as np
 import torch
@@ -21,10 +22,15 @@ __all__ = ['Pipeline']
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class PipelineResult:  # TODO replace in Pipeline.run()
+    """Results from the pipeline."""
+
+
 class Pipeline(object):
-    def __init__(self, config):
-        self.config = config
-        self.seed = config[SEED]
+    def __init__(self, config: Dict):
+        self.config: Dict = config
+        self.seed: int = config[SEED]
         self.entity_to_id = None
         self.rel_to_id = None
         self.device_name = (
@@ -34,19 +40,17 @@ class Pipeline(object):
         )
         self.device = torch.device(self.device_name)
 
-    def start(self, path_to_train_data: Optional[str] = None):
-        is_hpo_mode = self.config.get('hpo_mode') or self.config[EXECUTION_MODE] == HPO_MODE
-        return self._start_pipeline(is_hpo_mode=is_hpo_mode, path_to_train_data=path_to_train_data)
+    @staticmethod
+    def _use_hpo(config):
+        return config.get('hpo_mode') or config[EXECUTION_MODE] == HPO_MODE
 
     @property
     def is_evaluation_required(self) -> bool:
         return TEST_SET_PATH in self.config or TEST_SET_RATIO in self.config
 
-    # TODO: Remove path_to_train_data
-    def _start_pipeline(self, is_hpo_mode: bool, path_to_train_data: Optional[str] = None):
-        pipeline_outcome = OrderedDict()
-
-        if is_hpo_mode:
+    def run(self) -> Mapping:
+        """Run this pipeline."""
+        if self._use_hpo(self.config):  # Hyper-parameter optimization mode
             mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
 
             (trained_model,
@@ -55,18 +59,15 @@ class Pipeline(object):
              relation_to_embedding,
              eval_summary,
              params) = RandomSearchHPO.run(
-                mapped_train_tripels=mapped_pos_train_triples,
-                mapped_test_tripels=mapped_pos_test_triples,
+                mapped_train_triples=mapped_pos_train_triples,
+                mapped_test_triples=mapped_pos_test_triples,
                 entity_to_id=self.entity_to_id,
                 rel_to_id=self.rel_to_id,
                 config=self.config,
                 device=self.device,
                 seed=self.seed,
             )
-
-        else:
-
-            # Training Mode
+        else:  # Training Mode
             if self.is_evaluation_required:
                 mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
             else:
@@ -83,17 +84,18 @@ class Pipeline(object):
             batch_size = self.config[BATCH_SIZE]
             num_epochs = self.config[NUM_EPOCHS]
             learning_rate = self.config[LEARNING_RATE]
-            params = self.config
 
             log.info("-------------Train KG Embeddings-------------")
-            trained_model, loss_per_epoch = train_model(kg_embedding_model=kg_embedding_model,
-                                                        all_entities=all_entities,
-                                                        learning_rate=learning_rate,
-                                                        num_epochs=num_epochs,
-                                                        batch_size=batch_size,
-                                                        pos_triples=mapped_pos_train_triples,
-                                                        device=self.device,
-                                                        seed=self.seed)
+            trained_model, loss_per_epoch = train_model(
+                kg_embedding_model=kg_embedding_model,
+                all_entities=all_entities,
+                learning_rate=learning_rate,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                pos_triples=mapped_pos_train_triples,
+                device=self.device,
+                seed=self.seed,
+            )
 
             eval_summary = None
 
@@ -101,12 +103,14 @@ class Pipeline(object):
                 log.info("-------------Start Evaluation-------------")
 
                 eval_summary = OrderedDict()
-                mean_rank, hits_at_k = compute_metrics(all_entities=all_entities,
-                                                       kg_embedding_model=kg_embedding_model,
-                                                       mapped_train_triples=mapped_pos_train_triples,
-                                                       mapped_test_triples=mapped_pos_test_triples,
-                                                       device=self.device,
-                                                       filter_neg_triples=self.config[FILTER_NEG_TRIPLES])
+                mean_rank, hits_at_k = compute_metrics(
+                    all_entities=all_entities,
+                    kg_embedding_model=kg_embedding_model,
+                    mapped_train_triples=mapped_pos_train_triples,
+                    mapped_test_triples=mapped_pos_test_triples,
+                    device=self.device,
+                    filter_neg_triples=self.config[FILTER_NEG_TRIPLES],
+                )
 
                 eval_summary[MEAN_RANK] = mean_rank
                 eval_summary[HITS_AT_K] = hits_at_k
@@ -119,7 +123,7 @@ class Pipeline(object):
             for id, embedding in enumerate(trained_model.entity_embeddings.weight)
         }
 
-        if self.config[KG_EMBEDDING_MODEL_NAME] in [SE_NAME, UM_NAME]:
+        if self.config[KG_EMBEDDING_MODEL_NAME] in (SE_NAME, UM_NAME):
             relation_to_embedding = None
         else:
             relation_to_embedding = {
@@ -127,15 +131,15 @@ class Pipeline(object):
                 for id, embedding in enumerate(trained_model.relation_embeddings.weight)
             }
 
-        pipeline_outcome[TRAINED_MODEL] = trained_model
-        pipeline_outcome[LOSSES] = loss_per_epoch
-        pipeline_outcome[ENTITY_TO_EMBEDDING] = entity_to_embedding
-        pipeline_outcome[RELATION_TO_EMBEDDING] = relation_to_embedding
-        pipeline_outcome[EVAL_SUMMARY] = eval_summary
-        pipeline_outcome[ENTITY_TO_ID] = self.entity_to_id
-        pipeline_outcome[RELATION_TO_ID] = self.rel_to_id
-
-        return pipeline_outcome, params
+        results = OrderedDict()
+        results[TRAINED_MODEL] = trained_model
+        results[LOSSES] = loss_per_epoch
+        results[ENTITY_TO_EMBEDDING]: Mapping[str, np.ndarray] = entity_to_embedding
+        results[RELATION_TO_EMBEDDING]: Mapping[str, np.ndarray] = relation_to_embedding
+        results[EVAL_SUMMARY] = eval_summary
+        results[ENTITY_TO_ID] = self.entity_to_id
+        results[RELATION_TO_ID] = self.rel_to_id
+        return results
 
     def _get_train_and_test_triples(self):
         train_pos = _load_data(self.config[TRAINING_SET_PATH])

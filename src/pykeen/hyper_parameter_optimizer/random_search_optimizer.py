@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import random
+from typing import Optional
 
 import numpy as np
 
@@ -14,40 +15,48 @@ __all__ = ['RandomSearchHPO']
 
 
 class RandomSearchHPO(AbstractHPOptimizer):
+    """A hyper-parameter optimizer that uses random search."""
 
-    def _sample_conv_e_params(self, hyparams_dict):
+    def _sample_conv_e_params(self, hyperparams_dict):
         kg_model_config = OrderedDict()
         # Sample params which are dependent on each other
-        embedding_dimensions = hyparams_dict[EMBEDDING_DIM]
+        embedding_dimensions = hyperparams_dict[EMBEDDING_DIM]
         sampled_index = random.choice(range(len(embedding_dimensions)))
         kg_model_config[EMBEDDING_DIM] = embedding_dimensions[sampled_index]
-        kg_model_config[CONV_E_HEIGHT] = hyparams_dict[CONV_E_HEIGHT][sampled_index]
-        kg_model_config[CONV_E_WIDTH] = hyparams_dict[CONV_E_WIDTH][sampled_index]
-        kg_model_config[CONV_E_KERNEL_HEIGHT] = hyparams_dict[CONV_E_KERNEL_HEIGHT][sampled_index]
-        kg_model_config[CONV_E_KERNEL_WIDTH] = hyparams_dict[CONV_E_KERNEL_WIDTH][sampled_index]
+        kg_model_config[CONV_E_HEIGHT] = hyperparams_dict[CONV_E_HEIGHT][sampled_index]
+        kg_model_config[CONV_E_WIDTH] = hyperparams_dict[CONV_E_WIDTH][sampled_index]
+        kg_model_config[CONV_E_KERNEL_HEIGHT] = hyperparams_dict[CONV_E_KERNEL_HEIGHT][sampled_index]
+        kg_model_config[CONV_E_KERNEL_WIDTH] = hyperparams_dict[CONV_E_KERNEL_WIDTH][sampled_index]
 
-        del hyparams_dict[EMBEDDING_DIM]
-        del hyparams_dict[CONV_E_HEIGHT]
-        del hyparams_dict[CONV_E_WIDTH]
-        del hyparams_dict[CONV_E_KERNEL_HEIGHT]
-        del hyparams_dict[CONV_E_KERNEL_WIDTH]
+        del hyperparams_dict[EMBEDDING_DIM]
+        del hyperparams_dict[CONV_E_HEIGHT]
+        del hyperparams_dict[CONV_E_WIDTH]
+        del hyperparams_dict[CONV_E_KERNEL_HEIGHT]
+        del hyperparams_dict[CONV_E_KERNEL_WIDTH]
 
-        kg_model_config.update(self._sample_params(hyparams_dict))
-
-        return kg_model_config
-
-    def _sample_params(self, hyperparams_dict):
-        kg_model_config = OrderedDict()
-        for param, values in hyperparams_dict.items():
-            if isinstance(values, list):
-                kg_model_config[param] = random.choice(values)
-            else:
-                kg_model_config[param] = values
+        kg_model_config.update(self._sample_params(hyperparams_dict))
 
         return kg_model_config
 
-    def optimize_hyperparams(self, mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config,
-                             device, seed=None):
+    @staticmethod
+    def _sample_params(hyperparams_dict):
+        return {
+            param: (
+                random.choice(values)
+                if isinstance(values, list) else
+                values
+            )
+            for param, values in hyperparams_dict.items()
+        }
+
+    def optimize_hyperparams(self,
+                             mapped_train_triples,
+                             mapped_test_triples,
+                             entity_to_id,
+                             rel_to_id,
+                             config,
+                             device,
+                             seed: Optional[int] = None):
         if seed is not None:
             # FIXME np.random is not used
             np.random.seed(seed=seed)
@@ -93,7 +102,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
                 learning_rate=kg_embedding_model_config[LEARNING_RATE],
                 num_epochs=kg_embedding_model_config[NUM_EPOCHS],
                 batch_size=kg_embedding_model_config[BATCH_SIZE],
-                pos_triples=mapped_train_tripels,
+                pos_triples=mapped_train_triples,
                 device=device,
                 seed=seed
             )
@@ -102,8 +111,8 @@ class RandomSearchHPO(AbstractHPOptimizer):
             mean_rank, hits_at_k = compute_metrics(
                 all_entities=all_entities,
                 kg_embedding_model=trained_model,
-                mapped_train_triples=mapped_train_tripels,
-                mapped_test_triples=mapped_test_tripels,
+                mapped_train_triples=mapped_train_triples,
+                mapped_test_triples=mapped_test_triples,
                 device=device
             )
 
@@ -115,21 +124,23 @@ class RandomSearchHPO(AbstractHPOptimizer):
             trained_models.append(trained_model)
             epoch_losses.append(epoch_loss)
 
-        index_of_max = np.argmax(a=eval_results)
+        index_of_max = int(np.argmax(a=eval_results))
 
-        return trained_models[index_of_max], \
-               epoch_losses[index_of_max], \
-               entity_to_ids[index_of_max], \
-               rel_to_ids[index_of_max], \
-               eval_summaries[index_of_max], \
-               models_params[index_of_max]
+        return (
+            trained_models[index_of_max],
+            epoch_losses[index_of_max],
+            entity_to_ids[index_of_max],
+            rel_to_ids[index_of_max],
+            eval_summaries[index_of_max],
+            models_params[index_of_max],
+        )
 
     @staticmethod
-    def run(mapped_train_tripels, mapped_test_tripels, entity_to_id, rel_to_id, config, device, seed):
+    def run(mapped_train_triples, mapped_test_triples, entity_to_id, rel_to_id, config, device, seed):
         hpo = RandomSearchHPO()
         return hpo.optimize_hyperparams(
-            mapped_train_tripels=mapped_train_tripels,
-            mapped_test_tripels=mapped_test_tripels,
+            mapped_train_triples=mapped_train_triples,
+            mapped_test_triples=mapped_test_triples,
             entity_to_id=entity_to_id,
             rel_to_id=rel_to_id,
             config=config,

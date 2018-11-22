@@ -6,7 +6,8 @@ import json
 import os
 import pickle
 import time
-from typing import Mapping, Optional
+from dataclasses import dataclass
+from typing import Dict, Mapping, Optional
 
 import torch
 
@@ -17,48 +18,78 @@ from pykeen.constants import (
 from pykeen.utilities.pipeline import Pipeline
 
 
-def run(config: Mapping,
-        output_directory: Optional[str] = None,
-        training_path: Optional[str] = None):
+@dataclass
+class Results:
+    """Results from PyKEEN."""
+
+    config: Mapping
+    pipeline: Pipeline
+    results: Mapping
+
+
+def run(config: Dict,
+        output_directory: Optional[str] = None) -> Results:
     """Run PyKEEN using a given configuration."""
     if output_directory is None:
         output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d_%H:%M:%S"))
     os.makedirs(output_directory, exist_ok=True)
 
     pipeline = Pipeline(config=config)
+    pipeline_results = pipeline.run()
 
-    pipeline_outcome, params = pipeline.start(path_to_train_data=training_path)
+    with open(os.path.join(output_directory, 'configuration.json'), 'w') as file:
+        json.dump(pipeline.config, file, indent=2)
 
-    out_path = os.path.join(output_directory, 'configuration.json')
-    with open(out_path, 'w') as handle:
-        json.dump(params, handle, indent=2)
+    with open(os.path.join(output_directory, 'entities_to_embeddings.pkl'), 'wb') as file:
+        pickle.dump(pipeline_results[ENTITY_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out_path = os.path.join(output_directory, 'entities_to_embeddings.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(pipeline_outcome[ENTITY_TO_EMBEDDING], handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(os.path.join(output_directory, 'entities_to_embeddings.json'), 'w') as file:
+        json.dump(
+            {
+                key: list(map(float, array))
+                for key, array in pipeline_results[ENTITY_TO_EMBEDDING].items()
+            },
+            file,
+            indent=2,
+            sort_keys=True
+        )
 
-    out_path = os.path.join(output_directory, 'relations_to_embeddings.pkl')
-    with open(out_path, 'wb') as handle:
-        pickle.dump(pipeline_outcome[RELATION_TO_EMBEDDING], handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(os.path.join(output_directory, 'relations_to_embeddings.pkl'), 'wb') as file:
+        pickle.dump(pipeline_results[RELATION_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out_path = os.path.join(output_directory, 'entity_to_id.json')
-    with open(out_path, 'w') as handle:
-        json.dump(pipeline_outcome[ENTITY_TO_ID], handle, indent=2)
+    with open(os.path.join(output_directory, 'relations_to_embeddings.json'), 'w') as file:
+        json.dump(
+            {
+                key: list(map(float, array))
+                for key, array in pipeline_results[RELATION_TO_EMBEDDING].items()
+            },
+            file,
+            indent=2,
+            sort_keys=True,
+        )
 
-    out_path = os.path.join(output_directory, 'relation_to_id.json')
-    with open(out_path, 'w') as handle:
-        json.dump(pipeline_outcome[RELATION_TO_ID], handle, indent=2)
+    with open(os.path.join(output_directory, 'entity_to_id.json'), 'w') as file:
+        json.dump(pipeline_results[ENTITY_TO_ID], file, indent=2, sort_keys=True)
 
-    out_path = os.path.join(output_directory, 'losses.json')
-    with open(out_path, 'w') as handle:
-        json.dump(pipeline_outcome[LOSSES], handle, indent=2)
+    with open(os.path.join(output_directory, 'relation_to_id.json'), 'w') as file:
+        json.dump(pipeline_results[RELATION_TO_ID], file, indent=2, sort_keys=True)
 
-    eval_summary = pipeline_outcome.get(EVAL_SUMMARY)
+    with open(os.path.join(output_directory, 'losses.json'), 'w') as file:
+        json.dump(pipeline_results[LOSSES], file, indent=2, sort_keys=True)
+
+    eval_summary = pipeline_results.get(EVAL_SUMMARY)
     if eval_summary is not None:
-        out_path = os.path.join(output_directory, 'evaluation_summary.json')
-        with open(out_path, 'w') as handle:
-            json.dump(eval_summary, handle, indent=2)
+        with open(os.path.join(output_directory, 'evaluation_summary.json'), 'w') as file:
+            json.dump(eval_summary, file, indent=2)
 
     # Save trained model
-    out_path = os.path.join(output_directory, 'trained_model.pkl')
-    torch.save(pipeline_outcome[TRAINED_MODEL].state_dict(), out_path)
+    torch.save(
+        pipeline_results[TRAINED_MODEL].state_dict(),
+        os.path.join(output_directory, 'trained_model.pkl'),
+    )
+
+    return Results(
+        config=config,
+        pipeline=pipeline,
+        results=pipeline_results,
+    )
