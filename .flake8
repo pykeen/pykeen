@@ -5,10 +5,15 @@
 #########################
 [flake8]
 ignore =
-    F405 # Related to import *
+    # Related to import *
+    F405
 	E501
-	I100  # Import statements are in the wrong order
-	I101  # Imported names are in the wrong order
+    # Import statements are in the wrong order
+	I100
+    # Imported names are in the wrong order
+	I101
+    # Don't complain about asserts
+    S101
 exclude =
     .tox,
     .git,
@@ -22,7 +27,7 @@ exclude =
     .cache,
     .eggs,
     data
-max-complexity = 10
+max-complexity = 20
 import-order-style = pycharm
 application-import-names =
     pykeen
