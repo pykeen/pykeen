@@ -44,7 +44,7 @@ class Pipeline(object):
 
     @staticmethod
     def _use_hpo(config):
-        return config.get('hpo_mode') or config[EXECUTION_MODE] == HPO_MODE
+        return config[EXECUTION_MODE] == HPO_MODE
 
     @property
     def is_evaluation_required(self) -> bool:
