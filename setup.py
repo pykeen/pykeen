@@ -29,6 +29,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Information Analysis',
 ]
 INSTALL_REQUIRES = [
+    'dataclasses; python_version<"3.7"',
     'numpy; python_version == "3.6"',
     'numpy; python_version == "3.7"',
     'scikit-learn==0.19.1; python_version == "3.6"',
