@@ -7,7 +7,7 @@ The system has a modular architecture, and can be configured by the user through
 
 Citation
 --------
-If you use BioKEEN in your work, please cite:
+If you use PyKEEN in your work, please cite:
 
 .. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings <https://doi.org/10.1101/475202>`_. bioRxiv 475202.
 
