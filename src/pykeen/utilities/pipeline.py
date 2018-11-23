@@ -41,6 +41,7 @@ class Pipeline(object):
         )
         self.device = torch.device(self.device_name)
 
+
     @staticmethod
     def _use_hpo(config):
         return config.get('hpo_mode') or config[EXECUTION_MODE] == HPO_MODE
@@ -98,6 +99,7 @@ class Pipeline(object):
                 seed=self.seed,
             )
 
+            params = self.config
             eval_summary = None
 
             if self.is_evaluation_required:
@@ -140,6 +142,7 @@ class Pipeline(object):
         results[EVAL_SUMMARY] = eval_summary
         results[ENTITY_TO_ID] = self.entity_to_id
         results[RELATION_TO_ID] = self.rel_to_id
+        results[FINAL_CONFIGURATION] = params
         return results
 
     def _get_train_and_test_triples(self):
