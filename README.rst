@@ -67,7 +67,7 @@ or alternatively:
 
 Summarize the results of all experiments
 ****************************************
-To summarize the results of all experiments and run following command:
+To summarize the results of all experiments, please run following command:
 
 .. code-block:: sh
 
