@@ -77,7 +77,7 @@ or alternatively:
 
 .. code-block:: python
 
-    python3 -m pykeen-summarize
+    python3 -m pykeen-summarize -d /path/to/experiments/directory -o /path/to/output/file.csv
 
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
     :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
