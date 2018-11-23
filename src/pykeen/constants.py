@@ -98,6 +98,7 @@ LOSSES = 'losses'
 ENTITY_TO_EMBEDDING = 'entity_to_embedding'
 RELATION_TO_EMBEDDING = 'relation_to_embedding'
 CONFIG = 'configuration'
+FINAL_CONFIGURATION = 'final_configuration'
 EVAL_SUMMARY = 'eval_summary'
 # -----------------Command line interface messages-----------------
 
