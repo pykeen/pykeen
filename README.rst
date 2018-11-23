@@ -67,12 +67,11 @@ or alternatively:
 
 Summarize the results of all experiments
 ****************************************
-To summarize the results of all experiments, please switch to root directory containing the directories for each
-experiment, and run following command:
+To summarize the results of all experiments and run following command:
 
 .. code-block:: sh
 
-    pykeen-summarize
+    pykeen-summarize -d /path/to/experiments/directory -o /path/to/output/file.csv
 
 or alternatively:
 
