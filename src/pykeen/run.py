@@ -14,7 +14,7 @@ import torch
 from pykeen.constants import (
     ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING, RELATION_TO_ID,
     TRAINED_MODEL,
-)
+    FINAL_CONFIGURATION)
 from pykeen.utilities.pipeline import Pipeline
 
 
@@ -38,7 +38,8 @@ def run(config: Dict,
     pipeline_results = pipeline.run()
 
     with open(os.path.join(output_directory, 'configuration.json'), 'w') as file:
-        json.dump(pipeline.config, file, indent=2)
+        # In HPO model inital configuration is different from final configurations, thats why we differentiate
+        json.dump(pipeline_results[FINAL_CONFIGURATION], file, indent=2)
 
     with open(os.path.join(output_directory, 'entities_to_embeddings.pkl'), 'wb') as file:
         pickle.dump(pipeline_results[ENTITY_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
