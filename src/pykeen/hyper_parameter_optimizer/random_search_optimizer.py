@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""A hyper-parameter optimizer that uses random search."""
+
 import random
 from typing import Any, Dict, List, Optional, Tuple
 

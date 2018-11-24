@@ -5,6 +5,10 @@
 #########################
 [flake8]
 ignore =
+    # Related to generating random numbers
+    S311
+    # Related to security for pickles
+    S403
     # Related to import *
     F405
 	E501
@@ -14,6 +18,13 @@ ignore =
 	I101
     # Don't complain about asserts
     S101
+    # Documentation in public method
+    D102
+    D103
+    # Documentation in public class
+    D101
+    # Documentation in init
+    D107
 exclude =
     .tox,
     .git,

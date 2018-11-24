@@ -14,7 +14,7 @@ from pykeen.utilities.initialization_utils.module_initialization_utils import ge
 from pykeen.utilities.prediction_utils import make_predictions
 
 
-def start_predictions_piepline(model_direc: str, data_direc: str):
+def start_predictions_pipeline(model_direc: str, data_direc: str):
     # Load configuration file
     with open(os.path.join(model_direc, 'configuration.json')) as f:
         config = json.load(f)

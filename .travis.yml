@@ -26,6 +26,7 @@ jobs:
 matrix:
   allow_failures:
       - env: TOXENV=xenon
+      - env: TOXENV=flake8
       - python: 3.7
 install:
     - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov; else pip install tox; fi'

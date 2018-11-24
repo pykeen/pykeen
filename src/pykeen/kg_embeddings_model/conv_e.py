@@ -12,6 +12,7 @@ from pykeen.constants import *
 
 __all__ = ['ConvE']
 
+
 class ConvE(nn.Module):
     """An implementation of ConvE based on https://github.com/TimDettmers/ConvE/blob/master/model.py."""
 
@@ -48,7 +49,7 @@ class ConvE(nn.Module):
             kernel_size=(kernel_height, kernel_width),
             stride=1,
             padding=0,
-            bias=True
+            bias=True,
         )
 
         # num_features – C from an expected input of size (N,C,L)
@@ -113,7 +114,6 @@ class ConvE(nn.Module):
         :param labels:
         :return:
         """
-
         return self.loss(predictions, labels)
 
     def forward(self, batch, labels):

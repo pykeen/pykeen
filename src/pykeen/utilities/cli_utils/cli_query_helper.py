@@ -8,10 +8,12 @@ from collections import OrderedDict
 
 import click
 from prompt_toolkit import prompt
+
 from pykeen.constants import (
-    BINARY_QUESTION_MAPPING, CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE,
-    ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, TRAINING_MODE,
-    PYKEEN)
+    BINARY_QUESTION_MAPPING, CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE, ID_TO_KG_MODEL_MAPPING,
+    ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, PYKEEN, TRAINING_MODE,
+)
+
 
 def _is_correct_format(path):
     if path.startswith('ndex:') or path.endswith('.tsv') or path.endswith('.nt'):

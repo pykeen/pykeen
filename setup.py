@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Setup.py for pykeen."""
+"""Setup.py for PyKEEN."""
 
 import codecs
 import os
@@ -29,9 +29,8 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Information Analysis',
 ]
 INSTALL_REQUIRES = [
-    'dataclasses; python_version<"3.7"',
-    'numpy; python_version == "3.6"',
-    'numpy; python_version == "3.7"',
+    'dataclasses; python_version < "3.7"',
+    'numpy',
     'scikit-learn==0.19.1; python_version == "3.6"',
     'scikit-learn; python_version == "3.7"',
     'scipy',

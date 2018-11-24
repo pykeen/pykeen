@@ -10,19 +10,13 @@ from typing import Dict
 import click
 
 from pykeen.constants import (
-    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, EXECUTION_MODE, FILTER_NEG_TRIPLES, HPO_ITERS_ERROR_MSG,
-    HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_MODE, NUM_OF_HPO_ITERS, OUTPUT_DIREC, PREFERRED_DEVICE, PYKEEN,
-    RESCAL_NAME, SEED, SEED_ERROR_MSG, SEED_PRINT_MSG, SEED_PROMPT_MSG, SE_NAME, TEST_FILE_ERROR_MSG,
-    TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG, TRAINING_FILE_PROMPT_MSG,
-    TRAINING_MODE, TRAINING_SET_PATH, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME, TRANS_R_NAME, UM_NAME,
+    EXECUTION_MODE, FILTER_NEG_TRIPLES, HPO_ITERS_ERROR_MSG, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_MODE,
+    NUM_OF_HPO_ITERS, OUTPUT_DIREC, PREFERRED_DEVICE, PYKEEN, SEED, SEED_ERROR_MSG, SEED_PRINT_MSG, SEED_PROMPT_MSG,
+    TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
+    TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH,
 )
-from pykeen.predict import start_predictions_piepline
+from pykeen.predict import start_predictions_pipeline
 from pykeen.run import run
-from pykeen.utilities.cli_utils import (
-    configure_distmult_training_pipeline, configure_ermlp_training_pipeline, configure_rescal_training_pipeline,
-    configure_se_training_pipeline, configure_trans_d_training_pipeline, configure_trans_e_training_pipeline,
-    configure_trans_h_training_pipeline, configure_trans_r_training_pipeline, configure_um_training_pipeline,
-)
 from pykeen.utilities.cli_utils.cli_print_msg_helper import (
     print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
     print_model_selection_message, print_random_seed_message, print_section_divider, print_test_ratio_message,
@@ -33,46 +27,11 @@ from pykeen.utilities.cli_utils.cli_query_helper import (
     select_embedding_model, select_integer_value, select_keen_execution_mode, select_preferred_device,
     select_ratio_for_test_set,
 )
-from pykeen.utilities.cli_utils.conv_e_cli import configure_conv_e_hpo_pipeline, configure_conv_e_training_pipeline
-from pykeen.utilities.cli_utils.distmult_cli import configure_distmult_hpo_pipeline
-from pykeen.utilities.cli_utils.ermlp_cli import configure_ermlp_hpo_pipeline
-from pykeen.utilities.cli_utils.rescal_cli import configure_rescal_hpo_pipeline
-from pykeen.utilities.cli_utils.structured_embedding_cli import configure_se_hpo_pipeline
-from pykeen.utilities.cli_utils.trans_d_cli import configure_trans_d_hpo_pipeline
-from pykeen.utilities.cli_utils.trans_e_cli import configure_trans_e_hpo_pipeline
-from pykeen.utilities.cli_utils.trans_h_cli import configure_trans_h_hpo_pipeline
-from pykeen.utilities.cli_utils.trans_r_cli import configure_trans_r_hpo_pipeline
-from pykeen.utilities.cli_utils.unstructured_model_cli import configure_um_hpo_pipeline
+from pykeen.utilities.cli_utils.dicts import MODEL_HPO_CONFIG_FUNCS, MODEL_TRAINING_CONFIG_FUNCS
 from pykeen.utilities.cli_utils.utils import summarize_results
 
-MODEL_TRAINING_CONFIG_FUNCS = {
-    TRANS_E_NAME: configure_trans_e_training_pipeline,
-    TRANS_H_NAME: configure_trans_h_training_pipeline,
-    TRANS_R_NAME: configure_trans_r_training_pipeline,
-    TRANS_D_NAME: configure_trans_d_training_pipeline,
-    SE_NAME: configure_se_training_pipeline,
-    UM_NAME: configure_um_training_pipeline,
-    DISTMULT_NAME: configure_distmult_training_pipeline,
-    ERMLP_NAME: configure_ermlp_training_pipeline,
-    RESCAL_NAME: configure_rescal_training_pipeline,
-    CONV_E_NAME: configure_conv_e_training_pipeline
-}
 
-MODEL_HPO_CONFIG_FUNCS = {
-    TRANS_E_NAME: configure_trans_e_hpo_pipeline,
-    TRANS_H_NAME: configure_trans_h_hpo_pipeline,
-    TRANS_R_NAME: configure_trans_r_hpo_pipeline,
-    TRANS_D_NAME: configure_trans_d_hpo_pipeline,
-    SE_NAME: configure_se_hpo_pipeline,
-    UM_NAME: configure_um_hpo_pipeline,
-    DISTMULT_NAME: configure_distmult_hpo_pipeline,
-    ERMLP_NAME: configure_ermlp_hpo_pipeline,
-    RESCAL_NAME: configure_rescal_hpo_pipeline,
-    CONV_E_NAME: configure_conv_e_hpo_pipeline
-}
-
-
-def _configure_training_pipeline(model_name):
+def _configure_training_pipeline(model_name: str):
     model_config_func = MODEL_TRAINING_CONFIG_FUNCS.get(model_name)
     if model_config_func is None:
         raise KeyError(f'invalid model given: {model_name}')
@@ -82,7 +41,7 @@ def _configure_training_pipeline(model_name):
     return config
 
 
-def _configure_hpo_pipeline(model_name):
+def _configure_hpo_pipeline(model_name: str):
     model_config_func = MODEL_HPO_CONFIG_FUNCS.get(model_name)
     if model_config_func is None:
         raise KeyError(f'invalid model given: {model_name}')
@@ -109,8 +68,10 @@ def prompt_evaluation_parameters(config: Dict) -> None:
         print_section_divider()
 
         if provide_test_set:
-            test_set_path = get_input_path(prompt_msg=TEST_FILE_PROMPT_MSG,
-                                           error_msg=TEST_FILE_ERROR_MSG)
+            test_set_path = get_input_path(
+                prompt_msg=TEST_FILE_PROMPT_MSG,
+                error_msg=TEST_FILE_ERROR_MSG,
+            )
             config[TEST_SET_PATH] = test_set_path
         else:
             print_test_ratio_message()
@@ -252,7 +213,7 @@ def main(config):
 @click.option('-d', '--data-directory', type=click.Path(file_okay=False, dir_okay=True))
 def predict(model_directory: str, data_directory: str):
     """Predict new links based on trained model."""
-    start_predictions_piepline(model_directory, data_directory)
+    start_predictions_pipeline(model_directory, data_directory)
 
 
 @click.command()
