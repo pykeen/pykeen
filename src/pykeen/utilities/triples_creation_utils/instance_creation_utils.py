@@ -22,6 +22,7 @@ def create_mapped_triples(triples, entity_to_id=None, rel_to_id=None):
     triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)
+    # Note: Unique changes the order
     triples_of_ids = np.unique(ar=triples_of_ids, axis=0)
 
     return triples_of_ids, entity_to_id, rel_to_id
