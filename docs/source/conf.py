@@ -16,12 +16,8 @@ import os
 import re
 import sys
 
-# -- Mockup PyTorch to exclude it while compiling the docs--------------------------------------------------------------
-
-# MOCK_MODULES = ['torch', 'numpy', 'scipy', 'torchvision', 'scikit-learn', 'click', 'prompt_toolkit', 'tqdm', 'rdflib',
-#                 'pandas', ]
-autodoc_mock_imports = ['pytorch','torch', 'numpy', 'scipy', 'torchvision', 'scikit-learn', 'click', 'prompt_toolkit', 'tqdm',
-                        'rdflib', 'pandas', ]
+# -- Mockup PyTorch to exclude it while compiling the docs--------------------
+autodoc_mock_imports = ['torch', 'torchvision', 'scikit-learn']
 
 sys.path.insert(0, os.path.abspath('../../src'))
 
@@ -193,5 +189,3 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/3/': None}
-
-autodoc_mock_imports = ['torch', 'pytorch']
