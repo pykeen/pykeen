@@ -41,8 +41,6 @@ INSTALL_REQUIRES = [
     'prompt_toolkit',
     'tqdm',
     'pandas',
-    'rdflib',
-    'ndex2',
 ]
 EXTRAS_REQUIRE = {
     'docs': [
@@ -50,6 +48,12 @@ EXTRAS_REQUIRE = {
         'sphinx-rtd-theme',
         'sphinx-click',
     ],
+    'ndex': [
+        'ndex2',
+    ],
+    'rdf': [
+        'rdflib',
+    ]
 }
 ENTRY_POINTS = {
     'console_scripts': [
