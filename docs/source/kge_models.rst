@@ -1,7 +1,6 @@
-Knowledge Graph Embedding Models
-================================
-
-This page contains all the Knowledge Graph Embedding Models included in PyKEEN.
+Knowledge Graph Embedding (KGE) Models
+======================================
+This page contains all the knowledge graph embedding (KGE) models included in PyKEEN.
 
 +------------------------+---------------------+
 | Model Name             | Reference           |
@@ -30,7 +29,6 @@ This page contains all the Knowledge Graph Embedding Models included in PyKEEN.
 
 References
 ----------
-
 - Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS..
 - Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14.
 - Lin, Y., *et al.* (2015). Learning entity and relation embeddings for knowledge graph completion. AAAI. Vol. 15.
@@ -48,68 +46,68 @@ TransE
 ------
 Considers a relation as a translation from the head to the tail entity.
 
-.. automodule:: pykeen.kg_embeddings_model.trans_e
+.. automodule:: pykeen.kge_models.trans_e
     :members:
 
 TransH
 ------
 Extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
 
-.. automodule:: pykeen.kg_embeddings_model.trans_h
+.. automodule:: pykeen.kge_models.trans_h
     :members:
 
 TransR
 ------
 Extends TransE and TransH by considering different vector spaces for entities and relations.
 
-.. automodule:: pykeen.kg_embeddings_model.trans_r
+.. automodule:: pykeen.kge_models.trans_r
     :members:
 
 TransD
 ------
 Extends TransR to use fewer parameters.
 
-.. automodule:: pykeen.kg_embeddings_model.trans_d
+.. automodule:: pykeen.kge_models.trans_d
     :members:
 
 DistMul
 -------
 Simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
 
-.. automodule:: pykeen.kg_embeddings_model.distmult
+.. automodule:: pykeen.kge_models.distmult
     :members:
 
 ConvE
 -----
 Uses a convolutional neural network (CNN).
 
-.. automodule:: pykeen.kg_embeddings_model.conv_e
+.. automodule:: pykeen.kge_models.conv_e
     :members:
 
 ERMPL
 -----
 Neural network based approach.
 
-.. automodule:: pykeen.kg_embeddings_model.ermlp
+.. automodule:: pykeen.kge_models.ermlp
     :members:
 
 RESCAL
 ------
 Represents relations as matrices and models interactions between latent features.
 
-.. automodule:: pykeen.kg_embeddings_model.rescal
+.. automodule:: pykeen.kge_models.rescal
     :members:
 
 Structured Embedding (SE)
 -------------------------
 For each relation head and tail entity are projected by different matrices.
 
-.. automodule:: pykeen.kg_embeddings_model.structured_embedding
+.. automodule:: pykeen.kge_models.structured_embedding
     :members:
 
 Unstructured Model (UM)
 -------------------------
-.. automodule:: pykeen.kg_embeddings_model.unstructured_model
+.. automodule:: pykeen.kge_models.unstructured_model
     :members:
 
 .. _Bordes: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf

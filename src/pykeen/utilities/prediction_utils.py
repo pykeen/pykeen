@@ -18,10 +18,10 @@ def create_triples(entity_pairs, relation):
     return triples
 
 
-def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, device):
+def make_predictions(kge_model, entities, relations, entity_to_id, rel_to_id, device):
     """
 
-    :param kg_model: Trained KG model
+    :param kge_model: Trained KG model
     :param candidates: numpy array with two columns: 1.) Entites 2.) Relations
     :return:
     """
@@ -48,7 +48,7 @@ def make_predictions(kg_model, entities, relations, entity_to_id, rel_to_id, dev
 
     triples_ordered_by_ids = np.concatenate([subject_column, predicate_column, object_column], axis=1)
 
-    predicted_scores = kg_model.predict(mapped_triples)
+    predicted_scores = kge_model.predict(mapped_triples)
 
     _, sorted_indices = torch.sort(torch.tensor(predicted_scores, dtype=torch.float),
                                    descending=False)

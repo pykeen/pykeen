@@ -13,9 +13,9 @@ from torch.nn import Module
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
+from pykeen.kge_models import get_kge_model
 from pykeen.utilities.evaluation_utils.metrics_computations import compute_metric_results
-from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
-from pykeen.utilities.train_utils import train_model
+from pykeen.utilities.train_utils import train_kge_model
 from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples, create_mappings
 
 __all__ = ['Pipeline']
@@ -40,7 +40,6 @@ class Pipeline(object):
             CPU
         )
         self.device = torch.device(self.device_name)
-
 
     @staticmethod
     def _use_hpo(config):
@@ -81,15 +80,15 @@ class Pipeline(object):
             self.config[NUM_ENTITIES] = len(self.entity_to_id)
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
             self.config[PREFERRED_DEVICE] = CPU if self.device_name == CPU else GPU
-            kg_embedding_model: Module = get_kg_embedding_model(config=self.config)
+            kge_model: Module = get_kge_model(config=self.config)
 
             batch_size = self.config[BATCH_SIZE]
             num_epochs = self.config[NUM_EPOCHS]
             learning_rate = self.config[LEARNING_RATE]
 
             log.info("-------------Train KG Embeddings-------------")
-            trained_model, loss_per_epoch = train_model(
-                kg_embedding_model=kg_embedding_model,
+            trained_model, loss_per_epoch = train_kge_model(
+                kge_model=kge_model,
                 all_entities=all_entities,
                 learning_rate=learning_rate,
                 num_epochs=num_epochs,
@@ -107,7 +106,7 @@ class Pipeline(object):
 
                 mean_rank, hits_at_k = compute_metric_results(
                     all_entities=all_entities,
-                    kg_embedding_model=kg_embedding_model,
+                    kge_model=kge_model,
                     mapped_train_triples=mapped_pos_train_triples,
                     mapped_test_triples=mapped_pos_test_triples,
                     device=self.device,

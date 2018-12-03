@@ -186,7 +186,7 @@ class MetricResult:
 
 
 def compute_metric_results(all_entities,
-                           kg_embedding_model,
+                           kge_model,
                            mapped_train_triples,
                            mapped_test_triples,
                            device,
@@ -195,7 +195,7 @@ def compute_metric_results(all_entities,
     """
 
     :param all_entities:
-    :param kg_embedding_model:
+    :param kge_model:
     :param mapped_train_triples:
     :param mapped_test_triples:
     :param device:
@@ -211,7 +211,7 @@ def compute_metric_results(all_entities,
         for k in (ks or DEFAULT_HITS_AT_K)
     }
 
-    kg_embedding_model = kg_embedding_model.to(device)
+    kge_model = kge_model.to(device)
 
     all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
     all_pos_triples_hashed = np.apply_along_axis(_hash_triples, 1, all_pos_triples)
@@ -231,7 +231,7 @@ def compute_metric_results(all_entities,
         )
 
         rank_of_positive_subject_based, rank_of_positive_object_based = compute_rank_fct(
-            kg_embedding_model=kg_embedding_model,
+            kge_model=kge_model,
             pos_triple=pos_triple,
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,

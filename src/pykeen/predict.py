@@ -10,7 +10,7 @@ import torch
 from torch.nn import Module
 
 from pykeen.constants import CPU, GPU, PREFERRED_DEVICE
-from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
+from pykeen.kge_models import get_kge_model
 from pykeen.utilities.prediction_utils import make_predictions
 
 
@@ -27,9 +27,9 @@ def start_predictions_pipeline(model_direc: str, data_direc: str):
     with open(os.path.join(model_direc, 'relation_to_id.json')) as f:
         relation_to_id = json.load(f)
 
-    trained_model: Module = get_kg_embedding_model(config=config)
+    trained_kge_model: Module = get_kge_model(config=config)
     path_to_model = os.path.join(model_direc, 'trained_model.pkl')
-    trained_model.load_state_dict(torch.load(path_to_model))
+    trained_kge_model.load_state_dict(torch.load(path_to_model))
 
     entities = np.loadtxt(fname=os.path.join(data_direc, 'entities.tsv'), dtype=str, delimiter='\t')
     relations = np.loadtxt(fname=os.path.join(data_direc, 'relations.tsv'), dtype=str, delimiter='\t')
@@ -38,7 +38,7 @@ def start_predictions_pipeline(model_direc: str, data_direc: str):
     device = torch.device(device_name)
 
     ranked_triples = make_predictions(
-        kg_model=trained_model,
+        kge_model=trained_kge_model,
         entities=entities,
         relations=relations,
         entity_to_id=entity_to_id,

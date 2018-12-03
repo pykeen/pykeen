@@ -1,0 +1,18 @@
+[run]
+branch = True
+source = pykeen
+omit =
+    tests/*
+    docs/*
+    scripts/*
+
+[paths]
+source =
+    src/pykeen
+    .tox/*/lib/python*/site-packages/pykeen
+
+[report]
+show_missing = True
+exclude_lines =
+    def __str__
+    def __repr__

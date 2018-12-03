@@ -10,9 +10,9 @@ from torch.nn import Module
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
+from pykeen.kge_models import get_kge_model
 from pykeen.utilities.evaluation_utils.metrics_computations import compute_metric_results
-from pykeen.utilities.initialization_utils.module_initialization_utils import get_kg_embedding_model
-from pykeen.utilities.train_utils import train_model
+from pykeen.utilities.train_utils import train_kge_model
 
 __all__ = ['RandomSearchHPO']
 
@@ -76,26 +76,26 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         for _ in range(max_iters):
             # Sample hyper-params
-            kg_embedding_model_config: Dict[int, Any] = sample_fct(config)
-            kg_embedding_model_config[NUM_ENTITIES]: int = len(entity_to_id)
-            kg_embedding_model_config[NUM_RELATIONS]: int = len(rel_to_id)
-            kg_embedding_model_config[SEED]: int = seed
+            kge_model_config: Dict[int, Any] = sample_fct(config)
+            kge_model_config[NUM_ENTITIES]: int = len(entity_to_id)
+            kge_model_config[NUM_RELATIONS]: int = len(rel_to_id)
+            kge_model_config[SEED]: int = seed
 
             # Configure defined model
-            kg_embedding_model: Module = get_kg_embedding_model(config=kg_embedding_model_config)
+            kge_model: Module = get_kge_model(config=kge_model_config)
 
-            models_params.append(kg_embedding_model_config)
+            models_params.append(kge_model_config)
             entity_to_ids.append(entity_to_id)
             rel_to_ids.append(rel_to_id)
 
             all_entities = np.array(list(entity_to_id.values()))
 
-            trained_model, epoch_loss = train_model(
-                kg_embedding_model=kg_embedding_model,
+            trained_kge_model, epoch_loss = train_kge_model(
+                kge_model=kge_model,
                 all_entities=all_entities,
-                learning_rate=kg_embedding_model_config[LEARNING_RATE],
-                num_epochs=kg_embedding_model_config[NUM_EPOCHS],
-                batch_size=kg_embedding_model_config[BATCH_SIZE],
+                learning_rate=kge_model_config[LEARNING_RATE],
+                num_epochs=kge_model_config[NUM_EPOCHS],
+                batch_size=kge_model_config[BATCH_SIZE],
                 pos_triples=mapped_train_triples,
                 device=device,
                 seed=seed,
@@ -104,7 +104,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             # Evaluate trained model
             mean_rank, hits_at_k = compute_metric_results(
                 all_entities=all_entities,
-                kg_embedding_model=trained_model,
+                kge_model=trained_kge_model,
                 mapped_train_triples=mapped_train_triples,
                 mapped_test_triples=mapped_test_triples,
                 device=device,
@@ -116,7 +116,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             eval_summary[HITS_AT_K]: Dict[int, float] = hits_at_k
             eval_summaries.append(eval_summary)
 
-            trained_models.append(trained_model)
+            trained_models.append(trained_kge_model)
             epoch_losses.append(epoch_loss)
 
             hits_at_k_evaluation.append(hits_at_k[k_evaluation])

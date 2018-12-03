@@ -1,7 +1,6 @@
 PyKEEN
 ======
-
-PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings.
+PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings (KGEs).
 
 The system has a modular architecture, and can be configured by the user through the command line interface.
 
@@ -12,7 +11,8 @@ Citation
 --------
 If you use PyKEEN in your work, please cite [1]_:
 
-.. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings <https://zenodo.org/badge/latestdoi/136345023>`_.
+.. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
+       <https://zenodo.org/badge/latestdoi/136345023>`_.
 
 .. toctree::
    :maxdepth: 2
@@ -27,7 +27,7 @@ If you use PyKEEN in your work, please cite [1]_:
    :caption: Models
    :name: data
 
-   kg_models
+   kge_models
 
 Indices and tables
 ==================

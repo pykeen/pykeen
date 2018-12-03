@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Utilities for training KGE models."""
+
 import logging
 import timeit
 from typing import List, Optional, Tuple
@@ -12,7 +14,11 @@ from torch.nn import Module
 from tqdm import trange
 
 from pykeen.constants import *
-from pykeen.kg_embeddings_model import ConvE
+from pykeen.kge_models import ConvE
+
+__all__ = [
+    'train_kge_model',
+]
 
 log = logging.getLogger(__name__)
 
@@ -21,8 +27,8 @@ def _split_list_in_batches(input_list, batch_size):
     return [input_list[i:i + batch_size] for i in range(0, len(input_list), batch_size)]
 
 
-def train_model(
-        kg_embedding_model: Module,
+def train_kge_model(
+        kge_model: Module,
         all_entities,
         learning_rate,
         num_epochs,
@@ -31,33 +37,33 @@ def train_model(
         device,
         seed: Optional[int] = None) -> Tuple[Module, List[float]]:
     """Train the model."""
-    if CONV_E_NAME == kg_embedding_model.model_name:
+    if CONV_E_NAME == kge_model.model_name:
         return _train_conv_e_model(
-            kg_embedding_model,
-            all_entities,
-            learning_rate,
-            num_epochs,
-            batch_size,
-            pos_triples,
-            device,
+            kge_model=kge_model,
+            all_entities=all_entities,
+            learning_rate=learning_rate,
+            num_epochs=num_epochs,
+            batch_size=batch_size,
+            pos_triples=pos_triples,
+            device=device,
             seed=seed,
         )
 
     # model_name in {TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME, DISTMULT_NAME, UM_NAME, SE_NAME, ERMLP_NAME, RESCAL_NAME}
     return _train_basic_model(
-        kg_embedding_model,
-        all_entities,
-        learning_rate,
-        num_epochs,
-        batch_size,
-        pos_triples,
-        device,
+        kge_model=kge_model,
+        all_entities=all_entities,
+        learning_rate=learning_rate,
+        num_epochs=num_epochs,
+        batch_size=batch_size,
+        pos_triples=pos_triples,
+        device=device,
         seed=seed,
     )
 
 
 def _train_basic_model(
-        kg_embedding_model: Module,
+        kge_model: Module,
         all_entities,
         learning_rate,
         num_epochs,
@@ -69,9 +75,9 @@ def _train_basic_model(
     if seed is not None:
         np.random.seed(seed=seed)
 
-    kg_embedding_model = kg_embedding_model.to(device)
+    kge_model = kge_model.to(device)
 
-    optimizer = optim.SGD(kg_embedding_model.parameters(), lr=learning_rate)
+    optimizer = optim.SGD(kge_model.parameters(), lr=learning_rate)
     log.debug(f'****running model on {device}****')
 
     loss_per_epoch = []
@@ -116,7 +122,7 @@ def _train_basic_model(
             # Recall that torch *accumulates* gradients. Before passing in a
             # new instance, you need to zero out the gradients from the old instance
             optimizer.zero_grad()
-            loss = kg_embedding_model(pos_batch, neg_batch)
+            loss = kge_model(pos_batch, neg_batch)
             current_epoch_loss += (loss.item() * current_batch_size)
 
             loss.backward()
@@ -130,11 +136,11 @@ def _train_basic_model(
     stop_training = timeit.default_timer()
     log.debug("training took %.2fs seconds", stop_training - start_training)
 
-    return kg_embedding_model, loss_per_epoch
+    return kge_model, loss_per_epoch
 
 
 def _train_conv_e_model(
-        conv_e_model: ConvE,
+        kge_model: ConvE,
         all_entities,
         learning_rate,
         num_epochs,
@@ -145,9 +151,9 @@ def _train_conv_e_model(
     if seed is not None:
         np.random.seed(seed=seed)
 
-    conv_e_model = conv_e_model.to(device)
+    kge_model = kge_model.to(device)
 
-    optimizer = optim.Adam(conv_e_model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(kge_model.parameters(), lr=learning_rate)
 
     loss_per_epoch: List[float] = []
 
@@ -211,7 +217,7 @@ def _train_conv_e_model(
             # new instance, you need to zero out the gradients from the old
             # instance
             optimizer.zero_grad()
-            loss = conv_e_model(batch, labels)
+            loss = kge_model(batch, labels)
             current_epoch_loss += (loss.item() * current_batch_size)
 
             loss.backward()
@@ -225,4 +231,4 @@ def _train_conv_e_model(
     stop_training = timeit.default_timer()
     log.info("Training took %s seconds \n" % (str(round(stop_training - start_training))))
 
-    return conv_e_model, loss_per_epoch
+    return kge_model, loss_per_epoch
