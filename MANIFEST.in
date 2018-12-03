@@ -9,6 +9,6 @@ include config/config.ini
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib .DS_Store *.gpickle
 
-exclude .bumpversion.cfg
+exclude .bumpversion.cfg .coveragerc .flake8
 
-include *.rst *.txt *.yml *.ini LICENSE .flake8
+include *.rst *.txt *.yml *.ini LICENSE
