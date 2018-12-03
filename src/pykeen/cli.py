@@ -197,6 +197,7 @@ def prompt_config() -> Dict:
 
 
 @click.command()
+@click.version_option()
 @click.option('-c', '--config', type=click.File(), help='A PyKEEN JSON configuration file')
 def main(config):
     """PyKEEN: A software for training and evaluating knowledge graph embeddings."""
