@@ -2,7 +2,7 @@
 
 """Script for initializing the knowledge graph embedding models."""
 
-from typing import Dict
+from typing import Dict, Mapping
 
 import torch.optim as optim
 from torch.nn import Module
@@ -15,6 +15,18 @@ from pykeen.constants import (
 from pykeen.kg_embeddings_model import (
     ConvE, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
+
+__all__ = [
+    'OPTIMIZERS',
+    'get_kg_embedding_model',
+    'get_optimizer',
+]
+
+OPTIMIZERS: Mapping = {
+    SGD_OPTIMIZER_NAME: optim.SGD,
+    ADAGRAD_OPTIMIZER_NAME: optim.Adagrad,
+    ADAM_OPTIMIZER_NAME: optim.Adam,
+}
 
 
 def get_kg_embedding_model(config: Dict) -> Module:
@@ -54,21 +66,18 @@ def get_kg_embedding_model(config: Dict) -> Module:
     raise ValueError(f'Invalid KGE model name: {model_name}')
 
 
-def get_optimizer(config, kg_embedding_model):
+def get_optimizer(config: Dict, kg_embedding_model):
     """
 
     :param config:
     :return:
     """
     optimizer_name = config[OPTMIZER_NAME]
+    optimizer = OPTIMIZERS.get(optimizer_name)
+
+    if optimizer is None:
+        raise ValueError(f'invalid optimizer name: {optimizer_name}')
 
     parameters = filter(lambda p: p.requires_grad, kg_embedding_model.parameters())
 
-    if optimizer_name == SGD_OPTIMIZER_NAME:
-        return optim.SGD(parameters, lr=config[LEARNING_RATE])
-
-    if optimizer_name == ADAGRAD_OPTIMIZER_NAME:
-        return optim.Adagrad(parameters, lr=config[LEARNING_RATE])
-
-    if optimizer_name == ADAM_OPTIMIZER_NAME:
-        return optim.Adam(parameters, lr=config[LEARNING_RATE])
+    return optimizer(parameters, lr=config[LEARNING_RATE])
