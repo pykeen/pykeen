@@ -7,7 +7,7 @@ from itertools import product
 import numpy as np
 import torch
 
-from pykeen.utilities.triples_creation_utils.instance_creation_utils import create_mapped_triples
+from pykeen.utilities.triples_creation_utils import create_mapped_triples
 
 
 def create_triples(entity_pairs, relation):

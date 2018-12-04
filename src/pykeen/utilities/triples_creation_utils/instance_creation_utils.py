@@ -5,12 +5,17 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
+__all__ = [
+    'create_mapped_triples',
+    'create_mappings',
+]
+
 log = logging.getLogger(__name__)
 
 
 def create_mapped_triples(triples: np.ndarray,
-                          entity_to_id: Optional[Dict[int: str]] = None,
-                          rel_to_id: Optional[Dict[int: str]] = None) -> np.ndarray:
+                          entity_to_id: Optional[Dict[int, str]] = None,
+                          rel_to_id: Optional[Dict[int, str]] = None) -> np.ndarray:
     """"""
     if entity_to_id is None or rel_to_id is None:
         entity_to_id, rel_to_id = create_mappings(triples)
@@ -25,17 +30,17 @@ def create_mapped_triples(triples: np.ndarray,
     return np.unique(ar=triples_of_ids, axis=0)
 
 
-def create_mappings(triples: np.ndarray) -> Tuple[Dict[int: str], Dict[int: str]]:
+def create_mappings(triples: np.ndarray) -> Tuple[Dict[int, str], Dict[int, str]]:
     """"""
     entities = np.unique(np.ndarray.flatten(np.concatenate([triples[:, 0:1], triples[:, 2:3]])))
     relations = np.unique(np.ndarray.flatten(triples[:, 1:2]).tolist())
 
-    entity_to_id: Dict[int: str] = {
+    entity_to_id: Dict[int, str] = {
         value: key
         for key, value in enumerate(entities)
     }
 
-    rel_to_id: Dict[int: str] = {
+    rel_to_id: Dict[int, str] = {
         value: key
         for key, value in enumerate(relations)
     }
