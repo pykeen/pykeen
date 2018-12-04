@@ -4,7 +4,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Mapping
+from typing import Dict, Mapping, Tuple
 
 import numpy as np
 import torch
@@ -29,11 +29,13 @@ class PipelineResult:  # TODO replace in Pipeline.run()
 
 
 class Pipeline(object):
+    """"""
+
     def __init__(self, config: Dict):
         self.config: Dict = config
         self.seed: int = config[SEED]
-        self.entity_to_id = None
-        self.rel_to_id = None
+        self.entity_to_id: Dict[int: str] = None
+        self.rel_to_id: Dict[int: str] = None
         self.device_name = (
             'cuda:0'
             if torch.cuda.is_available() and self.config[PREFERRED_DEVICE] == GPU else
@@ -133,18 +135,18 @@ class Pipeline(object):
                 for id, embedding in enumerate(trained_model.relation_embeddings.weight)
             }
 
-        results = OrderedDict()
-        results[TRAINED_MODEL] = trained_model
-        results[LOSSES] = loss_per_epoch
-        results[ENTITY_TO_EMBEDDING]: Mapping[str, np.ndarray] = entity_to_embedding
-        results[RELATION_TO_EMBEDDING]: Mapping[str, np.ndarray] = relation_to_embedding
-        results[EVAL_SUMMARY] = eval_summary
-        results[ENTITY_TO_ID] = self.entity_to_id
-        results[RELATION_TO_ID] = self.rel_to_id
-        results[FINAL_CONFIGURATION] = params
-        return results
+        return _make_results(
+            trained_model=trained_model,
+            loss_per_epoch=loss_per_epoch,
+            entity_to_embedding=entity_to_embedding,
+            relation_to_embedding=relation_to_embedding,
+            eval_summary=eval_summary,
+            entity_to_id=self.entity_to_id,
+            rel_to_id=self.rel_to_id,
+            params=params,
+        )
 
-    def _get_train_and_test_triples(self):
+    def _get_train_and_test_triples(self) -> Tuple[np.ndarray, np.ndarray]:
         train_pos = _load_data(self.config[TRAINING_SET_PATH])
 
         if TEST_SET_PATH in self.config:
@@ -158,16 +160,18 @@ class Pipeline(object):
 
         return self._handle_train_and_test(train_pos, test_pos)
 
-    def _handle_train_and_test(self, train_pos, test_pos):
-        all_triples = np.concatenate([train_pos, test_pos], axis=0)
+    def _handle_train_and_test(self, train_pos, test_pos) -> Tuple[np.ndarray, np.ndarray]:
+        """"""
+        all_triples: np.ndarray = np.concatenate([train_pos, test_pos], axis=0)
         self.entity_to_id, self.rel_to_id = create_mappings(triples=all_triples)
-        mapped_pos_train_triples, _, _ = create_mapped_triples(
+
+        mapped_pos_train_triples = create_mapped_triples(
             triples=train_pos,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
         )
 
-        mapped_pos_test_triples, _, _ = create_mapped_triples(
+        mapped_pos_test_triples = create_mapped_triples(
             triples=test_pos,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
@@ -180,7 +184,7 @@ class Pipeline(object):
 
         self.entity_to_id, self.rel_to_id = create_mappings(triples=train_pos)
 
-        mapped_pos_train_triples, _, _ = create_mapped_triples(
+        mapped_pos_train_triples = create_mapped_triples(
             triples=train_pos,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
@@ -246,3 +250,23 @@ def _load_ndex(network_uuid: str) -> np.ndarray:
                     ])
 
     return np.array(triples)
+
+
+def _make_results(trained_model,
+                  loss_per_epoch,
+                  entity_to_embedding: Mapping[str, np.ndarray],
+                  relation_to_embedding: Mapping[str, np.ndarray],
+                  eval_summary,
+                  entity_to_id,
+                  rel_to_id,
+                  params) -> Dict:
+    results = OrderedDict()
+    results[TRAINED_MODEL] = trained_model
+    results[LOSSES] = loss_per_epoch
+    results[ENTITY_TO_EMBEDDING]: Mapping[str, np.ndarray] = entity_to_embedding
+    results[RELATION_TO_EMBEDDING]: Mapping[str, np.ndarray] = relation_to_embedding
+    results[EVAL_SUMMARY] = eval_summary
+    results[ENTITY_TO_ID] = entity_to_id
+    results[RELATION_TO_ID] = rel_to_id
+    results[FINAL_CONFIGURATION] = params
+    return results

@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
 log = logging.getLogger(__name__)
 
 
-def create_mapped_triples(triples, entity_to_id=None, rel_to_id=None):
-    """
-
-    :param path_to_kg:
-    :return:
-    """
+def create_mapped_triples(triples: np.ndarray,
+                          entity_to_id: Optional[Dict[int: str]] = None,
+                          rel_to_id: Optional[Dict[int: str]] = None) -> np.ndarray:
+    """"""
     if entity_to_id is None or rel_to_id is None:
         entity_to_id, rel_to_id = create_mappings(triples)
 
@@ -23,15 +22,22 @@ def create_mapped_triples(triples, entity_to_id=None, rel_to_id=None):
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)
     # Note: Unique changes the order
-    triples_of_ids = np.unique(ar=triples_of_ids, axis=0)
-
-    return triples_of_ids, entity_to_id, rel_to_id
+    return np.unique(ar=triples_of_ids, axis=0)
 
 
-def create_mappings(triples):
+def create_mappings(triples: np.ndarray) -> Tuple[Dict[int: str], Dict[int: str]]:
+    """"""
     entities = np.unique(np.ndarray.flatten(np.concatenate([triples[:, 0:1], triples[:, 2:3]])))
     relations = np.unique(np.ndarray.flatten(triples[:, 1:2]).tolist())
-    entity_to_id = {value: key for key, value in enumerate(entities)}
-    rel_to_id = {value: key for key, value in enumerate(relations)}
+
+    entity_to_id: Dict[int: str] = {
+        value: key
+        for key, value in enumerate(entities)
+    }
+
+    rel_to_id: Dict[int: str] = {
+        value: key
+        for key, value in enumerate(relations)
+    }
 
     return entity_to_id, rel_to_id

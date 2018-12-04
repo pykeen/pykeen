@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Utilities for predicting links."""
+
 from itertools import product
 
 import numpy as np
@@ -36,7 +38,7 @@ def make_predictions(kge_model, entities, relations, entity_to_id, rel_to_id, de
             triples = create_triples(entity_pairs=all_entity_pairs, relation=relation)
             all_triples = np.append(all_triples, triples, axis=0)
 
-    mapped_triples, _, _ = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
+    mapped_triples = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
 
     mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=device)
 

@@ -22,7 +22,7 @@ OptimizeResult = Tuple[Module, List[float], Any, Any, Any, Any]
 class RandomSearchHPO(AbstractHPOptimizer):
     """A hyper-parameter optimizer that uses random search."""
 
-    def _sample_conv_e_params(self, hyperparams_dict):
+    def _sample_conv_e_params(self, hyperparams_dict) -> Dict[str, Any]:
         kg_model_config = OrderedDict()
         # Sample params which are dependent on each other
         embedding_dimensions = hyperparams_dict[EMBEDDING_DIM]
@@ -57,11 +57,11 @@ class RandomSearchHPO(AbstractHPOptimizer):
             # FIXME np.random is not used
             np.random.seed(seed=seed)
 
-        trained_models: List[Module] = []
+        trained_kge_models: List[Module] = []
         epoch_losses: List[List[float]] = []
-        hits_at_k_evaluation: List[float] = []
-        entity_to_ids: List = []
-        rel_to_ids: List = []
+        hits_at_k_evaluations: List[float] = []
+        entity_to_ids: List[Dict[int, str]] = []
+        rel_to_ids: List[Dict[int, str]] = []
         models_params: List[Dict] = []
         eval_summaries: List = []
 
@@ -76,7 +76,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         for _ in range(max_iters):
             # Sample hyper-params
-            kge_model_config: Dict[int, Any] = sample_fct(config)
+            kge_model_config: Dict[str, Any] = sample_fct(config)
             kge_model_config[NUM_ENTITIES]: int = len(entity_to_id)
             kge_model_config[NUM_RELATIONS]: int = len(rel_to_id)
             kge_model_config[SEED]: int = seed
@@ -111,20 +111,19 @@ class RandomSearchHPO(AbstractHPOptimizer):
             )
 
             # TODO: Define HPO metric
-            eval_summary = OrderedDict()
-            eval_summary[MEAN_RANK]: float = mean_rank
-            eval_summary[HITS_AT_K]: Dict[int, float] = hits_at_k
+            eval_summary = _make_eval_summary(mean_rank, hits_at_k)
             eval_summaries.append(eval_summary)
 
-            trained_models.append(trained_kge_model)
+            trained_kge_models.append(trained_kge_model)
             epoch_losses.append(epoch_loss)
 
-            hits_at_k_evaluation.append(hits_at_k[k_evaluation])
+            hits_at_k_evaluation = hits_at_k[k_evaluation]
+            hits_at_k_evaluations.append(hits_at_k_evaluation)
 
-        index_of_max = int(np.argmax(a=hits_at_k_evaluation))
+        index_of_max = int(np.argmax(a=hits_at_k_evaluations))
 
         return (
-            trained_models[index_of_max],
+            trained_kge_models[index_of_max],
             epoch_losses[index_of_max],
             entity_to_ids[index_of_max],
             rel_to_ids[index_of_max],
@@ -134,11 +133,11 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
     @classmethod
     def run(cls,
-            mapped_train_triples,
-            mapped_test_triples,
-            entity_to_id,
-            rel_to_id,
-            config,
+            mapped_train_triples: np.ndarray,
+            mapped_test_triples: np.ndarray,
+            entity_to_id: Dict[int, str],
+            rel_to_id: Dict[int, str],
+            config: Dict,
             device,
             seed) -> OptimizeResult:
         return cls().optimize_hyperparams(
@@ -150,3 +149,10 @@ class RandomSearchHPO(AbstractHPOptimizer):
             device=device,
             seed=seed,
         )
+
+
+def _make_eval_summary(mean_rank: float, hits_at_k: Dict[int, float]):
+    eval_summary = OrderedDict()
+    eval_summary[MEAN_RANK]: float = mean_rank
+    eval_summary[HITS_AT_K]: Dict[int, float] = hits_at_k
+    return eval_summary
