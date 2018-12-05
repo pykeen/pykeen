@@ -27,7 +27,7 @@ def create_mapped_triples(triples: np.ndarray,
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)
     # Note: Unique changes the order
-    return np.unique(ar=triples_of_ids, axis=0),entity_to_id, rel_to_id
+    return np.unique(ar=triples_of_ids, axis=0), entity_to_id, rel_to_id
 
 
 def create_mappings(triples: np.ndarray) -> Tuple[Dict[int, str], Dict[int, str]]:
