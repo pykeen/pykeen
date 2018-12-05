@@ -104,7 +104,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             # Evaluate trained model
             mean_rank, hits_at_k = compute_metric_results(
                 all_entities=all_entities,
-                kge_model=trained_kge_model,
+                kg_embedding_model=trained_kge_model,
                 mapped_train_triples=mapped_train_triples,
                 mapped_test_triples=mapped_test_triples,
                 device=device,

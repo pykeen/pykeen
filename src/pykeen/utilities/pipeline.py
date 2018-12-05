@@ -108,7 +108,7 @@ class Pipeline(object):
 
                 mean_rank, hits_at_k = compute_metric_results(
                     all_entities=all_entities,
-                    kge_model=kge_model,
+                    kg_embedding_model=kge_model,
                     mapped_train_triples=mapped_pos_train_triples,
                     mapped_test_triples=mapped_pos_test_triples,
                     device=self.device,
