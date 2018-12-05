@@ -2,33 +2,30 @@
 
 """PyKEEN's command line interface."""
 
-import json
-import os
 from collections import OrderedDict
 from typing import Dict
 
-import click
-
+from pykeen.cli.dicts import MODEL_HPO_CONFIG_FUNCS, MODEL_TRAINING_CONFIG_FUNCS
+from pykeen.cli.utils.cli_print_msg_helper import (
+    print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
+    print_model_selection_message, print_random_seed_message, print_section_divider, print_test_ratio_message,
+    print_test_set_message, print_training_set_message, print_welcome_message,
+)
+from pykeen.cli.utils.cli_query_helper import (
+    ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
+    select_embedding_model, select_integer_value, select_keen_execution_mode, select_preferred_device,
+    select_ratio_for_test_set,
+)
 from pykeen.constants import (
     EXECUTION_MODE, FILTER_NEG_TRIPLES, HPO_ITERS_ERROR_MSG, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_MODE,
     NUM_OF_HPO_ITERS, OUTPUT_DIREC, PREFERRED_DEVICE, PYKEEN, SEED, SEED_ERROR_MSG, SEED_PRINT_MSG, SEED_PROMPT_MSG,
     TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
     TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH,
 )
-from pykeen.predict import start_predictions_pipeline
-from pykeen.run import run
-from pykeen.utilities.cli_utils.cli_print_msg_helper import (
-    print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
-    print_model_selection_message, print_random_seed_message, print_section_divider, print_test_ratio_message,
-    print_test_set_message, print_training_set_message, print_welcome_message,
-)
-from pykeen.utilities.cli_utils.cli_query_helper import (
-    ask_for_evaluation, ask_for_filtering_of_negatives, ask_for_test_set, get_input_path, query_output_directory,
-    select_embedding_model, select_integer_value, select_keen_execution_mode, select_preferred_device,
-    select_ratio_for_test_set,
-)
-from pykeen.utilities.cli_utils.dicts import MODEL_HPO_CONFIG_FUNCS, MODEL_TRAINING_CONFIG_FUNCS
-from pykeen.utilities.cli_utils.utils import summarize_results
+
+__all__ = [
+    'prompt_config',
+]
 
 
 def _configure_training_pipeline(model_name: str):
@@ -194,36 +191,3 @@ def prompt_config() -> Dict:
     print_section_divider()
 
     return cfg
-
-
-@click.command()
-@click.version_option()
-@click.option('-c', '--config', type=click.File(), help='A PyKEEN JSON configuration file')
-def main(config):
-    """PyKEEN: A software for training and evaluating knowledge graph embeddings."""
-    if config is not None:
-        config = json.load(config)
-    else:
-        config = prompt_config()
-
-    run(config)
-
-
-@click.command()
-@click.option('-m', '--model-directory', type=click.Path(file_okay=False, dir_okay=True))
-@click.option('-d', '--data-directory', type=click.Path(file_okay=False, dir_okay=True))
-def predict(model_directory: str, data_directory: str):
-    """Predict new links based on trained model."""
-    start_predictions_pipeline(model_directory, data_directory)
-
-
-@click.command()
-@click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
-@click.option('-o', '--output', type=click.File('w'))
-def summarize(directory: str, output):
-    """Summarize contents of training and evaluation."""
-    summarize_results(directory, output)
-
-
-if __name__ == '__main__':
-    main()

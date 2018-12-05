@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""pykeen main."""
+"""Command line interface for PyKEEN."""
 
 from pykeen.cli import main
 

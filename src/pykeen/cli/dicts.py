@@ -6,7 +6,7 @@ from pykeen.constants import (
     CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, RESCAL_NAME, SE_NAME, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME,
     TRANS_R_NAME, UM_NAME,
 )
-from pykeen.utilities.cli_utils import (
+from pykeen.cli.utils import (
     configure_conv_e_hpo_pipeline, configure_conv_e_training_pipeline,
     configure_distmult_hpo_pipeline, configure_distmult_training_pipeline, configure_ermlp_hpo_pipeline,
     configure_ermlp_training_pipeline, configure_rescal_hpo_pipeline, configure_rescal_training_pipeline,
