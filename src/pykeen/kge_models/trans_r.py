@@ -8,6 +8,7 @@ import torch.autograd
 from torch import nn
 
 from pykeen.constants import *
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransR']
 
@@ -21,7 +22,7 @@ Constraints:
 """
 
 
-class TransR(nn.Module):
+class TransR(BaseModule):
     """An implementation of TransR [lin2015]_.
 
     This model extends TransE and TransH by considering different vector spaces for entities and relations.
@@ -34,21 +35,7 @@ class TransR(nn.Module):
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
+        super().__init__(config)
 
         # Embeddings
         self.entity_embedding_dim = config[EMBEDDING_DIM]

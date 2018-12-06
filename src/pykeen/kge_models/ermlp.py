@@ -8,11 +8,12 @@ import torch.autograd
 from torch import nn
 
 from pykeen.constants import *
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['ERMLP']
 
 
-class ERMLP(nn.Module):
+class ERMLP(BaseModule):
     """An implementation of ERMLP [dong2014]_.
 
     This model uses a neural network-based approach.
@@ -25,21 +26,7 @@ class ERMLP(nn.Module):
     margin_ranking_loss_size_average: bool = False
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
+        super().__init__(config)
 
         # Embeddings
         self.embedding_dim = config[EMBEDDING_DIM]
