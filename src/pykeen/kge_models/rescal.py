@@ -20,6 +20,9 @@ class RESCAL(nn.Module):
     .. [nickel2011] Nickel, M., *et al.* (2011) `A Three-Way Model for Collective Learning on Multi-Relational Data
                     <http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf>`_. ICML. Vol. 11.
     """
+
+    margin_ranking_loss_size_average: bool = True
+
     def __init__(self, config):
         super().__init__()
 
@@ -33,7 +36,10 @@ class RESCAL(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

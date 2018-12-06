@@ -25,6 +25,8 @@ class StructuredEmbedding(nn.Module):
                     <http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898>`_. AAAI. Vol. 6. No. 1.
     """
 
+    margin_ranking_loss_size_average: bool = True
+
     def __init__(self, config):
         super().__init__()
 
@@ -38,7 +40,10 @@ class StructuredEmbedding(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]

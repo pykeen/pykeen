@@ -30,6 +30,8 @@ class TransR(nn.Module):
                  <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
     """
 
+    margin_ranking_loss_size_average: bool = True
+
     def __init__(self, config):
         super().__init__()
 
@@ -43,7 +45,10 @@ class TransR(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         self.relation_embedding_dim = config[RELATION_EMBEDDING_DIM]
 

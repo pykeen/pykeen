@@ -28,6 +28,8 @@ class TransE(nn.Module):
     .. seealso:: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py
     """
 
+    margin_ranking_loss_size_average: bool = True
+
     def __init__(self, config):
         super().__init__()
 
@@ -41,7 +43,10 @@ class TransE(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]

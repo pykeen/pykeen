@@ -21,6 +21,8 @@ class ERMLP(nn.Module):
                   <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
     """
 
+    margin_ranking_loss_size_average: bool = False
+
     def __init__(self, config):
         super().__init__()
 
@@ -34,7 +36,10 @@ class ERMLP(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)

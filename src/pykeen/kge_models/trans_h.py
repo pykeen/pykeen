@@ -21,6 +21,8 @@ class TransH(nn.Module):
                   <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
     """
 
+    margin_ranking_loss_size_average: bool = False
+
     def __init__(self, config):
         super().__init__()
 
@@ -34,7 +36,10 @@ class TransH(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

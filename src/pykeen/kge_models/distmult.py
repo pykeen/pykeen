@@ -21,6 +21,8 @@ class DistMult(nn.Module):
                   and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
     """
 
+    margin_ranking_loss_size_average: bool = True
+
     def __init__(self, config):
         super().__init__()
 
@@ -34,7 +36,10 @@ class DistMult(nn.Module):
 
         # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
 
         # self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
