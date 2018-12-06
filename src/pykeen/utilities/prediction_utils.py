@@ -9,6 +9,11 @@ import torch
 
 from pykeen.utilities.triples_creation_utils import create_mapped_triples
 
+__all__ = [
+    'create_triples',
+    'make_predictions',
+]
+
 
 def create_triples(entity_pairs, relation):
     subjects = entity_pairs[:, 0:1]
