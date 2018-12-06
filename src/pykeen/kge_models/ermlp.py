@@ -5,7 +5,7 @@
 import numpy as np
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 
 from pykeen.constants import *
 
@@ -27,10 +27,6 @@ class ERMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         # Device selection
         self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
@@ -40,6 +36,13 @@ class ERMLP(nn.Module):
             margin=self.margin_loss,
             size_average=self.margin_ranking_loss_size_average,
         )
+
+        # Entity dimensions
+        self.num_entities = config[NUM_ENTITIES]
+        self.num_relations = config[NUM_RELATIONS]
+
+        # Embeddings
+        self.embedding_dim = config[EMBEDDING_DIM]
 
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)

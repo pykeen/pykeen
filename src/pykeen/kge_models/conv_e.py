@@ -4,7 +4,7 @@
 
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 from torch.nn import Parameter, functional as F
 from torch.nn.init import xavier_normal
 
@@ -27,12 +27,18 @@ class ConvE(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         # Device selection
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Entity dimensions
+        self.num_entities = config[NUM_ENTITIES]
+        self.num_relations = config[NUM_RELATIONS]
+
+        # Embeddings
+        self.embedding_dim = config[EMBEDDING_DIM]
+
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         num_in_channels = config[CONV_E_INPUT_CHANNELS]
         num_out_channels = config[CONV_E_OUTPUT_CHANNELS]
@@ -46,8 +52,6 @@ class ConvE(nn.Module):
 
         assert self.img_height * self.img_width == self.embedding_dim
 
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.inp_drop = torch.nn.Dropout(input_dropout)
         self.hidden_drop = torch.nn.Dropout(hidden_dropout)
         self.feature_map_drop = torch.nn.Dropout2d(feature_map_dropout)

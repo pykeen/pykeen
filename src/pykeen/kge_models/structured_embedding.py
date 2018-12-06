@@ -7,7 +7,7 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 
 from pykeen.constants import *
 
@@ -31,10 +31,6 @@ class StructuredEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         # Device selection
         self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
@@ -44,6 +40,13 @@ class StructuredEmbedding(nn.Module):
             margin=self.margin_loss,
             size_average=self.margin_ranking_loss_size_average,
         )
+
+        # Entity dimensions
+        self.num_entities = config[NUM_ENTITIES]
+        self.num_relations = config[NUM_RELATIONS]
+
+        # Embeddings
+        self.embedding_dim = config[EMBEDDING_DIM]
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
