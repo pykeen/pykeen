@@ -21,12 +21,12 @@ class TransD(nn.Module):
                 <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
     """
 
+    model_name = TRANS_D_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
         super().__init__()
 
-        self.model_name = TRANS_D_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.entity_embedding_dim = config[EMBEDDING_DIM]

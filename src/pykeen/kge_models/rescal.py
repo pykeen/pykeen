@@ -21,12 +21,12 @@ class RESCAL(nn.Module):
                     <http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf>`_. ICML. Vol. 11.
     """
 
+    model_name = RESCAL_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
         super().__init__()
 
-        self.model_name = RESCAL_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]

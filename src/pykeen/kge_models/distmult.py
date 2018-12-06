@@ -21,12 +21,12 @@ class DistMult(nn.Module):
                   and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
     """
 
+    model_name = DISTMULT_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
         super().__init__()
 
-        self.model_name = DISTMULT_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]

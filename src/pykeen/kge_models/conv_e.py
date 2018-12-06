@@ -22,10 +22,11 @@ class ConvE(nn.Module):
     .. seealso:: https://github.com/TimDettmers/ConvE/blob/master/model.py
     """
 
+    model_name = CONV_E_NAME
+
     def __init__(self, config):
         super().__init__()
 
-        self.model_name = CONV_E_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]

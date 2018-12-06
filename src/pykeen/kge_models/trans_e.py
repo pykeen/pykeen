@@ -28,12 +28,12 @@ class TransE(nn.Module):
     .. seealso:: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py
     """
 
+    model_name = TRANS_E_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
         super().__init__()
 
-        self.model_name = TRANS_E_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]

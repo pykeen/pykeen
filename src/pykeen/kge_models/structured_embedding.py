@@ -25,12 +25,12 @@ class StructuredEmbedding(nn.Module):
                     <http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898>`_. AAAI. Vol. 6. No. 1.
     """
 
+    model_name = SE_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
         super().__init__()
 
-        self.model_name = TRANS_E_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
