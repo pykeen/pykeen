@@ -11,18 +11,32 @@ from pykeen.constants import *
 
 __all__ = ['TransD']
 
+
 class TransD(nn.Module):
+    """An implementation of TransD [ji2015]_.
+
+    This model extends TransR to use fewer parameters.
+
+    .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
+                <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
+    """
 
     def __init__(self, config):
-        super(TransD, self).__init__()
+        super().__init__()
+
         self.model_name = TRANS_D_NAME
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.entity_embedding_dim = config[EMBEDDING_DIM]
-        self.relation_embedding_dim = self.entity_embedding_dim
+
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
         self.margin_loss = config[MARGIN_LOSS]
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+
+        self.relation_embedding_dim = self.entity_embedding_dim
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entity_embeddings = nn.Embedding(self.num_entities, self.entity_embedding_dim, max_norm=1)
@@ -30,7 +44,6 @@ class TransD(nn.Module):
         self.entity_projections = nn.Embedding(self.num_entities, self.entity_embedding_dim)
         self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
 
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         # self._initialize()
 

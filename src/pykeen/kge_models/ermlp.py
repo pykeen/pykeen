@@ -13,19 +13,31 @@ __all__ = ['ERMLP']
 
 
 class ERMLP(nn.Module):
+    """An implementation of ERMLP [dong2014]_.
+
+    This model uses a neural network-based approach.
+
+    .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
+                  <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
+    """
 
     def __init__(self, config):
-        super(ERMLP, self).__init__()
+        super().__init__()
+
         self.model_name = ERMLP_NAME
-
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
-        num_entities = config[NUM_ENTITIES]
-        num_relations = config[NUM_RELATIONS]
+        self.num_entities = config[NUM_ENTITIES]
+        self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
-        margin_loss = config[MARGIN_LOSS]
 
-        self.entity_embeddings = nn.Embedding(num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
+
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         self.mlp = nn.Sequential(
             nn.Linear(3 * self.embedding_dim, self.embedding_dim),
@@ -33,10 +45,6 @@ class ERMLP(nn.Module):
             nn.Dropout(p=0.2),
             nn.Linear(self.embedding_dim, 1),
         )
-        self.margin_loss = margin_loss
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
     def _compute_loss(self, pos_scores, neg_scores):
         """

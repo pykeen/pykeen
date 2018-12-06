@@ -17,26 +17,34 @@ log = logging.getLogger(__name__)
 
 
 class StructuredEmbedding(nn.Module):
+    """An implementation of Structured Embedding (SE) [bordes2011]_.
+
+    This model projects different matrices for each relation head and tail entity.
+
+    .. [bordes2011] Bordes, A., *et al.* (2011). `Learning Structured Embeddings of Knowledge Bases
+                    <http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898>`_. AAAI. Vol. 6. No. 1.
+    """
 
     def __init__(self, config):
-        super(StructuredEmbedding, self).__init__()
+        super().__init__()
+
         self.model_name = TRANS_E_NAME
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
 
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.m_left_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
         self.m_right_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
-
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
 
         self._initialize()
 

@@ -13,25 +13,33 @@ __all__ = ['RESCAL']
 
 
 class RESCAL(nn.Module):
+    """An implementation of RESCAL [nickel2011]_.
 
+    This model represents relations as matrices and models interactions between latent features.
+
+    .. [nickel2011] Nickel, M., *et al.* (2011) `A Three-Way Model for Collective Learning on Multi-Relational Data
+                    <http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf>`_. ICML. Vol. 11.
+    """
     def __init__(self, config):
-        super(RESCAL, self).__init__()
+        super().__init__()
 
         self.model_name = RESCAL_NAME
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
 
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
 
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+
 
     def _compute_loss(self, pos_scores, neg_scores):
         """

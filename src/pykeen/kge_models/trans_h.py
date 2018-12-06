@@ -13,24 +13,35 @@ __all__ = ['TransH']
 
 
 class TransH(nn.Module):
+    """An implementation of TransH [wang2014]_.
+
+    This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
+
+    .. [wang2014] Wang, Z., *et al.* (2014). `Knowledge Graph Embedding by Translating on Hyperplanes
+                  <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
+    """
 
     def __init__(self, config):
-        super(TransH, self).__init__()
+        super().__init__()
+
         self.model_name = TRANS_H_NAME
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
         self.embedding_dim = config[EMBEDDING_DIM]
-        margin_loss = config[MARGIN_LOSS]
+
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.margin_loss = margin_loss
         self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=False)
+
         self.epsilon = torch.nn.Parameter(torch.tensor(0.005, requires_grad=True))
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
