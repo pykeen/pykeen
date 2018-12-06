@@ -30,7 +30,7 @@ def create_mapped_triples(triples: np.ndarray,
     return np.unique(ar=triples_of_ids, axis=0), entity_to_id, rel_to_id
 
 
-def create_mappings(triples: np.ndarray) -> Tuple[Dict[int, str], Dict[int, str]]:
+def create_mappings(triples: np.ndarray) -> Tuple[Dict[str, int], Dict[str, int]]:
     """"""
     entities = np.unique(np.ndarray.flatten(np.concatenate([triples[:, 0:1], triples[:, 2:3]])))
     relations = np.unique(np.ndarray.flatten(triples[:, 1:2]).tolist())
