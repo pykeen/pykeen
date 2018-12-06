@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 sys.modules['numpy'] = Mock()
 sys.modules['scipy'] = Mock()
 sys.modules['torch'] = Mock()
+sys.modules['scikit-learn'] = Mock()
 
 # -- Project information -----------------------------------------------------
 
