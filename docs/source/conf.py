@@ -15,11 +15,14 @@
 import os
 import re
 import sys
-
-# -- Mockup PyTorch to exclude it while compiling the docs--------------------
-autodoc_mock_imports = ['torch', 'torchvision', 'scikit-learn']
-
+from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath('../../src'))
+# -- Mockup PyTorch to exclude it while compiling the docs--------------------
+# autodoc_mock_imports = ['torch', 'torchvision', 'scikit-learn']
+
+sys.modules['numpy'] = Mock()
+sys.modules['scipy'] = Mock()
+sys.modules['torch'] = Mock()
 
 # -- Project information -----------------------------------------------------
 
