@@ -17,7 +17,7 @@ from pykeen.constants import (
     RELATION_EMBEDDING_DIMENSIONS_PROMPT_MSG, RELATION_EMBEDDING_DIMENSION_ERROR_MSG,
     RELATION_EMBEDDING_DIMENSION_PRINT_MSG, RELATION_EMBEDDING_DIMENSION_PROMPT_MSG, SCORING_FUNCTION_NORM,
 )
-from pykeen.utilities.cli_utils.cli_print_msg_helper import (
+from pykeen.cli.utils.cli_print_msg_helper import (
     print_batch_size_message,
     print_entities_embedding_dimension_message, print_hpo_batch_sizes_message, print_hpo_embedding_dimensions_message,
     print_hpo_epochs_message, print_hpo_learning_rates_message, print_hpo_margin_losses_message,
@@ -25,11 +25,11 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import (
     print_relations_embedding_dimension_message, print_scoring_fct_message, print_section_divider,
     print_training_margin_loss_message,
 )
-from pykeen.utilities.cli_utils.cli_query_helper import (
+from pykeen.cli.utils.cli_query_helper import (
     select_float_value, select_float_values, select_integer_value,
     select_positive_integer_values,
 )
-from pykeen.utilities.cli_utils.utils import get_config_dict
+from pykeen.utilities.summarize import get_config_dict
 
 
 def configure_trans_r_training_pipeline(model_name):

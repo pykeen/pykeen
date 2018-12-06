@@ -12,16 +12,16 @@ from pykeen.constants import (
     LEARNING_RATE_PROMPT_MSG, MARGIN_LOSS, MARGIN_LOSSES_ERROR_MSG, MARGIN_LOSSES_PRINT_MSG, MARGIN_LOSSES_PROMPT_MSG,
     MARGIN_LOSS_ERROR_MSG, MARGIN_LOSS_PRINT_MSG, MARGIN_LOSS_PROMPT_MSG, NUM_EPOCHS,
 )
-from pykeen.utilities.cli_utils.cli_print_msg_helper import (
+from pykeen.cli.utils.cli_print_msg_helper import (
     print_batch_size_message, print_embedding_dimension_info_message, print_hpo_batch_sizes_message,
     print_hpo_embedding_dimensions_message, print_hpo_epochs_message, print_hpo_learning_rates_message,
     print_hpo_margin_losses_message, print_learning_rate_message, print_number_epochs_message, print_section_divider,
     print_training_embedding_dimension_message, print_training_margin_loss_message,
 )
-from pykeen.utilities.cli_utils.cli_query_helper import (
+from pykeen.cli.utils.cli_query_helper import (
     select_float_value, select_float_values, select_integer_value,select_positive_integer_values,
 )
-from pykeen.utilities.cli_utils.utils import get_config_dict
+from pykeen.utilities.summarize import get_config_dict
 
 
 def configure_ermlp_training_pipeline(model_name):

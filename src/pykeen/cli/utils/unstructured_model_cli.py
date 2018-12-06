@@ -19,7 +19,7 @@ from pykeen.constants import (
     NORMS_SCORING_FUNCTION_PROMPT_MSG, NORM_FOR_NORMALIZATION_OF_ENTITIES, NORM_SCORING_FUNCTION_ERROR_MSG,
     NORM_SCORING_FUNCTION_PRINT_MSG, NORM_SCORING_FUNCTION_PROMPT_MSG, NUM_EPOCHS, SCORING_FUNCTION_NORM,
 )
-from pykeen.utilities.cli_utils.cli_print_msg_helper import (
+from pykeen.cli.utils.cli_print_msg_helper import (
     print_batch_size_message,
     print_embedding_dimension_info_message, print_entity_normalization_message, print_hpo_batch_sizes_message,
     print_hpo_embedding_dimensions_message, print_hpo_entity_normalization_norms_message, print_hpo_epochs_message,
@@ -27,11 +27,11 @@ from pykeen.utilities.cli_utils.cli_print_msg_helper import (
     print_learning_rate_message, print_number_epochs_message, print_scoring_fct_message, print_section_divider,
     print_training_embedding_dimension_message, print_training_margin_loss_message,
 )
-from pykeen.utilities.cli_utils.cli_query_helper import (
+from pykeen.cli.utils.cli_query_helper import (
     select_float_value, select_float_values, select_integer_value,
     select_positive_integer_values,
 )
-from pykeen.utilities.cli_utils.utils import get_config_dict
+from pykeen.utilities.summarize import get_config_dict
 
 
 def configure_um_training_pipeline(model_name):

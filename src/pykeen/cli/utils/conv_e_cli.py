@@ -1,7 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """Implementation the command line interface needed for TransE."""
-
+from pykeen.cli.utils.cli_print_msg_helper import print_training_embedding_dimension_message, \
+    print_embedding_dimension_info_message, print_section_divider, print_conv_e_width_height_message, \
+    print_conv_input_channels_message, print_conv_e_output_channels_message, print_conv_kernel_height_message, \
+    print_conv_kernel_width_message, print_hpo_input_dropout_message, print_output_dropout_message, \
+    print_feature_map_dropout_message, print_learning_rate_message, print_batch_size_message, \
+    print_number_epochs_message, print_hpo_embedding_dimensions_message, print_hpo_conv_e_width_height_message, \
+    print_conv_e_hpo_kernel_height_message, print_conv_e_hpo_kernel_width_message, print_hpo_output_dropout_message, \
+    print_hpo_feature_maps_dropouts_message, print_hpo_learning_rates_message, print_hpo_batch_sizes_message, \
+    print_hpo_epochs_message
+from pykeen.cli.utils.cli_query_helper import select_integer_value, query_height_and_width_for_conv_e, \
+    query_kernel_param, select_zero_one_float_value, select_float_value, select_positive_integer_values, \
+    select_heights_and_widths, select_kernel_sizes, select_float_values, select_zero_one_range_float_values
 from pykeen.constants import (
     BATCH_SIZE, BATCH_SIZES_ERROR_MSG, BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG,
     BATCH_SIZE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, CONV_E_FEATURE_MAP_DROPOUT,
@@ -26,23 +37,7 @@ from pykeen.constants import (
     LEARNING_RATES_ERROR_MSG, LEARNING_RATES_PRINT_MSG, LEARNING_RATES_PROMPT_MSG, LEARNING_RATE_ERROR_MSG,
     LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, NUM_EPOCHS,
 )
-from pykeen.utilities.cli_utils.cli_print_msg_helper import (
-    print_batch_size_message,
-    print_conv_e_hpo_kernel_height_message, print_conv_e_hpo_kernel_width_message, print_conv_e_output_channels_message,
-    print_conv_e_width_height_message, print_conv_input_channels_message, print_conv_kernel_height_message,
-    print_conv_kernel_width_message, print_embedding_dimension_info_message, print_feature_map_dropout_message,
-    print_hpo_batch_sizes_message, print_hpo_conv_e_width_height_message, print_hpo_embedding_dimensions_message,
-    print_hpo_epochs_message, print_hpo_feature_maps_dropouts_message, print_hpo_input_dropout_message,
-    print_hpo_learning_rates_message, print_hpo_output_dropout_message, print_learning_rate_message,
-    print_number_epochs_message, print_output_dropout_message, print_section_divider,
-    print_training_embedding_dimension_message,
-)
-from pykeen.utilities.cli_utils.cli_query_helper import (
-    query_height_and_width_for_conv_e, query_kernel_param,
-    select_float_value, select_float_values, select_heights_and_widths, select_integer_value, select_kernel_sizes,
-    select_positive_integer_values, select_zero_one_float_value, select_zero_one_range_float_values,
-)
-from pykeen.utilities.cli_utils.utils import get_config_dict
+from pykeen.utilities.summarize import get_config_dict
 
 
 def configure_conv_e_training_pipeline(model_name):
