@@ -16,12 +16,20 @@ import os
 import re
 import sys
 from unittest.mock import Mock
-sys.path.insert(0, os.path.abspath('../../src'))
+# sys.path.insert(0, os.path.abspath('../../src'))
+sys.path.insert(0, os.path.abspath('..'))
 # -- Mockup PyTorch to exclude it while compiling the docs--------------------
 # autodoc_mock_imports = ['torch', 'torchvision', 'scikit-learn']
-
 sys.modules['numpy'] = Mock()
+sys.modules['numpy.linalg'] = Mock()
 sys.modules['scipy'] = Mock()
+sys.modules['scipy.optimize'] = Mock()
+sys.modules['scipy.interpolate'] = Mock()
+sys.modules['scipy.ndimage'] = Mock()
+sys.modules['scipy.ndimage.filters'] = Mock()
+sys.modules['tensorflow'] = Mock()
+sys.modules['theano'] = Mock()
+sys.modules['theano.tensor'] = Mock()
 sys.modules['torch'] = Mock()
 sys.modules['scikit-learn'] = Mock()
 
