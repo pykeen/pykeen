@@ -165,13 +165,13 @@ class Pipeline(object):
         all_triples: np.ndarray = np.concatenate([train_pos, test_pos], axis=0)
         self.entity_to_id, self.rel_to_id = create_mappings(triples=all_triples)
 
-        mapped_pos_train_triples = create_mapped_triples(
+        mapped_pos_train_triples, _, _ = create_mapped_triples(
             triples=train_pos,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
         )
 
-        mapped_pos_test_triples = create_mapped_triples(
+        mapped_pos_test_triples, _, _ = create_mapped_triples(
             triples=test_pos,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
@@ -184,7 +184,7 @@ class Pipeline(object):
 
         self.entity_to_id, self.rel_to_id = create_mappings(triples=train_pos)
 
-        mapped_pos_train_triples = create_mapped_triples(
+        mapped_pos_train_triples, _, _ = create_mapped_triples(
             triples=train_pos,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.rel_to_id,
