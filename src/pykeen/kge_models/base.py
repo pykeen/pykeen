@@ -15,7 +15,7 @@ __all__ = [
 class BaseModule(nn.Module):
     """A base class for all of the models."""
 
-    margin_ranking_loss_size_average: bool = True
+    margin_ranking_loss_size_average: bool = ...
 
     def __init__(self, config):
         super().__init__()
