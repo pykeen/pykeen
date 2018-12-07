@@ -15,8 +15,7 @@ __all__ = [
 class BaseModule(nn.Module):
     """A base class for all of the models."""
 
-    #: Should the margin ranking loss use the size average?
-    margin_ranking_loss_size_average: bool = ...
+    margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
         super().__init__()
