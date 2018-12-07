@@ -29,8 +29,6 @@ class RESCAL(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 

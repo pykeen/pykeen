@@ -38,18 +38,14 @@ class TransR(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.entity_embedding_dim = config[EMBEDDING_DIM]
-
         self.relation_embedding_dim = config[RELATION_EMBEDDING_DIM]
 
         # max_norm = 1 according to the paper
         # TODO: max_norm < 1.
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.entity_embedding_dim, norm_type=2, max_norm=1)
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, norm_type=2, max_norm=1)
         # max_norm = 1 according to the paper
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2,
-                                                max_norm=1)
-        self.projection_matrix_embs = nn.Embedding(self.num_relations,
-                                                   self.relation_embedding_dim * self.entity_embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2, max_norm=1)
+        self.projection_matrix_embs = nn.Embedding(self.num_relations, self.relation_embedding_dim * self.embedding_dim)
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self._initialize()
 
@@ -108,8 +104,8 @@ class TransR(BaseModule):
 
     # TODO: Initilaize relation matrices as identiy matrices
     def _initialize(self):
-        lower_bound = -6 / np.sqrt(self.entity_embedding_dim)
-        upper_bound = 6 / np.sqrt(self.entity_embedding_dim)
+        lower_bound = -6 / np.sqrt(self.embedding_dim)
+        upper_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
         nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
 
@@ -131,11 +127,11 @@ class TransR(BaseModule):
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
 
-        head_embs = self.entity_embeddings(heads).view(-1, self.entity_embedding_dim)
+        head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
         relation_embs = self.relation_embeddings(relations).view(-1, self.relation_embedding_dim)
-        tail_embs = self.entity_embeddings(tails).view(-1, self.entity_embedding_dim)
+        tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
-        proj_matrix_embs = self.projection_matrix_embs(relations).view(-1, self.entity_embedding_dim,
+        proj_matrix_embs = self.projection_matrix_embs(relations).view(-1, self.embedding_dim,
                                                                        self.relation_embedding_dim)
 
         proj_heads_embs = self._project_entities(head_embs, proj_matrix_embs)
@@ -154,15 +150,15 @@ class TransR(BaseModule):
         neg_relations = batch_negatives[:, 1:2]
         neg_tails = batch_negatives[:, 2:3]
 
-        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.entity_embedding_dim)
+        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
         pos_r_embs = self.relation_embeddings(pos_relations).view(-1, self.relation_embedding_dim)
-        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.entity_embedding_dim)
+        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
 
-        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.entity_embedding_dim)
+        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
         neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.relation_embedding_dim)
-        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.entity_embedding_dim)
+        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
 
-        proj_matrix_embs = self.projection_matrix_embs(pos_relations).view(-1, self.entity_embedding_dim,
+        proj_matrix_embs = self.projection_matrix_embs(pos_relations).view(-1, self.embedding_dim,
                                                                            self.relation_embedding_dim)
 
         # Project entities into relation space

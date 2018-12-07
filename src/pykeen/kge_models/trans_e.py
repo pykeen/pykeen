@@ -36,8 +36,6 @@ class TransE(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

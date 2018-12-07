@@ -5,7 +5,7 @@
 import torch
 from torch import nn
 
-from pykeen.constants import CPU, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE
+from pykeen.constants import CPU, EMBEDDING_DIM, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE
 
 __all__ = [
     'BaseModule',
@@ -34,3 +34,5 @@ class BaseModule(nn.Module):
         # Entity dimensions
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
+
+        self.embedding_dim = config[EMBEDDING_DIM]

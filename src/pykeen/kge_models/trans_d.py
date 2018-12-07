@@ -29,13 +29,12 @@ class TransD(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.entity_embedding_dim = config[EMBEDDING_DIM]
-        self.relation_embedding_dim = self.entity_embedding_dim
+        self.relation_embedding_dim = self.embedding_dim
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.entity_embedding_dim, max_norm=1)
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1)
-        self.entity_projections = nn.Embedding(self.num_entities, self.entity_embedding_dim)
+        self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
 
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
@@ -105,13 +104,13 @@ class TransD(BaseModule):
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
 
-        h_embs = self.entity_embeddings(heads).view(-1, self.entity_embedding_dim)
+        h_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
         r_embs = self.relation_embeddings(relations).view(-1, self.relation_embedding_dim)
-        t_embs = self.entity_embeddings(tails).view(-1, self.entity_embedding_dim)
+        t_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
-        h_proj_vec_embs = self.entity_projections(heads).view(-1, self.entity_embedding_dim)
+        h_proj_vec_embs = self.entity_projections(heads).view(-1, self.embedding_dim)
         r_projs_embs = self.relation_projections(relations).view(-1, self.relation_embedding_dim)
-        t_proj_vec_embs = self.entity_projections(tails).view(-1, self.entity_embedding_dim)
+        t_proj_vec_embs = self.entity_projections(tails).view(-1, self.embedding_dim)
 
         proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
         proj_tails = self._project_entities(t_embs, t_proj_vec_embs, r_projs_embs)
@@ -129,21 +128,21 @@ class TransD(BaseModule):
         neg_relations = batch_negatives[:, 1:2]
         neg_tails = batch_negatives[:, 2:3]
 
-        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.entity_embedding_dim)
+        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
         pos_r_embs = self.relation_embeddings(pos_relations).view(-1, self.relation_embedding_dim)
-        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.entity_embedding_dim)
+        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
 
-        pos_h_proj_vec_embs = self.entity_projections(pos_heads).view(-1, self.entity_embedding_dim)
+        pos_h_proj_vec_embs = self.entity_projections(pos_heads).view(-1, self.embedding_dim)
         pos_r_projs_embs = self.relation_projections(pos_relations).view(-1, self.relation_embedding_dim)
-        pos_t_proj_vec_embs = self.entity_projections(pos_tails).view(-1, self.entity_embedding_dim)
+        pos_t_proj_vec_embs = self.entity_projections(pos_tails).view(-1, self.embedding_dim)
 
-        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.entity_embedding_dim)
+        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
         neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.relation_embedding_dim)
-        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.entity_embedding_dim)
+        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
 
-        neg_h_proj_vec_embs = self.entity_projections(neg_heads).view(-1, self.entity_embedding_dim)
+        neg_h_proj_vec_embs = self.entity_projections(neg_heads).view(-1, self.embedding_dim)
         neg_r_projs_embs = self.relation_projections(neg_relations).view(-1, self.relation_embedding_dim)
-        neg_t_proj_vec_embs = self.entity_projections(neg_tails).view(-1, self.entity_embedding_dim)
+        neg_t_proj_vec_embs = self.entity_projections(neg_tails).view(-1, self.embedding_dim)
 
         # Project entities
         proj_pos_heads = self._project_entities(pos_h_embs, pos_h_proj_vec_embs, pos_r_projs_embs)
