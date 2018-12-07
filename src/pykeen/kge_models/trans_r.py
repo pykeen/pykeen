@@ -5,7 +5,7 @@
 import numpy as np
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 
 from pykeen.constants import *
 
@@ -22,18 +22,38 @@ Constraints:
 
 
 class TransR(nn.Module):
+    """An implementation of TransR [lin2015]_.
+
+    This model extends TransE and TransH by considering different vector spaces for entities and relations.
+
+    .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion
+                 <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
+    """
+
+    model_name = TRANS_R_NAME
+    margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super(TransR, self).__init__()
-        self.model_name = TRANS_R_NAME
+        super().__init__()
+
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
+
+        # Entity dimensions
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
+
+        # Embeddings
         self.entity_embedding_dim = config[EMBEDDING_DIM]
+
         self.relation_embedding_dim = config[RELATION_EMBEDDING_DIM]
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
 
         # max_norm = 1 according to the paper
         # TODO: max_norm < 1.

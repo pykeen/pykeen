@@ -4,7 +4,7 @@
 
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 from torch.nn import Parameter, functional as F
 from torch.nn.init import xavier_normal
 
@@ -14,15 +14,32 @@ __all__ = ['ConvE']
 
 
 class ConvE(nn.Module):
-    """An implementation of ConvE based on https://github.com/TimDettmers/ConvE/blob/master/model.py."""
+    """An implementation of ConvE [dettmers2017]_.
+
+    .. [dettmers2017] Dettmers, T., *et al.* (2017) `Convolutional 2d knowledge graph embeddings
+                      <https://arxiv.org/pdf/1707.01476.pdf>`_. arXiv preprint arXiv:1707.01476.
+
+    .. seealso:: https://github.com/TimDettmers/ConvE/blob/master/model.py
+    """
+
+    model_name = CONV_E_NAME
 
     def __init__(self, config):
-        super(ConvE, self).__init__()
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.model_name = CONV_E_NAME
+        super().__init__()
+
+        # Device selection
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Entity dimensions
         self.num_entities = config[NUM_ENTITIES]
-        num_relations = config[NUM_RELATIONS]
+        self.num_relations = config[NUM_RELATIONS]
+
+        # Embeddings
         self.embedding_dim = config[EMBEDDING_DIM]
+
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
         num_in_channels = config[CONV_E_INPUT_CHANNELS]
         num_out_channels = config[CONV_E_OUTPUT_CHANNELS]
         kernel_height = config[CONV_E_KERNEL_HEIGHT]
@@ -35,13 +52,10 @@ class ConvE(nn.Module):
 
         assert self.img_height * self.img_width == self.embedding_dim
 
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
         self.inp_drop = torch.nn.Dropout(input_dropout)
         self.hidden_drop = torch.nn.Dropout(hidden_dropout)
         self.feature_map_drop = torch.nn.Dropout2d(feature_map_dropout)
         self.loss = torch.nn.BCELoss()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.conv1 = torch.nn.Conv2d(
             in_channels=num_in_channels,

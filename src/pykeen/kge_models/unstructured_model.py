@@ -7,7 +7,7 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 
 from pykeen.constants import *
 
@@ -17,44 +17,48 @@ log = logging.getLogger(__name__)
 
 
 class UnstructuredModel(nn.Module):
+    """An implementation of Unstructured Model (UM) [bordes2014]_.
+
+    .. [bordes2014] Bordes, A., *et al.* (2014). `A semantic matching energy function for learning with
+                    multi-relational data <https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf>`_.
+                    Machine
+    """
+
+    model_name = UM_NAME
+    margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super(UnstructuredModel, self).__init__()
-        self.model_name = UM_NAME
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
+        super().__init__()
+
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
+
+        # Entity dimensions
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
-        self.embedding_dim = config[EMBEDDING_DIM]
 
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+        # Embeddings
+        self.embedding_dim = config[EMBEDDING_DIM]
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
 
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
-
         self._initialize()
 
     def _initialize(self):
-        """
-
-        :return:
-        """
         lower_bound = -6 / np.sqrt(self.embedding_dim)
         upper_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
-
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
@@ -68,14 +72,6 @@ class UnstructuredModel(nn.Module):
         return loss
 
     def _compute_scores(self, h_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
-
         # Add the vector element wise
         sum_res = h_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
@@ -83,15 +79,7 @@ class UnstructuredModel(nn.Module):
         return distances
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
@@ -104,14 +92,7 @@ class UnstructuredModel(nn.Module):
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
-        """
-
-        :param batch_positives:
-        :param batch_negatives:
-        :return:
-        """
-
-        # Normalise embeddings of entities
+        # Normalize embeddings of entities
         pos_heads = batch_positives[:, 0:1]
         pos_tails = batch_positives[:, 2:3]
 

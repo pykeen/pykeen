@@ -5,7 +5,7 @@
 import numpy as np
 import torch
 import torch.autograd
-import torch.nn as nn
+from torch import nn
 
 from pykeen.constants import *
 
@@ -13,25 +13,41 @@ __all__ = ['DistMult']
 
 
 class DistMult(nn.Module):
-    """An implementation of DistMult."""
+    """An implementation of DistMult [yang2014]_.
+
+    This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
+
+    .. [yang2014] Yang, B., Yih, W., He, X., Gao, J., & Deng, L. (2014). `Embedding Entities and Relations for Learning
+                  and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
+    """
+
+    model_name = DISTMULT_NAME
+    margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super(DistMult, self).__init__()
-        self.model_name = DISTMULT_NAME
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
+        super().__init__()
+
+        # Device selection
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
+
+        # Loss
+        self.margin_loss = config[MARGIN_LOSS]
+        self.criterion = nn.MarginRankingLoss(
+            margin=self.margin_loss,
+            size_average=self.margin_ranking_loss_size_average,
+        )
+
+        # Entity dimensions
         self.num_entities = config[NUM_ENTITIES]
         self.num_relations = config[NUM_RELATIONS]
+
+        # Embeddings
         self.embedding_dim = config[EMBEDDING_DIM]
 
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(margin=self.margin_loss, size_average=True)
+        # self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
 
         self._initialize()
 

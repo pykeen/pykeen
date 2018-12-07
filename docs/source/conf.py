@@ -15,23 +15,33 @@
 import os
 import re
 import sys
-from unittest.mock import Mock
-# sys.path.insert(0, os.path.abspath('../../src'))
-sys.path.insert(0, os.path.abspath('..'))
+
+sys.path.insert(0, os.path.abspath('../../src'))
+# sys.path.insert(0, os.path.abspath('..'))
+
 # -- Mockup PyTorch to exclude it while compiling the docs--------------------
 # autodoc_mock_imports = ['torch', 'torchvision', 'scikit-learn']
-sys.modules['numpy'] = Mock()
-sys.modules['numpy.linalg'] = Mock()
-sys.modules['scipy'] = Mock()
-sys.modules['scipy.optimize'] = Mock()
-sys.modules['scipy.interpolate'] = Mock()
-sys.modules['scipy.ndimage'] = Mock()
-sys.modules['scipy.ndimage.filters'] = Mock()
-sys.modules['tensorflow'] = Mock()
-sys.modules['theano'] = Mock()
-sys.modules['theano.tensor'] = Mock()
-sys.modules['torch'] = Mock()
-sys.modules['scikit-learn'] = Mock()
+
+# from unittest.mock import Mock
+# sys.modules['numpy'] = Mock()
+# sys.modules['numpy.linalg'] = Mock()
+# sys.modules['scipy'] = Mock()
+# sys.modules['scipy.optimize'] = Mock()
+# sys.modules['scipy.interpolate'] = Mock()
+# sys.modules['scipy.sparse'] = Mock()
+# sys.modules['scipy.ndimage'] = Mock()
+# sys.modules['scipy.ndimage.filters'] = Mock()
+# sys.modules['tensorflow'] = Mock()
+# sys.modules['theano'] = Mock()
+# sys.modules['theano.tensor'] = Mock()
+# sys.modules['torch'] = Mock()
+# sys.modules['torch.optim'] = Mock()
+# sys.modules['torch.nn'] = Mock()
+# sys.modules['torch.nn.init'] = Mock()
+# sys.modules['torch.autograd'] = Mock()
+# sys.modules['sklearn'] = Mock()
+# sys.modules['sklearn.model_selection'] = Mock()
+# sys.modules['sklearn.utils'] = Mock()
 
 # -- Project information -----------------------------------------------------
 
@@ -200,4 +210,8 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/3/': None}
+intersphinx_mapping = {
+    'https://docs.python.org/3/': None,
+    'torch': ('https://pytorch.org/docs/0.3.0', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy', None),
+}
