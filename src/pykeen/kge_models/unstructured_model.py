@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM, UM_NAME
 from pykeen.kge_models.base import BaseModule
 
 __all__ = ['UnstructuredModel']

@@ -7,7 +7,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
 from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransR']
@@ -44,7 +44,8 @@ class TransR(BaseModule):
         # TODO: max_norm < 1.
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, norm_type=2, max_norm=1)
         # max_norm = 1 according to the paper
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2, max_norm=1)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2,
+                                                max_norm=1)
         self.projection_matrix_embs = nn.Embedding(self.num_relations, self.relation_embedding_dim * self.embedding_dim)
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self._initialize()

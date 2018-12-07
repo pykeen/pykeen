@@ -7,7 +7,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import SCORING_FUNCTION_NORM, TRANS_D_NAME
 from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransD']

@@ -7,7 +7,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import RESCAL_NAME, SCORING_FUNCTION_NORM
 from pykeen.kge_models.base import BaseModule
 
 __all__ = ['RESCAL']
