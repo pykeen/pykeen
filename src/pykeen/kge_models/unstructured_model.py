@@ -9,14 +9,15 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM, UM_NAME
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['UnstructuredModel']
 
 log = logging.getLogger(__name__)
 
 
-class UnstructuredModel(nn.Module):
+class UnstructuredModel(BaseModule):
     """An implementation of Unstructured Model (UM) [bordes2014]_.
 
     .. [bordes2014] Bordes, A., *et al.* (2014). `A semantic matching energy function for learning with
@@ -28,24 +29,7 @@ class UnstructuredModel(nn.Module):
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
-
-        # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
+        super().__init__(config)
 
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]

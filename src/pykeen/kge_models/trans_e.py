@@ -9,14 +9,15 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import TRANS_E_NAME, NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransE']
 
 log = logging.getLogger(__name__)
 
 
-class TransE(nn.Module):
+class TransE(BaseModule):
     """An implementation of TransE [borders2013]_.
 
      This model considers a relation as a translation from the head to the tail entity.
@@ -32,25 +33,9 @@ class TransE(nn.Module):
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device Selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity Dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
+        super().__init__(config)
 
         # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

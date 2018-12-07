@@ -7,12 +7,13 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import DISTMULT_NAME
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['DistMult']
 
 
-class DistMult(nn.Module):
+class DistMult(BaseModule):
     """An implementation of DistMult [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
@@ -25,25 +26,9 @@ class DistMult(nn.Module):
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
+        super().__init__(config)
 
         # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
@@ -52,10 +37,6 @@ class DistMult(nn.Module):
         self._initialize()
 
     def _initialize(self):
-        """
-
-        :return:
-        """
         lower_bound = -6 / np.sqrt(self.embedding_dim)
         upper_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
@@ -66,13 +47,6 @@ class DistMult(nn.Module):
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
-
         # Choose y = -1 since a smaller score is better.
         # In TransE for exampel the scores represent distances
         y = np.repeat([-1], repeats=pos_scores.shape[0])
@@ -88,27 +62,11 @@ class DistMult(nn.Module):
         return loss
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
         scores = - torch.sum(h_embs * r_embs * t_embs, dim=1)
-
         return scores
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
@@ -118,17 +76,9 @@ class DistMult(nn.Module):
         tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
         scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
-
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
-        """
-
-        :param batch_positives:
-        :param batch_negatives:
-        :return:
-        """
-
         pos_heads = batch_positives[:, 0:1]
         pos_relations = batch_positives[:, 1:2]
         pos_tails = batch_positives[:, 2:3]
@@ -149,5 +99,4 @@ class DistMult(nn.Module):
         neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-
         return loss

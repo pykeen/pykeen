@@ -7,12 +7,13 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H, SCORING_FUNCTION_NORM
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransH']
 
 
-class TransH(nn.Module):
+class TransH(BaseModule):
     """An implementation of TransH [wang2014]_.
 
     This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
@@ -25,24 +26,7 @@ class TransH(nn.Module):
     margin_ranking_loss_size_average: bool = False
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
-
-        # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
+        super().__init__(config)
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

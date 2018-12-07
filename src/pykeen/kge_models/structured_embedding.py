@@ -9,14 +9,15 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import *
+from pykeen.constants import NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM, SE_NAME
+from pykeen.kge_models.base import BaseModule
 
 __all__ = ['StructuredEmbedding']
 
 log = logging.getLogger(__name__)
 
 
-class StructuredEmbedding(nn.Module):
+class StructuredEmbedding(BaseModule):
     """An implementation of Structured Embedding (SE) [bordes2011]_.
 
     This model projects different matrices for each relation head and tail entity.
@@ -29,25 +30,9 @@ class StructuredEmbedding(nn.Module):
     margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config):
-        super().__init__()
-
-        # Device selection
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU)
-
-        # Loss
-        self.margin_loss = config[MARGIN_LOSS]
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
-        )
-
-        # Entity dimensions
-        self.num_entities = config[NUM_ENTITIES]
-        self.num_relations = config[NUM_RELATIONS]
+        super().__init__(config)
 
         # Embeddings
-        self.embedding_dim = config[EMBEDDING_DIM]
-
         self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
