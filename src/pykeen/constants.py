@@ -66,7 +66,7 @@ HPO_MODE = 'HPO_mode'
 HYPER_PARAMTER_OPTIMIZATION_PARAMS = 'hyper_optimization_params'
 TRAINING_SET_PATH = 'training_set_path'
 TEST_SET_PATH = 'test_set_path'
-TEST_SET_RATIO = 'validation_set_ratio'
+TEST_SET_RATIO = 'test_set_ratio'
 NORM_FOR_NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
 SCORING_FUNCTION_NORM = 'scoring_function'
 # TransH related
