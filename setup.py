@@ -46,7 +46,7 @@ EXTRAS_REQUIRE = {
     'docs': [
         'sphinx',
         'sphinx-rtd-theme',
-        # 'sphinx-click',
+        'sphinx-click',
     ],
     'ndex': [
         'ndex2',
