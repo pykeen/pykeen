@@ -7,13 +7,6 @@ The system has a modular architecture, and can be configured by the user through
 Installation is as easy as getting the code from `PyPI <https://pypi.python.org/pypi/pykeen>`_ with
 :code:`python3 -m pip install pykeen`
 
-Citation
---------
-If you use PyKEEN in your work, please cite [1]_:
-
-.. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
-       <https://zenodo.org/badge/latestdoi/136345023>`_.
-
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
