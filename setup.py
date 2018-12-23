@@ -58,8 +58,8 @@ EXTRAS_REQUIRE = {
 ENTRY_POINTS = {
     'console_scripts': [
         'pykeen = pykeen.cli:main',
-        'pykeen-summarize = pykeen.cli:summarize',
-        'pykeen-predict = pykeen.cli:predict',
+        'pykeen-summarize = pykeen.cli.cli:summarize',
+        'pykeen-predict = pykeen.cli.cli:predict',
     ]
 }
 
