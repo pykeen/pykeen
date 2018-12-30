@@ -29,9 +29,16 @@ def main(config):
 @click.command()
 @click.option('-m', '--model-directory', type=click.Path(file_okay=False, dir_okay=True))
 @click.option('-d', '--data-directory', type=click.Path(file_okay=False, dir_okay=True))
-def predict(model_directory: str, data_directory: str):
+@click.option('-t', '--training-set-path', type=click.Path())
+def predict(model_directory: str, data_directory: str, training_set_path: str):
     """Predict new links based on trained model."""
-    start_predictions_pipeline(model_directory, data_directory)
+
+    remove_training_triples = False
+
+    if training_set_path is not None:
+        remove_training_triples = True,
+
+    start_predictions_pipeline(model_directory, data_directory, remove_training_triples, training_set_path)
 
 
 @click.command()

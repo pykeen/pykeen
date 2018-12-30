@@ -147,10 +147,10 @@ class Pipeline(object):
         )
 
     def _get_train_and_test_triples(self) -> Tuple[np.ndarray, np.ndarray]:
-        train_pos = _load_data(self.config[TRAINING_SET_PATH])
+        train_pos = load_data(self.config[TRAINING_SET_PATH])
 
         if TEST_SET_PATH in self.config:
-            test_pos = _load_data(self.config[TEST_SET_PATH])
+            test_pos = load_data(self.config[TEST_SET_PATH])
         else:
             train_pos, test_pos = train_test_split(
                 train_pos,
@@ -180,7 +180,7 @@ class Pipeline(object):
         return mapped_pos_train_triples, mapped_pos_test_triples
 
     def _get_train_triples(self):
-        train_pos = _load_data(self.config[TRAINING_SET_PATH])
+        train_pos = load_data(self.config[TRAINING_SET_PATH])
 
         self.entity_to_id, self.rel_to_id = create_mappings(triples=train_pos)
 
@@ -193,7 +193,7 @@ class Pipeline(object):
         return mapped_pos_train_triples
 
 
-def _load_data(path: str) -> np.ndarray:
+def load_data(path: str) -> np.ndarray:
     if path.startswith('ndex:'):
         return _load_ndex(path[len('ndex:'):])
 
