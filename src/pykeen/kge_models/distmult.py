@@ -32,8 +32,6 @@ class DistMult(BaseModule):
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        # self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
-
         self._initialize()
 
     def _initialize(self):
