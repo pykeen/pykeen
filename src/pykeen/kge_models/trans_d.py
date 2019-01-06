@@ -7,7 +7,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import SCORING_FUNCTION_NORM, TRANS_D_NAME
+from pykeen.constants import SCORING_FUNCTION_NORM, TRANS_D_NAME, RELATION_EMBEDDING_DIM
 from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransD']
@@ -29,7 +29,7 @@ class TransD(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.relation_embedding_dim = self.embedding_dim
+        self.relation_embedding_dim = config[RELATION_EMBEDDING_DIM]
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
