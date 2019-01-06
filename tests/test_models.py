@@ -8,6 +8,8 @@ from pykeen.constants import *
 from pykeen.kge_models import TransE, TransH, TransR, TransD, DistMult, ERMLP, StructuredEmbedding, UnstructuredModel, \
     RESCAL, ConvE
 
+import torch
+
 TRANS_E_CONFIG = {
     NUM_ENTITIES: 5,
     NUM_RELATIONS: 5,
@@ -208,4 +210,69 @@ class TestModelInstantiation(unittest.TestCase):
 
 
 class TestScoringFunctions(unittest.TestCase):
-    pass
+    def test_compute_scores_trans_e(self):
+        """Test that TransE's socore function computes the scores correct."""
+        trans_e = TransE(config=TRANS_E_CONFIG)
+        h_embs = torch.tensor([[1.,1.],[2.,2.]],dtype=torch.float)
+        r_embs = torch.tensor([[1., 1.], [2., 2.]],dtype=torch.float)
+        t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = trans_e._compute_scores(h_embs,r_embs,t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [0.,0.])
+
+    def test_compute_scores_trans_h(self):
+        """Test that TransH's socore function computes the scores correct."""
+        trans_h = TransH(config=TRANS_H_CONFIG)
+        proj_h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
+        proj_r_embs = torch.tensor([[1., 1.], [2., 2.]],dtype=torch.float)
+        proj_t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = trans_h._compute_scores(proj_h_embs,proj_r_embs,proj_t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [0.,4.])
+
+    def test_compute_scores_trans_r(self):
+        """Test that TransR's socore function computes the scores correct."""
+        trans_r = TransR(config=TRANS_R_CONFIG)
+        proj_h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
+        proj_r_embs = torch.tensor([[1., 1.], [2., 2.]],dtype=torch.float)
+        proj_t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = trans_r._compute_scores(proj_h_embs,proj_r_embs,proj_t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [0.,4.])
+
+    def test_compute_scores_trans_d(self):
+        """Test that TransD's socore function computes the scores correct."""
+        trans_d = TransD(config=TRANS_D_CONFIG)
+        proj_h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
+        proj_r_embs = torch.tensor([[1., 1.], [2., 2.]],dtype=torch.float)
+        proj_t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = trans_d._compute_scores(proj_h_embs,proj_r_embs,proj_t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [0.,4.])
+
+    def test_compute_scores_distmult(self):
+        """Test that TransD's socore function computes the scores correct."""
+        distmult = DistMult(config=DISTMULT_CONFIG)
+        h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
+        r_embs = torch.tensor([[1., 1.], [2., 2.]],dtype=torch.float)
+        t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = distmult._compute_scores(h_embs,r_embs,t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [-4.,-16.])
+
+    def test_compute_scores_se(self):
+        """Test that TransD's socore function computes the scores correct."""
+        se = StructuredEmbedding(config=SE_CONFIG)
+        proj_h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
+        proj_t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = se._compute_scores(proj_h_embs,proj_t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [2.,6.])
+
+
