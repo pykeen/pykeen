@@ -147,7 +147,7 @@ def select_ratio_for_test_set():
 
 
 def select_preferred_device():
-    click.secho(click.style("Current Step: Please specify tthe preferred device (GPU or CPU).", fg='blue'))
+    click.secho(click.style("Current Step: Please specify the preferred device (GPU or CPU).", fg='blue'))
 
     while True:
         user_input = prompt('> Please type \'GPU\' or \'CPU\': ').lower()
