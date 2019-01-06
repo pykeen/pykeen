@@ -57,16 +57,22 @@ class TransE(BaseModule):
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
-        # Scores for the psotive and negative triples
+        # Scores for the positive and negative triples
         pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-        # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
 
         return loss
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
+        """
+
+        :param h_embs: embeddings of head entities of dimension batchsize x embedding_dim
+        :param r_embs: emebddings of relation embeddings of dimension batchsize x embedding_dim
+        :param t_embs: embeddings of tail entities of dimension batchsize x embedding_dim
+        :return: Tensor of dimension batch_size containing the scores for each batch element
+        """
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
@@ -74,7 +80,6 @@ class TransE(BaseModule):
         return distances
 
     def predict(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
