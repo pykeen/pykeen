@@ -23,12 +23,12 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(trans_e)
-        self.assertTrue(trans_e.num_entities, 5)
-        self.assertTrue(trans_e.num_relations, 5)
-        self.assertTrue(trans_e.embedding_dim, 5)
-        self.assertTrue(trans_e.l_p_norm_entities, 2)
-        self.assertTrue(trans_e.scoring_fct_norm, 1)
-        self.assertTrue(trans_e.margin_loss, 4)
+        self.assertEqual(trans_e.num_entities, 5)
+        self.assertEqual(trans_e.num_relations, 5)
+        self.assertEqual(trans_e.embedding_dim, 5)
+        self.assertEqual(trans_e.l_p_norm_entities, 2)
+        self.assertEqual(trans_e.scoring_fct_norm, 1)
+        self.assertEqual(trans_e.margin_loss, 4)
 
     def test_instantiate_trans_h(self):
         """Test that TransH can be instantiated."""
@@ -42,12 +42,12 @@ class TestModelInstantiation(unittest.TestCase):
             WEIGHT_SOFT_CONSTRAINT_TRANS_H: 0.05,
         })
         self.assertIsNotNone(trans_h)
-        self.assertTrue(trans_h.num_entities,5)
-        self.assertTrue(trans_h.num_relations, 5)
-        self.assertTrue(trans_h.embedding_dim, 5)
-        self.assertTrue(trans_h.weightning_soft_constraint,0.05)
-        self.assertTrue(trans_h.scoring_fct_norm, 1)
-        self.assertTrue(trans_h.margin_loss, 4)
+        self.assertEqual(trans_h.num_entities,5)
+        self.assertEqual(trans_h.num_relations, 5)
+        self.assertEqual(trans_h.embedding_dim, 5)
+        self.assertEqual(trans_h.weightning_soft_constraint,0.05)
+        self.assertEqual(trans_h.scoring_fct_norm, 1)
+        self.assertEqual(trans_h.margin_loss, 4)
 
     def test_instantiate_trans_r(self):
         """Test that TransR can be instantiated."""
@@ -60,12 +60,12 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(trans_r)
-        self.assertTrue(trans_r.num_entities,5)
-        self.assertTrue(trans_r.num_relations, 5)
-        self.assertTrue(trans_r.embedding_dim, 5)
-        self.assertTrue(trans_r.relation_embedding_dim, 3)
-        self.assertTrue(trans_r.scoring_fct_norm, 1)
-        self.assertTrue(trans_r.margin_loss, 4)
+        self.assertEqual(trans_r.num_entities,5)
+        self.assertEqual(trans_r.num_relations, 5)
+        self.assertEqual(trans_r.embedding_dim, 5)
+        self.assertEqual(trans_r.relation_embedding_dim, 3)
+        self.assertEqual(trans_r.scoring_fct_norm, 1)
+        self.assertEqual(trans_r.margin_loss, 4)
 
     def test_instantiate_trans_d(self):
         """Test that TransD can be instantiated."""
@@ -78,12 +78,12 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(trans_d)
-        self.assertTrue(trans_d.num_entities,5)
-        self.assertTrue(trans_d.num_relations, 5)
-        self.assertTrue(trans_d.embedding_dim, 5)
-        self.assertTrue(trans_d.relation_embedding_dim, 3)
-        self.assertTrue(trans_d.scoring_fct_norm, 1)
-        self.assertTrue(trans_d.margin_loss, 4)
+        self.assertEqual(trans_d.num_entities,5)
+        self.assertEqual(trans_d.num_relations, 5)
+        self.assertEqual(trans_d.embedding_dim, 5)
+        self.assertEqual(trans_d.relation_embedding_dim, 3)
+        self.assertEqual(trans_d.scoring_fct_norm, 1)
+        self.assertEqual(trans_d.margin_loss, 4)
 
     def test_instantiate_distmult(self):
         """Test that DistMult can be instantiated."""
@@ -95,10 +95,10 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(distmult)
-        self.assertTrue(distmult.num_entities,5)
-        self.assertTrue(distmult.num_relations, 5)
-        self.assertTrue(distmult.embedding_dim, 5)
-        self.assertTrue(distmult.margin_loss, 4)
+        self.assertEqual(distmult.num_entities,5)
+        self.assertEqual(distmult.num_relations, 5)
+        self.assertEqual(distmult.embedding_dim, 5)
+        self.assertEqual(distmult.margin_loss, 4)
 
     def test_instantiate_ermlp(self):
         """Test that ERMLP can be instantiated."""
@@ -110,10 +110,10 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(ermlp)
-        self.assertTrue(ermlp.num_entities,5)
-        self.assertTrue(ermlp.num_relations, 5)
-        self.assertTrue(ermlp.embedding_dim, 5)
-        self.assertTrue(ermlp.margin_loss, 4)
+        self.assertEqual(ermlp.num_entities,5)
+        self.assertEqual(ermlp.num_relations, 5)
+        self.assertEqual(ermlp.embedding_dim, 5)
+        self.assertEqual(ermlp.margin_loss, 4)
 
     def test_instantiate_strcutured_embedding(self):
         """Test that StructuredEmbedding can be instantiated."""
@@ -126,11 +126,11 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(se)
-        self.assertTrue(se.num_entities,5)
-        self.assertTrue(se.num_relations, 5)
-        self.assertTrue(se.embedding_dim, 5)
-        self.assertTrue(se.l_p_norm_entities, 2)
-        self.assertTrue(se.margin_loss, 4)
+        self.assertEqual(se.num_entities,5)
+        self.assertEqual(se.num_relations, 5)
+        self.assertEqual(se.embedding_dim, 5)
+        self.assertEqual(se.l_p_norm_entities, 2)
+        self.assertEqual(se.margin_loss, 4)
 
     def test_instantiate_unstructured_model(self):
         """Test that UnstructuredModel can be instantiated."""
@@ -143,11 +143,11 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(um)
-        self.assertTrue(um.num_entities, 5)
-        self.assertTrue(um.num_relations, 5)
-        self.assertTrue(um.embedding_dim, 5)
-        self.assertTrue(um.l_p_norm_entities, 2)
-        self.assertTrue(um.margin_loss, 4)
+        self.assertEqual(um.num_entities, 5)
+        self.assertEqual(um.num_relations, 5)
+        self.assertEqual(um.embedding_dim, 5)
+        self.assertEqual(um.l_p_norm_entities, 2)
+        self.assertEqual(um.margin_loss, 4)
 
     def test_instantiate_rescal(self):
         """Test that RESCAL can be instantiated."""
@@ -160,10 +160,10 @@ class TestModelInstantiation(unittest.TestCase):
             MARGIN_LOSS: 4,
         })
         self.assertIsNotNone(rescal)
-        self.assertTrue(rescal.num_entities, 5)
-        self.assertTrue(rescal.num_relations, 5)
-        self.assertTrue(rescal.embedding_dim, 5)
-        self.assertTrue(rescal.margin_loss, 4)
+        self.assertEqual(rescal.num_entities, 5)
+        self.assertEqual(rescal.num_relations, 5)
+        self.assertEqual(rescal.embedding_dim, 5)
+        self.assertEqual(rescal.margin_loss, 4)
 
     def test_instantiate_conv_e(self):
         """Test that ConvE can be instantiated."""
@@ -182,6 +182,6 @@ class TestModelInstantiation(unittest.TestCase):
             CONV_E_WIDTH: 1,
         })
         self.assertIsNotNone(conv_e)
-        self.assertTrue(conv_e.num_entities, 5)
-        self.assertTrue(conv_e.num_relations, 5)
-        self.assertTrue(conv_e.embedding_dim, 5)
+        self.assertEqual(conv_e.num_entities, 5)
+        self.assertEqual(conv_e.num_relations, 5)
+        self.assertEqual(conv_e.embedding_dim, 5)
