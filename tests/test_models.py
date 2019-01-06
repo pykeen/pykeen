@@ -255,7 +255,7 @@ class TestScoringFunctions(unittest.TestCase):
         self.assertEqual(scores, [0.,4.])
 
     def test_compute_scores_distmult(self):
-        """Test that TransD's socore function computes the scores correct."""
+        """Test that DistMult's socore function computes the scores correct."""
         distmult = DistMult(config=DISTMULT_CONFIG)
         h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
         r_embs = torch.tensor([[1., 1.], [2., 2.]],dtype=torch.float)
@@ -266,7 +266,7 @@ class TestScoringFunctions(unittest.TestCase):
         self.assertEqual(scores, [-4.,-16.])
 
     def test_compute_scores_se(self):
-        """Test that TransD's socore function computes the scores correct."""
+        """Test that SE's socore function computes the scores correct."""
         se = StructuredEmbedding(config=SE_CONFIG)
         proj_h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
         proj_t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
