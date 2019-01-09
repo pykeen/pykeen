@@ -1,14 +1,13 @@
 graft src/pykeen
 graft tests
+prune notebooks
 
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
-recursive-include notebooks *.ipynb
 include docs/Makefile
 include config/config.ini
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib .DS_Store *.gpickle
 
-exclude .bumpversion.cfg .coveragerc .flake8
-
-include *.rst *.txt *.yml *.ini LICENSE
+exclude .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml doc8.ini
+include LICENSE README.rst tox.ini
