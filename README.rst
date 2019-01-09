@@ -22,7 +22,12 @@ Installation |pypi_version| |python_versions| |pypi_license|
 
 Usage
 -----
-To start PyKEEN, please run the following command:
+Code examples can be found in the `notebooks directory
+<https://github.com/SmartDataAnalytics/PyKEEN/tree/master/notebooks>`_.
+
+CLI Usage
+---------
+To start the PyKEEN CLI, run the following command:
 
 .. code-block:: sh
 
@@ -30,7 +35,7 @@ To start PyKEEN, please run the following command:
 
 then the command line interface will assist you to configure your experiments.
 
-To start PyKEEN with an existing configuration file, please run the following command:
+To start PyKEEN with an existing configuration file, run:
 
 .. code-block:: sh
 
@@ -38,11 +43,9 @@ To start PyKEEN with an existing configuration file, please run the following co
 
 then the command line interface won't be called, instead the pipeline will be started immediately.
 
-More examples can be found in the `notebooks directory <https://github.com/SmartDataAnalytics/PyKEEN/tree/master/notebooks>`_.
-
 Starting the Prediction Pipeline
-**************************************
-To make prediction based on a trained model, please run following command:
+********************************
+To make prediction based on a trained model, run:
 
 .. code-block:: sh
 
@@ -50,7 +53,7 @@ To make prediction based on a trained model, please run following command:
 
 Summarize the Results of All Experiments
 ****************************************
-To summarize the results of all experiments, please run following command:
+To summarize the results of all experiments, run:
 
 .. code-block:: sh
 
@@ -58,20 +61,25 @@ To summarize the results of all experiments, please run following command:
 
 .. |build| image:: https://travis-ci.org/SmartDataAnalytics/PyKEEN.svg?branch=master
     :target: https://travis-ci.org/SmartDataAnalytics/PyKEEN
+    :alt: Build Status
 
 .. |zenodo| image:: https://zenodo.org/badge/136345023.svg
-   :target: https://zenodo.org/badge/latestdoi/136345023
+    :target: https://zenodo.org/badge/latestdoi/136345023
+    :alt: Zenodo DOI
 
 .. |docs| image:: http://readthedocs.org/projects/pykeen/badge/?version=latest
     :target: https://pykeen.readthedocs.io/en/latest/
     :alt: Documentation Status
+
 .. |python_versions| image:: https://img.shields.io/pypi/pyversions/pykeen.svg
-    :alt: Stable Supported Python Versions
+    :alt: Supported Python Versions: 3.6 and 3.7
+
 .. |pypi_version| image:: https://img.shields.io/pypi/v/pykeen.svg
     :alt: Current version on PyPI
+
 .. |pypi_license| image:: https://img.shields.io/pypi/l/pykeen.svg
     :alt: MIT License
 
 .. |coverage| image:: https://codecov.io/gh/SmartDataAnalytics/PyKEEN/branch/master/graphs/badge.svg
     :target: https://codecov.io/gh/SmartDataAnalytics/PyKEEN
-    :alt: Coverage Status
+    :alt: Coverage Status on CodeCov
