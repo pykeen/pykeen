@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test that all models can be instantiated."""
+"""Test KGE models"""
 
 import unittest
 
