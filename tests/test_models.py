@@ -58,7 +58,7 @@ DISTMULT_CONFIG = {
 ERMLP_CONFIG = {
     NUM_ENTITIES: 5,
     NUM_RELATIONS: 5,
-    EMBEDDING_DIM: 5,
+    EMBEDDING_DIM: 2,
     SCORING_FUNCTION_NORM: 1,
     MARGIN_LOSS: 4,
 }
@@ -168,7 +168,7 @@ class TestModelInstantiation(unittest.TestCase):
         self.assertIsNotNone(ermlp)
         self.assertEqual(ermlp.num_entities, 5)
         self.assertEqual(ermlp.num_relations, 5)
-        self.assertEqual(ermlp.embedding_dim, 5)
+        self.assertEqual(ermlp.embedding_dim, 2)
         self.assertEqual(ermlp.margin_loss, 4)
 
     def test_instantiate_strcutured_embedding(self):
@@ -265,6 +265,16 @@ class TestScoringFunctions(unittest.TestCase):
 
         self.assertEqual(scores, [-4.,-16.])
 
+    def test_compute_scores_um(self):
+        """Test that DistMult's socore function computes the scores correct."""
+        um = UnstructuredModel(config=UM_CONFIG)
+        h_embs = torch.tensor([[1.,1.],[1.,1.]],dtype=torch.float)
+        t_embs = torch.tensor([[2., 2.], [4., 4.]],dtype=torch.float)
+
+        scores = um._compute_scores(h_embs, t_embs).cpu().numpy().tolist()
+
+        self.assertEqual(scores, [4.,36.])
+
     def test_compute_scores_se(self):
         """Test that SE's socore function computes the scores correct."""
         se = StructuredEmbedding(config=SE_CONFIG)
@@ -274,5 +284,18 @@ class TestScoringFunctions(unittest.TestCase):
         scores = se._compute_scores(proj_h_embs,proj_t_embs).cpu().numpy().tolist()
 
         self.assertEqual(scores, [2.,6.])
+
+    def test_compute_scores_ermlp(self):
+        """Test that SE's socore function computes the scores correct."""
+        ermlp = ERMLP(config=ERMLP_CONFIG)
+
+        h_embs = torch.tensor([[1., 1.], [1., 1.]], dtype=torch.float)
+        r_embs = torch.tensor([[1., 1.], [2., 2.]], dtype=torch.float)
+        t_embs = torch.tensor([[2., 2.], [4., 4.]], dtype=torch.float)
+
+        scores = ermlp._compute_scores(h_embs,r_embs,t_embs).detach().cpu().numpy().tolist()
+
+        self.assertEqual(len(scores),2)
+
 
 
