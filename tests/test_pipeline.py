@@ -4,7 +4,8 @@
 
 import unittest
 
-from pykeen.constants import SEED, PREFERRED_DEVICE, HPO_MODE, EXECUTION_MODE, TRAINING_MODE
+from pykeen.constants import SEED, PREFERRED_DEVICE, HPO_MODE, EXECUTION_MODE, TRAINING_MODE, TEST_SET_PATH, \
+    TEST_SET_RATIO
 from pykeen.utilities.pipeline import Pipeline, CPU
 
 
@@ -32,4 +33,21 @@ class TestPipeline(unittest.TestCase):
 
         self.p.config[EXECUTION_MODE] = TRAINING_MODE
         value = self.p._use_hpo(config=self.p.config)
+        self.assertFalse(value)
+
+    def test_is_evaluation_required(self):
+        """Test whether evaluation option is identified correctly."""
+        self.p.config[TEST_SET_PATH] = '/test/path'
+        value = self.p.is_evaluation_required
+        self.assertTrue(value)
+
+        del self.p.config[TEST_SET_PATH]
+
+        self.p.config[TEST_SET_RATIO] = 0.1
+        value = self.p.is_evaluation_required
+        self.assertTrue(value)
+
+        del self.p.config[TEST_SET_RATIO]
+
+        value = self.p.is_evaluation_required
         self.assertFalse(value)
