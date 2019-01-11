@@ -55,19 +55,21 @@ def run(config: Dict,
             sort_keys=True
         )
 
-    with open(os.path.join(output_directory, 'relations_to_embeddings.pkl'), 'wb') as file:
-        pickle.dump(pipeline_results[RELATION_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
+    if pipeline_results[RELATION_TO_EMBEDDING] is not None:
+        with open(os.path.join(output_directory, 'relations_to_embeddings.pkl'), 'wb') as file:
+            pickle.dump(pipeline_results[RELATION_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(os.path.join(output_directory, 'relations_to_embeddings.json'), 'w') as file:
-        json.dump(
-            {
-                key: list(map(float, array))
-                for key, array in pipeline_results[RELATION_TO_EMBEDDING].items()
-            },
-            file,
-            indent=2,
-            sort_keys=True,
-        )
+        with open(os.path.join(output_directory, 'relations_to_embeddings.json'), 'w') as file:
+            json.dump(
+                {
+                    key: list(map(float, array))
+                    for key, array in pipeline_results[RELATION_TO_EMBEDDING].items()
+                },
+                file,
+                indent=2,
+                sort_keys=True,
+            )
+
 
     with open(os.path.join(output_directory, 'entity_to_id.json'), 'w') as file:
         json.dump(pipeline_results[ENTITY_TO_ID], file, indent=2, sort_keys=True)
