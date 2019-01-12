@@ -256,6 +256,6 @@ def compute_metric_results(all_entities,
     }
 
     stop = timeit.default_timer()
-    log.info("evaluation took %.2fs seconds", stop - start)
+    log.info("Evaluation took %.2fs seconds", stop - start)
 
     return mean_rank, hits_at_k
