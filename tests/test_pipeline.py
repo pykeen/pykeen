@@ -2,20 +2,26 @@
 
 """Test pipeline module."""
 
+import json
+import os
 import unittest
 
-import json
-
-from pykeen.constants import SEED, PREFERRED_DEVICE, HPO_MODE, EXECUTION_MODE, TRAINING_MODE, TEST_SET_PATH, \
-    TEST_SET_RATIO
-from pykeen.utilities.pipeline import Pipeline, CPU
-
-
+from pykeen.constants import (
+    EXECUTION_MODE,
+    HPO_MODE,
+    PREFERRED_DEVICE,
+    SEED,
+    TEST_SET_PATH,
+    TEST_SET_RATIO,
+    TRAINING_MODE,
+)
+from pykeen.utilities.pipeline import CPU, Pipeline
 
 CONFIG = {
-    SEED:2,
+    SEED: 2,
     PREFERRED_DEVICE: CPU
 }
+
 
 class TestPipeline(unittest.TestCase):
 
@@ -56,7 +62,13 @@ class TestPipeline(unittest.TestCase):
         self.assertFalse(value)
 
     def test_run(self):
-        config_path = '../test_resources/configuration.json'
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+
+        config_path = os.path.join(
+            os.path.abspath(os.path.join(dir_path, os.pardir)),
+            'test_resources',
+            'configuration.json'
+        )
 
         with open(config_path) as json_data:
             config = json.load(json_data)
@@ -64,5 +76,3 @@ class TestPipeline(unittest.TestCase):
         self.p.config = config
         results = self.p.run()
         self.assertIsNotNone(results)
-
-
