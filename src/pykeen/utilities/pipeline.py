@@ -198,12 +198,12 @@ def load_data(path: str) -> np.ndarray:
         return _load_ndex(path[len('ndex:'):])
 
     if path.endswith('.tsv'):
-        return np.loadtxt(
+        return np.reshape(np.loadtxt(
             fname=path,
             dtype=str,
             comments='@Comment@ Subject Predicate Object',
             delimiter='\t',
-        )
+        ),newshape=(-1,3))
 
     if path.endswith('.nt'):
         import rdflib
