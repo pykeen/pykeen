@@ -5,9 +5,10 @@
 import unittest
 
 from pykeen.constants import SEED, PREFERRED_DEVICE, HPO_MODE, EXECUTION_MODE, TRAINING_MODE, TEST_SET_PATH, \
-    TEST_SET_RATIO
+    TEST_SET_RATIO, TRAINING_SET_PATH, KG_EMBEDDING_MODEL_NAME, TRANS_E_NAME, EMBEDDING_DIM
 from pykeen.utilities.pipeline import Pipeline, CPU
 
+import json
 
 CONFIG = {
     SEED:2,
@@ -51,3 +52,15 @@ class TestPipeline(unittest.TestCase):
 
         value = self.p.is_evaluation_required
         self.assertFalse(value)
+
+    def test_run(self):
+        config_path = '../test_resources/configuration.json'
+
+        with open(config_path) as json_data:
+            config = json.load(json_data)
+
+        self.p.config = config
+        results = self.p.run()
+        self.assertIsNotNone(results)
+
+
