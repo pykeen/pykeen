@@ -5,15 +5,15 @@ Knowledge Graph Embeddings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Knowledge graphs (KGs) are multi-relational, directed graphs in which nodes represent entities and edges represent their
-relations [1]. While they have been successfully applied for question answering, information
+relations [1]_. While they have been successfully applied for question answering, information
 extraction, and named entity disambiguation outside of the biomedical domain, their usage in biomedical applications
-remains limited [2, 3].
+remains limited [2]_ [3]_.
 
 Because KGs are inherently incomplete and noisy, several methods have been developed for deriving or predicting missing
-edges [2].  One is to apply reasoning based on formal logic to derive missing edges, but it usually
+edges [2]_.  One is to apply reasoning based on formal logic to derive missing edges, but it usually
 requires a large set of user-defined formulas to achieve generalization. Another is to train knowledge graph embedding
 (KGE) models, which encode the nodes and relations in a KG into a low-dimensional, continuous vector-space that best
-preserves the structural characteristics of the KG [4]. These embeddings can be used to predict new
+preserves the structural characteristics of the KG [4]_. These embeddings can be used to predict new
 relations between entities. In a biological setting, relation prediction not only enables researchers to expand their
 KGs, but also to generate new hypotheses that can be tested experimentally.
 
@@ -21,10 +21,11 @@ KGs, but also to generate new hypotheses that can be tested experimentally.
 Existing Software
 ~~~~~~~~~~~~~~~~~
 
-While there exists other toolkits like OpenKE [5] and scikit-kge (https://github.com/mnick/scikit-kge),
+While there exists other toolkits like OpenKE [5]_ and scikit-kge (https://github.com/mnick/scikit-kge),
 they are not specifically for bioinformatics applications and they require more expertise in programming and in KGEs.
 To the best of our knowledge, PyKEEN is the first framework specifically designed to facilitate the use of KGE models
-for users in different applications such as the bioinformatics community (see BioKEEN: https://github.com/SmartDataAnalytics/BioKEEN).
+for users in different applications such as the bioinformatics community (see BioKEEN:
+https://github.com/SmartDataAnalytics/BioKEEN).
 
 References
 ~~~~~~~~~~
