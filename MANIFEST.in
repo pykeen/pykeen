@@ -4,6 +4,9 @@ prune notebooks
 
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
+recursive-include test_resources *.json
+recursive-include test_resources *.tsv
+
 include docs/Makefile
 include config/config.ini
 
