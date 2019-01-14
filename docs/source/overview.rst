@@ -24,7 +24,7 @@ Existing Software
 While there exists other toolkits like OpenKE (Han *et al.*, 2018) and scikit-kge (https://github.com/mnick/scikit-kge),
 they are not specifically for bioinformatics applications and they require more expertise in programming and in KGEs.
 To the best of our knowledge, PyKEEN is the first framework specifically designed to facilitate the use of KGE models
-for users in the bioinformatics community.
+for users in different applications such as the bioinformatics community (see BioKEEN: https://github.com/SmartDataAnalytics/BioKEEN).
 
 References
 ~~~~~~~~~~
