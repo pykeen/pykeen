@@ -6,19 +6,19 @@ The system has a modular architecture, and can be configured by the user through
 
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
-1. ``pykeen`` can be installed with the following commands:
+``pykeen`` can be installed with the following command:
 
 .. code-block:: sh
 
-    python3 -m pip install git+https://github.com/SmartDataAnalytics/PyKEEN.git@master
+    pip install pykeen
 
-2. or in editable mode with:
+Alternatively, it can be installed from the source for development with:
 
 .. code-block:: sh
 
     $ git clone https://github.com/SmartDataAnalytics/PyKEEN.git pykeen
     $ cd pykeen
-    $ python3 -m pip install -e .
+    $ pip install -e .
 
 Usage
 -----
