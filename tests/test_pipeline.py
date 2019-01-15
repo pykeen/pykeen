@@ -73,6 +73,13 @@ class TestPipeline(unittest.TestCase):
         with open(config_path) as json_data:
             config = json.load(json_data)
 
+        # Work around to modify training example path
+        config['training_set_path'] = os.path.join(
+            os.path.abspath(os.path.join(dir_path, os.pardir)),
+            'test_resources',
+            'example_training.tsv'
+        )
+
         self.p.config = config
         results = self.p.run()
         self.assertIsNotNone(results)
