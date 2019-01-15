@@ -67,7 +67,33 @@ class TestPipeline(unittest.TestCase):
         config_path = os.path.join(
             os.path.abspath(os.path.join(dir_path, os.pardir)),
             'test_resources',
-            'configuration.json'
+            'configuration_training_without_eval.json'
+        )
+
+        with open(config_path) as json_data:
+            config = json.load(json_data)
+
+        config['training_set_path'] = os.path.join(
+            os.path.abspath(os.path.join(dir_path, os.pardir)),
+            'test_resources',
+            'example_training.tsv'
+        )
+
+        config['test_set_path'] = os.path.join(
+            os.path.abspath(os.path.join(dir_path, os.pardir)),
+            'test_resources',
+            'example_test.tsv'
+        )
+
+        self.p.config = config
+        results = self.p.run()
+        self.assertIsNotNone(results)
+
+
+        config_path = os.path.join(
+            os.path.abspath(os.path.join(dir_path, os.pardir)),
+            'test_resources',
+            'configuration_hpo.json'
         )
 
         with open(config_path) as json_data:
