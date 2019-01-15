@@ -14,6 +14,7 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
    overview
    installation
+   run_pykeen
 
 .. toctree::
    :maxdepth: 2
