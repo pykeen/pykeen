@@ -1,9 +1,11 @@
-graft src/pykeen
+graft src
 graft tests
 prune notebooks
+prune data
 
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
+recursive-include docs/images *.png
 recursive-include test_resources *.json
 recursive-include test_resources *.tsv
 
