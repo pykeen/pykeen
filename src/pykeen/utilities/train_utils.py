@@ -4,7 +4,7 @@
 
 import logging
 import timeit
-from typing import List, Optional, Tuple
+from typing import Any, List, Mapping, Optional, Tuple
 
 import numpy as np
 import torch
@@ -35,7 +35,9 @@ def train_kge_model(
         batch_size,
         pos_triples,
         device,
-        seed: Optional[int] = None) -> Tuple[Module, List[float]]:
+        seed: Optional[int] = None,
+        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+) -> Tuple[Module, List[float]]:
     """Train the model."""
     if CONV_E_NAME == kge_model.model_name:
         return _train_conv_e_model(
@@ -59,6 +61,7 @@ def train_kge_model(
         pos_triples=pos_triples,
         device=device,
         seed=seed,
+        tqdm_kwargs=tqdm_kwargs,
     )
 
 
@@ -70,7 +73,9 @@ def _train_basic_model(
         batch_size,
         pos_triples,
         device,
-        seed: Optional[int] = None) -> Tuple[Module, List[float]]:
+        seed: Optional[int] = None,
+        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+) -> Tuple[Module, List[float]]:
     """"""
     if seed is not None:
         np.random.seed(seed=seed)
@@ -86,11 +91,14 @@ def _train_basic_model(
 
     start_training = timeit.default_timer()
 
-    for _ in trange(num_epochs, desc="Training the model (epochs)"):
+    _tqdm_kwargs = dict(desc='Training epoch')
+    if tqdm_kwargs:
+        _tqdm_kwargs.update(tqdm_kwargs)
+
+    for _ in trange(num_epochs, **_tqdm_kwargs):
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
-        start = timeit.default_timer()
         pos_batches = _split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
         current_epoch_loss = 0.
 
@@ -128,7 +136,6 @@ def _train_basic_model(
             loss.backward()
             optimizer.step()
 
-        stop = timeit.default_timer()
         # log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
         loss_per_epoch.append(current_epoch_loss / len(pos_triples))

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from torch.nn import Module
+from tqdm import trange
 
 from pykeen.constants import *
 from pykeen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
@@ -74,7 +75,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             self._sample_parameter_value
         )
 
-        for _ in range(max_iters):
+        for _ in trange(max_iters, desc='HPO Iteration'):
             # Sample hyper-params
             kge_model_config: Dict[str, Any] = sample_fct(config)
             kge_model_config[NUM_ENTITIES]: int = len(entity_to_id)
@@ -99,6 +100,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
                 pos_triples=mapped_train_triples,
                 device=device,
                 seed=seed,
+                tqdm_kwargs=dict(leave=False),
             )
 
             # Evaluate trained model
