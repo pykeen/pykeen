@@ -14,8 +14,7 @@ edges [2]_.  One is to apply reasoning based on formal logic to derive missing e
 requires a large set of user-defined formulas to achieve generalization. Another is to train knowledge graph embedding
 (KGE) models, which encode the nodes and relations in a KG into a low-dimensional, continuous vector-space that best
 preserves the structural characteristics of the KG [4]_. These embeddings can be used to predict new
-relations between entities. In a biological setting, relation prediction not only enables researchers to expand their
-KGs, but also to generate new hypotheses that can be tested experimentally.
+relations between entities.
 
 
 Existing Software
