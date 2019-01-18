@@ -4,7 +4,7 @@
 
 from collections import OrderedDict
 
-VERSION = '0.0.17-dev'
+VERSION = '0.0.17'
 
 
 def get_version() -> str:
