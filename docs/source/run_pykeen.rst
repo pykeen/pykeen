@@ -45,7 +45,7 @@ Step 10: Provide a random seed
 
 Step 12: Specify preferred device
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: ../images/random_seed.png
+.. image:: ../images/preferred_device.png
 
 Step 13: Specify the path to the output directory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
