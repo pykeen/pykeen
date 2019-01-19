@@ -35,9 +35,9 @@ INSTALL_REQUIRES = [
     'scikit-learn; python_version == "3.7"',
     'scipy',
     'click',
-    #'torch==0.4.0; python_version == "3.6"',
-    #'torch==0.4.1; python_version == "3.7"',
-    #'torchvision==0.2.1',
+    'torch==0.4.0; python_version == "3.6"',
+    'torch==0.4.1; python_version == "3.7"',
+    'torchvision==0.2.1',
     'prompt_toolkit',
     'tqdm',
     'pandas',
@@ -46,7 +46,7 @@ EXTRAS_REQUIRE = {
     'docs': [
         'sphinx',
         'sphinx-rtd-theme',
-        #'sphinx-click',
+        'sphinx-click',
     ],
     'ndex': [
         'ndex2',
