@@ -4,11 +4,9 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Dict, Iterable, Mapping, Tuple, Union
+from typing import Iterable, Mapping, Tuple, Union
 
-import numpy as np
 import torch
-from pkg_resources import iter_entry_points
 from sklearn.model_selection import train_test_split
 from torch.nn import Module
 
@@ -21,16 +19,9 @@ from pykeen.utilities.triples_creation_utils import create_mapped_triples, creat
 
 __all__ = [
     'Pipeline',
-    'IMPORTERS',
 ]
 
 log = logging.getLogger(__name__)
-
-#: Functions for specifying exotic resources with a given prefix
-IMPORTERS: Dict[str, Callable[[str], np.ndarray]] = {
-    entry_point.name: entry_point.load()
-    for entry_point in iter_entry_points(group='pykeen.data.importer')
-}
 
 
 @dataclass

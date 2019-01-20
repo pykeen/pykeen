@@ -14,12 +14,19 @@ from pykeen.constants import (
     ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, PYKEEN, TRAINING_MODE,
 )
 
+from pykeen.constants import IMPORTERS
 
-def _is_correct_format(path):
-    if path.startswith('ndex:') or path.endswith('.tsv') or path.endswith('.nt'):
-        return True
-    else:
-        return False
+
+def _is_correct_format(path: str):
+    return (
+        any(
+            path.startswith(prefix)
+            for prefix in IMPORTERS
+        )
+        or path.endswith('.tsv')
+        or path.endswith('.nt')
+    )
+
 
 def get_input_path(prompt_msg, error_msg, is_dataset=False):
     while True:
