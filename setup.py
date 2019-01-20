@@ -35,6 +35,7 @@ INSTALL_REQUIRES = [
     'scikit-learn; python_version == "3.7"',
     'scipy',
     'click',
+    'click_default_group',
     'torch==0.4.0; python_version == "3.6"',
     'torch==0.4.1; python_version == "3.7"',
     'torchvision==0.2.1',
@@ -60,6 +61,9 @@ ENTRY_POINTS = {
         'pykeen = pykeen.cli:main',
         'pykeen-summarize = pykeen.cli.cli:summarize',
         'pykeen-predict = pykeen.cli.cli:predict',
+    ],
+    'pykeen.data.importer': [
+        'ndex = pykeen.utilities.handlers:handle_ndex',
     ]
 }
 

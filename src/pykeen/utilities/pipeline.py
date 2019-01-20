@@ -8,6 +8,7 @@ from typing import Callable, Dict, Mapping, Tuple
 
 import numpy as np
 import torch
+from pkg_resources import iter_entry_points
 from sklearn.model_selection import train_test_split
 from torch.nn import Module
 
@@ -20,10 +21,16 @@ from pykeen.utilities.triples_creation_utils import create_mapped_triples, creat
 
 __all__ = [
     'Pipeline',
-    'register_handler',
+    'IMPORTERS',
 ]
 
 log = logging.getLogger(__name__)
+
+#: Functions for specifying exotic resources with a given prefix
+IMPORTERS: Dict[str, Callable[[str], np.ndarray]] = {
+    entry_point.name: entry_point.load()
+    for entry_point in iter_entry_points(group='pykeen.data.importer')
+}
 
 
 @dataclass
@@ -198,7 +205,7 @@ class Pipeline(object):
 
 def load_data(path: str) -> np.ndarray:
     """Load data given the *path*."""
-    for prefix, handler in _PREFIX_HANDLERS.items():
+    for prefix, handler in IMPORTERS.items():
         if path.startswith(f'{prefix}:'):
             return handler(path[len(f'{prefix}:'):])
 
@@ -208,7 +215,7 @@ def load_data(path: str) -> np.ndarray:
             dtype=str,
             comments='@Comment@ Subject Predicate Object',
             delimiter='\t',
-        ),newshape=(-1,3))
+        ), newshape=(-1, 3))
 
     if path.endswith('.nt'):
         import rdflib
@@ -228,45 +235,6 @@ def load_data(path: str) -> np.ndarray:
     - A string path to a .nt RDF file serialized in N-Triples format 
     - A string NDEx network UUID prefixed by "ndex:" like in ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf
     ''')
-
-
-def _load_ndex(network_uuid: str) -> np.ndarray:
-    """Load a network from NDEx.
-
-    Example network UUID: f93f402c-86d4-11e7-a10d-0ac135e8bacf
-    """
-    import ndex2
-    ndex_client = ndex2.Ndex2()
-
-    log.info(f'downloading {network_uuid} from ndex')
-    res = ndex_client.get_network_as_cx_stream(network_uuid)
-    res_json = res.json()
-
-    triples = []
-
-    for entry in res_json:
-        for aspect, data in entry.items():
-            if aspect == 'edges':
-                for edge in data:
-                    triples.append([
-                        str(edge['s']),
-                        edge.get('i', 'interacts'),
-                        str(edge['t']),
-                    ])
-
-    return np.array(triples)
-
-
-_PREFIX_HANDLERS: Dict[str, Callable[[str], np.ndarray]] = {
-    'ndex': _load_ndex,
-}
-
-
-def register_handler(prefix: str, handler: Callable[[str], np.ndarray]):
-    """Register a handler for loading data."""
-    if prefix in _PREFIX_HANDLERS:
-        raise ValueError(f'prefix {prefix} has already been registered')
-    _PREFIX_HANDLERS[prefix] = handler
 
 
 def _make_results(trained_model,
