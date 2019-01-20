@@ -148,7 +148,7 @@ HPO_ITERS_ERROR_MSG = 'An error occurred, please type in a positive integer for 
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of entities and relations, and press enter.'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Embedding dimension: '
-EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please provide an integer as the number of iterations (e.g. 5).'
+EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please provide a positive integer as embedding dimension (e.g. 20).'
 
 EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimension(s), and press enter.'
 EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Embedding dimensions: '
