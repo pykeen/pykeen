@@ -29,6 +29,7 @@ jobs:
       dist: xenial
 matrix:
   allow_failures:
+    - env: TOXENV=flake8
     - env: TOXENV=xenon
 install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
