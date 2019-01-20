@@ -148,24 +148,25 @@ def prompt_output_directory(config: Dict) -> None:
     config[OUTPUT_DIREC] = query_output_directory()
 
 
-def prompt_config(*, cfg: Optional[Dict] = None) -> Dict:
+def prompt_config(*, config: Optional[Dict] = None, show_welcome: bool = True, do_prompt_training: bool = True) -> Dict:
     """Prompt the user for the run configuration."""
-    if cfg is None:
-        cfg = OrderedDict()
+    if config is None:
+        config = OrderedDict()
 
     # Step 1: Welcome + Intro
-    print_welcome_message()
-    print_section_divider()
-
-    print_intro()
-    print_section_divider()
+    if show_welcome:
+        print_welcome_message()
+        print_section_divider()
+        print_intro()
+        print_section_divider()
 
     # Step 2: Ask for training file
-    prompt_training_file(cfg)
-    print_section_divider()
+    if do_prompt_training:
+        prompt_training_file(config)
+        print_section_divider()
 
     # Step 3: Ask for execution mode
-    prompt_execution_mode(cfg)
+    prompt_execution_mode(config)
     print_section_divider()
 
     # Step 4: Ask for model
@@ -173,22 +174,22 @@ def prompt_config(*, cfg: Optional[Dict] = None) -> Dict:
     print_section_divider()
 
     # Step 5: Query parameters depending on the selected execution mode
-    prompt_execution_parameters(cfg, model_name=model_name)
+    prompt_execution_parameters(config, model_name=model_name)
     print_section_divider()
 
     # Step 5.5: Prompt for evaluation parameters depending on the selected execution mode
-    prompt_evaluation_parameters(cfg)
+    prompt_evaluation_parameters(config)
 
     # Step 6: Please select a random seed
-    prompt_random_seed(cfg)
+    prompt_random_seed(config)
     print_section_divider()
 
     # Step 7: Query device to train on
-    prompt_device(cfg)
+    prompt_device(config)
     print_section_divider()
 
     # Step 8: Define output directory
-    prompt_output_directory(cfg)
+    prompt_output_directory(config)
     print_section_divider()
 
-    return cfg
+    return config
