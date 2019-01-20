@@ -4,7 +4,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Dict, Mapping, Tuple
+from typing import Callable, Dict, Iterable, Mapping, Tuple, Union
 
 import numpy as np
 import torch
@@ -203,8 +203,18 @@ class Pipeline(object):
         return mapped_pos_train_triples
 
 
-def load_data(path: str) -> np.ndarray:
+def load_data(path: Union[str, Iterable[str]]) -> np.ndarray:
     """Load data given the *path*."""
+    if isinstance(path, str):
+        return _load_data_helper(path)
+
+    return np.concatenate([
+        _load_data_helper(p)
+        for p in path
+    ])
+
+
+def _load_data_helper(path: str) -> np.ndarray:
     for prefix, handler in IMPORTERS.items():
         if path.startswith(f'{prefix}:'):
             return handler(path[len(f'{prefix}:'):])
