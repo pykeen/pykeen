@@ -56,8 +56,9 @@ def select_keen_execution_mode(lib_name=PYKEEN):
 
 def select_embedding_model():
     click.echo('Please select the embedding model you want to train:')
-    for model, id in KG_MODEL_TO_ID_MAPPING.items():
-        click.echo("%s: %s" % (model, id))
+    number_width = 1 + round(len(KG_MODEL_TO_ID_MAPPING) / 10)
+    for model, model_id in KG_MODEL_TO_ID_MAPPING.items():
+        click.echo(f'{model_id: >{number_width}}: {model}')
 
     ids = list(KG_MODEL_TO_ID_MAPPING.values())
     available_models = list(KG_MODEL_TO_ID_MAPPING.keys())
