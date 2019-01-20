@@ -3,7 +3,7 @@
 """PyKEEN's command line interface."""
 
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, Optional
 
 from pykeen.cli.dicts import MODEL_HPO_CONFIG_FUNCS, MODEL_TRAINING_CONFIG_FUNCS
 from pykeen.cli.utils.cli_print_msg_helper import (
@@ -148,9 +148,10 @@ def prompt_output_directory(config: Dict) -> None:
     config[OUTPUT_DIREC] = query_output_directory()
 
 
-def prompt_config() -> Dict:
+def prompt_config(*, cfg: Optional[Dict] = None) -> Dict:
     """Prompt the user for the run configuration."""
-    cfg = OrderedDict()
+    if cfg is None:
+        cfg = OrderedDict()
 
     # Step 1: Welcome + Intro
     print_welcome_message()
