@@ -2,14 +2,11 @@ sudo: false
 cache: pip
 language: python
 python:
-- 3.6
-- 3.7
+  - 3.6
 stages:
   - lint
   - docs
   - test
-env:
-  - TOXENV=py
 jobs:
   include:
     # lint stage
@@ -23,14 +20,19 @@ jobs:
       env: TOXENV=doc8
     - env: TOXENV=readme
     - env: TOXENV=docs
+    - stage: test
+      env: TOXENV=py
+      python: "3.6"
+    - env: TOXENV=py
+      sudo: true
+      python: "3.7"
+      dist: xenial
 matrix:
   allow_failures:
-      - env: TOXENV=xenon
-      - env: TOXENV=flake8
-      - python: 3.7
+    - env: TOXENV=xenon
 install:
-    - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov; else pip install tox; fi'
+  - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
 script:
-- tox
+  - tox
 after_success:
-    - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'
+  - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'
