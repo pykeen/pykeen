@@ -58,7 +58,7 @@ def summarize(directory: str, output):
 @main.command()
 def prefixes():
     """List registered prefixes."""
-    from pykeen.utilities.pipeline import IMPORTERS
+    from pykeen.constants import IMPORTERS
     for name, handler in sorted(IMPORTERS.items()):
         handler_doc = handler.__doc__.split('\n')[0]
         click.echo(f'{name}: {handler_doc}')
