@@ -10,7 +10,7 @@ import click
 from prompt_toolkit import prompt
 
 from pykeen.constants import (
-    BINARY_QUESTION_MAPPING, CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE, ID_TO_KG_MODEL_MAPPING,
+    CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE, ID_TO_KG_MODEL_MAPPING,
     ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING, PYKEEN, TRAINING_MODE,
 )
 
@@ -115,28 +115,11 @@ def select_zero_one_float_value(print_msg, prompt_msg, error_msg):
 
 
 def ask_for_evaluation():
-    click.echo('Do you want to evaluate your model?')
-
-    while True:
-        user_input = prompt('> Please type \'yes\' or \'no\': ')
-        if user_input != 'yes' and user_input != 'no':
-            click.echo('Invalid input, please type \'yes\' or \'no\' and press enter.\n'
-                       'If you type \'yes\' it means that you want to evaluate your model after it is trained.')
-        else:
-            return BINARY_QUESTION_MAPPING[user_input]
+    return click.confirm('Do you want to evaluate your model?')
 
 
 def ask_for_test_set():
-    click.echo('Do you provide a test set yourself?')
-
-    while True:
-        user_input = prompt('> Please type \'yes\' or \'no\': ')
-
-        if user_input != 'yes' and user_input != 'no':
-            click.echo('Invalid input, please type \'yes\' or \'no\' and press enter.\n'
-                       'If you type \'yes\' it means that you provide a test set yourself.')
-        else:
-            return BINARY_QUESTION_MAPPING[user_input]
+    return click.confirm('Do you provide a test set yourself?')
 
 
 def select_ratio_for_test_set():
@@ -166,16 +149,7 @@ def select_preferred_device():
 
 
 def ask_for_filtering_of_negatives():
-    click.echo('Do you want to filter out negative triples during evaluation of your model?')
-
-    while True:
-        user_input = prompt('> Please type \'yes\' or \'no\': ')
-
-        if user_input != 'yes' and user_input != 'no':
-            click.echo('Invalid input, please type \'yes\' or \'no\' and press enter.\n'
-                       'If you type \'yes\' it means that you provide a test set yourself.')
-        else:
-            return BINARY_QUESTION_MAPPING[user_input]
+    return click.confirm('Do you want to filter out negative triples during evaluation of your model?')
 
 
 def load_config_file():
@@ -193,16 +167,7 @@ def load_config_file():
 
 
 def ask_for_existing_config_file():
-    click.echo('Do you provide an existing configuration file?\n')
-
-    while True:
-        user_input = prompt('> Please type \'yes\' or \'no\': ')
-
-        if user_input != 'yes' and user_input != 'no':
-            click.echo('Invalid input, please type \'yes\' or \'no\' and press enter.\n'
-                       'If you type \'yes\' it means that you provide a configuration file.')
-        else:
-            return BINARY_QUESTION_MAPPING[user_input]
+    click.confirm('Do you provide an existing configuration file?')
 
 
 def query_output_directory():

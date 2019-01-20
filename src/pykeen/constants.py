@@ -344,5 +344,3 @@ OPTIMIZER_TO_ID_MAPPING = OrderedDict({
     value: key
     for key, value in ID_TO_OPTIMIZER_MAPPING.items()
 })
-
-BINARY_QUESTION_MAPPING = OrderedDict({'yes': True, 'no': False})
