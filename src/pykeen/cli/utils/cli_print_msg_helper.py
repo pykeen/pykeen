@@ -5,16 +5,16 @@
 import click
 
 
-def print_section_divider():
-    click.secho(
-        '--------------------------------------------------------------------------------------------------------')
+def print_section_divider(width: int = 104) -> None:
+    """Prints a section divider"""
+    click.secho('-' * width)
 
 
-def print_welcome_message() -> None:
+def print_welcome_message(width: int = 49, name='PyKEEN') -> None:
     """Print the PyKEEN welcome message."""
-    click.secho('#################################################')
-    click.secho("#\t\tWelcome to " + click.style("PyKEEN", bold=True) + "\t\t#")
-    click.secho('#################################################')
+    click.echo('#' * 49)
+    click.secho("#\t\tWelcome to " + click.style(name, bold=True) + "\t\t#")
+    click.echo('#' * 49)
 
 
 def print_intro() -> None:
@@ -226,44 +226,44 @@ def print_hpo_margin_losses_message():
         click.style("Current Step: Please provide a list of margin losses to use for the margin-ranking-loss function",
                     fg='blue'))
     click.secho("The margin ranking losses need to be float values. Please separate your input by a \',\':\n"
-                "0.5,1,2.4\n\n")
+                "0.5, 1, 2.4, etc.\n\n")
 
 
 def print_hpo_scoring_fcts_message():
     click.secho(click.style("Current Step: Please provide a list of norms used as scoring function", fg='blue'))
     click.secho("The norms should be positive integer values. Please separate your input by a \',\':\n"
-                "1,2,3\n\n")
+                "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_entity_normalization_norms_message():
     click.secho(
         click.style("Current Step: Please provide a list of norms used used for normalizing the entities.", fg='blue'))
     click.secho("The norms should be positive integer values. Please separate your input by a \',\':\n"
-                "1,2,3\n\n")
+                "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_learning_rates_message():
     click.secho(click.style("Current Step: Please provide a list of learning rates", fg='blue'))
     click.secho("The learning rates need to be float values. Please separate your input by a \',\':\n"
-                "0.1,0.01,0.001\n\n")
+                "0.1, 0.01, 0.001, etc.\n\n")
 
 
 def print_hpo_batch_sizes_message():
     click.secho(click.style("Current Step: Please provide a list of batch sizes.", fg='blue'))
     click.secho("The batch sizes should be positive integer values. Please separate your input by a \',\':\n"
-                "1,2,3\n\n")
+                "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_epochs_message():
     click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
     click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
-                "1,2,3\n\n")
+                "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_iterations_message():
     click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
     click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
-                "1,2,3\n\n")
+                "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_trans_h_soft_constraints_weights_message():
