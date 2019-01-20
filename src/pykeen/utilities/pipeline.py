@@ -18,7 +18,10 @@ from pykeen.utilities.evaluation_utils.metrics_computations import compute_metri
 from pykeen.utilities.train_utils import train_kge_model
 from pykeen.utilities.triples_creation_utils import create_mapped_triples, create_mappings
 
-__all__ = ['Pipeline']
+__all__ = [
+    'Pipeline',
+    'register_handler',
+]
 
 log = logging.getLogger(__name__)
 
@@ -257,6 +260,13 @@ def _load_ndex(network_uuid: str) -> np.ndarray:
 _PREFIX_HANDLERS: Dict[str, Callable[[str], np.ndarray]] = {
     'ndex': _load_ndex,
 }
+
+
+def register_handler(prefix: str, handler: Callable[[str], np.ndarray]):
+    """Register a handler for loading data."""
+    if prefix in _PREFIX_HANDLERS:
+        raise ValueError(f'prefix {prefix} has already been registered')
+    _PREFIX_HANDLERS[prefix] = handler
 
 
 def _make_results(trained_model,
