@@ -2,7 +2,7 @@
 
 """PyKEEN's command line interface."""
 
-from .cli_main import main
+from .cli import main
 
 if __name__ == '__main__':
     main()

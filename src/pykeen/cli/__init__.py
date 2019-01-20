@@ -2,4 +2,4 @@
 
 """PyKEEN's command line interface."""
 
-from .cli import main
+from .cli import main  # noqa: 401
