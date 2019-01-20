@@ -4,7 +4,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Mapping, Tuple
+from typing import Callable, Dict, Mapping, Tuple
 
 import numpy as np
 import torch
@@ -194,8 +194,10 @@ class Pipeline(object):
 
 
 def load_data(path: str) -> np.ndarray:
-    if path.startswith('ndex:'):
-        return _load_ndex(path[len('ndex:'):])
+    """Load data given the *path*."""
+    for prefix, handler in _PREFIX_HANDLERS.items():
+        if path.startswith(f'{prefix}:'):
+            return handler(path[len(f'{prefix}:'):])
 
     if path.endswith('.tsv'):
         return np.reshape(np.loadtxt(
@@ -250,6 +252,11 @@ def _load_ndex(network_uuid: str) -> np.ndarray:
                     ])
 
     return np.array(triples)
+
+
+_PREFIX_HANDLERS: Dict[str, Callable[[str], np.ndarray]] = {
+    'ndex': _load_ndex,
+}
 
 
 def _make_results(trained_model,
