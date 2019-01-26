@@ -1,7 +1,6 @@
-Run PyKEEN
-==========
-Configure an experiment through the CLI and train and evaluate a model
-----------------------------------------------------------------------
+Use The CLI To Train & Evaluate a KGE model
+===========================================
+
 Step 1: Start CLI
 ~~~~~~~~~~~~~~~~~
 .. code-block:: sh
