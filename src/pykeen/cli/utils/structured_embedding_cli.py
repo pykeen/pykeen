@@ -4,6 +4,18 @@
 
 from collections import OrderedDict
 
+from pykeen.cli.utils.cli_print_msg_helper import (
+    print_batch_size_message,
+    print_embedding_dimension_info_message, print_entity_normalization_message, print_hpo_batch_sizes_message,
+    print_hpo_embedding_dimensions_message, print_hpo_entity_normalization_norms_message, print_hpo_epochs_message,
+    print_hpo_learning_rates_message, print_hpo_margin_losses_message, print_hpo_scoring_fcts_message,
+    print_learning_rate_message, print_number_epochs_message, print_scoring_fct_message, print_section_divider,
+    print_training_embedding_dimension_message, print_training_margin_loss_message,
+)
+from pykeen.cli.utils.cli_query_helper import (
+    select_float_value, select_float_values, select_integer_value,
+    select_positive_integer_values,
+)
 from pykeen.constants import (
     BATCH_SIZE, BATCH_SIZES_ERROR_MSG, BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG,
     BATCH_SIZE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, EMBEDDING_DIM, EMBEDDING_DIMENSIONS_ERROR_MSG,
@@ -18,18 +30,6 @@ from pykeen.constants import (
     NORMS_FOR_NORMALIZATION_OF_ENTITIES_PROMPT_MSG, NORMS_SCORING_FUNCTION_ERROR_MSG, NORMS_SCORING_FUNCTION_PRINT_MSG,
     NORMS_SCORING_FUNCTION_PROMPT_MSG, NORM_FOR_NORMALIZATION_OF_ENTITIES, NORM_SCORING_FUNCTION_ERROR_MSG,
     NORM_SCORING_FUNCTION_PRINT_MSG, NORM_SCORING_FUNCTION_PROMPT_MSG, NUM_EPOCHS, SCORING_FUNCTION_NORM,
-)
-from pykeen.cli.utils.cli_print_msg_helper import (
-    print_batch_size_message,
-    print_embedding_dimension_info_message, print_entity_normalization_message, print_hpo_batch_sizes_message,
-    print_hpo_embedding_dimensions_message, print_hpo_entity_normalization_norms_message, print_hpo_epochs_message,
-    print_hpo_learning_rates_message, print_hpo_margin_losses_message, print_hpo_scoring_fcts_message,
-    print_learning_rate_message, print_number_epochs_message, print_scoring_fct_message, print_section_divider,
-    print_training_embedding_dimension_message, print_training_margin_loss_message,
-)
-from pykeen.cli.utils.cli_query_helper import (
-    select_float_value, select_float_values, select_integer_value,
-    select_positive_integer_values,
 )
 from pykeen.utilities.summarize import get_config_dict
 

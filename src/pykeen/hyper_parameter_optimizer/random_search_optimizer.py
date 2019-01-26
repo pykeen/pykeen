@@ -3,9 +3,8 @@
 """A hyper-parameter optimizer that uses random search."""
 
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
-import numpy as np
 from torch.nn import Module
 from tqdm import trange
 

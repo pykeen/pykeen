@@ -2,10 +2,6 @@
 
 """PyKEEN's command line interface."""
 
-from pykeen.constants import (
-    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, RESCAL_NAME, SE_NAME, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME,
-    TRANS_R_NAME, UM_NAME,
-)
 from pykeen.cli.utils import (
     configure_conv_e_hpo_pipeline, configure_conv_e_training_pipeline,
     configure_distmult_hpo_pipeline, configure_distmult_training_pipeline, configure_ermlp_hpo_pipeline,
@@ -14,6 +10,10 @@ from pykeen.cli.utils import (
     configure_trans_d_training_pipeline, configure_trans_e_hpo_pipeline, configure_trans_e_training_pipeline,
     configure_trans_h_hpo_pipeline, configure_trans_h_training_pipeline, configure_trans_r_hpo_pipeline,
     configure_trans_r_training_pipeline, configure_um_hpo_pipeline, configure_um_training_pipeline,
+)
+from pykeen.constants import (
+    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, RESCAL_NAME, SE_NAME, TRANS_D_NAME, TRANS_E_NAME, TRANS_H_NAME,
+    TRANS_R_NAME, UM_NAME,
 )
 
 __all__ = [

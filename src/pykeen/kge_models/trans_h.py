@@ -7,7 +7,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H, SCORING_FUNCTION_NORM
+from pykeen.constants import SCORING_FUNCTION_NORM, TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from pykeen.kge_models.base import BaseModule
 
 __all__ = ['TransH']

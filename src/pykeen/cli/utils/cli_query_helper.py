@@ -19,12 +19,12 @@ from pykeen.constants import (
 
 def _is_correct_format(path: str):
     return (
-        any(
-            path.startswith(prefix)
-            for prefix in IMPORTERS
-        )
-        or path.endswith('.tsv')
-        or path.endswith('.nt')
+            any(
+                path.startswith(prefix)
+                for prefix in IMPORTERS
+            )
+            or path.endswith('.tsv')
+            or path.endswith('.nt')
     )
 
 
@@ -49,8 +49,9 @@ def get_input_path(prompt_msg, error_msg, is_dataset=False):
 
 
 def select_keen_execution_mode(lib_name=PYKEEN):
-    r = click.confirm('Do you have hyper-parameters? If not, %s will be configured for hyper-parameter search.' % (lib_name),
-                      default=False)
+    r = click.confirm(
+        'Do you have hyper-parameters? If not, %s will be configured for hyper-parameter search.' % (lib_name),
+        default=False)
     return TRAINING_MODE if r else HPO_MODE
 
 

@@ -2,6 +2,18 @@
 
 """Implementation the command line interface needed for TransR."""
 
+from pykeen.cli.utils.cli_print_msg_helper import (
+    print_batch_size_message,
+    print_entities_embedding_dimension_message, print_hpo_batch_sizes_message, print_hpo_embedding_dimensions_message,
+    print_hpo_epochs_message, print_hpo_learning_rates_message, print_hpo_margin_losses_message,
+    print_hpo_scoring_fcts_message, print_learning_rate_message, print_number_epochs_message,
+    print_relations_embedding_dimension_message, print_scoring_fct_message, print_section_divider,
+    print_training_margin_loss_message,
+)
+from pykeen.cli.utils.cli_query_helper import (
+    select_float_value, select_float_values, select_integer_value,
+    select_positive_integer_values,
+)
 from pykeen.constants import (
     BATCH_SIZE, BATCH_SIZES_ERROR_MSG, BATCH_SIZES_PRINT_MSG, BATCH_SIZES_PROMPT_MSG,
     BATCH_SIZE_ERROR_MSG, BATCH_SIZE_PRINT_MSG, BATCH_SIZE_PROMPT_MSG, EMBEDDING_DIM, EMBEDDING_DIMENSIONS_ERROR_MSG,
@@ -16,18 +28,6 @@ from pykeen.constants import (
     RELATION_EMBEDDING_DIMENSIONS_ERROR_MSG, RELATION_EMBEDDING_DIMENSIONS_PRINT_MSG,
     RELATION_EMBEDDING_DIMENSIONS_PROMPT_MSG, RELATION_EMBEDDING_DIMENSION_ERROR_MSG,
     RELATION_EMBEDDING_DIMENSION_PRINT_MSG, RELATION_EMBEDDING_DIMENSION_PROMPT_MSG, SCORING_FUNCTION_NORM,
-)
-from pykeen.cli.utils.cli_print_msg_helper import (
-    print_batch_size_message,
-    print_entities_embedding_dimension_message, print_hpo_batch_sizes_message, print_hpo_embedding_dimensions_message,
-    print_hpo_epochs_message, print_hpo_learning_rates_message, print_hpo_margin_losses_message,
-    print_hpo_scoring_fcts_message, print_learning_rate_message, print_number_epochs_message,
-    print_relations_embedding_dimension_message, print_scoring_fct_message, print_section_divider,
-    print_training_margin_loss_message,
-)
-from pykeen.cli.utils.cli_query_helper import (
-    select_float_value, select_float_values, select_integer_value,
-    select_positive_integer_values,
 )
 from pykeen.utilities.summarize import get_config_dict
 
