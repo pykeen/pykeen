@@ -33,4 +33,4 @@ contained in the training set:
 
    pykeen-predict -m /path/to/model/directory -d /path/to/data/directory -t /path/to/triples.tsv
 
-Hence, it is easily possible to compute plausibility scores forr all triples that are not contained in the training set
+Hence, it is easily possible to compute plausibility scores forr all triples that are not contained in the training set.
