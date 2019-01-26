@@ -5,7 +5,8 @@
 import json
 import os
 from collections import OrderedDict
-from typing import Dict
+from pathlib import Path
+from typing import Dict, TextIO, Union
 
 import click
 import pandas as pd
@@ -25,7 +26,7 @@ def get_config_dict(model_name: str) -> Dict:
     ])
 
 
-def summarize_results(directory: str, output) -> None:
+def summarize_results(directory: str, output: Union[str, Path, TextIO]) -> None:
     """Summarize contents of training and evaluation."""
     r = []
 

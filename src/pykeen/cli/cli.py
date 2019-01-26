@@ -4,6 +4,7 @@
 
 import json
 import os
+from typing import TextIO
 
 import click
 from click_default_group import DefaultGroup
@@ -48,8 +49,8 @@ def predict(model_directory: str, data_directory: str, training_set_path: str):
 
 @main.command()
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
-@click.option('-o', '--output', type=click.File('w'))
-def summarize(directory: str, output):
+@click.option('-o', '--output', type=click.File('w'), required=True)
+def summarize(directory: str, output: TextIO):
     """Summarize contents of training and evaluation."""
     summarize_results(directory, output)
 
