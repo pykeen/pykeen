@@ -4,18 +4,22 @@
 
 import json
 import os
+from typing import Optional
 
 import numpy as np
 import torch
 from torch.nn import Module
 
-from pykeen.constants import CPU, GPU, PREFERRED_DEVICE, TEST_SET_PATH
+from pykeen.constants import CPU, GPU, PREFERRED_DEVICE
 from pykeen.kge_models import get_kge_model
 from pykeen.utilities.prediction_utils import make_predictions
 
 
-def start_predictions_pipeline(model_direc: str, data_direc: str, remove_training_triples=False,
-                               training_set_path=None):
+def start_predictions_pipeline(model_direc: str,
+                               data_direc: str,
+                               remove_training_triples: bool = False,
+                               training_set_path: Optional[str] = None,
+                               ) -> None:
     # Load configuration file
     with open(os.path.join(model_direc, 'configuration.json')) as f:
         config = json.load(f)
@@ -38,7 +42,6 @@ def start_predictions_pipeline(model_direc: str, data_direc: str, remove_trainin
     device_name = 'cuda:0' if torch.cuda.is_available() and config[PREFERRED_DEVICE] == GPU else CPU
     device = torch.device(device_name)
 
-
     ranked_triples = make_predictions(
         kge_model=trained_kge_model,
         entities=entities,
@@ -47,8 +50,7 @@ def start_predictions_pipeline(model_direc: str, data_direc: str, remove_trainin
         rel_to_id=relation_to_id,
         device=device,
         remove_training_triples=remove_training_triples,
-        training_set_path=training_set_path
-
+        training_set_path=training_set_path,
     )
 
     np.savetxt(os.path.join(data_direc, 'predictions.tsv'), ranked_triples, fmt='%s')
