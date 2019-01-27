@@ -1,14 +1,13 @@
-Use The CLI To Perform Inference
-================================
-
+Perform Inference
+=================
 Starting the Prediction Pipeline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: sh
 
    pykeen-predict -m /path/to/model/directory -d /path/to/data/directory
 
-where the value for the argument **-m** is the directory containing the model, in more detail following files must be contained in
-the directory:
+where the value for the argument **-m** is the directory containing the model, in more detail following files must be
+contained in the directory:
 
 * configuration.json
 * entities_to_embeddings.json
@@ -17,8 +16,8 @@ the directory:
 
 These files are created automatically created when an experiment is configured through the CLI.
 
-The vlue for the argument  **-d** is the directory containing the data for which inference should be applied, and it needs
-to contain following files:
+The value for the argument **-d** is the directory containing the data for which inference should be applied, and it
+needs to contain following files:
 
 * entities.tsv
 * relations.tsv
@@ -34,3 +33,9 @@ contained in the training set:
    pykeen-predict -m /path/to/model/directory -d /path/to/data/directory -t /path/to/triples.tsv
 
 Hence, it is easily possible to compute plausibility scores forr all triples that are not contained in the training set.
+
+CLI Manual
+~~~~~~~~~~
+.. click:: pykeen.cli.cli:predict
+   :prog: pykeen-predict
+   :show-nested:

@@ -1,6 +1,7 @@
-Use The CLI To Train & Evaluate a KGE model
-===========================================
-
+Train and Evaluate a KGE model
+==============================
+Tutorial
+--------
 Step 1: Start CLI
 ~~~~~~~~~~~~~~~~~
 .. code-block:: sh
@@ -49,3 +50,9 @@ Step 12: Specify preferred device
 Step 13: Specify the path to the output directory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. image:: images/output_directory.png
+
+Reference
+---------
+.. click:: pykeen.cli.cli:train
+   :prog: pykeen
+   :show-nested:
