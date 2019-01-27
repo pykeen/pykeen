@@ -1,9 +1,7 @@
 Overview
 --------
-
 Knowledge Graph Embeddings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Knowledge graphs (KGs) are multi-relational, directed graphs in which nodes represent entities and edges represent their
 relations [1]_. While they have been successfully applied for question answering, information
 extraction, and named entity disambiguation outside of the biomedical domain, their usage in biomedical applications
@@ -16,10 +14,8 @@ requires a large set of user-defined formulas to achieve generalization. Another
 preserves the structural characteristics of the KG [4]_. These embeddings can be used to predict new
 relations between entities.
 
-
 Existing Software
 ~~~~~~~~~~~~~~~~~
-
 While there exists other toolkits like OpenKE [5]_ and scikit-kge (https://github.com/mnick/scikit-kge),
 they are not specifically for bioinformatics applications and they require more expertise in programming and in KGEs.
 To the best of our knowledge, PyKEEN is the first framework specifically designed to facilitate the use of KGE models
@@ -28,15 +24,9 @@ https://github.com/SmartDataAnalytics/BioKEEN).
 
 References
 ~~~~~~~~~~
-
 .. [1] Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS.
-
 .. [2] Nickel, M., *et al.* (2011) A Three-Way Model for Collective Learning on Multi-Relational Data. ICML. Vol. 11.
-
 .. [3] Malone, B., *et al.* (2018). Knowledge Graph Completion to Predict Polypharmacy Side Effects. arXiv preprint
-  arXiv:1810.09227.
-
+       arXiv:1810.09227.
 .. [4] Wang, Z., *et al.* (2014). Knowledge Graph Embedding by Translating on Hyperplanes. AAAI. Vol. 14.
-
 .. [5] Han, X., *et al.* (2018). OpenKE: An Open Toolkit for Knowledge Embedding. Proceedings of EMNLP.
-

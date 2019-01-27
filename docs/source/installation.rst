@@ -1,13 +1,12 @@
 Installation |pypi_version| |python_versions| |pypi_license|
 ============================================================
-
 Easiest
 ~~~~~~~
 Download the latest stable code from `PyPI <https://pypi.python.org/pypi/pykeen>`_ with:
 
 .. code-block:: python
 
-   python3 pip install pykeen
+   pip install pykeen
 
 Get the Latest
 ~~~~~~~~~~~~~~~
@@ -15,7 +14,7 @@ Download the most recent code from `GitHub <https://github.com/SmartDataAnalytic
 
 .. code-block:: python
 
-   python3 pip install git+https://github.com/SmartDataAnalytics/PyKEEN.git@develop
+   pip install git+https://github.com/SmartDataAnalytics/PyKEEN.git
 
 .. |python_versions| image:: https://img.shields.io/pypi/pyversions/pykeen.svg
     :alt: Stable Supported Python Versions

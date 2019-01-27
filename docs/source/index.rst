@@ -5,7 +5,7 @@ PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating kn
 The system has a modular architecture, and can be configured by the user through the command line interface.
 
 Installation is as easy as getting the code from `PyPI <https://pypi.python.org/pypi/pykeen>`_ with
-:code:`python3 -m pip install pykeen`
+:code:`pip install pykeen`
 
 .. toctree::
    :maxdepth: 2
@@ -14,7 +14,15 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
    overview
    installation
-   run_pykeen
+   train_and_evaluate
+
+.. toctree::
+   :maxdepth: 2
+   :caption: CLI Usage
+   :name: cli
+
+   cli/train_and_evaluate
+   cli/inference
 
 .. toctree::
    :maxdepth: 2
