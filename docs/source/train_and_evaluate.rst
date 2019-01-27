@@ -50,3 +50,15 @@ Access trained KGE model
 
 Access the losses
 ~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    results.results['losses']
+
+Access evaluation results
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    results.results['eval_summary']
+
