@@ -31,6 +31,13 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
    kge_models
 
+.. toctree::
+   :maxdepth: 2
+   :caption: HPO
+   :name: data
+
+   hyper_parameter_optimization
+
 Indices and tables
 ==================
 * :ref:`genindex`
