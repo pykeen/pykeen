@@ -5,7 +5,6 @@
 from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
-import numpy as np
 import torch
 from torch import nn
 
@@ -67,8 +66,11 @@ class BaseModule(nn.Module):
         )
 
         # Entity dimensions
+        #: The number of entities in the knowledge graph
         self.num_entities = config.number_entities
+        #: The number of unique relation types in the knowledge graph
         self.num_relations = config.number_relations
+        #: The dimension of the embeddings to generate
         self.embedding_dim = config.embedding_dimension
 
         self.entity_embeddings = nn.Embedding(
@@ -77,10 +79,6 @@ class BaseModule(nn.Module):
             norm_type=self.entity_embedding_norm_type,
             max_norm=self.entity_embedding_max_norm,
         )
-
-    @property
-    def bound(self):
-        return 6 / np.sqrt(self.embedding_dim)
 
     def __init_subclass__(cls, **kwargs):
         if not getattr(cls, 'model_name', None):

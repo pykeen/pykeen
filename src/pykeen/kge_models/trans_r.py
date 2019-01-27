@@ -55,8 +55,20 @@ class TransR(BaseModule):
         self.projection_matrix_embs = nn.Embedding(self.num_relations, self.relation_embedding_dim * self.embedding_dim)
         self.scoring_fct_norm = config.scoring_function_norm
 
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=-self.bound, b=self.bound)
-        nn.init.uniform_(self.relation_embeddings.weight.data, a=-self.bound, b=self.bound)
+        self._initialize()
+
+    def _initialize(self):
+        entity_embeddings_init_bound = relation_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
+        nn.init.uniform_(
+            self.entity_embeddings.weight.data,
+            a=-entity_embeddings_init_bound,
+            b=entity_embeddings_init_bound,
+        )
+        nn.init.uniform_(
+            self.relation_embeddings.weight.data,
+            a=-relation_embeddings_init_bound,
+            b=relation_embeddings_init_bound,
+        )
 
         norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(

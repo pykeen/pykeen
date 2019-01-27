@@ -34,13 +34,6 @@ class RESCAL(BaseModule):
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
-
         # TODO: Check
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)

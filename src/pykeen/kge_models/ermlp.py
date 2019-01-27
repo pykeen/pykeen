@@ -28,9 +28,11 @@ class ERMLP(BaseModule):
     def __init__(self, config):
         super().__init__(config)
 
-        # Embeddings
+        #: Embeddings for relations in the knowledge graph
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
+        # TODO document what is MLP?
+        #:
         self.mlp = nn.Sequential(
             nn.Linear(3 * self.embedding_dim, self.embedding_dim),
             nn.ReLU(),
@@ -39,13 +41,6 @@ class ERMLP(BaseModule):
         )
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
-
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
@@ -55,31 +50,14 @@ class ERMLP(BaseModule):
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
-
         return loss
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
-
         x_s = torch.cat([h_embs, r_embs, t_embs], 1)
         scores = - self.mlp(x_s)
-
         return scores
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
 
         heads = triples[:, 0:1]
@@ -95,13 +73,6 @@ class ERMLP(BaseModule):
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
-        """
-
-        :param batch_positives:
-        :param batch_negatives:
-        :return:
-        """
-
         pos_heads = batch_positives[:, 0:1]
         pos_relations = batch_positives[:, 1:2]
         pos_tails = batch_positives[:, 2:3]
@@ -122,5 +93,4 @@ class ERMLP(BaseModule):
         neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-
         return loss

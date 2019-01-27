@@ -41,8 +41,20 @@ class StructuredEmbedding(BaseModule):
         self.m_left_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
         self.m_right_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=-self.bound, b=self.bound)
-        nn.init.uniform_(self.m_left_rel_embeddings.weight.data, a=-self.bound, b=self.bound)
+        self._initialize()
+
+    def _initialize(self):
+        entity_embeddings_init_bound = m_left_relation_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
+        nn.init.uniform_(
+            self.entity_embeddings.weight.data,
+            a=-entity_embeddings_init_bound,
+            b=entity_embeddings_init_bound,
+        )
+        nn.init.uniform_(
+            self.m_left_rel_embeddings.weight.data,
+            a=-m_left_relation_embeddings_init_bound,
+            b=m_left_relation_embeddings_init_bound,
+        )
 
         norms = torch.norm(self.m_left_rel_embeddings.weight, p=2, dim=1).data
         self.m_left_rel_embeddings.weight.data = self.m_left_rel_embeddings.weight.data.div(
