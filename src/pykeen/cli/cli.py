@@ -4,6 +4,7 @@
 
 import json
 import os
+from typing import TextIO
 
 import click
 from click_default_group import DefaultGroup
@@ -33,24 +34,23 @@ def train(config):
 
 
 @main.command()
-@click.option('-m', '--model-directory', type=click.Path(file_okay=False, dir_okay=True))
+@click.option('-m', '--model-directory', type=click.Path(file_okay=False, dir_okay=True, exists=True))
 @click.option('-d', '--data-directory', type=click.Path(file_okay=False, dir_okay=True))
-@click.option('-t', '--training-set-path', type=click.Path())
+@click.option('-t', '--training-set-path', type=click.Path(file_okay=True, dir_okay=False, exists=True))
 def predict(model_directory: str, data_directory: str, training_set_path: str):
     """Predict new links based on trained model."""
-
-    remove_training_triples = False
-
-    if training_set_path is not None:
-        remove_training_triples = True,
-
-    start_predictions_pipeline(model_directory, data_directory, remove_training_triples, training_set_path)
+    start_predictions_pipeline(
+        model_directory,
+        data_directory,
+        remove_training_triples=(training_set_path is not None),
+        training_set_path=training_set_path,
+    )
 
 
 @main.command()
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True), default=os.getcwd())
-@click.option('-o', '--output', type=click.File('w'))
-def summarize(directory: str, output):
+@click.option('-o', '--output', type=click.File('w'), required=True)
+def summarize(directory: str, output: TextIO):
     """Summarize contents of training and evaluation."""
     summarize_results(directory, output)
 

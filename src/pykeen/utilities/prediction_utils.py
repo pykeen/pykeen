@@ -54,14 +54,11 @@ def make_predictions(kge_model, entities, relations, entity_to_id, rel_to_id, de
         all_triples = pd.DataFrame(data=all_triples)
         merged = all_triples.merge(training_triples, indicator=True, how='outer')
         merged = merged[merged['_merge'] == 'left_only'].values
-        all_triples = np.array(merged[:,:-1],dtype=np.str)
-
-
+        all_triples = np.array(merged[:, :-1], dtype=np.str)
 
     mapped_triples, _, _ = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
 
     mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=device)
-
 
     id_to_entity = {value: key for key, value in entity_to_id.items()}
     id_to_relation = {value: key for key, value in rel_to_id.items()}

@@ -12,9 +12,9 @@ from typing import Dict, Mapping, Optional
 import torch
 
 from pykeen.constants import (
-    ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING, RELATION_TO_ID,
-    TRAINED_MODEL,
-    FINAL_CONFIGURATION)
+    ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, FINAL_CONFIGURATION, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING,
+    RELATION_TO_ID, TRAINED_MODEL,
+)
 from pykeen.utilities.pipeline import Pipeline
 
 
@@ -69,7 +69,6 @@ def run(config: Dict,
                 indent=2,
                 sort_keys=True,
             )
-
 
     with open(os.path.join(output_directory, 'entity_to_id.json'), 'w') as file:
         json.dump(pipeline_results[ENTITY_TO_ID], file, indent=2, sort_keys=True)
