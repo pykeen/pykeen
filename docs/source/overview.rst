@@ -26,7 +26,7 @@ PyKEEN's Software Architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The following figure shows PyKEEN's software architecture:
 
-.. image:: ../images/pykeen_architecture.jpg
+.. image:: images/pykeen_architecture.jpg
 
 It has a modular architecture, and depending for which PyKEEN is used different modules will be active.
 The **Pipeline** module controls the workflow by interacting with the other modules. To extend PyKEEN, the
