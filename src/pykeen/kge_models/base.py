@@ -34,7 +34,7 @@ class BaseConfig:
     def from_dict(cls, config: Dict) -> 'BaseConfig':
         """Generate an instance from a dictionary."""
         return cls(
-            try_gpu=(config[PREFERRED_DEVICE] == GPU),
+            try_gpu=(config.get(PREFERRED_DEVICE) == GPU),
             margin_loss=config[MARGIN_LOSS],
             number_entities=config[NUM_ENTITIES],
             number_relations=config[NUM_RELATIONS],
