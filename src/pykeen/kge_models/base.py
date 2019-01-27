@@ -22,7 +22,7 @@ class BaseConfig:
     """Configuration for KEEN models."""
 
     try_gpu: bool
-    margin_loss: str
+    margin_loss: float
     number_entities: int
     number_relations: int
     embedding_dimension: int
