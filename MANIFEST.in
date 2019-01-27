@@ -6,6 +6,7 @@ prune data
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
 recursive-include docs/source *.png
+recursive-include docs/source *.jpg
 recursive-include test_resources *.json
 recursive-include test_resources *.tsv
 
