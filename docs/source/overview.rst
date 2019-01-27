@@ -22,6 +22,17 @@ To the best of our knowledge, PyKEEN is the first framework specifically designe
 for users in different applications such as the bioinformatics community (see BioKEEN:
 https://github.com/SmartDataAnalytics/BioKEEN).
 
+PyKEEN's Software Architecture
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The following figure shows PyKEEN's software architecture:
+
+.. image:: ../images/pykeen_architecture.jpg
+
+It has a modular architecture, and depending for which PyKEEN is used different modules will be active.
+The **Pipeline** module controls the workflow by interacting with the other modules. To extend PyKEEN, the
+**KGEModel** modules are the most relevant. Each **KGEModel** hast to provide a *forward* and a *predict* function
+that is called by the interacting modules. For more details, please check the implemented KGE models.
+
 References
 ~~~~~~~~~~
 .. [1] Bordes, A., *et al.* (2013). Translating embeddings for modeling multi-relational data. NIPS.
