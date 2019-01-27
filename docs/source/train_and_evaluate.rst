@@ -1,5 +1,5 @@
-Train, Evaluate, and Perform Inference
-======================================
+Train and Evaluate
+==================
 Configure your experiment
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 To programmatically train (and evaluate) a KGE model, a python dictionary must be created specifying the experiment:
@@ -7,7 +7,7 @@ To programmatically train (and evaluate) a KGE model, a python dictionary must b
 .. code-block:: python
 
     config = dict(
-        training_set_path           = 'data/corpora/fb15k/fb_15k_test.tsv',
+        training_set_path           = 'data/corpora/fb15k/fb_15k_train.tsv',
         execution_mode              = 'Training_mode',
         kg_embedding_model_name     = 'TransE',
         embedding_dim               = 50,
