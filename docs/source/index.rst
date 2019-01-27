@@ -33,8 +33,8 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
 .. toctree::
    :maxdepth: 2
-   :caption: HPO
-   :name: data
+   :caption: Apply Hyper-Parameter Optimization
+   :name: hpo
 
    hyper_parameter_optimization
 
