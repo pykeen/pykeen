@@ -29,16 +29,10 @@ class DistMult(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        self._initialize()
-
-    def _initialize(self):
-        lower_bound = -6 / np.sqrt(self.embedding_dim)
-        upper_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
-        nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
+        nn.init.uniform_(self.entity_embeddings.weight.data, a=-self.bound, b=self.bound)
+        nn.init.uniform_(self.relation_embeddings.weight.data, a=-self.bound, b=self.bound)
 
         norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(

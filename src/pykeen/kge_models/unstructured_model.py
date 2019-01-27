@@ -11,6 +11,7 @@ from torch import nn
 
 from pykeen.constants import NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM, UM_NAME
 from pykeen.kge_models.base import BaseModule
+from .trans_e import TransEConfig
 
 __all__ = ['UnstructuredModel']
 
@@ -30,17 +31,12 @@ class UnstructuredModel(BaseModule):
 
     def __init__(self, config):
         super().__init__(config)
+        config = TransEConfig.from_dict(config)
 
-        self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
-        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.l_p_norm_entities = config.lp_norm
+        self.scoring_fct_norm = config.scoring_function_norm
 
-        self._initialize()
-
-    def _initialize(self):
-        lower_bound = -6 / np.sqrt(self.embedding_dim)
-        upper_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
+        nn.init.uniform_(self.entity_embeddings.weight.data, a=-self.bound, b=self.bound)
 
     def _compute_loss(self, pos_scores, neg_scores):
         y = np.repeat([-1], repeats=pos_scores.shape[0])

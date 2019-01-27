@@ -3,8 +3,9 @@
 """Utilities for getting and initializing KGE models."""
 
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -46,6 +47,8 @@ class BaseModule(nn.Module):
     """A base class for all of the models."""
 
     margin_ranking_loss_size_average: bool = ...
+    entity_embedding_max_norm: Optional[int] = None
+    entity_embedding_norm_type: int = 2
 
     def __init__(self, config: Union[Dict, BaseConfig]) -> None:
         super().__init__()
@@ -66,5 +69,19 @@ class BaseModule(nn.Module):
         # Entity dimensions
         self.num_entities = config.number_entities
         self.num_relations = config.number_relations
-
         self.embedding_dim = config.embedding_dimension
+
+        self.entity_embeddings = nn.Embedding(
+            self.num_entities,
+            self.embedding_dim,
+            norm_type=self.entity_embedding_norm_type,
+            max_norm=self.entity_embedding_max_norm,
+        )
+
+    @property
+    def bound(self):
+        return 6 / np.sqrt(self.embedding_dim)
+
+    def __init_subclass__(cls, **kwargs):
+        if not getattr(cls, 'model_name', None):
+            raise TypeError('missing model_name class attribute')

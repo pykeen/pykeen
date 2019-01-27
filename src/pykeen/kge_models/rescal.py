@@ -29,7 +29,6 @@ class RESCAL(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]

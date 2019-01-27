@@ -3,18 +3,37 @@
 """Implementation of the TransE model."""
 
 import logging
+from dataclasses import dataclass
+from typing import Dict
 
 import numpy as np
 import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import TRANS_E_NAME, NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM
+from pykeen.constants import NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM, TRANS_E_NAME
 from pykeen.kge_models.base import BaseModule
 
-__all__ = ['TransE']
+__all__ = [
+    'TransE',
+    'TransEConfig',
+]
 
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class TransEConfig:
+    lp_norm: str
+    scoring_function_norm: str
+
+    @classmethod
+    def from_dict(cls, config: Dict) -> 'TransEConfig':
+        """Generate an instance from a dictionary."""
+        return cls(
+            lp_norm=config[NORM_FOR_NORMALIZATION_OF_ENTITIES],
+            scoring_function_norm=config[SCORING_FUNCTION_NORM],
+        )
 
 
 class TransE(BaseModule):
@@ -32,22 +51,17 @@ class TransE(BaseModule):
     model_name = TRANS_E_NAME
     margin_ranking_loss_size_average: bool = True
 
-    def __init__(self, config):
+    def __init__(self, config: Dict) -> None:
         super().__init__(config)
+        config = TransEConfig.from_dict(config)
 
         # Embeddings
-        self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
-        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.l_p_norm_entities = config.lp_norm
+        self.scoring_fct_norm = config.scoring_function_norm
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        self._initialize()
-
-    def _initialize(self):
-        lower_bound = -6 / np.sqrt(self.embedding_dim)
-        upper_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
-        nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
+        nn.init.uniform_(self.entity_embeddings.weight.data, a=-self.bound, b=self.bound)
+        nn.init.uniform_(self.relation_embeddings.weight.data, a=-self.bound, b=self.bound)
 
         norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
