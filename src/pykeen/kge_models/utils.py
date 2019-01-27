@@ -6,10 +6,7 @@ from typing import Dict
 
 from torch.nn import Module
 
-from pykeen.constants import (
-    CONV_E_NAME, DISTMULT_NAME, ERMLP_NAME, KG_EMBEDDING_MODEL_NAME, RESCAL_NAME, SE_NAME, TRANS_D_NAME, TRANS_E_NAME,
-    TRANS_H_NAME, TRANS_R_NAME, UM_NAME,
-)
+from pykeen.constants import KG_EMBEDDING_MODEL_NAME
 from pykeen.kge_models import (
     ConvE, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
@@ -19,17 +16,18 @@ __all__ = [
     'get_kge_model',
 ]
 
+#: A mapping from KGE model names to KGE model classes
 KGE_MODELS = {
-    TRANS_E_NAME: TransE,
-    TRANS_H_NAME: TransH,
-    TRANS_D_NAME: TransD,
-    TRANS_R_NAME: TransR,
-    SE_NAME: StructuredEmbedding,
-    UM_NAME: UnstructuredModel,
-    DISTMULT_NAME: DistMult,
-    ERMLP_NAME: ERMLP,
-    RESCAL_NAME: RESCAL,
-    CONV_E_NAME: ConvE,
+    TransE.model_name: TransE,
+    TransH.model_name: TransH,
+    TransD.model_name: TransD,
+    TransR.model_name: TransR,
+    StructuredEmbedding.model_name: StructuredEmbedding,
+    UnstructuredModel.model_name: UnstructuredModel,
+    DistMult.model_name: DistMult,
+    ERMLP.model_name: ERMLP,
+    RESCAL.model_name: RESCAL,
+    ConvE.model_name: ConvE,
 }
 
 

@@ -2,6 +2,9 @@
 
 """Implementation of TransD."""
 
+from dataclasses import dataclass
+from typing import Dict
+
 import numpy as np
 import torch
 import torch.autograd
@@ -10,7 +13,24 @@ from torch import nn
 from pykeen.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_D_NAME
 from pykeen.kge_models.base import BaseModule
 
-__all__ = ['TransD']
+__all__ = [
+    'TransD',
+    'TransDConfig',
+]
+
+
+@dataclass
+class TransDConfig:
+    relation_embedding_dim: int
+    scoring_function_norm: str
+
+    @classmethod
+    def from_dict(cls, config: Dict) -> 'TransDConfig':
+        """Generate an instance from a dictionary."""
+        return cls(
+            relation_embedding_dim=config[RELATION_EMBEDDING_DIM],
+            scoring_function_norm=config[SCORING_FUNCTION_NORM],
+        )
 
 
 class TransD(BaseModule):
@@ -24,21 +44,21 @@ class TransD(BaseModule):
 
     model_name = TRANS_D_NAME
     margin_ranking_loss_size_average: bool = True
+    entity_embedding_max_norm = 1
 
-    def __init__(self, config):
+    def __init__(self, config: Dict) -> None:
         super().__init__(config)
+        config = TransDConfig.from_dict(config)
 
         # Embeddings
-        self.relation_embedding_dim = config[RELATION_EMBEDDING_DIM]
+        self.relation_embedding_dim = config.relation_embedding_dim
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1)
         self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
 
-        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
-        # self._initialize()
+        self.scoring_fct_norm = config.scoring_function_norm
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
         """
@@ -48,7 +68,6 @@ class TransD(BaseModule):
         :param t_embs:
         :return:
         """
-
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
@@ -63,7 +82,6 @@ class TransD(BaseModule):
         :param neg_scores:
         :return:
         """
-
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
         # NOTE: y = 1 is important
@@ -99,7 +117,6 @@ class TransD(BaseModule):
         :return:
         """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]

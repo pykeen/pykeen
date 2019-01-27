@@ -77,7 +77,7 @@ class ConvE(nn.Module):
                           (self.img_width - kernel_width + 1)
         self.fc = torch.nn.Linear(num_in_features, self.embedding_dim)
 
-    def init(self):
+    def init(self):  # FIXME is this ever called?
         xavier_normal(self.entity_embeddings.weight.data)
         xavier_normal(self.relation_embeddings.weight.data)
 
@@ -121,15 +121,6 @@ class ConvE(nn.Module):
 
         return predicted_entities
 
-    def compute_loss(self, predictions, labels):
-        """
-
-        :param predictions:
-        :param labels:
-        :return:
-        """
-        return self.loss(predictions, labels)
-
     def forward(self, batch, labels):
         batch_size = batch.shape[0]
 
@@ -168,6 +159,6 @@ class ConvE(nn.Module):
         scores = torch.sum(torch.mm(x, tails_embs.transpose(1, 0)), dim=1)
 
         predictions = F.sigmoid(scores)
-        loss = self.compute_loss(predictions, labels)
+        loss = self.loss(predictions, labels)
 
         return loss

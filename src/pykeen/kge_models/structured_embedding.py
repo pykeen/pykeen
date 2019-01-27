@@ -9,8 +9,9 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM, SE_NAME
-from pykeen.kge_models.base import BaseModule
+from pykeen.constants import SE_NAME
+from .base import BaseModule
+from .trans_e import TransEConfig
 
 __all__ = ['StructuredEmbedding']
 
@@ -31,25 +32,29 @@ class StructuredEmbedding(BaseModule):
 
     def __init__(self, config):
         super().__init__(config)
+        config = TransEConfig.from_dict(config)
 
         # Embeddings
-        self.l_p_norm_entities = config[NORM_FOR_NORMALIZATION_OF_ENTITIES]
-        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.l_p_norm_entities = config.lp_norm
+        self.scoring_fct_norm = config.scoring_function_norm
+
         self.m_left_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
         self.m_right_rel_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
         self._initialize()
 
     def _initialize(self):
-        """
-
-        :return:
-        """
-        lower_bound = -6 / np.sqrt(self.embedding_dim)
-        upper_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
-        nn.init.uniform_(self.m_left_rel_embeddings.weight.data, a=lower_bound, b=upper_bound)
+        entity_embeddings_init_bound = m_left_relation_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
+        nn.init.uniform_(
+            self.entity_embeddings.weight.data,
+            a=-entity_embeddings_init_bound,
+            b=entity_embeddings_init_bound,
+        )
+        nn.init.uniform_(
+            self.m_left_rel_embeddings.weight.data,
+            a=-m_left_relation_embeddings_init_bound,
+            b=m_left_relation_embeddings_init_bound,
+        )
 
         norms = torch.norm(self.m_left_rel_embeddings.weight, p=2, dim=1).data
         self.m_left_rel_embeddings.weight.data = self.m_left_rel_embeddings.weight.data.div(
@@ -62,7 +67,6 @@ class StructuredEmbedding(BaseModule):
         :param neg_scores:
         :return:
         """
-
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
@@ -82,7 +86,6 @@ class StructuredEmbedding(BaseModule):
         :param t_embs:
         :return:
         """
-
         # Subtract the vector element wise
         difference = projected_head_embs - projected_tail_embs
 
@@ -106,7 +109,6 @@ class StructuredEmbedding(BaseModule):
         :return:
         """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
@@ -134,7 +136,6 @@ class StructuredEmbedding(BaseModule):
         :param batch_negatives:
         :return:
         """
-
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=self.l_p_norm_entities, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(

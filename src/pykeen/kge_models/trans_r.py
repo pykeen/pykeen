@@ -7,8 +7,9 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
-from pykeen.kge_models.base import BaseModule
+from pykeen.constants import TRANS_R_NAME
+from .base import BaseModule
+from .trans_d import TransDConfig
 
 __all__ = ['TransR']
 
@@ -33,22 +34,45 @@ class TransR(BaseModule):
 
     model_name = TRANS_R_NAME
     margin_ranking_loss_size_average: bool = True
+    # TODO: max_norm < 1.
+    # max_norm = 1 according to the paper
+    entity_embedding_max_norm = 1
+    entity_embedding_norm_type = 2
+    relation_embedding_max_norm = 1
+    relation_embedding_norm_type = 2
 
     def __init__(self, config):
         super().__init__(config)
+        config = TransDConfig.from_dict(config)
 
         # Embeddings
-        self.relation_embedding_dim = config[RELATION_EMBEDDING_DIM]
+        self.relation_embedding_dim = config.relation_embedding_dim
 
         # max_norm = 1 according to the paper
-        # TODO: max_norm < 1.
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, norm_type=2, max_norm=1)
-        # max_norm = 1 according to the paper
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, norm_type=2,
-                                                max_norm=1)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim,
+                                                norm_type=self.relation_embedding_norm_type,
+                                                max_norm=self.relation_embedding_max_norm)
         self.projection_matrix_embs = nn.Embedding(self.num_relations, self.relation_embedding_dim * self.embedding_dim)
-        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
+        self.scoring_fct_norm = config.scoring_function_norm
+
         self._initialize()
+
+    def _initialize(self):
+        entity_embeddings_init_bound = relation_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
+        nn.init.uniform_(
+            self.entity_embeddings.weight.data,
+            a=-entity_embeddings_init_bound,
+            b=entity_embeddings_init_bound,
+        )
+        nn.init.uniform_(
+            self.relation_embeddings.weight.data,
+            a=-relation_embeddings_init_bound,
+            b=relation_embeddings_init_bound,
+        )
+
+        norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
+        self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
+            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
         """
@@ -63,7 +87,6 @@ class TransR(BaseModule):
         sum_res = h_embs + r_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         distances = torch.mul(distances, distances)
-
         return distances
 
     def _compute_loss(self, pos_scores, neg_scores):
@@ -73,7 +96,6 @@ class TransR(BaseModule):
         :param neg_scores:
         :return:
         """
-
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
         # NOTE: y = 1 is important
@@ -87,7 +109,6 @@ class TransR(BaseModule):
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
-
         return loss
 
     def _project_entities(self, entity_embs, projection_matrix_embs):
@@ -98,21 +119,8 @@ class TransR(BaseModule):
         :return:
         """
         projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])
-
         projected_entity_embs = torch.clamp(projected_entity_embs, max=1.)
-
         return projected_entity_embs
-
-    # TODO: Initilaize relation matrices as identiy matrices
-    def _initialize(self):
-        lower_bound = -6 / np.sqrt(self.embedding_dim)
-        upper_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(self.entity_embeddings.weight.data, a=lower_bound, b=upper_bound)
-        nn.init.uniform_(self.relation_embeddings.weight.data, a=lower_bound, b=upper_bound)
-
-        norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
-        self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
     def predict(self, triples):
         """

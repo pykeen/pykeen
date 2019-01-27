@@ -29,19 +29,11 @@ class RESCAL(BaseModule):
         super().__init__(config)
 
         # Embeddings
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
-
         # TODO: Check
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)

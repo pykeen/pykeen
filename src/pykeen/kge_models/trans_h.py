@@ -2,6 +2,9 @@
 
 """Implementation of TransH."""
 
+from dataclasses import dataclass
+from typing import Dict
+
 import numpy as np
 import torch
 import torch.autograd
@@ -10,7 +13,23 @@ from torch import nn
 from pykeen.constants import SCORING_FUNCTION_NORM, TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from pykeen.kge_models.base import BaseModule
 
-__all__ = ['TransH']
+__all__ = [
+    'TransH'
+]
+
+
+@dataclass
+class TransHConfig:
+    soft_weight_constraint: str
+    scoring_function_norm: str
+
+    @classmethod
+    def from_dict(cls, config: Dict) -> 'TransHConfig':
+        """Generate an instance from a dictionary."""
+        return cls(
+            soft_weight_constraint=config[WEIGHT_SOFT_CONSTRAINT_TRANS_H],
+            scoring_function_norm=config[SCORING_FUNCTION_NORM],
+        )
 
 
 class TransH(BaseModule):
@@ -27,19 +46,16 @@ class TransH(BaseModule):
 
     def __init__(self, config):
         super().__init__(config)
+        config = TransHConfig.from_dict(config)
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.weightning_soft_constraint = config[WEIGHT_SOFT_CONSTRAINT_TRANS_H]
+        self.weightning_soft_constraint = config.soft_weight_constraint
 
         self.epsilon = torch.nn.Parameter(torch.tensor(0.005, requires_grad=True))
-        self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
-
-    def _initialize(self):
+        self.scoring_fct_norm = config.scoring_function_norm
         # TODO: Add initialization
-        pass
 
     def project_to_hyperplane(self, entity_embs, normal_vec_embs):
         """
@@ -56,14 +72,6 @@ class TransH(BaseModule):
         return projections
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
-
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
@@ -72,10 +80,7 @@ class TransH(BaseModule):
         return scores
 
     def compute_soft_constraint_loss(self):
-        """
-        Compute the soft constraints.
-        :return:
-        """
+        """Compute the soft constraints."""
         norm_of_entities = torch.norm(self.entity_embeddings.weight, p=2, dim=1)
         square_norms_entities = torch.mul(norm_of_entities, norm_of_entities)
         entity_constraint = square_norms_entities - self.num_entities * 1.
@@ -102,13 +107,6 @@ class TransH(BaseModule):
         return soft_constraints_loss
 
     def compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
-
         pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
@@ -123,14 +121,6 @@ class TransH(BaseModule):
         return loss
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
-
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
@@ -154,7 +144,6 @@ class TransH(BaseModule):
         :param batch_negatives:
         :return:
         """
-
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
