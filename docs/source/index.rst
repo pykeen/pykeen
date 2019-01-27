@@ -21,8 +21,8 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
    :caption: CLI Usage
    :name: cli
 
-   cli_train_and_evaluate
-   cli_inference
+   cli/train_and_evaluate
+   cli/inference
 
 .. toctree::
    :maxdepth: 2

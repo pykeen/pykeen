@@ -1,5 +1,5 @@
-Train and Evaluate a KGE model
-==============================
+Train and Evaluate
+==================
 Tutorial
 --------
 Step 1: Start CLI
@@ -10,46 +10,46 @@ Step 1: Start CLI
 
 Step 2: Provide the dataset
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/provide_dataset.png
+.. image:: ../images/provide_dataset.png
 
 Step 3: Specify execution mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/execution_mode.png
+.. image:: ../images/execution_mode.png
 
 Step 4: Select KGE model
 ~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/select_model.png
+.. image:: ../images/select_model.png
 
 Step 5: Specify model dependent hyper-parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Step 6: Specify the batch-size
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/batch_size.png
+.. image:: ../images/batch_size.png
 
 Step 7: Specify the number of training epochs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/epochs.png
+.. image:: ../images/epochs.png
 
 Step 8: Specify whether to evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/epochs.png
+.. image:: ../images/epochs.png
 
 Step 9: Specify whether to evaluate the model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/epochs.png
+.. image:: ../images/epochs.png
 
 Step 10: Provide a random seed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/random_seed.png
+.. image:: ../images/random_seed.png
 
 Step 12: Specify preferred device
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/preferred_device.png
+.. image:: ../images/preferred_device.png
 
 Step 13: Specify the path to the output directory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: images/output_directory.png
+.. image:: ../images/output_directory.png
 
 Reference
 ---------
