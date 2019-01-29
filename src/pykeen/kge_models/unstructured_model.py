@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import UM_NAME
+from pykeen.constants import UM_NAME, NORM_FOR_NORMALIZATION_OF_ENTITIES, SCORING_FUNCTION_NORM
 from pykeen.kge_models.base import BaseModule
 from .trans_e import TransEConfig
 
@@ -28,6 +28,7 @@ class UnstructuredModel(BaseModule):
 
     model_name = UM_NAME
     margin_ranking_loss_size_average: bool = True
+    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM, NORM_FOR_NORMALIZATION_OF_ENTITIES]
 
     def __init__(self, config):
         super().__init__(config)

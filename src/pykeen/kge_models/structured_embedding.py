@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import SE_NAME
+from pykeen.constants import SE_NAME, SCORING_FUNCTION_NORM, NORM_FOR_NORMALIZATION_OF_ENTITIES
 from .base import BaseModule
 from .trans_e import TransEConfig
 
@@ -29,6 +29,7 @@ class StructuredEmbedding(BaseModule):
 
     model_name = SE_NAME
     margin_ranking_loss_size_average: bool = True
+    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM, NORM_FOR_NORMALIZATION_OF_ENTITIES]
 
     def __init__(self, config):
         super().__init__(config)

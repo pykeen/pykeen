@@ -24,6 +24,7 @@ class RESCAL(BaseModule):
 
     model_name = RESCAL_NAME
     margin_ranking_loss_size_average: bool = True
+    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM]
 
     def __init__(self, config):
         super().__init__(config)

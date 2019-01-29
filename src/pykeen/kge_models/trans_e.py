@@ -22,6 +22,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
+
 @dataclass
 class TransEConfig:
     lp_norm: str
@@ -50,6 +51,8 @@ class TransE(BaseModule):
 
     model_name = TRANS_E_NAME
     margin_ranking_loss_size_average: bool = True
+
+    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM, NORM_FOR_NORMALIZATION_OF_ENTITIES]
 
     def __init__(self, config: Dict) -> None:
         super().__init__(config)
@@ -146,3 +149,7 @@ class TransE(BaseModule):
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
 
         return loss
+
+
+if __name__ == '__main__':
+    print(TransE.hyper_params)

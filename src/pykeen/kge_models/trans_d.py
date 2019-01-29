@@ -45,6 +45,7 @@ class TransD(BaseModule):
     model_name = TRANS_D_NAME
     margin_ranking_loss_size_average: bool = True
     entity_embedding_max_norm = 1
+    hyper_params = BaseModule.hyper_params + [RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM]
 
     def __init__(self, config: Dict) -> None:
         super().__init__(config)

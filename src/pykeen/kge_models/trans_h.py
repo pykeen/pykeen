@@ -43,6 +43,7 @@ class TransH(BaseModule):
 
     model_name = TRANS_H_NAME
     margin_ranking_loss_size_average: bool = False
+    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H]
 
     def __init__(self, config):
         super().__init__(config)

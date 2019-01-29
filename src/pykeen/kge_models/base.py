@@ -8,7 +8,8 @@ from typing import Dict, Optional, Union
 import torch
 from torch import nn
 
-from pykeen.constants import EMBEDDING_DIM, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE
+from pykeen.constants import EMBEDDING_DIM, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
+    LEARNING_RATE
 
 __all__ = [
     'BaseModule',
@@ -48,6 +49,7 @@ class BaseModule(nn.Module):
     margin_ranking_loss_size_average: bool = ...
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
+    hyper_params = [EMBEDDING_DIM, MARGIN_LOSS, LEARNING_RATE]
 
     def __init__(self, config: Union[Dict, BaseConfig]) -> None:
         super().__init__()

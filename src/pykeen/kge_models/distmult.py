@@ -24,6 +24,7 @@ class DistMult(BaseModule):
 
     model_name = DISTMULT_NAME
     margin_ranking_loss_size_average: bool = True
+    hyper_params = BaseModule.hyper_params
 
     def __init__(self, config):
         super().__init__(config)

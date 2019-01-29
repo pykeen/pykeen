@@ -7,7 +7,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import TRANS_R_NAME
+from pykeen.constants import TRANS_R_NAME, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
 from .base import BaseModule
 from .trans_d import TransDConfig
 
@@ -40,6 +40,7 @@ class TransR(BaseModule):
     entity_embedding_norm_type = 2
     relation_embedding_max_norm = 1
     relation_embedding_norm_type = 2
+    hyper_params = BaseModule.hyper_params + [RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM]
 
     def __init__(self, config):
         super().__init__(config)
