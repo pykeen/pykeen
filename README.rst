@@ -2,8 +2,6 @@ PyKEEN |build| |coverage| |docs| |zenodo|
 =========================================
 PyKEEN (Python KnowlEdge EmbeddiNgs) is a package for training and evaluating knowledge graph embeddings. Currently, it provides implementations of 10 knowledge graph emebddings models, and can be run in *training mode* in which users provide their set of hyper-parameters, or in *hyper-parameter optimization mode* to find suitable hyper-parameter values from set of user defined hyper-parameter values. PyKEEN can also be run without having experience in programing by using its interactive command line interface that can be started with the command *pykeen* from a terminal.
 
-The system has a modular architecture, and can be configured by the user through the command line interface.
-
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
 ``pykeen`` can be installed with the following command:
