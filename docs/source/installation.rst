@@ -1,24 +1,29 @@
-Installation |pypi_version| |python_versions| |pypi_license|
-============================================================
+Installation
+============
+There are several ways to download and install PyKEEN.
+
 Easiest
 ~~~~~~~
-Download the latest stable code from `PyPI <https://pypi.python.org/pypi/pykeen>`_ with:
+The easiest is to use ``pip`` and `PyPI <https://pypi.python.org/pypi/pykeen>`_ in the terminal:
 
-.. code-block:: python
+.. code-block:: sh
 
-   pip install pykeen
+   $ pip install pykeen
 
 Get the Latest
-~~~~~~~~~~~~~~~
-Download the most recent code from `GitHub <https://github.com/SmartDataAnalytics/PyKEEN>`_ with:
+~~~~~~~~~~~~~~
+The latest code can be installed from `GitHub <https://github.com/SmartDataAnalytics/PyKEEN>`_ with:
 
-.. code-block:: python
+.. code-block:: sh
 
-   pip install git+https://github.com/SmartDataAnalytics/PyKEEN.git
+   $ pip install git+https://github.com/SmartDataAnalytics/PyKEEN.git
 
-.. |python_versions| image:: https://img.shields.io/pypi/pyversions/pykeen.svg
-    :alt: Stable Supported Python Versions
-.. |pypi_version| image:: https://img.shields.io/pypi/v/pykeen.svg
-    :alt: Current version on PyPI
-.. |pypi_license| image:: https://img.shields.io/pypi/l/pykeen.svg
-    :alt: MIT License
+For Developers
+~~~~~~~~~~~~~~
+The code can be installed in a local development environment with:
+
+.. code-block:: sh
+
+   git clone https://github.com/SmartDataAnalytics/PyKEEN.git pykeen
+   cd pykeen
+   pip install -e .
