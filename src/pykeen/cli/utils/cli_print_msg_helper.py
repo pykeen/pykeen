@@ -6,7 +6,8 @@ import click
 
 
 def print_section_divider(width: int = 104) -> None:
-    """Prints a section divider"""
+    """Print the section divider."""
+    click.clear()
     click.secho('-' * width)
 
 
@@ -19,8 +20,7 @@ def print_welcome_message(width: int = 49, name='PyKEEN') -> None:
 
 def print_intro() -> None:
     """Print the PyKEEN introduction."""
-    click.secho("This interface will assist you to configure your experiment.")
-    click.secho("")
+    click.secho("This interface will assist you to configure your experiment.\n")
     click.secho(
         "PyKEEN can be run in two modes: \n"
         "1.) Training mode: PyKEEN trains a model based on a set of user-defined hyper-parameters.\n"
@@ -32,7 +32,8 @@ def print_intro() -> None:
 def print_existing_config_message():
     click.secho(
         "Here you are asked whether you have already an exisiing configuration that was created for a previous experiment.\n"
-        "The configuration is saved as a JSON file (.json)\n")
+        "The configuration is saved as a JSON file (.json)\n"
+    )
     click.secho("Example of a valid path: /Users/david/data/configuration.json")
     click.secho("")
 
@@ -50,17 +51,11 @@ def print_training_set_message():
     click.echo("Example of a valid NDEx network UUID: \"ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf\"\n")
 
 
-def print_execution_mode_message():
-    click.secho(
-        "Current Step: Please choose the execution mode: (1) training mode or (2) hyper-parameter search mode.",
-        fg='blue'
-    )
-
-
 def print_random_seed_message():
     click.secho(
         "Current Step: Please specify a random seed (positive integer).",
-        fg='blue'
+        fg='blue',
+        bold=True,
     )
     click.secho("The random seed is used for negative sampling, and for the random train and test split if requested.")
     click.secho("")
@@ -75,7 +70,8 @@ def print_model_selection_message():
 def print_training_embedding_dimension_message():
     click.secho(
         "Current Step: Please specify the embedding dimension to use for learning the entities and relations.",
-        fg='blue'
+        fg='blue',
+        bold=True,
     )
     click.secho("The embedding dimension must be a positive integer e.g. 20.\n")
 
@@ -87,68 +83,68 @@ def print_embedding_dimension_info_message():
 def print_training_margin_loss_message():
     click.secho(
         "Current Step: Please specify the value of the margin loss used for the margin-ranking-loss function.",
-        fg='blue'
+        fg='blue',
+        bold=True,
     )
     click.secho("The margin ranking loss is a float value. An example for the margin loss is a value of 1\n")
 
 
 def print_scoring_fct_message():
-    click.secho("Current Step: Please specify the norm used as scoring function.", fg='blue')
+    click.secho("Current Step: Please specify the norm used as scoring function.", fg='blue', bold=True)
     click.echo("The norm should be a positive integer value such as a value of 1\n")
 
 
 def print_entity_normalization_message():
-    click.secho("Current Step: Please specify the norm used to normalize the entities.", fg='blue')
+    click.secho("Current Step: Please specify the norm used to normalize the entities.", fg='blue', bold=True)
     click.echo("The norm should be a positive integer value such as a value of 2\n")
 
 
 def print_learning_rate_message():
-    click.secho("Current Step: Please specify the learning rate.", fg='blue')
+    click.secho("Current Step: Please specify the learning rate.", fg='blue', bold=True)
     click.secho("The learning rate should be a positive float value such as 0.01\n")
 
 
 def print_batch_size_message():
-    click.secho("Current Step: Please specify the batch size.", fg='blue')
+    click.secho("Current Step: Please specify the batch size.", fg='blue', bold=True)
     click.secho("Typical batch sizes are 32,64 and 128\n")
 
 
 def print_number_epochs_message():
-    click.secho("Current Step: Please specify the number of epochs", fg='blue')
+    click.secho("Current Step: Please specify the number of epochs", fg='blue', bold=True)
     click.echo(
         "The number of epochs defines how often to iterte over the whole training set during the training the model.\n")
 
 
 def print_ask_for_evlauation_message():
-    click.secho("Current Step: Please specify the number of epochs", fg='blue')
+    click.secho("Current Step: Please specify the number of epochs", fg='blue', bold=True)
     click.echo("Here you can specify whether you want to evaluate your model after training or not.\n")
 
 
 def print_test_set_message():
     click.secho("Current Step: Please specify whether you provide a test set yourself, or whether the test set\n"
-                "should be randomly extracted from the training set.\n", fg='blue')
+                "should be randomly extracted from the training set.\n", fg='blue', bold=True)
 
 
 def print_test_ratio_message():
     click.secho("Current Step: Please specify the ratio of the training set that should be used as a test set",
-                fg='blue')
+                fg='blue', bold=True)
     click.echo('For example 0.5 means half of the training set is used as a test set.\n')
 
 
 def print_filter_negative_triples_message():
-    click.secho(
-        click.style("Current Step: Please specify whether you want to filter negative triples out during evaluation.",
-                    fg='blue'))
+    click.secho("Current Step: Please specify whether you want to filter negative triples out during evaluation.",
+                fg='blue')
     click.echo('Filtered evaluation is more expressive, for further information we refer to \n'
                'Bordes et al. \"Translating embeddings for modeling multi-relational data.\"\n')
 
 
 def print_output_directory_message():
-    click.secho("Current Step: Please specify the path to your output directory.", fg='blue')
+    click.secho("Current Step: Please specify the path to your output directory.", fg='blue', bold=True)
     click.echo("Example of a valid path: /Users/david/output_direc\n")
 
 
 def print_trans_h_soft_constraints_weight_message():
-    click.secho("Current Step: Please specify the weight value for the soft constraints.", fg='blue')
+    click.secho("Current Step: Please specify the weight value for the soft constraints.", fg='blue', bold=True)
     click.secho('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
                 'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating '
                 'on Hyperplanes\n')
@@ -180,95 +176,94 @@ def print_conv_e_width_height_message():
 
 
 def print_conv_input_channels_message():
-    click.secho("Current Step: Please specify the number of input channels for the convolution layer.\n", fg='blue')
+    click.secho("Current Step: Please specify the number of input channels for the convolution layer.\n", fg='blue',
+                bold=True)
 
 
 def print_conv_e_output_channels_message():
-    click.secho("Current Step: Please specify the number of output channels for the convolution layer.\n", fg='blue')
+    click.secho("Current Step: Please specify the number of output channels for the convolution layer.\n", fg='blue',
+                bold=True)
 
 
 def print_conv_kernel_height_message():
-    click.secho("Current Step: Please specify the height of the convolution kernel.", fg='blue')
+    click.secho("Current Step: Please specify the height of the convolution kernel.", fg='blue', bold=True)
     click.echo("Important note: The kernel height must be smaller or equal to the input height, specified before.\n")
 
 
 def print_conv_kernel_width_message():
-    click.secho("Current Step: Please specify the width of the convolution kernel.", fg='blue')
+    click.secho("Current Step: Please specify the width of the convolution kernel.", fg='blue', bold=True)
     click.echo("Important note: The kernel width must be smaller or equal to the input width, specified before.\n")
 
 
 def print_input_dropout_message():
-    click.secho(click.style("Current Step: Please specify the dropout rate for the input layer.", fg='blue'))
+    click.secho("Current Step: Please specify the dropout rate for the input layer.", fg='blue', bold=True)
     click.secho("The dropout rate must be a value between 0 and 1\n")
 
 
 def print_output_dropout_message():
-    click.secho(click.style("Current Step: Please specify the dropout rate for the output layer.", fg='blue'))
+    click.secho("Current Step: Please specify the dropout rate for the output layer.", fg='blue')
     click.secho("The dropout rate must be a value between 0 and 1\n")
 
 
 def print_feature_map_dropout_message():
-    click.secho(click.style(
+    click.secho(
         "Current Step: Please specify the dropout rate for the feature maps created by the convolution layer.",
-        fg='blue'))
+        fg='blue', bold=True)
     click.secho("The dropout rate must be a value between 0 and 1\n")
 
 
 def print_hpo_embedding_dimensions_message():
-    click.secho(
-        click.style("Current Step: Please specify a list of embedding dimensions for the entities and relations.",
-                    fg='blue'))
+    click.secho("Current Step: Please specify a list of embedding dimensions for the entities and relations.",
+                fg='blue', bold=True)
     click.secho("You can also provide just a single value, in this case the \',\' is not required.\n")
 
 
 def print_hpo_margin_losses_message():
-    click.secho(
-        click.style("Current Step: Please provide a list of margin losses to use for the margin-ranking-loss function",
-                    fg='blue'))
+    click.secho("Current Step: Please provide a list of margin losses to use for the margin-ranking-loss function",
+                fg='blue', bold=True)
     click.secho("The margin ranking losses need to be float values. Please separate your input by a \',\':\n"
                 "0.5, 1, 2.4, etc.\n\n")
 
 
 def print_hpo_scoring_fcts_message():
-    click.secho(click.style("Current Step: Please provide a list of norms used as scoring function", fg='blue'))
+    click.secho("Current Step: Please provide a list of norms used as scoring function", fg='blue', bold=True)
     click.secho("The norms should be positive integer values. Please separate your input by a \',\':\n"
                 "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_entity_normalization_norms_message():
-    click.secho(
-        click.style("Current Step: Please provide a list of norms used used for normalizing the entities.", fg='blue'))
+    click.secho("Current Step: Please provide a list of norms used used for normalizing the entities.", fg='blue',
+                bold=True)
     click.secho("The norms should be positive integer values. Please separate your input by a \',\':\n"
                 "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_learning_rates_message():
-    click.secho(click.style("Current Step: Please provide a list of learning rates", fg='blue'))
+    click.secho("Current Step: Please provide a list of learning rates", fg='blue', bold=True)
     click.secho("The learning rates need to be float values. Please separate your input by a \',\':\n"
                 "0.1, 0.01, 0.001, etc.\n\n")
 
 
 def print_hpo_batch_sizes_message():
-    click.secho(click.style("Current Step: Please provide a list of batch sizes.", fg='blue'))
+    click.secho("Current Step: Please provide a list of batch sizes.", fg='blue', bold=True)
     click.secho("The batch sizes should be positive integer values. Please separate your input by a \',\':\n"
                 "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_epochs_message():
-    click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
+    click.secho("Current Step: Please provide a list of epochs.", fg='blue', bold=True)
     click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
                 "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_iterations_message():
-    click.secho(click.style("Current Step: Please provide a list of epochs.", fg='blue'))
+    click.secho("Current Step: Please provide a list of epochs.", fg='blue', bold=True)
     click.secho("The epochs should be positive integer values. Please separate your input by a \',\':\n"
                 "1, 2, 3, etc.\n\n")
 
 
 def print_hpo_trans_h_soft_constraints_weights_message():
-    click.secho(
-        click.style("Current Step: Please provide a list of weight values for the soft constraints.", fg='blue'))
+    click.secho("Current Step: Please provide a list of weight values for the soft constraints.", fg='blue', bold=True)
     click.secho('In TransH, soft constraints are introduced and incorporated into the loss function.\n'
                 'For further information we refer to Wang, Zhen, et al. \"Knowledge Graph Embedding by Translating on Hyperplanes\n')
 

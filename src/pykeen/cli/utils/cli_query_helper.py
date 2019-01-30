@@ -2,18 +2,15 @@
 
 """Helper script to query parameters."""
 
-import json
 import os
-from collections import OrderedDict
 
 import click
 from prompt_toolkit import prompt
-
 from pykeen.cli.utils.constants import (
     ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING,
 )
 from pykeen.constants import (
-    CONFIG_FILE_ERROR_MSG, CONFIG_FILE_PROMPT_MSG, CPU, GPU, HPO_MODE, IMPORTERS, PYKEEN, TRAINING_MODE,
+    CPU, GPU, HPO_MODE, IMPORTERS, PYKEEN, TRAINING_MODE,
 )
 
 
@@ -28,51 +25,50 @@ def _is_correct_format(path: str):
     )
 
 
-def get_input_path(prompt_msg, error_msg, is_dataset=False):
+def get_input_path(prompt_msg: str) -> str:
     while True:
         user_input = prompt(prompt_msg, ).strip('"').strip("'")
 
-        if not os.path.exists(os.path.dirname(user_input)):
-            click.echo(error_msg)
-            continue
-        if is_dataset:
-            if not _is_correct_format(path=user_input):
-                click.echo()
-                click.echo('Invalid data source, following data sources are supported:\n'
-                           'A string path to a .tsv file containing 3 columns corresponding to subject, predicate, and object.\n'
-                           'A string path to a .nt RDF file serialized in N-Triples format.\n'
-                           'A string NDEx network UUID prefixed by "ndex:" like in ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf')
-                click.echo()
-                continue
+        if _is_correct_format(path=user_input):
+            return user_input
 
-        return user_input
+        click.secho(
+            'Invalid data source, following data sources are supported:\nA string path to a .tsv file containing 3 '
+            'columns corresponding to subject, predicate, and object.\nA string path to a .nt RDF file serialized in '
+            'N-Triples format.\nA string NDEx network UUID prefixed by "ndex:" like in '
+            'ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf\n',
+            fg='red'
+        )
 
 
 def select_keen_execution_mode(lib_name=PYKEEN):
     r = click.confirm(
-        'Do you have hyper-parameters? If not, %s will be configured for hyper-parameter search.' % (lib_name),
-        default=False)
+        f'Do you have hyper-parameters? If not, {lib_name} will be configured for hyper-parameter search.',
+        default=False,
+    )
     return TRAINING_MODE if r else HPO_MODE
 
 
-def select_embedding_model():
-    click.echo('Please select the embedding model you want to train:')
+def select_embedding_model() -> str:
     number_width = 1 + round(len(KG_MODEL_TO_ID_MAPPING) / 10)
     for model, model_id in KG_MODEL_TO_ID_MAPPING.items():
-        click.echo(f'{model_id: >{number_width}}: {model}')
+        click.echo(f'{model_id: >{number_width}}. {model}')
+    click.echo()
 
-    ids = list(KG_MODEL_TO_ID_MAPPING.values())
-    available_models = list(KG_MODEL_TO_ID_MAPPING.keys())
+    available_models, ids = zip(*KG_MODEL_TO_ID_MAPPING.items())
 
     while True:
-        user_input = prompt('> Please select one of the options: ')
+        user_input = click.prompt('Please select the embedding model you want to train')
 
-        if user_input not in ids:
-            click.echo(
-                "Invalid input, please type in a number between %s and %s indicating the model id.\n"
-                "For example type %s to select the model %s and press enter" % (
-                    available_models[0], ids[0], ids[0], available_models[0]))
+        if user_input not in ids and user_input not in available_models:
+            click.secho(
+                f"Invalid input, please type in a number between 1 and {len(KG_MODEL_TO_ID_MAPPING)} indicating "
+                f"the model id.\nFor example, type 1 to select the model {available_models[0]} and press enter",
+                fg='red',
+            )
             click.echo()
+        elif user_input in available_models:
+            return user_input
         else:
             return ID_TO_KG_MODEL_MAPPING[user_input]
 
@@ -138,37 +134,18 @@ def select_ratio_for_test_set():
                    'Please try again.')
 
 
-def select_preferred_device():
+def select_preferred_device() -> str:
     click.secho(click.style("Current Step: Please specify the preferred device (GPU or CPU).", fg='blue'))
 
     while True:
         user_input = prompt('> Please type \'GPU\' or \'CPU\': ').lower()
         if user_input == GPU or user_input == CPU:
             return user_input
-        else:
-            click.echo('Invalid input, please type in \'GPU\' or \'CPU\' and press enter.')
+        click.echo('Invalid input, please type in \'GPU\' or \'CPU\' and press enter.')
 
 
 def ask_for_filtering_of_negatives():
     return click.confirm('Do you want to filter out negative triples during evaluation of your model?')
-
-
-def load_config_file():
-    path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PROMPT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
-    while True:
-        with open(path_to_config_file, 'rb') as f:
-            try:
-                config = json.load(f)
-                assert type(config) == dict or type(config) == OrderedDict
-                return config
-            except:
-                click.echo('Invalid file, the configuration must be a JSON file.\n'
-                           'Please try again.')
-                path_to_config_file = get_input_path(prompt_msg=CONFIG_FILE_PROMPT_MSG, error_msg=CONFIG_FILE_ERROR_MSG)
-
-
-def ask_for_existing_config_file():
-    click.confirm('Do you provide an existing configuration file?')
 
 
 def query_output_directory():
@@ -279,7 +256,7 @@ def select_positive_integer_values(print_msg, prompt_msg, error_msg):
 
     while not is_valid_input:
         user_input = prompt(prompt_msg)
-        user_input = user_input.split(',')
+        user_input = [v.strip() for v in user_input.split(',')]
         is_valid_input = True
 
         for integer in user_input:

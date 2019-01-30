@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 from pykeen.cli.dicts import MODEL_HPO_CONFIG_FUNCS, MODEL_TRAINING_CONFIG_FUNCS
 from pykeen.cli.utils.cli_print_msg_helper import (
-    print_ask_for_evlauation_message, print_execution_mode_message, print_filter_negative_triples_message, print_intro,
+    print_ask_for_evlauation_message, print_filter_negative_triples_message, print_intro,
     print_model_selection_message, print_random_seed_message, print_section_divider, print_test_ratio_message,
     print_test_set_message, print_training_set_message, print_welcome_message,
 )
@@ -19,8 +19,7 @@ from pykeen.cli.utils.cli_query_helper import (
 from pykeen.constants import (
     EXECUTION_MODE, FILTER_NEG_TRIPLES, HPO_ITERS_ERROR_MSG, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_MODE,
     NUM_OF_HPO_ITERS, OUTPUT_DIREC, PREFERRED_DEVICE, PYKEEN, SEED, SEED_ERROR_MSG, SEED_PRINT_MSG, SEED_PROMPT_MSG,
-    TEST_FILE_ERROR_MSG, TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_ERROR_MSG,
-    TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH,
+    TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH,
 )
 
 __all__ = [
@@ -65,10 +64,7 @@ def prompt_evaluation_parameters(config: Dict) -> None:
         print_section_divider()
 
         if provide_test_set:
-            test_set_path = get_input_path(
-                prompt_msg=TEST_FILE_PROMPT_MSG,
-                error_msg=TEST_FILE_ERROR_MSG,
-            )
+            test_set_path = get_input_path(TEST_FILE_PROMPT_MSG)
             config[TEST_SET_PATH] = test_set_path
         else:
             print_test_ratio_message()
@@ -87,16 +83,11 @@ def prompt_evaluation_parameters(config: Dict) -> None:
 def prompt_training_file(config: Dict) -> None:
     """Prompt the user for a training file."""
     print_training_set_message()
-    config[TRAINING_SET_PATH] = get_input_path(
-        prompt_msg=TRAINING_FILE_PROMPT_MSG,
-        error_msg=TRAINING_FILE_ERROR_MSG,
-        is_dataset=True,
-    )
+    config[TRAINING_SET_PATH] = get_input_path(TRAINING_FILE_PROMPT_MSG)
 
 
 def prompt_execution_mode(config: Dict, lib_name: str = PYKEEN) -> None:
     """Prompt the user for the execution mode."""
-    print_execution_mode_message()
     config[EXECUTION_MODE] = select_keen_execution_mode(lib_name=lib_name)
 
 
