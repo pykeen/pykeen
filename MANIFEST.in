@@ -15,5 +15,5 @@ include config/config.ini
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib .DS_Store *.gpickle
 
-exclude .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml doc8.ini
+exclude .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml doc8.ini requirements-rtd.txt
 include LICENSE README.rst tox.ini
