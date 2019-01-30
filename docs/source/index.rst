@@ -15,6 +15,7 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
    overview
    installation
    train_and_evaluate
+   summarize
 
 .. toctree::
    :maxdepth: 2
