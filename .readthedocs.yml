@@ -3,7 +3,4 @@ build:
   image: latest
 python:
   version: 3.6
-  pip_install: true
-  use_system_site_packages: true
-  extra_requirements:
-    - docs
+requirements_file: requirements-rtd.txt
