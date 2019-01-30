@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # sys.path.insert(0, os.path.abspath('..'))
 
 # -- Mockup PyTorch to exclude it while compiling the docs--------------------
-# autodoc_mock_imports = ['torch', 'torchvision', 'scikit-learn']
+autodoc_mock_imports = ['torch', 'torchvision']
 
 # from unittest.mock import Mock
 # sys.modules['numpy'] = Mock()
