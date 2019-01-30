@@ -17,6 +17,14 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
    train_and_evaluate
    summarize
 
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Software Architecture
+   :name: architecture
+
+    software_architecture.rst
+
 .. toctree::
    :maxdepth: 2
    :caption: CLI Usage
@@ -27,17 +35,22 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
 .. toctree::
    :maxdepth: 2
+   :caption: Running PyKEEN programmatically
+   :name: prog
+
+    train_and_evaluate
+    hyper_parameter_optimization
+
+.. toctree::
+   :maxdepth: 2
    :caption: Models
    :name: data
 
    kge_models
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Apply Hyper-Parameter Optimization
-   :name: hpo
 
-   hyper_parameter_optimization
+
+
 
 Indices and tables
 ==================

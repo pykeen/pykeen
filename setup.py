@@ -49,6 +49,18 @@ EXTRAS_REQUIRE = {
         'sphinx-rtd-theme',
         'sphinx-click',
     ],
+    "rtd": [
+        'dataclasses; python_version < "3.7"',
+        'numpy',
+        'scikit-learn==0.19.1; python_version == "3.6"',
+        'scikit-learn; python_version == "3.7"',
+        'scipy',
+        'click',
+        'click_default_group',
+        'prompt_toolkit',
+        'tqdm',
+        'pandas',
+    ],
     'ndex': [
         'ndex2',
     ],
