@@ -29,9 +29,10 @@ The following figure shows PyKEEN's software architecture:
 .. image:: images/pykeen_architecture.jpg
 
 It has a modular architecture, and depending for which PyKEEN is used different modules will be active.
-The **Pipeline** module controls the workflow by interacting with the other modules. To extend PyKEEN, the
-**KGEModel** modules are the most relevant. Each **KGEModel** hast to provide a *forward* and a *predict* function
-that is called by the interacting modules. For more details, please check the implemented KGE models.
+The :mod:`pykeen.utilities.pipeline` module controls the workflow by interacting with the other modules. To extend
+PyKEEN, the :mod:`pykeen.kge_models` modules are the most relevant. Each :mod:`pykeen.kge_models` hast to provide a
+*forward* and a *predict* function that is called by the interacting modules. For more details, please check the
+implemented KGE models.
 
 References
 ~~~~~~~~~~

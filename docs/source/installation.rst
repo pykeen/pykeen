@@ -24,6 +24,6 @@ The code can be installed in a local development environment with:
 
 .. code-block:: sh
 
-   git clone https://github.com/SmartDataAnalytics/PyKEEN.git pykeen
-   cd pykeen
-   pip install -e .
+   $ git clone https://github.com/SmartDataAnalytics/PyKEEN.git pykeen
+   $ cd pykeen
+   $ pip install -e .

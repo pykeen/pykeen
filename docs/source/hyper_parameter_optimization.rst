@@ -1,10 +1,8 @@
 Apply a Hyper-Parameter Optimization
 ====================================
-
 Here, we describe how to define an experiment that should perform a hyper-parameter optimization mode.
 
-
-Configure your experiment
+Configure Your Experiment
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 To run PyKEEN in hyper-parameter optimization (HPO) mode, please set **execution_mode**  to **HPO_mode**.
 In HPO mode several values can be provided for the hyper-parameters from which different settings will be tested based
@@ -32,7 +30,7 @@ a list. The **maximum_number_of_hpo_iters** defines how many HPO iterations shou
     )
 
 
-Run your experiment
+Run Your Experiment
 ~~~~~~~~~~~~~~~~~~~
 The experiment will be started with the *run* function, and in the output directory the exported results will be saved.
 
@@ -43,7 +41,7 @@ The experiment will be started with the *run* function, and in the output direct
         output_directory=output_directory,
     )
 
-Access your results
+Access Your Results
 ~~~~~~~~~~~~~~~~~~~
 Show all keys contained in ``results``:
 
@@ -52,23 +50,20 @@ Show all keys contained in ``results``:
     print('Keys:', *sorted(results.results.keys()), sep='\n  ')
 
 
-Access trained KGE model
+Access Trained KGE Model
 ~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
     results.results['trained_model']
 
-Access the losses
+Access the Losses
 ~~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
     results.results['losses']
 
-Access evaluation results
+Access Evaluation Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
     results.results['eval_summary']
-
