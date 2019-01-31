@@ -38,8 +38,8 @@ Usage
 Code examples can be found in the `notebooks directory
 <https://github.com/SmartDataAnalytics/PyKEEN/tree/master/notebooks>`_.
 
-CLI Usage - Set Up Your Experiment withn 60 seconds
----------------------------------------------------
+CLI Usage - Set Up Your Experiment within 60 seconds
+----------------------------------------------------
 To start the PyKEEN CLI, run the following command:
 
 .. code-block:: sh
