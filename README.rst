@@ -13,7 +13,7 @@ If you find PyKEEN useful in your work, please consider citing:
 
 .. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
        <https://doi.org/10.1101/475202>`_. bioRxiv 475202.
-       
+
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
 ``pykeen`` can be installed with the following command:
