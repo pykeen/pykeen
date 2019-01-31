@@ -16,7 +16,7 @@ If you find PyKEEN useful in your work, please consider citing:
 
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
-``pykeen`` can be installed with the following command:
+``pykeen`` can be installed on any system running Python 3.6+ with the following command:
 
 .. code-block:: sh
 
@@ -29,6 +29,9 @@ Alternatively, it can be installed from the source for development with:
     $ git clone https://github.com/SmartDataAnalytics/PyKEEN.git pykeen
     $ cd pykeen
     $ pip install -e .
+
+However, GPU acceleration is limited to Linux systems with the appropriate graphics cards
+as described in the PyTorch documentation.
 
 Usage
 -----

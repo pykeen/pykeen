@@ -2,6 +2,8 @@ Installation
 ============
 There are several ways to download and install PyKEEN.
 
+.. warning:: PyKEEN requires Python 3.6+
+
 Easiest
 ~~~~~~~
 The easiest is to use ``pip`` and `PyPI <https://pypi.python.org/pypi/pykeen>`_ in the terminal:
