@@ -190,11 +190,11 @@ BATCH_SIZE_PROMPT_MSG = '> Batch size:'
 BATCH_SIZE_ERROR_MSG = 'An error occurred, please select a integer.'
 
 EPOCH_PRINT_MSG = 'Please type the number of epochs:'
-EPOCH_PROMPT_MSG = '> Epochs:'
+EPOCH_PROMPT_MSG = 'Epochs'
 EPOCH_ERROR_MSG = 'An error occurred, please select an integers.'
 
 SEED_PRINT_MSG = 'Please specify the random seed.'
-SEED_PROMPT_MSG = '> Random seed: '
+SEED_PROMPT_MSG = 'Random seed'
 SEED_ERROR_MSG = 'An error occurred, please proive and positive integer as the random seed.'
 
 ENTITIES_NORMALIZATION_PRINT_MSG = 'Please select a norm to use to normalize the entities. The norm should be a positive integer greater than 0'

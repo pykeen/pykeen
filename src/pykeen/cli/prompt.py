@@ -119,13 +119,14 @@ def prompt_execution_parameters(config: Dict, model_name: str) -> None:
         print_section_divider()
 
 
-def prompt_random_seed(config):
+def prompt_random_seed(config) -> None:
     """Query random seed."""
     print_random_seed_message()
     config[SEED] = select_integer_value(
         print_msg=SEED_PRINT_MSG,
         prompt_msg=SEED_PROMPT_MSG,
         error_msg=SEED_ERROR_MSG,
+        default=0,
     )
 
 

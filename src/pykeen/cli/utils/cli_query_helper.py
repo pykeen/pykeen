@@ -6,6 +6,7 @@ import os
 
 import click
 from prompt_toolkit import prompt
+
 from pykeen.cli.utils.constants import (
     ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING,
 )
@@ -73,16 +74,14 @@ def select_embedding_model() -> str:
             return ID_TO_KG_MODEL_MAPPING[user_input]
 
 
-def select_integer_value(print_msg, prompt_msg, error_msg):
+def select_integer_value(print_msg, prompt_msg, error_msg, default=None):
     click.echo(print_msg)
 
     while True:
-        user_input = prompt(prompt_msg)
-
-        if user_input.isnumeric():
-            return int(user_input)
-
-        click.echo(error_msg)
+        try:
+            return click.prompt(prompt_msg, type=int, default=default)
+        except ValueError:
+            click.echo(error_msg)
 
 
 def select_float_value(print_msg, prompt_msg, error_msg):
@@ -136,29 +135,31 @@ def select_ratio_for_test_set():
 
 def select_preferred_device() -> str:
     click.secho(click.style("Current Step: Please specify the preferred device (GPU or CPU).", fg='blue'))
-
-    while True:
-        user_input = prompt('> Please type \'GPU\' or \'CPU\': ').lower()
-        if user_input == GPU or user_input == CPU:
-            return user_input
-        click.echo('Invalid input, please type in \'GPU\' or \'CPU\' and press enter.')
+    c = click.confirm('Do you want to try using the GPU?', default=False)
+    return GPU if c else CPU
 
 
 def ask_for_filtering_of_negatives():
     return click.confirm('Do you want to filter out negative triples during evaluation of your model?')
 
 
-def query_output_directory():
+def prompt_output_directory() -> str:
     click.echo('Please provide the path to your output directory.\n')
     click.echo()
 
     while True:
-        user_input = prompt('> Path to output directory:')
+        user_input = os.path.expanduser(click.prompt('Path to output directory'))
+
         if os.path.exists(os.path.dirname(user_input)):
             return user_input
-        else:
+
+        try:
+            os.makedirs(user_input)
+        except FileExistsError:
             click.echo('Invalid input, please make sure that the path to the directory exists.\n'
                        'Please try again.')
+        else:
+            return user_input
 
 
 def query_height_and_width_for_conv_e(embedding_dim):
