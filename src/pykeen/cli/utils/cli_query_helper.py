@@ -143,7 +143,7 @@ def ask_for_filtering_of_negatives():
     return click.confirm('Do you want to filter out negative triples during evaluation of your model?')
 
 
-def prompt_output_directory() -> str:
+def query_output_directory() -> str:
     click.echo('Please provide the path to your output directory.\n')
     click.echo()
 
