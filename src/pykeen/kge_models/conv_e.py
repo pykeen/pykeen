@@ -2,13 +2,19 @@
 
 """Implementation of ConvE."""
 
+from typing import Dict
+
 import torch
 import torch.autograd
 from torch import nn
 from torch.nn import Parameter, functional as F
 from torch.nn.init import xavier_normal
 
-from pykeen.constants import *
+from pykeen.constants import (
+    CONV_E_FEATURE_MAP_DROPOUT, CONV_E_HEIGHT, CONV_E_INPUT_CHANNELS, CONV_E_INPUT_DROPOUT, CONV_E_KERNEL_HEIGHT,
+    CONV_E_KERNEL_WIDTH, CONV_E_NAME, CONV_E_OUTPUT_CHANNELS, CONV_E_OUTPUT_DROPOUT, CONV_E_WIDTH, EMBEDDING_DIM,
+    NUM_ENTITIES, NUM_RELATIONS,
+)
 
 __all__ = ['ConvE']
 
@@ -24,7 +30,7 @@ class ConvE(nn.Module):
 
     model_name = CONV_E_NAME
 
-    def __init__(self, config):
+    def __init__(self, config: Dict) -> None:
         super().__init__()
 
         # Device selection
@@ -160,5 +166,4 @@ class ConvE(nn.Module):
 
         predictions = F.sigmoid(scores)
         loss = self.loss(predictions, labels)
-
         return loss

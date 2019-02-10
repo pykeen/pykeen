@@ -2,6 +2,8 @@
 
 """Implementation of ERMLP."""
 
+from typing import Dict
+
 import numpy as np
 import torch
 import torch.autograd
@@ -26,7 +28,7 @@ class ERMLP(BaseModule):
     margin_ranking_loss_size_average: bool = False
     hyper_params = BaseModule.hyper_params
 
-    def __init__(self, config):
+    def __init__(self, config: Dict) -> None:
         super().__init__(config)
 
         #: Embeddings for relations in the knowledge graph

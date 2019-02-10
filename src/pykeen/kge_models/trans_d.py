@@ -66,13 +66,6 @@ class TransD(BaseModule):
         self.scoring_fct_norm = config.scoring_function_norm
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
@@ -81,12 +74,6 @@ class TransD(BaseModule):
         return distances
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
         # NOTE: y = 1 is important
@@ -99,7 +86,6 @@ class TransD(BaseModule):
         neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
-
         return loss
 
     def _project_entities(self, entity_embs, entity_proj_vecs, relation_projs):
@@ -110,7 +96,6 @@ class TransD(BaseModule):
         transfer_matrices = torch.matmul(relation_projs, entity_proj_vecs)
 
         projected_entity_embs = torch.einsum('nmk,nk->nm', [transfer_matrices, entity_embs])
-
         return projected_entity_embs
 
     def predict(self, triples):
@@ -170,5 +155,4 @@ class TransD(BaseModule):
         neg_scores = self._compute_scores(h_embs=proj_neg_heads, r_embs=neg_r_embs, t_embs=proj_neg_tails)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-
         return loss

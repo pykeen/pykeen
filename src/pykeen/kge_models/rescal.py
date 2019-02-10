@@ -2,6 +2,8 @@
 
 """Implementation of RESCAL."""
 
+from typing import Dict
+
 import numpy as np
 import torch
 import torch.autograd
@@ -30,7 +32,7 @@ class RESCAL(BaseModule):
     margin_ranking_loss_size_average: bool = True
     hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM]
 
-    def __init__(self, config):
+    def __init__(self, config: Dict) -> None:
         super().__init__(config)
 
         # Embeddings
@@ -49,17 +51,9 @@ class RESCAL(BaseModule):
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
-
         return loss
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
         # Compute score and transform result to 1D tensor
         M = r_embs.view(-1, self.embedding_dim, self.embedding_dim)
         h_embs = h_embs.unsqueeze(-1).permute([0, 2, 1])
@@ -84,7 +78,6 @@ class RESCAL(BaseModule):
         tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
 
         scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
-
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
@@ -108,5 +101,4 @@ class RESCAL(BaseModule):
         neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-
         return loss

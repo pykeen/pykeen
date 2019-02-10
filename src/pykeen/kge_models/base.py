@@ -8,12 +8,14 @@ from typing import Dict, Optional, Union
 import torch
 from torch import nn
 
-from pykeen.constants import EMBEDDING_DIM, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE, \
-    LEARNING_RATE
+from pykeen.constants import (
+    EMBEDDING_DIM, GPU, LEARNING_RATE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE,
+)
 
 __all__ = [
     'BaseModule',
     'BaseConfig',
+    'slice_triples',
 ]
 
 
@@ -85,3 +87,11 @@ class BaseModule(nn.Module):
     def __init_subclass__(cls, **kwargs):
         if not getattr(cls, 'model_name', None):
             raise TypeError('missing model_name class attribute')
+
+
+def slice_triples(triples):
+    """Gets the heads, relations, and tails from a matrix of triples."""
+    h = triples[:, 0:1]
+    r = triples[:, 1:2]
+    t = triples[:, 2:3]
+    return h, r, t

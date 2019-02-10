@@ -2,6 +2,8 @@
 
 """Implementation of TransR."""
 
+from typing import Dict
+
 import numpy as np
 import torch
 import torch.autograd
@@ -47,7 +49,7 @@ class TransR(BaseModule):
     relation_embedding_norm_type = 2
     hyper_params = BaseModule.hyper_params + [RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM]
 
-    def __init__(self, config):
+    def __init__(self, config: Dict) -> None:
         super().__init__(config)
         config = TransDConfig.from_dict(config)
 
