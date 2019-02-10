@@ -70,15 +70,7 @@ class RESCAL(BaseModule):
         return scores
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
         tails = triples[:, 2:3]
@@ -92,13 +84,6 @@ class RESCAL(BaseModule):
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
-        """
-
-        :param batch_positives:
-        :param batch_negatives:
-        :return:
-        """
-
         pos_heads = batch_positives[:, 0:1]
         pos_relations = batch_positives[:, 1:2]
         pos_tails = batch_positives[:, 2:3]

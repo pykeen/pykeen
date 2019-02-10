@@ -65,7 +65,6 @@ class TransH(BaseModule):
         :param normal_vec_embs: Normal vectors with shape batch_size x 1 x embedding_dimension
         :return: Projected entities of shape batch_size x embedding_dim
         """
-
         scaling_factors = torch.sum(normal_vec_embs * entity_embs, dim=-1).unsqueeze(1)
         heads_projected_on_normal_vecs = scaling_factors * normal_vec_embs
         projections = (entity_embs - heads_projected_on_normal_vecs).view(-1, self.embedding_dim)
@@ -139,12 +138,6 @@ class TransH(BaseModule):
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
-        """
-
-        :param batch_positives:
-        :param batch_negatives:
-        :return:
-        """
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(

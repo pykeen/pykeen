@@ -102,13 +102,6 @@ class StructuredEmbedding(BaseModule):
         return projected_entity_embs
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
@@ -131,12 +124,6 @@ class StructuredEmbedding(BaseModule):
         return scores.detach().cpu().numpy()
 
     def forward(self, batch_positives, batch_negatives):
-        """
-
-        :param batch_positives:
-        :param batch_negatives:
-        :return:
-        """
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=self.l_p_norm_entities, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(

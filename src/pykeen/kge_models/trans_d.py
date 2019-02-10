@@ -110,13 +110,6 @@ class TransD(BaseModule):
         return projected_entity_embs
 
     def predict(self, triples):
-        """
-
-        :param head:
-        :param relation:
-        :param tail:
-        :return:
-        """
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
