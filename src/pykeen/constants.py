@@ -298,8 +298,3 @@ WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PRINT_MSG = 'Please provide (comma separated) th
 WEIGHTS_SOFT_CONSTRAINT_TRANS_H_PROMPT_MSG = '> Weight values for soft constraints: '
 WEIGHTS_SOFT_CONSTRAINT_TRANS_H_ERROR_MSG = 'An error occurred, the weight values for the soft constraint must be float values, \n' \
                                             ' and separated by a comma (e.g. 0.1,0.5). Please try again.'
-
-# ----------------------------------
-
-# ----------KEEN CLI mappings ----------
-EXECUTION_MODE_MAPPING = OrderedDict({1: TRAINING_MODE, 2: HPO_MODE})
