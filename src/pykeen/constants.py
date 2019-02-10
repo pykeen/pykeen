@@ -80,7 +80,7 @@ TEST_SET_RATIO = 'test_set_ratio'
 NORM_FOR_NORMALIZATION_OF_ENTITIES = 'normalization_of_entities'
 SCORING_FUNCTION_NORM = 'scoring_function'
 # TransH related
-WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weigthing_soft_constraint'
+WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weighting_soft_constraint'
 # ConvE related
 CONV_E_INPUT_DROPOUT = 'conv_e_input_dropout'
 CONV_E_OUTPUT_DROPOUT = 'conv_e_output_dropout'
