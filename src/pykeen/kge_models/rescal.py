@@ -10,7 +10,7 @@ import torch.autograd
 from torch import nn
 
 from pykeen.constants import RESCAL_NAME, SCORING_FUNCTION_NORM
-from pykeen.kge_models.base import BaseModule
+from pykeen.kge_models.base import BaseModule, slice_triples
 
 __all__ = ['RESCAL']
 
@@ -40,18 +40,34 @@ class RESCAL(BaseModule):
 
         self.scoring_fct_norm = config[SCORING_FUNCTION_NORM]
 
-    def _compute_loss(self, pos_scores, neg_scores):
+    def predict(self, triples):
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        scores = self._score_triples(triples)
+        return scores.detach().cpu().numpy()
+
+    def forward(self, positives, negatives):
+        positive_scores = self._score_triples(positives)
+        negative_scores = self._score_triples(negatives)
+        loss = self._compute_loss(positive_scores, negative_scores)
+        return loss
+
+    def _compute_loss(self, positive_scores, negative_scores):
         # TODO: Check
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
+        y = np.repeat([-1], repeats=positive_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
         # Scores for the psotive and negative triples
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
+        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
+        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
-        loss = self.criterion(pos_scores, neg_scores, y)
+        loss = self.criterion(positive_scores, negative_scores, y)
         return loss
+
+    def _score_triples(self, triples):
+        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
+        scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
+        return scores
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
         # Compute score and transform result to 1D tensor
@@ -67,38 +83,13 @@ class RESCAL(BaseModule):
 
         return scores
 
-    def predict(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        heads = triples[:, 0:1]
-        relations = triples[:, 1:2]
-        tails = triples[:, 2:3]
+    def _get_triple_embeddings(self, triples):
+        heads, relations, tails = slice_triples(triples)
+        return (
+            self._get_entity_embeddings(heads),
+            self._get_relation_embeddings(relations),
+            self._get_entity_embeddings(tails)
+        )
 
-        head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
-        relation_embs = self.relation_embeddings(relations).view(-1, self.embedding_dim)
-        tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
-
-        scores = self._compute_scores(h_embs=head_embs, r_embs=relation_embs, t_embs=tail_embs)
-        return scores.detach().cpu().numpy()
-
-    def forward(self, batch_positives, batch_negatives):
-        pos_heads = batch_positives[:, 0:1]
-        pos_relations = batch_positives[:, 1:2]
-        pos_tails = batch_positives[:, 2:3]
-
-        neg_heads = batch_negatives[:, 0:1]
-        neg_relations = batch_negatives[:, 1:2]
-        neg_tails = batch_negatives[:, 2:3]
-
-        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
-        pos_r_embs = self.relation_embeddings(pos_relations).view(-1, self.embedding_dim)
-        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
-
-        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
-        neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.embedding_dim)
-        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
-
-        pos_scores = self._compute_scores(h_embs=pos_h_embs, r_embs=pos_r_embs, t_embs=pos_t_embs)
-        neg_scores = self._compute_scores(h_embs=neg_h_embs, r_embs=neg_r_embs, t_embs=neg_t_embs)
-
-        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-        return loss
+    def _get_relation_embeddings(self, relations):
+        return self.relation_embeddings(relations).view(-1, self.embedding_dim)
