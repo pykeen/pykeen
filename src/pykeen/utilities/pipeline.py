@@ -24,13 +24,8 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class PipelineResult:  # TODO replace in Pipeline.run()
-    """Results from the pipeline."""
-
-
 class Pipeline(object):
-    """"""
+    """Encapsulates the KGE model training pipeline."""
 
     def __init__(self, config: Dict):
         self.config: Dict = config

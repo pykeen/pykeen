@@ -14,4 +14,4 @@ Clone the repository from `GitHub <https://github.com/SmartDataAnalytics/pykeen.
 """
 
 from .constants import get_version  # noqa: F401
-from .run import run  # noqa: F401
+from .run import Results, run  # noqa: F401

@@ -29,7 +29,6 @@ a list. The **maximum_number_of_hpo_iters** defines how many HPO iterations shou
         preferred_device            = 'gpu',
     )
 
-
 Run Your Experiment
 ~~~~~~~~~~~~~~~~~~~
 The experiment will be started with the *run* function, and in the output directory the exported results will be saved.
@@ -49,21 +48,20 @@ Show all keys contained in ``results``:
 
     print('Keys:', *sorted(results.results.keys()), sep='\n  ')
 
-
 Access Trained KGE Model
 ~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
-    results.results['trained_model']
+    results.trained_model
 
 Access the Losses
 ~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
-    results.results['losses']
+    results.losses
 
 Access Evaluation Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
-    results.results['eval_summary']
+    results.evaluation_summary

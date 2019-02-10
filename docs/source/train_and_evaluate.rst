@@ -23,7 +23,6 @@ To programmatically train (and evaluate) a KGE model, a python dictionary must b
         preferred_device            = 'gpu',
     )
 
-
 Run your experiment
 ~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
@@ -41,24 +40,21 @@ Show all keys contained in ``results``:
 
     print('Keys:', *sorted(results.results.keys()), sep='\n  ')
 
-
 Access trained KGE model
 ~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
-    results.results['trained_model']
+    results.trained_model
 
 Access the losses
 ~~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
-    results.results['losses']
+    results.losses
 
 Access evaluation results
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
-    results.results['eval_summary']
+    results.evaluation_summary
 

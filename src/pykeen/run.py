@@ -17,19 +17,48 @@ from pykeen.constants import (
 )
 from pykeen.utilities.pipeline import Pipeline
 
+__all__ = [
+    'Results',
+    'run',
+]
+
 
 @dataclass
 class Results:
     """Results from PyKEEN."""
 
+    #: The configuration used to train the KGE model
     config: Mapping
+
+    #: The pipeline used to train the KGE model
     pipeline: Pipeline
+
+    #: The results of training the KGE model
     results: Mapping
+
+    @property
+    def trained_model(self) -> torch.nn.Module:
+        """The pre-trained KGE model."""
+        return self.results['trained_model']
+
+    @property
+    def losses(self):
+        """The losses calculated during training."""
+        return self.results['losses']
+
+    @property
+    def evaluation_summary(self):
+        """The evaluation summary."""
+        return self.results['eval_summary']
 
 
 def run(config: Dict,
         output_directory: Optional[str] = None) -> Results:
-    """Run PyKEEN using a given configuration."""
+    """Train a KGE model.
+
+    :param config: The configuration specifying the KGE model and its hyperparameters
+    :param output_directory: The directory to store the results
+    """
     if output_directory is None:
         output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d_%H:%M:%S"))
     os.makedirs(output_directory, exist_ok=True)
