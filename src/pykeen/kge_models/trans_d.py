@@ -40,6 +40,10 @@ class TransD(BaseModule):
 
     .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
                 <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
+
+    .. seealso::
+
+       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/TransD.py
     """
 
     model_name = TRANS_D_NAME

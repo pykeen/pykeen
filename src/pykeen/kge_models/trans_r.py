@@ -30,6 +30,11 @@ class TransR(BaseModule):
 
     .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion
                  <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
+
+    .. seealso::
+
+       - Implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/TransR.py
+       - PyTorch implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py
     """
 
     model_name = TRANS_R_NAME

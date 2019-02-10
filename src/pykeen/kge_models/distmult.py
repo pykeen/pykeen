@@ -20,6 +20,10 @@ class DistMult(BaseModule):
 
     .. [yang2014] Yang, B., Yih, W., He, X., Gao, J., & Deng, L. (2014). `Embedding Entities and Relations for Learning
                   and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
+
+    .. seealso::
+
+       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py
     """
 
     model_name = DISTMULT_NAME

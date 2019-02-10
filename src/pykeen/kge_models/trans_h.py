@@ -39,6 +39,10 @@ class TransH(BaseModule):
 
     .. [wang2014] Wang, Z., *et al.* (2014). `Knowledge Graph Embedding by Translating on Hyperplanes
                   <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
+
+    .. seealso::
+
+       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/TransH.py
     """
 
     model_name = TRANS_H_NAME

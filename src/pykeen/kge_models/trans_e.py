@@ -46,7 +46,9 @@ class TransE(BaseModule):
                      <http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf>`_
                      . NIPS.
 
-    .. seealso:: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py
+    .. seealso::
+
+       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py
     """
 
     model_name = TRANS_E_NAME
