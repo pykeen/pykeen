@@ -56,7 +56,7 @@ class TransH(BaseModule):
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.weightning_soft_constraint = config.soft_weight_constraint
+        self.weighting_soft_constraint = config.soft_weight_constraint
 
         self.epsilon = torch.nn.Parameter(torch.tensor(0.005, requires_grad=True))
         self.scoring_fct_norm = config.scoring_function_norm
@@ -106,7 +106,7 @@ class TransH(BaseModule):
         orthogonalty_constraint = torch.abs(orthogonalty_constraint)
         orthogonalty_constraint = torch.sum(orthogonalty_constraint)
 
-        soft_constraints_loss = self.weightning_soft_constraint * (entity_constraint + orthogonalty_constraint)
+        soft_constraints_loss = self.weighting_soft_constraint * (entity_constraint + orthogonalty_constraint)
 
         return soft_constraints_loss
 

@@ -127,7 +127,7 @@ class TestModelInstantiation(unittest.TestCase):
         self.assertEqual(trans_h.num_entities, 5)
         self.assertEqual(trans_h.num_relations, 5)
         self.assertEqual(trans_h.embedding_dim, 5)
-        self.assertEqual(trans_h.weightning_soft_constraint, 0.05)
+        self.assertEqual(trans_h.weighting_soft_constraint, 0.05)
         self.assertEqual(trans_h.scoring_fct_norm, 1)
         self.assertEqual(trans_h.margin_loss, 4)
 
