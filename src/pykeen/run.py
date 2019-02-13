@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Mapping, Optional
 
+import numpy as np
 import torch
 
 from pykeen.constants import (
@@ -50,6 +51,15 @@ class Results:
     def evaluation_summary(self):
         """The evaluation summary."""
         return self.results['eval_summary']
+
+    def plot_losses(self) -> None:
+        """Plot the losses using Matplotlib."""
+        import matplotlib.pyplot as plt
+        epochs = np.arange(len(self.losses))
+        plt.title('Loss Per Epoch')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.plot(epochs, self.losses)
 
 
 def run(config: Dict,
