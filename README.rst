@@ -11,8 +11,8 @@ Citation
 --------
 If you find PyKEEN useful in your work, please consider citing:
 
-.. [1] Ali, M., *et al.* (2018). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
-       <https://doi.org/10.1101/475202>`_. bioRxiv 475202.
+.. [1] Ali, M., *et al.* (2019). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
+       <https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btz117/5320556>`_. *Bioinformatics* , btz117.
 
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
