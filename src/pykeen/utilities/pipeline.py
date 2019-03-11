@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 from typing import Iterable, Mapping, Tuple, Union
 
+import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 from torch.nn import Module
@@ -78,6 +79,9 @@ class Pipeline(object):
             self.config[NUM_ENTITIES] = len(self.entity_to_id)
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
             self.config[PREFERRED_DEVICE] = CPU if self.device_name == CPU else GPU
+            if self.config[SEED] is not None:
+                np.random.seed(self.config[SEED])
+                torch.manual_seed(self.config[SEED])
             kge_model: Module = get_kge_model(config=self.config)
 
             batch_size = self.config[BATCH_SIZE]
