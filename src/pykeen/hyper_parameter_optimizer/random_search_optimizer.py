@@ -55,7 +55,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
                              k_evaluation: int = 10) -> OptimizeResult:
         """"""
         if seed is not None:
-            torch.manual_seed(self.config[SEED])
+            torch.manual_seed(config[SEED])
 
 
         trained_kge_models: List[Module] = []
