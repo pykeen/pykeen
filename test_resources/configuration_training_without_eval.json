@@ -12,5 +12,6 @@
   "test_set_path": "../test_resources/example_test.tsv",
   "filter_negative_triples": true,
   "preferred_device": "cpu",
-  "output_direc": "../test_out"
+  "output_direc": "../test_out",
+  "random_seed": 2
 }
