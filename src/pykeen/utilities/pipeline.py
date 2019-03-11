@@ -80,7 +80,7 @@ class Pipeline(object):
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
             self.config[PREFERRED_DEVICE] = CPU if self.device_name == CPU else GPU
             if self.seed is not None:
-                torch.manual_seed(self.config[SEED])
+                torch.manual_seed(self.seed)
 
             kge_model: Module = get_kge_model(config=self.config)
 
