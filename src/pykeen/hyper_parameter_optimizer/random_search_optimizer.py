@@ -3,6 +3,7 @@
 """A hyper-parameter optimizer that uses random search."""
 
 import random
+import torch
 from typing import Any, List, Optional, Tuple
 
 from torch.nn import Module
@@ -54,8 +55,8 @@ class RandomSearchHPO(AbstractHPOptimizer):
                              k_evaluation: int = 10) -> OptimizeResult:
         """"""
         if seed is not None:
-            # FIXME np.random is not used
-            np.random.seed(seed=seed)
+            torch.manual_seed(self.config[SEED])
+
 
         trained_kge_models: List[Module] = []
         epoch_losses: List[List[float]] = []
