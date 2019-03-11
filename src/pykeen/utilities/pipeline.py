@@ -30,7 +30,7 @@ class Pipeline(object):
 
     def __init__(self, config: Dict):
         self.config: Dict = config
-        self.seed: int = config[SEED]
+        self.seed: int = config[SEED] if SEED in config else 2
         self.entity_to_id: Dict[int: str] = None
         self.rel_to_id: Dict[int: str] = None
         self.device_name = (
@@ -79,9 +79,9 @@ class Pipeline(object):
             self.config[NUM_ENTITIES] = len(self.entity_to_id)
             self.config[NUM_RELATIONS] = len(self.rel_to_id)
             self.config[PREFERRED_DEVICE] = CPU if self.device_name == CPU else GPU
-            if self.config[SEED] is not None:
-                np.random.seed(self.config[SEED])
+            if self.seed is not None:
                 torch.manual_seed(self.config[SEED])
+
             kge_model: Module = get_kge_model(config=self.config)
 
             batch_size = self.config[BATCH_SIZE]
