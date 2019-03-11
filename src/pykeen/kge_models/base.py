@@ -88,6 +88,9 @@ class BaseModule(nn.Module):
         if not getattr(cls, 'model_name', None):
             raise TypeError('missing model_name class attribute')
 
+    def _get_entity_embeddings(self, entities):
+        return self.entity_embeddings(entities).view(-1, self.embedding_dim)
+
 
 def slice_triples(triples):
     """Gets the heads, relations, and tails from a matrix of triples."""

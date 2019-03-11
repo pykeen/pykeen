@@ -83,14 +83,6 @@ class TransR(BaseModule):
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
-        """
-
-        :param h_embs:
-        :param r_embs:
-        :param t_embs:
-        :return:
-        """
-
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
@@ -98,12 +90,6 @@ class TransR(BaseModule):
         return distances
 
     def _compute_loss(self, pos_scores, neg_scores):
-        """
-
-        :param pos_scores:
-        :param neg_scores:
-        :return:
-        """
         # y == -1 indicates that second input to criterion should get a larger loss
         # y = torch.Tensor([-1]).cuda()
         # NOTE: y = 1 is important
@@ -120,12 +106,6 @@ class TransR(BaseModule):
         return loss
 
     def _project_entities(self, entity_embs, projection_matrix_embs):
-        """
-
-        :param entity_embs:
-        :param projection_matrix_embs:
-        :return:
-        """
         projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])
         projected_entity_embs = torch.clamp(projected_entity_embs, max=1.)
         return projected_entity_embs
@@ -181,5 +161,4 @@ class TransR(BaseModule):
         neg_scores = self._compute_scores(h_embs=proj_neg_heads_embs, r_embs=neg_r_embs, t_embs=proj_neg_tails_embs)
 
         loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-
         return loss

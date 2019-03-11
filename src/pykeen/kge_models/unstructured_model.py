@@ -48,6 +48,18 @@ class UnstructuredModel(BaseModule):
             b=entity_embeddings_init_bound,
         )
 
+    def predict(self, triples):
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        scores = self._score_triples(triples)
+        return scores.detach().cpu().numpy()
+
+    def forward(self, batch_positives, batch_negatives):
+        # Normalize embeddings of entities
+        pos_scores = self._score_triples(batch_positives)
+        neg_scores = self._score_triples(batch_negatives)
+        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
+        return loss
+
     def _compute_loss(self, pos_scores, neg_scores):
         y = np.repeat([-1], repeats=pos_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
@@ -58,46 +70,33 @@ class UnstructuredModel(BaseModule):
         # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
 
         loss = self.criterion(pos_scores, neg_scores, y)
-
         return loss
 
-    def _compute_scores(self, h_embs, t_embs):
+    def _score_triples(self, triples):
+        head_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
+        scores = self._compute_scores(head_embeddings=head_embeddings, tail_embeddings=tail_embeddings)
+        return scores
+
+    def _compute_scores(self, head_embeddings, tail_embeddings):
         # Add the vector element wise
-        sum_res = h_embs - t_embs
+        sum_res = head_embeddings - tail_embeddings
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         distances = distances ** 2
         return distances
 
-    def predict(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        heads = triples[:, 0:1]
-        relations = triples[:, 1:2]
-        tails = triples[:, 2:3]
+    def _get_triple_embeddings(self, triples):
+        heads, tails = self.slice_triples(triples)
+        return (
+            self._get_entity_embeddings(heads),
+            self._get_entity_embeddings(tails),
+        )
 
-        head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
-        tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
+    def _get_entity_embeddings(self, entities):
+        return self.entity_embeddings(entities).view(-1, self.embedding_dim)
 
-        scores = self._compute_scores(h_embs=head_embs, t_embs=tail_embs)
-
-        return scores.detach().cpu().numpy()
-
-    def forward(self, batch_positives, batch_negatives):
-        # Normalize embeddings of entities
-        pos_heads = batch_positives[:, 0:1]
-        pos_tails = batch_positives[:, 2:3]
-
-        neg_heads = batch_negatives[:, 0:1]
-        neg_tails = batch_negatives[:, 2:3]
-
-        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
-        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
-
-        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
-        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
-
-        pos_scores = self._compute_scores(h_embs=pos_h_embs, t_embs=pos_t_embs)
-        neg_scores = self._compute_scores(h_embs=neg_h_embs, t_embs=neg_t_embs)
-
-        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-
-        return loss
+    @staticmethod
+    def slice_triples(triples):
+        return (
+            triples[:, 0:1],
+            triples[:, 2:3],
+        )

@@ -80,7 +80,6 @@ class TransH(BaseModule):
         sum_res = h_embs + r_embs - t_embs
         norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         scores = torch.mul(norms, norms)
-
         return scores
 
     def compute_soft_constraint_loss(self):

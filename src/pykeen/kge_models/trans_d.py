@@ -11,7 +11,7 @@ import torch.autograd
 from torch import nn
 
 from pykeen.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_D_NAME
-from pykeen.kge_models.base import BaseModule
+from pykeen.kge_models.base import BaseModule, slice_triples
 
 __all__ = [
     'TransD',
@@ -63,96 +63,72 @@ class TransD(BaseModule):
         self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
 
+        # FIXME @mehdi what about initialization?
+
         self.scoring_fct_norm = config.scoring_function_norm
+
+    def predict(self, triples):
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        scores = self._score_triples(triples)
+        return scores.detach().cpu().numpy()
+
+    def _compute_loss(self, positive_scores, negative_scores):
+        # y == -1 indicates that second input to criterion should get a larger loss
+        # y = torch.Tensor([-1]).cuda()
+        # NOTE: y = 1 is important
+        # y = torch.tensor([-1], dtype=torch.float, device=self.device)
+        y = np.repeat([-1], repeats=positive_scores.shape[0])
+        y = torch.tensor(y, dtype=torch.float, device=self.device)
+
+        # Scores for the psotive and negative triples
+        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
+        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
+
+        loss = self.criterion(positive_scores, negative_scores, y)
+        return loss
+
+    def forward(self, positives, negatives):
+        positive_scores = self._score_triples(positives)
+        negative_scores = self._score_triples(negatives)
+        loss = self._compute_loss(positive_scores, negative_scores)
+        return loss
+
+    def _score_triples(self, triples):
+        heads, relations, tails = slice_triples(triples)
+
+        h_embs = self._get_entity_embeddings(heads)
+        r_embs = self._get_relation_embeddings(relations)
+        t_embs = self._get_entity_embeddings(tails)
+
+        h_proj_vec_embs = self._get_entity_projections(heads)
+        r_projs_embs = self._get_relation_projections(relations)
+        t_proj_vec_embs = self._get_entity_projections(tails)
+
+        proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
+        proj_tails = self._project_entities(t_embs, t_proj_vec_embs, r_projs_embs)
+
+        scores = self._compute_scores(h_embs=proj_heads, r_embs=r_embs, t_embs=proj_tails)
+        return scores
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         distances = torch.mul(distances, distances)
-
         return distances
 
-    def _compute_loss(self, pos_scores, neg_scores):
-        # y == -1 indicates that second input to criterion should get a larger loss
-        # y = torch.Tensor([-1]).cuda()
-        # NOTE: y = 1 is important
-        # y = torch.tensor([-1], dtype=torch.float, device=self.device)
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        # Scores for the psotive and negative triples
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(pos_scores, neg_scores, y)
-        return loss
-
-    def _project_entities(self, entity_embs, entity_proj_vecs, relation_projs):
-        entity_embs = entity_embs
-        relation_projs = relation_projs.unsqueeze(-1)
+    def _project_entities(self, entity_embs, entity_proj_vecs, relation_projections):
+        relation_projections = relation_projections.unsqueeze(-1)
         entity_proj_vecs = entity_proj_vecs.unsqueeze(-1).permute([0, 2, 1])
-
-        transfer_matrices = torch.matmul(relation_projs, entity_proj_vecs)
-
+        transfer_matrices = torch.matmul(relation_projections, entity_proj_vecs)
         projected_entity_embs = torch.einsum('nmk,nk->nm', [transfer_matrices, entity_embs])
         return projected_entity_embs
 
-    def predict(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        heads = triples[:, 0:1]
-        relations = triples[:, 1:2]
-        tails = triples[:, 2:3]
+    def _get_entity_projections(self, entities):
+        return self.entity_projections(entities).view(-1, self.embedding_dim)
 
-        h_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
-        r_embs = self.relation_embeddings(relations).view(-1, self.relation_embedding_dim)
-        t_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
+    def _get_relation_embeddings(self, relations):
+        return self.relation_embeddings(relations).view(-1, self.embedding_dim)
 
-        h_proj_vec_embs = self.entity_projections(heads).view(-1, self.embedding_dim)
-        r_projs_embs = self.relation_projections(relations).view(-1, self.relation_embedding_dim)
-        t_proj_vec_embs = self.entity_projections(tails).view(-1, self.embedding_dim)
-
-        proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
-        proj_tails = self._project_entities(t_embs, t_proj_vec_embs, r_projs_embs)
-
-        scores = self._compute_scores(h_embs=proj_heads, r_embs=r_embs, t_embs=proj_tails)
-
-        return scores.detach().cpu().numpy()
-
-    def forward(self, batch_positives, batch_negatives):
-        pos_heads = batch_positives[:, 0:1]
-        pos_relations = batch_positives[:, 1:2]
-        pos_tails = batch_positives[:, 2:3]
-
-        neg_heads = batch_negatives[:, 0:1]
-        neg_relations = batch_negatives[:, 1:2]
-        neg_tails = batch_negatives[:, 2:3]
-
-        pos_h_embs = self.entity_embeddings(pos_heads).view(-1, self.embedding_dim)
-        pos_r_embs = self.relation_embeddings(pos_relations).view(-1, self.relation_embedding_dim)
-        pos_t_embs = self.entity_embeddings(pos_tails).view(-1, self.embedding_dim)
-
-        pos_h_proj_vec_embs = self.entity_projections(pos_heads).view(-1, self.embedding_dim)
-        pos_r_projs_embs = self.relation_projections(pos_relations).view(-1, self.relation_embedding_dim)
-        pos_t_proj_vec_embs = self.entity_projections(pos_tails).view(-1, self.embedding_dim)
-
-        neg_h_embs = self.entity_embeddings(neg_heads).view(-1, self.embedding_dim)
-        neg_r_embs = self.relation_embeddings(neg_relations).view(-1, self.relation_embedding_dim)
-        neg_t_embs = self.entity_embeddings(neg_tails).view(-1, self.embedding_dim)
-
-        neg_h_proj_vec_embs = self.entity_projections(neg_heads).view(-1, self.embedding_dim)
-        neg_r_projs_embs = self.relation_projections(neg_relations).view(-1, self.relation_embedding_dim)
-        neg_t_proj_vec_embs = self.entity_projections(neg_tails).view(-1, self.embedding_dim)
-
-        # Project entities
-        proj_pos_heads = self._project_entities(pos_h_embs, pos_h_proj_vec_embs, pos_r_projs_embs)
-        proj_pos_tails = self._project_entities(pos_t_embs, pos_t_proj_vec_embs, pos_r_projs_embs)
-
-        proj_neg_heads = self._project_entities(neg_h_embs, neg_h_proj_vec_embs, neg_r_projs_embs)
-        proj_neg_tails = self._project_entities(neg_t_embs, neg_t_proj_vec_embs, neg_r_projs_embs)
-
-        pos_scores = self._compute_scores(h_embs=proj_pos_heads, r_embs=pos_r_embs, t_embs=proj_pos_tails)
-        neg_scores = self._compute_scores(h_embs=proj_neg_heads, r_embs=neg_r_embs, t_embs=proj_neg_tails)
-
-        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-        return loss
+    def _get_relation_projections(self, relations):
+        return self.relation_projections(relations).view(-1, self.relation_embedding_dim)
