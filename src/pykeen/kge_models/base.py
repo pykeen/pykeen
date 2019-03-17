@@ -84,7 +84,7 @@ class BaseModule(nn.Module):
             max_norm=self.entity_embedding_max_norm,
         )
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs):  # noqa: D105
         if not getattr(cls, 'model_name', None):
             raise TypeError('missing model_name class attribute')
 
@@ -93,7 +93,7 @@ class BaseModule(nn.Module):
 
 
 def slice_triples(triples):
-    """Gets the heads, relations, and tails from a matrix of triples."""
+    """Get the heads, relations, and tails from a matrix of triples."""
     h = triples[:, 0:1]
     r = triples[:, 1:2]
     t = triples[:, 2:3]

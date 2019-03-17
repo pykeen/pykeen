@@ -5,7 +5,7 @@
 import logging
 import timeit
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -15,19 +15,16 @@ log = logging.getLogger(__name__)
 DEFAULT_HITS_AT_K = [1, 3, 5, 10]
 
 
-def _hash_triples(triples):
-    """
-
-    :param triples:
-    :return:
-    """
+def _hash_triples(triples: Iterable[Hashable]) -> int:
+    """Hash a list of triples."""
     return hash(tuple(triples))
 
 
 def update_hits_at_k(
         hits_at_k_values: Dict[int, List[float]],
         rank_of_positive_subject_based: int,
-        rank_of_positive_object_based: int) -> None:
+        rank_of_positive_object_based: int
+) -> None:
     """Update the Hits@K dictionary for two values."""
     for k, values in hits_at_k_values.items():
         if rank_of_positive_subject_based < k:
@@ -42,13 +39,6 @@ def update_hits_at_k(
 
 
 def _create_corrupted_triples(triple, all_entities, device):
-    """
-
-    :param triple:
-    :param all_entities:
-    :param device:
-    :return:
-    """
     candidate_entities_subject_based = np.delete(arr=all_entities, obj=triple[0:1])
     candidate_entities_subject_based = np.reshape(candidate_entities_subject_based, newshape=(-1, 1))
     candidate_entities_object_based = np.delete(arr=all_entities, obj=triple[2:3])
@@ -72,14 +62,11 @@ def _create_corrupted_triples(triple, all_entities, device):
     return corrupted_subject_based, corrupted_object_based
 
 
-def _filter_corrupted_triples(corrupted_subject_based, corrupted_object_based, all_pos_triples_hashed):
-    """
-
-    :param corrupted_subject_based:
-    :param corrupted_object_based:
-    :param all_pos_triples_hashed:
-    :return:
-    """
+def _filter_corrupted_triples(
+        corrupted_subject_based,
+        corrupted_object_based,
+        all_pos_triples_hashed,
+):
     # TODO: Check
     corrupted_subject_based_hashed = np.apply_along_axis(_hash_triples, 1, corrupted_subject_based)
     mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
@@ -104,7 +91,8 @@ def _compute_filtered_rank(
         corrupted_subject_based,
         corrupted_object_based,
         device,
-        all_pos_triples_hashed) -> Tuple[int, int]:
+        all_pos_triples_hashed,
+) -> Tuple[int, int]:
     """
 
     :param kg_embedding_model:
@@ -135,7 +123,8 @@ def _compute_rank(
         corrupted_subject_based,
         corrupted_object_based,
         device,
-        all_pos_triples_hashed=None) -> Tuple[int, int]:
+        all_pos_triples_hashed=None,
+) -> Tuple[int, int]:
     """
 
     :param kg_embedding_model:
@@ -179,20 +168,23 @@ def _compute_rank(
 
 
 @dataclass
-class MetricResult:
+class MetricResults:
     """Results from computing metrics."""
+
     mean_rank: float
     hits_at_k: Dict[int, float]
 
 
-def compute_metric_results(all_entities,
-                           kg_embedding_model,
-                           mapped_train_triples,
-                           mapped_test_triples,
-                           device,
-                           filter_neg_triples=False,
-                           ks: Optional[List[int]] = None) -> MetricResult:
-    """
+def compute_metric_results(
+        all_entities,
+        kg_embedding_model,
+        mapped_train_triples,
+        mapped_test_triples,
+        device,
+        filter_neg_triples=False,
+        ks: Optional[List[int]] = None
+) -> MetricResults:
+    """Compute the metric results.
 
     :param all_entities:
     :param kg_embedding_model:
@@ -258,4 +250,7 @@ def compute_metric_results(all_entities,
     stop = timeit.default_timer()
     log.info("Evaluation took %.2fs seconds", stop - start)
 
-    return mean_rank, hits_at_k
+    return MetricResults(
+        mean_rank=mean_rank,
+        hits_at_k=hits_at_k,
+    )

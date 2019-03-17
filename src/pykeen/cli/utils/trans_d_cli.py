@@ -2,8 +2,6 @@
 
 """Implementation the command line interface needed for TransD."""
 
-from collections import OrderedDict
-
 from pykeen.cli.utils.cli_print_msg_helper import (
     print_batch_size_message, print_entities_embedding_dimension_message, print_hpo_batch_sizes_message,
     print_hpo_embedding_dimensions_message, print_hpo_epochs_message, print_hpo_learning_rates_message,
@@ -41,7 +39,6 @@ def configure_trans_d_training_pipeline(model_name: str):
     """Configure Trans D from pipeline.
 
     :param model_name: name of the model
-    :rtype: OrderedDict
     :return: configuration dictionary
     """
     config = get_config_dict(model_name)

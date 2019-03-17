@@ -53,7 +53,7 @@ def make_predictions(
         merged = merged[merged['_merge'] == 'left_only'].values
         all_triples = np.array(merged[:, :-1], dtype=np.str)
 
-    mapped_triples, _, _ = create_mapped_triples(all_triples, entity_to_id=entity_to_id, rel_to_id=rel_to_id)
+    mapped_triples, _, _ = create_mapped_triples(all_triples, entity_label_to_id=entity_to_id, relation_label_to_id=rel_to_id)
 
     mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=device)
 

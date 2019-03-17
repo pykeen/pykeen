@@ -9,13 +9,8 @@ ignore =
     S311
     # Related to security for pickles
     S403
-    # Related to import *
-    F405
+    # Line length
 	E501
-    # Import statements are in the wrong order
-	I100
-    # Imported names are in the wrong order
-	I101
     # Don't complain about asserts
     S101
     # Documentation in public method
@@ -25,6 +20,8 @@ ignore =
     D101
     # Documentation in init
     D107
+    # line break before binary operator
+    W503
 exclude =
     .tox,
     .git,

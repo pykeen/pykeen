@@ -31,11 +31,10 @@ def print_intro() -> None:
 
 def print_existing_config_message():
     click.secho(
-        "Here you are asked whether you have already an exisiing configuration that was created for a previous experiment.\n"
-        "The configuration is saved as a JSON file (.json)\n"
+        "Here you are asked whether you have already an existing configuration that was created for a previous "
+        "experiment.\nThe configuration is saved as a JSON file (.json)\n"
+        "Example of a valid path: /Users/david/data/configuration.json\n"
     )
-    click.secho("Example of a valid path: /Users/david/data/configuration.json")
-    click.secho("")
 
 
 def print_training_set_message():
@@ -112,7 +111,9 @@ def print_batch_size_message():
 def print_number_epochs_message():
     click.secho("Current Step: Please specify the number of epochs", fg='blue', bold=True)
     click.echo(
-        "The number of epochs defines how often to iterte over the whole training set during the training the model.\n")
+        "The number of epochs defines how often to iterate over the whole training set during the training the "
+        "model.\n"
+    )
 
 
 def print_ask_for_evlauation_message():
@@ -152,27 +153,34 @@ def print_trans_h_soft_constraints_weight_message():
 
 def print_entities_embedding_dimension_message():
     click.secho(
-        "Current Step: Please specify the embedding dimension to use for learning the entities of the knowedge graph.\n",
+        "Current Step: Please specify the embedding dimension to use for "
+        "learning the entities of the knowledge graph.\n",
         fg='blue'
     )
 
 
 def print_relations_embedding_dimension_message():
     click.secho(
-        "Current Step: Please specify the embedding dimension to use for learning the relations of the knowedge graph.\n",
+        "Current Step: Please specify the embedding dimension to use for "
+        "learning the relations of the knowedge graph.\n",
         fg='blue'
     )
 
 
 def print_conv_e_width_height_message():
     click.secho(
-        "Current Step: Please specify the embedding width and height based on your specified embedding dimension.",
+        "Current Step: Please specify the embedding width and height based "
+        "on your specified embedding dimension.",
         fg='blue'
     )
-    click.echo("In ConvE, the input of the CNN is the embedding of the head and of the relation.\n"
-               "Those are transformed into an \"image\" representation. The constraint is that height*width must equal\n"
-               "to the embedding dimension. If the embedding dimension is for example 100, then valid values for\n"
-               "height and width are e.g. 5 and 20 since 5*20 = 100.\n")
+    click.echo(
+        "In ConvE, the input of the CNN is the embedding of the head and of "
+        "the relation.\nThose are transformed into an \"image\" "
+        "representation. The constraint is that height*width must equal\n"
+        "to the embedding dimension. If the embedding dimension is for example "
+        "100, then valid values for\nheight and width are e.g. 5 and 20 since "
+        "5*20 = 100.\n"
+    )
 
 
 def print_conv_input_channels_message():

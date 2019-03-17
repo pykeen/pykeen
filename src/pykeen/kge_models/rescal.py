@@ -71,11 +71,11 @@ class RESCAL(BaseModule):
 
     def _compute_scores(self, h_embs, r_embs, t_embs):
         # Compute score and transform result to 1D tensor
-        M = r_embs.view(-1, self.embedding_dim, self.embedding_dim)
+        m = r_embs.view(-1, self.embedding_dim, self.embedding_dim)
         h_embs = h_embs.unsqueeze(-1).permute([0, 2, 1])
-        h_M_embs = torch.matmul(h_embs, M)
+        h_m_embs = torch.matmul(h_embs, m)
         t_embs = t_embs.unsqueeze(-1)
-        scores = -torch.matmul(h_M_embs, t_embs).view(-1)
+        scores = -torch.matmul(h_m_embs, t_embs).view(-1)
 
         # scores = torch.bmm(torch.transpose(h_emb, 1, 2), M)  # h^T M
         # scores = torch.bmm(scores, t_emb)  # (h^T M) h

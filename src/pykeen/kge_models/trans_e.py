@@ -114,7 +114,7 @@ class TransE(BaseModule):
         return scores
 
     def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings):
-        """
+        """Compute the scores based on the head, relation, and tail embeddings.
 
         :param head_embeddings: embeddings of head entities of dimension batchsize x embedding_dim
         :param relation_embeddings: emebddings of relation embeddings of dimension batchsize x embedding_dim

@@ -49,11 +49,10 @@ __all__ = [
 ]
 
 
-def configure_conv_e_training_pipeline(model_name):
+def configure_conv_e_training_pipeline(model_name: str):
     """Configure ConvE.
 
     :param str model_name: name of the model
-    :rtype: OrderedDict
     :return: configuration dictionary
     """
     config = get_config_dict(model_name)
@@ -64,7 +63,7 @@ def configure_conv_e_training_pipeline(model_name):
     embedding_dimension = select_integer_value(
         print_msg=EMBEDDING_DIMENSION_PRINT_MSG,
         prompt_msg=EMBEDDING_DIMENSION_PROMPT_MSG,
-        error_msg=EMBEDDING_DIMENSION_ERROR_MSG
+        error_msg=EMBEDDING_DIMENSION_ERROR_MSG,
     )
     config[EMBEDDING_DIM] = embedding_dimension
     print_section_divider()
@@ -78,59 +77,73 @@ def configure_conv_e_training_pipeline(model_name):
 
     # Step 3: Query number of input channels
     print_conv_input_channels_message()
-    num_input_channels = select_integer_value(CONV_E_INPUT_CHANNEL_PRINT_MSG,
-                                              CONV_E_INPUT_CHANNEL_PROMPT_MSG,
-                                              CONV_E_INPUT_CHANNEL_ERROR_MSG)
+    num_input_channels = select_integer_value(
+        CONV_E_INPUT_CHANNEL_PRINT_MSG,
+        CONV_E_INPUT_CHANNEL_PROMPT_MSG,
+        CONV_E_INPUT_CHANNEL_ERROR_MSG,
+    )
     config[CONV_E_INPUT_CHANNELS] = num_input_channels
     print_section_divider()
 
     # Step 4: Query number of output channels
     print_conv_e_output_channels_message()
-    num_output_channels = select_integer_value(CONV_E_OUT_CHANNEL_PRINT_MSG,
-                                               CONV_E_OUT_CHANNEL_PROMPT_MSG,
-                                               CONV_E_OUT_CHANNEL_ERROR_MSG)
+    num_output_channels = select_integer_value(
+        CONV_E_OUT_CHANNEL_PRINT_MSG,
+        CONV_E_OUT_CHANNEL_PROMPT_MSG,
+        CONV_E_OUT_CHANNEL_ERROR_MSG,
+    )
     config[CONV_E_OUTPUT_CHANNELS] = num_output_channels
     print_section_divider()
 
     # Step 4: Query kernel height
     print_conv_kernel_height_message()
-    kernel_height = query_kernel_param(depending_param=height,
-                                       print_msg=CONV_E_KERNEL_HEIGHT_PRINT_MSG,
-                                       prompt_msg=CONV_E_KERNEL_HEIGHT_PROMPT_MSG,
-                                       error_msg=CONV_E_KERNEL_HEIGHT_ERROR_MSG)
+    kernel_height = query_kernel_param(
+        depending_param=height,
+        print_msg=CONV_E_KERNEL_HEIGHT_PRINT_MSG,
+        prompt_msg=CONV_E_KERNEL_HEIGHT_PROMPT_MSG,
+        error_msg=CONV_E_KERNEL_HEIGHT_ERROR_MSG,
+    )
     config[CONV_E_KERNEL_HEIGHT] = kernel_height
     print_section_divider()
 
     # Step 5: Query kernel width
     print_conv_kernel_width_message()
-    kernel_width = query_kernel_param(depending_param=width,
-                                      print_msg=CONV_E_KERNEL_WIDTH_PRINT_MSG,
-                                      prompt_msg=CONV_E_KERNEL_WIDTH_PROMPT_MSG,
-                                      error_msg=CONV_E_KERNEL_WIDTH_ERROR_MSG)
+    kernel_width = query_kernel_param(
+        depending_param=width,
+        print_msg=CONV_E_KERNEL_WIDTH_PRINT_MSG,
+        prompt_msg=CONV_E_KERNEL_WIDTH_PROMPT_MSG,
+        error_msg=CONV_E_KERNEL_WIDTH_ERROR_MSG,
+    )
     config[CONV_E_KERNEL_WIDTH] = kernel_width
     print_section_divider()
 
     # Step 6: Query dropout for input layer
     print_hpo_input_dropout_message()
-    input_dropout = select_zero_one_float_value(print_msg=CONV_E_INPUT_DROPOUT_PRINT_MSG,
-                                                prompt_msg=CONV_E_INPUT_DROPOUT_PROMPT_MSG,
-                                                error_msg=CONV_E_INPUT_DROPOUT_ERROR_MSG)
+    input_dropout = select_zero_one_float_value(
+        print_msg=CONV_E_INPUT_DROPOUT_PRINT_MSG,
+        prompt_msg=CONV_E_INPUT_DROPOUT_PROMPT_MSG,
+        error_msg=CONV_E_INPUT_DROPOUT_ERROR_MSG,
+    )
     config[CONV_E_INPUT_DROPOUT] = input_dropout
     print_section_divider()
 
     # Step 7: Query dropout for output layer
     print_output_dropout_message()
-    output_dropout = select_zero_one_float_value(print_msg=CONV_E_OUTPUT_DROPOUT_PRINT_MSG,
-                                                 prompt_msg=CONV_E_OUTPUT_DROPOUT_PROMPT_MSG,
-                                                 error_msg=CONV_E_OUTPUT_DROPOUT_ERROR_MSG)
+    output_dropout = select_zero_one_float_value(
+        print_msg=CONV_E_OUTPUT_DROPOUT_PRINT_MSG,
+        prompt_msg=CONV_E_OUTPUT_DROPOUT_PROMPT_MSG,
+        error_msg=CONV_E_OUTPUT_DROPOUT_ERROR_MSG,
+    )
     config[CONV_E_OUTPUT_DROPOUT] = output_dropout
     print_section_divider()
 
     # Step 8: Query feature map dropout for output layer
     print_feature_map_dropout_message()
-    feature_map_dropout = select_zero_one_float_value(print_msg=CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG,
-                                                      prompt_msg=CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG,
-                                                      error_msg=CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG)
+    feature_map_dropout = select_zero_one_float_value(
+        print_msg=CONV_E_FEATURE_MAP_DROPOUT_PRINT_MSG,
+        prompt_msg=CONV_E__FEATURE_MAP_DROPOUT_PROMPT_MSG,
+        error_msg=CONV_E_FEATURE_MAP_DROPOUT_ERROR_MSG,
+    )
     config[CONV_E_FEATURE_MAP_DROPOUT] = feature_map_dropout
     print_section_divider()
 
@@ -170,17 +183,19 @@ def configure_conv_e_training_pipeline(model_name):
 def configure_conv_e_hpo_pipeline(model_name):
     """Configure ConvE.
 
-        :param str model_name: name of the model
-        :rtype: OrderedDict
-        :return: configuration dictionary
-        """
+    :param str model_name: name of the model
+    :rtype: OrderedDict
+    :return: configuration dictionary
+    """
     config = get_config_dict(model_name)
 
     # Step 1: Query embedding dimension
     print_hpo_embedding_dimensions_message()
-    embedding_dimensions = select_positive_integer_values(EMBEDDING_DIMENSIONS_PRINT_MSG,
-                                                          EMBEDDING_DIMENSIONS_PROMPT_MSG,
-                                                          EMBEDDING_DIMENSIONS_ERROR_MSG)
+    embedding_dimensions = select_positive_integer_values(
+        EMBEDDING_DIMENSIONS_PRINT_MSG,
+        EMBEDDING_DIMENSIONS_PROMPT_MSG,
+        EMBEDDING_DIMENSIONS_ERROR_MSG,
+    )
     config[EMBEDDING_DIM] = embedding_dimensions
     print_section_divider()
 
@@ -193,59 +208,73 @@ def configure_conv_e_hpo_pipeline(model_name):
 
     # Step 3: Query number of input channels
     print_conv_input_channels_message()
-    num_input_channels = select_positive_integer_values(CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG,
-                                                        CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG,
-                                                        CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG)
+    num_input_channels = select_positive_integer_values(
+        CONV_E_HPO_INPUT_CHANNELS_PRINT_MSG,
+        CONV_E_HPO_INPUT_CHANNELS_PROMPT_MSG,
+        CONV_E_HPO_INPUT_CHANNELS_ERROR_MSG,
+    )
     config[CONV_E_INPUT_CHANNELS] = num_input_channels
     print_section_divider()
 
     # Step 4: Query number of output channels
     print_conv_e_output_channels_message()
-    num_output_channels = select_positive_integer_values(CONV_E_HPO_OUT_CHANNELS_PRINT_MSG,
-                                                         CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG,
-                                                         CONV_E_HPO_OUT_CHANNELS_ERROR_MSG)
+    num_output_channels = select_positive_integer_values(
+        CONV_E_HPO_OUT_CHANNELS_PRINT_MSG,
+        CONV_E_HPO_OUT_CHANNELS_PROMPT_MSG,
+        CONV_E_HPO_OUT_CHANNELS_ERROR_MSG,
+    )
     config[CONV_E_OUTPUT_CHANNELS] = num_output_channels
     print_section_divider()
 
     # Step 4: Query kernel height
     print_conv_e_hpo_kernel_height_message()
-    kernel_heights = select_kernel_sizes(depending_params=heights,
-                                         print_msg=CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG,
-                                         prompt_msg=CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG,
-                                         error_msg=CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG)
+    kernel_heights = select_kernel_sizes(
+        depending_params=heights,
+        print_msg=CONV_E_HPO_KERNEL_HEIGHTS_PRINT_MSG,
+        prompt_msg=CONV_E_HPO_KERNEL_HEIGHTS_PROMPT_MSG,
+        error_msg=CONV_E_HPO_KERNEL_HEIGHTS_ERROR_MSG,
+    )
     config[CONV_E_KERNEL_HEIGHT] = kernel_heights
     print_section_divider()
 
     # Step 5: Query kernel width
     print_conv_e_hpo_kernel_width_message()
-    kernel_widths = select_kernel_sizes(depending_params=widths,
-                                        print_msg=CONV_E_KERNEL_WIDTH_PRINT_MSG,
-                                        prompt_msg=CONV_E_KERNEL_WIDTH_PROMPT_MSG,
-                                        error_msg=CONV_E_KERNEL_WIDTH_ERROR_MSG)
+    kernel_widths = select_kernel_sizes(
+        depending_params=widths,
+        print_msg=CONV_E_KERNEL_WIDTH_PRINT_MSG,
+        prompt_msg=CONV_E_KERNEL_WIDTH_PROMPT_MSG,
+        error_msg=CONV_E_KERNEL_WIDTH_ERROR_MSG,
+    )
     config[CONV_E_KERNEL_WIDTH] = kernel_widths
     print_section_divider()
 
     # Step 6: Query dropout for input layer
     print_hpo_input_dropout_message()
-    input_dropout = select_float_values(CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG,
-                                        CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG,
-                                        CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG)
+    input_dropout = select_float_values(
+        CONV_E_HPO_INPUT_DROPOUTS_PRINT_MSG,
+        CONV_E_HPO_INPUT_DROPOUTS_PROMPT_MSG,
+        CONV_E_HPO_INPUT_DROPOUTS_ERROR_MSG,
+    )
     config[CONV_E_INPUT_DROPOUT] = input_dropout
     print_section_divider()
 
     # Step 7: Query dropout for output layer
     print_hpo_output_dropout_message()
-    output_dropouts = select_zero_one_range_float_values(print_msg=CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG,
-                                                         prompt_msg=CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG,
-                                                         error_msg=CONV_E_HPO_OUTPUT_DROPOUT_ERROR_MSG)
+    output_dropouts = select_zero_one_range_float_values(
+        print_msg=CONV_E_HPO_OUTPUT_DROPOUT_PRINT_MSG,
+        prompt_msg=CONV_E_HPO_OUTPUT_DROPOUT_PROMPT_MSG,
+        error_msg=CONV_E_HPO_OUTPUT_DROPOUT_ERROR_MSG,
+    )
     config[CONV_E_OUTPUT_DROPOUT] = output_dropouts
     print_section_divider()
 
     # Step 8: Query feature map dropout for output layer
     print_hpo_feature_maps_dropouts_message()
-    feature_map_dropouts = select_zero_one_range_float_values(print_msg=CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG,
-                                                              prompt_msg=CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG,
-                                                              error_msg=CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG)
+    feature_map_dropouts = select_zero_one_range_float_values(
+        print_msg=CONV_E_HPO_FEATURE_MAP_DROPOUT_PRINT_MSG,
+        prompt_msg=CONV_E_HPO_FEATURE_MAP_DROPOUT_PROMPT_MSG,
+        error_msg=CONV_E_HPO_FEATURE_MAP_DROPOUT_ERROR_MSG,
+    )
     config[CONV_E_FEATURE_MAP_DROPOUT] = feature_map_dropouts
     print_section_divider()
 
@@ -254,7 +283,8 @@ def configure_conv_e_hpo_pipeline(model_name):
     learning_rates = select_float_values(
         print_msg=LEARNING_RATES_PRINT_MSG,
         prompt_msg=LEARNING_RATES_PROMPT_MSG,
-        error_msg=LEARNING_RATES_ERROR_MSG)
+        error_msg=LEARNING_RATES_ERROR_MSG,
+    )
     config[LEARNING_RATE] = learning_rates
     print_section_divider()
 
@@ -263,7 +293,8 @@ def configure_conv_e_hpo_pipeline(model_name):
     batch_size = select_positive_integer_values(
         print_msg=BATCH_SIZES_PRINT_MSG,
         prompt_msg=BATCH_SIZES_PROMPT_MSG,
-        error_msg=BATCH_SIZES_ERROR_MSG)
+        error_msg=BATCH_SIZES_ERROR_MSG,
+    )
     config[BATCH_SIZE] = batch_size
     print_section_divider()
 
@@ -272,7 +303,8 @@ def configure_conv_e_hpo_pipeline(model_name):
     number_epochs = select_positive_integer_values(
         print_msg=EPOCHS_PRINT_MSG,
         prompt_msg=EPOCHS_PROMPT_MSG,
-        error_msg=EPOCHS_ERROR_MSG)
+        error_msg=EPOCHS_ERROR_MSG,
+    )
     config[NUM_EPOCHS] = number_epochs
     print_section_divider()
 

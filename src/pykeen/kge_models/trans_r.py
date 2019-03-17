@@ -9,20 +9,11 @@ import torch
 import torch.autograd
 from torch import nn
 
-from pykeen.constants import TRANS_R_NAME, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
+from pykeen.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
 from .base import BaseModule
 from .trans_d import TransDConfig
 
 __all__ = ['TransR']
-
-"""
-Constraints: 
- * ||h||_2 <= 1: Done
- * ||r||_2 <= 1: Done
- * ||t||_2 <= 1: Done
- * ||h*M_r||_2 <= 1: Done
- * ||t*M_r||_2 <= 1: Done
-"""
 
 
 class TransR(BaseModule):
@@ -32,6 +23,13 @@ class TransR(BaseModule):
 
     .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion
                  <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
+
+    Constraints:
+     * ||h||_2 <= 1: Done
+     * ||r||_2 <= 1: Done
+     * ||t||_2 <= 1: Done
+     * ||h*M_r||_2 <= 1: Done
+     * ||t*M_r||_2 <= 1: Done
 
     .. seealso::
 

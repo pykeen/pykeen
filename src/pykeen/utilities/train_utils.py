@@ -6,13 +6,14 @@ import logging
 import timeit
 from typing import Any, List, Mapping, Optional, Tuple
 
+import numpy as np
 import torch
 import torch.optim as optim
 from sklearn.utils import shuffle
 from torch.nn import Module
 from tqdm import trange
 
-from pykeen.constants import *
+import pykeen.constants as pkc
 from pykeen.kge_models import ConvE
 
 __all__ = [
@@ -38,7 +39,7 @@ def train_kge_model(
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[Module, List[float]]:
     """Train the model."""
-    if CONV_E_NAME == kge_model.model_name:
+    if pkc.CONV_E_NAME == kge_model.model_name:
         return _train_conv_e_model(
             kge_model=kge_model,
             all_entities=all_entities,
@@ -174,10 +175,9 @@ def _train_conv_e_model(
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
-        start = timeit.default_timer()
         num_positives = batch_size // 2
         # TODO: Make sure that batch = num_pos + num_negs
-        num_negatives = batch_size - num_positives
+        # num_negatives = batch_size - num_positives
 
         pos_batches = _split_list_in_batches(input_list=pos_triples, batch_size=num_positives)
         current_epoch_loss = 0.
@@ -210,8 +210,8 @@ def _train_conv_e_model(
             neg_batch = torch.tensor(neg_batch, dtype=torch.long, device=device)
 
             batch = np.concatenate([pos_batch, neg_batch], axis=0)
-            positive_labels = np.ones(shape=(current_batch_size))
-            negative_labels = np.zeros(shape=(current_batch_size))
+            positive_labels = np.ones(shape=current_batch_size)
+            negative_labels = np.zeros(shape=current_batch_size)
             labels = np.concatenate([positive_labels, negative_labels], axis=0)
 
             batch, labels = shuffle(batch, labels, random_state=seed)
@@ -229,7 +229,6 @@ def _train_conv_e_model(
             loss.backward()
             optimizer.step()
 
-        stop = timeit.default_timer()
         # log.info("Epoch %s took %s seconds \n" % (str(epoch), str(round(stop - start))))
         # Track epoch loss
         loss_per_epoch.append(current_epoch_loss / len(pos_triples))

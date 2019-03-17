@@ -3,19 +3,23 @@
 """A hyper-parameter optimizer that uses random search."""
 
 import random
-import torch
-from typing import Any, List, Optional, Tuple
+from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
+import torch
 from torch.nn import Module
 from tqdm import trange
 
-from pykeen.constants import *
+import pykeen.constants as pkc
 from pykeen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
 from pykeen.kge_models import get_kge_model
 from pykeen.utilities.evaluation_utils.metrics_computations import compute_metric_results
 from pykeen.utilities.train_utils import train_kge_model
 
-__all__ = ['RandomSearchHPO']
+__all__ = [
+    'RandomSearchHPO',
+]
 
 OptimizeResult = Tuple[Module, List[float], Any, Any, Any, Any]
 
@@ -26,19 +30,19 @@ class RandomSearchHPO(AbstractHPOptimizer):
     def _sample_conv_e_params(self, hyperparams_dict) -> Dict[str, Any]:
         kg_model_config = OrderedDict()
         # Sample params which are dependent on each other
-        embedding_dimensions = hyperparams_dict[EMBEDDING_DIM]
+        embedding_dimensions = hyperparams_dict[pkc.EMBEDDING_DIM]
         sampled_index = random.choice(range(len(embedding_dimensions)))
-        kg_model_config[EMBEDDING_DIM] = embedding_dimensions[sampled_index]
-        kg_model_config[CONV_E_HEIGHT] = hyperparams_dict[CONV_E_HEIGHT][sampled_index]
-        kg_model_config[CONV_E_WIDTH] = hyperparams_dict[CONV_E_WIDTH][sampled_index]
-        kg_model_config[CONV_E_KERNEL_HEIGHT] = hyperparams_dict[CONV_E_KERNEL_HEIGHT][sampled_index]
-        kg_model_config[CONV_E_KERNEL_WIDTH] = hyperparams_dict[CONV_E_KERNEL_WIDTH][sampled_index]
+        kg_model_config[pkc.EMBEDDING_DIM] = embedding_dimensions[sampled_index]
+        kg_model_config[pkc.CONV_E_HEIGHT] = hyperparams_dict[pkc.CONV_E_HEIGHT][sampled_index]
+        kg_model_config[pkc.CONV_E_WIDTH] = hyperparams_dict[pkc.CONV_E_WIDTH][sampled_index]
+        kg_model_config[pkc.CONV_E_KERNEL_HEIGHT] = hyperparams_dict[pkc.CONV_E_KERNEL_HEIGHT][sampled_index]
+        kg_model_config[pkc.CONV_E_KERNEL_WIDTH] = hyperparams_dict[pkc.CONV_E_KERNEL_WIDTH][sampled_index]
 
-        del hyperparams_dict[EMBEDDING_DIM]
-        del hyperparams_dict[CONV_E_HEIGHT]
-        del hyperparams_dict[CONV_E_WIDTH]
-        del hyperparams_dict[CONV_E_KERNEL_HEIGHT]
-        del hyperparams_dict[CONV_E_KERNEL_WIDTH]
+        del hyperparams_dict[pkc.EMBEDDING_DIM]
+        del hyperparams_dict[pkc.CONV_E_HEIGHT]
+        del hyperparams_dict[pkc.CONV_E_WIDTH]
+        del hyperparams_dict[pkc.CONV_E_KERNEL_HEIGHT]
+        del hyperparams_dict[pkc.CONV_E_KERNEL_WIDTH]
 
         kg_model_config.update(self._sample_parameter_value(hyperparams_dict))
 
@@ -55,8 +59,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
                              k_evaluation: int = 10) -> OptimizeResult:
         """"""
         if seed is not None:
-            torch.manual_seed(config[SEED])
-
+            torch.manual_seed(config[pkc.SEED])
 
         trained_kge_models: List[Module] = []
         epoch_losses: List[List[float]] = []
@@ -67,20 +70,20 @@ class RandomSearchHPO(AbstractHPOptimizer):
         eval_summaries: List = []
 
         config = config.copy()
-        max_iters = config[NUM_OF_HPO_ITERS]
+        max_iters = config[pkc.NUM_OF_HPO_ITERS]
 
         sample_fct = (
             self._sample_conv_e_params
-            if config[KG_EMBEDDING_MODEL_NAME] == CONV_E_NAME else
+            if config[pkc.KG_EMBEDDING_MODEL_NAME] == pkc.CONV_E_NAME else
             self._sample_parameter_value
         )
 
         for _ in trange(max_iters, desc='HPO Iteration'):
             # Sample hyper-params
             kge_model_config: Dict[str, Any] = sample_fct(config)
-            kge_model_config[NUM_ENTITIES]: int = len(entity_to_id)
-            kge_model_config[NUM_RELATIONS]: int = len(rel_to_id)
-            kge_model_config[SEED]: int = seed
+            kge_model_config[pkc.NUM_ENTITIES]: int = len(entity_to_id)
+            kge_model_config[pkc.NUM_RELATIONS]: int = len(rel_to_id)
+            kge_model_config[pkc.SEED]: int = seed
 
             # Configure defined model
             kge_model: Module = get_kge_model(config=kge_model_config)
@@ -94,9 +97,9 @@ class RandomSearchHPO(AbstractHPOptimizer):
             trained_kge_model, epoch_loss = train_kge_model(
                 kge_model=kge_model,
                 all_entities=all_entities,
-                learning_rate=kge_model_config[LEARNING_RATE],
-                num_epochs=kge_model_config[NUM_EPOCHS],
-                batch_size=kge_model_config[BATCH_SIZE],
+                learning_rate=kge_model_config[pkc.LEARNING_RATE],
+                num_epochs=kge_model_config[pkc.NUM_EPOCHS],
+                batch_size=kge_model_config[pkc.BATCH_SIZE],
                 pos_triples=mapped_train_triples,
                 device=device,
                 seed=seed,
@@ -104,7 +107,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             )
 
             # Evaluate trained model
-            mean_rank, hits_at_k = compute_metric_results(
+            metric_results = compute_metric_results(
                 all_entities=all_entities,
                 kg_embedding_model=trained_kge_model,
                 mapped_train_triples=mapped_train_triples,
@@ -113,13 +116,12 @@ class RandomSearchHPO(AbstractHPOptimizer):
             )
 
             # TODO: Define HPO metric
-            eval_summary = _make_eval_summary(mean_rank, hits_at_k)
-            eval_summaries.append(eval_summary)
+            eval_summaries.append(_make_eval_summary(metric_results.mean_rank, metric_results.hits_at_k))
 
             trained_kge_models.append(trained_kge_model)
             epoch_losses.append(epoch_loss)
 
-            hits_at_k_evaluation = hits_at_k[k_evaluation]
+            hits_at_k_evaluation = metric_results.hits_at_k[k_evaluation]
             hits_at_k_evaluations.append(hits_at_k_evaluation)
 
         index_of_max = int(np.argmax(a=hits_at_k_evaluations))
@@ -155,6 +157,6 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
 def _make_eval_summary(mean_rank: float, hits_at_k: Dict[int, float]):
     eval_summary = OrderedDict()
-    eval_summary[MEAN_RANK]: float = mean_rank
-    eval_summary[HITS_AT_K]: Dict[int, float] = hits_at_k
+    eval_summary[pkc.MEAN_RANK]: float = mean_rank
+    eval_summary[pkc.HITS_AT_K]: Dict[int, float] = hits_at_k
     return eval_summary
