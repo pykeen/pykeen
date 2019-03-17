@@ -25,6 +25,11 @@ from pykeen.constants import (
 )
 from pykeen.utilities.summarize import get_config_dict
 
+__all__ = [
+    'configure_distmult_hpo_pipeline',
+    'configure_distmult_training_pipeline',
+]
+
 
 def configure_distmult_training_pipeline(model_name: str):
     config = OrderedDict()

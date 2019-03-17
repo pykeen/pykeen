@@ -31,6 +31,11 @@ from pykeen.constants import (
 )
 from pykeen.utilities.summarize import get_config_dict
 
+__all__ = [
+    'configure_trans_h_hpo_pipeline',
+    'configure_trans_h_training_pipeline',
+]
+
 
 def configure_trans_h_training_pipeline(model_name: str) -> Dict:
     """Prompt the user to configure Trans H from pipeline."""

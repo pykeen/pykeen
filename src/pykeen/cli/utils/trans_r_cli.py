@@ -31,11 +31,16 @@ from pykeen.constants import (
 )
 from pykeen.utilities.summarize import get_config_dict
 
+__all__ = [
+    'configure_trans_r_hpo_pipeline',
+    'configure_trans_r_training_pipeline',
+]
 
-def configure_trans_r_training_pipeline(model_name):
+
+def configure_trans_r_training_pipeline(model_name: str):
     """Configure Trans R from pipeline.
 
-    :param str model_name: name of the model
+    :param model_name: name of the model
     :rtype: OrderedDict
     :return: configuration dictionary
     """

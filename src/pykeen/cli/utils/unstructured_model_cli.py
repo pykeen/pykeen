@@ -33,12 +33,13 @@ from pykeen.constants import (
 )
 from pykeen.utilities.summarize import get_config_dict
 
+__all__ = [
+    'configure_um_hpo_pipeline',
+    'configure_um_training_pipeline',
+]
 
-def configure_um_training_pipeline(model_name):
-    """
 
-    :return:
-    """
+def configure_um_training_pipeline(model_name: str):
     config = OrderedDict()
     config[KG_EMBEDDING_MODEL_NAME] = model_name
 

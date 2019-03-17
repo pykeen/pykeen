@@ -23,11 +23,16 @@ from pykeen.constants import (
 )
 from pykeen.utilities.summarize import get_config_dict
 
+__all__ = [
+    'configure_ermlp_hpo_pipeline',
+    'configure_ermlp_training_pipeline',
+]
 
-def configure_ermlp_training_pipeline(model_name):
+
+def configure_ermlp_training_pipeline(model_name: str):
     """Configure ERMLP from pipeline.
 
-    :param str model_name: name of the model
+    :param model_name: name of the model
     :rtype: OrderedDict
     :return: configuration dictionary
     """
@@ -87,7 +92,7 @@ def configure_ermlp_training_pipeline(model_name):
     return config
 
 
-def configure_ermlp_hpo_pipeline(model_name):
+def configure_ermlp_hpo_pipeline(model_name: str):
     config = get_config_dict(model_name)
 
     # Step 1: Query embedding dimensions

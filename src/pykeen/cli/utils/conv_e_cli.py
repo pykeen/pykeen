@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation the command line interface needed for TransE."""
+
 from pykeen.cli.utils.cli_print_msg_helper import (
     print_batch_size_message, print_conv_e_hpo_kernel_height_message, print_conv_e_hpo_kernel_width_message,
     print_conv_e_output_channels_message, print_conv_e_width_height_message, print_conv_input_channels_message,
@@ -41,6 +42,11 @@ from pykeen.constants import (
     LEARNING_RATE_PRINT_MSG, LEARNING_RATE_PROMPT_MSG, NUM_EPOCHS,
 )
 from pykeen.utilities.summarize import get_config_dict
+
+__all__ = [
+    'configure_conv_e_training_pipeline',
+    'configure_conv_e_hpo_pipeline',
+]
 
 
 def configure_conv_e_training_pipeline(model_name):
