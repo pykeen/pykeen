@@ -17,25 +17,22 @@ __all__ = [
 ]
 
 
-def create_triples(entity_pairs, relation):
+def create_triples(entity_pairs, relation) -> np.ndarray:
     subjects = entity_pairs[:, 0:1]
     objects = entity_pairs[:, 1:2]
     relation_repeated = np.reshape(np.repeat(relation, repeats=subjects.shape[0]), newshape=(-1, 1))
-
-    triples = np.concatenate([subjects, relation_repeated, objects], axis=1)
-
-    return triples
+    return np.concatenate([subjects, relation_repeated, objects], axis=1)
 
 
-def make_predictions(kge_model, entities, relations, entity_to_id, rel_to_id, device,
-                     remove_training_triples=False,
-                     training_set_path=None):
-    """
-
-    :param kge_model: Trained KG model
-    :param candidates: numpy array with two columns: 1.) Entites 2.) Relations
-    :return:
-    """
+def make_predictions(
+        kge_model,
+        entities,
+        relations,
+        entity_to_id,
+        rel_to_id, device,
+        remove_training_triples=False,
+        training_set_path=None,
+):
     all_entity_pairs = np.array(list(product(entities, entities)))
 
     if relations.size == 1:

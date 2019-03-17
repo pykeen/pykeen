@@ -2,7 +2,6 @@
 
 """Constants defined for PyKEEN."""
 
-from collections import OrderedDict
 from typing import Callable, Dict
 
 import numpy as np

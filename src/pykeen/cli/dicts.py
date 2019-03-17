@@ -12,7 +12,7 @@ from pykeen.cli.utils import (
     configure_trans_r_training_pipeline, configure_um_hpo_pipeline, configure_um_training_pipeline,
 )
 from pykeen.kge_models import (
-    ConvE, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR,UnstructuredModel,
+    ConvE, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
 
 __all__ = [
@@ -30,7 +30,7 @@ MODEL_TRAINING_CONFIG_FUNCS = {
     DistMult.model_name: configure_distmult_training_pipeline,
     ERMLP.model_name: configure_ermlp_training_pipeline,
     RESCAL.model_name: configure_rescal_training_pipeline,
-    ConvE.model_name: configure_conv_e_training_pipeline
+    ConvE.model_name: configure_conv_e_training_pipeline,
 }
 
 MODEL_HPO_CONFIG_FUNCS = {
@@ -43,5 +43,5 @@ MODEL_HPO_CONFIG_FUNCS = {
     DistMult.model_name: configure_distmult_hpo_pipeline,
     ERMLP.model_name: configure_ermlp_hpo_pipeline,
     RESCAL.model_name: configure_rescal_hpo_pipeline,
-    ConvE.model_name: configure_conv_e_hpo_pipeline
+    ConvE.model_name: configure_conv_e_hpo_pipeline,
 }

@@ -3,10 +3,9 @@
 """Implementation of the basic pipeline."""
 
 import logging
-from dataclasses import dataclass
+from collections import OrderedDict
 from typing import Iterable, Mapping, Tuple, Union
 
-import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 from torch.nn import Module
@@ -20,6 +19,7 @@ from pykeen.utilities.triples_creation_utils import create_mapped_triples, creat
 
 __all__ = [
     'Pipeline',
+    'load_data',
 ]
 
 log = logging.getLogger(__name__)

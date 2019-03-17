@@ -38,17 +38,17 @@ class Results:
     results: Mapping
 
     @property
-    def trained_model(self) -> torch.nn.Module:
+    def trained_model(self) -> torch.nn.Module:  # noqa: D401
         """The pre-trained KGE model."""
         return self.results['trained_model']
 
     @property
-    def losses(self):
+    def losses(self):  # noqa: D401
         """The losses calculated during training."""
         return self.results['losses']
 
     @property
-    def evaluation_summary(self):
+    def evaluation_summary(self):  # noqa: D401
         """The evaluation summary."""
         return self.results['eval_summary']
 
@@ -63,10 +63,11 @@ class Results:
 
 
 def run(config: Dict,
-        output_directory: Optional[str] = None) -> Results:
+        output_directory: Optional[str] = None,
+        ) -> Results:
     """Train a KGE model.
 
-    :param config: The configuration specifying the KGE model and its hyperparameters
+    :param config: The configuration specifying the KGE model and its hyper-parameters
     :param output_directory: The directory to store the results
     """
     if output_directory is None:
@@ -77,7 +78,7 @@ def run(config: Dict,
     pipeline_results = pipeline.run()
 
     with open(os.path.join(output_directory, 'configuration.json'), 'w') as file:
-        # In HPO model inital configuration is different from final configurations, thats why we differentiate
+        # In HPO model initial configuration is different from final configurations, that's why we differentiate
         json.dump(pipeline_results[FINAL_CONFIGURATION], file, indent=2)
 
     with open(os.path.join(output_directory, 'entities_to_embeddings.pkl'), 'wb') as file:
@@ -91,7 +92,7 @@ def run(config: Dict,
             },
             file,
             indent=2,
-            sort_keys=True
+            sort_keys=True,
         )
 
     if pipeline_results[RELATION_TO_EMBEDDING] is not None:

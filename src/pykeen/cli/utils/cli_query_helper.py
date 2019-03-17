@@ -10,19 +10,17 @@ from prompt_toolkit import prompt
 from pykeen.cli.utils.constants import (
     ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING,
 )
-from pykeen.constants import (
-    CPU, GPU, HPO_MODE, IMPORTERS, PYKEEN, TRAINING_MODE,
-)
+from pykeen.constants import CPU, GPU, HPO_MODE, IMPORTERS, PYKEEN, TRAINING_MODE
 
 
 def _is_correct_format(path: str):
     return (
-            any(
-                path.startswith(prefix)
-                for prefix in IMPORTERS
-            )
-            or path.endswith('.tsv')
-            or path.endswith('.nt')
+        any(
+            path.startswith(prefix)
+            for prefix in IMPORTERS
+        )
+        or path.endswith('.tsv')
+        or path.endswith('.nt')
     )
 
 
@@ -38,7 +36,7 @@ def get_input_path(prompt_msg: str) -> str:
             'columns corresponding to subject, predicate, and object.\nA string path to a .nt RDF file serialized in '
             'N-Triples format.\nA string NDEx network UUID prefixed by "ndex:" like in '
             'ndex:f93f402c-86d4-11e7-a10d-0ac135e8bacf\n',
-            fg='red'
+            fg='red',
         )
 
 
@@ -110,14 +108,6 @@ def select_zero_one_float_value(print_msg, prompt_msg, error_msg):
             click.echo(error_msg)
 
 
-def ask_for_evaluation():
-    return click.confirm('Do you want to evaluate your model?')
-
-
-def ask_for_test_set():
-    return click.confirm('Do you provide a test set yourself?')
-
-
 def select_ratio_for_test_set():
     while True:
         user_input = prompt('> Please select the ratio: ')
@@ -129,12 +119,11 @@ def select_ratio_for_test_set():
         except ValueError:
             pass
 
-        click.echo('Invalid input, the ratio should be 0.< ratio < 1. (e.g. 0.2).\n'
-                   'Please try again.')
+        click.echo('Invalid input, the ratio should be 0.< ratio < 1. (e.g. 0.2).\nPlease try again.')
 
 
 def select_preferred_device() -> str:
-    click.secho(click.style("Current Step: Please specify the preferred device (GPU or CPU).", fg='blue'))
+    click.secho("Current Step: Please specify the preferred device (GPU or CPU).", fg='blue')
     c = click.confirm('Do you want to try using the GPU?', default=False)
     return GPU if c else CPU
 
@@ -144,8 +133,7 @@ def ask_for_filtering_of_negatives():
 
 
 def query_output_directory() -> str:
-    click.echo('Please provide the path to your output directory.\n')
-    click.echo()
+    click.echo('Please provide the path to your output directory.\n\n')
 
     while True:
         user_input = os.path.expanduser(click.prompt('Path to output directory'))
