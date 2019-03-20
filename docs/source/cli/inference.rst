@@ -14,7 +14,8 @@ contained in the directory:
 * relations_to_embeddings.json
 * trained_model.pkl
 
-These files are created automatically created when an experiment is configured through the CLI.
+These files are created automatically created when an model is trained (and evaluated) and exported in your
+specified output directory.
 
 The value for the argument **-d** is the directory containing the data for which inference should be applied, and it
 needs to contain following files:
@@ -22,8 +23,11 @@ needs to contain following files:
 * entities.tsv
 * relations.tsv
 
-where *entities.tsv* contains all entities of interest, and relations.tsv all relations. PyKEEN will create all possible
-combinations of triples, and computes the predictions for them, and saves them in data directory in *predictions.tsv*.
+where *entities.tsv* contains all entities of interest, and relations.tsv all relations. Both files should contain
+should contain a single column containing all the entities/relations. Based on these files, PyKEEN will create all
+possible combinations of triples, and computes the predictions for them, and saves them in data directory
+in *predictions.tsv*.
+Note: the model- and the data-directory can be the same directory as long as all required files are provided.
 
 Optionally, a set of triples can be provided that should be exluded from the prediction, e.g. all the triples
 contained in the training set:
