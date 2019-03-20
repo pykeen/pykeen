@@ -20,6 +20,18 @@ def start_predictions_pipeline(model_directory: str,
                                remove_training_triples: bool = False,
                                training_set_path: Optional[str] = None,
                                ) -> None:
+    """
+    Performs inference based on a trained KGE model. The predictions are saved predictions.tsv in the provided
+    data directory.
+    :param model_directory: Directory containing the experimental artifacts: configuration.json,
+    entities_to_embeddings.json, relations_to_embeddings.json and trained_model.pkl
+    :param data_directory: Directory containing the candidate entities as an entities.tsv file and
+    the candidate relations as relations.tsv. Both files consists of one column containint the entities/relations,
+    and based on these all combinatios of possible triples are created.
+    :param remove_training_triples:
+    :param training_set_path:
+    :return:
+    """
     # Load configuration file
     with open(os.path.join(model_directory, 'configuration.json')) as f:
         config = json.load(f)
