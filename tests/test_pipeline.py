@@ -14,8 +14,8 @@ from pykeen.constants import (
     TEST_SET_PATH,
     TEST_SET_RATIO,
     TRAINING_MODE,
-)
-from pykeen.utilities.pipeline import CPU, Pipeline
+    CPU)
+from pykeen.utilities.pipeline import Pipeline
 
 CONFIG = {
     SEED: 2,
