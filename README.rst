@@ -72,7 +72,7 @@ contained in the directory:
 * relations_to_embeddings.json
 * trained_model.pkl
 
-These files are created automatically created when an model is trained (and evaluated) and exported in your
+These files are created automatically created after model is trained (and evaluated) and exported in your
 specified output directory.
 
 The value for the argument **-d** is the directory containing the data for which inference should be applied, and it
@@ -98,7 +98,7 @@ Hence, it is easily possible to compute plausibility scores for all triples that
 
 Summarize the Results of All Experiments
 ****************************************
-To summarize the results of all experiments, run:
+To summarize the results of all experiments, please provide the path to parent directory containing all the experiments as sub-directories, and the path to the output file:
 
 .. code-block:: sh
 
