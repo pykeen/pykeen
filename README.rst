@@ -83,7 +83,7 @@ needs to contain following files:
 
 where *entities.tsv* contains all entities of interest, and relations.tsv all relations. Both files should contain
 should contain a single column containing all the entities/relations. Based on these files, PyKEEN will create all
-possible combinations of triples, and computes the predictions for them, and saves them in data directory
+triple permutations, and computes the predictions for them, and saves them in data directory
 in *predictions.tsv*.
 Note: the model- and the data-directory can be the same directory as long as all required files are provided.
 
