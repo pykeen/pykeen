@@ -98,7 +98,8 @@ Hence, it is easily possible to compute plausibility scores for all triples that
 
 Summarize the Results of All Experiments
 ****************************************
-To summarize the results of all experiments, please provide the path to parent directory containing all the experiments as sub-directories, and the path to the output file:
+To summarize the results of all experiments, please provide the path to parent directory containing all the experiments
+as sub-directories, and the path to the output file:
 
 .. code-block:: sh
 
