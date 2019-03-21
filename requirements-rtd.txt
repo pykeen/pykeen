@@ -11,3 +11,4 @@ pandas
 sphinx
 sphinx-rtd-theme
 sphinx-click
+ndex2
