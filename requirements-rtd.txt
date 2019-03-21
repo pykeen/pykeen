@@ -5,10 +5,10 @@ scikit-learn; python_version == "3.7"
 scipy
 click
 click_default_group
+ndex2
 prompt_toolkit
 tqdm
 pandas
 sphinx
 sphinx-rtd-theme
 sphinx-click
-ndex2
