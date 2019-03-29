@@ -202,7 +202,7 @@ def compute_metric_results(
         k: []
         for k in (ks or DEFAULT_HITS_AT_K)
     }
-
+    kg_embedding_model = kg_embedding_model.eval()
     kg_embedding_model = kg_embedding_model.to(device)
 
     all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
