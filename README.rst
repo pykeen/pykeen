@@ -7,13 +7,6 @@ provide their own set of hyper-parameter values, or in *hyper-parameter optimiza
 hyper-parameter values from set of user defined values. PyKEEN can also be run without having experience in programing
 by using its interactive command line interface that can be started with the command *pykeen* from a terminal.
 
-Citation
---------
-If you find PyKEEN useful in your work, please consider citing:
-
-.. [1] Ali, M., *et al.* (2019). `BioKEEN: A library for learning and evaluating biological knowledge graph embeddings
-       <https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btz117/5320556>`_. *Bioinformatics* , btz117.
-
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
 ``pykeen`` can be installed on any system running Python 3.6+ with the following command:
