@@ -33,8 +33,10 @@ class ERMLP(BaseModule):
         #: Embeddings for relations in the knowledge graph
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        # TODO document what is MLP?
-        #:
+        """The mulit layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
+           with self.embedding_dim neurons and output layer with one neuron.
+           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
+        """
         self.mlp = nn.Sequential(
             nn.Linear(3 * self.embedding_dim, self.embedding_dim),
             nn.ReLU(),
