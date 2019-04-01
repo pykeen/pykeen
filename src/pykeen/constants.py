@@ -28,8 +28,8 @@ KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 EXECUTION_MODE = 'execution_mode'
 
 # Model names
-SE_NAME = 'Structured Embedding (SE)'
-UM_NAME = 'Unstructured Model (UM)'
+SE_NAME = 'SE'
+UM_NAME = 'UM'
 TRANS_E_NAME = 'TransE'
 TRANS_H_NAME = 'TransH'
 TRANS_D_NAME = 'TransD'
