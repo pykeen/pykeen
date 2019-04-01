@@ -40,7 +40,6 @@ class ERMLP(BaseModule):
         self.mlp = nn.Sequential(
             nn.Linear(3 * self.embedding_dim, self.embedding_dim),
             nn.ReLU(),
-            nn.Dropout(p=0.2),
             nn.Linear(self.embedding_dim, 1),
         )
 
