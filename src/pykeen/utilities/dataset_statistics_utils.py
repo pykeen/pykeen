@@ -45,3 +45,4 @@ def compute_number_subjects_per_object_relation_tuples(triples):
     stats = get_sorted_dict_from_counter(stats)
 
     return stats
+
