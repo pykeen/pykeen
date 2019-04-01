@@ -14,7 +14,7 @@ from pykeen.constants import (
     CONV_E_FEATURE_MAP_DROPOUT, CONV_E_HEIGHT, CONV_E_INPUT_CHANNELS, CONV_E_INPUT_DROPOUT, CONV_E_KERNEL_HEIGHT,
     CONV_E_KERNEL_WIDTH, CONV_E_NAME, CONV_E_OUTPUT_CHANNELS, CONV_E_OUTPUT_DROPOUT, CONV_E_WIDTH, EMBEDDING_DIM,
     NUM_ENTITIES, NUM_RELATIONS,
-)
+    MARGIN_LOSS, LEARNING_RATE)
 
 __all__ = ['ConvE']
 
@@ -29,6 +29,9 @@ class ConvE(nn.Module):
     """
 
     model_name = CONV_E_NAME
+    hyper_params = [EMBEDDING_DIM, CONV_E_INPUT_CHANNELS, CONV_E_OUTPUT_CHANNELS, CONV_E_HEIGHT, CONV_E_WIDTH,
+                    CONV_E_KERNEL_HEIGHT, CONV_E_KERNEL_WIDTH, CONV_E_INPUT_DROPOUT, CONV_E_FEATURE_MAP_DROPOUT,
+                    CONV_E_OUTPUT_DROPOUT, MARGIN_LOSS, LEARNING_RATE]
 
     def __init__(self, config: Dict) -> None:
         super().__init__()
@@ -48,13 +51,13 @@ class ConvE(nn.Module):
 
         num_in_channels = config[CONV_E_INPUT_CHANNELS]
         num_out_channels = config[CONV_E_OUTPUT_CHANNELS]
+        self.img_height = config[CONV_E_HEIGHT]
+        self.img_width = config[CONV_E_WIDTH]
         kernel_height = config[CONV_E_KERNEL_HEIGHT]
         kernel_width = config[CONV_E_KERNEL_WIDTH]
         input_dropout = config[CONV_E_INPUT_DROPOUT]
         hidden_dropout = config[CONV_E_OUTPUT_DROPOUT]
         feature_map_dropout = config[CONV_E_FEATURE_MAP_DROPOUT]
-        self.img_height = config[CONV_E_HEIGHT]
-        self.img_width = config[CONV_E_WIDTH]
 
         assert self.img_height * self.img_width == self.embedding_dim
 
