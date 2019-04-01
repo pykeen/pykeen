@@ -128,7 +128,7 @@ class TransD(BaseModule):
         return self.entity_projections(entities).view(-1, self.embedding_dim)
 
     def _get_relation_embeddings(self, relations):
-        return self.relation_embeddings(relations).view(-1, self.embedding_dim)
+        return self.relation_embeddings(relations).view(-1, self.relation_embedding_dim)
 
     def _get_relation_projections(self, relations):
         return self.relation_projections(relations).view(-1, self.relation_embedding_dim)
