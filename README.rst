@@ -26,8 +26,8 @@ Alternatively, it can be installed from the source for development with:
 However, GPU acceleration is limited to Linux systems with the appropriate graphics cards
 as described in the PyTorch documentation.
 
-Usage
------
+Tutorials
+---------
 Code examples can be found in the `notebooks directory
 <https://github.com/SmartDataAnalytics/PyKEEN/tree/master/notebooks>`_.
 
