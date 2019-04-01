@@ -7,7 +7,7 @@ from typing import Callable, Dict
 import numpy as np
 from pkg_resources import iter_entry_points
 
-VERSION = '0.0.21-dev'
+VERSION = '0.0.21'
 
 #: Functions for specifying exotic resources with a given prefix
 IMPORTERS: Dict[str, Callable[[str], np.ndarray]] = {
