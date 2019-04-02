@@ -116,7 +116,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             )
 
             # TODO: Define HPO metric
-            eval_summaries.append(_make_eval_summary(metric_results.mean_rank, metric_results.hits_at_k))
+            eval_summaries.append(metric_results)
 
             trained_kge_models.append(trained_kge_model)
             epoch_losses.append(epoch_loss)
@@ -154,9 +154,3 @@ class RandomSearchHPO(AbstractHPOptimizer):
             seed=seed,
         )
 
-
-def _make_eval_summary(mean_rank: float, hits_at_k: Dict[int, float]):
-    eval_summary = OrderedDict()
-    eval_summary[pkc.MEAN_RANK]: float = mean_rank
-    eval_summary[pkc.HITS_AT_K]: Dict[int, float] = hits_at_k
-    return eval_summary

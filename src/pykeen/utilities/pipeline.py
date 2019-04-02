@@ -60,7 +60,7 @@ class Pipeline(object):
              loss_per_epoch,
              entity_label_to_embedding,
              relation_label_to_embedding,
-             eval_summary,
+             metric_results,
              params) = RandomSearchHPO.run(
                 mapped_train_triples=mapped_pos_train_triples,
                 mapped_test_triples=mapped_pos_test_triples,
