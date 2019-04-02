@@ -105,7 +105,7 @@ venv.bak/
 
 .idea/
 .idea/*
-/data/
+/data_local/
 /src/try_and_Error/
 /dist/
 /t_s.py
