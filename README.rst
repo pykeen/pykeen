@@ -9,7 +9,7 @@ by using its interactive command line interface that can be started with the com
 
 Share Your Experimental Artifacts
 ---------------------------------
-You can share you trained KGE model along the other experimental artifacts through the `KEEN-Model-Zoo <https://github.com/SmartDataAnalytics/KEEN-Model-Zoo>`_.
+You can share you trained KGE models along the other experimental artifacts through the `KEEN-Model-Zoo <https://github.com/SmartDataAnalytics/KEEN-Model-Zoo>`_.
 
 
 Installation |pypi_version| |python_versions| |pypi_license|
