@@ -7,6 +7,9 @@ provide their own set of hyper-parameter values, or in *hyper-parameter optimiza
 hyper-parameter values from set of user defined values. PyKEEN can also be run without having experience in programing
 by using its interactive command line interface that can be started with the command *pykeen* from a terminal.
 
+
+https://github.com/SmartDataAnalytics/KEEN-Model-Zoo
+
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
 ``pykeen`` can be installed on any system running Python 3.6+ with the following command:
@@ -25,6 +28,10 @@ Alternatively, it can be installed from the source for development with:
 
 However, GPU acceleration is limited to Linux systems with the appropriate graphics cards
 as described in the PyTorch documentation.
+
+Share Your Experimental Artifacts
+---------------------------------
+You can share you trained KGE model along the other experimental artifacts through the `KEEN-Model-Zoo <https://github.com/SmartDataAnalytics/KEEN-Model-Zoo>`_.
 
 Tutorials
 ---------
