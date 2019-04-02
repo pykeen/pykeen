@@ -12,8 +12,6 @@ Share Your Experimental Artifacts
 You can share you trained KGE model along the other experimental artifacts through the `KEEN-Model-Zoo <https://github.com/SmartDataAnalytics/KEEN-Model-Zoo>`_.
 
 
-https://github.com/SmartDataAnalytics/KEEN-Model-Zoo
-
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
 ``pykeen`` can be installed on any system running Python 3.6+ with the following command:
