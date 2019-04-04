@@ -126,9 +126,11 @@ class ConvE(nn.Module):
         x = torch.mm(x, candidate_object_emebddings.transpose(1, 0))
         scores = F.sigmoid(x)
 
-        max_scores, predicted_entities = torch.max(scores, dim=1)
+        max_scores, predictions = torch.max(scores, dim=1)
 
-        return predicted_entities
+        # Class 0 represents false fact and class 1 represents true fact
+
+        return predictions
 
     def forward(self, batch, labels):
         batch_size = batch.shape[0]
