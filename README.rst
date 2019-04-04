@@ -36,7 +36,7 @@ Tutorials
 Code examples can be found in the `notebooks directory
 <https://github.com/SmartDataAnalytics/PyKEEN/tree/master/notebooks>`_.
 
-Further tutorials are available in our `Documentation <https://pykeen.readthedocs.io/en/latest/>`_.
+Further tutorials are available in our `documentation <https://pykeen.readthedocs.io/en/latest/>`_.
 
 CLI Usage - Set Up Your Experiment within 60 seconds
 ----------------------------------------------------
