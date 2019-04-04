@@ -105,6 +105,8 @@ CONV_E_CONFIG = {
     CONV_E_WIDTH: 1,
 }
 
+TEST_TRIPLES = torch.tensor([[0, 1, 1], [0, 1, 2]], dtype=torch.long)
+
 
 class TestModelInstantiation(unittest.TestCase):
     """Test that all models can be instantiated."""
@@ -286,7 +288,7 @@ class TestScoringFunctions(unittest.TestCase):
         self.assertEqual(scores, [2.,6.])
 
     def test_compute_scores_ermlp(self):
-        """Test that SE's socore function computes the scores correct."""
+        """Test that SE's score function computes the scores correct."""
         ermlp = ERMLP(config=ERMLP_CONFIG)
 
         h_embs = torch.tensor([[1., 1.], [1., 1.]], dtype=torch.float)
@@ -296,6 +298,80 @@ class TestScoringFunctions(unittest.TestCase):
         scores = ermlp._compute_scores(h_embs,r_embs,t_embs).detach().cpu().numpy().tolist()
 
         self.assertEqual(len(scores),2)
+
+
+    def test_um_predict(self):
+        """Test UM's predict function."""
+        um = UnstructuredModel(config=UM_CONFIG)
+        predictions = um.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_se_predict(self):
+        """Test SE's predict function."""
+        se = StructuredEmbedding(config=SE_CONFIG)
+        predictions = se.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_trans_e_predict(self):
+        """Test TransE's predict function."""
+        trans_e = TransE(config=TRANS_E_CONFIG)
+        predictions = trans_e.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_trans_h_predict(self):
+        """Test TransH's predict function."""
+        trans_h = TransE(config=TRANS_H_CONFIG)
+        predictions = trans_h.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_trans_r_predict(self):
+        """Test TransR's predict function."""
+        trans_r = TransR(config=TRANS_R_CONFIG)
+        predictions = trans_r.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_trans_d_predict(self):
+        """Test TransD's predict function."""
+        trans_d = TransR(config=TRANS_D_CONFIG)
+        predictions = trans_d.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_ermlp_predict(self):
+        """Test ERMLP's predict function."""
+        ermlp = ERMLP(config=ERMLP_CONFIG)
+        predictions = ermlp.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_rescal_predict(self):
+        """Test RESCAL's predict function."""
+        rescal = RESCAL(config=RESCAL_CONFIG)
+        predictions = rescal.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions),len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),float)
+
+    def test_conv_e_predict(self):
+        """Test ConvE's predict function."""
+        conv_e = ConvE(config=CONV_E_CONFIG)
+
+        predictions = conv_e.predict(triples=TEST_TRIPLES)
+
+        self.assertEqual(len(predictions), len(TEST_TRIPLES))
+        self.assertTrue(type(predictions.shape[0]),int)
 
 
 
