@@ -90,12 +90,12 @@ class ConvE(nn.Module):
         xavier_normal(self.entity_embeddings.weight.data)
         xavier_normal(self.relation_embeddings.weight.data)
 
-    def predict(self, triple_batch):
-        batch_size = triple_batch.shape[0]
-        triple_batch = torch.tensor(triple_batch, dtype=torch.long, device=self.device)
-        subject_batch = triple_batch[:, 0:1]
-        relation_batch = triple_batch[:, 1:2]
-        object_batch = triple_batch[:, 2:3].view(-1)
+    def predict(self, triples):
+        batch_size = triples.shape[0]
+        triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        subject_batch = triples[:, 0:1]
+        relation_batch = triples[:, 1:2]
+        object_batch = triples[:, 2:3].view(-1)
 
         subject_batch_embedded = self.entity_embeddings(subject_batch).view(-1, 1, self.img_height, self.img_width)
         relation_batch_embedded = self.relation_embeddings(relation_batch).view(-1, 1, self.img_height, self.img_width)
