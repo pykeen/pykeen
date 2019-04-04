@@ -98,7 +98,7 @@ class ConvE(nn.Module):
         object_batch = triple_batch[:, 2:3].view(-1)
 
         subject_batch_embedded = self.entity_embeddings(subject_batch).view(-1, 1, self.img_height, self.img_width)
-        relation_batch_embedded = self.entity_embeddings(relation_batch).view(-1, 1, self.img_height, self.img_width)
+        relation_batch_embedded = self.relation_embeddings(relation_batch).view(-1, 1, self.img_height, self.img_width)
         candidate_object_emebddings = self.entity_embeddings(object_batch)
 
         # batch_size, num_input_channels, 2*height, width
