@@ -19,7 +19,7 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
 .. toctree::
    :maxdepth: 2
-   :caption: CLI Usage
+   :caption: Tutorial - CLI Usage
    :name: cli
 
    cli/train_and_evaluate
@@ -27,7 +27,7 @@ Installation is as easy as getting the code from `PyPI <https://pypi.python.org/
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorial
+   :caption: Tutorial - Programmatic Access
    :name: tutorial
 
    train_and_evaluate
