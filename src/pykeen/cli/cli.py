@@ -42,8 +42,7 @@ def predict(model_directory: str, data_directory: str, training_set_path: str):
     start_predictions_pipeline(
         model_directory,
         data_directory,
-        remove_training_triples=(training_set_path is not None),
-        training_set_path=training_set_path,
+        path_to_blacklisted_triples=training_set_path,
     )
 
 

@@ -17,8 +17,7 @@ from pykeen.utilities.prediction_utils import make_predictions
 
 def start_predictions_pipeline(model_directory: str,
                                data_directory: str,
-                               remove_training_triples: bool = False,
-                               training_set_path: Optional[str] = None,
+                               path_to_blacklisted_triples: Optional[str] = None,
                                ) -> None:
     """
     Performs inference based on a trained KGE model. The predictions are saved predictions.tsv in the provided
@@ -29,7 +28,7 @@ def start_predictions_pipeline(model_directory: str,
     the candidate relations as relations.tsv. Both files consists of one column containint the entities/relations,
     and based on these all combinatios of possible triples are created.
     :param remove_training_triples:
-    :param training_set_path:
+    :param path_to_blacklisted_triples:
     :return:
     """
     # Load configuration file
@@ -61,8 +60,7 @@ def start_predictions_pipeline(model_directory: str,
         entity_to_id=entity_to_id,
         rel_to_id=relation_to_id,
         device=device,
-        remove_training_triples=remove_training_triples,
-        blacklist_path=training_set_path,
+        blacklist_path=path_to_blacklisted_triples,
     )
 
     np.savetxt(os.path.join(data_directory, 'predictions.tsv'), ranked_triples, fmt='%s')
