@@ -1,5 +1,15 @@
 Perform Inference
 =================
+PyKEEN can be used to perform inference based on a trained KGE model. While several approaches to realise the
+inference workflow are conceivable, in our approach, users provide a set of candidate entities and relations that are
+used to create all triple-permutations for which predictions are computed. Furthermore, users can provide a set of
+triples that will be automatically removed from the set of candidate triples. This might be relevant in a setting,
+in which predictions for all possible triples expect those contained in the training set should be computed.
+The output of the inference workflow is a ranked list of triples where the most plausible ones are located
+at the beginning of the list.
+
+.. image:: ../images/inference.png
+
 Starting the Prediction Pipeline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: sh
