@@ -30,8 +30,7 @@ def make_predictions(
         relations,
         entity_to_id,
         rel_to_id, device,
-        remove_training_triples=False,
-        training_set_path=None,
+        blacklist_path=None,
 ):
     all_entity_pairs = np.array(list(product(entities, entities)))
 
@@ -44,9 +43,8 @@ def make_predictions(
             triples = create_triples(entity_pairs=all_entity_pairs, relation=relation)
             all_triples = np.append(all_triples, triples, axis=0)
 
-    if remove_training_triples:
-        assert (training_set_path is not None)
-        training_triples = load_data(training_set_path)
+    if blacklist_path is not None:
+        training_triples = load_data(blacklist_path)
         training_triples = pd.DataFrame(data=training_triples)
         all_triples = pd.DataFrame(data=all_triples)
         merged = all_triples.merge(training_triples, indicator=True, how='outer')

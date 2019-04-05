@@ -62,7 +62,7 @@ def start_predictions_pipeline(model_directory: str,
         rel_to_id=relation_to_id,
         device=device,
         remove_training_triples=remove_training_triples,
-        training_set_path=training_set_path,
+        blacklist_path=training_set_path,
     )
 
     np.savetxt(os.path.join(data_directory, 'predictions.tsv'), ranked_triples, fmt='%s')
