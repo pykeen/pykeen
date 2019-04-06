@@ -61,22 +61,10 @@ class Results:
         plt.ylabel('Loss')
         plt.plot(epochs, self.losses)
 
-
-def run(config: Dict,
-        output_directory: Optional[str] = None,
-        ) -> Results:
-    """Train a KGE model.
-
-    :param config: The configuration specifying the KGE model and its hyper-parameters
-    :param output_directory: The directory to store the results
-    """
-    if output_directory is None:
-        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d-%H-%M-%S"))
-    os.makedirs(output_directory, exist_ok=True)
-
-    pipeline = Pipeline(config=config)
-    pipeline_results = pipeline.run()
-
+def export_experimental_artifacts(pipeline_results: Mapping,
+                                  output_directory: str,
+                                  ) -> None:
+    """Export export experimental artifacts."""
     with open(os.path.join(output_directory, 'configuration.json'), 'w') as file:
         # In HPO model initial configuration is different from final configurations, that's why we differentiate
         json.dump(pipeline_results[FINAL_CONFIGURATION], file, indent=2)
@@ -129,6 +117,25 @@ def run(config: Dict,
         pipeline_results[TRAINED_MODEL].state_dict(),
         os.path.join(output_directory, 'trained_model.pkl'),
     )
+
+def run(config: Dict,
+        output_directory: Optional[str] = None,
+        ) -> Results:
+    """Train a KGE model.
+
+    :param config: The configuration specifying the KGE model and its hyper-parameters
+    :param output_directory: The directory to store the results
+    """
+    if output_directory is None:
+        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d-%H-%M-%S"))
+    os.makedirs(output_directory, exist_ok=True)
+
+    pipeline = Pipeline(config=config)
+    pipeline_results = pipeline.run()
+
+    # Export experimental artifacts
+    export_experimental_artifacts(pipeline_results=pipeline_results,
+                                  output_directory=output_directory)
 
     return Results(
         config=config,

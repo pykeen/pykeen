@@ -18,7 +18,7 @@ from pykeen.utilities.prediction_utils import make_predictions
 def start_predictions_pipeline(model_directory: str,
                                data_directory: str,
                                path_to_blacklisted_triples: Optional[str] = None,
-                               ) -> None:
+                               export_predictions=True) -> None:
     """
     Performs inference based on a trained KGE model. The predictions are saved predictions.tsv in the provided
     data directory.
@@ -63,4 +63,7 @@ def start_predictions_pipeline(model_directory: str,
         blacklist_path=path_to_blacklisted_triples,
     )
 
-    np.savetxt(os.path.join(data_directory, 'predictions.tsv'), ranked_triples, fmt='%s')
+    if export_predictions:
+        np.savetxt(os.path.join(data_directory, 'predictions.tsv'), ranked_triples, fmt='%s')
+
+    return ranked_triples
