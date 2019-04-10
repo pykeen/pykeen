@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test KGE models"""
+"""Test KGE models."""
 
 import unittest
 
