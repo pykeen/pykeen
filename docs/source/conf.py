@@ -76,6 +76,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
+    'sphinx_autodoc_typehints',
     'sphinx_click.ext',
 ]
 
