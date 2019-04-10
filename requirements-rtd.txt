@@ -12,3 +12,5 @@ pandas
 sphinx
 sphinx-rtd-theme
 sphinx-click
+sphinx-autodoc-typehints
+rdflib
