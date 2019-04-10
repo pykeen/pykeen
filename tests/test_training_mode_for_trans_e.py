@@ -24,7 +24,6 @@ CONFIG = dict(
     learning_rate=0.01,
     num_epochs=20,
     batch_size=64,
-    filter_negative_triples=True,
     preferred_device='cpu'
 )
 
@@ -53,6 +52,7 @@ class TestTrainingModeForTransE(unittest.TestCase):
         # 10 % of training set will be used as a test set
         config = CONFIG.copy()
         config[pkc.TEST_SET_RATIO] = 0.1
+        config[pkc.FILTER_NEG_TRIPLES] = True
 
         results = pykeen.run(
             config=config,
