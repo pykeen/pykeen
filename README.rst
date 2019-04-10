@@ -32,7 +32,7 @@ However, GPU acceleration is limited to Linux systems with the appropriate graph
 as described in the PyTorch documentation.
 
 Installing Extras with Pip
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 PyKEEN uses pip's extras functionality to allow some non-essential features to be skipped. They can be installed with
 the following:
 
