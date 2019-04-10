@@ -16,7 +16,7 @@ logging.getLogger('pykeen').setLevel(logging.INFO)
 OUTPUT_DIRECTORY = '../test_resources/test_out'
 CONFIG = dict(
     training_set_path='../data/rdf.nt',
-    execution_mode='Training_mode',
+    execution_mode=pkc.TRAINING_MODE,
     random_seed=0,
     kg_embedding_model_name=pkc.TRANS_H_NAME,
     embedding_dim=50,
