@@ -7,6 +7,7 @@ from collections import OrderedDict
 from typing import Dict, Iterable, Mapping, Optional, Tuple, Union
 
 import numpy as np
+import rdflib
 import torch
 from sklearn.model_selection import train_test_split
 from torch.nn import Module
@@ -221,7 +222,6 @@ def _load_data_helper(path: str) -> np.ndarray:
         ), newshape=(-1, 3))
 
     if path.endswith('.nt'):
-        import rdflib
         g = rdflib.Graph()
         g.parse(path, format='nt')
         return np.array(
