@@ -6,16 +6,12 @@ import json
 import os
 import unittest
 
+
 from pykeen.constants import (
-    EXECUTION_MODE,
-    HPO_MODE,
-    PREFERRED_DEVICE,
-    SEED,
-    TEST_SET_PATH,
-    TEST_SET_RATIO,
-    TRAINING_MODE,
-    CPU)
+    CPU, EXECUTION_MODE, HPO_MODE, PREFERRED_DEVICE, SEED, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_MODE,
+)
 from pykeen.utilities.pipeline import Pipeline
+from tests.constants import RESOURCES_DIRECTORY
 
 CONFIG = {
     SEED: 2,
@@ -65,8 +61,7 @@ class TestPipeline(unittest.TestCase):
         dir_path = os.path.dirname(os.path.realpath(__file__))
 
         config_path = os.path.join(
-            os.path.abspath(os.path.join(dir_path, os.pardir)),
-            'test_resources',
+            RESOURCES_DIRECTORY,
             'configuration_training_without_eval.json'
         )
 
@@ -74,14 +69,12 @@ class TestPipeline(unittest.TestCase):
             config = json.load(json_data)
 
         config['training_set_path'] = os.path.join(
-            os.path.abspath(os.path.join(dir_path, os.pardir)),
-            'test_resources',
+            RESOURCES_DIRECTORY,
             'example_training.tsv'
         )
 
         config['test_set_path'] = os.path.join(
-            os.path.abspath(os.path.join(dir_path, os.pardir)),
-            'test_resources',
+            RESOURCES_DIRECTORY,
             'example_test.tsv'
         )
 
@@ -89,10 +82,8 @@ class TestPipeline(unittest.TestCase):
         results = self.p.run()
         self.assertIsNotNone(results)
 
-
         config_path = os.path.join(
-            os.path.abspath(os.path.join(dir_path, os.pardir)),
-            'test_resources',
+            RESOURCES_DIRECTORY,
             'configuration_hpo.json'
         )
 
@@ -100,14 +91,12 @@ class TestPipeline(unittest.TestCase):
             config = json.load(json_data)
 
         config['training_set_path'] = os.path.join(
-            os.path.abspath(os.path.join(dir_path, os.pardir)),
-            'test_resources',
+            RESOURCES_DIRECTORY,
             'example_training.tsv'
         )
 
         config['test_set_path'] = os.path.join(
-            os.path.abspath(os.path.join(dir_path, os.pardir)),
-            'test_resources',
+            RESOURCES_DIRECTORY,
             'example_test.tsv'
         )
 

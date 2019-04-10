@@ -3,17 +3,21 @@
 """Test training mode for TransE."""
 
 import logging
+import os
+import tempfile
 import unittest
+
+import numpy as np
+
 import pykeen
 import pykeen.constants as pkc
-import numpy as np
+from tests.constants import RESOURCES_DIRECTORY
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pykeen').setLevel(logging.INFO)
 
-OUTPUT_DIRECTORY = '../test_resources/test_out'
 CONFIG = dict(
-    training_set_path='../data/rdf.nt',
+    training_set_path=os.path.join(RESOURCES_DIRECTORY, 'data', 'rdf.nt'),
     execution_mode=pkc.TRAINING_MODE,
     random_seed=0,
     kg_embedding_model_name='TransE',
@@ -31,11 +35,17 @@ CONFIG = dict(
 class TestTrainingModeForTransE(unittest.TestCase):
     """Test that TransE can be trained and evaluated correctly in training mode."""
 
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.dir.cleanup()
+
     def test_training(self):
         """Test that TransE is trained correctly in training mode."""
         results = pykeen.run(
             config=CONFIG,
-            output_directory=OUTPUT_DIRECTORY,
+            output_directory=self.dir.name,
         )
 
         self.assertIsNotNone(results)
@@ -56,7 +66,7 @@ class TestTrainingModeForTransE(unittest.TestCase):
 
         results = pykeen.run(
             config=config,
-            output_directory=OUTPUT_DIRECTORY,
+            output_directory=self.dir.name,
         )
 
         self.assertIsNotNone(results)
@@ -74,4 +84,3 @@ class TestTrainingModeForTransE(unittest.TestCase):
         self.assertIsNotNone(results.results[pkc.ENTITY_TO_ID])
         self.assertIsNotNone(results.results[pkc.RELATION_TO_ID])
         self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])
-

@@ -31,6 +31,17 @@ Alternatively, it can be installed from the source for development with:
 However, GPU acceleration is limited to Linux systems with the appropriate graphics cards
 as described in the PyTorch documentation.
 
+Installation Extras
+~~~~~~~~~~~~~~~~~~~
+PyKEEN has several extras that can be installed with PyPI.
+
+1. ``pip install pykeen[rdf]`` enables support for loading files using ``rdflib``. They can be added to the training
+   file paths by prefixing files with ``rdf:``
+2. ``pip install pykeen[ndex]`` enables support for loading networks from NDEx. They can be added to the training file
+   paths by prefixing files with ``ndex:``
+
+Any combinations can be added with commas, such as ``pip install pykeen[rdf,ndex]``.
+
 Tutorials
 ---------
 Code examples can be found in the `notebooks directory
