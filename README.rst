@@ -32,7 +32,7 @@ However, GPU acceleration is limited to Linux systems with the appropriate graph
 as described in the PyTorch documentation.
 
 Installation Extras
-~~~~~~~~~~~~~~~~~~~
+-------------------
 PyKEEN has several extras that can be installed with PyPI.
 
 1. ``pip install pykeen[rdf]`` enables support for loading files using ``rdflib``. They can be added to the training
