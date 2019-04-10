@@ -23,6 +23,20 @@ To programmatically train (and evaluate) a KGE model, a python dictionary must b
         preferred_device            = 'gpu',
     )
 
+The ``training_set_path`` can also be set to a list of strings. The corresponding knowledge graphs will all be combine
+before training.
+
+.. code-block:: python
+
+    config = dict(
+        training_set_path = [
+            'data/corpora/fb15k/fb_15k_train.tsv',
+            'data/corpora/fb16k/fb_16k_train.tsv',
+            ...
+        ],
+        ...
+    )
+
 Run your experiment
 ~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
