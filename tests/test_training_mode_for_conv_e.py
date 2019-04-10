@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test training mode for TransE."""
+"""Test training mode for ConvE."""
 
 import logging
 import os
@@ -20,10 +20,17 @@ CONFIG = dict(
     training_set_path=os.path.join(RESOURCES_DIRECTORY, 'data', 'rdf.nt'),
     execution_mode=pkc.TRAINING_MODE,
     random_seed=0,
-    kg_embedding_model_name=pkc.TRANS_E_NAME,
+    kg_embedding_model_name=pkc.CONV_E_NAME,
     embedding_dim=50,
-    scoring_function=1,  # corresponds to L1
-    normalization_of_entities=2,  # corresponds to L2
+    ConvE_input_channels=1,
+    ConvE_output_channels=3,
+    ConvE_height=5,
+    ConvE_width=10,
+    ConvE_kernel_height=5,
+    ConvE_kernel_width=3,
+    conv_e_input_dropout=0.2,
+    conv_e_feature_map_dropout=0.5,
+    conv_e_output_dropout=0.5,
     margin_loss=1,
     learning_rate=0.01,
     num_epochs=20,
@@ -32,8 +39,8 @@ CONFIG = dict(
 )
 
 
-class TestTrainingModeForTransE(unittest.TestCase):
-    """Test that TransE can be trained and evaluated correctly in training mode."""
+class TestTrainingModeForConvE(unittest.TestCase):
+    """Test that ConvE can be trained and evaluated correctly in training mode."""
 
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
@@ -42,7 +49,7 @@ class TestTrainingModeForTransE(unittest.TestCase):
         self.dir.cleanup()
 
     def test_training(self):
-        """Test that TransE is trained correctly in training mode."""
+        """Test that ConvE is trained correctly in training mode."""
         results = pykeen.run(
             config=CONFIG,
             output_directory=self.dir.name,
@@ -58,7 +65,7 @@ class TestTrainingModeForTransE(unittest.TestCase):
         self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])
 
     def test_evaluation(self):
-        """Test that TransE is trained and evaluated correctly in training mode. """
+        """Test that ConvE is trained and evaluated correctly in training mode. """
         # 10 % of training set will be used as a test set
         config = CONFIG.copy()
         config[pkc.TEST_SET_RATIO] = 0.1
