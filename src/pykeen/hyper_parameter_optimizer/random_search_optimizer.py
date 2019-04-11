@@ -30,9 +30,11 @@ class RandomSearchHPO(AbstractHPOptimizer):
     def _sample_conv_e_params(self, hyperparams_dict) -> Dict[str, Any]:
         kg_model_config = OrderedDict()
         # Sample params which are dependent on each other
+
+        hyperparams_dict = hyperparams_dict.copy()
         embedding_dimensions = hyperparams_dict[pkc.EMBEDDING_DIM]
         sampled_index = random.choice(range(len(embedding_dimensions)))
-        kg_model_config[pkc.EMBEDDING_DIM] = embedding_dimensions[sampled_index]
+        kg_model_config[pkc.EMBEDDING_DIM] = hyperparams_dict[pkc.EMBEDDING_DIM][sampled_index]
         kg_model_config[pkc.CONV_E_HEIGHT] = hyperparams_dict[pkc.CONV_E_HEIGHT][sampled_index]
         kg_model_config[pkc.CONV_E_WIDTH] = hyperparams_dict[pkc.CONV_E_WIDTH][sampled_index]
         kg_model_config[pkc.CONV_E_KERNEL_HEIGHT] = hyperparams_dict[pkc.CONV_E_KERNEL_HEIGHT][sampled_index]
@@ -45,6 +47,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
         del hyperparams_dict[pkc.CONV_E_KERNEL_WIDTH]
 
         kg_model_config.update(self._sample_parameter_value(hyperparams_dict))
+
 
         return kg_model_config
 
@@ -153,4 +156,3 @@ class RandomSearchHPO(AbstractHPOptimizer):
             device=device,
             seed=seed,
         )
-
