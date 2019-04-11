@@ -5,15 +5,6 @@
 import pykeen.constants as pkc
 from tests.constants import BaseTestTrainingMode
 
-CONFIG = dict(
-
-    margin_loss=1,
-    learning_rate=0.01,
-    num_epochs=20,
-    batch_size=64,
-    preferred_device='cpu'
-)
-
 
 class TestTrainingModeForConvE(BaseTestTrainingMode):
     """Test that ConvE can be trained and evaluated correctly in training mode."""
