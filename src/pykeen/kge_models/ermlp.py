@@ -25,7 +25,7 @@ class ERMLP(BaseModule):
     """
 
     model_name = ERMLP_NAME
-    margin_ranking_loss_size_average: bool = False
+    margin_ranking_loss_size_average: bool = True
 
     def __init__(self, config: Dict) -> None:
         super().__init__(config)
