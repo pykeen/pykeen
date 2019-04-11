@@ -2,13 +2,16 @@
 
 """Testing constants for PyKEEN."""
 
+import logging
 import os
 import tempfile
 import unittest
+
 import numpy as np
+
 import pykeen
 import pykeen.constants as pkc
-import logging
+
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pykeen').setLevel(logging.INFO)
 
@@ -54,7 +57,6 @@ class BaseTestTrainingMode(unittest.TestCase):
         config[pkc.FILTER_NEG_TRIPLES] = True
         return config
 
-
     def check_basic_results(self, results):
         """Test basic functionalities that are always called when a model is trained in training model."""
         self.assertIsNotNone(results)
@@ -78,4 +80,3 @@ class BaseTestTrainingMode(unittest.TestCase):
         self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][3]), np.float64)
         self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][5]), np.float64)
         self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][10]), np.float64)
-

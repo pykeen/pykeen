@@ -14,7 +14,7 @@ import torch
 
 from pykeen.constants import (
     ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, FINAL_CONFIGURATION, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING,
-    RELATION_TO_ID, TRAINED_MODEL,
+    RELATION_TO_ID, TRAINED_MODEL
 )
 from pykeen.utilities.pipeline import Pipeline
 
@@ -60,6 +60,7 @@ class Results:
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.plot(epochs, self.losses)
+
 
 def export_experimental_artifacts(pipeline_results: Mapping,
                                   output_directory: str,
@@ -117,6 +118,7 @@ def export_experimental_artifacts(pipeline_results: Mapping,
         pipeline_results[TRAINED_MODEL].state_dict(),
         os.path.join(output_directory, 'trained_model.pkl'),
     )
+
 
 def run(config: Dict,
         output_directory: Optional[str] = None,
