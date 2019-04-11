@@ -82,12 +82,14 @@ class BaseTestTrainingMode(unittest.TestCase):
         self.assertIsNotNone(results.results[pkc.RELATION_TO_ID])
         self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])
 
-    def check_that_model_has_not_been_evalauted(self, results):
+    def check_training_mode_without_evaluation(self, results):
         """Test that model has not been evaluated."""
+        self.check_basic_results(results=results)
         self.assertNotIn(pkc.EVAL_SUMMARY, results.results)
 
-    def check_evaluation_results(self, results):
+    def check_training_followed_by_evaluation(self, results):
         """Test evaluation specific functionalities."""
+        self.check_basic_results(results=results)
         self.assertIn(pkc.MEAN_RANK, results.results[pkc.EVAL_SUMMARY])
         self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.MEAN_RANK]), float)
         self.assertIn(pkc.HITS_AT_K, results.results[pkc.EVAL_SUMMARY])

@@ -21,13 +21,11 @@ class TestTrainingModeForTransD(BaseTestTrainingMode):
     def test_training(self):
         """Test that TransD is trained correctly in training mode."""
         results = self.execute_pipeline(config=self.config)
-        self.check_basic_results(results=results)
-        self.check_that_model_has_not_been_evalauted(results=results)
+        self.check_training_mode_without_evaluation(results=results)
 
     def test_evaluation(self):
         """Test that TransD is trained and evaluated correctly in training mode."""
         config = set_evaluation_specific_parameters(config=self.config)
         results = self.execute_pipeline(config=config)
-        self.check_basic_results(results=results)
-        self.check_evaluation_results(results=results)
+        self.check_training_followed_by_evaluation(results=results)
         self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])
