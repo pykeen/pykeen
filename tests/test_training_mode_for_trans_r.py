@@ -2,85 +2,30 @@
 
 """Test training mode for TransR."""
 
-import logging
-import os
-import tempfile
-import unittest
-
-import numpy as np
-
-import pykeen
 import pykeen.constants as pkc
-from tests.constants import RESOURCES_DIRECTORY
-
-logging.basicConfig(level=logging.INFO)
-logging.getLogger('pykeen').setLevel(logging.INFO)
-
-CONFIG = dict(
-    training_set_path=os.path.join(RESOURCES_DIRECTORY, 'data', 'rdf.nt'),
-    execution_mode=pkc.TRAINING_MODE,
-    random_seed=0,
-    kg_embedding_model_name=pkc.TRANS_R_NAME,
-    embedding_dim=50,
-    relation_embedding_dim=20,
-    scoring_function=2,  # corresponds to L2
-    margin_loss=0.05,
-    learning_rate=0.01,
-    num_epochs=10,
-    batch_size=64,
-    preferred_device='cpu'
-)
+from tests.constants import BaseTestTrainingMode
 
 
-class TestTrainingModeForTransR(unittest.TestCase):
+class TestTrainingModeForTransR(BaseTestTrainingMode):
     """Test that TransR can be trained and evaluated correctly in training mode."""
-
-    def setUp(self):
-        self.dir = tempfile.TemporaryDirectory()
-
-    def tearDown(self):
-        self.dir.cleanup()
+    config = BaseTestTrainingMode.config
+    config[pkc.KG_EMBEDDING_MODEL_NAME] = pkc.TRANS_R_NAME
+    config[pkc.EMBEDDING_DIM] = 50
+    config[pkc.RELATION_EMBEDDING_DIM] = 20
+    config[pkc.SCORING_FUNCTION_NORM] = 2  # corresponds to L2
+    config[pkc.NORM_FOR_NORMALIZATION_OF_ENTITIES] = 2  # corresponds to L2
+    config[pkc.MARGIN_LOSS] = 0.05  # corresponds to L1
 
     def test_training(self):
         """Test that TransR is trained correctly in training mode."""
-        results = pykeen.run(
-            config=CONFIG,
-            output_directory=self.dir.name,
-        )
-
-        self.assertIsNotNone(results)
-        self.assertIsNotNone(results.results[pkc.TRAINED_MODEL])
-        self.assertIsNotNone(results.results[pkc.LOSSES])
-        self.assertIsNotNone(results.results[pkc.ENTITY_TO_EMBEDDING])
-        self.assertNotIn(pkc.EVAL_SUMMARY, results.results)
-        self.assertIsNotNone(results.results[pkc.ENTITY_TO_ID])
-        self.assertIsNotNone(results.results[pkc.RELATION_TO_ID])
-        self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])
+        results = self.start_training(config=self.config)
+        self.check_basic_results(results=results)
+        self.check_that_model_has_not_been_evalauted(results=results)
 
     def test_evaluation(self):
-        """Test that TransR is trained and evaluated correctly in training mode. """
-        # 10 % of training set will be used as a test set
-        config = CONFIG.copy()
-        config[pkc.TEST_SET_RATIO] = 0.1
-        config[pkc.FILTER_NEG_TRIPLES] = True
-
-        results = pykeen.run(
-            config=config,
-            output_directory=self.dir.name,
-        )
-
-        self.assertIsNotNone(results)
-        self.assertIsNotNone(results.results[pkc.TRAINED_MODEL])
-        self.assertIsNotNone(results.results[pkc.LOSSES])
-        self.assertIsNotNone(results.results[pkc.ENTITY_TO_EMBEDDING])
-        self.assertIn(pkc.EVAL_SUMMARY, results.results)
-        self.assertIn(pkc.MEAN_RANK, results.results[pkc.EVAL_SUMMARY])
-        self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.MEAN_RANK]), float)
-        self.assertIn(pkc.HITS_AT_K, results.results[pkc.EVAL_SUMMARY])
-        self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][1]), np.float64)
-        self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][3]), np.float64)
-        self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][5]), np.float64)
-        self.assertEqual(type(results.results[pkc.EVAL_SUMMARY][pkc.HITS_AT_K][10]), np.float64)
-        self.assertIsNotNone(results.results[pkc.ENTITY_TO_ID])
-        self.assertIsNotNone(results.results[pkc.RELATION_TO_ID])
+        """Test that TransR is trained and evaluated correctly in training mode."""
+        config = self.set_evaluation_specific_parameters(config=self.config)
+        results = self.start_training(config=config)
+        self.check_basic_results(results=results)
+        self.check_evaluation_results(results=results)
         self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])

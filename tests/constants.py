@@ -8,6 +8,9 @@ import unittest
 import numpy as np
 import pykeen
 import pykeen.constants as pkc
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.getLogger('pykeen').setLevel(logging.INFO)
 
 __all__ = [
     'RESOURCES_DIRECTORY',
@@ -24,7 +27,7 @@ class BaseTestTrainingMode(unittest.TestCase):
     config[pkc.EXECUTION_MODE] = pkc.TRAINING_MODE
     config[pkc.SEED] = 0
     config[pkc.LEARNING_RATE] = 0.01
-    config[pkc.NUM_EPOCHS] = 20
+    config[pkc.NUM_EPOCHS] = 10
     config[pkc.BATCH_SIZE] = 64
     config[pkc.PREFERRED_DEVICE] = pkc.CPU
 
@@ -42,6 +45,15 @@ class BaseTestTrainingMode(unittest.TestCase):
         )
 
         return results
+
+    def set_evaluation_specific_parameters(self, config):
+        """Set evaluation specific parameters."""
+        # 10 % of training set will be used as a test set
+        config = config.copy()
+        config[pkc.TEST_SET_RATIO] = 0.1
+        config[pkc.FILTER_NEG_TRIPLES] = True
+        return config
+
 
     def check_basic_results(self, results):
         """Test basic functionalities that are always called when a model is trained in training model."""
