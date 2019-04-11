@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Test training mode for TransD."""
+"""Test HPO mode for TransD."""
 
 import pykeen.constants as pkc
 from tests.constants import BaseTestTrainingMode, set_training_mode_specific_parameters, \
-    set_evaluation_specific_parameters
+    set_hpo_mode_specific_parameters, set_evaluation_specific_parameters
 
 
 class TestTrainingModeForTransD(BaseTestTrainingMode):
@@ -29,3 +29,20 @@ class TestTrainingModeForTransD(BaseTestTrainingMode):
         results = self.execute_pipeline(config=config)
         self.check_training_followed_by_evaluation(results=results)
         self.assertIsNotNone(results.results[pkc.FINAL_CONFIGURATION])
+
+
+class TestHPOModeForTransD(BaseTestTrainingMode):
+    """Test that TransD can be trained and evaluated correctly in HPO mode."""
+    config = BaseTestTrainingMode.config
+    config = set_training_mode_specific_parameters(config=config)
+    config[pkc.KG_EMBEDDING_MODEL_NAME] = pkc.TRANS_D_NAME
+    config[pkc.EMBEDDING_DIM] = [10, 20, 50]
+    config[pkc.RELATION_EMBEDDING_DIM] = [5, 20]
+    config[pkc.SCORING_FUNCTION_NORM] = [1, 2]
+    config[pkc.MARGIN_LOSS] = [1, 1.5, 2]
+
+    def test_hpo_mode(self):
+        """Test whether HPO mode works correctly for TransD."""
+        config = set_hpo_mode_specific_parameters(config=self.config)
+        results = self.execute_pipeline(config=config)
+        self.check_training_followed_by_evaluation(results=results)
