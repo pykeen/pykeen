@@ -23,11 +23,34 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 RESOURCES_DIRECTORY = os.path.join(HERE, 'resources')
 
 
+def set_training_mode_specific_parameters(config):
+    """Set hyper-parameter optimization specific specific parameters."""
+    config = config.copy()
+    config[pkc.EXECUTION_MODE] = pkc.TRAINING_MODE
+    return config
+
+
+def set_hpo_mode_specific_parameters(config):
+    """Set hyper-parameter optimization specific specific parameters."""
+    config = config.copy()
+    config[pkc.EXECUTION_MODE] = pkc.HPO_MODE
+    config[pkc.NUM_OF_HPO_ITERS] = 3
+    return config
+
+
+def set_evaluation_specific_parameters(config):
+    """Set evaluation specific parameters."""
+    # 10 % of training set will be used as a test set
+    config = config.copy()
+    config[pkc.TEST_SET_RATIO] = 0.1
+    config[pkc.FILTER_NEG_TRIPLES] = True
+    return config
+
+
 class BaseTestTrainingMode(unittest.TestCase):
     """Base class for testing the training mode."""
     config = dict()
     config[pkc.TRAINING_SET_PATH] = os.path.join(RESOURCES_DIRECTORY, 'data', 'rdf.nt'),
-    config[pkc.EXECUTION_MODE] = pkc.TRAINING_MODE
     config[pkc.SEED] = 0
     config[pkc.LEARNING_RATE] = 0.01
     config[pkc.NUM_EPOCHS] = 10
@@ -40,7 +63,7 @@ class BaseTestTrainingMode(unittest.TestCase):
     def tearDown(self):
         self.dir.cleanup()
 
-    def start_training(self, config):
+    def execute_pipeline(self, config):
         """Test that ConvE is trained correctly in training mode."""
         results = pykeen.run(
             config=config,
@@ -48,14 +71,6 @@ class BaseTestTrainingMode(unittest.TestCase):
         )
 
         return results
-
-    def set_evaluation_specific_parameters(self, config):
-        """Set evaluation specific parameters."""
-        # 10 % of training set will be used as a test set
-        config = config.copy()
-        config[pkc.TEST_SET_RATIO] = 0.1
-        config[pkc.FILTER_NEG_TRIPLES] = True
-        return config
 
     def check_basic_results(self, results):
         """Test basic functionalities that are always called when a model is trained in training model."""
