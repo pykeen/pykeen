@@ -3,20 +3,12 @@
 """Test training mode for RESCAL."""
 
 import logging
-import os
-import tempfile
-import unittest
 
-import numpy as np
-
-import pykeen
 import pykeen.constants as pkc
-from tests.constants import RESOURCES_DIRECTORY, BaseTestTrainingMode
+from tests.constants import BaseTestTrainingMode
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pykeen').setLevel(logging.INFO)
-
-
 
 
 class TestTrainingModeForRESCAL(BaseTestTrainingMode):
@@ -24,8 +16,8 @@ class TestTrainingModeForRESCAL(BaseTestTrainingMode):
     config = BaseTestTrainingMode.config
     config[pkc.KG_EMBEDDING_MODEL_NAME] = pkc.RESCAL_NAME
     config[pkc.EMBEDDING_DIM] = 50
-    config[pkc.SCORING_FUNCTION_NORM] = 2 # corresponds to L2
-    config[pkc.MARGIN_LOSS] = 1 # corresponds to L1
+    config[pkc.SCORING_FUNCTION_NORM] = 2  # corresponds to L2
+    config[pkc.MARGIN_LOSS] = 1  # corresponds to L1
 
     def test_training(self):
         """Test that RESCAL is trained correctly in training mode."""
