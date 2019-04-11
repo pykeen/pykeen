@@ -14,7 +14,7 @@ You can share you trained KGE models along the other experimental artifacts thro
 
 Installation |pypi_version| |python_versions| |pypi_license|
 ------------------------------------------------------------
-To install ``pykeen`` Python 3.6+ is required, and we recommend to install it on Linux or Mac OS systems.
+To install ``pykeen``, Python 3.6+ is required, and we recommend to install it on Linux or Mac OS systems.
 Please run following command:
 
 .. code-block:: sh
