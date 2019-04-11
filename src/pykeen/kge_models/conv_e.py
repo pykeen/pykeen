@@ -50,6 +50,7 @@ class ConvE(nn.Module):
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         num_in_channels = config[CONV_E_INPUT_CHANNELS]
+
         num_out_channels = config[CONV_E_OUTPUT_CHANNELS]
         self.img_height = config[CONV_E_HEIGHT]
         self.img_width = config[CONV_E_WIDTH]
