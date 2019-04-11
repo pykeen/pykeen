@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test HPO mode for TransH."""
+"""Test training and HPO mode for TransH."""
 
 import pykeen.constants as pkc
 from tests.constants import BaseTestTrainingMode, set_training_mode_specific_parameters, \
