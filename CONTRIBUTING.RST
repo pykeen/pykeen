@@ -31,7 +31,7 @@ Want to Contribute?
     $ git clone https://github.com/<YourUsername>/SmartDataAnalytics/PyKEEN.git
 
 3. Install with :code:`pip`. The flag, :code:`-e`, makes your installation editable, so your changes will be reflected
-automatically in your installation.
+   automatically in your installation.
 
     $ cd pykeen
     $ python3 -m pip install -e .
