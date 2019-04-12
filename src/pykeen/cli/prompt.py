@@ -142,8 +142,6 @@ def prompt_config(*, config: Optional[Dict] = None, show_welcome: bool = True, d
     if config is None:
         config = OrderedDict()
 
-    config['pykeen-version'] = VERSION
-
     # Step 1: Welcome + Intro
     if show_welcome:
         print_welcome_message()

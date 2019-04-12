@@ -14,8 +14,8 @@ import torch
 
 from pykeen.constants import (
     ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, FINAL_CONFIGURATION, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING,
-    RELATION_TO_ID, TRAINED_MODEL
-)
+    RELATION_TO_ID, TRAINED_MODEL,
+    VERSION)
 from pykeen.utilities.pipeline import Pipeline
 
 __all__ = [
@@ -66,6 +66,7 @@ def export_experimental_artifacts(pipeline_results: Mapping,
                                   output_directory: str,
                                   ) -> None:
     """Export export experimental artifacts."""
+
     with open(os.path.join(output_directory, 'configuration.json'), 'w') as file:
         # In HPO model initial configuration is different from final configurations, that's why we differentiate
         json.dump(pipeline_results[FINAL_CONFIGURATION], file, indent=2)
@@ -131,6 +132,8 @@ def run(config: Dict,
     if output_directory is None:
         output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d-%H-%M-%S"))
     os.makedirs(output_directory, exist_ok=True)
+
+    config['pykeen-version'] = VERSION
 
     pipeline = Pipeline(config=config)
     pipeline_results = pipeline.run()
