@@ -40,6 +40,12 @@ the following:
 1. ``pip install pykeen[ndex]`` enables support for loading networks from NDEx. They can be added to the training file
    paths by prefixing files with ``ndex:``
 
+Contributing
+------------
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
+See `CONTRIBUTING.rst <https://github.com/pybel/pybel/blob/develop/CONTRIBUTING.rst>`_ for more information on getting
+involved.
+
 Tutorials
 ---------
 Code examples can be found in the `notebooks directory

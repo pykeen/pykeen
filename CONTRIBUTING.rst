@@ -26,6 +26,7 @@ Want to Contribute?
 -------------------
 
 1. Get the code. Fork the repository from GitHub using the big button in the top-right corner of https://github.com/SmartDataAnalytics/PyKEEN
+
 2. Clone your directory with
 
     $ git clone https://github.com/<YourUsername>/SmartDataAnalytics/PyKEEN.git
