@@ -10,12 +10,12 @@ Having a Problem? Submit an Issue.
 
 1. Check that you have the latest version of :code:`PyKEEN`
 2. Go here: https://github.com/SmartDataAnalytics/PyKEEN/issues
-4. Check that this issue hasn't been solved
-5. Click "new issue"
-6. Add a short, but descriptive title
-7. Add a full description of the problem, including the code that caused it and any support files related to this code
+3. Check that this issue hasn't been solved
+4. Click "new issue"
+5. Add a short, but descriptive title
+6. Add a full description of the problem, including the code that caused it and any support files related to this code
    so others can reproduce your problem
-8. Copy the output and error message you're getting
+7. Copy the output and error message you're getting
 
 Have a Question or Suggestion?
 ------------------------------
