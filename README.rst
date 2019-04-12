@@ -43,8 +43,8 @@ the following:
 Contributing
 ------------
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
-See `CONTRIBUTING.rst <https://github.com/pybel/pybel/blob/develop/CONTRIBUTING.rst>`_ for more information on getting
-involved.
+See `CONTRIBUTING.rst <https://github.com/SmartDataAnalytics/PyKEEN/blob/master/CONTRIBUTING.rst>`_ for more
+information on getting involved.
 
 Tutorials
 ---------
