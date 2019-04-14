@@ -17,10 +17,9 @@ relations between entities.
 Existing Software
 ~~~~~~~~~~~~~~~~~
 While there exists other toolkits like OpenKE [5]_ and scikit-kge (https://github.com/mnick/scikit-kge),
-they are not specifically for bioinformatics applications and they require more expertise in programming and in KGEs.
-To the best of our knowledge, PyKEEN is the first framework specifically designed to facilitate the use of KGE models
-for users in different applications such as the bioinformatics community (see BioKEEN:
-https://github.com/SmartDataAnalytics/BioKEEN).
+they require more expertise in programming and in KGEs. To the best of our knowledge, PyKEEN is the first framework
+specifically designed to facilitate the use of KGE models for users in different applications such as the
+bioinformatics community (see BioKEEN: https://github.com/SmartDataAnalytics/BioKEEN).
 
 PyKEEN's Software Architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
