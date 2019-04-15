@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from torch.nn import Module
 
 import pykeen.constants as pkc
-from pykeen.hyper_parameter_optimizer.random_search_optimizer import RandomSearchHPO
+from pykeen.hpo import RandomSearch
 from pykeen.kge_models import get_kge_model
 from pykeen.utilities.evaluation_utils.metrics_computations import MetricResults, compute_metric_results
 from pykeen.utilities.train_utils import train_kge_model
@@ -62,7 +62,7 @@ class Pipeline(object):
              entity_label_to_embedding,
              relation_label_to_embedding,
              metric_results,
-             params) = RandomSearchHPO.run(
+             params) = RandomSearch.run(
                 mapped_train_triples=mapped_pos_train_triples,
                 mapped_test_triples=mapped_pos_test_triples,
                 entity_to_id=self.entity_label_to_id,
@@ -75,7 +75,7 @@ class Pipeline(object):
             if self.is_evaluation_required:
                 mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_and_test_triples()
             else:
-                mapped_pos_train_triples = self._get_train_triples()
+                mapped_pos_train_triples, mapped_pos_test_triples = self._get_train_triples(), None
 
             all_entities = np.array(list(self.entity_label_to_id.values()))
 

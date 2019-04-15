@@ -2,29 +2,27 @@
 
 """A hyper-parameter optimizer that uses random search."""
 
-import random
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+import random
 import torch
 from torch.nn import Module
 from tqdm import trange
+from typing import Any, Dict, List, Optional
 
 import pykeen.constants as pkc
-from pykeen.hyper_parameter_optimizer.abstract_hyper_params_optimizer import AbstractHPOptimizer
+from pykeen.hpo.utils import HPOptimizer, HPOptimizerResult
 from pykeen.kge_models import get_kge_model
 from pykeen.utilities.evaluation_utils.metrics_computations import compute_metric_results
 from pykeen.utilities.train_utils import train_kge_model
 
 __all__ = [
-    'RandomSearchHPO',
+    'RandomSearch',
 ]
 
-OptimizeResult = Tuple[Module, List[float], Any, Any, Any, Any]
 
-
-class RandomSearchHPO(AbstractHPOptimizer):
+class RandomSearch(HPOptimizer):
     """A hyper-parameter optimizer that uses random search."""
 
     def _sample_conv_e_params(self, hyperparams_dict) -> Dict[str, Any]:
@@ -48,19 +46,19 @@ class RandomSearchHPO(AbstractHPOptimizer):
 
         kg_model_config.update(self._sample_parameter_value(hyperparams_dict))
 
-
         return kg_model_config
 
-    def optimize_hyperparams(self,
-                             mapped_train_triples,
-                             mapped_test_triples,
-                             entity_to_id,
-                             rel_to_id,
-                             config,
-                             device,
-                             seed: Optional[int] = None,
-                             k_evaluation: int = 10) -> OptimizeResult:
-        """"""
+    def optimize_hyperparams(
+            self,
+            mapped_train_triples,
+            mapped_test_triples,
+            entity_to_id,
+            rel_to_id,
+            config,
+            device,
+            seed: Optional[int] = None,
+            k_evaluation: int = 10,
+    ) -> HPOptimizerResult:
         if seed is not None:
             torch.manual_seed(config[pkc.SEED])
 
@@ -146,7 +144,7 @@ class RandomSearchHPO(AbstractHPOptimizer):
             rel_to_id: Dict[int, str],
             config: Dict,
             device,
-            seed) -> OptimizeResult:
+            seed) -> HPOptimizerResult:
         return cls().optimize_hyperparams(
             mapped_train_triples=mapped_train_triples,
             mapped_test_triples=mapped_test_triples,
