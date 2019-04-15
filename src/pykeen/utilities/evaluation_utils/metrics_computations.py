@@ -9,6 +9,9 @@ from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
+from tqdm import tqdm
+
+from ...constants import EMOJI
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +185,9 @@ def compute_metric_results(
         mapped_test_triples,
         device,
         filter_neg_triples=False,
-        ks: Optional[List[int]] = None
+        ks: Optional[List[int]] = None,
+        *,
+        use_tqdm: bool = True,
 ) -> MetricResults:
     """Compute the metric results.
 
@@ -193,6 +198,7 @@ def compute_metric_results(
     :param device:
     :param filter_neg_triples:
     :param ks:
+    :param use_tqdm: Should a progress bar be shown?
     :return:
     """
     start = timeit.default_timer()
@@ -214,7 +220,8 @@ def compute_metric_results(
         _compute_rank
     )
 
-    # Corrupt triples
+    if use_tqdm:
+        mapped_test_triples = tqdm(mapped_test_triples, desc=f'{EMOJI} corrupting triples')
     for pos_triple in mapped_test_triples:
         corrupted_subject_based, corrupted_object_based = _create_corrupted_triples(
             triple=pos_triple,
