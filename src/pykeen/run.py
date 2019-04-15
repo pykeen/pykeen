@@ -14,8 +14,8 @@ import torch
 
 from pykeen.constants import (
     ENTITY_TO_EMBEDDING, ENTITY_TO_ID, EVAL_SUMMARY, FINAL_CONFIGURATION, LOSSES, OUTPUT_DIREC, RELATION_TO_EMBEDDING,
-    RELATION_TO_ID, TRAINED_MODEL,
-    VERSION)
+    RELATION_TO_ID, TRAINED_MODEL, VERSION,
+)
 from pykeen.utilities.pipeline import Pipeline
 
 __all__ = [
@@ -62,38 +62,39 @@ class Results:
         plt.plot(epochs, self.losses)
 
 
-def export_experimental_artifacts(pipeline_results: Mapping,
-                                  output_directory: str,
-                                  ) -> None:
+def export_experimental_artifacts(
+        results: Mapping,
+        output_directory: str,
+) -> None:
     """Export export experimental artifacts."""
 
     with open(os.path.join(output_directory, 'configuration.json'), 'w') as file:
         # In HPO model initial configuration is different from final configurations, that's why we differentiate
-        json.dump(pipeline_results[FINAL_CONFIGURATION], file, indent=2)
+        json.dump(results[FINAL_CONFIGURATION], file, indent=2)
 
     with open(os.path.join(output_directory, 'entities_to_embeddings.pkl'), 'wb') as file:
-        pickle.dump(pipeline_results[ENTITY_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(results[ENTITY_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
 
     with open(os.path.join(output_directory, 'entities_to_embeddings.json'), 'w') as file:
         json.dump(
             {
                 key: list(map(float, array))
-                for key, array in pipeline_results[ENTITY_TO_EMBEDDING].items()
+                for key, array in results[ENTITY_TO_EMBEDDING].items()
             },
             file,
             indent=2,
             sort_keys=True,
         )
 
-    if pipeline_results[RELATION_TO_EMBEDDING] is not None:
+    if results[RELATION_TO_EMBEDDING] is not None:
         with open(os.path.join(output_directory, 'relations_to_embeddings.pkl'), 'wb') as file:
-            pickle.dump(pipeline_results[RELATION_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(results[RELATION_TO_EMBEDDING], file, protocol=pickle.HIGHEST_PROTOCOL)
 
         with open(os.path.join(output_directory, 'relations_to_embeddings.json'), 'w') as file:
             json.dump(
                 {
                     key: list(map(float, array))
-                    for key, array in pipeline_results[RELATION_TO_EMBEDDING].items()
+                    for key, array in results[RELATION_TO_EMBEDDING].items()
                 },
                 file,
                 indent=2,
@@ -101,29 +102,30 @@ def export_experimental_artifacts(pipeline_results: Mapping,
             )
 
     with open(os.path.join(output_directory, 'entity_to_id.json'), 'w') as file:
-        json.dump(pipeline_results[ENTITY_TO_ID], file, indent=2, sort_keys=True)
+        json.dump(results[ENTITY_TO_ID], file, indent=2, sort_keys=True)
 
     with open(os.path.join(output_directory, 'relation_to_id.json'), 'w') as file:
-        json.dump(pipeline_results[RELATION_TO_ID], file, indent=2, sort_keys=True)
+        json.dump(results[RELATION_TO_ID], file, indent=2, sort_keys=True)
 
     with open(os.path.join(output_directory, 'losses.json'), 'w') as file:
-        json.dump(pipeline_results[LOSSES], file, indent=2, sort_keys=True)
+        json.dump(results[LOSSES], file, indent=2, sort_keys=True)
 
-    eval_summary = pipeline_results.get(EVAL_SUMMARY)
+    eval_summary = results.get(EVAL_SUMMARY)
     if eval_summary is not None:
         with open(os.path.join(output_directory, 'evaluation_summary.json'), 'w') as file:
             json.dump(eval_summary, file, indent=2)
 
     # Save trained model
     torch.save(
-        pipeline_results[TRAINED_MODEL].state_dict(),
+        results[TRAINED_MODEL].state_dict(),
         os.path.join(output_directory, 'trained_model.pkl'),
     )
 
 
-def run(config: Dict,
+def run(
+        config: Dict,
         output_directory: Optional[str] = None,
-        ) -> Results:
+) -> Results:
     """Train a KGE model.
 
     :param config: The configuration specifying the KGE model and its hyper-parameters
@@ -136,14 +138,16 @@ def run(config: Dict,
     config['pykeen-version'] = VERSION
 
     pipeline = Pipeline(config=config)
-    pipeline_results = pipeline.run()
+    results = pipeline.run()
 
     # Export experimental artifacts
-    export_experimental_artifacts(pipeline_results=pipeline_results,
-                                  output_directory=output_directory)
+    export_experimental_artifacts(
+        results=results,
+        output_directory=output_directory,
+    )
 
     return Results(
         config=config,
         pipeline=pipeline,
-        results=pipeline_results,
+        results=results,
     )

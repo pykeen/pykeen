@@ -2,6 +2,8 @@
 
 """PyKEEN's command line interface."""
 
+import json
+import os
 from collections import OrderedDict
 from typing import Dict, Optional
 
@@ -21,7 +23,6 @@ from pykeen.constants import (
     EXECUTION_MODE, FILTER_NEG_TRIPLES, HPO_ITERS_ERROR_MSG, HPO_ITERS_PRINT_MSG, HPO_ITERS_PROMPT_MSG, HPO_MODE,
     NUM_OF_HPO_ITERS, OUTPUT_DIREC, PREFERRED_DEVICE, PYKEEN, SEED, SEED_ERROR_MSG, SEED_PRINT_MSG, SEED_PROMPT_MSG,
     TEST_FILE_PROMPT_MSG, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_FILE_PROMPT_MSG, TRAINING_MODE, TRAINING_SET_PATH,
-    VERSION,
 )
 
 __all__ = [
@@ -180,5 +181,9 @@ def prompt_config(*, config: Optional[Dict] = None, show_welcome: bool = True, d
     # Step 8: Define output directory
     config[OUTPUT_DIREC] = query_output_directory()
     print_section_divider()
+
+    config_path = os.path.join(config[OUTPUT_DIREC], 'configuration.json')
+    with open(config_path, 'w') as file:
+        json.dump(config, file, indent=2)
 
     return config

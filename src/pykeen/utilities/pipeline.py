@@ -240,14 +240,16 @@ def _load_data_helper(path: str) -> np.ndarray:
     ''')
 
 
-def _make_results(trained_model,
-                  loss_per_epoch,
-                  entity_to_embedding: Mapping[str, np.ndarray],
-                  relation_to_embedding: Mapping[str, np.ndarray],
-                  metric_results: Optional[MetricResults],
-                  entity_to_id,
-                  rel_to_id,
-                  params) -> Dict:
+def _make_results(
+        trained_model,
+        loss_per_epoch,
+        entity_to_embedding: Mapping[str, np.ndarray],
+        relation_to_embedding: Mapping[str, np.ndarray],
+        metric_results: Optional[MetricResults],
+        entity_to_id,
+        rel_to_id,
+        params
+) -> Dict:
     results = OrderedDict()
     results[pkc.TRAINED_MODEL] = trained_model
     results[pkc.LOSSES] = loss_per_epoch
