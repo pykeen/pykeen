@@ -10,7 +10,7 @@ from prompt_toolkit import prompt
 from pykeen.cli.utils.constants import (
     ID_TO_KG_MODEL_MAPPING, ID_TO_OPTIMIZER_MAPPING, KG_MODEL_TO_ID_MAPPING, OPTIMIZER_TO_ID_MAPPING,
 )
-from pykeen.constants import CPU, GPU, HPO_MODE, IMPORTERS, PYKEEN, TRAINING_MODE
+from pykeen.constants import CPU, GPU, HPO_MODE, IMPORTERS, PYKEEN, TRAINING_MODE, TRANS_E_NAME
 
 
 def _is_correct_format(path: str):
@@ -57,7 +57,10 @@ def select_embedding_model() -> str:
     available_models, ids = zip(*KG_MODEL_TO_ID_MAPPING.items())
 
     while True:
-        user_input = click.prompt('Please select the embedding model you want to train')
+        user_input = click.prompt(
+            'Please select the embedding model you want to train',
+            default=TRANS_E_NAME,
+        )
 
         if user_input not in ids and user_input not in available_models:
             click.secho(
@@ -110,10 +113,9 @@ def select_zero_one_float_value(print_msg, prompt_msg, error_msg):
 
 def select_ratio_for_test_set():
     while True:
-        user_input = prompt('> Please select the ratio: ')
+        ratio = click.prompt('> Please select the ratio', default=0.2, type=float)
 
         try:
-            ratio = float(user_input)
             if 0. < ratio < 1.:
                 return ratio
         except ValueError:
@@ -123,8 +125,8 @@ def select_ratio_for_test_set():
 
 
 def select_preferred_device() -> str:
-    click.secho("Current Step: Please specify the preferred device (GPU or CPU).", fg='blue')
-    c = click.confirm('Do you want to try using the GPU?', default=False)
+    click.secho("Current Step: Please specify the preferred device (GPU or CPU)", fg='blue')
+    c = click.confirm('Do you want to try using the GPU? ', default=False)
     return GPU if c else CPU
 
 
@@ -133,6 +135,11 @@ def ask_for_filtering_of_negatives():
 
 
 def query_output_directory() -> str:
+    default_output_directory = os.environ.get('PYKEEN_DEFAULT_OUTPUT_DIRECTORY')
+    if default_output_directory is not None:
+        os.makedirs(default_output_directory, exist_ok=True)
+        return default_output_directory
+
     click.echo('Please provide the path to your output directory.\n\n')
 
     while True:
@@ -142,7 +149,7 @@ def query_output_directory() -> str:
             return user_input
 
         try:
-            os.makedirs(user_input)
+            os.makedirs(user_input, exist_ok=True)
         except FileExistsError:
             click.echo('Invalid input, please make sure that the path to the directory exists.\n'
                        'Please try again.')
@@ -156,13 +163,13 @@ def query_height_and_width_for_conv_e(embedding_dim):
     click.echo()
 
     while True:
-        height = prompt('> Height:')
+        height = click.prompt('> Height')
 
         if not height.isnumeric():
             click.echo("Invalid input, please make sure that height is a positive integer.")
             continue
 
-        width = prompt('> Width:')
+        width = click.prompt('> Width')
 
         if not width.isnumeric():
             click.echo("Invalid input, please make sure that height is a positive integer.")
@@ -287,18 +294,18 @@ def select_heights_and_widths(embedding_dimensions):
     for embedding_dim in embedding_dimensions:
         is_valid_input = False
         while not is_valid_input:
-            print("Specify height for specified embedding dimension %d ." % embedding_dim)
-            height = prompt('> Height:')
+            click.echo("Specify height for specified embedding dimension %d ." % embedding_dim)
+            height = click.prompt('> Height', type=int)
 
-            print("Specify width for specified embedding dimension %d ." % embedding_dim)
-            width = prompt('> Width:')
+            click.echo("Specify width for specified embedding dimension %d ." % embedding_dim)
+            width = click.prompt('> Width', type=int)
 
-            if not (height.isnumeric() and width.isnumeric() and int(height) * int(width) == embedding_dim):
-                print("Invalid input, height and width must be positive integers, and height * width must equal the "
-                      " specified embedding dimension of \'%d\'." % embedding_dim)
+            if not (0 < height and 0 < width and height * width != embedding_dim):
+                click.echo("Invalid input - height and width must be positive integers and height * width must"
+                           " equal the specified embedding dimension of \'%d\'." % embedding_dim)
             else:
-                heights.append(int(height))
-                widths.append(int(width))
+                heights.append(height)
+                widths.append(width)
                 is_valid_input = True
         print()
 
