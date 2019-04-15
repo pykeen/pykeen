@@ -119,25 +119,28 @@ TEST_FILE_PROMPT_MSG = '> Please provide here the path to your test file: '
 TEST_FILE_ERROR_MSG = 'An error occurred, either the path is not correct or the test file doesn\'t exist.\n' \
                       'Please try again.'
 
-EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma separated (e.g. 50,100,200):'
+EMBEDDING_DIMENSION_PRINT_MSG = 'Please type the range of preferred embedding dimensions for entities comma-separated' \
+                                ' (e.g. 50,100,200):'
 EMBEDDING_DIMENSION_PROMPT_MSG = '> Please select the embedding dimensions:'
 EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please positive integer as embedding dimension.'
 
 ENTITIES_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension for entities (e.g. 40). '
 ENTITIES_EMBEDDING_DIMENSION_PROMPT_MSG = '> Entity embedding dimension: '
-ENTITIES_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please proive and positive integer as embedding dimension (e.g. 50).'
+ENTITIES_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please proive and positive integer as embedding dimension' \
+                                         ' (e.g. 50).'
 
-ENTITIES_EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimension(s) for entities (e.g. 50, 100). '
+ENTITIES_EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimension(s) for entities' \
+                                          ' (e.g. 50, 100). '
 ENTITIES_EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Entity embedding dimensions: '
-ENTITIES_EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the embedding dimensions must be positive integers and separated by a comma.\n' \
-                                          'Please try again.'
+ENTITIES_EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the embedding dimensions must be positive integers and' \
+                                          ' separated by a comma.\nPlease try again.'
 
 BATCH_SIZES_PRINT_MSG = 'Please type (comma separated) the batch size(s) (e.g. 32, 64, 128):'
 BATCH_SIZES_PROMPT_MSG = '> Batch size(s): '
 BATCH_SIZES_ERROR_MSG = 'An error occurred, the batch sizes must be positive integers and separated by a comma.\n' \
                         'Please try again.'
 
-EPOCHS_PRINT_MSG = 'Please type (comma separated) the number of epochs (e.g. 50,100,500).'
+EPOCHS_PRINT_MSG = 'Please type (comma separated) the number of epochs (e.g. 50, 100, 500).'
 EPOCHS_PROMPT_MSG = '> Epochs: '
 EPOCHS_ERROR_MSG = 'An error occurred, the number of epochs must be positive integers and separated by a comma.\n' \
                    'Please try again.'
@@ -147,16 +150,18 @@ LEARNING_RATES_PROMPT_MSG = '> Learning rate(s): '
 LEARNING_RATES_ERROR_MSG = 'An error occurred, the learning rates must be float values and separated by a comma.\n' \
                            'Please try again.'
 
-MARGIN_LOSSES_PRINT_MSG = 'Please type (comma separated) the margin losses(s) comma separated  (e.g. 1, 2, 10), and press enter-'
+MARGIN_LOSSES_PRINT_MSG = 'Please type (comma separated) the margin losses(s) comma separated (e.g. 1, 2, 10),' \
+                          ' and press enter.'
 MARGIN_LOSSES_PROMPT_MSG = '> Margin losse(s): '
-MARGIN_LOSSES_ERROR_MSG = 'An error occurred, the margin losses must be positive float values and separated by a comma (e.g. 0.5, 3)'
+MARGIN_LOSSES_ERROR_MSG = 'An error occurred, the margin losses must be positive float values and separated by a' \
+                          ' comma (e.g. 0.5, 3)'
 
 MARGIN_LOSS_PRINT_MSG = 'Please type in the margin losses:'
 MARGIN_LOSS_PROMPT_MSG = '> Margin loss: '
 MARGIN_LOSS_ERROR_MSG = 'An error occurred, please type in a float value.'
 
 HPO_ITERS_PRINT_MSG = 'Please type (comma separated) the number of iterations of hyper-parameter search (e.g. 5)'
-HPO_ITERS_PROMPT_MSG = '> Number of iterations: '
+HPO_ITERS_PROMPT_MSG = '> Number of iterations'
 HPO_ITERS_ERROR_MSG = 'An error occurred, please type in a positive integer for the maximum number of iterations.'
 
 EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of entities and relations, and press enter.'
@@ -171,13 +176,13 @@ EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the embedding dimensions mu
 
 RELATION_EMBEDDING_DIMENSION_PRINT_MSG = 'Please provide the embedding dimension of relations:'
 RELATION_EMBEDDING_DIMENSION_PROMPT_MSG = '> Relation embedding dimension: '
-RELATION_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please type in an integer as embedding dimension such as 30.'
+RELATION_EMBEDDING_DIMENSION_ERROR_MSG = 'An error occurred, please type in an integer as embedding dimension such' \
+                                         ' as 30.'
 
 RELATION_EMBEDDING_DIMENSIONS_PRINT_MSG = 'Please provide (comma separated) the embedding dimensions of relations:'
 RELATION_EMBEDDING_DIMENSIONS_PROMPT_MSG = '> Relation embedding dimensions: '
-RELATION_EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the relation embedding dimensions must be positive integers and separated\n' \
-                                          'by a comma e.g. 50, 100, 200' \
-                                          'Please try again. \n'
+RELATION_EMBEDDING_DIMENSIONS_ERROR_MSG = 'An error occurred, the relation embedding dimensions must be positive' \
+                                          ' integers and separated\nby a comma e.g. 50, 100, 200. Please try again. \n'
 
 LEARNING_RATE_PRINT_MSG = 'Please type in the learning rate.'
 LEARNING_RATE_PROMPT_MSG = '> Learning rate: '
