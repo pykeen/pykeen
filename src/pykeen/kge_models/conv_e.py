@@ -140,6 +140,12 @@ class ConvE(nn.Module):
         relations = batch[:, 1:2]
         tails = batch[:, 2:3]
 
+        if torch.cuda.is_available():
+            heads = heads.to(self.device)
+            relations = relations.to(self.device)
+            tails = tails.to(self.device)
+            labels = labels.to(self.device)
+
         # batch_size, num_input_channels, width, height
         heads_embs = self.entity_embeddings(heads).view(-1, 1, self.img_height, self.img_width)
         relation_embs = self.relation_embeddings(relations).view(-1, 1, self.img_height, self.img_width)
