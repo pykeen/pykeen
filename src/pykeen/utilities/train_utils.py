@@ -49,6 +49,7 @@ def train_kge_model(
             pos_triples=pos_triples,
             device=device,
             seed=seed,
+            tqdm_kwargs=tqdm_kwargs
         )
 
     # model_name in {TRANS_E_NAME, TRANS_H_NAME, TRANS_D_NAME, TRANS_R_NAME, DISTMULT_NAME, UM_NAME, SE_NAME, ERMLP_NAME, RESCAL_NAME}
@@ -153,7 +154,9 @@ def _train_conv_e_model(
         num_epochs,
         batch_size,
         pos_triples, device,
-        seed: Optional[int] = None) -> Tuple[ConvE, List[float]]:
+        seed: Optional[int] = None,
+        tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+) -> Tuple[ConvE, List[float]]:
     """"""
     if seed is not None:
         np.random.seed(seed=seed)
@@ -171,7 +174,11 @@ def _train_conv_e_model(
 
     start_training = timeit.default_timer()
 
-    for epoch in range(num_epochs):
+    _tqdm_kwargs = dict(desc='Training epoch')
+    if tqdm_kwargs:
+        _tqdm_kwargs.update(tqdm_kwargs)
+
+    for epoch in trange(num_epochs, **_tqdm_kwargs):
         indices = np.arange(num_pos_triples)
         np.random.shuffle(indices)
         pos_triples = pos_triples[indices]
