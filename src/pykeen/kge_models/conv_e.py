@@ -37,7 +37,7 @@ class ConvE(nn.Module):
         super().__init__()
 
         # Device selection
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() and self.try_gpu else 'cpu')
 
         # Entity dimensions
         self.num_entities = config[NUM_ENTITIES]
