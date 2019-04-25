@@ -223,8 +223,8 @@ def _train_conv_e_model(
 
             batch, labels = shuffle(batch, labels, random_state=seed)
 
-            batch = torch.tensor(batch, dtype=torch.long)
-            labels = torch.tensor(labels, dtype=torch.float)
+            batch = torch.tensor(batch, dtype=torch.long, device=device)
+            labels = torch.tensor(labels, dtype=torch.float, device=device)
 
             # Recall that torch *accumulates* gradients. Before passing in a
             # new instance, you need to zero out the gradients from the old
