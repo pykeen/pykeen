@@ -1,2 +1,2 @@
 # POEM
-POEM (Python multi mOdal KnowlEdge EmbeddiNgs) is  package of training and evaluating knowledge graphs embedding models that incorporate literals (e.g. numerical, textual, visual literals) and is part of the KEEN Universe.
+POEM (Python multi mOdal KnowlEdge EmbeddiNgs) is  package of training and evaluating knowledge graphs embedding models that incorporate multi modal information (e.g. numerical, textual, visual information) and is part of the KEEN Universe.
