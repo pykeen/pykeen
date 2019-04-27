@@ -8,6 +8,14 @@ from dataclasses import dataclass
 class Instances():
     """."""
 
+@dataclass
+class OWAInstances(Instances):
+    """."""
+
+@dataclass
+class CWAInstances(Instances):
+    """."""
+
 class TriplesFactory():
     """."""
 
