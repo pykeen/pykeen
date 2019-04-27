@@ -3,10 +3,12 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from dataclasses import dataclass
+import numpy as np
 
 @dataclass
 class Instances():
     """."""
+    triples: np.array
 
 @dataclass
 class OWAInstances(Instances):
@@ -15,6 +17,7 @@ class OWAInstances(Instances):
 @dataclass
 class CWAInstances(Instances):
     """."""
+    labels: np.array
 
 class TriplesFactory():
     """."""
