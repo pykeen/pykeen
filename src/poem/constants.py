@@ -15,11 +15,14 @@ LEARNING_RATE = 'learning_rate'
 EXECUTION_MODE = 'execution_mode'
 TRAINING_MODE = 'Training_mode'
 HPO_MODE = 'HPO_mode'
-TEST_SET_PATH = 'test_set_path'
-TEST_SET_RATIO = 'test_set_ratio'
 KG_ASSUMPTION = 'KG_assumption'
 OWA = 'open_world_assumption'
 CWA = 'closed_world_assumption'
+
+# Data
+TRAINING_SET_PATH = 'training_set_path'
+TEST_SET_PATH = 'test_set_path'
+TEST_SET_RATIO = 'test_set_ratio'
 
 # Model names
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
