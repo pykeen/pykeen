@@ -34,20 +34,6 @@ class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
     """."""
     eval_results: EvalResults
 
-@property
-def is_hpo_mode(config) -> bool:
-    """."""
-    return config[EXECUTION_MODE] == HPO_MODE
-
-@property
-def is_evaluation_requested(config) -> bool:
-    return TEST_SET_PATH in config or TEST_SET_RATIO in config
-
-@property
-def is_owa(config):
-    """."""
-    return config[KG_ASSUMPTION] == config[OWA]
-
 
 def run(config: Dict) -> ExperimentalArtifacts:
     """."""
