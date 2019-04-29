@@ -27,6 +27,7 @@ CWA = 'closed_world_assumption'
 NUMERIC_LITERALS = 'numeric_literlas'
 BATCH_SIZE = 'batch_size'
 NUM_EPOCHS = 'num_epochs'
+SEED = 'random_seed'
 
 """Optimizer related constants"""
 OPTMIZER_NAME = 'optimizer'
