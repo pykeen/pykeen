@@ -9,8 +9,13 @@ from typing import Dict, Mapping
 import numpy as np
 import torch.nn as nn
 
+from poem import model_config
 from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE
-from poem.utils import get_factory
+from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
+from poem.instance_creation_factories.utils import get_factory
+from poem.kge_models.utils import get_kge_model
+from poem.model_config import ModelConfig
+from poem.training_loops.basic_training_loop import TrainingLoop
 
 log = logging.getLogger(__name__)
 
@@ -44,9 +49,10 @@ class Pipeline():
     """."""
 
     def __init__(self, config):
-        self.config = config
-        self.instance_factory = None
-        self.instances = None
+        self.config: Dict = config
+        self.model_config: ModelConfig = None
+        self.instance_factory: TriplesFactory = None
+        self.instances: Instances = None
 
     def run(self):
         """."""
@@ -75,6 +81,11 @@ class Pipeline():
 
     def train(self):
         """."""
+        self.model_config = ModelConfig(config=self.config,
+                                   multimodal_data=self.instances.multimodal_data,
+                                   has_multimodal_data= self.instances.has_multimodal_data )
+        kge_model = get_kge_model(model_config=model_config)
+        train_loop = TrainingLoop(model_config=self.model_config)
 
     def perform_hpo(self):
         """."""
