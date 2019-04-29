@@ -25,6 +25,14 @@ KG_ASSUMPTION = 'KG_assumption'
 OWA = 'open_world_assumption'
 CWA = 'closed_world_assumption'
 NUMERIC_LITERALS = 'numeric_literlas'
+BATCH_SIZE = 'batch_size'
+NUM_EPOCHS = 'num_epochs'
+
+"""Optimizer related constants"""
+OPTMIZER_NAME = 'optimizer'
+SGD_OPTIMIZER_NAME = 'SGD'
+ADAGRAD_OPTIMIZER_NAME = 'Adagrad'
+ADAM_OPTIMIZER_NAME = 'Adam'
 
 """Data"""
 
@@ -46,3 +54,7 @@ DISTMULT_INPUT_DROPOUT = 'input_dropout'
 FACTORY_NAME = 'factory_name'
 TRIPLES_FACTORY = 'triples_factory'
 NUMERIC_LITERALS_FACTORY = 'numeric_literals_factory'
+
+"""Training loops related constants"""
+
+
