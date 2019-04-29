@@ -4,12 +4,13 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Mapping
+from typing import Dict, Mapping, Optional
 
 import numpy as np
 import torch.nn as nn
 
 from poem import model_config
+from poem.basic_utils import is_evaluation_requested
 from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from poem.instance_creation_factories.utils import get_factory
@@ -48,17 +49,16 @@ class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
 class Pipeline():
     """."""
 
-    def __init__(self, config):
+    def __init__(self, config, instances: Optional[Instances]):
         self.config: Dict = config
         self.model_config: ModelConfig = None
         self.instance_factory: TriplesFactory = None
-        self.instances: Instances = None
+        self.instances: Instances = instances
+        self.has_preprocessed_instances = self.instances is True
+
 
     def run(self):
         """."""
-
-        # Step 1: Create instances
-        self.instances = self.preprocess()
 
         if EXECUTION_MODE not in self.config:
             raise KeyError()
@@ -68,14 +68,25 @@ class Pipeline():
         if exec_mode != TRAINING_MODE and exec_mode != HPO_MODE:
             raise ValueError()
 
-        # Step 2: Train in training or HPO mode
+        if self.has_preprocessed_instances is False:
+            self.instances = self.preprocess()
         if exec_mode == TRAINING_MODE:
-            self.train()
+            kge_model, losses_per_epochs = self.train()
+
+            if is_evaluation_requested(config=self.config):
+                # eval
+                pass
+
         elif exec_mode == HPO_MODE:
             self.perform_hpo()
 
+
     def preprocess(self):
         """Create instances."""
+
+        if self.has_preprocessed_instances:
+            raise Warning("Instances will be created, although already provided")
+
         self.instance_factory = get_factory(self.config)
         return self.instance_factory.create_instances()
 
@@ -98,15 +109,3 @@ class Pipeline():
         """."""
 
 
-def run(config: Dict) -> ExperimentalArtifacts:
-    """."""
-
-    # Determine execution mode: Training (Evaluation), HPO
-    # Determine training approach: OWA or CWA
-    # Determines how to create training instances
-
-    '''
-    Step 1: Load data
-    Step 2: Create instances based on assumption and model
-    '''
-    NotImplemented
