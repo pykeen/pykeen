@@ -10,7 +10,7 @@ by using its interactive command line interface that can be started with the com
 
 News
 ----
-We are woring currently on our `package <https://github.com/SmartDataAnalytics/POEM>`_ for training and evaluating multimodal KGE models.
+We are developing a new `package <https://github.com/SmartDataAnalytics/POEM>`_ for training and evaluating multimodal KGE models.
 
 Share Your Experimental Artifacts
 ---------------------------------
