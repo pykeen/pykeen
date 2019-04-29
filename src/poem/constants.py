@@ -39,6 +39,7 @@ ADAM_OPTIMIZER_NAME = 'Adam'
 TRAINING_SET_PATH = 'training_set_path'
 TEST_SET_PATH = 'test_set_path'
 TEST_SET_RATIO = 'test_set_ratio'
+PATH_TO_NUMERIC_LITERALS = 'path_to_numeric_literals'
 
 """Model names"""
 
