@@ -7,6 +7,11 @@ provide their own set of hyper-parameter values, or in *hyper-parameter optimiza
 hyper-parameter values from set of user defined values. PyKEEN can also be run without having experience in programing
 by using its interactive command line interface that can be started with the command *pykeen* from a terminal.
 
+
+News
+----
+We are woring currently on our `package <https://github.com/SmartDataAnalytics/POEM>`_for training and evaluating multimodal KGE models.
+
 Share Your Experimental Artifacts
 ---------------------------------
 You can share you trained KGE models along the other experimental artifacts through the `KEEN Model Zoo <https://github.com/SmartDataAnalytics/KEEN-Model-Zoo>`_.
