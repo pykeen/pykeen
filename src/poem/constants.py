@@ -24,6 +24,7 @@ HPO_MODE = 'HPO_mode'
 KG_ASSUMPTION = 'KG_assumption'
 OWA = 'open_world_assumption'
 CWA = 'closed_world_assumption'
+NUMERIC_LITERALS = 'numeric_literlas'
 
 """Data"""
 
@@ -33,6 +34,7 @@ TEST_SET_RATIO = 'test_set_ratio'
 
 """Model names"""
 
+KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
 DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 
