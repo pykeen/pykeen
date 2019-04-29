@@ -13,7 +13,7 @@ from poem import model_config
 from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from poem.instance_creation_factories.utils import get_factory
-from poem.kge_models.utils import get_kge_model
+from poem.kge_models.utils import get_kge_model, get_training_loop
 from poem.model_config import ModelConfig
 from poem.training_loops.basic_training_loop import TrainingLoop
 
@@ -85,7 +85,11 @@ class Pipeline():
                                    multimodal_data=self.instances.multimodal_data,
                                    has_multimodal_data= self.instances.has_multimodal_data )
         kge_model = get_kge_model(model_config=model_config)
-        train_loop = TrainingLoop(model_config=self.model_config)
+        train_loop = get_training_loop(model_config=self.model_config, kge_model=kge_model, instances=self.instances)
+        # Train the model based on the defined training loop
+        kge_model, losses_per_epochs = train_loop.train()
+
+        return kge_model, losses_per_epochs
 
     def perform_hpo(self):
         """."""
