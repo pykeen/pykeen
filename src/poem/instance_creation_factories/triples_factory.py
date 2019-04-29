@@ -16,12 +16,14 @@ from typing import Tuple
 @dataclass
 class Instances():
     """."""
-    training_triples: np.array
-    test_triples = None
+    training_instances: np.array
+    test_instances = None
     has_test_instances = False
     has_validation_instances = False
     multimodal_data: Dict[str: np.array]
     has_multimodal_data = False
+    entity_to_id: Dict[str:np.array()]
+    relation_to_id: Dict[str:np.array()]
     kg_assumption: str
 
 
@@ -98,6 +100,8 @@ class TriplesFactory():
         return Instances(training_triples=training_triples,
                          test_triples=test_triples,
                          has_test_instances=True,
+                         entity_to_id=self.entity_to_id,
+                         relation_to_id=self.relation_to_id,
                          kg_assumption=OWA)
 
 
