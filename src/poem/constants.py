@@ -10,6 +10,9 @@ CPU = 'cpu'
 
 """Configuration-related constants"""
 
+EXECUTION_MODE = 'execution_mode'
+TRAINING_MODE = 'training_mode'
+HPO_MODE = 'HPO_mode'
 MARGIN_LOSS = 'margin_mrl'
 NUM_ENTITIES = 'number_entities'
 NUM_RELATIONS = 'num_relations'
@@ -36,3 +39,8 @@ DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 """DistMult related constants"""
 
 DISTMULT_INPUT_DROPOUT = 'input_dropout'
+
+"""Factory related constants"""
+FACTORY_NAME = 'factory_name'
+TRIPLES_FACTORY = 'triples_factory'
+NUMERIC_LITERALS_FACTORY = 'numeric_literals_factory'
