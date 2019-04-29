@@ -2,14 +2,14 @@
 
 """Implementation of the DistMultLiteral model."""
 
+import numpy as np
 import torch
 import torch.nn as nn
-from typing import Dict
-import numpy as np
 from torch.nn.init import xavier_normal_
 
-from poem.constants import DISTMULT_LITERAL_NAME_OWA, DISTMULT_INPUT_DROPOUT
+from poem.constants import DISTMULT_LITERAL_NAME_OWA, DISTMULT_INPUT_DROPOUT, NUMERIC_LITERALS
 from poem.kge_models.base_owa import BaseOWAModule, slice_triples
+from poem.model_config import ModelConfig
 
 
 class DistMultLiteral(BaseOWAModule):
@@ -22,8 +22,10 @@ class DistMultLiteral(BaseOWAModule):
     model_name = DISTMULT_LITERAL_NAME_OWA
     margin_ranking_loss_size_average: bool = True
 
-    def __init__(self, config: Dict, numeric_literals: np.array) -> None:
-        super().__init__(config)
+    def __init__(self, model_config: ModelConfig) -> None:
+        super().__init__(model_config.config)
+
+        numeric_literals = model_config.multimodal_data.get(NUMERIC_LITERALS)
 
         # Embeddings
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
@@ -31,7 +33,7 @@ class DistMultLiteral(BaseOWAModule):
         self.num_literals = len(self.numeric_literals.weight.data)
         self.linear_transformation = nn.Linear(self.embedding_dim + self.numeric_literals, self.embedding_dim)
         self.input_dropout = torch.nn.Dropout(
-            config[DISTMULT_INPUT_DROPOUT] if DISTMULT_INPUT_DROPOUT in config else 0.)
+            self.config[DISTMULT_INPUT_DROPOUT] if DISTMULT_INPUT_DROPOUT in self.config else 0.)
 
         self._initialize()
 

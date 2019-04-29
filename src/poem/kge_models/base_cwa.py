@@ -9,6 +9,7 @@ import torch
 from torch import nn
 
 from poem.constants import PREFERRED_DEVICE, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, LEARNING_RATE
+from poem.experimental_setup import ModelConfig
 
 
 @dataclass
@@ -44,8 +45,9 @@ class BaseCWAModule(nn.Module):
     entity_embedding_norm_type: int = 2
     hyper_params = [EMBEDDING_DIM, MARGIN_LOSS, LEARNING_RATE]
 
-    def __init__(self, config: Union[Dict, BaseConfig]) -> None:
+    def __init__(self, experimental_setup: ModelConfig) -> None:
         super().__init__()
+        config = experimental_setup.config
 
         if not isinstance(config, BaseConfig):
             config = BaseConfig.from_dict(config)
