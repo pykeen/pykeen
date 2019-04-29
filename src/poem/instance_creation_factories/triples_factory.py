@@ -5,7 +5,7 @@
 from dataclasses import dataclass
 import numpy as np
 from sklearn.model_selection import train_test_split
-
+from typing import Dict
 from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples, create_entity_and_relation_mappings, \
     map_triples_elements_to_ids
 from poem.basic_utils import is_evaluation_requested, is_cwa
@@ -20,6 +20,8 @@ class Instances():
     test_triples = None
     has_test_instances = False
     has_validation_instances = False
+    multimodal_data: Dict[str: np.array]
+    has_multimodal_data = False
     kg_assumption: str
 
 

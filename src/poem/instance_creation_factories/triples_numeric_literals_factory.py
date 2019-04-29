@@ -6,10 +6,7 @@ from poem.instance_creation_factories.triples_factory import TriplesFactory, Ins
 from dataclasses import dataclass
 import numpy as np
 
-@dataclass
-class TriplesNumericInstances(Instances):
-    """."""
-    numeric_literals: np.array
+
 
 
 class TriplesNumericLiteralsFactory(TriplesFactory):

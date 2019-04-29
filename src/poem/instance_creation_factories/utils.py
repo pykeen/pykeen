@@ -21,3 +21,4 @@ def get_factory(config) -> TriplesFactory:
         raise ValueError(f'invalid factory name: {factory_name}')
 
     return factory(config)
+
