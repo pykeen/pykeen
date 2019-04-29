@@ -36,7 +36,23 @@ class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
     """."""
     eval_results: EvalResults
 
+class Pipeline():
+    """."""
 
+    def run(self):
+        """."""
+
+    def preprocess(self):
+        """."""
+
+    def train(self):
+        """."""
+
+    def perform_hpo(self):
+        """."""
+
+    def evaluate(self):
+        """."""
 def run(config: Dict) -> ExperimentalArtifacts:
     """."""
 
