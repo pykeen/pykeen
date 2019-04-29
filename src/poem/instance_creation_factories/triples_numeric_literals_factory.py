@@ -2,7 +2,7 @@
 
 """Implementation of factory that create instances containing of triples and numeric literals."""
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances, OWAInstances, CWAInstances
+from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from dataclasses import dataclass
 import numpy as np
 
