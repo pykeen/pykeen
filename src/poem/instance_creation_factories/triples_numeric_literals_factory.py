@@ -16,12 +16,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     """."""
 
     def __init__(self, config):
-        super().__init__( config=config)
+        super().__init__(TriplesFactory,config=config)
         exit(0)
 
     # def __int__(self, config:Dict):
     #     """."""
-        super().__init__(config=config)
+    #     super().__init__(config=config)
 
     def create_instances(self) -> Instances:
         """"""

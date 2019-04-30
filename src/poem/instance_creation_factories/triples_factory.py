@@ -41,7 +41,7 @@ class CWAInstances(Instances):
     kg_assumption = CWA
 
 
-class TriplesFactory(object):
+class TriplesFactory():
     """."""
 
     def __int__(self, config):
