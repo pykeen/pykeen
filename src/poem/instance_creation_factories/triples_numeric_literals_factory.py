@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of factory that create instances containing of triples and numeric literals."""
+
+from typing import Tuple
+
 import numpy as np
 
 from kupp.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
@@ -18,23 +21,20 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         numeric_literals = create_matix_of_literals(numeric_triples=numeric_triples, entity_to_id=self.entity_to_id)
         return numeric_literals
 
-    def _add_nummerical_literals(self, instances: Instances, numeric_literals) -> Instances:
+    def _add_numeric_literals(self, instances: Instances, numeric_literals) -> None:
         """"""
-
         instances.multimodal_data = {
             NUMERIC_LITERALS: numeric_literals
         }
         instances.has_multimodal_data = True
 
-        return instances
-
-    def create_train_and_test_instances(self) -> (Instances, Instances):
+    def create_train_and_test_instances(self) -> Tuple[Instances, Instances]:
         """"""
         train_instances, test_instances = super().create_train_and_test_instances()
         numeric_literals = self._create_numeric_literals()
 
-        train_instances = self._add_nummerical_literals(instances=train_instances, numeric_literals=numeric_literals)
-        test_instances = self._add_nummerical_literals(instances=test_instances, numeric_literals=numeric_literals)
+        self._add_numeric_literals(instances=train_instances, numeric_literals=numeric_literals)
+        self._add_numericaliterals(instances=test_instances, numeric_literals=numeric_literals)
 
         return train_instances, test_instances
 
@@ -42,5 +42,5 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """"""
         triple_instances = super().create_instances()
         numeric_literals = self._create_numeric_literals()
-        triple_instances = self._add_nummerical_literals(instances=triple_instances, numeric_literals=numeric_literals)
+        self._add_numeric_literals(instances=triple_instances, numeric_literals=numeric_literals)
         return triple_instances
