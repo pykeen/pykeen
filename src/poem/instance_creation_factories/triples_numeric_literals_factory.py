@@ -12,11 +12,6 @@ from poem.instance_creation_factories.triples_factory import TriplesFactory, Ins
 class TriplesNumericLiteralsFactory(TriplesFactory):
     """."""
 
-    def __init__(self, config):
-        # FIXME: Return error: TypeError: object.__init__() takes no arguments
-        # super(TriplesFactory, self).__init__(config)
-        self.config = config
-
     def _create_numeric_literals(self) -> np.ndarray:
         """"""
         numeric_triples = load_triples(path=self.config[PATH_TO_NUMERIC_LITERALS], delimiter='\t')
