@@ -4,15 +4,24 @@
 from kupp.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
 from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples
 from poem.constants import PATH_TO_NUMERIC_LITERALS, NUMERIC_LITERALS
-from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 
+from poem.instance_creation_factories.triples_factory import Instances, TriplesFactory
+
+
+# class TriplesFactory():
+#     def __init__(self, config):
+#         self.config = config
 
 class TriplesNumericLiteralsFactory(TriplesFactory):
     """."""
 
-    def __int__(self, config):
-        """."""
-        self.config = config
+    def __init__(self, config):
+        super().__init__( config=config)
+        exit(0)
+
+    # def __int__(self, config:Dict):
+    #     """."""
+        super().__init__(config=config)
 
     def create_instances(self) -> Instances:
         """"""
