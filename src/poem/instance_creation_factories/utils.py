@@ -13,7 +13,6 @@ KGE_MODEL_NAME_TO_FACTORY = {
 
 def get_factory(config) -> TriplesFactory:
     """."""
-
     kge_model_name = config[KG_EMBEDDING_MODEL_NAME]
     factory = KGE_MODEL_NAME_TO_FACTORY.get(kge_model_name)
 
