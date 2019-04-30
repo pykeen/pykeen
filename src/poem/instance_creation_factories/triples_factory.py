@@ -10,7 +10,7 @@ from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples, cr
     map_triples_elements_to_ids
 from poem.basic_utils import is_evaluation_requested
 from poem.constants import TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, OWA, CWA
-from typing import Tuple, Mapping
+from typing import Tuple, Dict
 
 
 @dataclass
@@ -41,11 +41,12 @@ class CWAInstances(Instances):
     kg_assumption = CWA
 
 
-class TriplesFactory():
+class TriplesFactory(object):
     """."""
 
     def __int__(self, config):
         """."""
+        print("Hi")
         self.config = config
         self.entity_to_id = None
         self.relation_to_id = None
