@@ -2,7 +2,7 @@
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -16,7 +16,7 @@ from poem.instance_creation_factories.instances import Instances, OWAInstances
 class TriplesFactory:
     """."""
 
-    def __int__(self, config):
+    def __init__(self, config):
         """."""
         self.config = config
         self.entity_to_id = None
@@ -25,24 +25,32 @@ class TriplesFactory:
         self.test_triples = None
         self.all_triples = None
 
-    def map_triples(self, train_triples, test_triples=None, validation_triples=None) -> Tuple[np.ndarray, Union[
-        np.ndarray, None]]:
+    def map_triples(
+        self, 
+        train_triples, 
+        test_triples=None, 
+        validation_triples=None,
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """."""
         all_triples: np.ndarray = np.concatenate([train_triples, test_triples], axis=0)
         # Map each entity/relation to a unique id
         self.entity_to_id, self.relation_to_id = create_entity_and_relation_mappings(triples=all_triples)
 
         # Map triple elements to their ids
-        mapped_train_triples = map_triples_elements_to_ids(triples=train_triples,
-                                                           entity_to_id=self.entity_to_id,
-                                                           rel_to_id=self.relation_to_id)
+        mapped_train_triples = map_triples_elements_to_ids(
+            triples=train_triples,
+            entity_to_id=self.entity_to_id,
+            rel_to_id=self.relation_to_id,
+        )
 
         if test_triples is None:
             return mapped_train_triples, None
 
-        mapped_test_triples = map_triples_elements_to_ids(triples=test_triples,
-                                                          entity_to_id=self.entity_to_id,
-                                                          rel_to_id=self.relation_to_id)
+        mapped_test_triples = map_triples_elements_to_ids(
+            triples=test_triples,
+            entity_to_id=self.entity_to_id,
+            rel_to_id=self.relation_to_id,
+        )
 
         return mapped_train_triples, mapped_test_triples
 
