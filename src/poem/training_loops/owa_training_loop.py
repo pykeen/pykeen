@@ -12,7 +12,6 @@ from tqdm import trange
 
 from poem.constants import BATCH_SIZE, NUM_EPOCHS
 from poem.instance_creation_factories.triples_factory import Instances
-from poem.kge_models.utils import get_optimizer
 from poem.model_config import ModelConfig
 from poem.training_loops.basic_training_loop import TrainingLoop
 from poem.training_loops.utils import split_list_in_batches
@@ -30,7 +29,7 @@ class OWATrainingLoop(TrainingLoop):
         """."""
         self.kge_model = self.kge_model.to(self.kge_model.device)
 
-        optimizer = get_optimizer(config=self.config, kge_model=self.kge_model)
+        optimizer = self.get_optimizer(config=self.config, kge_model=self.kge_model)
         num_pos_triples = self.instances.training_instances.shape[0]
         num_entities = self.all_entities.shape[0]
 
