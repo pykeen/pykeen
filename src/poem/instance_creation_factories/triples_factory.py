@@ -46,7 +46,6 @@ class TriplesFactory(object):
 
     def __int__(self, config):
         """."""
-        print("Hi")
         self.config = config
         self.entity_to_id = None
         self.relation_to_id = None
