@@ -5,19 +5,21 @@
 import logging
 from dataclasses import dataclass
 from typing import Dict, Mapping, Optional
+from typing import Union, Tuple
 
 import numpy as np
+import torch
 import torch.nn as nn
 
-from poem import model_config
 from poem.basic_utils import is_evaluation_requested
 from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, KG_EMBEDDING_MODEL_NAME, DISTMULT_LITERAL_NAME_OWA, \
-    PATH_TO_NUMERIC_LITERALS, SEED
+    PATH_TO_NUMERIC_LITERALS, SEED, CWA, OWA, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from poem.instance_creation_factories.utils import get_factory
-from poem.kge_models.utils import get_kge_model, get_training_loop
+from poem.kge_models.utils import get_kge_model
 from poem.model_config import ModelConfig
-import torch
+from poem.training_loops.basic_training_loop import TrainingLoop
+from poem.training_loops.owa_training_loop import OWATrainingLoop
 
 log = logging.getLogger(__name__)
 
@@ -50,16 +52,60 @@ class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
 class Pipeline():
     """."""
 
-    def __init__(self, config: Dict, instances: Optional[Instances]):
+    KG_ASSUMPTION_TO_TRAINING_LOOP = {
+        CWA: None,
+        OWA: OWATrainingLoop
+    }
+
+    def __init__(self, config: Dict, training_instances: Optional[Instances] = None,
+                 test_instances: Optional[Instances] = None):
         self.config = config
         self.model_config: ModelConfig = None
         self.instance_factory: TriplesFactory = None
-        self.instances = instances
-        self.has_preprocessed_instances = self.instances is True
+        self.training_instances = training_instances
+        self.test_instances = test_instances
+        self.has_preprocessed_instances = self.training_instances is True
 
         # Set random generators
         torch.manual_seed(config[SEED])
         np.random.seed(config[SEED])
+
+    @property
+    def is_evaluation_requested(self):
+        return TEST_SET_PATH in self.config or TEST_SET_RATIO in self.config
+
+    def _preprocess_train_triples(self) -> Instances:
+        """"""
+
+        self.instance_factory = get_factory(self.config)
+        return self.instance_factory.create_instances()
+
+    def _proprcess_train_and_test_triples(self) -> (Instances, Instances):
+        """"""
+        self.instance_factory = get_factory(self.config)
+        return self.instance_factory.create_train_and_test_instances()
+
+    def preprocess(self) -> Union[Tuple[Instances, Instances], Instances]:
+        """Create instances."""
+
+        if self.has_preprocessed_instances:
+            raise Warning("Instances will be created, although already provided")
+
+        if self.is_evaluation_requested:
+            return self._proprcess_train_and_test_triples()
+        else:
+            return self._preprocess_train_triples()
+
+    def get_training_loop(self, model_config: ModelConfig, kge_model: nn.Module, instances: Instances) -> TrainingLoop:
+        """Get training loop."""
+        training_loop = self.KG_ASSUMPTION_TO_TRAINING_LOOP[kge_model.kg_assumption]
+
+        return training_loop(model_config=model_config, kge_model=kge_model, instances=instances)
+
+    def _only_train(self):
+        """"""
+        if self.has_preprocessed_instances is False:
+            self.training_instances = self.preprocess()
 
     def run(self):
         """."""
@@ -73,7 +119,7 @@ class Pipeline():
             raise ValueError()
 
         if self.has_preprocessed_instances is False:
-            self.instances = self.preprocess()
+            self.training_instances = self.preprocess()
         if exec_mode == TRAINING_MODE:
             kge_model, losses_per_epochs = self.train()
 
@@ -84,22 +130,15 @@ class Pipeline():
         elif exec_mode == HPO_MODE:
             self.perform_hpo()
 
-    def preprocess(self):
-        """Create instances."""
-
-        if self.has_preprocessed_instances:
-            raise Warning("Instances will be created, although already provided")
-
-        self.instance_factory = get_factory(self.config)
-        return self.instance_factory.create_instances()
-
     def train(self):
         """."""
         self.model_config = ModelConfig(config=self.config,
-                                        multimodal_data=self.instances.multimodal_data,
-                                        has_multimodal_data=self.instances.has_multimodal_data)
-        kge_model = get_kge_model(model_config=model_config)
-        train_loop = get_training_loop(model_config=self.model_config, kge_model=kge_model, instances=self.instances)
+                                        multimodal_data=self.training_instances.multimodal_data,
+                                        has_multimodal_data=self.training_instances.has_multimodal_data)
+        kge_model = get_kge_model(model_config=self.model_config)
+        train_loop = self.get_training_loop(model_config=self.model_config,
+                                            kge_model=kge_model,
+                                            instances=self.training_instances)
         # Train the model based on the defined training loop
         kge_model, losses_per_epochs = train_loop.train()
 
@@ -113,12 +152,16 @@ class Pipeline():
 
 
 if __name__ == '__main__':
+    p = '/Users/mehdi/PycharmProjects/LiteralE/data/FB15k/literals/numerical_literals.txt'
+    t = '/Users/mehdi/PycharmProjects/LiteralE/data/FB15k/test.txt'
     config = {
         KG_EMBEDDING_MODEL_NAME: DISTMULT_LITERAL_NAME_OWA,
-        PATH_TO_NUMERIC_LITERALS: ''
+        TRAINING_SET_PATH: t,
+        PATH_TO_NUMERIC_LITERALS: p,
+        SEED: 2
 
     }
-
     # preprocess
     pipeline = Pipeline(config=config)
     instances = pipeline.preprocess()
+    print(instances)
