@@ -8,7 +8,8 @@ from typing import Dict, Optional, Union
 import torch
 from torch import nn
 
-from poem.constants import PREFERRED_DEVICE, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, LEARNING_RATE
+from poem.constants import PREFERRED_DEVICE, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, \
+    LEARNING_RATE, OWA
 
 
 @dataclass
@@ -43,6 +44,7 @@ class BaseOWAModule(nn.Module):
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
     hyper_params = [EMBEDDING_DIM, MARGIN_LOSS, LEARNING_RATE]
+    kg_assumption = OWA
 
     def __init__(self, config: Union[Dict, BaseOWAConfig]) -> None:
         super().__init__()
