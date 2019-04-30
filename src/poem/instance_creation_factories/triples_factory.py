@@ -3,14 +3,15 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from dataclasses import dataclass
+from typing import Tuple, Dict
+
 import numpy as np
 from sklearn.model_selection import train_test_split
-from typing import Dict
+
 from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples, create_entity_and_relation_mappings, \
     map_triples_elements_to_ids
 from poem.basic_utils import is_evaluation_requested
 from poem.constants import TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, OWA, CWA
-from typing import Tuple, Dict
 
 
 @dataclass
@@ -41,7 +42,7 @@ class CWAInstances(Instances):
     kg_assumption = CWA
 
 
-class TriplesFactory():
+class TriplesFactory:
     """."""
 
     def __int__(self, config):
@@ -53,7 +54,7 @@ class TriplesFactory():
         self.test_triples = None
         self.all_triples = None
 
-    def map_triples(self, train_triples, test_triples=None, validation_triples = None) -> Tuple[np.ndarray, np.ndarray]:
+    def map_triples(self, train_triples, test_triples=None, validation_triples=None) -> Tuple[np.ndarray, np.ndarray]:
         """."""
         all_triples: np.ndarray = np.concatenate([train_triples, test_triples], axis=0)
         # Map each entity/relation to a unique id
@@ -110,9 +111,7 @@ class TriplesFactory():
                          relation_to_id=self.relation_to_id,
                          kg_assumption=OWA)
 
-
         # TODO
-        #if is_cwa(self.config):
-         #   # Create multi-labels
-          #  pass
-
+        # if is_cwa(self.config):
+        #   # Create multi-labels
+        #  pass
