@@ -8,22 +8,28 @@ from sklearn.model_selection import train_test_split
 from typing import Dict
 from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples, create_entity_and_relation_mappings, \
     map_triples_elements_to_ids
-from poem.basic_utils import is_evaluation_requested, is_cwa
+from poem.basic_utils import is_evaluation_requested
 from poem.constants import TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, OWA, CWA
-from typing import Tuple
+from typing import Tuple, Mapping
 
 
 @dataclass
-class Instances():
+class Instances:
     """."""
-    training_instances: np.array
+    training_instances: np.ndarray
+
     test_instances = None
     has_test_instances = False
+
+    validation_instances = None
     has_validation_instances = False
-    multimodal_data: Dict[str: np.array]
+
+    multimodal_data: Dict[str, np.ndarray]
     has_multimodal_data = False
-    entity_to_id: Dict[str:np.array()]
-    relation_to_id: Dict[str:np.array()]
+
+    entity_to_id: Dict[str, np.ndarray]
+    relation_to_id: Dict[str, np.ndarray]
+
     kg_assumption: str
 
 

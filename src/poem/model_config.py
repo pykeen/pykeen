@@ -9,8 +9,8 @@ import numpy as np
 
 
 @dataclass
-class ModelConfig():
+class ModelConfig:
     """."""
     config: Dict
+    multimodal_data: Dict[str,np.ndarray]
     has_multimodal_data = False
-    multimodal_data: Dict[str: np.array]
