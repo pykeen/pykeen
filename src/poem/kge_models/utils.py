@@ -22,4 +22,4 @@ def get_kge_model(model_config: ModelConfig) -> Module:
     if kge_model_cls is None:
         raise ValueError(f'Invalid KGE model name: {kge_model_name}')
 
-    return kge_model_cls(experimental_setup=model_config)
+    return kge_model_cls(model_config=model_config)
