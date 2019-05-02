@@ -20,18 +20,20 @@ class DistMultLiteral(BaseOWAModule):
                        arXiv preprint arXiv:1802.00934 (2018).
     """
     model_name = DISTMULT_LITERAL_NAME_OWA
-    margin_ranking_loss_size_average: bool = True
+    margin_ranking_loss_average: bool = True
 
     def __init__(self, model_config: ModelConfig) -> None:
-        super().__init__(model_config.config)
+        super().__init__(model_config)
 
         numeric_literals = model_config.multimodal_data.get(NUMERIC_LITERALS)
 
         # Embeddings
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.numeric_literals = nn.Embedding.from_pretrained(numeric_literals, freeze=True)
-        self.num_literals = len(self.numeric_literals.weight.data)
-        self.linear_transformation = nn.Linear(self.embedding_dim + self.numeric_literals, self.embedding_dim)
+        self.numeric_literals = nn.Embedding.from_pretrained(
+            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True)
+        # Number of columns corresponds to number of literals
+        self.num_of_literals = self.numeric_literals.weight.data.shape[1]
+        self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
         self.input_dropout = torch.nn.Dropout(
             self.config[DISTMULT_INPUT_DROPOUT] if DISTMULT_INPUT_DROPOUT in self.config else 0.)
 
@@ -39,7 +41,7 @@ class DistMultLiteral(BaseOWAModule):
 
     def _initialize(self):
         """Initialize the entities and relation embeddings based on the XAVIER initialization."""
-        xavier_normal_(self.embedding_dim.weight.data)
+        xavier_normal_(self.entity_embeddings.weight.data)
         xavier_normal_(self.relation_embeddings.weight.data)
 
     def _get_literals(self, heads, tails):
@@ -47,10 +49,10 @@ class DistMultLiteral(BaseOWAModule):
         return (
             self._get_embeddings(elements=heads,
                                  embedding_module=self.numeric_literals,
-                                 embedding_dim=self.num_literals),
+                                 embedding_dim=self.num_of_literals),
             self._get_embeddings(elements=tails,
                                  embedding_module=self.numeric_literals,
-                                 embedding_dim=self.num_literals),
+                                 embedding_dim=self.num_of_literals),
         )
 
     def _get_triple_embeddings(self, heads, relations, tails):
@@ -113,10 +115,6 @@ class DistMultLiteral(BaseOWAModule):
         y = np.repeat([-1], repeats=positive_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
-        # Scores for the psotive and negative triples
-        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
-        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
-
         loss = self.criterion(positive_scores, negative_scores, y)
         return loss
 
@@ -136,6 +134,7 @@ class DistMultLiteral(BaseOWAModule):
         :param batch_negatives: batch_size x 3
         :return:
         """
+
         positive_scores = self._score_triples(batch_positives)
         negative_scores = self._score_triples(batch_negatives)
         loss = self._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
