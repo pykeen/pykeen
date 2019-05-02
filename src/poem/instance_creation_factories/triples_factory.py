@@ -26,33 +26,22 @@ class TriplesFactory:
         self.all_triples = None
 
     def map_triples(
-        self, 
-        train_triples, 
-        test_triples=None, 
-        validation_triples=None,
+            self,
+            triples,
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """."""
-        all_triples: np.ndarray = np.concatenate([train_triples, test_triples], axis=0)
+        # all_triples: np.ndarray = np.concatenate([train_triples, test_triples], axis=0)
         # Map each entity/relation to a unique id
-        self.entity_to_id, self.relation_to_id = create_entity_and_relation_mappings(triples=all_triples)
+
 
         # Map triple elements to their ids
         mapped_train_triples = map_triples_elements_to_ids(
-            triples=train_triples,
+            triples=triples,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.relation_to_id,
         )
 
-        if test_triples is None:
-            return mapped_train_triples, None
-
-        mapped_test_triples = map_triples_elements_to_ids(
-            triples=test_triples,
-            entity_to_id=self.entity_to_id,
-            rel_to_id=self.relation_to_id,
-        )
-
-        return mapped_train_triples, mapped_test_triples
+        return mapped_train_triples
 
     def get_test_triples(self, train_triples):
         """."""
@@ -93,6 +82,10 @@ class TriplesFactory:
 
         return training_instances, test_instances
 
+    def _create_entity_and_relations_mappings(self):
+        """."""
+        self.entity_to_id, self.relation_to_id = create_entity_and_relation_mappings(triples=self.all_triples)
+
     def create_train_and_test_instances(self) -> (Instances, Instances):
         """."""
 
@@ -105,9 +98,12 @@ class TriplesFactory:
         train_triples, test_triples = self.get_test_triples(train_triples=training_triples)
         self.test_triples = test_triples
         self.all_triples = np.concatenate([train_triples, test_triples], axis=0)
+        self._create_entity_and_relations_mappings()
 
-        training_triples, test_triples = self.map_triples(train_triples=self.train_triples,
-                                                          test_triples=self.test_triples)
+
+        training_triples = self.map_triples(triples=self.train_triples)
+
+        test_triples = self.map_triples(triples=self.test_triples)
 
         if self.is_OWA:
             return self._create_owa_train_and_test_instances(training_triples=training_triples,
@@ -123,9 +119,8 @@ class TriplesFactory:
         training_triples = load_triples(path=self.config[TRAINING_SET_PATH], delimiter='\t')
         self.train_triples = training_triples
         self.all_triples = training_triples
-
-        training_triples, _ = self.map_triples(train_triples=self.train_triples,
-                                               test_triples=self.test_triples)
+        self._create_entity_and_relations_mappings()
+        training_triples = self.map_triples(triples=self.train_triples)
 
         if self.is_OWA:
             return self._create_owa_instance_object(instances=training_triples,
@@ -135,8 +130,3 @@ class TriplesFactory:
         else:
             # TODO: ADD CWA logic
             pass
-
-
-
-
-
