@@ -8,67 +8,43 @@ from typing import Dict, Optional, Union
 import torch
 from torch import nn
 
-from poem.constants import PREFERRED_DEVICE, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, \
+from poem.constants import PREFERRED_DEVICE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, \
     LEARNING_RATE, OWA
+from poem.model_config import ModelConfig
 
-
-@dataclass
-class BaseOWAConfig:
-    """Configuration for KEEN models."""
-
-    try_gpu: bool
-    margin_loss: float
-    number_entities: int
-    number_relations: int
-    embedding_dimension: int
-
-    def get_device(self):
-        """Get the Torch device to use."""
-        return torch.device('cuda:0' if torch.cuda.is_available() and self.try_gpu else 'cpu')
-
-    @classmethod
-    def from_dict(cls, config: Dict) -> 'BaseOWAConfig':
-        """Generate an instance from a dictionary."""
-        return cls(
-            try_gpu=(config.get(PREFERRED_DEVICE) == GPU),
-            margin_loss=config[MARGIN_LOSS],
-            number_entities=config[NUM_ENTITIES],
-            number_relations=config[NUM_RELATIONS],
-            embedding_dimension=config[EMBEDDING_DIM],
-        )
 
 class BaseOWAModule(nn.Module):
     """A base class for all of the models."""
 
-    margin_ranking_loss_size_average: bool = ...
+    margin_ranking_loss_average: bool = ...
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
     hyper_params = [EMBEDDING_DIM, MARGIN_LOSS, LEARNING_RATE]
     kg_assumption = OWA
 
-    def __init__(self, config: Union[Dict, BaseOWAConfig]) -> None:
+    def __init__(self, model_config: ModelConfig) -> None:
         super().__init__()
 
-        if not isinstance(config, BaseOWAConfig):
-            config = BaseOWAConfig.from_dict(config)
-
+        self.model_config = model_config
+        self.config = self.model_config.config
         # Device selection
-        self.device = config.get_device()
+        self.device = torch.device(
+            'cuda:0' if torch.cuda.is_available() and model_config.config(PREFERRED_DEVICE) else 'cpu')
 
         # Loss
-        self.margin_loss = config.margin_loss
+        self.margin_loss = self.config[MARGIN_LOSS]
         self.criterion = nn.MarginRankingLoss(
             margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
+            reduction='mean' if self.margin_ranking_loss_average else None,
         )
 
         # Entity dimensions
         #: The number of entities in the knowledge graph
-        self.num_entities = config.number_entities
+        self.num_entities = self.config[NUM_ENTITIES]
         #: The number of unique relation types in the knowledge graph
-        self.num_relations = config.number_relations
+        self.num_relations = self.config[NUM_RELATIONS]
         #: The dimension of the embeddings to generate
-        self.embedding_dim = config.embedding_dimension
+        self.embedding_dim = self.config[EMBEDDING_DIM]
 
         self.entity_embeddings = nn.Embedding(
             self.num_entities,
@@ -82,6 +58,7 @@ class BaseOWAModule(nn.Module):
             raise TypeError('missing model_name class attribute')
 
     def _get_embeddings(self, elements, embedding_module, embedding_dim):
+        """."""
         return embedding_module(elements).view(-1, embedding_dim)
 
 
