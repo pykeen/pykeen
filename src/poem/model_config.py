@@ -13,4 +13,3 @@ class ModelConfig:
     """."""
     config: Dict
     multimodal_data: Dict[str,np.ndarray] = None
-    has_multimodal_data = False
