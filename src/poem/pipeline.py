@@ -13,7 +13,8 @@ import torch.nn as nn
 
 from poem.basic_utils import is_evaluation_requested
 from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, KG_EMBEDDING_MODEL_NAME, DISTMULT_LITERAL_NAME_OWA, \
-    PATH_TO_NUMERIC_LITERALS, SEED, CWA, OWA, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO
+    PATH_TO_NUMERIC_LITERALS, SEED, CWA, OWA, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, KG_ASSUMPTION
+from poem.instance_creation_factories.instances import MultimodalInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from poem.instance_creation_factories.utils import get_factory
 from poem.kge_models.utils import get_kge_model
@@ -52,6 +53,19 @@ class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
 class Pipeline():
     """."""
 
+    def __int__(self):
+        pass
+
+    def perform_preprocessing(self):
+        pass
+
+    def run_experiment(self):
+        pass
+
+
+class Pipeline():
+    """."""
+
     KG_ASSUMPTION_TO_TRAINING_LOOP = {
         CWA: None,
         OWA: OWATrainingLoop
@@ -73,6 +87,17 @@ class Pipeline():
     @property
     def is_evaluation_requested(self):
         return TEST_SET_PATH in self.config or TEST_SET_RATIO in self.config
+
+    def _create_model_config(self) -> ModelConfig:
+        """"""
+
+        multimodal_data = None
+
+        if isinstance(self.training_instances, MultimodalInstances):
+            multimodal_data = self.training_instances.multimodal_data
+
+        model_config = ModelConfig(config=self.config, multimodal_data=multimodal_data)
+        return model_config
 
     def _preprocess_train_triples(self) -> Instances:
         """"""
@@ -132,9 +157,7 @@ class Pipeline():
 
     def train(self):
         """."""
-        self.model_config = ModelConfig(config=self.config,
-                                        multimodal_data=self.training_instances.multimodal_data,
-                                        has_multimodal_data=self.training_instances.has_multimodal_data)
+        self.model_config = self._create_model_config()
         kge_model = get_kge_model(model_config=self.model_config)
         train_loop = self.get_training_loop(model_config=self.model_config,
                                             kge_model=kge_model,
@@ -151,17 +174,18 @@ class Pipeline():
         """."""
 
 
-if __name__ == '__main__':
-    p = '/Users/mehdi/PycharmProjects/LiteralE/data/FB15k/literals/numerical_literals.txt'
-    t = '/Users/mehdi/PycharmProjects/LiteralE/data/FB15k/test.txt'
-    config = {
-        KG_EMBEDDING_MODEL_NAME: DISTMULT_LITERAL_NAME_OWA,
-        TRAINING_SET_PATH: t,
-        PATH_TO_NUMERIC_LITERALS: p,
-        SEED: 2
-
-    }
-    # preprocess
-    pipeline = Pipeline(config=config)
-    instances = pipeline.preprocess()
-    print(instances)
+# if __name__ == '__main__':
+#     p = '/Users/mali/PycharmProjects/LiteralE/data/FB15k/literals/numerical_literals.tsv.txt'
+#     t = '/Users/mali/PycharmProjects/LiteralE/data/FB15k/test.txt'
+#     config = {
+#         KG_EMBEDDING_MODEL_NAME: DISTMULT_LITERAL_NAME_OWA,
+#         TRAINING_SET_PATH: t,
+#         PATH_TO_NUMERIC_LITERALS: p,
+#         KG_ASSUMPTION: OWA,
+#         SEED: 2
+#
+#     }
+#     # preprocess
+#     pipeline = Pipeline(config=config)
+#     instances = pipeline.preprocess()
+#     print(instances)
