@@ -16,17 +16,33 @@ class Instances:
     instances: np.ndarray
     entity_to_id: Dict[str, np.ndarray]
     relation_to_id: Dict[str, np.ndarray]
-    kg_assumption: str
-    multimodal_data: Dict[str, np.ndarray] = None
-    has_multimodal_data: bool = False
+
 
 @dataclass
 class OWAInstances(Instances):
     """."""
-    kg_assumption:str = OWA
+    kg_assumption: str = OWA
 
-# @dataclass
-# class CWAInstances(Instances):
-#     """."""
-#     labels: np.ndarray
-#     kg_assumption:str = CWA
+
+@dataclass
+class CWAInstances(Instances):
+    """."""
+    labels: np.ndarray
+    kg_assumption: str = CWA
+
+
+@dataclass
+class MultimodalInstances(Instances):
+    """."""
+
+    multimodal_data: Dict[str, np.ndarray]
+
+
+@dataclass
+class MultimodalOWAInstances(OWAInstances, MultimodalInstances):
+    """."""
+
+
+@dataclass
+class MultimodalCWAInstances(CWAInstances, MultimodalInstances):
+    """."""
