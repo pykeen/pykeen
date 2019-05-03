@@ -14,7 +14,7 @@ from pykeen.constants import (
     CONV_E_FEATURE_MAP_DROPOUT, CONV_E_HEIGHT, CONV_E_INPUT_CHANNELS, CONV_E_INPUT_DROPOUT, CONV_E_KERNEL_HEIGHT,
     CONV_E_KERNEL_WIDTH, CONV_E_NAME, CONV_E_OUTPUT_CHANNELS, CONV_E_OUTPUT_DROPOUT, CONV_E_WIDTH, EMBEDDING_DIM,
     NUM_ENTITIES, NUM_RELATIONS,
-    MARGIN_LOSS, LEARNING_RATE)
+    MARGIN_LOSS, LEARNING_RATE, PREFERRED_DEVICE, GPU)
 
 __all__ = ['ConvE']
 
@@ -35,6 +35,7 @@ class ConvE(nn.Module):
 
     def __init__(self, config: Dict) -> None:
         super().__init__()
+        self.try_gpu = config[PREFERRED_DEVICE] == GPU
 
         # Device selection
         self.device = torch.device('cuda:0' if torch.cuda.is_available() and self.try_gpu else 'cpu')
