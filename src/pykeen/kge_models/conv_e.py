@@ -35,7 +35,7 @@ class ConvE(nn.Module):
 
     def __init__(self, config: Dict) -> None:
         super().__init__()
-        self.try_gpu = config[PREFERRED_DEVICE] == GPU
+        self.try_gpu = config.get(PREFERRED_DEVICE) == GPU
 
         # Device selection
         self.device = torch.device('cuda:0' if torch.cuda.is_available() and self.try_gpu else 'cpu')
