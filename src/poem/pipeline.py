@@ -113,7 +113,7 @@ class Pipeline():
 
         return training_loop(model_config=model_config, kge_model=kge_model, instances=instances)
 
-    def _only_train(self):
+    def _perform_only_training(self):
         """"""
         if self.has_preprocessed_instances is False:
             self.training_instances = self.preprocess()
