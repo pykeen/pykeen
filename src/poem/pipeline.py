@@ -12,8 +12,7 @@ import torch
 import torch.nn as nn
 
 from poem.basic_utils import is_evaluation_requested
-from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, KG_EMBEDDING_MODEL_NAME, DISTMULT_LITERAL_NAME_OWA, \
-    PATH_TO_NUMERIC_LITERALS, SEED, CWA, OWA, TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, KG_ASSUMPTION
+from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, SEED, CWA, OWA, TEST_SET_PATH, TEST_SET_RATIO
 from poem.instance_creation_factories.instances import MultimodalInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from poem.instance_creation_factories.utils import get_factory
@@ -48,19 +47,6 @@ class ExperimentalArtifacts():
 class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
     """."""
     eval_results: EvalResults
-
-
-class Pipeline():
-    """."""
-
-    def __int__(self):
-        pass
-
-    def perform_preprocessing(self):
-        pass
-
-    def run_experiment(self):
-        pass
 
 
 class Pipeline():
@@ -172,7 +158,6 @@ class Pipeline():
 
     def evaluate(self):
         """."""
-
 
 # if __name__ == '__main__':
 #     p = '/Users/mali/PycharmProjects/LiteralE/data/FB15k/literals/numerical_literals.tsv.txt'
