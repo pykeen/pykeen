@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Basic structure of a evaluator."""
+"""Implementation of ranked based evaluator."""
 
 import logging
 import timeit
