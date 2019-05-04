@@ -35,6 +35,11 @@ SGD_OPTIMIZER_NAME = 'SGD'
 ADAGRAD_OPTIMIZER_NAME = 'Adagrad'
 ADAM_OPTIMIZER_NAME = 'Adam'
 
+"""Evaluator related constants"""
+EVALUATOR = 'evaluator'
+RANK_BASED_EVALUATOR = 'ranked_based_evaluator'
+FILTER_NEG_TRIPLES = 'filter_negative_triples'
+
 """Data"""
 
 TRAINING_SET_PATH = 'training_set_path'
