@@ -9,7 +9,6 @@ from typing import List, Iterable, Hashable, Callable, Tuple, Dict
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from poem.constants import FILTER_NEG_TRIPLES
 from poem.evaluation.abstract_evaluator import AbstractEvalutor
@@ -30,7 +29,7 @@ class RankBasedEvaluator(AbstractEvalutor):
     """."""
 
     def __init__(self, evaluator_config: EvaluatorConfig, hits_at_k=[1, 3, 5, 10]):
-        self.all_entities = np.arange(0,len(evaluator_config.entity_to_id))
+        self.all_entities = np.arange(0, len(evaluator_config.entity_to_id))
         self.kge_model = evaluator_config.kge_model
         self.filter_neg_triples = evaluator_config.config.get(FILTER_NEG_TRIPLES)
         self.device = self.kge_model.device
@@ -41,11 +40,11 @@ class RankBasedEvaluator(AbstractEvalutor):
         """Hash a list of triples."""
         return hash(tuple(triples))
 
-    def update_hits_at_k(self,
-                         hits_at_k_values: Dict[int, List[float]],
-                         rank_of_positive_subject_based: int,
-                         rank_of_positive_object_based: int
-                         ) -> None:
+    def _update_hits_at_k(self,
+                          hits_at_k_values: Dict[int, List[float]],
+                          rank_of_positive_subject_based: int,
+                          rank_of_positive_object_based: int
+                          ) -> None:
         """Update the Hits@K dictionary for two values."""
         for k, values in hits_at_k_values.items():
             if rank_of_positive_subject_based < k:
@@ -196,7 +195,7 @@ class RankBasedEvaluator(AbstractEvalutor):
             ranks.append(rank_of_positive_object_based)
 
             # Compute hits@k for k in {1,3,5,10}
-            self.update_hits_at_k(
+            self._update_hits_at_k(
                 hits_at_k_values,
                 rank_of_positive_subject_based=rank_of_positive_subject_based,
                 rank_of_positive_object_based=rank_of_positive_object_based,

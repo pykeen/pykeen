@@ -88,7 +88,7 @@ class Pipeline():
         np.random.seed(config[SEED])
 
     @property
-    def is_evaluation_requested(self):
+    def _is_evaluation_requested(self):
         return TEST_SET_PATH in self.config or TEST_SET_RATIO in self.config
 
     def _create_model_config(self) -> ModelConfig:
@@ -119,7 +119,7 @@ class Pipeline():
         if self.has_preprocessed_instances:
             raise Warning("Instances will be created, although already provided")
 
-        if self.is_evaluation_requested:
+        if self._is_evaluation_requested:
             return self._proprcess_train_and_test_triples()
         else:
             return self._preprocess_train_triples()
