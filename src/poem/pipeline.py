@@ -12,7 +12,10 @@ import torch
 import torch.nn as nn
 
 from poem.basic_utils import is_evaluation_requested
-from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, SEED, CWA, OWA, TEST_SET_PATH, TEST_SET_RATIO
+from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, SEED, CWA, OWA, TEST_SET_PATH, TEST_SET_RATIO, \
+    EVALUATOR, RANK_BASED_EVALUATOR
+from poem.evaluation.abstract_evaluator import AbstractEvalutor
+from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
 from poem.instance_creation_factories.instances import MultimodalInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
 from poem.instance_creation_factories.utils import get_factory
@@ -49,12 +52,26 @@ class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
     eval_results: EvalResults
 
 
+@dataclass
+class EvaluatorConfig:
+    """."""
+    config: Dict
+    kge_model: nn.Module
+    entity_to_id: Dict[str, int]
+    relation_to_id: Dict[str, int]
+    training_triples: np.ndarray = None
+
+
 class Pipeline():
     """."""
 
     KG_ASSUMPTION_TO_TRAINING_LOOP = {
         CWA: None,
         OWA: OWATrainingLoop
+    }
+
+    EVALUATORS = {
+        RANK_BASED_EVALUATOR: RankBasedEvaluator,
     }
 
     def __init__(self, config: Dict, training_instances: Optional[Instances] = None,
@@ -107,7 +124,18 @@ class Pipeline():
         else:
             return self._preprocess_train_triples()
 
-    def get_training_loop(self, model_config: ModelConfig, kge_model: nn.Module, instances: Instances) -> TrainingLoop:
+    def _get_evaluator(self, kge_model) -> AbstractEvalutor:
+        """."""
+        evaluator: AbstractEvalutor = self.config.get(EVALUATOR)
+        eval_config = EvaluatorConfig(config=self.config,
+                                      entity_to_id=self.training_instances.entity_to_id,
+                                      relation_to_id=self.training_instances.relation_to_id,
+                                      kge_model=kge_model,
+                                      training_triples=self.training_instances.instances)
+
+        return evaluator(evaluator_config=eval_config)
+
+    def _get_training_loop(self, model_config: ModelConfig, kge_model: nn.Module, instances: Instances) -> TrainingLoop:
         """Get training loop."""
         training_loop = self.KG_ASSUMPTION_TO_TRAINING_LOOP[kge_model.kg_assumption]
 
@@ -136,7 +164,7 @@ class Pipeline():
 
             if is_evaluation_requested(config=self.config):
                 # eval
-                pass
+                metric_results = self.evaluate(kge_model=kge_model, test_triples=self.test_instances.instances)
 
         elif exec_mode == HPO_MODE:
             self.perform_hpo()
@@ -145,9 +173,9 @@ class Pipeline():
         """."""
         self.model_config = self._create_model_config()
         kge_model = get_kge_model(model_config=self.model_config)
-        train_loop = self.get_training_loop(model_config=self.model_config,
-                                            kge_model=kge_model,
-                                            instances=self.training_instances)
+        train_loop = self._get_training_loop(model_config=self.model_config,
+                                             kge_model=kge_model,
+                                             instances=self.training_instances)
         # Train the model based on the defined training loop
         kge_model, losses_per_epochs = train_loop.train()
 
@@ -156,8 +184,12 @@ class Pipeline():
     def perform_hpo(self):
         """."""
 
-    def evaluate(self):
+    def evaluate(self, kge_model, test_triples):
         """."""
+        evaluator = self._get_evaluator(kge_model=kge_model)
+        metric_results = evaluator.evaluate(test_triples=test_triples)
+
+        return metric_results
 
 # if __name__ == '__main__':
 #     p = '/Users/mali/PycharmProjects/LiteralE/data/FB15k/literals/numerical_literals.tsv.txt'
