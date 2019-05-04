@@ -11,9 +11,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from poem.constants import FILTER_NEG_TRIPLES
 from poem.evaluation.abstract_evaluator import AbstractEvalutor
+from poem.pipeline import EvaluatorConfig
 
 log = logging.getLogger(__name__)
+
 
 @dataclass
 class MetricResults:
@@ -22,25 +25,27 @@ class MetricResults:
     mean_rank: float
     hits_at_k: Dict[int, float]
 
+
 class RankBasedEvaluator(AbstractEvalutor):
     """."""
 
-    def __init__(self, all_entities: np.ndarray, kge_model: nn.Module,filter_neg_triples, device, hits_at_k=[1,3,5,10]):
-        self.all_entities = all_entities
-        self.kge_model = kge_model
-        self.filter_neg_triples = filter_neg_triples
-        self.device = device
+    def __init__(self, evaluator_config: EvaluatorConfig, hits_at_k=[1, 3, 5, 10]):
+        self.all_entities = np.arange(0,len(evaluator_config.entity_to_id))
+        self.kge_model = evaluator_config.kge_model
+        self.filter_neg_triples = evaluator_config.config.get(FILTER_NEG_TRIPLES)
+        self.device = self.kge_model.device
         self.hits_at_k = hits_at_k
+        self.train_triples = evaluator_config.training_triples
 
     def _hash_triples(self, triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
         return hash(tuple(triples))
 
     def update_hits_at_k(self,
-            hits_at_k_values: Dict[int, List[float]],
-            rank_of_positive_subject_based: int,
-            rank_of_positive_object_based: int
-    ) -> None:
+                         hits_at_k_values: Dict[int, List[float]],
+                         rank_of_positive_subject_based: int,
+                         rank_of_positive_object_based: int
+                         ) -> None:
         """Update the Hits@K dictionary for two values."""
         for k, values in hits_at_k_values.items():
             if rank_of_positive_subject_based < k:
@@ -53,10 +58,10 @@ class RankBasedEvaluator(AbstractEvalutor):
             else:
                 values.append(0.0)
 
-    def _create_corrupted_triples(self, triple, all_entities):
-        candidate_entities_subject_based = np.delete(arr=all_entities, obj=triple[0:1])
+    def _create_corrupted_triples(self, triple):
+        candidate_entities_subject_based = np.delete(arr=self.all_entities, obj=triple[0:1])
         candidate_entities_subject_based = np.reshape(candidate_entities_subject_based, newshape=(-1, 1))
-        candidate_entities_object_based = np.delete(arr=all_entities, obj=triple[2:3])
+        candidate_entities_object_based = np.delete(arr=self.all_entities, obj=triple[2:3])
         candidate_entities_object_based = np.reshape(candidate_entities_object_based, newshape=(-1, 1))
 
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
@@ -77,12 +82,12 @@ class RankBasedEvaluator(AbstractEvalutor):
         return corrupted_subject_based, corrupted_object_based
 
     def _compute_filtered_rank(self,
-            kg_embedding_model,
-            pos_triple,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed,
-    ) -> Tuple[int, int]:
+                               kg_embedding_model,
+                               pos_triple,
+                               corrupted_subject_based,
+                               corrupted_object_based,
+                               all_pos_triples_hashed,
+                               ) -> Tuple[int, int]:
         """
 
         :param kg_embedding_model:
@@ -107,12 +112,12 @@ class RankBasedEvaluator(AbstractEvalutor):
         )
 
     def _compute_rank(self,
-            kg_embedding_model,
-            pos_triple,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed=None,
-    ) -> Tuple[int, int]:
+                      kg_embedding_model,
+                      pos_triple,
+                      corrupted_subject_based,
+                      corrupted_object_based,
+                      all_pos_triples_hashed=None,
+                      ) -> Tuple[int, int]:
         """
 
         :param kg_embedding_model:
@@ -155,7 +160,7 @@ class RankBasedEvaluator(AbstractEvalutor):
             rank_of_positive_object_based,
         )
 
-    def evaluate(self, mapped_train_triples, mapped_test_triples):
+    def evaluate(self, test_triples):
         """."""
         start = timeit.default_timer()
         ranks: List[int] = []
@@ -166,7 +171,7 @@ class RankBasedEvaluator(AbstractEvalutor):
         # Set eval mode in order to ignore functionalities such as dropout
         self.kge_model = self.kge_model.eval()
 
-        all_pos_triples = np.concatenate([mapped_train_triples, mapped_test_triples], axis=0)
+        all_pos_triples = np.concatenate([self.train_triples, test_triples], axis=0)
         all_pos_triples_hashed = np.apply_along_axis(self._hash_triples, 1, all_pos_triples)
 
         compute_rank_fct: Callable[..., Tuple[int, int]] = (
@@ -175,10 +180,9 @@ class RankBasedEvaluator(AbstractEvalutor):
             self._compute_rank
         )
 
-        for pos_triple in mapped_test_triples:
+        for pos_triple in test_triples:
             corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
-                triple=pos_triple,
-                all_entities=self.all_entities)
+                triple=pos_triple)
 
             rank_of_positive_subject_based, rank_of_positive_object_based = compute_rank_fct(
                 kg_embedding_model=self.kg_embedding_model,
