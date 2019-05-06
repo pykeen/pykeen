@@ -57,19 +57,7 @@ class UnstructuredModel(BaseModule):
         # Normalize embeddings of entities
         pos_scores = self._score_triples(batch_positives)
         neg_scores = self._score_triples(batch_negatives)
-        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
-        return loss
-
-    def _compute_loss(self, pos_scores, neg_scores):
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        # Scores for the psotive and negative triples
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-        # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(pos_scores, neg_scores, y)
+        loss = self._compute_loss(positive_scores=pos_scores, negative_scores=neg_scores)
         return loss
 
     def _score_triples(self, triples):

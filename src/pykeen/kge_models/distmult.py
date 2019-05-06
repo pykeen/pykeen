@@ -68,20 +68,6 @@ class DistMult(BaseModule):
         loss = self._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         return loss
 
-    def _compute_loss(self, positive_scores, negative_scores):
-        # Choose y = -1 since a smaller score is better.
-        # In TransE for example, the scores represent distances
-        y = np.repeat([-1], repeats=positive_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        # Scores for the psotive and negative triples
-        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
-        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
-        # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(positive_scores, negative_scores, y)
-        return loss
-
     def _score_triples(self, triples):
         head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
         return self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
