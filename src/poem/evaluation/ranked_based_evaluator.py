@@ -11,8 +11,7 @@ import numpy as np
 import torch
 
 from poem.constants import FILTER_NEG_TRIPLES
-from poem.evaluation.abstract_evaluator import AbstractEvalutor
-from poem.pipeline import EvaluatorConfig
+from poem.evaluation.abstract_evaluator import AbstractEvalutor, EvaluatorConfig
 
 log = logging.getLogger(__name__)
 
