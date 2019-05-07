@@ -2,7 +2,6 @@
 
 """Negative sampling algorithm based on the work og of Bordes et al.."""
 
-import torch
 import numpy as np
 
 from poem.negative_sampling.abstract_negative_sampler import NegativeSampler
@@ -39,5 +38,3 @@ class BasicNegativeSampler(NegativeSampler):
         neg_batch = np.concatenate([subject_based_corrupted_triples, object_based_corrupted_triples], axis=0)
 
         return neg_batch
-
-
