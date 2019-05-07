@@ -96,11 +96,6 @@ class BaseModule(nn.Module):
         y = np.repeat([-1], repeats=positive_scores.shape[0])
         y = torch.tensor(y, dtype=torch.float, device=self.device)
 
-        # Scores for the psotive and negative triples
-        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
-        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
-        # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
         loss = self.criterion(positive_scores, negative_scores, y)
         return loss
 
