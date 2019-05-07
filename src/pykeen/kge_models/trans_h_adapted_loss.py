@@ -2,7 +2,6 @@
 
 """Implementation of TransH."""
 
-import numpy as np
 import torch
 import torch.autograd
 import torch.nn as nn
