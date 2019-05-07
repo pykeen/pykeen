@@ -28,12 +28,11 @@ class RankBasedEvaluator(AbstractEvalutor):
     """."""
 
     def __init__(self, evaluator_config: EvaluatorConfig, hits_at_k=[1, 3, 5, 10]):
-        self.all_entities = np.arange(0, len(evaluator_config.entity_to_id))
-        self.kge_model = evaluator_config.kge_model
-        self.filter_neg_triples = evaluator_config.config.get(FILTER_NEG_TRIPLES)
-        self.device = self.kge_model.device
+        super().__init__(evaluator_config=evaluator_config)
+        self.all_entities = np.arange(0, len(self.entity_to_id))
+        self.filter_neg_triples = self.evaluator_config.config.get(FILTER_NEG_TRIPLES)
         self.hits_at_k = hits_at_k
-        self.train_triples = evaluator_config.training_triples
+        self.train_triples = self.evaluator_config.training_triples
 
     def _hash_triples(self, triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
@@ -86,15 +85,7 @@ class RankBasedEvaluator(AbstractEvalutor):
                                corrupted_object_based,
                                all_pos_triples_hashed,
                                ) -> Tuple[int, int]:
-        """
-
-        :param kg_embedding_model:
-        :param pos_triple:
-        :param corrupted_subject_based:
-        :param corrupted_object_based:
-        :param device:
-        :param all_pos_triples_hashed:
-        """
+        """."""
         corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
@@ -116,15 +107,7 @@ class RankBasedEvaluator(AbstractEvalutor):
                       corrupted_object_based,
                       all_pos_triples_hashed=None,
                       ) -> Tuple[int, int]:
-        """
-
-        :param kg_embedding_model:
-        :param pos_triple:
-        :param corrupted_subject_based:
-        :param corrupted_object_based:
-        :param device:
-        :param all_pos_triples_hashed: This parameter isn't used but is necessary for compatability
-        """
+        """."""
         scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
         scores_of_corrupted_objects = kg_embedding_model.predict(corrupted_object_based)
 
@@ -183,7 +166,7 @@ class RankBasedEvaluator(AbstractEvalutor):
                 triple=pos_triple)
 
             rank_of_positive_subject_based, rank_of_positive_object_based = compute_rank_fct(
-                kg_embedding_model=self.kg_embedding_model,
+                kg_embedding_model=self.kge_model,
                 pos_triple=pos_triple,
                 corrupted_subject_based=corrupted_subject_based,
                 corrupted_object_based=corrupted_object_based,
