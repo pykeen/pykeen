@@ -87,22 +87,6 @@ class TransR(BaseModule):
         distances = torch.mul(distances, distances)
         return distances
 
-    def _compute_loss(self, pos_scores, neg_scores):
-        # y == -1 indicates that second input to criterion should get a larger loss
-        # y = torch.Tensor([-1]).cuda()
-        # NOTE: y = 1 is important
-        # y = torch.tensor([-1], dtype=torch.float, device=self.device)
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        # Scores for the psotive and negative triples
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-        # neg_scores_temp = 1 * torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(pos_scores, neg_scores, y)
-        return loss
-
     def _project_entities(self, entity_embs, projection_matrix_embs):
         projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])
         projected_entity_embs = torch.clamp(projected_entity_embs, max=1.)
@@ -158,5 +142,5 @@ class TransR(BaseModule):
         pos_scores = self._compute_scores(h_embs=proj_pos_heads_embs, r_embs=pos_r_embs, t_embs=proj_pos_tails_embs)
         neg_scores = self._compute_scores(h_embs=proj_neg_heads_embs, r_embs=neg_r_embs, t_embs=proj_neg_tails_embs)
 
-        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
+        loss = self._compute_loss(positive_scores=pos_scores, negative_scores=neg_scores)
         return loss

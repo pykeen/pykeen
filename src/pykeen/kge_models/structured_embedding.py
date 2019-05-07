@@ -80,18 +80,7 @@ class StructuredEmbedding(BaseModule):
         positive_scores = self._score_triples(positives)
         negative_scores = self._score_triples(negatives)
 
-        loss = self._compute_loss(positive_scores, negative_scores)
-        return loss
-
-    def _compute_loss(self, positive_scores, negative_scores):
-        y = np.repeat([-1], repeats=positive_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        # Scores for the positive and negative triples
-        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
-        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(positive_scores, negative_scores, y)
+        loss = self._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         return loss
 
     def _score_triples(self, triples):

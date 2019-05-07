@@ -2,7 +2,6 @@
 
 """Implementation of TransH."""
 
-import numpy as np
 import torch
 import torch.autograd
 import torch.nn as nn
@@ -103,21 +102,15 @@ class TransH(nn.Module):
 
         return soft_constraints_loss
 
-    def compute_loss(self, pos_scores, neg_scores, batch_entities, batch_relations):
+    def compute_loss(self, positive_scores, negative_scores, batch_entities, batch_relations):
         """
 
-        :param pos_scores:
-        :param neg_scores:
+        :param positive_scores:
+        :param negative_scores:
         :return:
         """
 
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
-        # y == -1 indicates that second input to criterion should get a larger loss
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-        margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
+        margin_ranking_loss = super(TransH, self)._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         soft_constraint_loss = self.compute_soft_constraint_loss(batch_entities, batch_relations)
 
         loss = margin_ranking_loss + soft_constraint_loss
@@ -200,6 +193,6 @@ class TransH(nn.Module):
             batch_entities = batch_entities.cuda()
             batch_relations = batch_relations.cuda()
 
-        loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores, batch_entities=batch_entities,
+        loss = self.compute_loss(positive_scores=pos_scores, negative_scores=neg_scores, batch_entities=batch_entities,
                                  batch_relations=batch_relations)
         return loss

@@ -5,7 +5,6 @@
 from dataclasses import dataclass
 from typing import Dict
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
@@ -72,25 +71,10 @@ class TransD(BaseModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def _compute_loss(self, positive_scores, negative_scores):
-        # y == -1 indicates that second input to criterion should get a larger loss
-        # y = torch.Tensor([-1]).cuda()
-        # NOTE: y = 1 is important
-        # y = torch.tensor([-1], dtype=torch.float, device=self.device)
-        y = np.repeat([-1], repeats=positive_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        # Scores for the psotive and negative triples
-        positive_scores = torch.tensor(positive_scores, dtype=torch.float, device=self.device)
-        negative_scores = torch.tensor(negative_scores, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(positive_scores, negative_scores, y)
-        return loss
-
     def forward(self, positives, negatives):
         positive_scores = self._score_triples(positives)
         negative_scores = self._score_triples(negatives)
-        loss = self._compute_loss(positive_scores, negative_scores)
+        loss = self._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         return loss
 
     def _score_triples(self, triples):

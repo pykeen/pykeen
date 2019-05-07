@@ -5,7 +5,6 @@
 from dataclasses import dataclass
 from typing import Dict
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
@@ -109,14 +108,8 @@ class TransH(BaseModule):
 
         return soft_constraints_loss
 
-    def compute_loss(self, pos_scores, neg_scores):
-        pos_scores = torch.tensor(pos_scores, dtype=torch.float, device=self.device)
-        neg_scores = torch.tensor(neg_scores, dtype=torch.float, device=self.device)
-
-        # y == -1 indicates that second input to criterion should get a larger loss
-        y = np.repeat([-1], repeats=pos_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-        margin_ranking_loss = self.criterion(pos_scores, neg_scores, y)
+    def _compute_loss(self, positive_scores, negative_scores):
+        margin_ranking_loss = super(TransH, self)._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         soft_constraint_loss = self.compute_soft_constraint_loss()
 
         loss = margin_ranking_loss + soft_constraint_loss
@@ -176,6 +169,6 @@ class TransH(BaseModule):
         pos_scores = self._compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
         neg_scores = self._compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
-        loss = self.compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
+        loss = self._compute_loss(positive_scores=pos_scores, negative_scores=neg_scores)
 
         return loss
