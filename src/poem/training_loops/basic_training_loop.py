@@ -26,15 +26,14 @@ class TrainingLoop(ABC):
         ADAM_OPTIMIZER_NAME: optim.Adam,
     }
 
-    def __init__(self, model_config: ModelConfig, kge_model: nn.Module, instances: Instances):
-        self.config = model_config.config
+    def __init__(self, config: Dict, kge_model: nn.Module, all_entities: np.ndarray):
+        self.config = config
         self.kge_model = kge_model
         self.losses_per_epochs = []
-        self.instances = instances
-        self.all_entities = np.array(list(self.instances.entity_to_id.values()))
+        self.all_entities = all_entities
 
     @abstractmethod
-    def train(self):
+    def train(self, training_instances: Instances):
         pass
 
     def get_optimizer(self, config: Dict, kge_model):

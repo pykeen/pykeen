@@ -11,8 +11,7 @@ import torch.nn as nn
 from tqdm import trange
 
 from poem.constants import BATCH_SIZE, NUM_EPOCHS
-from poem.instance_creation_factories.triples_factory import Instances
-from poem.model_config import ModelConfig
+from typing import Dict
 from poem.negative_sampling.basic_negative_sampler import BasicNegativeSampler
 from poem.training_loops.basic_training_loop import TrainingLoop
 from poem.training_loops.utils import split_list_in_batches
@@ -23,17 +22,19 @@ log = logging.getLogger(__name__)
 class OWATrainingLoop(TrainingLoop):
     """."""
 
-    def __init__(self, model_config: ModelConfig, kge_model: nn.Module, instances: Instances):
-        super().__init__(model_config=model_config, kge_model=kge_model, instances=instances)
+    def __init__(self, config: Dict, kge_model: nn.Module, all_entities, negative_sampler=None):
+        super().__init__(config=config, kge_model=kge_model, all_entities=all_entities)
         # Later, different negative sampling algorithms can be set
-        self.negative_sampler = BasicNegativeSampler(all_entities=self.all_entities)
+        self.negative_sampler = negative_sampler
+        if self.negative_sampler is None:
+            self.negative_sampler = BasicNegativeSampler(all_entities=self.all_entities)
 
-    def train(self):
+    def train(self, training_instances):
         """."""
         self.kge_model = self.kge_model.to(self.kge_model.device)
 
         optimizer = self.get_optimizer(config=self.config, kge_model=self.kge_model)
-        pos_triples = self.instances.instances
+        pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
 
         start_training = timeit.default_timer()
