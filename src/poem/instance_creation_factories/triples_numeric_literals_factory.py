@@ -6,12 +6,12 @@ from typing import Tuple
 
 import numpy as np
 from typing import Dict
-from kupp.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
-from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples
 from poem.constants import PATH_TO_NUMERIC_LITERALS, NUMERIC_LITERALS, OWA, CWA
 from poem.instance_creation_factories.instances import MultimodalInstances, MultimodalOWAInstances, \
     MultimodalCWAInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
+from poem.preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
+from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import load_triples
 
 
 class TriplesNumericLiteralsFactory(TriplesFactory):

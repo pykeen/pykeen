@@ -7,10 +7,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from kupp.triples_preprocessing_utils.basic_triple_utils import load_triples, create_entity_and_relation_mappings, \
-    map_triples_elements_to_ids
+
 from poem.constants import TRAINING_SET_PATH, TEST_SET_PATH, TEST_SET_RATIO, OWA, SEED, KG_ASSUMPTION
 from poem.instance_creation_factories.instances import Instances, OWAInstances
+from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import map_triples_elements_to_ids, load_triples, \
+    create_entity_and_relation_mappings
 
 
 class TriplesFactory:
