@@ -170,6 +170,6 @@ class TransH(BaseModule):
         pos_scores = self._compute_scores(h_embs=projected_heads_pos, r_embs=pos_rel_embs, t_embs=projected_tails_pos)
         neg_scores = self._compute_scores(h_embs=projected_heads_neg, r_embs=neg_rel_embs, t_embs=projected_tails_neg)
 
-        loss = self._compute_loss(pos_scores=pos_scores, neg_scores=neg_scores)
+        loss = self._compute_loss(positive_scores=pos_scores, negative_scores=neg_scores)
 
         return loss
