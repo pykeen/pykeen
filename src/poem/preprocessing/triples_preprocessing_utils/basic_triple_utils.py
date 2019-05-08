@@ -74,7 +74,7 @@ def get_unique_entity_pairs(triples, return_indices=False) -> np.array:
     return get_unique_pairs(pairs=entity_pairs, return_indices=return_indices)
 
 
-def get_unique_subject_relation_pairs(triples, return_indices=False) -> np.array:
+def get_unique_subject_relation_pairs(triples, return_indices=False) -> np.ndarray:
     """Extract all unique subject relation pairs from the triples."""
 
     subjects, relations, _ = slice_triples(triples)
