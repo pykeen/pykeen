@@ -26,7 +26,7 @@ class TrainingLoop(ABC):
         ADAM_OPTIMIZER_NAME: optim.Adam,
     }
 
-    def __init__(self, config: Dict, kge_model: nn.Module, all_entities: np.ndarray):
+    def __init__(self, config: Dict, kge_model: nn.Module, all_entities: np.ndarray = None):
         self.config = config
         self.kge_model = kge_model
         self.losses_per_epochs = []
