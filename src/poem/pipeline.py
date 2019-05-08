@@ -24,6 +24,7 @@ from poem.model_config import ModelConfig
 from poem.training_loops.basic_training_loop import TrainingLoop
 from poem.training_loops.owa_training_loop import OWATrainingLoop
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
@@ -93,8 +94,7 @@ class Helper():
     @staticmethod
     def get_training_loop(config: Dict, kge_model: nn.Module, all_entities: np.ndarray) -> TrainingLoop:
         """Get training loop."""
-        kg_assumption = kge_model.kg_assumption
-        training_loop = Helper.KG_ASSUMPTION_TO_TRAINING_LOOP[kg_assumption]
+        training_loop = Helper.KG_ASSUMPTION_TO_TRAINING_LOOP[kge_model.kg_assumption]
 
         return training_loop(config=config, kge_model=kge_model, all_entities=all_entities)
 
@@ -122,20 +122,21 @@ class Helper():
         return model_config
 
     @staticmethod
-    def get_factory(config) -> TriplesFactory:
+    def get_factory(kge_model_name, entity_to_id, relation_to_id) -> TriplesFactory:
         """."""
-        kge_model_name = config[KG_EMBEDDING_MODEL_NAME]
+
         factory = Helper.KGE_MODEL_NAME_TO_FACTORY.get(kge_model_name)
 
         if factory is None:
             raise ValueError(f'invalid factory name: {kge_model_name}')
 
-        return factory(config)
+        return factory(entity_to_id, relation_to_id)
 
     @staticmethod
-    def preprocess_train_triples(config) -> Instances:
+    def preprocess_train_triples(kge_model_name, entity_to_id, relation_to_id, kg_assumption) -> Instances:
         """"""
 
+        # FIXME
         instance_factory = Helper.get_factory(config)
         return instance_factory.create_instances()
 
