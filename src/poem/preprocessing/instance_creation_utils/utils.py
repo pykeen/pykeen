@@ -29,7 +29,7 @@ def create_multi_label_relation_instances(unique_entity_pairs: np.array,
 
 def create_multi_label_objects_instance(unique_s_r_pairs: np.array,
                                         triples: np.array,
-                                        num_entities: int, ) -> Dict[tuple, np.array]:
+                                        num_entities: int) -> Dict[tuple, np.array]:
     """Create for each (s,r) pair the multi object label."""
 
     subjects, relations, objects = slice_triples(triples)
