@@ -27,12 +27,13 @@ class MetricResults:
 class RankBasedEvaluator(AbstractEvalutor):
     """."""
 
-    def __init__(self, evaluator_config: EvaluatorConfig, hits_at_k=[1, 3, 5, 10]):
-        super().__init__(evaluator_config=evaluator_config)
+    def __init__(self, kge_model, entity_to_id, relation_to_id, training_triples, filter_neg_triples=False,
+                 hits_at_k=[1, 3, 5, 10]):
+        super().__init__(kge_model=kge_model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
         self.all_entities = np.arange(0, len(self.entity_to_id))
-        self.filter_neg_triples = self.evaluator_config.config.get(FILTER_NEG_TRIPLES)
+        self.filter_neg_triples = filter_neg_triples
         self.hits_at_k = hits_at_k
-        self.train_triples = self.evaluator_config.training_triples
+        self.train_triples = training_triples
 
     def _hash_triples(self, triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
