@@ -52,10 +52,11 @@ PATH_TO_NUMERIC_LITERALS = 'path_to_numeric_literals'
 KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
 DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
+COMPLEX_CWA_NAME = 'Complex_CWA'
 
 """DistMult related constants"""
 
-DISTMULT_INPUT_DROPOUT = 'input_dropout'
+INPUT_DROPOUT = 'input_dropout'
 
 """Factory related constants"""
 FACTORY_NAME = 'factory_name'
