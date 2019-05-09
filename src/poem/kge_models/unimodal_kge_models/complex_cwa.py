@@ -12,7 +12,7 @@ from torch.nn import functional as F
 from poem.model_config import ModelConfig
 
 
-class Complex(torch.nn.Module):
+class ComplexCWA(torch.nn.Module):
     """
        An implementation of Complex [agustinus2018] based on the closed world assumption (CWA)
 
@@ -22,7 +22,7 @@ class Complex(torch.nn.Module):
     model_name = COMPLEX_CWA_NAME
 
     def __init__(self, model_config: ModelConfig):
-        super(Complex, self).__init__()
+        super(ComplexCWA, self).__init__()
 
         # Entity dimensions
         #: The number of entities in the knowledge graph
@@ -51,8 +51,16 @@ class Complex(torch.nn.Module):
         xavier_normal_(self.relation_embeddings_real.weight.data)
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
-    def forward(self, batch_subjects, batch_relations):
+    def _compute_loss(self, predictions, labels):
         """"""
+        loss = self.criterion(predictions, labels)
+        return loss
+
+    def forward(self, batch, labels):
+        """"""
+        batch_subjects = batch[:,0:1]
+        batch_relations = batch[:,1:2]
+
         subjects_embedded_real = self.inp_drop(self.emb_e_real(batch_subjects)).view(-1, self.embedding_dim)
         relations_embedded_real = self.inp_drop(self.emb_rel_real(batch_relations)).view(-1, self.embedding_dim)
         subjects_embedded_img = self.inp_drop(self.emb_e_img(batch_subjects)).view(-1, self.embedding_dim)
@@ -77,5 +85,5 @@ class Complex(torch.nn.Module):
 
         predictions = real_real_real + real_img_img + img_real_img - img_img_real
         predictions = F.sigmoid(predictions)
-
-        return predictions
+        loss = self._compute_loss(predictions=predictions, labels=labels)
+        return loss
