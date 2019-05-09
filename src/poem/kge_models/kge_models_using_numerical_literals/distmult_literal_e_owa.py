@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import DISTMULT_LITERAL_NAME_OWA, DISTMULT_INPUT_DROPOUT, NUMERIC_LITERALS
+from poem.constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS
 from poem.kge_models.base_owa import BaseOWAModule, slice_triples
 from poem.model_config import ModelConfig
 
@@ -35,7 +35,7 @@ class DistMultLiteral(BaseOWAModule):
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
         self.input_dropout = torch.nn.Dropout(
-            self.config[DISTMULT_INPUT_DROPOUT] if DISTMULT_INPUT_DROPOUT in self.config else 0.)
+            self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.)
 
         self._initialize()
 
