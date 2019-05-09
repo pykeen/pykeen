@@ -6,9 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import INPUT_DROPOUT, COMPLEX_CWA_NAME, NUM_ENTITIES, \
-    NUM_RELATIONS, EMBEDDING_DIM, PREFERRED_DEVICE
-from poem.model_config import ModelConfig
+from poem.constants import COMPLEX_CWA_NAME, GPU, CWA
 
 
 class ComplexCWA(torch.nn.Module):
@@ -17,21 +15,21 @@ class ComplexCWA(torch.nn.Module):
 
        .. [trouillon2016complex] Trouillon, Théo, et al. "Complex embeddings for simple link prediction."
                                  International Conference on Machine Learning. 2016..
-       """
+    """
     model_name = COMPLEX_CWA_NAME
+    kg_assumption = CWA
 
-    def __init__(self, model_config: ModelConfig):
+    def __init__(self, num_entities, num_relations, embedding_dim=50, input_dropout=0.2, preferred_device=GPU):
         super(ComplexCWA, self).__init__()
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and model_config.config(PREFERRED_DEVICE) else 'cpu')
+            'cuda:0' if torch.cuda.is_available() and preferred_device else 'cpu')
         # Entity dimensions
         #: The number of entities in the knowledge graph
-        self.config = model_config.config
-        self.num_entities = self.config[NUM_ENTITIES]
+        self.num_entities = num_entities
         #: The number of unique relation types in the knowledge graph
-        self.num_relations = self.config[NUM_RELATIONS]
+        self.num_relations = num_relations
         #: The dimension of the embeddings to generate
-        self.embedding_dim = self.config[EMBEDDING_DIM]
+        self.embedding_dim = embedding_dim
 
         # ToDo:Why padding?
         self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
@@ -41,7 +39,7 @@ class ComplexCWA(torch.nn.Module):
 
         self.init()
 
-        self.inp_drop = torch.nn.Dropout(self.config[INPUT_DROPOUT])
+        self.inp_drop = torch.nn.Dropout(input_dropout)
         self.criterion = torch.nn.BCELoss()
 
     def init(self):
