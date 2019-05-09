@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Training KGE models based on the OWA."""
+"""Training KGE models based on the CWA."""
 
 import logging
 import timeit
