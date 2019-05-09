@@ -54,4 +54,5 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
                                       entity_to_id=cwa_instances.entity_to_id,
                                       relation_to_id=cwa_instances.relation_to_id,
                                       kg_assumption=cwa_instances.kg_assumption,
-                                      multimodal_data=self.multimodal_data)
+                                      multimodal_data=self.multimodal_data,
+                                      labels=cwa_instances.labels)
