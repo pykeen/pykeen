@@ -10,8 +10,7 @@ from typing import List, Iterable, Hashable, Callable, Tuple, Dict
 import numpy as np
 import torch
 
-from poem.constants import FILTER_NEG_TRIPLES
-from poem.evaluation.abstract_evaluator import AbstractEvalutor, EvaluatorConfig
+from poem.evaluation.abstract_evaluator import AbstractEvalutor
 
 log = logging.getLogger(__name__)
 
