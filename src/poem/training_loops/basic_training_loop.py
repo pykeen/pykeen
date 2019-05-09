@@ -26,19 +26,18 @@ class TrainingLoop(ABC):
         ADAM_OPTIMIZER_NAME: optim.Adam,
     }
 
-    def __init__(self, config: Dict, kge_model: nn.Module, all_entities: np.ndarray = None):
-        self.config = config
+    def __init__(self, kge_model: nn.Module, optimizer, all_entities: np.ndarray = None):
         self.kge_model = kge_model
+        self.optimizer = optimizer
         self.losses_per_epochs = []
         self.all_entities = all_entities
 
     @abstractmethod
-    def train(self, training_instances: Instances):
+    def train(self, training_instances: Instances, num_epochs, batch_size, learning_rate):
         pass
 
-    def get_optimizer(self, config: Dict, kge_model):
+    def get_optimizer(self, optimizer_name, kge_model, learning_rate):
         """Get an optimizer for the given knowledge graph embedding model."""
-        optimizer_name = config[OPTMIZER_NAME]
         optimizer_cls = self.OPTIMIZERS.get(optimizer_name)
 
         if optimizer_cls is None:
@@ -46,4 +45,4 @@ class TrainingLoop(ABC):
 
         parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
 
-        return optimizer_cls(parameters, lr=config[LEARNING_RATE])
+        return optimizer_cls(parameters, lr=learning_rate)
