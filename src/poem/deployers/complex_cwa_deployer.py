@@ -1,7 +1,6 @@
-from poem.constants import KG_ASSUMPTION, EMBEDDING_DIM, CWA, NUM_ENTITIES, NUM_RELATIONS, INPUT_DROPOUT
+from poem.constants import EMBEDDING_DIM, NUM_ENTITIES, NUM_RELATIONS, INPUT_DROPOUT
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.kge_models.unimodal_kge_models.complex_cwa import ComplexCWA
-from poem.model_config import ModelConfig
 from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
     load_triples
 from torch import optim
