@@ -48,12 +48,13 @@ class CWATrainingLoop(TrainingLoop):
             for i, batch_pairs in enumerate(batches):
                 current_batch_size = len(batch_pairs)
                 batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.kge_model.device)
+                batch_labels = labels_batches[i]
                 batch_labels = torch.tensor(batch_labels, dtype=torch.float, device=self.kge_model.device)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
                 self.optimizer.zero_grad()
-                loss = self.kge_model(batch_pairs, batch_pairs)
+                loss = self.kge_model(batch_pairs, batch_labels)
                 current_epoch_loss += (loss.item() * current_batch_size)
 
                 loss.backward()
