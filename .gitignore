@@ -104,6 +104,6 @@ venv.bak/
 .mypy_cache/
 .idea/
 
-/try_and_error/
+/try_and_error/*
 
 /src/try_and_error/
