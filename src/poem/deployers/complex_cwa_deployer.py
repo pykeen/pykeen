@@ -20,7 +20,6 @@ if __name__ == '__main__':
 
     # Step 2: Define config
     config = {
-        KG_ASSUMPTION: CWA,
         EMBEDDING_DIM: 200,
         NUM_ENTITIES: len(entity_to_id),
         NUM_RELATIONS: len(relation_to_id),
@@ -28,8 +27,7 @@ if __name__ == '__main__':
     }
 
     # Configure KGE model
-    model_config = ModelConfig(config=config, multimodal_data=None)
-    kge_model = ComplexCWA(model_config=model_config)
+    kge_model = ComplexCWA(**config)
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
     optimizer = optim.Adam(params=parameters)
 
