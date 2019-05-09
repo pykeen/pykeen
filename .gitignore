@@ -112,6 +112,6 @@ venv.bak/
 /t_s.py
 /corpora/
 
-/try_and_error/
+/try_and_error/*
 
 /src/try_and_error/
