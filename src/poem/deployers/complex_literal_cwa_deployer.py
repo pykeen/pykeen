@@ -3,7 +3,6 @@ from poem.kge_models.kge_models_using_numerical_literals.complex_literal_cwa imp
 from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
     load_triples
 from torch import optim
-import numpy as np
 
 from poem.training_loops.cwa_training_loop import CWATrainingLoop
 
@@ -30,10 +29,9 @@ if __name__ == '__main__':
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
     optimizer = optim.Adam(params=parameters)
 
-    all_entities = np.array(list(entity_to_id.values()))
 
     # Train
-    cwa_training_loop = CWATrainingLoop(kge_model=kge_model, optimizer=optimizer, all_entities=all_entities)
+    cwa_training_loop = CWATrainingLoop(kge_model=kge_model, optimizer=optimizer)
 
     fitted_kge_model, losses = cwa_training_loop.train(training_instances=instances,
                                                        num_epochs=2,

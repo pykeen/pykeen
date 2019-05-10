@@ -11,7 +11,6 @@ import torch.nn as nn
 from tqdm import trange
 
 from poem.instance_creation_factories.instances import Instances
-from poem.negative_sampling.basic_negative_sampler import BasicNegativeSampler
 from poem.training_loops.basic_training_loop import TrainingLoop
 from poem.training_loops.utils import split_list_in_batches
 
@@ -21,8 +20,8 @@ log = logging.getLogger(__name__)
 class CWATrainingLoop(TrainingLoop):
     """."""
 
-    def __init__(self, kge_model: nn.Module, optimizer, all_entities):
-        super().__init__(kge_model=kge_model, optimizer=optimizer, all_entities=all_entities)
+    def __init__(self, kge_model: nn.Module, optimizer):
+        super().__init__(kge_model=kge_model, optimizer=optimizer)
 
     def train(self, training_instances: Instances, num_epochs: int, batch_size: int):
         """."""
