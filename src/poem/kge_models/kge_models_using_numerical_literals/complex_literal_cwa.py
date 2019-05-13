@@ -77,6 +77,54 @@ class ComplexLiteralCWA(torch.nn.Module):
         loss = self.criterion(predictions, labels)
         return loss
 
+    def predict(self, triples: torch.tensor):
+        """."""
+        heads = triples[:, 0:1]
+        relations = triples[:, 1:2]
+        tails = triples[:, 2:3]
+
+        heads_embs_real = self.entity_embs_real(heads).view(-1, self.embedding_dim)
+        rels_embedded_real = self.relation_embs_real(relations).view(-1, self.embedding_dim)
+        tails_embs_real = self.entity_embs_real(tails).view(-1, self.embedding_dim)
+
+        heads_embs_img = self.entity_embs_img(heads).view(-1, self.embedding_dim)
+        rels_embedded_img = self.relation_embs_img(relations).view(-1, self.embedding_dim)
+        tails_embs_img = self.entity_embs_img(tails).view(-1, self.embedding_dim)
+
+        # Literals
+        head_literals = self.numeric_literals(heads).view(-1, self.num_of_literals)
+        tail_literals = self.numeric_literals(tails).view(-1, self.num_of_literals)
+
+        heads_embs_real, heads_embs_img = self._apply_g_function(
+            real_embs=heads_embs_real,
+            img_embs=heads_embs_img,
+            literals=head_literals
+        )
+
+        tails_embs_real, tails_embs_img = self._apply_g_function(
+            real_embs=tails_embs_real,
+            img_embs=tails_embs_img,
+            literals=tail_literals
+        )
+
+        # End literals
+        real_real_real = torch.bmm((heads_embs_real * rels_embedded_real).view(-1, 1, self.embedding_dim),
+                                   tails_embs_real.view(-1, self.embedding_dim, 1)).view(-1)
+
+        real_img_img = torch.bmm((heads_embs_real * rels_embedded_img).view(-1, 1, self.embedding_dim),
+                                 tails_embs_img.view(-1, self.embedding_dim, 1)).view(-1)
+
+        img_real_img = torch.bmm((heads_embs_img * heads_embs_real).view(-1, 1, self.embedding_dim),
+                                tails_embs_img.view(-1, self.embedding_dim, 1)).view(-1)
+
+        img_img_real = torch.bmm((heads_embs_img * rels_embedded_img).view(-1, 1, self.embedding_dim),
+                                tails_embs_real.view(-1, self.embedding_dim, 1)).view(-1)
+
+        predictions = real_real_real + real_img_img + img_real_img - img_img_real
+        predictions = torch.sigmoid(predictions)
+
+        return predictions.detach().cpu().numpy()
+
     def forward(self, batch, labels):
         """"""
         batch_heads = batch[:, 0:1]
