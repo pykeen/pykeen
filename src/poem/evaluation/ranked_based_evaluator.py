@@ -26,7 +26,7 @@ class MetricResults:
 class RankBasedEvaluator(AbstractEvalutor):
     """."""
 
-    def __init__(self, kge_model, entity_to_id, relation_to_id, training_triples, filter_neg_triples=False,
+    def __init__(self, kge_model, entity_to_id, relation_to_id, training_triples: np.ndarray, filter_neg_triples=False,
                  hits_at_k=[1, 3, 5, 10]):
         super().__init__(kge_model=kge_model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
         self.all_entities = np.arange(0, len(self.entity_to_id))
@@ -105,7 +105,7 @@ class RankBasedEvaluator(AbstractEvalutor):
                       pos_triple,
                       corrupted_subject_based,
                       corrupted_object_based,
-                      all_pos_triples_hashed=None,
+                      all_pos_triples_hashed=None
                       ) -> Tuple[int, int]:
         """."""
         scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
@@ -141,7 +141,7 @@ class RankBasedEvaluator(AbstractEvalutor):
             rank_of_positive_object_based,
         )
 
-    def evaluate(self, test_triples):
+    def evaluate(self, test_triples: np.ndarray):
         """."""
         start = timeit.default_timer()
         ranks: List[int] = []
