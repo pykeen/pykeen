@@ -23,11 +23,16 @@ class CWATrainingLoop(TrainingLoop):
     def __init__(self, kge_model: nn.Module, optimizer):
         super().__init__(kge_model=kge_model, optimizer=optimizer)
 
-    def train(self, training_instances: Instances, num_epochs: int, batch_size: int):
+    def train(self, training_instances: Instances, num_epochs: int, batch_size: int, label_smoothing=True,
+              label_smoothing_epsilon=0.1):
         """."""
         self.kge_model = self.kge_model.to(self.kge_model.device)
         subject_relation_pairs = training_instances.instances
         labels = training_instances.labels
+
+        if label_smoothing:
+            labels = ((1.0 - label_smoothing_epsilon) * labels) + (1.0 / np.size(labels, 1))
+
         num_triples = subject_relation_pairs.shape[0]
 
         start_training = timeit.default_timer()
