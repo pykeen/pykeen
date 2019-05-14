@@ -53,6 +53,7 @@ KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
 DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 COMPLEX_CWA_NAME = 'Complex_CWA'
+TRANS_E_NAME = 'TransE'
 
 """DistMult related constants"""
 
