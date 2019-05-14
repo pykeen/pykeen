@@ -38,6 +38,28 @@ class RankBasedEvaluator(AbstractEvalutor):
         """Hash a list of triples."""
         return hash(tuple(triples))
 
+    def _filter_corrupted_triples(self,
+            corrupted_subject_based,
+            corrupted_object_based,
+            all_pos_triples_hashed,
+    ):
+        # TODO: Check
+        corrupted_subject_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_subject_based)
+        mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
+        mask = np.where(mask)[0]
+        corrupted_subject_based = corrupted_subject_based[mask]
+
+        corrupted_object_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_object_based)
+        mask = np.in1d(corrupted_object_based_hashed, all_pos_triples_hashed, invert=True)
+        mask = np.where(mask)[0]
+
+        if mask.size == 0:
+            raise Exception("User selected filtered metric computation, but all corrupted triples exists"
+                            "also a positive triples.")
+        corrupted_object_based = corrupted_object_based[mask]
+
+        return corrupted_subject_based, corrupted_object_based
+
     def _update_hits_at_k(self,
                           hits_at_k_values: Dict[int, List[float]],
                           rank_of_positive_subject_based: int,
