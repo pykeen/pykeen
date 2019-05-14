@@ -61,13 +61,13 @@ def main(training_file, test_file, output_direc):
                                         all_entities=all_entities)
 
     fitted_kge_model, losses = owa_training_loop.train(training_instances=instances,
-                                                       num_epochs=10,
-                                                       batch_size=128,
+                                                       num_epochs=1000,
+                                                       batch_size=32,
                                                        )
 
     # Step 4: Prepare test triples
     test_triples = load_triples(path=test_file)
-    mapped_test_triples = map_triples_elements_to_ids(triples=test_triples[0:100, :],
+    mapped_test_triples = map_triples_elements_to_ids(triples=test_triples,
                                                       entity_to_id=entity_to_id,
                                                       rel_to_id=relation_to_id)
 
