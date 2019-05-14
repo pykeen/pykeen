@@ -36,6 +36,7 @@ class MultimodalInstances(Instances):
     """."""
 
     multimodal_data: Dict[str, np.ndarray]
+    data_relation_to_id: Dict[str,int]
 
 
 @dataclass

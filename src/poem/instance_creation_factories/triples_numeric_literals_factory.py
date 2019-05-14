@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of factory that create instances containing of triples and numeric literals."""
+"""Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
 from typing import Tuple
 
@@ -18,13 +18,14 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
     def __init__(self, entity_to_id, relation_to_id, numeric_triples):
         super().__init__(entity_to_id, relation_to_id)
+        self.literals_to_id = None
         self.numeric_triples = numeric_triples
         self.numeric_literals = None
         self.multimodal_data = None
 
     def _create_numeric_literals(self) -> np.ndarray:
         """"""
-        self.numeric_literals = create_matix_of_literals(numeric_triples=self.numeric_triples,
+        self.numeric_literals, self.literals_to_id = create_matix_of_literals(numeric_triples=self.numeric_triples,
                                                          entity_to_id=self.entity_to_id)
         self.multimodal_data = {
             NUMERIC_LITERALS: self.numeric_literals
@@ -55,4 +56,5 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
                                       relation_to_id=cwa_instances.relation_to_id,
                                       kg_assumption=cwa_instances.kg_assumption,
                                       multimodal_data=self.multimodal_data,
+                                      data_relation_to_id=self.literals_to_id,
                                       labels=cwa_instances.labels)
