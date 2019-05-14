@@ -54,3 +54,16 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
         self.assertEqual(literals[id_susan, id_age], 28)
         self.assertEqual(literals[id_susan, id_height], 170)
         self.assertEqual(literals[id_susan, id_num_children], 0)
+
+        id_chocolate_cake = entity_to_id['chocolate_cake']
+        id_age = literals_to_id['/lit/hasAge']
+        id_height = literals_to_id['/lit/hasHeight']
+        id_num_children = literals_to_id['/lit/hasChildren']
+
+        self.assertEqual(literals[id_chocolate_cake, id_age], 0)
+        self.assertEqual(literals[id_chocolate_cake, id_height], 0)
+        self.assertEqual(literals[id_chocolate_cake, id_num_children], 0)
+
+        # Test creation of labels
+
+        print(instances.labels)
