@@ -1,0 +1,3 @@
+peter   likes   chocolate_cake
+chocolate_cake  isA dish
+susan   likes   pizza
