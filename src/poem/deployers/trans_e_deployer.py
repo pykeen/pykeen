@@ -1,4 +1,4 @@
-from poem.constants import GPU
+from poem.constants import GPU, KG_EMBEDDING_MODEL_NAME, EMBEDDING_DIM, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS
 from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.kge_models.unimodal_kge_models.trans_e import TransE
@@ -41,16 +41,22 @@ def main(training_file, test_file, output_direc):
 
     instances = factory.create_owa_instances(triples=training_triples)
 
+    embedding_dim = 50
+    learning_rate = 0.01
+    margin_loss = 1
+    batch_size = 32
+    num_epochs = 800
+
     # Step 2: Configure KGE model
     kge_model = TransE(num_entities=len(entity_to_id),
                        num_relations=len(relation_to_id),
-                       embedding_dim=50,
+                       embedding_dim=embedding_dim,
                        scoring_fct_norm=1,
-                       margin_loss=1,
+                       margin_loss=margin_loss,
                        preferred_device=GPU)
 
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
-    optimizer = optim.Adam(params=parameters)
+    optimizer = optim.SGD(params=parameters,lr=learning_rate)
 
     # Step 3: Train
     all_entities = np.array(list(entity_to_id.values()), dtype=np.long)
@@ -61,8 +67,8 @@ def main(training_file, test_file, output_direc):
                                         all_entities=all_entities)
 
     fitted_kge_model, losses = owa_training_loop.train(training_instances=instances,
-                                                       num_epochs=1000,
-                                                       batch_size=32,
+                                                       num_epochs=num_epochs,
+                                                       batch_size=batch_size,
                                                        )
 
     # Step 4: Prepare test triples
@@ -85,6 +91,15 @@ def main(training_file, test_file, output_direc):
     results['mean_rank'] = metric_results.mean_rank
     results['hits_at_k'] = metric_results.hits_at_k
 
+    # Step 7: Create summary
+    config = {
+        KG_EMBEDDING_MODEL_NAME: kge_model.model_name,
+        EMBEDDING_DIM: embedding_dim,
+        LEARNING_RATE: learning_rate,
+        BATCH_SIZE: batch_size,
+        NUM_EPOCHS: num_epochs
+    }
+
     eval_file = os.path.join(output_directory, 'evaluation_summary.json')
 
     with open(eval_file, 'w') as file:
@@ -94,6 +109,11 @@ def main(training_file, test_file, output_direc):
 
     with open(losses_file, 'w') as file:
         json.dump(losses, file, indent=2)
+
+    config_file = os.path.join(output_directory, 'config.json')
+
+    with open(config_file, 'w') as file:
+        json.dump(config, file, indent=2)
 
 
 if __name__ == '__main__':

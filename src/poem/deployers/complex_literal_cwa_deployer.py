@@ -1,3 +1,4 @@
+from poem.constants import KG_EMBEDDING_MODEL_NAME, EMBEDDING_DIM, INPUT_DROPOUT, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS
 from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 from poem.kge_models.kge_models_using_numerical_literals.complex_literal_cwa import ComplexLiteralCWA
@@ -40,23 +41,29 @@ def main(training_file, test_file, output_direc, literals_file):
                                             numeric_triples=literals)
     instances = factory.create_cwa_instances(triples=training_triples)
 
+    embedding_dim = 100
+    input_dropout = 0.2
+    learning_rate = 0.001
+    batch_size = 128
+    num_epochs = 100
+
     # Step 2: Configure KGE model
-    kge_model = ComplexLiteralCWA(embedding_dim=200,
+    kge_model = ComplexLiteralCWA(embedding_dim=embedding_dim,
                                   num_entities=len(entity_to_id),
                                   num_relations=len(relation_to_id),
-                                  input_dropout=0.2,
+                                  input_dropout=input_dropout,
                                   multimodal_data=instances.multimodal_data)
 
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
-    optimizer = optim.Adam(params=parameters)
+    optimizer = optim.Adam(params=parameters, lr=learning_rate)
 
     # Step 3: Train
     log.info("Train KGE model")
     cwa_training_loop = CWATrainingLoop(kge_model=kge_model, optimizer=optimizer)
 
     fitted_kge_model, losses = cwa_training_loop.train(training_instances=instances,
-                                                       num_epochs=100,
-                                                       batch_size=128,
+                                                       num_epochs=num_epochs,
+                                                       batch_size=batch_size,
                                                        label_smoothing=True,
                                                        label_smoothing_epsilon=0.1
                                                        )
@@ -83,6 +90,17 @@ def main(training_file, test_file, output_direc, literals_file):
 
     eval_file = os.path.join(output_directory, 'evaluation_summary.json')
 
+    # Step 7: Create summary
+    config = {
+        KG_EMBEDDING_MODEL_NAME: kge_model.model_name,
+        EMBEDDING_DIM: embedding_dim,
+        INPUT_DROPOUT: input_dropout,
+        LEARNING_RATE: learning_rate,
+        BATCH_SIZE: batch_size,
+        NUM_EPOCHS: num_epochs
+    }
+
+
     with open(eval_file, 'w') as file:
         json.dump(results, file, indent=2)
 
@@ -90,6 +108,11 @@ def main(training_file, test_file, output_direc, literals_file):
 
     with open(losses_file, 'w') as file:
         json.dump(losses, file, indent=2)
+
+    config_file = os.path.join(output_directory, 'config.json')
+
+    with open(config_file, 'w') as file:
+        json.dump(config, file, indent=2)
 
 
 if __name__ == '__main__':
