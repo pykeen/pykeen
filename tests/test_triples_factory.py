@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test utils for processing numeric literals.tsv."""
+"""Test utils for processing numeric literals"""
 
 import unittest
 import numpy as np
