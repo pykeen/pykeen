@@ -23,7 +23,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self.numeric_literals = None
         self.multimodal_data = None
 
-    def _create_numeric_literals(self) -> np.ndarray:
+    def _create_numeric_literals(self) -> None:
         """"""
         self.numeric_literals, self.literals_to_id = create_matix_of_literals(numeric_triples=self.numeric_triples,
                                                          entity_to_id=self.entity_to_id)
