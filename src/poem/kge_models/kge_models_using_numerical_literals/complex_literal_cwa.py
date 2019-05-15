@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from poem.constants import INPUT_DROPOUT, COMPLEX_CWA_NAME, NUM_ENTITIES, \
-    NUM_RELATIONS, EMBEDDING_DIM, PREFERRED_DEVICE, GPU, NUMERIC_LITERALS
+    NUM_RELATIONS, EMBEDDING_DIM, PREFERRED_DEVICE, GPU, NUMERIC_LITERALS, Complex_LITERAL_NAME_CWA
 from poem.model_config import ModelConfig
 
 
@@ -18,6 +18,7 @@ class ComplexLiteralCWA(torch.nn.Module):
         .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
                            arXiv preprint arXiv:1802.00934 (2018).
         """
+    model_name = Complex_LITERAL_NAME_CWA
 
     def __init__(self, num_entities, num_relations, multimodal_data, embedding_dim=50, input_dropout=0.2,
                  preferred_device=GPU):
