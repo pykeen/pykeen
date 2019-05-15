@@ -5,6 +5,7 @@ from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
     create_entity_and_relation_mappings, load_triples,
 )
 from poem.training_loops import CWATrainingLoop
+from poem.utils import get_params
 from torch import optim
 
 if __name__ == '__main__':
@@ -26,14 +27,16 @@ if __name__ == '__main__':
 
     # Configure KGE model
     kge_model = ComplexCWA(**config)
-    parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
-    optimizer = optim.Adam(params=parameters)
+    params = get_params(kge_model)
+    optimizer = optim.Adam(params=params)
 
     # Train
     cwa_training_loop = CWATrainingLoop(kge_model=kge_model, optimizer=optimizer)
 
-    fitted_kge_model, losses = cwa_training_loop.train(training_instances=instances,
-                                                       num_epochs=2,
-                                                       batch_size=128,
-                                                       label_smoothing=True,
-                                                       label_smoothing_epsilon=0.1)
+    fitted_kge_model, losses = cwa_training_loop.train(
+        training_instances=instances,
+        num_epochs=2,
+        batch_size=128,
+        label_smoothing=True,
+        label_smoothing_epsilon=0.1,
+    )

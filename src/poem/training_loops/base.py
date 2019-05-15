@@ -4,15 +4,15 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Mapping, Tuple, Type
+from typing import List, Mapping, Tuple, Type
 
 import numpy as np
 import torch.nn as nn
-from torch import Tensor
 from torch.optim import Adagrad, Adam, Optimizer, SGD
 
 from ..constants import ADAGRAD_OPTIMIZER_NAME, ADAM_OPTIMIZER_NAME, SGD_OPTIMIZER_NAME
 from ..instance_creation_factories.instances import Instances
+from ..utils import get_params
 
 __all__ = [
     'OPTIMIZERS',
@@ -26,10 +26,6 @@ OPTIMIZERS: Mapping[str, Type[Optimizer]] = {
     ADAGRAD_OPTIMIZER_NAME: Adagrad,
     ADAM_OPTIMIZER_NAME: Adam,
 }
-
-
-def get_params(module: nn.Module) -> Iterable[Tensor]:
-    return filter(lambda p: p.requires_grad, module.parameters())
 
 
 class TrainingLoop(ABC):
