@@ -77,21 +77,19 @@ class RankBasedEvaluator(AbstractEvalutor):
                           ) -> None:
         """Update the Hits@K dictionary for two values."""
         for k, values in hits_at_k_values.items():
-            if rank_of_positive_subject_based < k:
+            if rank_of_positive_subject_based <= k:
                 values.append(1.0)
             else:
                 values.append(0.0)
 
-            if rank_of_positive_object_based < k:
+            if rank_of_positive_object_based <= k:
                 values.append(1.0)
             else:
                 values.append(0.0)
 
     def _create_corrupted_triples(self, triple):
-        candidate_entities_subject_based = np.delete(arr=self.all_entities, obj=triple[0:1])
-        candidate_entities_subject_based = np.reshape(candidate_entities_subject_based, newshape=(-1, 1))
-        candidate_entities_object_based = np.delete(arr=self.all_entities, obj=triple[2:3])
-        candidate_entities_object_based = np.reshape(candidate_entities_object_based, newshape=(-1, 1))
+        candidate_entities_subject_based = self.all_entities[self.all_entities != triple[0:1]].reshape((-1, 1))
+        candidate_entities_object_based = self.all_entities[self.all_entities != triple[2:3]].reshape((-1, 1))
 
         # Extract current test tuple: Either (subject,predicate) or (predicate,object)
         tuple_subject_based = np.reshape(a=triple[1:3], newshape=(1, 2))
