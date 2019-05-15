@@ -138,10 +138,10 @@ class RankBasedEvaluator(AbstractEvalutor):
                       all_pos_triples_hashed=None
                       ) -> Tuple[int, int]:
         """."""
-        scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
-        scores_of_corrupted_objects = kg_embedding_model.predict(corrupted_object_based)
+        scores_of_corrupted_subjects = kg_embedding_model.predict_scores(corrupted_subject_based)
+        scores_of_corrupted_objects = kg_embedding_model.predict_scores(corrupted_object_based)
 
-        score_of_positive = kg_embedding_model.predict(torch.tensor([pos_triple], dtype=torch.long, device=self.device))
+        score_of_positive = kg_embedding_model.predict_scores(torch.tensor([pos_triple], dtype=torch.long, device=self.device))
 
         rank_of_positive_subject_based = scores_of_corrupted_subjects.shape[0] - \
                                          np.greater_equal(scores_of_corrupted_subjects, score_of_positive).sum()
