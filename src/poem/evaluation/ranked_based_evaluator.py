@@ -10,6 +10,8 @@ from typing import List, Iterable, Hashable, Callable, Tuple, Dict
 import numpy as np
 import torch
 
+from poem.constants import Complex_LITERAL_NAME_CWA, COMPLEX_CWA_NAME, DISTMULT_LITERAL_NAME_CWA, \
+    DISTMULT_LITERAL_NAME_OWA, TRANS_E_NAME
 from poem.evaluation.abstract_evaluator import AbstractEvalutor
 
 log = logging.getLogger(__name__)
@@ -33,16 +35,24 @@ class RankBasedEvaluator(AbstractEvalutor):
         self.filter_neg_triples = filter_neg_triples
         self.hits_at_k = hits_at_k
         self.train_triples = training_triples
+        self.kge_to_descend_sorting = {
+            COMPLEX_CWA_NAME: True,
+            Complex_LITERAL_NAME_CWA: True,
+            DISTMULT_LITERAL_NAME_CWA: True,
+            DISTMULT_LITERAL_NAME_OWA: True,
+            TRANS_E_NAME: False
+
+        }
 
     def _hash_triples(self, triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
         return hash(tuple(triples))
 
     def _filter_corrupted_triples(self,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed,
-    ):
+                                  corrupted_subject_based,
+                                  corrupted_object_based,
+                                  all_pos_triples_hashed,
+                                  ):
         # TODO: Check
         corrupted_subject_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_subject_based)
         mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
@@ -146,11 +156,13 @@ class RankBasedEvaluator(AbstractEvalutor):
         indice_of_pos_object_based = scores_object_based.size - 1
 
         _, sorted_score_indices_subject_based = torch.sort(torch.tensor(scores_subject_based, dtype=torch.float),
-                                                           descending=False)
+                                                           descending=self.kge_to_descend_sorting[
+                                                               kg_embedding_model.model_name])
         sorted_score_indices_subject_based = sorted_score_indices_subject_based.cpu().numpy()
 
         _, sorted_score_indices_object_based = torch.sort(torch.tensor(scores_object_based, dtype=torch.float),
-                                                          descending=False)
+                                                          descending=self.kge_to_descend_sorting[
+                                                              kg_embedding_model.model_name])
         sorted_score_indices_object_based = sorted_score_indices_object_based.cpu().numpy()
 
         # Get index of first occurrence that fulfills the condition
