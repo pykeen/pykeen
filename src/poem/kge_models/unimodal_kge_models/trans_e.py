@@ -81,7 +81,7 @@ class TransE(torch.nn.Module):
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
-    def predict(self, triples):
+    def predict_scores(self, triples):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 

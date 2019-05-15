@@ -78,7 +78,11 @@ class ComplexLiteralCWA(torch.nn.Module):
         loss = self.criterion(predictions, labels)
         return loss
 
-    def predict(self, triples: torch.tensor):
+    def predict_probabilities(self, triples: torch.tensor):
+        """."""
+        return torch.sigmoid(self.predict_scores(triples=triples))
+
+    def predict_scores(self, triples: torch.tensor):
         """."""
         heads = triples[:, 0:1]
         relations = triples[:, 1:2]
@@ -116,13 +120,12 @@ class ComplexLiteralCWA(torch.nn.Module):
                                  tails_embs_img.view(-1, self.embedding_dim, 1)).view(-1)
 
         img_real_img = torch.bmm((heads_embs_img * heads_embs_real).view(-1, 1, self.embedding_dim),
-                                tails_embs_img.view(-1, self.embedding_dim, 1)).view(-1)
+                                 tails_embs_img.view(-1, self.embedding_dim, 1)).view(-1)
 
         img_img_real = torch.bmm((heads_embs_img * rels_embedded_img).view(-1, 1, self.embedding_dim),
-                                tails_embs_real.view(-1, self.embedding_dim, 1)).view(-1)
+                                 tails_embs_real.view(-1, self.embedding_dim, 1)).view(-1)
 
         predictions = real_real_real + real_img_img + img_real_img - img_img_real
-        predictions = torch.sigmoid(predictions)
 
         return predictions.detach().cpu().numpy()
 

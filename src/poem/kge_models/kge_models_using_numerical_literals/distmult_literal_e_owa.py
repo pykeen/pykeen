@@ -118,7 +118,7 @@ class DistMultLiteral(BaseOWAModule):
         loss = self.criterion(positive_scores, negative_scores, y)
         return loss
 
-    def predict(self, triples: torch.tensor) -> np.array:
+    def predict_scores(self, triples: torch.tensor) -> np.array:
         """
         Compute predictions.
         :param triples: num_triples x 3
