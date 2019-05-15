@@ -2,9 +2,10 @@
 
 """Utils to process numerical literals."""
 
-import numpy as np
-from typing import Dict
 import logging
+from typing import Dict
+
+import numpy as np
 
 log = logging.getLogger(__name__)
 

@@ -6,9 +6,8 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import INPUT_DROPOUT, COMPLEX_CWA_NAME, NUM_ENTITIES, \
-    NUM_RELATIONS, EMBEDDING_DIM, PREFERRED_DEVICE, GPU, NUMERIC_LITERALS, Complex_LITERAL_NAME_CWA
-from poem.model_config import ModelConfig
+from ...constants import COMPLEX_LITERAL_NAME_CWA, GPU, NUMERIC_LITERALS
+from ...utils import slice_triples
 
 
 class ComplexLiteralCWA(torch.nn.Module):
@@ -18,7 +17,7 @@ class ComplexLiteralCWA(torch.nn.Module):
         .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
                            arXiv preprint arXiv:1802.00934 (2018).
         """
-    model_name = Complex_LITERAL_NAME_CWA
+    model_name = COMPLEX_LITERAL_NAME_CWA
 
     def __init__(self, num_entities, num_relations, multimodal_data, embedding_dim=50, input_dropout=0.2,
                  preferred_device=GPU):
@@ -60,33 +59,25 @@ class ComplexLiteralCWA(torch.nn.Module):
         self.criterion = torch.nn.BCELoss()
 
     def init(self):
-        """."""
         xavier_normal_(self.entity_embs_real.weight.data)
         xavier_normal_(self.entity_embs_img.weight.data)
         xavier_normal_(self.relation_embs_real.weight.data)
         xavier_normal_(self.relation_embs_img.weight.data)
 
     def _apply_g_function(self, real_embs, img_embs, literals):
-        """"""
         real = self.real_non_lin_transf(torch.cat([real_embs, literals], 1))
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
-
         return real, img
 
     def _compute_loss(self, predictions, labels):
-        """"""
         loss = self.criterion(predictions, labels)
         return loss
 
     def predict_probabilities(self, triples: torch.tensor):
-        """."""
         return torch.sigmoid(self.predict_scores(triples=triples))
 
     def predict_scores(self, triples: torch.tensor):
-        """."""
-        heads = triples[:, 0:1]
-        relations = triples[:, 1:2]
-        tails = triples[:, 2:3]
+        heads, relations, tails = slice_triples(triples)
 
         heads_embs_real = self.entity_embs_real(heads).view(-1, self.embedding_dim)
         rels_embedded_real = self.relation_embs_real(relations).view(-1, self.embedding_dim)
@@ -130,7 +121,6 @@ class ComplexLiteralCWA(torch.nn.Module):
         return predictions.detach().cpu().numpy()
 
     def forward(self, batch, labels):
-        """"""
         batch_heads = batch[:, 0:1]
         batch_relations = batch[:, 1:2]
 

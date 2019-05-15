@@ -1,11 +1,11 @@
-from poem.constants import EMBEDDING_DIM, NUM_ENTITIES, NUM_RELATIONS, INPUT_DROPOUT
+from poem.constants import EMBEDDING_DIM, INPUT_DROPOUT, NUM_ENTITIES, NUM_RELATIONS
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.kge_models.unimodal_kge_models.complex_cwa import ComplexCWA
-from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
-    load_triples
+from poem.models import ComplexCWA
+from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
+    create_entity_and_relation_mappings, load_triples,
+)
+from poem.training_loops import CWATrainingLoop
 from torch import optim
-
-from poem.training_loops.cwa_training_loop import CWATrainingLoop
 
 if __name__ == '__main__':
     path_to_training_data = '../../../tests/resources/test.txt'
@@ -37,5 +37,3 @@ if __name__ == '__main__':
                                                        batch_size=128,
                                                        label_smoothing=True,
                                                        label_smoothing_epsilon=0.1)
-
-

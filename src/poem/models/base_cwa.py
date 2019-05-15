@@ -3,13 +3,17 @@
 """Utilities for getting and initializing KGE models."""
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import torch
 from torch import nn
 
-from poem.constants import PREFERRED_DEVICE, GPU, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, LEARNING_RATE
-from poem.experimental_setup import ModelConfig
+from ..constants import EMBEDDING_DIM, GPU, LEARNING_RATE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE
+from ..model_config import ModelConfig
+
+__all__ = [
+    'BaseCWAModule',
+]
 
 
 @dataclass
@@ -36,6 +40,7 @@ class BaseConfig:
             number_relations=config[NUM_RELATIONS],
             embedding_dimension=config[EMBEDDING_DIM],
         )
+
 
 class BaseCWAModule(nn.Module):
     """A base class for all of the models."""
@@ -83,11 +88,3 @@ class BaseCWAModule(nn.Module):
 
     def _get_entity_embeddings(self, entities):
         return self.entity_embeddings(entities).view(-1, self.embedding_dim)
-
-
-def slice_triples(triples):
-    """Get the heads, relations, and tails from a matrix of triples."""
-    h = triples[:, 0:1]
-    r = triples[:, 1:2]
-    t = triples[:, 2:3]
-    return h, r, t

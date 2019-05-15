@@ -7,12 +7,15 @@ import timeit
 
 import numpy as np
 import torch
-import torch.nn as nn
 from tqdm import trange
 
-from poem.instance_creation_factories.instances import Instances
-from poem.training_loops.basic_training_loop import TrainingLoop
-from poem.training_loops.utils import split_list_in_batches
+from .base import TrainingLoop
+from .utils import split_list_in_batches
+from ..instance_creation_factories.instances import Instances
+
+__all__ = [
+    'CWATrainingLoop',
+]
 
 log = logging.getLogger(__name__)
 
@@ -20,11 +23,14 @@ log = logging.getLogger(__name__)
 class CWATrainingLoop(TrainingLoop):
     """."""
 
-    def __init__(self, kge_model: nn.Module, optimizer):
-        super().__init__(kge_model=kge_model, optimizer=optimizer)
-
-    def train(self, training_instances: Instances, num_epochs: int, batch_size: int, label_smoothing=True,
-              label_smoothing_epsilon=0.1):
+    def train(
+            self,
+            training_instances: Instances,
+            num_epochs: int,
+            batch_size: int,
+            label_smoothing: bool = True,
+            label_smoothing_epsilon: float = 0.1,
+    ):
         """."""
         self.kge_model = self.kge_model.to(self.kge_model.device)
         subject_relation_pairs = training_instances.instances

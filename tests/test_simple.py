@@ -4,9 +4,9 @@
 
 import unittest
 
+
 class NumericLiteralsUtilsTests(unittest.TestCase):
     """Class for testing utils for processing numeric literals."""
 
     def test_create_matix_of_literals(self):
-        """."""
-        self.assertEqual(1,1)
+        self.assertEqual(1, 1)

@@ -1,0 +1,33 @@
+sudo: true
+cache: pip
+dist: xenial
+language: python
+python: "3.7"
+stages:
+  - lint
+  - docs
+  - test
+jobs:
+  include:
+    # lint stage
+    - stage: lint
+      env: TOXENV=manifest
+    - env: TOXENV=flake8
+    - env: TOXENV=pyroma
+    # docs stage
+    - stage: docs
+      env: TOXENV=doc8
+    - env: TOXENV=readme
+    - env: TOXENV=docs
+    # test stage
+    - stage: test
+      env: TOXENV=py
+matrix:
+  allow_failures:
+    - env: TOXENV=xenon
+install:
+  - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
+script:
+  - tox
+after_success:
+  - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'

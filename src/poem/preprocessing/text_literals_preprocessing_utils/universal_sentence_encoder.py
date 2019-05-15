@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """Wrapper for the universal sentence encoder."""
-from src.kupp.text_preprocessing_utils.AbstractSentenceEncoder import AbstractSentenceEncoder
-import tensorflow_hub as hub
-import tensorflow as tf
+
 import numpy as np
+import tensorflow as tf
+import tensorflow_hub as hub
+
+from .AbstractSentenceEncoder import AbstractSentenceEncoder
+
+__all__ = [
+    'USEncoder',
+]
 
 
 class USEncoder(AbstractSentenceEncoder):

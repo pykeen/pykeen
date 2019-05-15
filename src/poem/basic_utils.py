@@ -2,7 +2,7 @@
 
 """Implementation of the basic utils."""
 
-from poem.constants import CWA, EXECUTION_MODE, HPO_MODE, TEST_SET_PATH, TEST_SET_RATIO, KG_ASSUMPTION
+from .constants import CWA, EXECUTION_MODE, HPO_MODE, KG_ASSUMPTION, TEST_SET_PATH, TEST_SET_RATIO
 
 
 def is_hpo_mode(config) -> bool:

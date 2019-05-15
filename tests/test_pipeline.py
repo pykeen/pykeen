@@ -13,7 +13,7 @@ class PieplineTest(unittest.TestCase):
     def test_run(self):
         """Test run function of pipeline."""
 
-        #input: configuration, output: experimental artifacts
+        # input: configuration, output: experimental artifacts
 
     def test_preprocess(self):
         """Test Pipline's preprocess fct."""

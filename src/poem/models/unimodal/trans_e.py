@@ -9,8 +9,8 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import TRANS_E_NAME, GPU
-from poem.kge_models.base_owa import slice_triples
+from ...constants import GPU, TRANS_E_NAME
+from ...utils import slice_triples
 
 __all__ = [
     'TransE',

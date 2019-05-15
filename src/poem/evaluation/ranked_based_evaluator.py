@@ -5,14 +5,16 @@
 import logging
 import timeit
 from dataclasses import dataclass
-from typing import List, Iterable, Hashable, Callable, Tuple, Dict
+from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
 
-from poem.constants import Complex_LITERAL_NAME_CWA, COMPLEX_CWA_NAME, DISTMULT_LITERAL_NAME_CWA, \
-    DISTMULT_LITERAL_NAME_OWA, TRANS_E_NAME
-from poem.evaluation.abstract_evaluator import AbstractEvalutor
+from .abstract_evaluator import Evaluator
+from ..constants import (
+    COMPLEX_CWA_NAME, COMPLEX_LITERAL_NAME_CWA, DISTMULT_LITERAL_NAME_CWA,
+    DISTMULT_LITERAL_NAME_OWA, TRANS_E_NAME,
+)
 
 log = logging.getLogger(__name__)
 
@@ -25,34 +27,40 @@ class MetricResults:
     hits_at_k: Dict[int, float]
 
 
-class RankBasedEvaluator(AbstractEvalutor):
-    """."""
-
-    def __init__(self, kge_model, entity_to_id, relation_to_id, training_triples: np.ndarray, filter_neg_triples=False,
-                 hits_at_k=[1, 3, 5, 10]):
+class RankBasedEvaluator(Evaluator):
+    def __init__(
+            self,
+            kge_model,
+            entity_to_id,
+            relation_to_id,
+            training_triples: np.ndarray,
+            filter_neg_triples=False,
+            hits_at_k: Optional[List[int]] = None,
+    ):
         super().__init__(kge_model=kge_model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
+
         self.all_entities = np.arange(0, len(self.entity_to_id))
         self.filter_neg_triples = filter_neg_triples
-        self.hits_at_k = hits_at_k
+        self.hits_at_k = hits_at_k if hits_at_k is not None else [1, 3, 5, 10]
         self.train_triples = training_triples
         self.kge_to_descend_sorting = {
             COMPLEX_CWA_NAME: True,
-            Complex_LITERAL_NAME_CWA: True,
+            COMPLEX_LITERAL_NAME_CWA: True,
             DISTMULT_LITERAL_NAME_CWA: True,
             DISTMULT_LITERAL_NAME_OWA: True,
-            TRANS_E_NAME: False
-
+            TRANS_E_NAME: False,
         }
 
     def _hash_triples(self, triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
         return hash(tuple(triples))
 
-    def _filter_corrupted_triples(self,
-                                  corrupted_subject_based,
-                                  corrupted_object_based,
-                                  all_pos_triples_hashed,
-                                  ):
+    def _filter_corrupted_triples(
+            self,
+            corrupted_subject_based,
+            corrupted_object_based,
+            all_pos_triples_hashed,
+    ):
         # TODO: Check
         corrupted_subject_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_subject_based)
         mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
@@ -70,11 +78,12 @@ class RankBasedEvaluator(AbstractEvalutor):
 
         return corrupted_subject_based, corrupted_object_based
 
-    def _update_hits_at_k(self,
-                          hits_at_k_values: Dict[int, List[float]],
-                          rank_of_positive_subject_based: int,
-                          rank_of_positive_object_based: int
-                          ) -> None:
+    def _update_hits_at_k(
+            self,
+            hits_at_k_values: Dict[int, List[float]],
+            rank_of_positive_subject_based: int,
+            rank_of_positive_object_based: int
+    ) -> None:
         """Update the Hits@K dictionary for two values."""
         for k, values in hits_at_k_values.items():
             if rank_of_positive_subject_based <= k:
@@ -108,14 +117,14 @@ class RankBasedEvaluator(AbstractEvalutor):
 
         return corrupted_subject_based, corrupted_object_based
 
-    def _compute_filtered_rank(self,
-                               kg_embedding_model,
-                               pos_triple,
-                               corrupted_subject_based,
-                               corrupted_object_based,
-                               all_pos_triples_hashed,
-                               ) -> Tuple[int, int]:
-        """."""
+    def _compute_filtered_rank(
+            self,
+            kg_embedding_model,
+            pos_triple,
+            corrupted_subject_based,
+            corrupted_object_based,
+            all_pos_triples_hashed,
+    ) -> Tuple[int, int]:
         corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
@@ -130,18 +139,19 @@ class RankBasedEvaluator(AbstractEvalutor):
             all_pos_triples_hashed=all_pos_triples_hashed,
         )
 
-    def _compute_rank(self,
-                      kg_embedding_model,
-                      pos_triple,
-                      corrupted_subject_based,
-                      corrupted_object_based,
-                      all_pos_triples_hashed=None
-                      ) -> Tuple[int, int]:
-        """."""
+    def _compute_rank(
+            self,
+            kg_embedding_model,
+            pos_triple,
+            corrupted_subject_based,
+            corrupted_object_based,
+            all_pos_triples_hashed=None
+    ) -> Tuple[int, int]:
         scores_of_corrupted_subjects = kg_embedding_model.predict_scores(corrupted_subject_based)
         scores_of_corrupted_objects = kg_embedding_model.predict_scores(corrupted_object_based)
 
-        score_of_positive = kg_embedding_model.predict_scores(torch.tensor([pos_triple], dtype=torch.long, device=self.device))
+        score_of_positive = kg_embedding_model.predict_scores(
+            torch.tensor([pos_triple], dtype=torch.long, device=self.device))
 
         rank_of_positive_subject_based = scores_of_corrupted_subjects.shape[0] - \
                                          np.greater_equal(scores_of_corrupted_subjects, score_of_positive).sum()
@@ -155,7 +165,6 @@ class RankBasedEvaluator(AbstractEvalutor):
         )
 
     def evaluate(self, test_triples: np.ndarray):
-        """."""
         start = timeit.default_timer()
         ranks: List[int] = []
         hits_at_k_values = {

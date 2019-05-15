@@ -2,15 +2,17 @@
 
 """Utilities for getting and initializing KGE models."""
 
-from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Optional
 
 import torch
 from torch import nn
 
-from poem.constants import PREFERRED_DEVICE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, EMBEDDING_DIM, \
-    LEARNING_RATE, OWA
-from poem.model_config import ModelConfig
+from ..constants import EMBEDDING_DIM, LEARNING_RATE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, OWA, PREFERRED_DEVICE
+from ..model_config import ModelConfig
+
+__all__ = [
+    'BaseOWAModule',
+]
 
 
 class BaseOWAModule(nn.Module):
@@ -58,13 +60,4 @@ class BaseOWAModule(nn.Module):
             raise TypeError('missing model_name class attribute')
 
     def _get_embeddings(self, elements, embedding_module, embedding_dim):
-        """."""
         return embedding_module(elements).view(-1, embedding_dim)
-
-
-def slice_triples(triples):
-    """Get the heads, relations, and tails from a matrix of triples."""
-    h = triples[:, 0:1]
-    r = triples[:, 1:2]
-    t = triples[:, 2:3]
-    return h, r, t

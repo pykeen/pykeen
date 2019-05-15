@@ -1,19 +1,20 @@
+import json
+import logging
+import os
+import time
+from collections import OrderedDict
+
+import click
+import numpy as np
 from poem.constants import GPU
 from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.kge_models.unimodal_kge_models.trans_e import TransE
-from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
-    load_triples, map_triples_elements_to_ids
+from poem.models import TransE
+from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
+    create_entity_and_relation_mappings, load_triples, map_triples_elements_to_ids,
+)
+from poem.training_loops import OWATrainingLoop
 from torch import optim
-import click
-import numpy as np
-import json
-from collections import OrderedDict
-import os
-import time
-import logging
-
-from poem.training_loops.owa_training_loop import OWATrainingLoop
 
 log = logging.getLogger(__name__)
 

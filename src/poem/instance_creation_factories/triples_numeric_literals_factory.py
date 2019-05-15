@@ -2,20 +2,15 @@
 
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
-from typing import Tuple
-
 import numpy as np
-from typing import Dict
-from poem.constants import PATH_TO_NUMERIC_LITERALS, NUMERIC_LITERALS
-from poem.instance_creation_factories.instances import MultimodalOWAInstances, \
-    MultimodalCWAInstances
-from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
+
+from .instances import MultimodalCWAInstances, MultimodalOWAInstances
+from .triples_factory import TriplesFactory
+from ..constants import NUMERIC_LITERALS
+from ..preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
 
 
 class TriplesNumericLiteralsFactory(TriplesFactory):
-    """."""
-
     def __init__(self, entity_to_id, relation_to_id, numeric_triples):
         super().__init__(entity_to_id, relation_to_id)
         self.literals_to_id = None
@@ -24,25 +19,28 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self.multimodal_data = None
 
     def _create_numeric_literals(self) -> np.ndarray:
-        """"""
-        self.numeric_literals, self.literals_to_id = create_matix_of_literals(numeric_triples=self.numeric_triples,
-                                                         entity_to_id=self.entity_to_id)
+        self.numeric_literals, self.literals_to_id = create_matix_of_literals(
+            numeric_triples=self.numeric_triples,
+            entity_to_id=self.entity_to_id,
+        )
+
         self.multimodal_data = {
-            NUMERIC_LITERALS: self.numeric_literals
+            NUMERIC_LITERALS: self.numeric_literals,
         }
 
     def create_owa_instances(self, triples) -> MultimodalOWAInstances:
-        """"""
         owa_instances = super().create_owa_instances(triples=triples)
 
         if self.multimodal_data is None:
             self._create_numeric_literals()
 
-        return MultimodalOWAInstances(instances=owa_instances.instances,
-                                      entity_to_id=owa_instances.entity_to_id,
-                                      relation_to_id=owa_instances.relation_to_id,
-                                      kg_assumption=owa_instances.kg_assumption,
-                                      multimodal_data=self.multimodal_data)
+        return MultimodalOWAInstances(
+            instances=owa_instances.instances,
+            entity_to_id=owa_instances.entity_to_id,
+            relation_to_id=owa_instances.relation_to_id,
+            kg_assumption=owa_instances.kg_assumption,
+            multimodal_data=self.multimodal_data,
+        )
 
     def create_cwa_instances(self, triples) -> MultimodalCWAInstances:
         """."""
@@ -51,10 +49,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if self.multimodal_data is None:
             self._create_numeric_literals()
 
-        return MultimodalCWAInstances(instances=cwa_instances.instances,
-                                      entity_to_id=cwa_instances.entity_to_id,
-                                      relation_to_id=cwa_instances.relation_to_id,
-                                      kg_assumption=cwa_instances.kg_assumption,
-                                      multimodal_data=self.multimodal_data,
-                                      data_relation_to_id=self.literals_to_id,
-                                      labels=cwa_instances.labels)
+        return MultimodalCWAInstances(
+            instances=cwa_instances.instances,
+            entity_to_id=cwa_instances.entity_to_id,
+            relation_to_id=cwa_instances.relation_to_id,
+            kg_assumption=cwa_instances.kg_assumption,
+            multimodal_data=self.multimodal_data,
+            data_relation_to_id=self.literals_to_id,
+            labels=cwa_instances.labels,
+        )

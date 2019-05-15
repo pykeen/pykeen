@@ -4,25 +4,24 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Mapping, Optional
-from typing import Union, Tuple
+from typing import Dict, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
-
 from poem.basic_utils import is_evaluation_requested
-from poem.constants import EXECUTION_MODE, TRAINING_MODE, HPO_MODE, SEED, CWA, OWA, TEST_SET_PATH, TEST_SET_RATIO, \
-    EVALUATOR, RANK_BASED_EVALUATOR, KG_EMBEDDING_MODEL_NAME, DISTMULT_LITERAL_NAME_OWA, NUM_ENTITIES, NUM_RELATIONS
-from poem.evaluation.abstract_evaluator import AbstractEvalutor, EvaluatorConfig
+from poem.constants import (
+    CWA, DISTMULT_LITERAL_NAME_OWA, EVALUATOR, EXECUTION_MODE, HPO_MODE, KG_EMBEDDING_MODEL_NAME,
+    NUM_ENTITIES, NUM_RELATIONS, OWA, RANK_BASED_EVALUATOR, SEED, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_MODE,
+)
+from poem.evaluation.abstract_evaluator import Evaluator, EvaluatorConfig
 from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
-from poem.instance_creation_factories.instances import MultimodalInstances
-from poem.instance_creation_factories.triples_factory import TriplesFactory, Instances
+from poem.instance_creation_factories.instances import Instances, MultimodalInstances
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
-from poem.kge_models.kge_models_using_numerical_literals.distmult_literal_e_owa import DistMultLiteral
 from poem.model_config import ModelConfig
-from poem.training_loops.basic_training_loop import TrainingLoop
-from poem.training_loops.owa_training_loop import OWATrainingLoop
+from poem.models import DistMultLiteral
+from poem.training_loops import OWATrainingLoop, TrainingLoop
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -37,7 +36,7 @@ class EvalResults:
 
 
 @dataclass
-class ExperimentalArtifacts():
+class ExperimentalArtifacts:
     """Contains the experimental artifacts."""
     trained_kge_model: nn.Module
     losses: list
@@ -49,11 +48,10 @@ class ExperimentalArtifacts():
 
 @dataclass
 class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
-    """."""
     eval_results: EvalResults
 
 
-class Helper():
+class Helper:
     """."""
 
     KGE_MODELS = {
@@ -65,7 +63,7 @@ class Helper():
         OWA: OWATrainingLoop
     }
 
-    EVALUATORS = {
+    EVALUATORS: Mapping[str, Type[Evaluator]] = {
         RANK_BASED_EVALUATOR: RankBasedEvaluator,
     }
 
@@ -75,27 +73,33 @@ class Helper():
 
     # ---------------------Get pipeline components---------------------#
     @staticmethod
-    def get_evaluator(kge_model: nn.Module, config: Dict, entity_to_id: Dict, relation_to_id: Dict,
-                      training_triples: np.ndarray) -> AbstractEvalutor:
+    def get_evaluator(
+            kge_model: nn.Module,
+            config: Dict,
+            entity_to_id: Dict,
+            relation_to_id: Dict,
+            training_triples: np.ndarray,
+    ) -> Evaluator:
         """."""
         evaluator_name = config.get(EVALUATOR)
         evaluator_cls = Helper.EVALUATORS.get(evaluator_name)
-        eval_config = EvaluatorConfig(config=config,
-                                      entity_to_id=entity_to_id,
-                                      relation_to_id=relation_to_id,
-                                      kge_model=kge_model,
-                                      training_triples=training_triples)
+        evaluator_config = EvaluatorConfig(
+            config=config,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            kge_model=kge_model,
+            training_triples=training_triples,
+        )
 
         if evaluator_cls is None:
             raise ValueError(f'Invalid evaluator name: {evaluator_name}')
 
-        return evaluator_cls(evaluator_config=eval_config)
+        return evaluator_cls(evaluator_config=evaluator_config)
 
     @staticmethod
     def get_training_loop(config: Dict, kge_model: nn.Module, all_entities: np.ndarray) -> TrainingLoop:
         """Get training loop."""
         training_loop = Helper.KG_ASSUMPTION_TO_TRAINING_LOOP[kge_model.kg_assumption]
-
         return training_loop(config=config, kge_model=kge_model, all_entities=all_entities)
 
     @staticmethod
@@ -111,8 +115,6 @@ class Helper():
 
     @staticmethod
     def create_model_config(config, instances: Instances) -> ModelConfig:
-        """"""
-
         multimodal_data = None
 
         if isinstance(instances, MultimodalInstances):
@@ -147,11 +149,15 @@ class Helper():
         return instance_factory.create_train_and_test_instances()
 
 
-class Pipeline():
+class Pipeline:
     """."""
 
-    def __init__(self, config: Dict, training_instances: Optional[Instances] = None,
-                 test_instances: Optional[Instances] = None):
+    def __init__(
+            self,
+            config: Dict,
+            training_instances: Optional[Instances] = None,
+            test_instances: Optional[Instances] = None,
+    ) -> None:
         self.config = config
         self.model_config: ModelConfig = None
         self.instance_factory: TriplesFactory = None

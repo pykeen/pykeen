@@ -25,8 +25,6 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
     # literals_file = '/Users/mali/PycharmProjects/POEM_develop/tests/resources/numerical_literals.txt'
 
     def test_create_cwa_instances(self):
-        """."""
-
         entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=self.triples)
 
         factory = TriplesNumericLiteralsFactory(entity_to_id=entity_to_id,
@@ -65,5 +63,4 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
         self.assertEqual(literals[id_chocolate_cake, id_num_children], 0)
 
         # Test creation of labels
-
         print(instances.labels)

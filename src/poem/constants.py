@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""Constants defined for XXX."""
+"""Constants defined for POEM."""
+
+from torch.optim import Adagrad, Adam, SGD
 
 """Device related constants"""
 
@@ -18,22 +20,18 @@ NUM_ENTITIES = 'num_entities'
 NUM_RELATIONS = 'num_relations'
 EMBEDDING_DIM = 'embedding_dim'
 LEARNING_RATE = 'learning_rate'
-EXECUTION_MODE = 'execution_mode'
-TRAINING_MODE = 'Training_mode'
-HPO_MODE = 'HPO_mode'
 KG_ASSUMPTION = 'KG_assumption'
 OWA = 'open_world_assumption'
 CWA = 'closed_world_assumption'
-NUMERIC_LITERALS = 'numeric_literlas'
+NUMERIC_LITERALS = 'numeric_literals'
 BATCH_SIZE = 'batch_size'
 NUM_EPOCHS = 'num_epochs'
 SEED = 'random_seed'
 
 """Optimizer related constants"""
-OPTMIZER_NAME = 'optimizer'
-SGD_OPTIMIZER_NAME = 'SGD'
-ADAGRAD_OPTIMIZER_NAME = 'Adagrad'
-ADAM_OPTIMIZER_NAME = 'Adam'
+SGD_OPTIMIZER_NAME = SGD.__name__
+ADAGRAD_OPTIMIZER_NAME = Adagrad.__name__
+ADAM_OPTIMIZER_NAME = Adam.__name__
 
 """Evaluator related constants"""
 EVALUATOR = 'evaluator'
@@ -53,7 +51,7 @@ KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
 DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 COMPLEX_CWA_NAME = 'Complex_CWA'
-Complex_LITERAL_NAME_CWA = 'ComplexLiteral_CWA'
+COMPLEX_LITERAL_NAME_CWA = 'ComplexLiteral_CWA'
 TRANS_E_NAME = 'TransE'
 
 """DistMult related constants"""
@@ -66,5 +64,3 @@ TRIPLES_FACTORY = 'triples_factory'
 NUMERIC_LITERALS_FACTORY = 'numeric_literals_factory'
 
 """Training loops related constants"""
-
-

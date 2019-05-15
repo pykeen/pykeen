@@ -4,10 +4,10 @@
 
 import multiprocessing
 from multiprocessing import Pool
+from typing import Dict
 
 import numpy as np
 import spacy
-from typing import Dict
 
 nlp = spacy.load('en')
 
@@ -61,6 +61,6 @@ def extract_first_n_sentences(entity_to_desc: Dict[str, str],
     return entity_to_desc
 
 
-def embedd_texts(texts:list) -> np.array:
+def embedd_texts(texts: list) -> np.array:
     """"""
     pass

@@ -5,6 +5,11 @@
 import logging
 import os
 
+__all__ = [
+    'HERE',
+    'RESOURCES_DIRECTORY',
+]
+
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('poem').setLevel(logging.INFO)
 

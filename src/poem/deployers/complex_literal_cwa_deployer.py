@@ -1,11 +1,12 @@
+import torch
 from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
-from poem.kge_models.kge_models_using_numerical_literals.complex_literal_cwa import ComplexLiteralCWA
-from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
-    load_triples, map_triples_elements_to_ids
+from poem.models import ComplexLiteralCWA
+from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
+    create_entity_and_relation_mappings, load_triples, map_triples_elements_to_ids,
+)
+from poem.training_loops import CWATrainingLoop
 from torch import optim
-import torch
-from poem.training_loops.cwa_training_loop import CWATrainingLoop
 
 if __name__ == '__main__':
     path_to_training_data = '../../../tests/resources/test.txt'
@@ -47,7 +48,6 @@ if __name__ == '__main__':
 
     mapped_test_triples = torch.tensor(mapped_test_triples, dtype=torch.long, device=fitted_kge_model.device)
 
-
     # Step 5: Predict
     predictions = fitted_kge_model.predict(mapped_test_triples)
 
@@ -66,4 +66,3 @@ if __name__ == '__main__':
     metric_results = evaluator.evaluate(test_triples=mapped_test_triples)
 
     print(metric_results)
-

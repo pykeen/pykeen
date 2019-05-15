@@ -1,7 +1,6 @@
 #########################
 # Flake8 Configuration  #
 # (.flake8)             #
-# (formerly in tox.ini) #
 #########################
 [flake8]
 ignore =
@@ -13,13 +12,6 @@ ignore =
 	E501
     # Don't complain about asserts
     S101
-    # Documentation in public method
-    D102
-    D103
-    # Documentation in public class
-    D101
-    # Documentation in init
-    D107
     # line break before binary operator
     W503
 exclude =

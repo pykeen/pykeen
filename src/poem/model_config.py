@@ -10,6 +10,5 @@ import numpy as np
 
 @dataclass
 class ModelConfig:
-    """."""
     config: Dict
-    multimodal_data: Dict[str,np.ndarray] = None
+    multimodal_data: Dict[str, np.ndarray] = None

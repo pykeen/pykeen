@@ -1,35 +1,29 @@
 # -*- coding: utf-8 -*-
 
+from typing import Dict
 
 import numpy as np
-from typing import Dict
 
 
 def load_entity_to_descriptions(path_to_file: str) -> np.array:
     """Load entity to descriptions file."""
-
-    entity_description_matrix = np.loadtxt(
+    return np.loadtxt(
         fname=path_to_file,
         dtype=str,
         comments='@Comment@ Subject Predicate Object',
         delimiter='\t',
     )
 
-    return entity_description_matrix
-
 
 def create_entity_to_desciption_mappings(entity_description_matrix: np.array) -> Dict[str, str]:
-    """Map entities to descriptions"""
-
+    """Map entities to descriptions."""
     entities = entity_description_matrix[:, 0]
     descriptions = entity_description_matrix[:, 1]
 
+    # TODO compress into dictionary comprehension
     entity_to_desciption = {}
 
-    for i in range(len(entities)):
-        entity = entities[i]
-        desc = descriptions[i]
-
+    for entity, desc in zip(entities, descriptions):
         # Check whether entity/description is empty or None
         if not entity or entity is None or not desc or desc is None:
             continue

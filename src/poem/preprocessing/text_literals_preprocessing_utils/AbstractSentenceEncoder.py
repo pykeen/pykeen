@@ -2,11 +2,16 @@
 
 """Abstract class for pre-trained models that encode text passages."""
 
-import numpy as np
 from abc import ABC, abstractmethod
 
-class AbstractSentenceEncoder(ABC):
+import numpy as np
 
+__all__ = [
+    'AbstractSentenceEncoder',
+]
+
+
+class AbstractSentenceEncoder(ABC):
     @abstractmethod
-    def encode(self, texts:list) -> np.array:
+    def encode(self, texts: list) -> np.array:
         """Encode the text passages into vector representations."""

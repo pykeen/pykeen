@@ -4,17 +4,15 @@
 
 import torch
 import torch.nn as nn
+from poem.constants import COMPLEX_CWA_NAME, CWA, GPU
 from torch.nn.init import xavier_normal_
-
-from poem.constants import COMPLEX_CWA_NAME, GPU, CWA
 
 
 class ComplexCWA(torch.nn.Module):
-    """
-       An implementation of Complex [agustinus2018] based on the closed world assumption (CWA)
+    """An implementation of Complex [agustinus2018] based on the closed world assumption (CWA).
 
-       .. [trouillon2016complex] Trouillon, Théo, et al. "Complex embeddings for simple link prediction."
-                                 International Conference on Machine Learning. 2016..
+    .. [trouillon2016complex] Trouillon, Théo, et al. "Complex embeddings for simple link prediction."
+                              International Conference on Machine Learning. 2016.
     """
     model_name = COMPLEX_CWA_NAME
     kg_assumption = CWA
@@ -31,7 +29,7 @@ class ComplexCWA(torch.nn.Module):
         #: The dimension of the embeddings to generate
         self.embedding_dim = embedding_dim
 
-        # ToDo:Why padding?
+        # TODO Why padding?
         self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.entity_embeddings_img = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
@@ -43,28 +41,30 @@ class ComplexCWA(torch.nn.Module):
         self.criterion = torch.nn.BCELoss()
 
     def init(self):
-        """."""
         xavier_normal_(self.entity_embeddings_real.weight.data)
         xavier_normal_(self.entity_embeddings_img.weight.data)
         xavier_normal_(self.relation_embeddings_real.weight.data)
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
     def _compute_loss(self, predictions, labels):
-        """"""
-        loss = self.criterion(predictions, labels)
-        return loss
+        return self.criterion(predictions, labels)
 
     def forward(self, batch, labels):
-        """"""
         batch_heads = batch[:, 0:1]
         batch_relations = batch[:, 1:2]
 
-        subjects_embedded_real = self.inp_drop(self.entity_embeddings_real(batch_heads)).view(-1, self.embedding_dim)
-        relations_embedded_real = self.inp_drop(self.relation_embeddings_real(batch_relations)).view(-1,
-                                                                                                     self.embedding_dim)
-        subjects_embedded_img = self.inp_drop(self.entity_embeddings_img(batch_heads)).view(-1, self.embedding_dim)
-        relations_embedded_img = self.inp_drop(self.relation_embeddings_img(batch_relations)).view(-1,
-                                                                                                   self.embedding_dim)
+        subjects_embedded_real = self \
+            .inp_drop(self.entity_embeddings_real(batch_heads)) \
+            .view(-1, self.embedding_dim)
+        relations_embedded_real = self \
+            .inp_drop(self.relation_embeddings_real(batch_relations)) \
+            .view(-1, self.embedding_dim)
+        subjects_embedded_img = self \
+            .inp_drop(self.entity_embeddings_img(batch_heads)) \
+            .view(-1, self.embedding_dim)
+        relations_embedded_img = self \
+            .inp_drop(self.relation_embeddings_img(batch_relations)) \
+            .view(-1, self.embedding_dim)
 
         # Apply dropout
         subjects_embedded_real = self.inp_drop(subjects_embedded_real)

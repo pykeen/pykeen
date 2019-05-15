@@ -7,9 +7,9 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS
-from poem.kge_models.base_owa import BaseOWAModule, slice_triples
-from poem.model_config import ModelConfig
+from ..base_owa import BaseOWAModule, slice_triples
+from ...constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS
+from ...model_config import ModelConfig
 
 
 class DistMultLiteral(BaseOWAModule):

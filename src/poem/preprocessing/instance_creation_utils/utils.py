@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 from typing import Dict
 
-from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import slice_triples
+import numpy as np
+
+from ...utils import slice_triples
 
 
 def create_multi_label_relation_instances(unique_entity_pairs: np.array,
