@@ -55,7 +55,7 @@ def main(training_file, test_file, output_direc, literals_file):
     cwa_training_loop = CWATrainingLoop(kge_model=kge_model, optimizer=optimizer)
 
     fitted_kge_model, losses = cwa_training_loop.train(training_instances=instances,
-                                                       num_epochs=1,
+                                                       num_epochs=100,
                                                        batch_size=128,
                                                        label_smoothing=True,
                                                        label_smoothing_epsilon=0.1
