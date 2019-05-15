@@ -211,7 +211,7 @@ class Pipeline:
                                               entity_to_id=entity_to_id,
                                               relation_to_id=relation_to_id,
                                               training_triples=training_triples)
-        metric_results = self.evaluator.evaluate(test_triples=test_triples)
+        metric_results = self.evaluator.evaluate(triples=test_triples)
 
         return metric_results
 

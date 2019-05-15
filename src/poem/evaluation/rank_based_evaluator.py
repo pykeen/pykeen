@@ -10,11 +10,16 @@ from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 import numpy as np
 import torch
 
-from .abstract_evaluator import Evaluator
+from .base import Evaluator
 from ..constants import (
     COMPLEX_CWA_NAME, COMPLEX_LITERAL_NAME_CWA, DISTMULT_LITERAL_NAME_CWA,
     DISTMULT_LITERAL_NAME_OWA, TRANS_E_NAME,
 )
+
+__all__ = [
+    'MetricResults',
+    'RankBasedEvaluator',
+]
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +41,7 @@ class RankBasedEvaluator(Evaluator):
             training_triples: np.ndarray,
             filter_neg_triples=False,
             hits_at_k: Optional[List[int]] = None,
-    ):
+    ) -> None:
         super().__init__(kge_model=kge_model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
 
         self.all_entities = np.arange(0, len(self.entity_to_id))
@@ -164,7 +169,7 @@ class RankBasedEvaluator(Evaluator):
             rank_of_positive_object_based + 1,
         )
 
-    def evaluate(self, test_triples: np.ndarray):
+    def evaluate(self, test_triples: np.ndarray) -> MetricResults:
         start = timeit.default_timer()
         ranks: List[int] = []
         hits_at_k_values = {

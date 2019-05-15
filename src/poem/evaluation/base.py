@@ -25,12 +25,17 @@ class EvaluatorConfig:
 
 
 class Evaluator(ABC):
-    def __init__(self, kge_model, entity_to_id, relation_to_id):
+    def __init__(
+            self,
+            kge_model,
+            entity_to_id,
+            relation_to_id,
+    ) -> None:
         self.kge_model = kge_model
         self.entity_to_id = entity_to_id
         self.relation_to_id = relation_to_id
         self.device = self.kge_model.device
 
     @abstractmethod
-    def evaluate(self, test_triples: np.ndarray):
+    def evaluate(self, triples: np.ndarray):
         pass
