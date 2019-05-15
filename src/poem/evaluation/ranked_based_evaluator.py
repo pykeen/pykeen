@@ -144,10 +144,10 @@ class RankBasedEvaluator(AbstractEvalutor):
         score_of_positive = kg_embedding_model.predict(torch.tensor([pos_triple], dtype=torch.long, device=self.device))
 
         rank_of_positive_subject_based = scores_of_corrupted_subjects.shape[0] - \
-                                         np.greater(scores_of_corrupted_subjects, score_of_positive).sum()
+                                         np.greater_equal(scores_of_corrupted_subjects, score_of_positive).sum()
 
         rank_of_positive_object_based = scores_of_corrupted_objects.shape[0] - \
-                                        np.greater(scores_of_corrupted_objects, score_of_positive).sum()
+                                        np.greater_equal(scores_of_corrupted_objects, score_of_positive).sum()
 
         return (
             rank_of_positive_subject_based + 1,
