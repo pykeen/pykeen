@@ -8,7 +8,7 @@ from poem.pipeline import Pipeline
 
 
 class PieplineTest(unittest.TestCase):
-    """Class for testing utils for processing numeric literals."""
+    """Class for testing utils for processing numeric literals"""
 
     def test_run(self):
         """Test run function of pipeline."""
