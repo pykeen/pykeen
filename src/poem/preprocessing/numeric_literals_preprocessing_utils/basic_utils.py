@@ -29,4 +29,4 @@ def create_matix_of_literals(numeric_triples: np.array, entity_to_id: Dict) -> n
             log.info("Either entity or relation to literal doesn't exist.")
             continue
 
-    return num_literals
+    return num_literals, data_rel_to_id

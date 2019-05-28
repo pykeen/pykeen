@@ -47,7 +47,7 @@ PATH_TO_NUMERIC_LITERALS = 'path_to_numeric_literals'
 
 """Model names"""
 
-KG_EMBEDDING_MODEL_NAME = 'kg_embedding_model_name'
+KG_EMBEDDING_MODEL_NAME = 'kge_model_name'
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
 DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 COMPLEX_CWA_NAME = 'Complex_CWA'
