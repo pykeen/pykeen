@@ -106,13 +106,13 @@ class TransE(BaseOWAModule):
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)
         return (
-            self._get_entity_embeddings(heads),
-            self._get_relation_embeddings(relations),
-            self._get_entity_embeddings(tails),
+            self._get_embeddings(elements=heads,
+                                 embedding_module=self.entity_embeddings,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=relations,
+                                 embedding_module=self.relation_embeddings,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=tails,
+                                 embedding_module=self.entity_embeddings,
+                                 embedding_dim=self.embedding_dim),
         )
-
-    def _get_entity_embeddings(self, entities):
-        return self.entity_embeddings(entities).view(-1, self.embedding_dim)
-
-    def _get_relation_embeddings(self, relations):
-        return self.relation_embeddings(relations).view(-1, self.embedding_dim)
