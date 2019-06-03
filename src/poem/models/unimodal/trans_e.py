@@ -9,6 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
+from poem.models.base_owa import BaseOWAModule
 from ...constants import GPU, TRANS_E_NAME
 from ...utils import slice_triples
 
@@ -19,7 +20,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-class TransE(torch.nn.Module):
+class TransE(BaseOWAModule):
     """An implementation of TransE [borders2013]_.
 
      This model considers a relation as a translation from the head to the tail entity.
@@ -35,33 +36,14 @@ class TransE(torch.nn.Module):
 
     model_name = TRANS_E_NAME
 
-    def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1, margin_loss=1,
-                 preferred_device=GPU) -> None:
-        super(TransE, self).__init__()
+    def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1,
+                 criterion=nn.MarginRankingLos(margin=1., reduction='mean'), preferred_device=GPU) -> None:
+        super(TransE, self).__init__(num_entities, num_relations, criterion, embedding_dim)
 
         # Embeddings
-
         self.scoring_fct_norm = scoring_fct_norm
-        # Entity dimensions
-        #: The number of entities in the knowledge graph
-        self.num_entities = num_entities
-        #: The number of unique relation types in the knowledge graph
-        self.num_relations = num_relations
-        #: The dimension of the embeddings to generate
-        self.embedding_dim = embedding_dim
-
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
 
-        self.margin_loss = margin_loss
-
-        self.criterion = nn.MarginRankingLoss(
-            margin=self.margin_loss,
-            reduction='mean',
-        )
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and preferred_device else 'cpu')
         self._initialize()
 
     def _initialize(self):
