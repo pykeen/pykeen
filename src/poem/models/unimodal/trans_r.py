@@ -7,9 +7,8 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import GPU
+from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_R_NAME, RELATION_EMBEDDING_DIM
 from poem.models.base_owa import BaseOWAModule, slice_triples
-from pykeen.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
 
 __all__ = ['TransR']
 
