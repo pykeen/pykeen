@@ -30,6 +30,8 @@ SEED = 'random_seed'
 # TransH related
 SCORING_FUNCTION_NORM = 'scoring_function'
 WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weighting_soft_constraint'
+# TransR related
+RELATION_EMBEDDING_DIM = 'relation_embedding_dim'
 
 """Optimizer related constants"""
 SGD_OPTIMIZER_NAME = SGD.__name__
@@ -57,6 +59,7 @@ COMPLEX_CWA_NAME = 'Complex_CWA'
 COMPLEX_LITERAL_NAME_CWA = 'ComplexLiteral_CWA'
 TRANS_E_NAME = 'TransE'
 TRANS_H_NAME = 'TransH'
+TRANS_R_NAME = 'TransR'
 
 """DistMult related constants"""
 
