@@ -22,7 +22,7 @@ class TransH(BaseOWAModule):
     hyper_params = [SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H]
 
     def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1, soft_weight_constraint=0.05,
-                 criterion=nn.MarginRankingLos(margin=1., reduction='mean'), preferred_device=GPU) -> None:
+                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
         super(TransH, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
         # A simple lookup table that stores embeddings of a fixed dictionary and size
@@ -81,16 +81,16 @@ class TransH(BaseOWAModule):
 
         return soft_constraints_loss
 
-    def _compute_loss(self, positive_scores, negative_scores):
+    def compute_loss(self, positive_scores, negative_scores):
         """"""
-        margin_ranking_loss = self._compute_mr_loss(positive_scores,negative_scores)
+        margin_ranking_loss = self._compute_mr_loss(positive_scores, negative_scores)
         soft_constraint_loss = self.compute_soft_constraint_loss()
 
         loss = margin_ranking_loss + soft_constraint_loss
 
         return loss
 
-    def predict(self, triples):
+    def predict_scores(self, triples):
         """"""
         scores = self._score_triples(triples)
 
@@ -111,7 +111,7 @@ class TransH(BaseOWAModule):
         )
         tail_embeddings = self._get_embeddings(
             elements=tails,
-            embedding_module=self.relation_embeddings,
+            embedding_module=self.entity_embeddings,
             embedding_dim=self.embedding_dim
         )
         normal_vec_embs = self._get_embeddings(
@@ -127,6 +127,7 @@ class TransH(BaseOWAModule):
         """"""
         head_embeddings = head_embeddings.view(-1, 1, self.embedding_dim)
         tail_embeddings = tail_embeddings.view(-1, 1, self.embedding_dim)
+        normal_vec_embs = normal_vec_embs.view(-1, 1, self.embedding_dim)
 
         projected_heads = self.project_to_hyperplane(entity_embs=head_embeddings, normal_vec_embs=normal_vec_embs)
         projected_tails = self.project_to_hyperplane(entity_embs=tail_embeddings, normal_vec_embs=normal_vec_embs)

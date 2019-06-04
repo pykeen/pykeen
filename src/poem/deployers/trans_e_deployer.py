@@ -1,10 +1,11 @@
 from poem.constants import GPU, KG_EMBEDDING_MODEL_NAME, EMBEDDING_DIM, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS
-from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
+from poem.evaluation import RankBasedEvaluator
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.kge_models.unimodal_kge_models.trans_e import TransE
+from poem.models import TransE
 from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
     load_triples, map_triples_elements_to_ids
 from torch import optim
+from torch import nn
 import click
 import numpy as np
 import json
@@ -13,7 +14,7 @@ import os
 import time
 import logging
 
-from poem.training_loops.owa_training_loop import OWATrainingLoop
+from poem.training_loops import OWATrainingLoop
 
 log = logging.getLogger(__name__)
 
@@ -45,18 +46,18 @@ def main(training_file, test_file, output_direc):
     learning_rate = 0.01
     margin_loss = 1
     batch_size = 32
-    num_epochs = 800
+    num_epochs = 1
 
     # Step 2: Configure KGE model
     kge_model = TransE(num_entities=len(entity_to_id),
                        num_relations=len(relation_to_id),
                        embedding_dim=embedding_dim,
                        scoring_fct_norm=1,
-                       margin_loss=margin_loss,
+                       criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
                        preferred_device=GPU)
 
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
-    optimizer = optim.SGD(params=parameters,lr=learning_rate)
+    optimizer = optim.SGD(params=parameters, lr=learning_rate)
 
     # Step 3: Train
     all_entities = np.array(list(entity_to_id.values()), dtype=np.long)
@@ -86,7 +87,7 @@ def main(training_file, test_file, output_direc):
                                    filter_neg_triples=False)
 
     # Step 6: Evaluate
-    metric_results = evaluator.evaluate(test_triples=mapped_test_triples)
+    metric_results = evaluator.evaluate(test_triples=mapped_test_triples[0:100, :])
     results = OrderedDict()
     results['mean_rank'] = metric_results.mean_rank
     results['hits_at_k'] = metric_results.hits_at_k

@@ -37,7 +37,7 @@ class TransE(BaseOWAModule):
     model_name = TRANS_E_NAME
 
     def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1,
-                 criterion=nn.MarginRankingLos(margin=1., reduction='mean'), preferred_device=GPU) -> None:
+                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
         super(TransE, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
         # Embeddings
