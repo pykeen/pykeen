@@ -7,9 +7,7 @@ from typing import Optional
 import torch
 from torch import nn
 
-from ..constants import EMBEDDING_DIM, LEARNING_RATE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, OWA, PREFERRED_DEVICE, \
-    GPU
-from ..model_config import ModelConfig
+from ..constants import EMBEDDING_DIM, GPU, OWA
 
 __all__ = [
     'BaseOWAModule',
@@ -22,6 +20,7 @@ class BaseOWAModule(nn.Module):
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
     kg_assumption = OWA
+    hyper_params = [EMBEDDING_DIM]
 
     def __init__(self, num_entities, num_relations, criterion, embedding_dim=50, preferred_device=GPU) -> None:
         super().__init__()
@@ -53,7 +52,7 @@ class BaseOWAModule(nn.Module):
         """"""
         return embedding_module(elements).view(-1, embedding_dim)
 
-    def _compute_mr_loss(self,positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+    def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """"""
         y = torch.FloatTensor([-1])
 
