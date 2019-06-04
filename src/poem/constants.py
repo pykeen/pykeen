@@ -27,6 +27,9 @@ NUMERIC_LITERALS = 'numeric_literals'
 BATCH_SIZE = 'batch_size'
 NUM_EPOCHS = 'num_epochs'
 SEED = 'random_seed'
+# TransH related
+SCORING_FUNCTION_NORM = 'scoring_function'
+WEIGHT_SOFT_CONSTRAINT_TRANS_H = 'weighting_soft_constraint'
 
 """Optimizer related constants"""
 SGD_OPTIMIZER_NAME = SGD.__name__
@@ -53,6 +56,7 @@ DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 COMPLEX_CWA_NAME = 'Complex_CWA'
 COMPLEX_LITERAL_NAME_CWA = 'ComplexLiteral_CWA'
 TRANS_E_NAME = 'TransE'
+TRANS_H_NAME = 'TransH'
 
 """DistMult related constants"""
 
