@@ -10,7 +10,7 @@ import torch.autograd
 from torch import nn
 
 from poem.models.base_owa import BaseOWAModule
-from ...constants import GPU, TRANS_E_NAME
+from ...constants import GPU, TRANS_E_NAME, SCORING_FUNCTION_NORM
 from ...utils import slice_triples
 
 __all__ = [
@@ -35,6 +35,7 @@ class TransE(BaseOWAModule):
     """
 
     model_name = TRANS_E_NAME
+    hyper_params = BaseOWAModule.hyper_params + [SCORING_FUNCTION_NORM]
 
     def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1,
                  criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
@@ -69,7 +70,7 @@ class TransE(BaseOWAModule):
 
     def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """"""
-        loss = self._compute_mr_loss(positive_scores,negative_scores)
+        loss = self._compute_mr_loss(positive_scores, negative_scores)
         return loss
 
     def forward(self, batch_positives, batch_negatives):
