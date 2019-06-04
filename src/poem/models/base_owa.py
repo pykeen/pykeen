@@ -53,6 +53,16 @@ class BaseOWAModule(nn.Module):
         """"""
         return embedding_module(elements).view(-1, embedding_dim)
 
+    def _compute_mr_loss(self,positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+        """"""
+        y = torch.FloatTensor([-1])
+
+        y = y.expand(positive_scores.shape[0]).to(self.device)
+
+        loss = self.criterion(positive_scores, negative_scores, y)
+
+        return loss
+
 
 def slice_triples(triples):
     """Get the heads, relations, and tails from a matrix of triples."""
