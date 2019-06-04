@@ -132,7 +132,7 @@ def run(
     :param output_directory: The directory to store the results
     """
     if output_directory is None:
-        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d-%H-%M-%S"))
+
     os.makedirs(output_directory, exist_ok=True)
 
     config['pykeen-version'] = VERSION
