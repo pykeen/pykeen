@@ -84,21 +84,8 @@ class TransR(BaseOWAModule):
         return projected_entity_embs
 
     def predict_scores(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        heads, relations, tails = slice_triples(triples)
-
-        head_embs = self.entity_embeddings(heads).view(-1, self.embedding_dim)
-        relation_embs = self.relation_embeddings(relations).view(-1, self.relation_embedding_dim)
-        tail_embs = self.entity_embeddings(tails).view(-1, self.embedding_dim)
-
-        proj_matrix_embs = self.projection_matrix_embs(relations).view(-1, self.embedding_dim,
-                                                                       self.relation_embedding_dim)
-
-        proj_heads_embs = self._project_entities(head_embs, proj_matrix_embs)
-        proj_tails_embs = self._project_entities(tail_embs, proj_matrix_embs)
-
-        scores = self._compute_scores(h_embs=proj_heads_embs, r_embs=relation_embs, t_embs=proj_tails_embs)
-
+        """"""
+        scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
     def _score_triples(self, triples):
