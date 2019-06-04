@@ -67,11 +67,9 @@ class TransE(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def _compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        y = np.repeat([-1], repeats=positive_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
-
-        loss = self.criterion(positive_scores, negative_scores, y)
+    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+        """"""
+        loss = self._compute_mr_loss(positive_scores,negative_scores)
         return loss
 
     def forward(self, batch_positives, batch_negatives):
@@ -82,7 +80,7 @@ class TransE(BaseOWAModule):
 
         positive_scores = self._score_triples(batch_positives)
         negative_scores = self._score_triples(batch_negatives)
-        loss = self._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         return loss
 
     def _score_triples(self, triples):
