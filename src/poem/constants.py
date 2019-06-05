@@ -60,6 +60,7 @@ COMPLEX_LITERAL_NAME_CWA = 'ComplexLiteral_CWA'
 TRANS_E_NAME = 'TransE'
 TRANS_H_NAME = 'TransH'
 TRANS_R_NAME = 'TransR'
+TRANS_D_NAME = 'TransD'
 
 """DistMult related constants"""
 
