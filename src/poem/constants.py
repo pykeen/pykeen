@@ -64,6 +64,7 @@ TRANS_D_NAME = 'TransD'
 DISTMULT_NAME = 'DistMult'
 ERMLP_NAME = 'ERMLP'
 RESCAL_NAME = 'RESCAL'
+SE_NAME = 'StructuredEmbedding'
 
 """DistMult related constants"""
 
