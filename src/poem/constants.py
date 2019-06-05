@@ -62,6 +62,7 @@ TRANS_H_NAME = 'TransH'
 TRANS_R_NAME = 'TransR'
 TRANS_D_NAME = 'TransD'
 DISTMULT_NAME = 'DistMult'
+ERMLP_NAME = 'ERMLP'
 
 """DistMult related constants"""
 
