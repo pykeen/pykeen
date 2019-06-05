@@ -65,6 +65,7 @@ DISTMULT_NAME = 'DistMult'
 ERMLP_NAME = 'ERMLP'
 RESCAL_NAME = 'RESCAL'
 SE_NAME = 'StructuredEmbedding'
+UM_NAME = 'UM'
 
 """DistMult related constants"""
 
