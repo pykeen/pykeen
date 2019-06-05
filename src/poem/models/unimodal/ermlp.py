@@ -1,0 +1,85 @@
+# -*- coding: utf-8 -*-
+
+"""Implementation of ERMLP."""
+
+from typing import Dict
+
+import torch
+import torch.autograd
+from torch import nn
+
+from poem.constants import ERMLP_NAME, GPU
+from poem.models.base_owa import BaseOWAModule, slice_triples
+
+__all__ = ['ERMLP']
+
+
+class ERMLP(BaseOWAModule):
+    """An implementation of ERMLP [dong2014]_.
+
+    This model uses a neural network-based approach.
+
+    .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
+                  <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
+
+    """
+
+    model_name = ERMLP_NAME
+    margin_ranking_loss_size_average: bool = True
+
+    def __init__(self, num_entities, num_relations, embedding_dim=50,
+                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
+        super(ERMLP, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
+
+        #: Embeddings for relations in the knowledge graph
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+        """The mulit layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
+           with self.embedding_dim neurons and output layer with one neuron.
+           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
+        """
+        self.mlp = nn.Sequential(
+            nn.Linear(3 * self.embedding_dim, self.embedding_dim),
+            nn.ReLU(),
+            nn.Linear(self.embedding_dim, 1),
+        )
+
+    def predict_scores(self, triples):
+        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
+        scores = self._score_triples(triples)
+        return scores.detach().cpu().numpy()
+
+    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+        """"""
+        loss = self._compute_mr_loss(positive_scores, negative_scores)
+        return loss
+
+    def forward(self, positives, negatives):
+        positive_scores = self._score_triples(positives)
+        negative_scores = self._score_triples(negatives)
+        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        return loss
+
+    def _score_triples(self, triples):
+        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
+        scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
+        return scores
+
+    def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings):
+        x_s = torch.cat([head_embeddings, relation_embeddings, tail_embeddings], 1)
+        scores = - self.mlp(x_s)
+        return scores
+
+    def _get_triple_embeddings(self, triples):
+        heads, relations, tails = slice_triples(triples)
+        return (
+            self._get_embeddings(elements=heads,
+                                 embedding_module=self.entity_embeddings,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=relations,
+                                 embedding_module=self.relation_embeddings,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=tails,
+                                 embedding_module=self.entity_embeddings,
+                                 embedding_dim=self.embedding_dim),
+        )
