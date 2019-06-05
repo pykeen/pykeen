@@ -1,5 +1,6 @@
 from poem.constants import KG_EMBEDDING_MODEL_NAME, EMBEDDING_DIM, INPUT_DROPOUT, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS
-from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
+from poem.evaluation import RankBasedEvaluator
+
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 from poem.models import ComplexLiteralCWA
 from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \

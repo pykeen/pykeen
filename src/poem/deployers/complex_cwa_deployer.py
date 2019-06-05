@@ -5,6 +5,7 @@ from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
     create_entity_and_relation_mappings, load_triples,
 )
 from poem.training_loops import CWATrainingLoop
+
 from poem.utils import get_params
 from torch import optim
 
