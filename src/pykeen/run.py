@@ -132,8 +132,7 @@ def run(
     :param output_directory: The directory to store the results
     """
     if output_directory is None:
-
-    os.makedirs(output_directory, exist_ok=True)
+        os.makedirs(output_directory, exist_ok=True)
 
     config['pykeen-version'] = VERSION
 
