@@ -63,6 +63,7 @@ TRANS_R_NAME = 'TransR'
 TRANS_D_NAME = 'TransD'
 DISTMULT_NAME = 'DistMult'
 ERMLP_NAME = 'ERMLP'
+RESCAL_NAME = 'RESCAL'
 
 """DistMult related constants"""
 
