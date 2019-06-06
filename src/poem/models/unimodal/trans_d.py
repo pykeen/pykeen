@@ -55,11 +55,6 @@ class TransD(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
-
     def forward(self, batch_positives, batch_negatives):
         positive_scores = self._score_triples(batch_positives)
         negative_scores = self._score_triples(batch_negatives)
@@ -111,7 +106,7 @@ class TransD(BaseOWAModule):
         # Add the vector element wise
         sum_res = h_embs + r_embs - t_embs
         scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = torch.mul(scores, scores)
+        scores = - torch.mul(scores, scores)
         return scores
 
     def _project_entities(self, entity_embs, entity_proj_vecs, relation_projections):

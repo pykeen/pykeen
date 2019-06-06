@@ -68,10 +68,18 @@ class TransE(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
+
+    def forward(self, batch, normalize=True):
+        # Normalize embeddings of entities
+        if normalize:
+            norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
+            self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
+                norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
+
+
+        scores = self._score_triples(batch)
+        return scores
+
 
     def forward(self, batch_positives, batch_negatives):
         # Normalize embeddings of entities
@@ -89,6 +97,7 @@ class TransE(BaseOWAModule):
         scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
         return scores
 
+
     def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings):
         """Compute the scores based on the head, relation, and tail embeddings.
 
@@ -99,8 +108,8 @@ class TransE(BaseOWAModule):
         """
         # Add the vector element wise
         sum_res = head_embeddings + relation_embeddings - tail_embeddings
-        distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        return distances
+        scores = - torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        return scores
 
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)

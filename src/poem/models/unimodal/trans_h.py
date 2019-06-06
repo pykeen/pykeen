@@ -81,15 +81,6 @@ class TransH(BaseOWAModule):
 
         return soft_constraints_loss
 
-    def compute_loss(self, positive_scores, negative_scores):
-        """"""
-        margin_ranking_loss = self._compute_mr_loss(positive_scores, negative_scores)
-        soft_constraint_loss = self.compute_soft_constraint_loss()
-
-        loss = margin_ranking_loss + soft_constraint_loss
-
-        return loss
-
     def predict_scores(self, triples):
         """"""
         scores = self._score_triples(triples)
@@ -134,7 +125,7 @@ class TransH(BaseOWAModule):
 
         sum_res = projected_heads + relation_embeddings - projected_tails
         norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = torch.mul(norms, norms)
+        scores = - torch.mul(norms, norms)
 
         return scores
 

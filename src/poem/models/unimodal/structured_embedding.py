@@ -69,11 +69,6 @@ class StructuredEmbedding(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
-
     def forward(self, positives, negatives):
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
@@ -116,8 +111,8 @@ class StructuredEmbedding(BaseOWAModule):
 
     def _compute_scores(self, projected_head_embeddings, projected_tail_embeddings):
         difference = projected_head_embeddings - projected_tail_embeddings
-        distances = torch.norm(difference, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        return distances
+        scores = - torch.norm(difference, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        return scores
 
     def _project_entities(self, entity_embeddings, relation_embeddings):
         entity_embeddings = entity_embeddings.unsqueeze(-1)

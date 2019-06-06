@@ -124,14 +124,9 @@ class TransR(BaseOWAModule):
 
         sum_res = proj_heads_embs + relation_embeddings - proj_tails_embs
         scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = torch.mul(scores, scores)
+        scores = - torch.mul(scores, scores)
 
         return scores
-
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
 
     def forward(self, batch_positives, batch_negatives):
         positive_scores = self._score_triples(batch_positives)

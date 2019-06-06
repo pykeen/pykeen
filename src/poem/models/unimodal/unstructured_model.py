@@ -50,11 +50,6 @@ class UnstructuredModel(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
-
     def forward(self, batch_positives, batch_negatives):
         # Normalize embeddings of entities
         pos_scores = self._score_triples(batch_positives)
@@ -70,9 +65,9 @@ class UnstructuredModel(BaseOWAModule):
     def _compute_scores(self, head_embeddings, tail_embeddings):
         # Add the vector element wise
         sum_res = head_embeddings - tail_embeddings
-        distances = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        distances = distances ** 2
-        return distances
+        scores = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
+        scores = scores ** 2
+        return -scores
 
     def _get_triple_embeddings(self, triples):
         heads, _, tails = slice_triples(triples)

@@ -41,11 +41,6 @@ class RESCAL(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
-
     def forward(self, positives, negatives):
         positive_scores = self._score_triples(positives)
         negative_scores = self._score_triples(negatives)
@@ -63,7 +58,7 @@ class RESCAL(BaseOWAModule):
         h_embs = h_embs.unsqueeze(-1).permute([0, 2, 1])
         h_m_embs = torch.matmul(h_embs, m)
         t_embs = t_embs.unsqueeze(-1)
-        scores = -torch.matmul(h_m_embs, t_embs).view(-1)
+        scores = torch.matmul(h_m_embs, t_embs).view(-1)
 
         # scores = torch.bmm(torch.transpose(h_emb, 1, 2), M)  # h^T M
         # scores = torch.bmm(scores, t_emb)  # (h^T M) h

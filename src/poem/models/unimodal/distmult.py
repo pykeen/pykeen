@@ -66,15 +66,15 @@ class DistMult(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def forward(self, positives, negatives):
+    def forward(self, batch_positives, batch_negatives):
         """"""
         # Normalize embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
 
-        positive_scores = self._score_triples(positives)
-        negative_scores = self._score_triples(negatives)
+        positive_scores = self._score_triples(batch_positives)
+        negative_scores = self._score_triples(batch_negatives)
         loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         return loss
 
@@ -83,13 +83,8 @@ class DistMult(BaseOWAModule):
         return self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
 
     def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings):
-        scores = - torch.sum(head_embeddings * relation_embeddings * tail_embeddings, dim=1)
+        scores = torch.sum(head_embeddings * relation_embeddings * tail_embeddings, dim=1)
         return scores
-
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
 
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)

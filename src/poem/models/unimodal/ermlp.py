@@ -49,11 +49,6 @@ class ERMLP(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        loss = self._compute_mr_loss(positive_scores, negative_scores)
-        return loss
-
     def forward(self, positives, negatives):
         positive_scores = self._score_triples(positives)
         negative_scores = self._score_triples(negatives)
@@ -67,7 +62,7 @@ class ERMLP(BaseOWAModule):
 
     def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings):
         x_s = torch.cat([head_embeddings, relation_embeddings, tail_embeddings], 1)
-        scores = - self.mlp(x_s)
+        scores = self.mlp(x_s)
         return scores
 
     def _get_triple_embeddings(self, triples):
