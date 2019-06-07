@@ -32,6 +32,9 @@ class BaseOWAModule(nn.Module):
 
         # Loss
         self.criterion = criterion
+        self.compute_loss_fct = self._compute_mr_loss if type(
+            criterion) == nn.MarginRankingLoss else self._compute_label_loss
+        self.sigmoid = nn.Sigmoid()
 
         # Entity dimensions
         #: The number of entities in the knowledge graph
@@ -52,9 +55,35 @@ class BaseOWAModule(nn.Module):
         """"""
         return embedding_module(elements).view(-1, embedding_dim)
 
+    def _compute_label_loss(self, positive_scores, negative_scores):
+        """."""
+        pos_labels = torch.FloatTensor([1])
+        pos_labels = pos_labels.expand(positive_scores.shape[0]).to(self.device)
+
+        neg_labels = torch.FloatTensor([0])
+        neg_labels = neg_labels.expand(negative_scores.shape[0]).to(self.device)
+
+        scores = torch.cat([positive_scores, negative_scores])
+        labels = torch.cat([pos_labels, neg_labels])
+
+        probs = self.compute_probabilities(scores=scores)
+
+        loss = self.criterion(probs, labels)
+
+        return loss
+
+    def compute_probabilities(self, scores):
+        """."""
+        return self.sigmoid(scores)
+
+    def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+        """"""
+        loss = self.compute_loss_fct(positive_scores, negative_scores)
+        return loss
+
     def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """"""
-        y = torch.FloatTensor([-1])
+        y = torch.FloatTensor([1])
 
         y = y.expand(positive_scores.shape[0]).to(self.device)
 
