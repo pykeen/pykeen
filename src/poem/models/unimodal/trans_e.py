@@ -64,23 +64,6 @@ class TransE(BaseOWAModule):
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
-    def predict_scores(self, triples):
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
-
-    def forward(self, batch, normalize=True):
-        # Normalize embeddings of entities
-        if normalize:
-            norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
-            self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
-                norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
-
-
-        scores = self._score_triples(batch)
-        return scores
-
-
     def forward(self, batch_positives, batch_negatives):
         # Normalize embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
@@ -96,7 +79,6 @@ class TransE(BaseOWAModule):
         head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
         scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
         return scores
-
 
     def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings):
         """Compute the scores based on the head, relation, and tail embeddings.

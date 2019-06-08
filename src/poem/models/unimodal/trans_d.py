@@ -50,11 +50,6 @@ class TransD(BaseOWAModule):
 
         self.scoring_fct_norm = scoring_fct_norm
 
-    def predict_scores(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
     def forward(self, batch_positives, batch_negatives):
         positive_scores = self._score_triples(batch_positives)
         negative_scores = self._score_triples(batch_negatives)

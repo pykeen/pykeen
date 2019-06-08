@@ -83,11 +83,6 @@ class TransR(BaseOWAModule):
         projected_entity_embs = torch.clamp(projected_entity_embs, max=1.)
         return projected_entity_embs
 
-    def predict_scores(self, triples):
-        """"""
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
     def _score_triples(self, triples):
         """"""
         heads, relations, tails = slice_triples(triples)

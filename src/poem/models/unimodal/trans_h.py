@@ -81,12 +81,6 @@ class TransH(BaseOWAModule):
 
         return soft_constraints_loss
 
-    def predict_scores(self, triples):
-        """"""
-        scores = self._score_triples(triples)
-
-        return scores.detach().cpu().numpy()
-
     def _score_triples(self, triples):
         """"""
         heads, relations, tails = slice_triples(triples)

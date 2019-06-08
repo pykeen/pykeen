@@ -61,11 +61,6 @@ class DistMult(BaseOWAModule):
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
-    def predict_scores(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
     def forward(self, batch_positives, batch_negatives):
         """"""
         # Normalize embeddings of entities

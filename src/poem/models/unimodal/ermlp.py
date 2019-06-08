@@ -44,11 +44,6 @@ class ERMLP(BaseOWAModule):
             nn.Linear(self.embedding_dim, 1),
         )
 
-    def predict_scores(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
     def forward(self, positives, negatives):
         positive_scores = self._score_triples(positives)
         negative_scores = self._score_triples(negatives)

@@ -51,30 +51,30 @@ class BaseOWAModule(nn.Module):
             max_norm=self.entity_embedding_max_norm,
         )
 
+    def predict_scores(self, triples):
+        scores = self._score_triples(triples)
+        return scores.detach().cpu().numpy()
+
     def _get_embeddings(self, elements, embedding_module, embedding_dim):
         """"""
         return embedding_module(elements).view(-1, embedding_dim)
 
-    def _compute_label_loss(self, positive_scores, negative_scores):
+    def _compute_label_loss(self, probs_pos, probs_neg):
         """."""
+
         pos_labels = torch.FloatTensor([1])
-        pos_labels = pos_labels.expand(positive_scores.shape[0]).to(self.device)
+        pos_labels = pos_labels.expand(probs_pos.shape[0]).to(self.device)
 
         neg_labels = torch.FloatTensor([0])
-        neg_labels = neg_labels.expand(negative_scores.shape[0]).to(self.device)
+        neg_labels = neg_labels.expand(probs_neg.shape[0]).to(self.device)
 
-        scores = torch.cat([positive_scores, negative_scores])
+
+        scores = torch.cat([probs_pos, probs_neg])
         labels = torch.cat([pos_labels, neg_labels])
 
-        probs = self.compute_probabilities(scores=scores)
-
-        loss = self.criterion(probs, labels)
+        loss = self.criterion(scores, labels)
 
         return loss
-
-    def compute_probabilities(self, scores):
-        """."""
-        return self.sigmoid(scores)
 
     def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """"""

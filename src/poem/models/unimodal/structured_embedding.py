@@ -64,11 +64,6 @@ class StructuredEmbedding(BaseOWAModule):
         self.left_relation_embeddings.weight.data = self.left_relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight))
 
-    def predict_scores(self, triples):
-        # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
     def forward(self, positives, negatives):
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
