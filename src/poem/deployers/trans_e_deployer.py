@@ -53,7 +53,7 @@ def main(training_file, test_file, output_direc):
                        num_relations=len(relation_to_id),
                        embedding_dim=embedding_dim,
                        scoring_fct_norm=1,
-                       criterion=nn.BCELoss(reduction='mean'),#nn.MarginRankingLoss(margin=1., reduction='mean'),
+                       criterion=nn.MarginRankingLoss(margin=margin_loss, reduction='mean'),
                        preferred_device=GPU)
 
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
