@@ -1,7 +1,7 @@
 import torch
 
 
-def comute_nearest_neighbours(x, neighbours, k=1):
+def comute_nearest_neighbours(x, neighbours, k=10):
     """
 
     :param x: tensor of shape 1 x D
