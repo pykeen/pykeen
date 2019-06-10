@@ -43,10 +43,10 @@ def main(training_file, test_file, output_direc):
 
     instances = factory.create_owa_instances(triples=training_triples)
 
-    embedding_dim = 50
+    embedding_dim = 200
     learning_rate = 0.5
-    batch_size = 128
-    num_epochs = 1
+    batch_size = 200
+    num_epochs = 1000
 
     # Step 2: Configure KGE model
     kge_model = ComplEx(num_entities=len(entity_to_id),
@@ -69,7 +69,7 @@ def main(training_file, test_file, output_direc):
     fitted_kge_model, losses = owa_training_loop.train(training_instances=instances,
                                                        num_epochs=num_epochs,
                                                        batch_size=batch_size,
-                                                       num_negs_per_pos=10
+                                                       num_negs_per_pos=50
                                                        )
 
     # Step 4: Prepare test triples
@@ -87,7 +87,7 @@ def main(training_file, test_file, output_direc):
                                    filter_neg_triples=False)
 
     # Step 6: Evaluate
-    metric_results = evaluator.evaluate(test_triples=mapped_test_triples[0:100, :])
+    metric_results = evaluator.evaluate(test_triples=mapped_test_triples)
     results = OrderedDict()
     results['mean_rank'] = metric_results.mean_rank
     results['hits_at_k'] = metric_results.hits_at_k
