@@ -29,8 +29,6 @@ class OWATrainingLoop(TrainingLoop):
         self.negative_sampler = negative_sampler or BasicNegativeSampler(all_entities=self.all_entities)
 
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
-        self.kge_model = self.kge_model.to(self.kge_model.device)
-
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
 

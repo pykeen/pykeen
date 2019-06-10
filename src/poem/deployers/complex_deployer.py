@@ -54,10 +54,10 @@ def main(training_file, test_file, output_direc):
                         embedding_dim=embedding_dim,
                         criterion=nn.BCELoss(reduction='mean'),
                         preferred_device=GPU)
+    kge_model = kge_model.to(kge_model.device)
 
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
-    # optimizer = optim.Adagrad(params=parameters, lr=learning_rate, weight_decay=0.01)
-    optimizer = optim.SGD(params=parameters,lr=0.01)
+    optimizer = optim.Adagrad(params=parameters, lr=learning_rate, weight_decay=0.01)
 
     # Step 3: Train
     all_entities = np.array(list(entity_to_id.values()), dtype=np.long)
