@@ -26,7 +26,7 @@ class BaseOWAModule(nn.Module):
         super().__init__()
 
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and preferred_device else 'cpu')
+            'cuda:0' if torch.cuda.is_available() and preferred_device==GPU else 'cpu')
         # Device selection
         self.device = torch.device('cuda:0' if torch.cuda.is_available() and preferred_device else 'cpu')
 
