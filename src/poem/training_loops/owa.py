@@ -72,9 +72,6 @@ class OWATrainingLoop(TrainingLoop):
 
                 current_epoch_loss += (loss.item() * current_batch_size * num_negs_per_pos)
 
-                print(current_epoch_loss)
-                exit(0)
-
                 loss.backward()
                 self.optimizer.step()
 

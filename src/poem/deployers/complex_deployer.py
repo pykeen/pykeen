@@ -57,6 +57,7 @@ def main(training_file, test_file, output_direc):
 
     parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
     optimizer = optim.Adagrad(params=parameters, lr=learning_rate, weight_decay=0.01)
+    optimizer = optim.SGD(params=parameters,lr=0.01)
 
     # Step 3: Train
     all_entities = np.array(list(entity_to_id.values()), dtype=np.long)
