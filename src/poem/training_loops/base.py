@@ -15,18 +15,10 @@ from ..instance_creation_factories.instances import Instances
 from ..utils import get_params
 
 __all__ = [
-    'OPTIMIZERS',
     'TrainingLoop',
 ]
 
 log = logging.getLogger(__name__)
-
-OPTIMIZERS: Mapping[str, Type[Optimizer]] = {
-    SGD_OPTIMIZER_NAME: SGD,
-    ADAGRAD_OPTIMIZER_NAME: Adagrad,
-    ADAM_OPTIMIZER_NAME: Adam,
-}
-
 
 class TrainingLoop(ABC):
     def __init__(
@@ -50,28 +42,8 @@ class TrainingLoop(ABC):
             training_instances: Instances,
             num_epochs,
             batch_size,
-            learning_rate,
     ) -> Tuple[nn.Module, List[float]]:
         """Train the KGE model.
 
         :return: A pair of the KGE model and the losses per epoch.
         """
-
-    @staticmethod
-    def get_optimizer(
-            optimizer_name: str,
-            kge_model: nn.Module,
-            lr: float,
-    ):
-        """Get an optimizer for the given knowledge graph embedding model."""
-        optimizer_cls: Type[Optimizer] = OPTIMIZERS.get(optimizer_name)
-
-        if optimizer_cls is None:
-            raise ValueError(f'invalid optimizer name: {optimizer_name}')
-
-        params = get_params(kge_model)
-
-        return optimizer_cls(
-            params=params,
-            lr=lr,
-        )
