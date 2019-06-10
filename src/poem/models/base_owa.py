@@ -68,11 +68,16 @@ class BaseOWAModule(nn.Module):
 
 
         scores = torch.cat([probs_pos, probs_neg])
+        probs = self.compute_probabilities(scores=scores)
         labels = torch.cat([pos_labels, neg_labels])
 
-        loss = self.criterion(scores, labels)
+        loss = self.criterion(probs, labels)
 
         return loss
+
+    def compute_probabilities(self, scores):
+        """."""
+        return self.sigmoid(scores)
 
     def compute_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """"""

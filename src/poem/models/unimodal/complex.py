@@ -90,8 +90,8 @@ class ComplEx(BaseOWAModule):
     def forward(self, batch_positives, batch_negatives):
         """."""
 
-        positive_scores = self.sigmoid(self._score_triples(batch_positives))
-        negative_scores = self.sigmoid(self._score_triples(batch_negatives))
+        positive_scores = self._score_triples(batch_positives)
+        negative_scores = self._score_triples(batch_negatives)
         loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
 
         return loss
