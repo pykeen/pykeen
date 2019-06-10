@@ -30,6 +30,8 @@ class OWATrainingLoop(TrainingLoop):
 
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
         self.kge_model = self.kge_model.to(self.kge_model.device)
+        print(self.kge_model.device)
+        exit(0)
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
 
