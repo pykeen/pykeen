@@ -18,7 +18,7 @@ class RESCAL(BaseOWAModule):
     This model represents relations as matrices and models interactions between latent features.
 
     .. [nickel2011] Nickel, M., *et al.* (2011) `A Three-Way Model for Collective Learning on Multi-Relational Data
-                    <http://www.cip.ifi.lmu.de/~nickel/data/slides-icml2011.pdf>`_. ICML. Vol. 11.
+                    <http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf>`_. ICML. Vol. 11.
 
     .. seealso::
 
