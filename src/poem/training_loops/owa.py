@@ -64,6 +64,9 @@ class OWATrainingLoop(TrainingLoop):
                 neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
                 neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.kge_model.device).view(-1, 3)
 
+                # Apply forward constraint if defined for used KGE model, otherwise method just returns
+                self.kge_model.apply_forward_constraints()
+
                 positive_scores = self.kge_model(pos_batch)
                 positive_scores = positive_scores.repeat(num_negs_per_pos)
                 negative_scores = self.kge_model(neg_batch)
@@ -83,7 +86,7 @@ class OWATrainingLoop(TrainingLoop):
                 self.optimizer.step()
 
             # Track epoch loss
-            self.losses_per_epochs.append(current_epoch_loss / len(pos_triples))
+            self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples)*num_negs_per_pos))
 
         stop_training = timeit.default_timer()
         log.debug("training took %.2fs seconds", stop_training - start_training)
