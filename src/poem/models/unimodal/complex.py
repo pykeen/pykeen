@@ -4,10 +4,9 @@
 
 import torch
 import torch.nn as nn
-from torch.nn.init import xavier_normal_
-
 from poem.constants import CWA, GPU, COMPLEX_NAME
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch.nn.init import xavier_normal_
 
 
 class ComplEx(BaseOWAModule):
@@ -36,9 +35,6 @@ class ComplEx(BaseOWAModule):
         xavier_normal_(self.entity_embeddings_img.weight.data)
         xavier_normal_(self.relation_embeddings_real.weight.data)
         xavier_normal_(self.relation_embeddings_img.weight.data)
-
-    def _compute_loss(self, predictions, labels):
-        return self.criterion(predictions, labels)
 
     def _score_triples(self, triples):
         heads_real, relations_real, tails_real, heads_img, relations_img, tails_img = self._get_triple_embeddings(
@@ -87,11 +83,9 @@ class ComplEx(BaseOWAModule):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
 
-    def forward(self, batch_positives, batch_negatives):
+    def forward(self, batch):
         """."""
 
-        positive_scores = self._score_triples(batch_positives)
-        negative_scores = self._score_triples(batch_negatives)
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        scores = self._score_triples(batch)
 
-        return loss
+        return scores
