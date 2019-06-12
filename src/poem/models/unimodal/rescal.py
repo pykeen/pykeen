@@ -2,8 +2,6 @@
 
 """Implementation of RESCAL."""
 
-import torch
-import torch.autograd
 from torch import nn
 
 from poem.constants import GPU, RESCAL_NAME
@@ -47,12 +45,13 @@ class RESCAL(BaseOWAModule):
         # Get triple embeddings
         heads, relations, tails = slice_triples(triples)
 
-        # shape: (b, 1, d)
+        # shape: (b, d)
         head_embeddings = self.entity_embeddings(heads).view(-1, 1, self.embedding_dim)
         # shape: (b, d, d)
         relation_embeddings = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
-        # shape: (b, d, 1)
+        # shape: (b, d)
         tail_embeddings = self.entity_embeddings(tails).view(-1, self.embedding_dim, 1)
 
-        scores = torch.bmm(head_embeddings, torch.bmm(relation_embeddings, tail_embeddings))
+        scores = head_embeddings @ relation_embeddings @ tail_embeddings
+
         return scores
