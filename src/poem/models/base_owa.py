@@ -57,6 +57,10 @@ class BaseOWAModule(nn.Module):
         """"""
         return embedding_module(elements).view(-1, embedding_dim)
 
+    def apply_forward_constraints(self):
+        """"""
+        return
+
     def _compute_label_loss(self, probs_pos, probs_neg):
         """."""
 
