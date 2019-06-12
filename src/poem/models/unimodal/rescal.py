@@ -2,10 +2,9 @@
 
 """Implementation of RESCAL."""
 
-from torch import nn
-
 from poem.constants import GPU, RESCAL_NAME
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch import nn
 
 __all__ = ['RESCAL']
 
@@ -34,12 +33,6 @@ class RESCAL(BaseOWAModule):
 
         # Embeddings
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
-
-    def forward(self, positives, negatives):
-        positive_scores = self._score_triples(positives)
-        negative_scores = self._score_triples(negatives)
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss
 
     def _score_triples(self, triples):
         # Get triple embeddings

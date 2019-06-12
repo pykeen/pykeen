@@ -7,10 +7,9 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-from torch import nn
-
 from poem.constants import SE_NAME, SCORING_FUNCTION_NORM, GPU
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch import nn
 
 __all__ = [
     'StructuredEmbedding',
@@ -64,17 +63,12 @@ class StructuredEmbedding(BaseOWAModule):
         self.left_relation_embeddings.weight.data = self.left_relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight))
 
-    def forward(self, positives, negatives):
+    def apply_forward_constraints(self):
+        """."""
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
-
-        positive_scores = self._score_triples(positives)
-        negative_scores = self._score_triples(negatives)
-
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss
 
     def _score_triples(self, triples):
         heads, relations, tails = slice_triples(triples)

@@ -1,7 +1,7 @@
+import torch
 from poem.constants import TRANS_H_NAME, SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H, GPU
 from poem.models.base_owa import BaseOWAModule, slice_triples
 from torch import nn
-import torch
 
 
 class TransH(BaseOWAModule):
@@ -53,6 +53,15 @@ class TransH(BaseOWAModule):
         norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         scores = torch.mul(norms, norms)
         return scores
+
+    def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+        """."""
+        mrl_loss = super()._compute_mr_loss(positive_scores, negative_scores)
+        soft_constraint_loss = self.compute_soft_constraint_loss()
+
+        loss = mrl_loss + soft_constraint_loss
+
+        return loss
 
     def compute_soft_constraint_loss(self):
         """Compute the soft constraints."""
@@ -123,14 +132,9 @@ class TransH(BaseOWAModule):
 
         return scores
 
-    def forward(self, batch_positives, batch_negatives):
+    def apply_forward_constraints(self):
+        """."""
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))
-
-        positive_scores = self._score_triples(batch_positives)
-        negative_scores = self._score_triples(batch_negatives)
-
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss

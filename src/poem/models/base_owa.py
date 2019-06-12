@@ -98,6 +98,9 @@ class BaseOWAModule(nn.Module):
 
         return loss
 
+    def forward(self, batch):
+        scores = self._score_triples(batch)
+        return scores
 
 def slice_triples(triples):
     """Get the heads, relations, and tails from a matrix of triples."""

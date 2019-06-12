@@ -2,14 +2,11 @@
 
 """Implementation of ERMLP."""
 
-from typing import Dict
-
 import torch
 import torch.autograd
-from torch import nn
-
 from poem.constants import ERMLP_NAME, GPU
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch import nn
 
 __all__ = ['ERMLP']
 
@@ -43,12 +40,6 @@ class ERMLP(BaseOWAModule):
             nn.ReLU(),
             nn.Linear(self.embedding_dim, 1),
         )
-
-    def forward(self, positives, negatives):
-        positive_scores = self._score_triples(positives)
-        negative_scores = self._score_triples(negatives)
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss
 
     def _score_triples(self, triples):
         head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)

@@ -5,10 +5,9 @@
 import numpy as np
 import torch
 import torch.autograd
-from torch import nn
-
 from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_R_NAME, RELATION_EMBEDDING_DIM
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch import nn
 
 __all__ = ['TransR']
 
@@ -122,10 +121,3 @@ class TransR(BaseOWAModule):
         scores = - torch.mul(scores, scores)
 
         return scores
-
-    def forward(self, batch_positives, batch_negatives):
-        positive_scores = self._score_triples(batch_positives)
-        negative_scores = self._score_triples(batch_negatives)
-
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss

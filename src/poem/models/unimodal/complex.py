@@ -82,10 +82,3 @@ class ComplEx(BaseOWAModule):
     def predict_scores(self, triples):
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
-
-    def forward(self, batch):
-        """."""
-
-        scores = self._score_triples(batch)
-
-        return scores

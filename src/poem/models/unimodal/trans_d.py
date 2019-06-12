@@ -2,14 +2,11 @@
 
 """Implementation of TransD."""
 
-from typing import Dict
-
 import torch
 import torch.autograd
-from torch import nn
-
 from poem.constants import GPU, TRANS_D_NAME, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch import nn
 
 __all__ = [
     'TransD',
@@ -49,12 +46,6 @@ class TransD(BaseOWAModule):
         # FIXME @mehdi what about initialization?
 
         self.scoring_fct_norm = scoring_fct_norm
-
-    def forward(self, batch_positives, batch_negatives):
-        positive_scores = self._score_triples(batch_positives)
-        negative_scores = self._score_triples(batch_negatives)
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss
 
     def _score_triples(self, triples):
         heads, relations, tails = slice_triples(triples)
@@ -111,4 +102,3 @@ class TransD(BaseOWAModule):
         transfer_matrices = torch.matmul(relation_projections, entity_proj_vecs)
         projected_entity_embs = torch.einsum('nmk,nk->nm', [transfer_matrices, entity_embs])
         return projected_entity_embs
-

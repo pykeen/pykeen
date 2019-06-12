@@ -7,10 +7,9 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-from torch import nn
-
 from poem.constants import UM_NAME, SCORING_FUNCTION_NORM, GPU
 from poem.models.base_owa import BaseOWAModule, slice_triples
+from torch import nn
 
 __all__ = ['UnstructuredModel']
 
@@ -49,13 +48,6 @@ class UnstructuredModel(BaseOWAModule):
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
         scores = self._score_triples(triples)
         return scores.detach().cpu().numpy()
-
-    def forward(self, batch_positives, batch_negatives):
-        # Normalize embeddings of entities
-        pos_scores = self._score_triples(batch_positives)
-        neg_scores = self._score_triples(batch_negatives)
-        loss = self.compute_loss(positive_scores=pos_scores, negative_scores=neg_scores)
-        return loss
 
     def _score_triples(self, triples):
         head_embeddings, tail_embeddings = self._get_triple_embeddings(triples)

@@ -70,10 +70,6 @@ class TransE(BaseOWAModule):
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
 
-    def forward(self, batch):
-        scores = self._score_triples(batch)
-        return scores
-
     def _score_triples(self, triples):
         head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
         scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
