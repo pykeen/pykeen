@@ -64,16 +64,15 @@ class TransE(BaseOWAModule):
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
 
-    def forward(self, batch_positives, batch_negatives):
-        # Normalize embeddings of entities
+    def apply_forward_constraints(self):
+        """."""
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
 
-        positive_scores = self._score_triples(batch_positives)
-        negative_scores = self._score_triples(batch_negatives)
-        loss = self.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        return loss
+    def forward(self, batch, batch_negatives):
+        scores = self._score_triples(batch)
+        return scores
 
     def _score_triples(self, triples):
         head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
