@@ -28,6 +28,14 @@ class OWATrainingLoop(TrainingLoop):
         # Later, different negative sampling algorithms can be set
         self.negative_sampler = negative_sampler or BasicNegativeSampler(all_entities=self.all_entities)
 
+    def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
+        """."""
+        list_neg_batches = []
+
+        for _ in range(num_negs_per_pos):
+            neg_batch = self.negative_sampler.sample(positive_batch=pos_batch)
+            list_neg_batches.append(neg_batch)
+
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
@@ -47,19 +55,18 @@ class OWATrainingLoop(TrainingLoop):
 
             for i, pos_batch in enumerate(pos_batches):
                 current_batch_size = len(pos_batch)
-                list_pos_batches = []
-                list_neg_batches = []
 
                 self.optimizer.zero_grad()
+                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.kge_model.device)
 
-                for _ in range(num_negs_per_pos):
-                    neg_batch = self.negative_sampler.sample(positive_batch=pos_batch)
-                    list_pos_batches.append(pos_batch)
-                    list_neg_batches.append(neg_batch)
+                neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
+                neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.kge_model.device).view(-1, 3)
 
-                pos_batch = torch.tensor(list_pos_batches, dtype=torch.long, device=self.kge_model.device).view(-1, 3)
-                neg_batch = torch.tensor(list_neg_batches, dtype=torch.long, device=self.kge_model.device).view(-1, 3)
-                loss = self.kge_model(pos_batch, neg_batch)
+                positive_scores = self.kge_model(pos_batch)
+                positive_scores = positive_scores.repeat(num_negs_per_pos)
+                negative_scores = self.kge_model(neg_batch)
+
+                loss = self.kge_model.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
