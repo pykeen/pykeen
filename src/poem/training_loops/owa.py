@@ -36,6 +36,8 @@ class OWATrainingLoop(TrainingLoop):
             neg_batch = self.negative_sampler.sample(positive_batch=pos_batch)
             list_neg_batches.append(neg_batch)
 
+        return list_neg_batches
+
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
