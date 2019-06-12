@@ -19,7 +19,7 @@ class ComplEx(BaseOWAModule):
     kg_assumption = CWA
 
     def __init__(self, num_entities, num_relations, embedding_dim=200,
-                 criterion=nn.BCEWithLogitsLoss(reduction='mean'), preferred_device=GPU):
+                 criterion=nn.BCELoss(reduction='mean'), preferred_device=GPU):
         super(ComplEx, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
         self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim)
