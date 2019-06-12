@@ -34,7 +34,7 @@ class RESCAL(BaseOWAModule):
         super(RESCAL, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
         # Embeddings
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 
     def forward(self, positives, negatives):
         positive_scores = self._score_triples(positives)
@@ -43,34 +43,15 @@ class RESCAL(BaseOWAModule):
         return loss
 
     def _score_triples(self, triples):
-        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
-        scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings)
-        return scores
-
-    def _compute_scores(self, h_embs, r_embs, t_embs):
-        # Compute score and transform result to 1D tensor
-        m = r_embs.view(-1, self.embedding_dim, self.embedding_dim)
-        h_embs = h_embs.unsqueeze(-1).permute([0, 2, 1])
-        h_m_embs = torch.matmul(h_embs, m)
-        t_embs = t_embs.unsqueeze(-1)
-        scores = torch.matmul(h_m_embs, t_embs).view(-1)
-
-        # scores = torch.bmm(torch.transpose(h_emb, 1, 2), M)  # h^T M
-        # scores = torch.bmm(scores, t_emb)  # (h^T M) h
-        # scores = score.view(-1, 1)
-
-        return scores
-
-    def _get_triple_embeddings(self, triples):
+        # Get triple embeddings
         heads, relations, tails = slice_triples(triples)
-        return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-        )
+
+        # shape: (b, 1, d)
+        head_embeddings = self.entity_embeddings(heads).view(-1, 1, self.embedding_dim)
+        # shape: (b, d, d)
+        relation_embeddings = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+        # shape: (b, d, 1)
+        tail_embeddings = self.entity_embeddings(tails).view(-1, self.embedding_dim, 1)
+
+        scores = torch.bmm(head_embeddings, torch.bmm(relation_embeddings, tail_embeddings))
+        return scores
