@@ -20,17 +20,21 @@ def load_triples(path, delimiter='\t') -> np.array:
 
 def create_entity_and_relation_mappings(triples: np.array) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Map entities and relations to ids."""
-    heads, relations, tails = slice_triples(triples)
+    entities = set()
+    relations = set()
 
-    entities = np.unique(np.ndarray.flatten(np.concatenate([heads, tails])))
-    relations = np.unique(np.ndarray.flatten(relations).tolist())
+    for triple in triples:
+        head, relation, tail = triple
+        entities.add(head)
+        entities.add(tail)
+        relations.add(relation)
 
-    entity_to_id: Dict[int, str] = {
+    entity_to_id: Dict[str, int] = {
         value: key
         for key, value in enumerate(entities)
     }
 
-    rel_to_id: Dict[int, str] = {
+    rel_to_id: Dict[str, int] = {
         value: key
         for key, value in enumerate(relations)
     }
@@ -53,8 +57,8 @@ def create_triple_mappings(triples: np.array, are_triples_unique=True) -> Dict[t
 
 def map_triples_elements_to_ids(
         triples: np.array,
-        entity_to_id: Optional[Dict[int, str]],
-        rel_to_id: Optional[Dict[int, str]],
+        entity_to_id: Optional[Dict[str, int]],
+        rel_to_id: Optional[Dict[str, int]],
 ) -> np.ndarray:
     """Map entities and relations to predefined ids."""
     heads, relations, tails = slice_triples(triples)
@@ -66,6 +70,7 @@ def map_triples_elements_to_ids(
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)
     # Note: Unique changes the order of the triples
+    # Note: Using unique means implicit balancing of training samples
     return np.unique(ar=triples_of_ids, axis=0)
 
 
