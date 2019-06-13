@@ -29,7 +29,29 @@ class MetricResults:
     """Results from computing metrics."""
 
     mean_rank: float
+    mean_reciprocal_rank: float
+    adjusted_mean_rank: float
+    adjusted_mean_reciprocal_rank: float
     hits_at_k: Dict[int, float]
+
+
+def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
+    """
+    Given scores, computes rank and adjusted rank.
+
+    :param true_score: The score of the true triple.
+    :param all_scores: The scores of all corrupted triples.
+    :return: a tuple (best_rank, adjusted_avg_rank) where
+        best_rank: int (best_rank >= 1)
+            The rank of the true triple as given as the number of elements having a better score plus one.
+        adjusted_avg_rank: float (adjusted_avg_rank > 0)
+            The avg rank of the true triple divided by the expected rank in random scoring.
+    """
+    best_rank = np.greater(all_scores, true_score).sum() + 1
+    worst_rank = np.greater_equal(all_scores, true_score).sum() + 1
+    avg_rank = (best_rank + worst_rank) / 2.0
+    adjusted_avg_rank = avg_rank / ((all_scores.shape[0] + 1) / 2)
+    return best_rank, adjusted_avg_rank
 
 
 class RankBasedEvaluator(Evaluator):
@@ -129,7 +151,7 @@ class RankBasedEvaluator(Evaluator):
             corrupted_subject_based,
             corrupted_object_based,
             all_pos_triples_hashed,
-    ) -> Tuple[int, int]:
+    ) -> Tuple[int, int, float, float]:
         corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
@@ -151,27 +173,27 @@ class RankBasedEvaluator(Evaluator):
             corrupted_subject_based,
             corrupted_object_based,
             all_pos_triples_hashed=None
-    ) -> Tuple[int, int]:
+    ) -> Tuple[int, int, float, float]:
         scores_of_corrupted_subjects = kg_embedding_model.predict_scores(corrupted_subject_based)
         scores_of_corrupted_objects = kg_embedding_model.predict_scores(corrupted_object_based)
 
         score_of_positive = kg_embedding_model.predict_scores(
             torch.tensor([pos_triple], dtype=torch.long, device=self.device))
 
-        rank_of_positive_subject_based = scores_of_corrupted_subjects.shape[0] - \
-                                         np.less(scores_of_corrupted_subjects, score_of_positive).sum()
-
-        rank_of_positive_object_based = scores_of_corrupted_objects.shape[0] - \
-                                        np.less(scores_of_corrupted_objects, score_of_positive).sum()
+        rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(true_score=score_of_positive, all_scores=scores_of_corrupted_subjects)
+        rank_of_positive_object_based, adj_rank_of_positive_object_based = _compute_rank_from_scores(true_score=score_of_positive, all_scores=scores_of_corrupted_objects)
 
         return (
-            rank_of_positive_subject_based + 1,
-            rank_of_positive_object_based + 1,
+            rank_of_positive_subject_based,
+            rank_of_positive_object_based,
+            adj_rank_of_positive_subject_based,
+            adj_rank_of_positive_object_based
         )
 
     def evaluate(self, test_triples: np.ndarray) -> MetricResults:
         start = timeit.default_timer()
         ranks: List[int] = []
+        adj_ranks = np.empty(shape=(test_triples.shape[0], 2), dtype=np.float)
         hits_at_k_values = {
             k: []
             for k in self.hits_at_k
@@ -182,26 +204,28 @@ class RankBasedEvaluator(Evaluator):
         all_pos_triples = np.concatenate([self.train_triples, test_triples], axis=0)
         all_pos_triples_hashed = np.apply_along_axis(self._hash_triples, 1, all_pos_triples)
 
-        compute_rank_fct: Callable[..., Tuple[int, int]] = (
+        compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank
             if self.filter_neg_triples else
             self._compute_rank
         )
 
-        for pos_triple in test_triples:
+        for i, pos_triple in enumerate(test_triples):
             corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
                 triple=pos_triple)
 
-            rank_of_positive_subject_based, rank_of_positive_object_based = compute_rank_fct(
-                kg_embedding_model=self.kge_model,
-                pos_triple=pos_triple,
-                corrupted_subject_based=corrupted_subject_based,
-                corrupted_object_based=corrupted_object_based,
-                all_pos_triples_hashed=all_pos_triples_hashed,
-            )
+            rank_of_positive_subject_based, rank_of_positive_object_based, adjusted_rank_of_positive_subject_based, \
+                adjusted_rank_of_positive_object_based = compute_rank_fct(
+                    kg_embedding_model=self.kge_model,
+                    pos_triple=pos_triple,
+                    corrupted_subject_based=corrupted_subject_based,
+                    corrupted_object_based=corrupted_object_based,
+                    all_pos_triples_hashed=all_pos_triples_hashed,
+                )
 
             ranks.append(rank_of_positive_subject_based)
             ranks.append(rank_of_positive_object_based)
+            adj_ranks[i, :] = (adjusted_rank_of_positive_subject_based, adjusted_rank_of_positive_object_based)
 
             # Compute hits@k for k in {1,3,5,10}
             self._update_hits_at_k(
@@ -211,6 +235,9 @@ class RankBasedEvaluator(Evaluator):
             )
 
         mean_rank = float(np.mean(ranks))
+        mean_reciprocal_rank = float(np.mean(np.reciprocal(ranks)))
+        adjusted_mean_rank = float(np.mean(adj_ranks))
+        adjusted_mean_reciprocal_rank = float(np.mean(np.reciprocal(adj_ranks)))
         hits_at_k: Dict[int, float] = {
             k: np.mean(values)
             for k, values in hits_at_k_values.items()
@@ -221,5 +248,8 @@ class RankBasedEvaluator(Evaluator):
 
         return MetricResults(
             mean_rank=mean_rank,
+            mean_reciprocal_rank=mean_reciprocal_rank,
             hits_at_k=hits_at_k,
+            adjusted_mean_rank=adjusted_mean_rank,
+            adjusted_mean_reciprocal_rank=adjusted_mean_reciprocal_rank,
         )
