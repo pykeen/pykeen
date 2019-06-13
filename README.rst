@@ -10,6 +10,8 @@ by using its interactive command line interface that can be started with the com
 
 News
 ----
+We are currently working on PyKEEN 0.1.0 which wikk provide additional features such as several negative sampling approaches. Furthermore, we are integrating additional KGE models.
+
 We are developing a new `package <https://github.com/SmartDataAnalytics/POEM>`_ for training and evaluating multimodal KGE models which will be later integrated into PyKEEN.
 
 Share Your Experimental Artifacts
