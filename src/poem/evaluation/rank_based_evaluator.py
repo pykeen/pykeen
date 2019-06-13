@@ -9,6 +9,7 @@ from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
+from dataclasses_json import dataclass_json
 
 from .base import Evaluator
 from ..constants import (
@@ -24,6 +25,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
+@dataclass_json
 @dataclass
 class MetricResults:
     """Results from computing metrics."""
