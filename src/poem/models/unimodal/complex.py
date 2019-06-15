@@ -4,9 +4,10 @@
 
 import torch
 import torch.nn as nn
+from torch.nn.init import xavier_normal_
+
 from poem.constants import GPU, COMPLEX_NAME, OWA
 from poem.models.base_owa import BaseOWAModule, slice_triples
-from torch.nn.init import xavier_normal_
 
 
 class ComplEx(BaseOWAModule):
@@ -78,7 +79,3 @@ class ComplEx(BaseOWAModule):
                                  embedding_module=self.entity_embeddings_img,
                                  embedding_dim=self.embedding_dim),
         )
-
-    def predict_scores(self, triples):
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
