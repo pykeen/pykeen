@@ -12,10 +12,6 @@ import torch
 from dataclasses_json import dataclass_json
 
 from .base import Evaluator
-from ..constants import (
-    COMPLEX_CWA_NAME, COMPLEX_LITERAL_NAME_CWA, DISTMULT_LITERAL_NAME_CWA,
-    DISTMULT_LITERAL_NAME_OWA, TRANS_E_NAME,
-)
 
 __all__ = [
     'MetricResults',
@@ -72,13 +68,6 @@ class RankBasedEvaluator(Evaluator):
         self.filter_neg_triples = filter_neg_triples
         self.hits_at_k = hits_at_k if hits_at_k is not None else [1, 3, 5, 10]
         self.train_triples = training_triples
-        self.kge_to_descend_sorting = {
-            COMPLEX_CWA_NAME: True,
-            COMPLEX_LITERAL_NAME_CWA: True,
-            DISTMULT_LITERAL_NAME_CWA: True,
-            DISTMULT_LITERAL_NAME_OWA: True,
-            TRANS_E_NAME: False,
-        }
 
     def _hash_triples(self, triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
@@ -182,8 +171,10 @@ class RankBasedEvaluator(Evaluator):
         score_of_positive = kg_embedding_model.predict_scores(
             torch.tensor([pos_triple], dtype=torch.long, device=self.device))
 
-        rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(true_score=score_of_positive, all_scores=scores_of_corrupted_subjects)
-        rank_of_positive_object_based, adj_rank_of_positive_object_based = _compute_rank_from_scores(true_score=score_of_positive, all_scores=scores_of_corrupted_objects)
+        rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(
+            true_score=score_of_positive, all_scores=scores_of_corrupted_subjects)
+        rank_of_positive_object_based, adj_rank_of_positive_object_based = _compute_rank_from_scores(
+            true_score=score_of_positive, all_scores=scores_of_corrupted_objects)
 
         return (
             rank_of_positive_subject_based,
@@ -217,13 +208,13 @@ class RankBasedEvaluator(Evaluator):
                 triple=pos_triple)
 
             rank_of_positive_subject_based, rank_of_positive_object_based, adjusted_rank_of_positive_subject_based, \
-                adjusted_rank_of_positive_object_based = compute_rank_fct(
-                    kg_embedding_model=self.kge_model,
-                    pos_triple=pos_triple,
-                    corrupted_subject_based=corrupted_subject_based,
-                    corrupted_object_based=corrupted_object_based,
-                    all_pos_triples_hashed=all_pos_triples_hashed,
-                )
+            adjusted_rank_of_positive_object_based = compute_rank_fct(
+                kg_embedding_model=self.kge_model,
+                pos_triple=pos_triple,
+                corrupted_subject_based=corrupted_subject_based,
+                corrupted_object_based=corrupted_object_based,
+                all_pos_triples_hashed=all_pos_triples_hashed,
+            )
 
             ranks.append(rank_of_positive_subject_based)
             ranks.append(rank_of_positive_object_based)
