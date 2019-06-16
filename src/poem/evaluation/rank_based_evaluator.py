@@ -151,7 +151,6 @@ class RankBasedEvaluator(Evaluator):
             pos_triple=pos_triple,
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
-            device=self.device,
             all_pos_triples_hashed=all_pos_triples_hashed,
         )
 
