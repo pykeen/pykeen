@@ -35,18 +35,12 @@ class TriplesFactory:
             rel_to_id=self.relation_to_id,
         )
 
-        # Step 1: Extract all unique subject relation pairs from the triples
-        subject_relation_pairs = get_unique_subject_relation_pairs(triples=mapped_triples)
-
-        # Step 2: Create for each (s,r) pair the multi object label
         s_r_to_mulit_objects = create_multi_label_objects_instance(
-            unique_s_r_pairs=subject_relation_pairs,
             triples=mapped_triples,
-            num_entities=len(self.entity_to_id),
         )
 
         subject_relation_pairs = np.array(list(s_r_to_mulit_objects.keys()), dtype=np.float)
-        labels = np.array(list(s_r_to_mulit_objects.values()), dtype=np.float)
+        labels = list(s_r_to_mulit_objects.values())
 
         return CWAInstances(
             instances=subject_relation_pairs,

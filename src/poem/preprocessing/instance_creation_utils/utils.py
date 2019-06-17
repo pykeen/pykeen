@@ -1,64 +1,62 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict
+import logging
+import tqdm
 
 import numpy as np
 
 from ...utils import slice_triples
+from collections import defaultdict
+log = logging.getLogger(__name__)
 
 
-def create_multi_label_relation_instances(unique_entity_pairs: np.array,
-                                          triples: np.array,
-                                          num_relations: int,
+def create_multi_label_relation_instances(triples: np.array,
                                           create_class_other=False
                                           ) -> Dict[tuple, np.array]:
     """Create for each (s,o) pair the multi relation label."""
 
-    subjects, relations, objects = slice_triples(triples)
-    entity_pairs = np.concatenate([subjects, objects], axis=1)
+    log.info(f'Creating multi label relations instance')
 
-    # Create class 'other' for relations not contained in the KG
-    if create_class_other:
-        num_relations += 1
+    s_t_to_multi_relations = create_multi_label_instances(triples,
+                                                          element_1_index=0,
+                                                          element_2_index=2,
+                                                          label_index=1,
+                                                          )
+    log.info(f'Created multi label relations instance')
 
-    s_t_to_multi_relations = create_multi_label_instances(unique_pairs=unique_entity_pairs,
-                                                          pairs=entity_pairs,
-                                                          elements=relations,
-                                                          num_elements=num_relations)
     return s_t_to_multi_relations
 
 
-def create_multi_label_objects_instance(unique_s_r_pairs: np.array,
-                                        triples: np.array,
-                                        num_entities: int) -> Dict[tuple, np.array]:
+def create_multi_label_objects_instance(triples: np.array,
+                                        ) -> Dict[tuple, np.array]:
     """Create for each (s,r) pair the multi object label."""
 
-    subjects, relations, objects = slice_triples(triples)
-    s_r_pairs = np.concatenate([subjects, relations], axis=1)
+    log.info(f'Creating multi label objects instance')
 
-    s_r_to_mulit_objects = create_multi_label_instances(unique_pairs=unique_s_r_pairs,
-                                                        pairs=s_r_pairs,
-                                                        elements=objects,
-                                                        num_elements=num_entities)
-    return s_r_to_mulit_objects
+    s_r_to_multi_objects_new = create_multi_label_instances(triples,
+                                                            element_1_index=0,
+                                                            element_2_index=1,
+                                                            label_index=2,
+                                                            )
+
+    log.info(f'Created multi label objects instance')
+
+    return s_r_to_multi_objects_new
 
 
-def create_multi_label_instances(unique_pairs: np.array,
-                                 pairs: np.array,
-                                 elements: np.array,
-                                 num_elements) -> Dict[tuple, np.array]:
+def create_multi_label_instances(triples: np.array,
+                                 element_1_index: int,
+                                 element_2_index: int,
+                                 label_index: int,
+                                 ) -> Dict[tuple, np.array]:
     """Create for each (element_1, element_2) pair the multi-label."""
 
-    instance_to_multi_label = {}
+    instance_to_multi_label = defaultdict(set)
+    for row in tqdm.tqdm(triples):
+        instance_to_multi_label[(row[element_1_index], row[element_2_index])].add(row[label_index])
 
-    for unique_pair in unique_pairs:
-        # Step 1: Get all corresponding elements of pair
-        indices = np.where((pairs == unique_pair).all(-1))
-        all_corresponding_elements_of_pair = np.array(np.sort(elements[indices]).tolist(), dtype=np.int)
-        # Step 2: Create hot encoding labels
-        multi_label = np.zeros(num_elements)
-        np.put(multi_label, all_corresponding_elements_of_pair, np.ones(len(all_corresponding_elements_of_pair)))
-        # Step 3: Save in dict
-        instance_to_multi_label[tuple(unique_pair)] = multi_label
+    # Create lists out of sets for proper numpy indexing when loading the labels
+    instance_to_multi_label_new = {key: list(value) for key, value in instance_to_multi_label.items()}
 
-    return instance_to_multi_label
+    return instance_to_multi_label_new
