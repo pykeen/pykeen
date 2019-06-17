@@ -39,7 +39,6 @@ class OWATrainingLoop(TrainingLoop):
 
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
         pos_triples = training_instances.instances
-        torch.tensor(training_instances, dtype=torch.long)
 
         data_loader = torch.utils.data.DataLoader(dataset=training_instances, batch_size=batch_size, shuffle=True)
 
