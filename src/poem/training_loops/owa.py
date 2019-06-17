@@ -40,7 +40,8 @@ class OWATrainingLoop(TrainingLoop):
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
         pos_triples = training_instances.instances
 
-        data_loader = torch.utils.data.DataLoader(dataset=training_instances, batch_size=batch_size, shuffle=True)
+        data_loader = torch.utils.data.DataLoader(dataset=training_instances.instances, batch_size=batch_size,
+                                                  shuffle=True)
 
         start_training = timeit.default_timer()
 
