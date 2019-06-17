@@ -5,13 +5,12 @@
 import logging
 import timeit
 
-import numpy as np
 import torch
 import torch.nn as nn
+import torch.utils.data
 from tqdm import trange
 
 from .base import TrainingLoop
-from .utils import split_list_in_batches
 from ..negative_sampling.basic_negative_sampler import BasicNegativeSampler
 
 __all__ = [
@@ -40,7 +39,9 @@ class OWATrainingLoop(TrainingLoop):
 
     def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
         pos_triples = training_instances.instances
-        num_pos_triples = pos_triples.shape[0]
+        torch.tensor(training_instances, dtype=torch.long)
+
+        data_loader = torch.utils.data.DataLoader(dataset=training_instances, batch_size=batch_size, shuffle=True)
 
         start_training = timeit.default_timer()
 
@@ -49,13 +50,10 @@ class OWATrainingLoop(TrainingLoop):
         log.info(f'****running model on {self.kge_model.device}****')
 
         for _ in trange(num_epochs, **_tqdm_kwargs):
-            indices = np.arange(num_pos_triples)
-            np.random.shuffle(indices)
-            pos_triples = pos_triples[indices]
-            pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
+
             current_epoch_loss = 0.
 
-            for i, pos_batch in enumerate(pos_batches):
+            for i, pos_batch in enumerate(data_loader):
                 current_batch_size = len(pos_batch)
 
                 self.optimizer.zero_grad()
@@ -85,7 +83,7 @@ class OWATrainingLoop(TrainingLoop):
                 self.optimizer.step()
 
             # Track epoch loss
-            self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples)*num_negs_per_pos))
+            self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
 
         stop_training = timeit.default_timer()
         log.debug("training took %.2fs seconds", stop_training - start_training)
