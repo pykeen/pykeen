@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the Complex model based on the closed world assumption (CWA)."""
+"""Implementation of the Complex model based on the open world assumption (OWA)."""
 
 import torch
 import torch.nn as nn
-from poem.constants import CWA, GPU, COMPLEX_NAME
-from poem.models.base_owa import BaseOWAModule, slice_triples
 from torch.nn.init import xavier_normal_
+
+from poem.constants import GPU, COMPLEX_NAME, OWA
+from poem.models.base_owa import BaseOWAModule, slice_triples
 
 
 class ComplEx(BaseOWAModule):
@@ -16,7 +17,7 @@ class ComplEx(BaseOWAModule):
                               International Conference on Machine Learning. 2016.
     """
     model_name = COMPLEX_NAME
-    kg_assumption = CWA
+    kg_assumption = OWA
 
     def __init__(self, num_entities, num_relations, embedding_dim=200,
                  criterion=nn.BCELoss(reduction='mean'), preferred_device=GPU):
@@ -78,7 +79,3 @@ class ComplEx(BaseOWAModule):
                                  embedding_module=self.entity_embeddings_img,
                                  embedding_dim=self.embedding_dim),
         )
-
-    def predict_scores(self, triples):
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()

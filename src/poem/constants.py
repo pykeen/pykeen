@@ -26,6 +26,7 @@ CWA = 'closed_world_assumption'
 NUMERIC_LITERALS = 'numeric_literals'
 BATCH_SIZE = 'batch_size'
 NUM_EPOCHS = 'num_epochs'
+NUM_NEGS_PER_POS = 'num_negatives_per_positive'
 SEED = 'random_seed'
 # TransH related
 SCORING_FUNCTION_NORM = 'scoring_function'

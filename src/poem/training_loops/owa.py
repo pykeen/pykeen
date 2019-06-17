@@ -59,9 +59,8 @@ class OWATrainingLoop(TrainingLoop):
                 current_batch_size = len(pos_batch)
 
                 self.optimizer.zero_grad()
-                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.kge_model.device)
-
                 neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
+                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.kge_model.device)
                 neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.kge_model.device).view(-1, 3)
 
                 # Apply forward constraint if defined for used KGE model, otherwise method just returns

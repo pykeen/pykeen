@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from collections import OrderedDict
 
 import click
 import numpy as np
@@ -88,9 +87,6 @@ def main(training_file, test_file, output_direc):
 
     # Step 6: Evaluate
     metric_results = evaluator.evaluate(test_triples=mapped_test_triples[0:100, :])
-    results = OrderedDict()
-    results['mean_rank'] = metric_results.mean_rank
-    results['hits_at_k'] = metric_results.hits_at_k
 
     # Step 7: Create summary
     config = {
@@ -104,7 +100,7 @@ def main(training_file, test_file, output_direc):
     eval_file = os.path.join(output_directory, 'evaluation_summary.json')
 
     with open(eval_file, 'w') as file:
-        json.dump(results, file, indent=2)
+        json.dump(metric_results.to_json(), file, indent=2)
 
     losses_file = os.path.join(output_directory, 'losses.json')
 
