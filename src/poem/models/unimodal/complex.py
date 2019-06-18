@@ -19,7 +19,7 @@ class ComplEx(BaseOWAModule):
     model_name = COMPLEX_NAME
     kg_assumption = OWA
 
-    def __init__(self, num_entities, num_relations, embedding_dim=200,
+    def __init__(self, num_entities, num_relations, embedding_dim=200, neg_label=0.,
                  criterion=nn.BCELoss(reduction='mean'), preferred_device=GPU):
         super(ComplEx, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
@@ -27,6 +27,7 @@ class ComplEx(BaseOWAModule):
         self.entity_embeddings_img = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.neg_label = neg_label
 
         # self.init()
         self.criterion = criterion
