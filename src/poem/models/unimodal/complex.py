@@ -23,7 +23,7 @@ class ComplEx(BaseOWAModule):
                  criterion=nn.BCELoss(reduction='mean'), preferred_device=GPU):
         super(ComplEx, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
-        self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.entity_embeddings_real = self.entity_embeddings
         self.entity_embeddings_img = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
