@@ -28,7 +28,7 @@ class ComplEx(BaseOWAModule):
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
 
-        self.init()
+        # self.init()
         self.criterion = torch.nn.BCELoss()
 
     def init(self):
