@@ -49,12 +49,12 @@ class ComplEx(BaseOWAModule):
 
         # ComplEx space bilinear product (equivalent to HolE)
         # *: Elementwise multiplication
-        real_real_real = torch.sum(heads_real * relations_real * tails_real, dim=1)
-        real_img_img = torch.sum(heads_real * relations_img * tails_img, dim=1)
-        img_real_img = torch.sum(heads_img * relations_real * tails_img, dim=1)
-        img_img_real = torch.sum(heads_img * relations_img * tails_real, dim=1)
+        real_real_real = heads_real * relations_real * tails_real
+        real_img_img = heads_real * relations_img * tails_img
+        img_real_img = heads_img * relations_real * tails_img
+        img_img_real = heads_img * relations_img * tails_real
 
-        scores = real_real_real + real_img_img + img_real_img - img_img_real
+        scores = torch.sum(real_real_real + real_img_img + img_real_img - img_img_real, dim=1)
 
         return scores
 
