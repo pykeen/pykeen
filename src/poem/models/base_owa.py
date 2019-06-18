@@ -26,7 +26,7 @@ class BaseOWAModule(nn.Module):
         super().__init__()
 
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and preferred_device==GPU else 'cpu')
+            'cuda:0' if torch.cuda.is_available() and preferred_device == GPU else 'cpu')
 
         # Loss
         self.criterion = criterion
@@ -61,21 +61,19 @@ class BaseOWAModule(nn.Module):
         """"""
         return
 
-    def _compute_label_loss(self, probs_pos, probs_neg):
+    def _compute_label_loss(self, pos_elements, neg_elements):
         """."""
 
         pos_labels = torch.FloatTensor([1])
-        pos_labels = pos_labels.expand(probs_pos.shape[0]).to(self.device)
+        pos_labels = pos_labels.expand(pos_elements.shape[0]).to(self.device)
 
-        neg_labels = torch.FloatTensor([0])
-        neg_labels = neg_labels.expand(probs_neg.shape[0]).to(self.device)
+        neg_labels = torch.FloatTensor([self.neg_label])
+        neg_labels = neg_labels.expand(neg_elements.shape[0]).to(self.device)
 
-
-        scores = torch.cat([probs_pos, probs_neg])
-        probs = self.compute_probabilities(scores=scores)
+        scores = torch.cat([pos_elements, neg_elements])
         labels = torch.cat([pos_labels, neg_labels])
 
-        loss = self.criterion(probs, labels)
+        loss = self.criterion(scores, labels)
 
         return loss
 
@@ -101,6 +99,7 @@ class BaseOWAModule(nn.Module):
     def forward(self, batch):
         scores = self._score_triples(batch)
         return scores
+
 
 def slice_triples(triples):
     """Get the heads, relations, and tails from a matrix of triples."""
