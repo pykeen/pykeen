@@ -29,7 +29,7 @@ class ComplEx(BaseOWAModule):
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
 
         # self.init()
-        self.criterion = torch.nn.BCELoss()
+        self.criterion = criterion
 
     def init(self):
         xavier_normal_(self.entity_embeddings_real.weight.data)
