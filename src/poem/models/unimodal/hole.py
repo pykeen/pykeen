@@ -80,13 +80,13 @@ class HolE(BaseOWAModule):
 
     def _initialize(self):
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        entity_embeddings_init_bound = 6 / np.sqrt(np.sum(self.entity_embeddings.shape))
+        entity_embeddings_init_bound = 6 / np.sqrt(self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim)
         nn.init.uniform_(
             self.entity_embeddings.weight.data,
             a=-entity_embeddings_init_bound,
             b=+entity_embeddings_init_bound,
         )
-        relation_embeddings_init_bound = 6 / np.sqrt(np.sum(self.relation_embeddings.shape))
+        relation_embeddings_init_bound = 6 / np.sqrt(self.relation_embeddings.num_embeddings + self.relation_embeddings.embedding_dim)
         nn.init.uniform_(
             self.relation_embeddings.weight.data,
             a=-relation_embeddings_init_bound,
