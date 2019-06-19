@@ -45,6 +45,8 @@ class ComplEx(BaseOWAModule):
         loss = super()._compute_label_loss(pos_elements=pos_scores, neg_elements=neg_scores)
         loss += self.regularization_factor*self.current_regularization_term
 
+        return loss
+
     def _score_triples(self, triples):
         heads_real, relations_real, tails_real, heads_img, relations_img, tails_img = self._get_triple_embeddings(
             triples)
