@@ -19,7 +19,7 @@ class ComplEx(BaseOWAModule):
     model_name = COMPLEX_NAME
     kg_assumption = OWA
 
-    def __init__(self, num_entities, num_relations, embedding_dim=200, neg_label=0.,
+    def __init__(self, num_entities, num_relations, embedding_dim=200, neg_label=0., regularization_factor=0.1,
                  criterion=nn.BCELoss(reduction='mean'), preferred_device=GPU):
         super(ComplEx, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
@@ -28,8 +28,10 @@ class ComplEx(BaseOWAModule):
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
         self.neg_label = neg_label
+        self.regularization_factor = torch.Parameter(regularization_factor)
+        self.current_regularization_term = None
 
-        # self.init()
+        self.init()
         self.criterion = criterion
 
     def init(self):
@@ -38,11 +40,28 @@ class ComplEx(BaseOWAModule):
         xavier_normal_(self.relation_embeddings_real.weight.data)
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
+    def _compute_label_loss(self, pos_scores, neg_scores):
+        """."""
+        loss = super()._compute_label_loss(pos_elements=pos_scores, neg_elements=neg_scores)
+        loss += self.regularization_factor*self.current_regularization_term
+
     def _score_triples(self, triples):
         heads_real, relations_real, tails_real, heads_img, relations_img, tails_img = self._get_triple_embeddings(
             triples)
         scores = self._compute_scores(heads_real, relations_real, tails_real, heads_img, relations_img, tails_img)
         return scores
+
+    def _compute_regularization_term(self, heads_real, relations_real, tails_real, heads_img, relations_img, tails_img):
+        """"""
+
+        regularization_term = torch.norm(heads_real, dim=1, p=2).sum()
+        regularization_term += torch.norm(relations_real, dim=1, p=2).sum()
+        regularization_term += torch.norm(tails_real, dim=1, p=2).sum()
+        regularization_term += torch.norm(heads_img, dim=1, p=2).sum()
+        regularization_term += torch.norm(relations_img, dim=1, p=2).sum()
+        regularization_term += torch.norm(tails_img, dim=1, p=2).sum()
+
+        return regularization_term
 
     def _compute_scores(self, heads_real, relations_real, tails_real, heads_img, relations_img, tails_img):
         """."""
@@ -56,6 +75,8 @@ class ComplEx(BaseOWAModule):
 
         scores = torch.sum(real_real_real + real_img_img + img_real_img - img_img_real, dim=1)
 
+        self.current_regularization_term = self._compute_regularization_term(heads_real, relations_real, tails_real,
+                                                                             heads_img, relations_img, tails_img)
         return scores
 
     def _get_triple_embeddings(self, triples):
