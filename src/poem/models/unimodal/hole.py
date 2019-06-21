@@ -7,9 +7,9 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
+from poem.models.base_owa import BaseOWAModule
 from torch import nn
 
-from poem.models.base_owa import BaseOWAModule
 from ...constants import GPU, HOL_E_NAME, SCORING_FUNCTION_NORM
 from ...utils import slice_triples
 
@@ -70,7 +70,8 @@ class HolE(BaseOWAModule):
     model_name = HOL_E_NAME
     hyper_params = BaseOWAModule.hyper_params + [SCORING_FUNCTION_NORM]
 
-    def __init__(self, num_entities, num_relations, embedding_dim=200, criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
+    def __init__(self, num_entities, num_relations, embedding_dim=200,
+                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
         super(HolE, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
 
         # Embeddings
@@ -80,13 +81,15 @@ class HolE(BaseOWAModule):
 
     def _initialize(self):
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        entity_embeddings_init_bound = 6 / np.sqrt(self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim)
+        entity_embeddings_init_bound = 6 / np.sqrt(
+            self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim)
         nn.init.uniform_(
             self.entity_embeddings.weight.data,
             a=-entity_embeddings_init_bound,
             b=+entity_embeddings_init_bound,
         )
-        relation_embeddings_init_bound = 6 / np.sqrt(self.relation_embeddings.num_embeddings + self.relation_embeddings.embedding_dim)
+        relation_embeddings_init_bound = 6 / np.sqrt(
+            self.relation_embeddings.num_embeddings + self.relation_embeddings.embedding_dim)
         nn.init.uniform_(
             self.relation_embeddings.weight.data,
             a=-relation_embeddings_init_bound,
@@ -98,8 +101,8 @@ class HolE(BaseOWAModule):
         # Do not compute gradients for forward constraints
         with torch.no_grad():
             # Ensure norm of entity embeddings is at most 1
-            norms = torch.norm(self.entity_embeddings, p=2, dim=1, keepdim=True)
-            self.entity_embeddings /= torch.max(norms, torch.ones(size=(1, 1)))
+            norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1, keepdim=True)
+            self.entity_embeddings.weight /= torch.max(norms, torch.ones(size=(1, 1)))
 
     def _score_triples(self, triples):
         heads, relations, tails = slice_triples(triples)
