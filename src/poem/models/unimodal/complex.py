@@ -29,7 +29,7 @@ class ComplEx(BaseOWAModule):
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
         self.neg_label = neg_label
-        self.regularization_factor = torch.nn.Parameter(torch.Tensor([regularization_factor], device=self.device))
+        self.regularization_factor = torch.nn.Parameter(torch.Tensor([regularization_factor]))
         self.current_regularization_term = None
 
         self.init()
