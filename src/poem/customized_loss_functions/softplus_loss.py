@@ -16,9 +16,6 @@ class SoftplusLoss(_Loss):
     @weak_script_method
     def forward(self, scores, labels):
         """."""
-        labels = labels * (-1)
-        scores = labels * scores
-        # FIXME Why not just do loss = self.softplus(labels * labels * scores * -1)?
-        loss = self.softplus(labels * scores)
+        loss = self.softplus((-1) * labels * scores)
         loss = self._reduction_method(loss)
         return loss
