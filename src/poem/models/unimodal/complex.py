@@ -41,13 +41,6 @@ class ComplEx(BaseOWAModule):
         xavier_normal_(self.relation_embeddings_real.weight.data)
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
-    def _compute_label_loss(self, pos_scores, neg_scores):
-        """."""
-        loss = super()._compute_label_loss(pos_elements=pos_scores, neg_elements=neg_scores)
-        loss += self.regularization_factor.item() * self.current_regularization_term
-
-        return loss
-
     def _score_triples(self, triples):
         heads_real, relations_real, tails_real, heads_img, relations_img, tails_img = self._get_triple_embeddings(
             triples)
@@ -57,14 +50,21 @@ class ComplEx(BaseOWAModule):
     def _compute_regularization_term(self, heads_real, relations_real, tails_real, heads_img, relations_img, tails_img):
         """"""
 
-        regularization_term = torch.norm(heads_real, dim=1, p=2).sum()
-        regularization_term += torch.norm(relations_real, dim=1, p=2).sum()
-        regularization_term += torch.norm(tails_real, dim=1, p=2).sum()
-        regularization_term += torch.norm(heads_img, dim=1, p=2).sum()
-        regularization_term += torch.norm(relations_img, dim=1, p=2).sum()
-        regularization_term += torch.norm(tails_img, dim=1, p=2).sum()
+        regularization_term = torch.mean(heads_real ** 2)
+        regularization_term += torch.mean(heads_img ** 2)
+        regularization_term += torch.mean(relations_real ** 2)
+        regularization_term += torch.mean(relations_img ** 2)
+        regularization_term += torch.mean(tails_real ** 2)
+        regularization_term += torch.mean(tails_img ** 2)
 
         return regularization_term
+
+    def _compute_label_loss(self, pos_scores, neg_scores):
+        """."""
+        loss = super()._compute_label_loss(pos_elements=pos_scores, neg_elements=neg_scores)
+        loss += self.regularization_factor.item() * self.current_regularization_term
+
+        return loss
 
     def _compute_scores(self, heads_real, relations_real, tails_real, heads_img, relations_img, tails_img):
         """."""
