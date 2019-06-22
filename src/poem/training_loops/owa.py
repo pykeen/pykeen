@@ -86,6 +86,7 @@ class OWATrainingLoop(TrainingLoop):
 
             # Track epoch loss
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples)*num_negs_per_pos))
+            print(self.losses_per_epochs)
 
         stop_training = timeit.default_timer()
         log.debug("training took %.2fs seconds", stop_training - start_training)
