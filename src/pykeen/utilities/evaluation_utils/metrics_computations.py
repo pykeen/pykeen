@@ -57,10 +57,8 @@ def _create_corrupted_triples(triple, all_entities, device):
     tuples_object_based = np.repeat(a=tuple_object_based, repeats=candidate_entities_object_based.shape[0], axis=0)
 
     corrupted_subject_based = np.concatenate([candidate_entities_subject_based, tuples_subject_based], axis=1)
-    corrupted_subject_based = torch.tensor(corrupted_subject_based, dtype=torch.long, device=device)
 
     corrupted_object_based = np.concatenate([tuples_object_based, candidate_entities_object_based], axis=1)
-    corrupted_object_based = torch.tensor(corrupted_object_based, dtype=torch.long, device=device)
 
     return corrupted_subject_based, corrupted_object_based
 
@@ -137,6 +135,10 @@ def _compute_rank(
     :param device:
     :param all_pos_triples_hashed: This parameter isn't used but is necessary for compatability
     """
+
+    corrupted_subject_based = torch.tensor(corrupted_subject_based, dtype=torch.long, device=device)
+    corrupted_object_based = torch.tensor(corrupted_object_based, dtype=torch.long, device=device)
+
     scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
     scores_of_corrupted_objects = kg_embedding_model.predict(corrupted_object_based)
 
