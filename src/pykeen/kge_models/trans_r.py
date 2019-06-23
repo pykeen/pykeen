@@ -88,7 +88,7 @@ class TransR(BaseModule):
         return distances
 
     def _project_entities(self, entity_embs, projection_matrix_embs):
-        projected_entity_embs = torch.matmul(entity_embs.unsqueeze(1), projection_matrix_embs)
+        projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])
         projected_entity_embs = torch.clamp(projected_entity_embs, max=1.)
         return projected_entity_embs
 
