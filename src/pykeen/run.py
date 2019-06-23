@@ -7,7 +7,7 @@ import os
 import pickle
 from dataclasses import dataclass
 from typing import Dict, Mapping, Optional
-
+import time
 import numpy as np
 import torch
 
@@ -135,7 +135,7 @@ def run(
         if OUTPUT_DIREC not in config:
             raise Exception('No output directory defined.')
 
-        output_directory = config[OUTPUT_DIREC]
+        output_directory = os.path.join(config[OUTPUT_DIREC], time.strftime("%Y-%m-%d-%H-%M-%S"))
         os.makedirs(output_directory, exist_ok=True)
 
     config['pykeen-version'] = VERSION
