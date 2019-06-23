@@ -5,7 +5,6 @@
 import json
 import os
 import pickle
-import time
 from dataclasses import dataclass
 from typing import Dict, Mapping, Optional
 
@@ -131,7 +130,12 @@ def run(
     :param config: The configuration specifying the KGE model and its hyper-parameters
     :param output_directory: The directory to store the results
     """
+
     if output_directory is None:
+        if OUTPUT_DIREC not in config:
+            raise Exception('No output directory defined.')
+
+        output_directory = config[OUTPUT_DIREC]
         os.makedirs(output_directory, exist_ok=True)
 
     config['pykeen-version'] = VERSION
