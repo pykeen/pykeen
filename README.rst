@@ -13,7 +13,8 @@ News
 We are currently working on PyKEEN 0.1.0 which will provide additional features such as several negative
 sampling approaches and further evaluation metrics. Furthermore, we are integrating additional KGE models.
 
-We are developing a new `package <https://github.com/SmartDataAnalytics/POEM>`_ for training and evaluating multimodal KGE models which will be later integrated into PyKEEN.
+We are developing a new `package <https://github.com/SmartDataAnalytics/POEM>`_ for training and evaluating multimodal
+KGE models which will be later integrated into PyKEEN.
 
 Share Your Experimental Artifacts
 ---------------------------------
