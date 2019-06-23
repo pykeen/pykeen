@@ -182,8 +182,8 @@ def prompt_config(*, config: Optional[Dict] = None, show_welcome: bool = True, d
     config[OUTPUT_DIREC] = query_output_directory()
     print_section_divider()
 
-    config_path = os.path.join(config[OUTPUT_DIREC], 'configuration.json')
-    with open(config_path, 'w') as file:
-        json.dump(config, file, indent=2)
+    # config_path = os.path.join(config[OUTPUT_DIREC], 'configuration.json')
+    # with open(config_path, 'w') as file:
+    #     json.dump(config, file, indent=2)
 
     return config
