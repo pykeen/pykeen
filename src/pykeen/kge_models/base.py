@@ -67,7 +67,7 @@ class BaseModule(nn.Module):
         self.margin_loss = config.margin_loss
         self.criterion = nn.MarginRankingLoss(
             margin=self.margin_loss,
-            size_average=self.margin_ranking_loss_size_average,
+            reduction='mean' if self.margin_ranking_loss_size_average else 'sum'
         )
 
         # Entity dimensions
