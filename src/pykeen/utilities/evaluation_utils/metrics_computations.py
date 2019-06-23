@@ -42,10 +42,8 @@ def update_hits_at_k(
 
 
 def _create_corrupted_triples(triple, all_entities, device):
-    candidate_entities_subject_based = np.delete(arr=all_entities, obj=triple[0:1])
-    candidate_entities_subject_based = np.reshape(candidate_entities_subject_based, newshape=(-1, 1))
-    candidate_entities_object_based = np.delete(arr=all_entities, obj=triple[2:3])
-    candidate_entities_object_based = np.reshape(candidate_entities_object_based, newshape=(-1, 1))
+    candidate_entities_subject_based = all_entities[all_entities != triple[0:1]].reshape((-1, 1))
+    candidate_entities_object_based = all_entities[all_entities != triple[2:3]].reshape((-1, 1))
 
     # Extract current test tuple: Either (subject,predicate) or (predicate,object)
     tuple_subject_based = np.reshape(a=triple[1:3], newshape=(1, 2))
