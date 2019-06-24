@@ -44,10 +44,10 @@ class CWATrainingLoop(TrainingLoop):
             labels_batches = split_list_in_batches(input_list=labels, batch_size=batch_size)
             current_epoch_loss = 0.
 
-            for i, batch_pairs in enumerate(batches):
+            for batch_pairs, batch_labels in zip(batches, labels_batches):
                 current_batch_size = len(batch_pairs)
                 batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.device)
-                batch_labels = labels_batches[i]
+
                 batch_labels_full = torch.zeros((current_batch_size, num_entities), device=self.device)
                 for i in range(current_batch_size):
                     batch_labels_full[i, batch_labels[i]] = 1
