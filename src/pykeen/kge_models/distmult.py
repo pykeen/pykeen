@@ -4,10 +4,10 @@
 
 from typing import Dict
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import xavier_normal_
 
 from pykeen.constants import DISTMULT_NAME
 from pykeen.kge_models.base import BaseModule, slice_triples
@@ -40,22 +40,9 @@ class DistMult(BaseModule):
         self._initialize()
 
     def _initialize(self):
-        # The same bound is used for both entity embeddings and relation embeddings because they have the same dimension
-        embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-embeddings_init_bound,
-            b=+embeddings_init_bound,
-        )
-        nn.init.uniform_(
-            self.relation_embeddings.weight.data,
-            a=-embeddings_init_bound,
-            b=+embeddings_init_bound,
-        )
-
-        norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
-        self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
+        """."""
+        xavier_normal_(self.entity_embeddings.weight.data)
+        xavier_normal_(self.relation_embeddings.weight.data)
 
     def predict(self, triples):
         # triples = torch.tensor(triples, dtype=torch.long, device=self.device)
