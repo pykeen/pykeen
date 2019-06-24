@@ -8,8 +8,8 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ..base_owa import BaseOWAModule, slice_triples
+from ..model_config import ModelConfig
 from ...constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS
-from ...model_config import ModelConfig
 
 
 class DistMultLiteral(BaseOWAModule):

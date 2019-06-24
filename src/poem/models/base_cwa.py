@@ -8,8 +8,8 @@ from typing import Dict, Optional
 import torch
 from torch import nn
 
+from .model_config import ModelConfig
 from ..constants import EMBEDDING_DIM, GPU, LEARNING_RATE, MARGIN_LOSS, NUM_ENTITIES, NUM_RELATIONS, PREFERRED_DEVICE
-from ..model_config import ModelConfig
 
 __all__ = [
     'BaseCWAModule',

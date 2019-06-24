@@ -9,24 +9,23 @@ from typing import Dict, Mapping, Optional, Tuple, Type, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from poem.basic_utils import is_evaluation_requested
+from dataclasses_json import dataclass_json
+
 from poem.constants import (
     CWA, DISTMULT_LITERAL_NAME_OWA, EVALUATOR, EXECUTION_MODE, HPO_MODE, KG_EMBEDDING_MODEL_NAME,
     NUM_ENTITIES, NUM_RELATIONS, OWA, RANK_BASED_EVALUATOR, SEED, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_MODE,
 )
-from poem.evaluation.abstract_evaluator import Evaluator, EvaluatorConfig
-from poem.evaluation.ranked_based_evaluator import RankBasedEvaluator
+from poem.evaluation import Evaluator, EvaluatorConfig, RankBasedEvaluator
 from poem.instance_creation_factories.instances import Instances, MultimodalInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
-from poem.model_config import ModelConfig
-from poem.models import DistMultLiteral
+from poem.models import DistMultLiteral, ModelConfig
 from poem.training_loops import OWATrainingLoop, TrainingLoop
 
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
+@dataclass_json
 @dataclass
 class EvalResults:
     """Results from computing metrics."""
@@ -55,12 +54,15 @@ class Helper:
     """."""
 
     KGE_MODELS = {
-        DistMultLiteral.model_name: DistMultLiteral,
+        model_cls.model_name: model_cls
+        for model_cls in [
+            DistMultLiteral,
+        ]
     }
 
     KG_ASSUMPTION_TO_TRAINING_LOOP = {
         CWA: None,
-        OWA: OWATrainingLoop
+        OWA: OWATrainingLoop,
     }
 
     EVALUATORS: Mapping[str, Type[Evaluator]] = {
@@ -68,7 +70,7 @@ class Helper:
     }
 
     KGE_MODEL_NAME_TO_FACTORY = {
-        DISTMULT_LITERAL_NAME_OWA: TriplesNumericLiteralsFactory
+        DISTMULT_LITERAL_NAME_OWA: TriplesNumericLiteralsFactory,
     }
 
     # ---------------------Get pipeline components---------------------#
@@ -82,7 +84,13 @@ class Helper:
     ) -> Evaluator:
         """."""
         evaluator_name = config.get(EVALUATOR)
-        evaluator_cls = Helper.EVALUATORS.get(evaluator_name)
+        if evaluator_name is None:
+            raise ValueError(f'Configuration is missing key: {EVALUATOR}')
+
+        evaluator_cls: Type[Evaluator] = Helper.EVALUATORS.get(evaluator_name)
+        if evaluator_cls is None:
+            raise ValueError(f'Invalid evaluator name: {evaluator_name}')
+
         evaluator_config = EvaluatorConfig(
             config=config,
             entity_to_id=entity_to_id,
@@ -91,10 +99,8 @@ class Helper:
             training_triples=training_triples,
         )
 
-        if evaluator_cls is None:
-            raise ValueError(f'Invalid evaluator name: {evaluator_name}')
-
-        return evaluator_cls(evaluator_config=evaluator_config)
+        evaluator: Evaluator = evaluator_cls(evaluator_config=evaluator_config)
+        return evaluator
 
     @staticmethod
     def get_training_loop(config: Dict, kge_model: nn.Module, all_entities: np.ndarray) -> TrainingLoop:
@@ -126,7 +132,6 @@ class Helper:
     @staticmethod
     def get_factory(kge_model_name, entity_to_id, relation_to_id) -> TriplesFactory:
         """."""
-
         factory = Helper.KGE_MODEL_NAME_TO_FACTORY.get(kge_model_name)
 
         if factory is None:
@@ -137,7 +142,6 @@ class Helper:
     @staticmethod
     def preprocess_train_triples(kge_model_name, entity_to_id, relation_to_id, kg_assumption) -> Instances:
         """"""
-
         # FIXME
         instance_factory = Helper.get_factory(config)
         return instance_factory.create_instances()
@@ -241,7 +245,7 @@ class Pipeline:
             fitted_kge_model, losses_per_epochs = self._train(kge_model=kge_model,
                                                               training_instances=self.training_instances)
 
-            if is_evaluation_requested(config=self.config):
+            if self._is_evaluation_requested:
                 # eval
                 metric_results = self._evaluate(kge_model=fitted_kge_model, test_triples=self.test_instances.instances)
 
