@@ -44,7 +44,6 @@ class ExperimentalArtifacts:
     entities_to_ids: Mapping[str, int]
     relations_to_ids: Mapping[str, int]
 
-
 @dataclass
 class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
     eval_results: EvalResults

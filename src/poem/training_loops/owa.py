@@ -3,7 +3,7 @@
 """Training KGE models based on the OWA."""
 
 import logging
-import timeit
+from typing import Any, Mapping, Optional, Type
 
 import numpy as np
 import torch
@@ -12,6 +12,7 @@ from tqdm import trange
 
 from .base import TrainingLoop
 from .utils import split_list_in_batches
+from ..negative_sampling import NegativeSampler
 from ..negative_sampling.basic_negative_sampler import BasicNegativeSampler
 
 __all__ = [
@@ -23,32 +24,46 @@ log.setLevel(logging.INFO)
 
 
 class OWATrainingLoop(TrainingLoop):
-    def __init__(self, kge_model: nn.Module, optimizer, all_entities, negative_sampler=None):
-        super().__init__(kge_model=kge_model, optimizer=optimizer, all_entities=all_entities)
-        # Later, different negative sampling algorithms can be set
-        self.negative_sampler = negative_sampler or BasicNegativeSampler(all_entities=self.all_entities)
+    def __init__(
+            self,
+            kge_model: nn.Module,
+            optimizer,
+            all_entities,
+            negative_sampler_cls: Type[NegativeSampler] = None,
+    ):
+        super().__init__(
+            kge_model=kge_model,
+            optimizer=optimizer,
+            all_entities=all_entities,
+        )
+
+        if negative_sampler_cls is None:
+            negative_sampler_cls = BasicNegativeSampler
+
+        self.negative_sampler: NegativeSampler = negative_sampler_cls(all_entities=self.all_entities)
 
     def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
-        """."""
-        list_neg_batches = []
+        return [
+            self.negative_sampler.sample(positive_batch=pos_batch)
+            for _ in range(num_negs_per_pos)
+        ]
 
-        for _ in range(num_negs_per_pos):
-            neg_batch = self.negative_sampler.sample(positive_batch=pos_batch)
-            list_neg_batches.append(neg_batch)
-
-        return list_neg_batches
-
-    def train(self, training_instances, num_epochs, batch_size, num_negs_per_pos=1):
+    def train(
+            self,
+            training_instances,
+            num_epochs,
+            batch_size,
+            num_negs_per_pos=1,
+            tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
 
-        start_training = timeit.default_timer()
-
-        _tqdm_kwargs = dict(desc='Training epoch')
-
-        log.info(f'****running model on {self.kge_model.device}****')
-
-        for _ in trange(num_epochs, **_tqdm_kwargs):
+        _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
+        if tqdm_kwargs is not None:
+            _tqdm_kwargs.update(tqdm_kwargs)
+        it = trange(num_epochs, **_tqdm_kwargs)
+        for _ in it:
             indices = np.arange(num_pos_triples)
             np.random.shuffle(indices)
             pos_triples = pos_triples[indices]
@@ -60,8 +75,8 @@ class OWATrainingLoop(TrainingLoop):
 
                 self.optimizer.zero_grad()
                 neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
-                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.kge_model.device)
-                neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.kge_model.device).view(-1, 3)
+                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.device)
+                neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
                 # Apply forward constraint if defined for used KGE model, otherwise method just returns
                 self.kge_model.apply_forward_constraints()
@@ -85,10 +100,7 @@ class OWATrainingLoop(TrainingLoop):
                 self.optimizer.step()
 
             # Track epoch loss
-            self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples)*num_negs_per_pos))
-            print(self.losses_per_epochs)
-
-        stop_training = timeit.default_timer()
-        log.debug("training took %.2fs seconds", stop_training - start_training)
+            self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
+            it.write(f'Losses: {self.losses_per_epochs}')
 
         return self.kge_model, self.losses_per_epochs

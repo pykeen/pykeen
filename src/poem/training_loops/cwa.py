@@ -2,9 +2,6 @@
 
 """Training KGE models based on the CWA."""
 
-import logging
-import timeit
-
 import numpy as np
 import torch
 from tqdm import trange
@@ -17,11 +14,9 @@ __all__ = [
     'CWATrainingLoop',
 ]
 
-log = logging.getLogger(__name__)
-
 
 class CWATrainingLoop(TrainingLoop):
-    """."""
+    """A training loop that uses the closed world assumption."""
 
     def train(
             self,
@@ -31,20 +26,15 @@ class CWATrainingLoop(TrainingLoop):
             label_smoothing: bool = True,
             label_smoothing_epsilon: float = 0.1,
     ):
-        """."""
-        self.kge_model = self.kge_model.to(self.kge_model.device)
+        """Train the model using the closed world assumption."""
+        self.kge_model = self.kge_model.to(self.device)
         subject_relation_pairs = training_instances.instances
         labels = training_instances.labels
         num_entities = len(training_instances.entity_to_id)
 
         num_triples = subject_relation_pairs.shape[0]
 
-        start_training = timeit.default_timer()
-
-        _tqdm_kwargs = dict(desc='Training epoch')
-
-        log.info(f'****running model on {self.kge_model.device}****')
-
+        _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
         for _ in trange(num_epochs, **_tqdm_kwargs):
             indices = np.arange(num_triples)
             np.random.shuffle(indices)
@@ -56,14 +46,14 @@ class CWATrainingLoop(TrainingLoop):
 
             for i, batch_pairs in enumerate(batches):
                 current_batch_size = len(batch_pairs)
-                batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.kge_model.device)
+                batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.device)
                 batch_labels = labels_batches[i]
-                batch_labels_full = torch.zeros((current_batch_size, num_entities), device=self.kge_model.device)
+                batch_labels_full = torch.zeros((current_batch_size, num_entities), device=self.device)
                 for i in range(current_batch_size):
                     batch_labels_full[i, batch_labels[i]] = 1
 
                 if label_smoothing:
-                    batch_labels_full = (batch_labels_full * (1.0 - label_smoothing_epsilon)) +\
+                    batch_labels_full = (batch_labels_full * (1.0 - label_smoothing_epsilon)) + \
                                         (label_smoothing_epsilon / (num_entities - 1))
 
                 # Recall that torch *accumulates* gradients. Before passing in a
@@ -77,8 +67,5 @@ class CWATrainingLoop(TrainingLoop):
 
             # Track epoch loss
             self.losses_per_epochs.append(current_epoch_loss / len(subject_relation_pairs))
-
-        stop_training = timeit.default_timer()
-        log.debug("training took %.2fs seconds", stop_training - start_training)
 
         return self.kge_model, self.losses_per_epochs

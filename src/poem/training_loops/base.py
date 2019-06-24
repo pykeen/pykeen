@@ -4,21 +4,19 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Mapping, Tuple, Type
+from typing import List, Tuple
 
 import numpy as np
 import torch.nn as nn
-from torch.optim import Adagrad, Adam, Optimizer, SGD
 
-from ..constants import ADAGRAD_OPTIMIZER_NAME, ADAM_OPTIMIZER_NAME, SGD_OPTIMIZER_NAME
 from ..instance_creation_factories.instances import Instances
-from ..utils import get_params
 
 __all__ = [
     'TrainingLoop',
 ]
 
 log = logging.getLogger(__name__)
+
 
 class TrainingLoop(ABC):
     def __init__(
