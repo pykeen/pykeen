@@ -20,7 +20,7 @@ def load_triples(path, delimiter='\t') -> np.array:
 
 def create_entity_and_relation_mappings(triples: np.array) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Map entities and relations to ids."""
-    subjects, objects, relations = triples[:, 0], triples[:, 1], triples[:, 2]
+    subjects, relations, objects = triples[:, 0], triples[:, 1], triples[:, 2]
 
     all_entities = np.concatenate((subjects, objects), axis=0)
     entities = np.unique(all_entities)
