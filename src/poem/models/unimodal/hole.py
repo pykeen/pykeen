@@ -108,9 +108,9 @@ class HolE(BaseOWAModule):
         heads, relations, tails = slice_triples(triples)
 
         # Get embeddings
-        head_embeddings = self.entity_embeddings(heads)
-        tail_embeddings = self.entity_embeddings(tails)
-        relation_embeddings = self.relation_embeddings(relations)
+        head_embeddings = self.entity_embeddings(heads).view(-1, self.embedding_dim)
+        tail_embeddings = self.entity_embeddings(tails).view(-1, self.embedding_dim)
+        relation_embeddings = self.relation_embeddings(relations).view(-1, self.embedding_dim)
 
         # Circular correlation of entity embeddings
         composite = circular_correlation(a=head_embeddings, b=tail_embeddings)
