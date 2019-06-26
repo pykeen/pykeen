@@ -32,8 +32,10 @@ def main(training_file, test_file, output_direc):
     # Step 1: Create instances
     log.info("Create instances")
     training_triples = load_triples(path=training_file)
+    test_triples = load_triples(path=test_file)
+    all_triples = np.concatenate([training_triples, test_triples], axis=0)
 
-    entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=training_triples)
+    entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=all_triples)
     mapped_training_triples = map_triples_elements_to_ids(triples=training_triples,
                                                           entity_to_id=entity_to_id,
                                                           rel_to_id=relation_to_id)
@@ -75,7 +77,6 @@ def main(training_file, test_file, output_direc):
                                                        )
 
     # Step 4: Prepare test triples
-    test_triples = load_triples(path=test_file)
     mapped_test_triples = map_triples_elements_to_ids(triples=test_triples,
                                                       entity_to_id=entity_to_id,
                                                       rel_to_id=relation_to_id)
