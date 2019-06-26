@@ -64,11 +64,8 @@ class BaseOWAModule(nn.Module):
     def _compute_label_loss(self, pos_elements, neg_elements):
         """."""
 
-        pos_labels = torch.FloatTensor([1])
-        pos_labels = pos_labels.expand(pos_elements.shape[0]).to(self.device)
-
-        neg_labels = torch.FloatTensor([self.neg_label])
-        neg_labels = neg_labels.expand(neg_elements.shape[0]).to(self.device)
+        pos_labels = torch.tensor([1.0], device=self.device).expand(pos_elements.shape[0])
+        neg_labels = torch.tensor([self.neg_label], device=self.device).expand(neg_elements.shape[0])
 
         scores = torch.cat([pos_elements, neg_elements])
         labels = torch.cat([pos_labels, neg_labels])
@@ -88,9 +85,7 @@ class BaseOWAModule(nn.Module):
 
     def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """"""
-        y = torch.FloatTensor([1])
-
-        y = y.expand(positive_scores.shape[0]).to(self.device)
+        y = torch.tensor([1.0], device=self.device).expand(positive_scores.shape[0])
 
         loss = self.criterion(positive_scores, negative_scores, y)
 
