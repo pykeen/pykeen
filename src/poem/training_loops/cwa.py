@@ -59,7 +59,8 @@ class CWATrainingLoop(TrainingLoop):
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
                 self.optimizer.zero_grad()
-                loss = self.kge_model(batch_pairs, batch_labels_full)
+                predictions = self.kge_model.forward_cwa(batch_pairs)
+                loss = self.kge_model.compute_label_loss(predictions, batch_labels_full)
                 current_epoch_loss += (loss.item() * current_batch_size)
 
                 loss.backward()

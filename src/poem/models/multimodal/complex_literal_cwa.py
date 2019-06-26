@@ -7,10 +7,10 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ...constants import COMPLEX_LITERAL_NAME_CWA, GPU, NUMERIC_LITERALS
-from ...utils import slice_triples
+from ..base import BaseModule, slice_triples
 
-
-class ComplexLiteralCWA(torch.nn.Module):
+# TODO: Check entire build of the model
+class ComplexLiteralCWA(BaseModule):
     """
         An implementation of ComplexLiteral [agustinus2018] based on the closed world assumption (CWA).
 
@@ -19,9 +19,14 @@ class ComplexLiteralCWA(torch.nn.Module):
         """
     model_name = COMPLEX_LITERAL_NAME_CWA
 
-    def __init__(self, num_entities, num_relations, multimodal_data, embedding_dim=50, input_dropout=0.2,
+    def __init__(self,
+                 num_entities,
+                 num_relations,
+                 multimodal_data,
+                 embedding_dim=50,
+                 input_dropout=0.2,
                  preferred_device=GPU):
-        super(ComplexLiteralCWA, self).__init__()
+        super().__init__()
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() and preferred_device else 'cpu')
         # Entity dimensions

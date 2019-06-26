@@ -2,14 +2,16 @@
 
 """Implementation of RESCAL."""
 
+from typing import Optional
+
 from poem.constants import GPU, RESCAL_NAME
-from poem.models.base_owa import BaseOWAModule, slice_triples
+from poem.models.base import BaseModule, slice_triples
 from torch import nn
 
 __all__ = ['RESCAL']
 
 
-class RESCAL(BaseOWAModule):
+class RESCAL(BaseModule):
     """An implementation of RESCAL [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -25,16 +27,25 @@ class RESCAL(BaseOWAModule):
 
     model_name = RESCAL_NAME
     margin_ranking_loss_size_average: bool = True
-    hyper_params = BaseOWAModule.hyper_params
+    hyper_params = BaseModule.hyper_params
 
-    def __init__(self, num_entities, num_relations, embedding_dim=50,
-                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
-        super(RESCAL, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
+    def __init__(self,
+                 num_entities: int,
+                 num_relations: int,
+                 embedding_dim: int = 50,
+                 criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
+                 preferred_device: str = GPU,
+                 random_seed: Optional[int] = None,
+                 ) -> None:
+        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
+                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+        self.relation_embeddings = None
 
-        # Embeddings
+    def _init_embeddings(self):
+        super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 
-    def _score_triples(self, triples):
+    def forward_owa(self, triples):
         # Get triple embeddings
         heads, relations, tails = slice_triples(triples)
 
@@ -48,3 +59,5 @@ class RESCAL(BaseOWAModule):
         scores = head_embeddings @ relation_embeddings @ tail_embeddings
 
         return scores
+
+    # TODO: Implement forward_cwa

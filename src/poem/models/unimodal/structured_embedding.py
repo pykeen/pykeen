@@ -3,12 +3,13 @@
 """Implementation of structured model (SE)."""
 
 import logging
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.autograd
 from poem.constants import SE_NAME, SCORING_FUNCTION_NORM, GPU
-from poem.models.base_owa import BaseOWAModule, slice_triples
+from poem.models.base import BaseModule, slice_triples
 from torch import nn
 
 __all__ = [
@@ -18,7 +19,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-class StructuredEmbedding(BaseOWAModule):
+class StructuredEmbedding(BaseModule):
     """An implementation of Structured Embedding (SE) [bordes2011]_.
 
     This model projects different matrices for each relation head and tail entity.
@@ -29,79 +30,81 @@ class StructuredEmbedding(BaseOWAModule):
 
     model_name = SE_NAME
     margin_ranking_loss_size_average: bool = True
-    hyper_params = BaseOWAModule.hyper_params + [SCORING_FUNCTION_NORM]
+    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM]
 
-    def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1,
-                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
-        super(StructuredEmbedding, self).__init__(num_entities, num_relations, criterion, embedding_dim,
-                                                  preferred_device)
+    def __init__(self,
+                 num_entities: int,
+                 num_relations: int,
+                 embedding_dim: int = 50,
+                 scoring_fct_norm: int = 1,
+                 criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
+                 preferred_device: str = GPU,
+                 random_seed: Optional[int] = None,
+                 ) -> None:
+        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
+                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
 
         # Embeddings
         self.scoring_fct_norm = scoring_fct_norm
 
+        self.left_relation_embeddings = None
+        self.right_relation_embeddings = None
+
+    def _init_embeddings(self):
+        super()._init_embeddings()
         self.left_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
         self.right_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim * self.embedding_dim)
 
-        self._initialize()
-
-    def _initialize(self):
         entity_embeddings_init_bound = left_relation_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-entity_embeddings_init_bound,
-            b=+entity_embeddings_init_bound,
-        )
-        nn.init.uniform_(
-            self.left_relation_embeddings.weight.data,
-            a=-left_relation_embeddings_init_bound,
-            b=+left_relation_embeddings_init_bound,
-        )
+        nn.init.uniform_(self.entity_embeddings.weight.data,
+                         a=-entity_embeddings_init_bound,
+                         b=+entity_embeddings_init_bound,
+                         )
+        nn.init.uniform_(self.left_relation_embeddings.weight.data,
+                         a=-left_relation_embeddings_init_bound,
+                         b=+left_relation_embeddings_init_bound,
+                         )
 
         # FIXME @mehdi why aren't the right relation embeddings initialized?
 
         norms = torch.norm(self.left_relation_embeddings.weight, p=2, dim=1).data
-        self.left_relation_embeddings.weight.data = self.left_relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight))
+        self.left_relation_embeddings.weight.data =\
+            self.left_relation_embeddings.weight.data.div(norms.view(self.num_relations, 1)
+                                                          .expand_as(self.left_relation_embeddings.weight))
+
 
     def apply_forward_constraints(self):
         """."""
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
-        self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
-            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
+        self.entity_embeddings.weight.data =\
+            self.entity_embeddings.weight.data.div(norms.view(self.num_entities, 1)
+                                                   .expand_as(self.entity_embeddings.weight))
 
-    def _score_triples(self, triples):
+    def forward_owa(self, triples):
         heads, relations, tails = slice_triples(triples)
 
-        head_embeddings = self._get_embeddings(
-            elements=heads,
-            embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
-        )
+        head_embeddings = self._get_embeddings(elements=heads,
+                                               embedding_module=self.entity_embeddings,
+                                               embedding_dim=self.embedding_dim,
+                                               )
         left_relation_embeddings = self._get_left_relation_embeddings(relations)
-        projected_head_embeddings = self._project_entities(
-            entity_embeddings=head_embeddings,
-            relation_embeddings=left_relation_embeddings,
-        )
-
-        tail_embeddings = self._get_embeddings(
-            elements=tails,
-            embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim)
-
+        projected_head_embeddings = self._project_entities(entity_embeddings=head_embeddings,
+                                                           relation_embeddings=left_relation_embeddings,
+                                                           )
+        tail_embeddings = self._get_embeddings(elements=tails,
+                                               embedding_module=self.entity_embeddings,
+                                               embedding_dim=self.embedding_dim,
+                                               )
         right_relation_embeddings = self._get_right_relation_embeddings(relations)
-        projected_tails_embeddings = self._project_entities(
-            entity_embeddings=tail_embeddings,
-            relation_embeddings=right_relation_embeddings,
-        )
-
-        scores = self._compute_scores(projected_head_embeddings, projected_tails_embeddings)
-        return scores
-
-    def _compute_scores(self, projected_head_embeddings, projected_tail_embeddings):
-        difference = projected_head_embeddings - projected_tail_embeddings
+        projected_tails_embeddings = self._project_entities(entity_embeddings=tail_embeddings,
+                                                            relation_embeddings=right_relation_embeddings,
+                                                            )
+        difference = projected_head_embeddings - projected_tails_embeddings
         scores = - torch.norm(difference, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         return scores
+
+    # TODO: Implement forward_cwa
 
     def _project_entities(self, entity_embeddings, relation_embeddings):
         entity_embeddings = entity_embeddings.unsqueeze(-1)

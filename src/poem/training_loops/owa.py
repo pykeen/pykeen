@@ -24,40 +24,43 @@ log.setLevel(logging.INFO)
 
 
 class OWATrainingLoop(TrainingLoop):
-    def __init__(
-            self,
-            kge_model: nn.Module,
-            optimizer,
-            all_entities,
-            negative_sampler_cls: Type[NegativeSampler] = None,
-    ):
-        super().__init__(
-            kge_model=kge_model,
-            optimizer=optimizer,
-            all_entities=all_entities,
-        )
+    def __init__(self,
+                 kge_model: nn.Module,
+                 optimizer,
+                 all_entities,
+                 negative_sampler_cls: Type[NegativeSampler] = None,
+                 ):
+        super().__init__(kge_model=kge_model,
+                         optimizer=optimizer,
+                         all_entities=all_entities,
+                         )
 
         if negative_sampler_cls is None:
             negative_sampler_cls = BasicNegativeSampler
 
         self.negative_sampler: NegativeSampler = negative_sampler_cls(all_entities=self.all_entities)
 
-    def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
-        return [
-            self.negative_sampler.sample(positive_batch=pos_batch)
-            for _ in range(num_negs_per_pos)
-        ]
 
-    def train(
-            self,
-            training_instances,
-            num_epochs,
-            batch_size,
-            num_negs_per_pos=1,
-            tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-    ):
+    def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
+        return [self.negative_sampler.sample(positive_batch=pos_batch)
+                for _ in range(num_negs_per_pos)
+                ]
+
+    def train(self,
+              training_instances,
+              num_epochs,
+              batch_size,
+              num_negs_per_pos=1,
+              label_smoothing: bool = True,
+              label_smoothing_epsilon: float = 0.1,
+              tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+              ):
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
+        num_entities = len(training_instances.entity_to_id)
+
+        if self.kge_model.compute_mr_loss:
+            assert label_smoothing == False, 'Margin Ranking Loss cannot be used together with label smoothing'
 
         _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
         if tqdm_kwargs is not None:
@@ -73,30 +76,38 @@ class OWATrainingLoop(TrainingLoop):
             for i, pos_batch in enumerate(pos_batches):
                 current_batch_size = len(pos_batch)
 
-                self.optimizer.zero_grad()
                 neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
                 pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.device)
                 neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
+                # TODO: Should this be made clear within the model class itself?
                 # Apply forward constraint if defined for used KGE model, otherwise method just returns
                 self.kge_model.apply_forward_constraints()
 
-                positive_scores = self.kge_model(pos_batch)
+                positive_scores = self.kge_model.forward_owa(pos_batch)
                 positive_scores = positive_scores.repeat(num_negs_per_pos)
-                negative_scores = self.kge_model(neg_batch)
+                negative_scores = self.kge_model.forward_owa(neg_batch)
 
-                loss = self.kge_model.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+                if self.kge_model.compute_mr_loss:
+                    loss = self.kge_model.compute_mr_loss(positive_scores=positive_scores,
+                                                          negative_scores=negative_scores)
+                else:
+                    predictions = torch.cat([positive_scores, negative_scores], 0)
+                    ones = torch.ones_like(positive_scores, device=self.device)
+                    zeros = torch.zeros_like(negative_scores, device=self.device)
+                    labels = torch.cat([ones, zeros], 0)
+
+                    if label_smoothing:
+                        labels = (labels * (1.0 - label_smoothing_epsilon)) + \
+                                 (label_smoothing_epsilon / (num_entities - 1))
+
+                    loss = self.kge_model.compute_label_loss(predictions=predictions, labels=labels)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
-                # self.optimizer.zero_grad()
-                # loss = compute_loss_fct(loss_fct)
-                # loss = self.kge_model(pos_batch, neg_batch)
-                # current_epoch_loss += (loss.item() * current_batch_size)
-
-                current_epoch_loss += (loss.item() * current_batch_size * num_negs_per_pos)
-
+                self.optimizer.zero_grad()
                 loss.backward()
+                current_epoch_loss += (loss.item() * current_batch_size * num_negs_per_pos)
                 self.optimizer.step()
 
             # Track epoch loss

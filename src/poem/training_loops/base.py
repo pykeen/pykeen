@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 import numpy as np
+import torch
 import torch.nn as nn
 
 from ..instance_creation_factories.instances import Instances
@@ -22,7 +23,7 @@ class TrainingLoop(ABC):
     def __init__(
             self,
             kge_model: nn.Module,
-            optimizer,
+            optimizer: torch.optim.Optimizer,
             all_entities: np.ndarray = None,
     ) -> None:
         self.kge_model = kge_model

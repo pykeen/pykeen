@@ -1,10 +1,12 @@
+from typing import Optional
+
 import torch
 from poem.constants import TRANS_H_NAME, SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H, GPU
-from poem.models.base_owa import BaseOWAModule, slice_triples
+from poem.models.base import BaseModule, slice_triples
 from torch import nn
 
 
-class TransH(BaseOWAModule):
+class TransH(BaseModule):
     """An implementation of TransH [wang2014]_.
 
     This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
@@ -21,17 +23,28 @@ class TransH(BaseOWAModule):
     margin_ranking_loss_size_average: bool = False
     hyper_params = [SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H]
 
-    def __init__(self, num_entities, num_relations, embedding_dim=50, scoring_fct_norm=1, soft_weight_constraint=0.05,
-                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
-        super(TransH, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
-
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+    def __init__(self,
+                 num_entities: int,
+                 num_relations: int,
+                 embedding_dim: int = 50,
+                 scoring_fct_norm: int = 1,
+                 soft_weight_constraint: float = 0.05,
+                 criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
+                 preferred_device: str = GPU,
+                 random_seed: Optional[int] = None,
+                 ) -> None:
+        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
+                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
         self.weighting_soft_constraint = soft_weight_constraint
-
         self.epsilon = nn.Parameter(torch.tensor(0.005, requires_grad=True))
         self.scoring_fct_norm = scoring_fct_norm
+        self.relation_embeddings = None
+        self.normal_vector_embeddings = None
+
+    def _init_embeddings(self):
+        super()._init_embeddings()
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         # TODO: Add initialization
 
     def project_to_hyperplane(self, entity_embs, normal_vec_embs):
@@ -44,23 +57,13 @@ class TransH(BaseOWAModule):
         scaling_factors = torch.sum(normal_vec_embs * entity_embs, dim=-1).unsqueeze(1)
         heads_projected_on_normal_vecs = scaling_factors * normal_vec_embs
         projections = (entity_embs - heads_projected_on_normal_vecs).view(-1, self.embedding_dim)
-
         return projections
-
-    def _compute_scores(self, h_embs, r_embs, t_embs):
-        # Add the vector element wise
-        sum_res = h_embs + r_embs - t_embs
-        norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = torch.mul(norms, norms)
-        return scores
 
     def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """."""
         mrl_loss = super()._compute_mr_loss(positive_scores, negative_scores)
         soft_constraint_loss = self.compute_soft_constraint_loss()
-
         loss = mrl_loss + soft_constraint_loss
-
         return loss
 
     def compute_soft_constraint_loss(self):
@@ -90,35 +93,26 @@ class TransH(BaseOWAModule):
 
         return soft_constraints_loss
 
-    def _score_triples(self, triples):
+    def forward_owa(self, triples):
         """"""
         heads, relations, tails = slice_triples(triples)
-        head_embeddings = self._get_embeddings(
-            elements=heads, embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
-        )
+        head_embeddings = self._get_embeddings(elements=heads,
+                                               embedding_module=self.entity_embeddings,
+                                               embedding_dim=self.embedding_dim,
+                                               )
 
-        relation_embeddings = self._get_embeddings(
-            elements=relations,
-            embedding_module=self.relation_embeddings,
-            embedding_dim=self.embedding_dim
-        )
-        tail_embeddings = self._get_embeddings(
-            elements=tails,
-            embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
-        )
-        normal_vec_embs = self._get_embeddings(
-            elements=relations,
-            embedding_module=self.normal_vector_embeddings,
-            embedding_dim=self.embedding_dim
-        )
-        scores = self._compute_scores(head_embeddings, relation_embeddings, tail_embeddings, normal_vec_embs)
-
-        return scores
-
-    def _compute_scores(self, head_embeddings, relation_embeddings, tail_embeddings, normal_vec_embs):
-        """"""
+        relation_embeddings = self._get_embeddings(elements=relations,
+                                                   embedding_module=self.relation_embeddings,
+                                                   embedding_dim=self.embedding_dim,
+                                                   )
+        tail_embeddings = self._get_embeddings(elements=tails,
+                                               embedding_module=self.entity_embeddings,
+                                               embedding_dim=self.embedding_dim,
+                                               )
+        normal_vec_embs = self._get_embeddings(elements=relations,
+                                               embedding_module=self.normal_vector_embeddings,
+                                               embedding_dim=self.embedding_dim,
+                                               )
         head_embeddings = head_embeddings.view(-1, 1, self.embedding_dim)
         tail_embeddings = tail_embeddings.view(-1, 1, self.embedding_dim)
         normal_vec_embs = normal_vec_embs.view(-1, 1, self.embedding_dim)
@@ -129,12 +123,14 @@ class TransH(BaseOWAModule):
         sum_res = projected_heads + relation_embeddings - projected_tails
         norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
         scores = - torch.mul(norms, norms)
-
         return scores
+
+    # TODO: Implement forward_cwa
 
     def apply_forward_constraints(self):
         """."""
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
-        self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))
+        self.normal_vector_embeddings.weight.data =\
+            self.normal_vector_embeddings.weight.data.div(norms.view(self.num_relations, 1)
+                                                          .expand_as(self.normal_vector_embeddings.weight))
