@@ -112,8 +112,8 @@ class DistMultLiteral(BaseOWAModule):
     def _compute_loss(self, positive_scores, negative_scores):
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
-        y = np.repeat([-1], repeats=positive_scores.shape[0])
-        y = torch.tensor(y, dtype=torch.float, device=self.device)
+        # TODO: All other distance-based models implement _compute_scores and return the negative distance
+        y = torch.tensor([-1.0], device=self.device).expand(positive_scores.shape[0])
 
         loss = self.criterion(positive_scores, negative_scores, y)
         return loss
