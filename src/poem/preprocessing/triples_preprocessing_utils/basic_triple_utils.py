@@ -22,11 +22,9 @@ def create_entity_and_relation_mappings(triples: np.array) -> Tuple[Dict[str, in
     """Map entities and relations to ids."""
     subjects, relations, objects = triples[:, 0], triples[:, 1], triples[:, 2]
 
-    all_entities = np.concatenate((subjects, objects), axis=0)
-    entities = np.unique(all_entities)
-
-    # Note: with return_inverse=True, the translation to IDs can be done in one operation
-    relations = np.unique(relations)
+    # Sorting ensures consistent results when the triples are permuted
+    entities = sorted(set(subjects).union(objects))
+    relations = sorted(set(relations))
 
     entity_to_id: Dict[str, int] = {
         value: key
