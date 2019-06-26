@@ -102,7 +102,7 @@ class HolE(BaseOWAModule):
         with torch.no_grad():
             # Ensure norm of entity embeddings is at most 1
             norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1, keepdim=True)
-            self.entity_embeddings.weight /= torch.max(norms, torch.ones(size=(1, 1)))
+            self.entity_embeddings.weight /= torch.max(norms, torch.ones(size=(), device=self.device))
 
     def _score_triples(self, triples):
         heads, relations, tails = slice_triples(triples)
