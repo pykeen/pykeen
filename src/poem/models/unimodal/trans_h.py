@@ -1,7 +1,8 @@
 import torch
+from torch import nn
+
 from poem.constants import TRANS_H_NAME, SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H, GPU
 from poem.models.base_owa import BaseOWAModule, slice_triples
-from torch import nn
 
 
 class TransH(BaseOWAModule):
@@ -46,13 +47,6 @@ class TransH(BaseOWAModule):
         projections = (entity_embs - heads_projected_on_normal_vecs).view(-1, self.embedding_dim)
 
         return projections
-
-    def _compute_scores(self, h_embs, r_embs, t_embs):
-        # Add the vector element wise
-        sum_res = h_embs + r_embs - t_embs
-        norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = torch.mul(norms, norms)
-        return scores
 
     def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
         """."""
