@@ -53,18 +53,10 @@ class ComplexCWA(torch.nn.Module):
         batch_heads = batch[:, 0:1]
         batch_relations = batch[:, 1:2]
 
-        subjects_embedded_real = self \
-            .inp_drop(self.entity_embeddings_real(batch_heads)) \
-            .view(-1, self.embedding_dim)
-        relations_embedded_real = self \
-            .inp_drop(self.relation_embeddings_real(batch_relations)) \
-            .view(-1, self.embedding_dim)
-        subjects_embedded_img = self \
-            .inp_drop(self.entity_embeddings_img(batch_heads)) \
-            .view(-1, self.embedding_dim)
-        relations_embedded_img = self \
-            .inp_drop(self.relation_embeddings_img(batch_relations)) \
-            .view(-1, self.embedding_dim)
+        subjects_embedded_real = self.entity_embeddings_real(batch_heads).view(-1, self.embedding_dim)
+        relations_embedded_real = self.relation_embeddings_real(batch_relations).view(-1, self.embedding_dim)
+        subjects_embedded_img = self.entity_embeddings_img(batch_heads).view(-1, self.embedding_dim)
+        relations_embedded_img = self.relation_embeddings_img(batch_relations).view(-1, self.embedding_dim)
 
         # Apply dropout
         subjects_embedded_real = self.inp_drop(subjects_embedded_real)
