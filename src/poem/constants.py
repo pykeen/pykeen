@@ -68,6 +68,7 @@ ERMLP_NAME = 'ERMLP'
 RESCAL_NAME = 'RESCAL'
 SE_NAME = 'StructuredEmbedding'
 UM_NAME = 'UM'
+HOL_E_NAME = 'HolE'
 
 """DistMult related constants"""
 
