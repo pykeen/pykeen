@@ -21,16 +21,24 @@ class DistMultLiteral(BaseModule):
     model_name = DISTMULT_LITERAL_NAME_OWA
     margin_ranking_loss_average: bool = True
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self,
+                 num_entities: int,
+                 num_relations: int,
+                 multimodal_data: dict,
+                 embedding_dim: int = 50,
+                 criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+                 preferred_device: str = GPU,
+                 random_seed: Optional[int] = None,
+                 ) -> None:
+        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
+                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
 
-        # TODO: Check this
-        # numeric_literals = model_config.multimodal_data.get(NUMERIC_LITERALS)
+        numeric_literals = multimodal_data.get(NUMERIC_LITERALS)
 
         # Embeddings
         self.relation_embeddings = None
-        # self.numeric_literals = nn.Embedding.from_pretrained(
-        #     torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True)
+        self.numeric_literals = nn.Embedding.from_pretrained(
+            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True)
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
