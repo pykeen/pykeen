@@ -2,13 +2,16 @@
 
 """Implementation of the DistMultLiteral model."""
 
+from typing import Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from ..base import BaseModule, slice_triples
-from ...constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS
+from poem.models.base import BaseModule
+from poem.utils import slice_triples
+from poem.constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS, GPU
 
 # TODO: Check entire build of the model
 class DistMultLiteral(BaseModule):
@@ -26,10 +29,9 @@ class DistMultLiteral(BaseModule):
                  num_relations: int,
                  multimodal_data: dict,
                  embedding_dim: int = 50,
-                 criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+                 criterion: nn.modules.loss = nn.MarginRankingLoss(),
                  preferred_device: str = GPU,
-                 random_seed: Optional[int] = None,
-                 ) -> None:
+                 random_seed: Optional[int] = None) -> None:
         super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
                          criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
 
@@ -42,8 +44,8 @@ class DistMultLiteral(BaseModule):
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
-        self.input_dropout = torch.nn.Dropout(self.config[INPUT_DROPOUT]
-                                              if INPUT_DROPOUT in self.config else 0.)
+        self.input_dropout = torch.nn.Dropout(
+            self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.)
 
 
     def _init_embeddings(self):
@@ -55,26 +57,28 @@ class DistMultLiteral(BaseModule):
 
     def _get_literals(self, heads, tails):
         """"""
-        return (self._get_embeddings(elements=heads,
-                                     embedding_module=self.numeric_literals,
-                                     embedding_dim=self.num_of_literals),
-                self._get_embeddings(elements=tails,
-                                     embedding_module=self.numeric_literals,
-                                     embedding_dim=self.num_of_literals),
-                )
+        return (
+            self._get_embeddings(elements=heads,
+                                 embedding_module=self.numeric_literals,
+                                 embedding_dim=self.num_of_literals),
+            self._get_embeddings(elements=tails,
+                                 embedding_module=self.numeric_literals,
+                                 embedding_dim=self.num_of_literals),
+        )
 
     def _get_triple_embeddings(self, heads, relations, tails):
         """"""
-        return (self._get_embeddings(elements=heads,
-                                     embedding_module=self.entity_embeddings,
-                                     embedding_dim=self.embedding_dim),
-                self._get_embeddings(elements=relations,
-                                     embedding_module=self.relation_embeddings,
-                                     embedding_dim=self.embedding_dim),
-                self._get_embeddings(elements=tails,
-                                     embedding_module=self.entity_embeddings,
-                                     embedding_dim=self.embedding_dim),
-                )
+        return (
+            self._get_embeddings(elements=heads,
+                                 embedding_module=self.entity_embeddings,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=relations,
+                                 embedding_module=self.relation_embeddings,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=tails,
+                                 embedding_module=self.entity_embeddings,
+                                 embedding_dim=self.embedding_dim),
+        )
 
     def _apply_g_function(self, entity_embeddings, literals):
         """

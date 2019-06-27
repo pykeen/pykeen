@@ -7,7 +7,8 @@ from typing import Optional
 import torch
 import torch.autograd
 from poem.constants import GPU, TRANS_D_NAME, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
-from poem.models.base import BaseModule, slice_triples
+from poem.models.base import BaseModule
+from poem.utils import slice_triples
 from torch import nn
 
 __all__ = [
@@ -41,8 +42,7 @@ class TransD(BaseModule):
                  scoring_fct_norm: int = 1,
                  criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
                  preferred_device: str = GPU,
-                 random_seed: Optional[int] = None,
-                 ) -> None:
+                 random_seed: Optional[int] = None) -> None:
         super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
                          criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
         self.relation_embedding_dim = relation_dim
@@ -61,31 +61,38 @@ class TransD(BaseModule):
 
     def forward_owa(self, triples):
         heads, relations, tails = slice_triples(triples)
-        h_embs = self._get_embeddings(elements=heads,
-                                      embedding_module=self.entity_embeddings,
-                                      embedding_dim=self.embedding_dim,
-                                      )
-        r_embs = self._get_embeddings(elements=relations,
-                                      embedding_module=self.relation_embeddings,
-                                      embedding_dim=self.relation_embedding_dim,
-                                      )
-        t_embs = self._get_embeddings(elements=tails,
-                                      embedding_module=self.entity_embeddings,
-                                      embedding_dim=self.embedding_dim,
-                                      )
 
-        h_proj_vec_embs = self._get_embeddings(elements=heads,
-                                               embedding_module=self.entity_projections,
-                                               embedding_dim=self.embedding_dim,
-                                               )
-        r_projs_embs = self._get_embeddings(elements=relations,
-                                            embedding_module=self.relation_projections,
-                                            embedding_dim=self.relation_embedding_dim,
-                                            )
-        t_proj_vec_embs = self._get_embeddings(elements=tails,
-                                               embedding_module=self.entity_projections,
-                                               embedding_dim=self.embedding_dim,
-                                               )
+        h_embs = self._get_embeddings(
+            elements=heads,
+            embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim
+        )
+        r_embs = self._get_embeddings(
+            elements=relations,
+            embedding_module=self.relation_embeddings,
+            embedding_dim=self.relation_embedding_dim
+        )
+        t_embs = self._get_embeddings(
+            elements=tails,
+            embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim
+        )
+
+        h_proj_vec_embs = self._get_embeddings(
+            elements=heads,
+            embedding_module=self.entity_projections,
+            embedding_dim=self.embedding_dim
+        )
+        r_projs_embs = self._get_embeddings(
+            elements=relations,
+            embedding_module=self.relation_projections,
+            embedding_dim=self.relation_embedding_dim
+        )
+        t_proj_vec_embs = self._get_embeddings(
+            elements=tails,
+            embedding_module=self.entity_projections,
+            embedding_dim=self.embedding_dim
+        )
 
         proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
         proj_tails = self._project_entities(t_embs, t_proj_vec_embs, r_projs_embs)

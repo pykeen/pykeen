@@ -2,7 +2,8 @@ from typing import Optional
 
 import torch
 from poem.constants import TRANS_H_NAME, SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H, GPU
-from poem.models.base import BaseModule, slice_triples
+from poem.models.base import BaseModule
+from poem.utils import slice_triples
 from torch import nn
 
 
@@ -31,8 +32,7 @@ class TransH(BaseModule):
                  soft_weight_constraint: float = 0.05,
                  criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
                  preferred_device: str = GPU,
-                 random_seed: Optional[int] = None,
-                 ) -> None:
+                 random_seed: Optional[int] = None) -> None:
         super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
                          criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
         self.weighting_soft_constraint = soft_weight_constraint
@@ -96,23 +96,26 @@ class TransH(BaseModule):
     def forward_owa(self, triples):
         """"""
         heads, relations, tails = slice_triples(triples)
-        head_embeddings = self._get_embeddings(elements=heads,
-                                               embedding_module=self.entity_embeddings,
-                                               embedding_dim=self.embedding_dim,
-                                               )
+        head_embeddings = self._get_embeddings(
+            elements=heads, embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim
+        )
 
-        relation_embeddings = self._get_embeddings(elements=relations,
-                                                   embedding_module=self.relation_embeddings,
-                                                   embedding_dim=self.embedding_dim,
-                                                   )
-        tail_embeddings = self._get_embeddings(elements=tails,
-                                               embedding_module=self.entity_embeddings,
-                                               embedding_dim=self.embedding_dim,
-                                               )
-        normal_vec_embs = self._get_embeddings(elements=relations,
-                                               embedding_module=self.normal_vector_embeddings,
-                                               embedding_dim=self.embedding_dim,
-                                               )
+        relation_embeddings = self._get_embeddings(
+            elements=relations,
+            embedding_module=self.relation_embeddings,
+            embedding_dim=self.embedding_dim
+        )
+        tail_embeddings = self._get_embeddings(
+            elements=tails,
+            embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim
+        )
+        normal_vec_embs = self._get_embeddings(
+            elements=relations,
+            embedding_module=self.normal_vector_embeddings,
+            embedding_dim=self.embedding_dim
+        )
         head_embeddings = head_embeddings.view(-1, 1, self.embedding_dim)
         tail_embeddings = tail_embeddings.view(-1, 1, self.embedding_dim)
         normal_vec_embs = normal_vec_embs.view(-1, 1, self.embedding_dim)
@@ -131,6 +134,5 @@ class TransH(BaseModule):
         """."""
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
-        self.normal_vector_embeddings.weight.data =\
-            self.normal_vector_embeddings.weight.data.div(norms.view(self.num_relations, 1)
-                                                          .expand_as(self.normal_vector_embeddings.weight))
+        self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
+            norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))

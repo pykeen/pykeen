@@ -24,16 +24,18 @@ log.setLevel(logging.INFO)
 
 
 class OWATrainingLoop(TrainingLoop):
-    def __init__(self,
-                 kge_model: nn.Module,
-                 optimizer,
-                 all_entities,
-                 negative_sampler_cls: Type[NegativeSampler] = None,
-                 ):
-        super().__init__(kge_model=kge_model,
-                         optimizer=optimizer,
-                         all_entities=all_entities,
-                         )
+    def __init__(
+            self,
+            kge_model: nn.Module,
+            optimizer,
+            all_entities,
+            negative_sampler_cls: Type[NegativeSampler] = None,
+    ):
+        super().__init__(
+            kge_model=kge_model,
+            optimizer=optimizer,
+            all_entities=all_entities,
+        )
 
         if negative_sampler_cls is None:
             negative_sampler_cls = BasicNegativeSampler
@@ -42,19 +44,21 @@ class OWATrainingLoop(TrainingLoop):
 
 
     def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
-        return [self.negative_sampler.sample(positive_batch=pos_batch)
-                for _ in range(num_negs_per_pos)
-                ]
+        return [
+            self.negative_sampler.sample(positive_batch=pos_batch)
+            for _ in range(num_negs_per_pos)
+        ]
 
-    def train(self,
-              training_instances,
-              num_epochs,
-              batch_size,
-              num_negs_per_pos=1,
-              label_smoothing: bool = True,
-              label_smoothing_epsilon: float = 0.1,
-              tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-              ):
+    def train(
+            self,
+            training_instances,
+            num_epochs,
+            batch_size,
+            num_negs_per_pos=1,
+            label_smoothing: bool = True,
+            label_smoothing_epsilon: float = 0.1,
+            tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
         num_entities = len(training_instances.entity_to_id)
@@ -98,8 +102,8 @@ class OWATrainingLoop(TrainingLoop):
                     labels = torch.cat([ones, zeros], 0)
 
                     if label_smoothing:
-                        labels = (labels * (1.0 - label_smoothing_epsilon)) + \
-                                 (label_smoothing_epsilon / (num_entities - 1))
+                        labels = (labels * (1.0 - label_smoothing_epsilon))\
+                                 + (label_smoothing_epsilon / (num_entities - 1))
 
                     loss = self.kge_model.compute_label_loss(predictions=predictions, labels=labels)
 

@@ -14,15 +14,16 @@ from .trans_h import TransH
 from .trans_r import TransR
 from .unstructured_model import UnstructuredModel
 
-__all__ = ['ComplEx',
-           'ComplexCWA',
-           'DistMult',
-           'ERMLP',
-           'RESCAL',
-           'StructuredEmbedding',
-           'TransD',
-           'TransE',
-           'TransH',
-           'TransR',
-           'UnstructuredModel'
-           ]
+__all__ = [
+    'ComplEx',
+    'ComplexCWA',
+    'DistMult',
+    'ERMLP',
+    'RESCAL',
+    'StructuredEmbedding',
+    'TransD',
+    'TransE',
+    'TransH',
+    'TransR',
+    'UnstructuredModel'
+]

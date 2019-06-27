@@ -10,7 +10,8 @@ from torch.nn.init import xavier_normal_
 
 from poem.constants import GPU, COMPLEX_NAME
 from poem.customized_loss_functions.softplus_loss import SoftplusLoss
-from poem.models.base import BaseModule, slice_triples
+from poem.models.base import BaseModule
+from poem.utils import slice_triples
 
 
 # TODO: Combine with the ComplexCWA Module
@@ -22,16 +23,10 @@ class ComplEx(BaseModule):
     """
     model_name = COMPLEX_NAME
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 200,
-                 neg_label: float = -1.,
-                 regularization_factor: float = 0.01,
-                 criterion: nn.modules.loss = SoftplusLoss(reduction='mean'),
-                 preferred_device: str =GPU,
-                 random_seed: Optional[int] = None,
-                 ):
+    def __init__(self, num_entities: int, num_relations: int,
+                 embedding_dim: int = 200, neg_label: float = -1., regularization_factor: float = 0.01,
+                 criterion: nn.modules.loss = SoftplusLoss(reduction='mean'), preferred_device: str =GPU,
+                 random_seed: Optional[int] = None):
         super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
                          criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
 
@@ -90,28 +85,23 @@ class ComplEx(BaseModule):
 
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)
-        return (self._get_embeddings(elements=heads,
-                                     embedding_module=self.entity_embeddings_real,
-                                     embedding_dim=self.embedding_dim,
-                                     ),
-                self._get_embeddings(elements=relations,
-                                     embedding_module=self.relation_embeddings_real,
-                                     embedding_dim=self.embedding_dim,
-                                     ),
-                self._get_embeddings(elements=tails,
-                                     embedding_module=self.entity_embeddings_real,
-                                     embedding_dim=self.embedding_dim,
-                                     ),
-                self._get_embeddings(elements=heads,
-                                     embedding_module=self.entity_embeddings_img,
-                                     embedding_dim=self.embedding_dim,
-                                     ),
-                self._get_embeddings(elements=relations,
-                                     embedding_module=self.relation_embeddings_img,
-                                     embedding_dim=self.embedding_dim,
-                                     ),
-                self._get_embeddings(elements=tails,
-                                     embedding_module=self.entity_embeddings_img,
-                                     embedding_dim=self.embedding_dim,
-                                     ),
-                )
+        return (
+            self._get_embeddings(elements=heads,
+                                 embedding_module=self.entity_embeddings_real,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=relations,
+                                 embedding_module=self.relation_embeddings_real,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=tails,
+                                 embedding_module=self.entity_embeddings_real,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=heads,
+                                 embedding_module=self.entity_embeddings_img,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=relations,
+                                 embedding_module=self.relation_embeddings_img,
+                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(elements=tails,
+                                 embedding_module=self.entity_embeddings_img,
+                                 embedding_dim=self.embedding_dim),
+        )

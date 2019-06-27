@@ -2,15 +2,17 @@
 
 """Utilities for getting and initializing KGE models."""
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
 import numpy as np
 import random
+import logging
 
 from torch._C import device
 from abc import abstractmethod
+from operator import attrgetter
 
 from ..constants import EMBEDDING_DIM, GPU, CPU
 
@@ -18,13 +20,14 @@ __all__ = [
     'BaseModule',
 ]
 
+log = logging.getLogger(__name__)
 
 class BaseModule(nn.Module):
     """A base class for all of the OWA based models."""
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
-    hyper_params = [EMBEDDING_DIM]
+    hyper_params: Tuple[str] = [EMBEDDING_DIM]
 
     def __init__(self,
                  num_entities: int,
@@ -32,11 +35,11 @@ class BaseModule(nn.Module):
                  embedding_dim: int = 50,
                  criterion: nn.modules.loss = nn.MarginRankingLoss(),
                  preferred_device: str = GPU,
-                 random_seed: Optional[int] = None,) -> None:
+                 random_seed: Optional[int] = None) -> None:
         super().__init__()
 
         # Initialize the device
-        self._get_device(preferred_device)
+        self._set_device(preferred_device)
 
         self.random_seed = random_seed
 
@@ -49,10 +52,7 @@ class BaseModule(nn.Module):
         # Loss
         self.criterion = criterion
         # TODO: Check loss functions that require 1 and -1 as label but only
-        if isinstance(criterion, nn.MarginRankingLoss):
-            self.compute_mr_loss = True
-        else:
-            self.compute_mr_loss = False
+        self.compute_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
 
         # Entity dimensions
         #: The number of entities in the knowledge graph
@@ -74,7 +74,7 @@ class BaseModule(nn.Module):
             norm_type=self.entity_embedding_norm_type,
         )
 
-    def _get_device(self,
+    def _set_device(self,
                     device: str = 'cpu',
                     ) -> None:
         """Get the Torch device to use."""
@@ -83,19 +83,19 @@ class BaseModule(nn.Module):
                 self.device = torch.device('cuda')
             else:
                 self.device = torch.device('cpu')
-                print('No cuda devices were available. The model runs on CPU')
+                log.info('No cuda devices were available. The model runs on CPU')
         else:
             self.device = torch.device('cpu')
 
     def _to_cpu(self):
         """Transfer the entire model to CPU"""
-        self._get_device('cpu')
+        self._set_device('cpu')
         self.to(self.device)
         torch.cuda.empty_cache()
 
     def _to_gpu(self):
         """Transfer the entire model to GPU"""
-        self._get_device('gpu')
+        self._set_device('gpu')
         self.to(self.device)
         torch.cuda.empty_cache()
 
@@ -103,14 +103,10 @@ class BaseModule(nn.Module):
         scores = self.forward_owa(triples)
         return scores.detach().cpu().numpy()
 
-    def _get_embeddings(self, elements, embedding_module, embedding_dim):
+    @staticmethod
+    def _get_embeddings(elements, embedding_module, embedding_dim):
         """"""
         return embedding_module(elements).view(-1, embedding_dim)
-
-    # TODO: Why this one?
-    def apply_forward_constraints(self):
-        """"""
-        return
 
     # TODO: Why this one?
     def compute_probabilities(self, scores):
@@ -140,11 +136,4 @@ class BaseModule(nn.Module):
 
     def get_grad_params(self):
         self._init_embeddings()
-        return filter(lambda p: p.requires_grad, self.parameters())
-
-def slice_triples(triples):
-    """Get the heads, relations, and tails from a matrix of triples."""
-    h = triples[:, 0:1]
-    r = triples[:, 1:2]
-    t = triples[:, 2:3]
-    return h, r, t
+        return filter(attrgetter('requires_grad'), self.parameters())
