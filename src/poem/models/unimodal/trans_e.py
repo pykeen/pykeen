@@ -10,7 +10,7 @@ import torch.autograd
 from torch import nn
 
 from poem.models.base_owa import BaseOWAModule
-from ...constants import GPU, TRANS_E_NAME, SCORING_FUNCTION_NORM
+from ...constants import GPU, SCORING_FUNCTION_NORM, TRANS_E_NAME
 from ...utils import slice_triples
 
 __all__ = [

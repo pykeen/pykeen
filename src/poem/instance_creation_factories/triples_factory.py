@@ -7,7 +7,7 @@ import numpy as np
 from .instances import CWAInstances, OWAInstances
 from ..preprocessing.instance_creation_utils.utils import create_multi_label_objects_instance
 from ..preprocessing.triples_preprocessing_utils.basic_triple_utils import (
-    get_unique_subject_relation_pairs, map_triples_elements_to_ids,
+    map_triples_elements_to_ids,
 )
 
 

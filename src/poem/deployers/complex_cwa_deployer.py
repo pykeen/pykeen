@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from torch import optim
+
 from poem.constants import EMBEDDING_DIM, INPUT_DROPOUT, NUM_ENTITIES, NUM_RELATIONS
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import ComplexCWA
@@ -5,9 +9,7 @@ from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
     create_entity_and_relation_mappings, load_triples,
 )
 from poem.training_loops import CWATrainingLoop
-
-from poem.utils import get_params
-from torch import optim
+from poem.utils import get_params_requiring_grad
 
 if __name__ == '__main__':
     path_to_training_data = '../../../tests/resources/test.txt'
@@ -27,14 +29,14 @@ if __name__ == '__main__':
     }
 
     # Configure KGE model
-    kge_model = ComplexCWA(**config)
-    params = get_params(kge_model)
+    model = ComplexCWA(**config)
+    params = get_params_requiring_grad(model)
     optimizer = optim.Adam(params=params)
 
     # Train
-    cwa_training_loop = CWATrainingLoop(kge_model=kge_model, optimizer=optimizer)
+    cwa_training_loop = CWATrainingLoop(model=model, optimizer=optimizer)
 
-    fitted_kge_model, losses = cwa_training_loop.train(
+    _, losses = cwa_training_loop.train(
         training_instances=instances,
         num_epochs=2,
         batch_size=128,

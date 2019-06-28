@@ -7,9 +7,10 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-from poem.constants import SE_NAME, SCORING_FUNCTION_NORM, GPU
-from poem.models.base_owa import BaseOWAModule, slice_triples
 from torch import nn
+
+from poem.constants import GPU, SCORING_FUNCTION_NORM, SE_NAME
+from poem.models.base_owa import BaseOWAModule, slice_triples
 
 __all__ = [
     'StructuredEmbedding',

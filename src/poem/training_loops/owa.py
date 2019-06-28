@@ -26,13 +26,13 @@ log.setLevel(logging.INFO)
 class OWATrainingLoop(TrainingLoop):
     def __init__(
             self,
-            kge_model: nn.Module,
+            model: nn.Module,
             optimizer,
             all_entities,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
         super().__init__(
-            kge_model=kge_model,
+            model=model,
             optimizer=optimizer,
             all_entities=all_entities,
         )
@@ -79,19 +79,19 @@ class OWATrainingLoop(TrainingLoop):
                 neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
                 # Apply forward constraint if defined for used KGE model, otherwise method just returns
-                self.kge_model.apply_forward_constraints()
+                self.model.apply_forward_constraints()
 
-                positive_scores = self.kge_model(pos_batch)
+                positive_scores = self.model(pos_batch)
                 positive_scores = positive_scores.repeat(num_negs_per_pos)
-                negative_scores = self.kge_model(neg_batch)
+                negative_scores = self.model(neg_batch)
 
-                loss = self.kge_model.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+                loss = self.model.compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
                 # self.optimizer.zero_grad()
                 # loss = compute_loss_fct(loss_fct)
-                # loss = self.kge_model(pos_batch, neg_batch)
+                # loss = self.model(pos_batch, neg_batch)
                 # current_epoch_loss += (loss.item() * current_batch_size)
 
                 current_epoch_loss += (loss.item() * current_batch_size * num_negs_per_pos)
@@ -103,4 +103,4 @@ class OWATrainingLoop(TrainingLoop):
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
             it.write(f'Losses: {self.losses_per_epochs}')
 
-        return self.kge_model, self.losses_per_epochs
+        return self.model, self.losses_per_epochs

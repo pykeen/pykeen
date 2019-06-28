@@ -12,7 +12,7 @@ import torch.nn as nn
 from dataclasses_json import dataclass_json
 
 from poem.constants import (
-    CWA, DISTMULT_LITERAL_NAME_OWA, EVALUATOR, EXECUTION_MODE, HPO_MODE, KG_EMBEDDING_MODEL_NAME,
+    CWA, DISTMULT_LITERAL_NAME_OWA, EVALUATOR, EXECUTION_MODE, HPO_MODE, MODEL_NAME,
     NUM_ENTITIES, NUM_RELATIONS, OWA, RANK_BASED_EVALUATOR, SEED, TEST_SET_PATH, TEST_SET_RATIO, TRAINING_MODE,
 )
 from poem.evaluation import Evaluator, EvaluatorConfig, RankBasedEvaluator
@@ -37,22 +37,16 @@ class EvalResults:
 @dataclass
 class ExperimentalArtifacts:
     """Contains the experimental artifacts."""
-    trained_kge_model: nn.Module
+    trained_model: nn.Module
     losses: list
     entities_to_embeddings: Mapping[str, np.ndarray]
     relations_to_embeddings: Mapping[str, np.ndarray]
     entities_to_ids: Mapping[str, int]
     relations_to_ids: Mapping[str, int]
 
-@dataclass
-class ExperimentalArtifactsContainingEvalResults(ExperimentalArtifacts):
-    eval_results: EvalResults
-
 
 class Helper:
-    """."""
-
-    KGE_MODELS = {
+    MODELS = {
         model_cls.model_name: model_cls
         for model_cls in [
             DistMultLiteral,
@@ -68,14 +62,14 @@ class Helper:
         RANK_BASED_EVALUATOR: RankBasedEvaluator,
     }
 
-    KGE_MODEL_NAME_TO_FACTORY = {
+    MODEL_NAME_TO_FACTORY = {
         DISTMULT_LITERAL_NAME_OWA: TriplesNumericLiteralsFactory,
     }
 
     # ---------------------Get pipeline components---------------------#
     @staticmethod
     def get_evaluator(
-            kge_model: nn.Module,
+            model: nn.Module,
             config: Dict,
             entity_to_id: Dict,
             relation_to_id: Dict,
@@ -94,7 +88,7 @@ class Helper:
             config=config,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            kge_model=kge_model,
+            model=model,
             training_triples=training_triples,
         )
 
@@ -102,21 +96,25 @@ class Helper:
         return evaluator
 
     @staticmethod
-    def get_training_loop(config: Dict, kge_model: nn.Module, all_entities: np.ndarray) -> TrainingLoop:
+    def get_training_loop(
+            config: Dict,
+            model: nn.Module,
+            all_entities: np.ndarray,
+    ) -> TrainingLoop:
         """Get training loop."""
-        training_loop = Helper.KG_ASSUMPTION_TO_TRAINING_LOOP[kge_model.kg_assumption]
-        return training_loop(config=config, kge_model=kge_model, all_entities=all_entities)
+        training_loop = Helper.KG_ASSUMPTION_TO_TRAINING_LOOP[model.kg_assumption]
+        return training_loop(config=config, model=model, all_entities=all_entities)
 
     @staticmethod
-    def get_kge_model(model_config: ModelConfig) -> nn.Module:
+    def get_model(model_config: ModelConfig) -> nn.Module:
         """Get an instance of a knowledge graph embedding model with the given configuration."""
-        kge_model_name = model_config.config[KG_EMBEDDING_MODEL_NAME]
-        kge_model_cls = Helper.KGE_MODELS.get(kge_model_name)
+        model_name = model_config.config[MODEL_NAME]
+        model_cls = Helper.MODELS.get(model_name)
 
-        if kge_model_cls is None:
-            raise ValueError(f'Invalid KGE model name: {kge_model_name}')
+        if model_cls is None:
+            raise ValueError(f'Invalid model name: {model_name}')
 
-        return kge_model_cls(model_config=model_config)
+        return model_cls(model_config=model_config)
 
     @staticmethod
     def create_model_config(config, instances: Instances) -> ModelConfig:
@@ -129,17 +127,17 @@ class Helper:
         return model_config
 
     @staticmethod
-    def get_factory(kge_model_name, entity_to_id, relation_to_id) -> TriplesFactory:
+    def get_factory(model_name, entity_to_id, relation_to_id) -> TriplesFactory:
         """."""
-        factory = Helper.KGE_MODEL_NAME_TO_FACTORY.get(kge_model_name)
+        factory = Helper.MODEL_NAME_TO_FACTORY.get(model_name)
 
         if factory is None:
-            raise ValueError(f'invalid factory name: {kge_model_name}')
+            raise ValueError(f'invalid factory name: {model_name}')
 
         return factory(entity_to_id, relation_to_id)
 
     @staticmethod
-    def preprocess_train_triples(kge_model_name, entity_to_id, relation_to_id, kg_assumption) -> Instances:
+    def preprocess_train_triples(model_name, entity_to_id, relation_to_id, kg_assumption) -> Instances:
         """"""
         # FIXME
         instance_factory = Helper.get_factory(config)
@@ -195,25 +193,30 @@ class Pipeline:
         if self.has_preprocessed_instances is False:
             self.training_instances = self.preprocess()
 
-    def _train(self, kge_model, training_instances):
+    def _train(self, model, training_instances):
         """."""
-        self.training_loop = Helper.get_training_loop(config=kge_model.model_config.config,
-                                                      kge_model=kge_model,
-                                                      all_entities=training_instances)
+        self.training_loop = Helper.get_training_loop(
+            config=model.model_config.config,
+            model=model,
+            all_entities=training_instances,
+        )
         # Train the model based on the defined training loop
-        fitted_kge_model, losses_per_epochs = self.training_loop.train()
+        _, losses_per_epochs = self.training_loop.train(
+        )
 
-        return fitted_kge_model, losses_per_epochs
+        return model, losses_per_epochs
 
     def _perform_hpo(self):
         """."""
 
-    def _evaluate(self, kge_model, test_triples, entity_to_id, relation_to_id, training_triples):
+    def _evaluate(self, model, test_triples, entity_to_id, relation_to_id, training_triples):
         """."""
-        self.evaluator = Helper.get_evaluator(kge_model=kge_model,
-                                              entity_to_id=entity_to_id,
-                                              relation_to_id=relation_to_id,
-                                              training_triples=training_triples)
+        self.evaluator = Helper.get_evaluator(
+            model=model,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            training_triples=training_triples,
+        )
         metric_results = self.evaluator.evaluate(triples=test_triples)
 
         return metric_results
@@ -240,13 +243,14 @@ class Pipeline:
 
         if exec_mode == TRAINING_MODE:
             self.model_config = self.create_model_config(config=self.config, instances=self.training_instances)
-            kge_model = self.get_kge_model(model_config=self.model_config)
-            fitted_kge_model, losses_per_epochs = self._train(kge_model=kge_model,
-                                                              training_instances=self.training_instances)
-
+            model = self.get_model(model_config=self.model_config)
+            _, losses_per_epochs = self._train(
+                model=model,
+                training_instances=self.training_instances,
+            )
             if self._is_evaluation_requested:
                 # eval
-                metric_results = self._evaluate(kge_model=fitted_kge_model, test_triples=self.test_instances.instances)
+                metric_results = self._evaluate(model=model, test_triples=self.test_instances.instances)
 
         elif exec_mode == HPO_MODE:
             self._perform_hpo()

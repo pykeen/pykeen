@@ -4,7 +4,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Mapping
 
 import numpy as np
 import torch.nn as nn
@@ -18,7 +18,7 @@ __all__ = [
 @dataclass
 class EvaluatorConfig:
     config: Dict
-    kge_model: nn.Module
+    model: nn.Module
     entity_to_id: Dict[str, int]
     relation_to_id: Dict[str, int]
     training_triples: np.ndarray = None
@@ -27,14 +27,17 @@ class EvaluatorConfig:
 class Evaluator(ABC):
     def __init__(
             self,
-            kge_model,
-            entity_to_id,
-            relation_to_id,
+            model: nn.Module,
+            entity_to_id: Mapping,
+            relation_to_id: Mapping,
     ) -> None:
-        self.kge_model = kge_model
+        self.model = model
         self.entity_to_id = entity_to_id
         self.relation_to_id = relation_to_id
-        self.device = self.kge_model.device
+
+    @property
+    def device(self):
+        return self.model.device
 
     @abstractmethod
     def evaluate(self, triples: np.ndarray):

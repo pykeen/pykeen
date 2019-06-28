@@ -2,9 +2,10 @@
 
 """Implementation of RESCAL."""
 
+from torch import nn
+
 from poem.constants import GPU, RESCAL_NAME
 from poem.models.base_owa import BaseOWAModule, slice_triples
-from torch import nn
 
 __all__ = ['RESCAL']
 

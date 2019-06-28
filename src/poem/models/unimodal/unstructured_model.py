@@ -7,9 +7,10 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-from poem.constants import UM_NAME, SCORING_FUNCTION_NORM, GPU
-from poem.models.base_owa import BaseOWAModule, slice_triples
 from torch import nn
+
+from poem.constants import GPU, SCORING_FUNCTION_NORM, UM_NAME
+from poem.models.base_owa import BaseOWAModule, slice_triples
 
 __all__ = ['UnstructuredModel']
 

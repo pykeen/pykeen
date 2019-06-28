@@ -55,14 +55,14 @@ def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
 class RankBasedEvaluator(Evaluator):
     def __init__(
             self,
-            kge_model,
+            model,
             entity_to_id,
             relation_to_id,
             training_triples: np.ndarray,
             filter_neg_triples=False,
             hits_at_k: Optional[List[int]] = None,
     ) -> None:
-        super().__init__(kge_model=kge_model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
+        super().__init__(model=model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
 
         self.all_entities = np.arange(0, len(self.entity_to_id))
         self.filter_neg_triples = filter_neg_triples
@@ -194,7 +194,7 @@ class RankBasedEvaluator(Evaluator):
             for k in self.hits_at_k
         }
         # Set eval mode in order to ignore functionalities such as dropout
-        self.kge_model = self.kge_model.eval()
+        self.model = self.model.eval()
 
         all_pos_triples = np.concatenate([self.train_triples, test_triples], axis=0)
         all_pos_triples_hashed = np.apply_along_axis(self._hash_triples, 1, all_pos_triples)
@@ -211,7 +211,7 @@ class RankBasedEvaluator(Evaluator):
 
             rank_of_positive_subject_based, rank_of_positive_object_based, adjusted_rank_of_positive_subject_based, \
             adjusted_rank_of_positive_object_based = compute_rank_fct(
-                kg_embedding_model=self.kge_model,
+                kg_embedding_model=self.model,
                 pos_triple=pos_triple,
                 corrupted_subject_based=corrupted_subject_based,
                 corrupted_object_based=corrupted_object_based,

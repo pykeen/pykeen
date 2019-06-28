@@ -7,9 +7,9 @@ import logging
 import numpy as np
 import torch
 import torch.autograd
-from poem.models.base_owa import BaseOWAModule
 from torch import nn
 
+from poem.models.base_owa import BaseOWAModule
 from ...constants import GPU, HOL_E_NAME, SCORING_FUNCTION_NORM
 from ...utils import slice_triples
 

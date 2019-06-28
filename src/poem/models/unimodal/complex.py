@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import GPU, COMPLEX_NAME, OWA
+from poem.constants import COMPLEX_NAME, GPU, OWA
 from poem.customized_loss_functions.softplus_loss import SoftplusLoss
 from poem.models.base_owa import BaseOWAModule, slice_triples
 

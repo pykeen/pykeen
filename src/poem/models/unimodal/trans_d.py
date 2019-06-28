@@ -4,9 +4,10 @@
 
 import torch
 import torch.autograd
-from poem.constants import GPU, TRANS_D_NAME, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
-from poem.models.base_owa import BaseOWAModule, slice_triples
 from torch import nn
+
+from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_D_NAME
+from poem.models.base_owa import BaseOWAModule, slice_triples
 
 __all__ = [
     'TransD',
