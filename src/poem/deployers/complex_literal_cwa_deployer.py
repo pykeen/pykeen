@@ -8,7 +8,7 @@ import time
 import click
 from torch import optim
 
-from poem.constants import BATCH_SIZE, EMBEDDING_DIM, INPUT_DROPOUT, MODEL_NAME, LEARNING_RATE, NUM_EPOCHS
+from poem.constants import BATCH_SIZE, EMBEDDING_DIM, INPUT_DROPOUT, LEARNING_RATE, MODEL_NAME, NUM_EPOCHS
 from poem.evaluation import RankBasedEvaluator
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 from poem.models import ComplexLiteralCWA
