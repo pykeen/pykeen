@@ -4,8 +4,9 @@
 
 import torch
 import torch.nn as nn
-from poem.constants import COMPLEX_CWA_NAME, CWA, GPU
 from torch.nn.init import xavier_normal_
+
+from poem.constants import COMPLEX_CWA_NAME, CWA, GPU
 
 
 class ComplexCWA(torch.nn.Module):

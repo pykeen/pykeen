@@ -2,13 +2,8 @@
 
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
-from typing import Tuple
-
-import numpy as np
-from typing import Dict
-from poem.constants import PATH_TO_NUMERIC_LITERALS, NUMERIC_LITERALS
-from poem.instance_creation_factories.instances import MultimodalOWAInstances, \
-    MultimodalCWAInstances
+from poem.constants import NUMERIC_LITERALS
+from poem.instance_creation_factories.instances import MultimodalCWAInstances, MultimodalOWAInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
 

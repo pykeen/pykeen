@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 import logging
 import os
@@ -5,16 +7,19 @@ import time
 
 import click
 import numpy as np
-import torch
-from poem.models.unimodal.hole import HolE
 from torch import optim
+from torch.nn import MarginRankingLoss
 
-from poem.constants import GPU, KG_EMBEDDING_MODEL_NAME, EMBEDDING_DIM, LEARNING_RATE, BATCH_SIZE, NUM_EPOCHS
+from poem.constants import BATCH_SIZE, EMBEDDING_DIM, GPU, MODEL_NAME, LEARNING_RATE, NUM_EPOCHS
 from poem.evaluation import RankBasedEvaluator
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import create_entity_and_relation_mappings, \
-    load_triples, map_triples_elements_to_ids
+from poem.models.unimodal.hole import HolE
+from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
+    create_entity_and_relation_mappings,
+    load_triples, map_triples_elements_to_ids,
+)
 from poem.training_loops import OWATrainingLoop
+from poem.utils import get_params_requiring_grad
 
 log = logging.getLogger(__name__)
 
@@ -36,11 +41,15 @@ def main(training_file, test_file, output_direc):
     all_triples = np.concatenate([training_triples, test_triples], axis=0)
 
     entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=all_triples)
-    mapped_training_triples = map_triples_elements_to_ids(triples=training_triples,
-                                                          entity_to_id=entity_to_id,
-                                                          rel_to_id=relation_to_id)
-    factory = TriplesFactory(entity_to_id=entity_to_id,
-                             relation_to_id=relation_to_id)
+    mapped_training_triples = map_triples_elements_to_ids(
+        triples=training_triples,
+        entity_to_id=entity_to_id,
+        rel_to_id=relation_to_id,
+    )
+    factory = TriplesFactory(
+        entity_to_id=entity_to_id,
+        relation_to_id=relation_to_id,
+    )
 
     instances = factory.create_owa_instances(triples=training_triples)
 
@@ -51,54 +60,62 @@ def main(training_file, test_file, output_direc):
     num_epochs = 10
 
     # Step 2: Configure KGE model
-    kge_model = HolE(num_entities=len(entity_to_id),
-                        num_relations=len(relation_to_id),
-                        embedding_dim=embedding_dim,
-                        criterion=torch.nn.MarginRankingLoss(margin=1., reduction='mean'),
-                        preferred_device=GPU)
-    kge_model = kge_model.to(kge_model.device)
+    model = HolE(
+        num_entities=len(entity_to_id),
+        num_relations=len(relation_to_id),
+        embedding_dim=embedding_dim,
+        criterion=MarginRankingLoss(margin=1., reduction='mean'),
+        preferred_device=GPU,
+    )
+    model = model.to(model.device)
 
-    parameters = filter(lambda p: p.requires_grad, kge_model.parameters())
-
-    optimizer = optim.Adagrad(params=parameters, lr=learning_rate)
+    params = get_params_requiring_grad(model)
+    optimizer = optim.Adagrad(params=params, lr=learning_rate)
 
     # Step 3: Train
     all_entities = np.array(list(entity_to_id.values()), dtype=np.long)
     log.info("Train KGE model")
 
-    owa_training_loop = OWATrainingLoop(kge_model=kge_model,
-                                        optimizer=optimizer,
-                                        all_entities=all_entities)
+    owa_training_loop = OWATrainingLoop(
+        model=model,
+        optimizer=optimizer,
+        all_entities=all_entities,
+    )
 
-    fitted_kge_model, losses = owa_training_loop.train(training_instances=instances,
-                                                       num_epochs=num_epochs,
-                                                       batch_size=batch_size,
-                                                       num_negs_per_pos=num_negs_per_pos
-                                                       )
+    _, losses = owa_training_loop.train(
+        training_instances=instances,
+        num_epochs=num_epochs,
+        batch_size=batch_size,
+        num_negs_per_pos=num_negs_per_pos
+    )
 
     # Step 4: Prepare test triples
-    mapped_test_triples = map_triples_elements_to_ids(triples=test_triples,
-                                                      entity_to_id=entity_to_id,
-                                                      rel_to_id=relation_to_id)
+    mapped_test_triples = map_triples_elements_to_ids(
+        triples=test_triples,
+        entity_to_id=entity_to_id,
+        rel_to_id=relation_to_id,
+    )
 
     # Step 5: Configure evaluator
     log.info("Evaluate KGE model")
-    evaluator = RankBasedEvaluator(kge_model=fitted_kge_model,
-                                   entity_to_id=entity_to_id,
-                                   relation_to_id=relation_to_id,
-                                   training_triples=mapped_training_triples,
-                                   filter_neg_triples=False)
+    evaluator = RankBasedEvaluator(
+        model=model,
+        entity_to_id=entity_to_id,
+        relation_to_id=relation_to_id,
+        training_triples=mapped_training_triples,
+        filter_neg_triples=False,
+    )
 
     # Step 6: Evaluate
     metric_results = evaluator.evaluate(test_triples=mapped_test_triples[0:100, :])
 
     # Step 7: Create summary
     config = {
-        KG_EMBEDDING_MODEL_NAME: kge_model.model_name,
+        MODEL_NAME: model.model_name,
         EMBEDDING_DIM: embedding_dim,
         LEARNING_RATE: learning_rate,
         BATCH_SIZE: batch_size,
-        NUM_EPOCHS: num_epochs
+        NUM_EPOCHS: num_epochs,
     }
 
     eval_file = os.path.join(output_directory, 'evaluation_summary.json')

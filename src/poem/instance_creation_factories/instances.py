@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict
 
 import numpy as np
+
 from poem.constants import CWA, OWA
 
 

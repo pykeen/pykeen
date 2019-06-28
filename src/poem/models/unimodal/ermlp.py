@@ -4,9 +4,10 @@
 
 import torch
 import torch.autograd
+from torch import nn
+
 from poem.constants import ERMLP_NAME, GPU
 from poem.models.base_owa import BaseOWAModule, slice_triples
-from torch import nn
 
 __all__ = ['ERMLP']
 

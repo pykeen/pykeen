@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict
 import logging
-import tqdm
+from collections import defaultdict
+from typing import Dict
 
 import numpy as np
+import tqdm
 
-from ...utils import slice_triples
-from collections import defaultdict
 log = logging.getLogger(__name__)
 
 
