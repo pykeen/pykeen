@@ -27,7 +27,7 @@ class CWATrainingLoop(TrainingLoop):
             label_smoothing_epsilon: float = 0.1,
     ):
         """Train the model using the closed world assumption."""
-        self.kge_model = self.kge_model.to(self.device)
+        self.model = self.model.to(self.device)
         subject_relation_pairs = training_instances.instances
         labels = training_instances.labels
         num_entities = len(training_instances.entity_to_id)
@@ -59,8 +59,8 @@ class CWATrainingLoop(TrainingLoop):
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
                 self.optimizer.zero_grad()
-                predictions = self.kge_model.forward_cwa(batch_pairs)
-                loss = self.kge_model.compute_label_loss(predictions, batch_labels_full)
+                predictions = self.model.forward_cwa(batch_pairs)
+                loss = self.model.compute_label_loss(predictions, batch_labels_full)
                 current_epoch_loss += (loss.item() * current_batch_size)
 
                 loss.backward()
@@ -69,4 +69,4 @@ class CWATrainingLoop(TrainingLoop):
             # Track epoch loss
             self.losses_per_epochs.append(current_epoch_loss / len(subject_relation_pairs))
 
-        return self.kge_model, self.losses_per_epochs
+        return self.model, self.losses_per_epochs

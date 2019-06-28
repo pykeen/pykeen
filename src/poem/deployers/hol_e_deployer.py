@@ -7,12 +7,13 @@ import time
 
 import click
 import numpy as np
-from torch import nn, optim
+from torch import optim
+from torch.nn import MarginRankingLoss
 
 from poem.constants import BATCH_SIZE, EMBEDDING_DIM, GPU, LEARNING_RATE, MODEL_NAME, NUM_EPOCHS
 from poem.evaluation import RankBasedEvaluator
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.unimodal.trans_d import TransD
+from poem.models.unimodal.hole import HolE
 from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import (
     create_entity_and_relation_mappings,
     load_triples, map_triples_elements_to_ids,
@@ -29,14 +30,17 @@ log = logging.getLogger(__name__)
 @click.option('-out', '--output_direc')
 def main(training_file, test_file, output_direc):
     """"""
+
     output_directory = os.path.join(output_direc, time.strftime("%Y-%m-%d-%H-%M-%S"))
     os.mkdir(output_directory)
 
     # Step 1: Create instances
     log.info("Create instances")
     training_triples = load_triples(path=training_file)
+    test_triples = load_triples(path=test_file)
+    all_triples = np.concatenate([training_triples, test_triples], axis=0)
 
-    entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=training_triples)
+    entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=all_triples)
     mapped_training_triples = map_triples_elements_to_ids(
         triples=training_triples,
         entity_to_id=entity_to_id,
@@ -49,25 +53,24 @@ def main(training_file, test_file, output_direc):
 
     instances = factory.create_owa_instances(triples=training_triples)
 
-    embedding_dim = 50
-    learning_rate = 0.01
-    margin_loss = 1
-    batch_size = 32
-    num_epochs = 1
+    embedding_dim = 20
+    num_negs_per_pos = 1
+    learning_rate = 0.1
+    batch_size = 200
+    num_epochs = 10
 
     # Step 2: Configure KGE model
-    model = TransD(
+    model = HolE(
         num_entities=len(entity_to_id),
         num_relations=len(relation_to_id),
         embedding_dim=embedding_dim,
-        relation_dim=10,
-        scoring_fct_norm=1,
-        criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
+        criterion=MarginRankingLoss(margin=1., reduction='mean'),
         preferred_device=GPU,
     )
+    model = model.to(model.device)
 
     params = get_params_requiring_grad(model)
-    optimizer = optim.SGD(params=params, lr=learning_rate)
+    optimizer = optim.Adagrad(params=params, lr=learning_rate)
 
     # Step 3: Train
     all_entities = np.array(list(entity_to_id.values()), dtype=np.long)
@@ -83,10 +86,10 @@ def main(training_file, test_file, output_direc):
         training_instances=instances,
         num_epochs=num_epochs,
         batch_size=batch_size,
+        num_negs_per_pos=num_negs_per_pos
     )
 
     # Step 4: Prepare test triples
-    test_triples = load_triples(path=test_file)
     mapped_test_triples = map_triples_elements_to_ids(
         triples=test_triples,
         entity_to_id=entity_to_id,

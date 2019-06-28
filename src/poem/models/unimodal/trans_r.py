@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.autograd
-from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_R_NAME, RELATION_EMBEDDING_DIM
+from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
 from torch import nn

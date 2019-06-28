@@ -7,6 +7,8 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.autograd
+from torch import nn
+
 from poem.constants import DISTMULT_NAME, GPU
 from poem.models.base import BaseModule
 from poem.utils import slice_triples

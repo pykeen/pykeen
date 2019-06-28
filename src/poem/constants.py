@@ -53,7 +53,7 @@ PATH_TO_NUMERIC_LITERALS = 'path_to_numeric_literals'
 
 """Model names"""
 
-KG_EMBEDDING_MODEL_NAME = 'kge_model_name'
+MODEL_NAME = 'model_name'
 DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
 DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
 COMPLEX_NAME = 'ComplEx'
@@ -68,6 +68,7 @@ ERMLP_NAME = 'ERMLP'
 RESCAL_NAME = 'RESCAL'
 SE_NAME = 'StructuredEmbedding'
 UM_NAME = 'UM'
+HOL_E_NAME = 'HolE'
 
 """DistMult related constants"""
 

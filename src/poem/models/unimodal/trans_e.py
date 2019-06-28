@@ -11,7 +11,7 @@ import torch.autograd
 from torch import nn
 
 from poem.models.base import BaseModule
-from poem.constants import GPU, TRANS_E_NAME, SCORING_FUNCTION_NORM
+from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_E_NAME
 from poem.utils import slice_triples
 
 __all__ = [

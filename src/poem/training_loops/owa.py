@@ -26,13 +26,13 @@ log.setLevel(logging.INFO)
 class OWATrainingLoop(TrainingLoop):
     def __init__(
             self,
-            kge_model: nn.Module,
+            model: nn.Module,
             optimizer,
             all_entities,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
         super().__init__(
-            kge_model=kge_model,
+            model=model,
             optimizer=optimizer,
             all_entities=all_entities,
         )
@@ -63,7 +63,7 @@ class OWATrainingLoop(TrainingLoop):
         num_pos_triples = pos_triples.shape[0]
         num_entities = len(training_instances.entity_to_id)
 
-        if self.kge_model.compute_mr_loss:
+        if self.model.compute_mr_loss:
             assert label_smoothing == False, 'Margin Ranking Loss cannot be used together with label smoothing'
 
         _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
@@ -86,14 +86,14 @@ class OWATrainingLoop(TrainingLoop):
 
                 # TODO: Should this be made clear within the model class itself?
                 # Apply forward constraint if defined for used KGE model, otherwise method just returns
-                self.kge_model.apply_forward_constraints()
+                self.model.apply_forward_constraints()
 
-                positive_scores = self.kge_model.forward_owa(pos_batch)
+                positive_scores = self.model.forward_owa(pos_batch)
                 positive_scores = positive_scores.repeat(num_negs_per_pos)
-                negative_scores = self.kge_model.forward_owa(neg_batch)
+                negative_scores = self.model.forward_owa(neg_batch)
 
-                if self.kge_model.compute_mr_loss:
-                    loss = self.kge_model.compute_mr_loss(positive_scores=positive_scores,
+                if self.model.compute_mr_loss:
+                    loss = self.model.compute_mr_loss(positive_scores=positive_scores,
                                                           negative_scores=negative_scores)
                 else:
                     predictions = torch.cat([positive_scores, negative_scores], 0)
@@ -105,7 +105,7 @@ class OWATrainingLoop(TrainingLoop):
                         labels = (labels * (1.0 - label_smoothing_epsilon))\
                                  + (label_smoothing_epsilon / (num_entities - 1))
 
-                    loss = self.kge_model.compute_label_loss(predictions=predictions, labels=labels)
+                    loss = self.model.compute_label_loss(predictions=predictions, labels=labels)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
@@ -118,4 +118,4 @@ class OWATrainingLoop(TrainingLoop):
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
             it.write(f'Losses: {self.losses_per_epochs}')
 
-        return self.kge_model, self.losses_per_epochs
+        return self.model, self.losses_per_epochs

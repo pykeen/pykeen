@@ -1,7 +1,7 @@
 from typing import Optional
 
 import torch
-from poem.constants import TRANS_H_NAME, SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H, GPU
+from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
 from torch import nn

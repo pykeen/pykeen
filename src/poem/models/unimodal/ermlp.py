@@ -6,6 +6,7 @@ from typing import Optional
 
 import torch
 import torch.autograd
+
 from poem.constants import ERMLP_NAME, GPU
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
