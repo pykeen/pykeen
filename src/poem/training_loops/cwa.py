@@ -8,7 +8,7 @@ from tqdm import trange
 
 from .base import TrainingLoop
 from .utils import split_list_in_batches
-from ..instance_creation_factories.instances import Instances
+from ..instance_creation_factories.instances import CWAInstances
 
 __all__ = [
     'CWATrainingLoop',
@@ -20,7 +20,7 @@ class CWATrainingLoop(TrainingLoop):
 
     def train(
             self,
-            training_instances: Instances,
+            training_instances: CWAInstances,
             num_epochs: int,
             batch_size: int,
             label_smoothing: bool = True,
@@ -39,6 +39,7 @@ class CWATrainingLoop(TrainingLoop):
             indices = np.arange(num_triples)
             np.random.shuffle(indices)
             subject_relation_pairs = subject_relation_pairs[indices]
+            # TODO: replace with: labels = labels[indicies]
             labels = [labels[i] for i in indices]
             batches = split_list_in_batches(input_list=subject_relation_pairs, batch_size=batch_size)
             labels_batches = split_list_in_batches(input_list=labels, batch_size=batch_size)
