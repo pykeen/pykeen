@@ -113,9 +113,8 @@ class DistMultLiteral(BaseModule):
         """"""
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
-        assert self.compute_mr_loss == True,\
-            'The chosen criterion does not allow the calculation of Margin Ranking losses. Please use the' \
-            'compute_label_loss method instead'
+        assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \
+                                     'Please use the compute_label_loss method instead'
         y = torch.ones_like(neg_triples_scores, device=self.device) * -1
         loss = self.criterion(pos_triple_scores, neg_triples_scores, y)
         return loss

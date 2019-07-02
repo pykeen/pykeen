@@ -113,11 +113,13 @@ class BaseModule(nn.Module):
         """."""
         return self.sigmoid(scores)
 
-    def compute_mr_loss(self, pos_triple_scores: torch.Tensor, neg_triples_scores: torch.Tensor) -> torch.Tensor:
-        """"""
-        assert self.compute_mr_loss == True,\
-            'The chosen criterion does not allow the calculation of Margin Ranking losses. Please use the' \
-            'compute_label_loss method instead'
+    def compute_mr_loss(
+            self,
+            pos_triple_scores: torch.Tensor,
+            neg_triples_scores: torch.Tensor,
+    ) -> torch.Tensor:
+        assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \
+                                     'Please use the compute_label_loss method instead'
         y = torch.ones_like(neg_triples_scores, device=self.device)
         loss = self.criterion(pos_triple_scores, neg_triples_scores, y)
         return loss
