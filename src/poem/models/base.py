@@ -27,7 +27,7 @@ class BaseModule(nn.Module):
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
-    hyper_params: Tuple[str] = (EMBEDDING_DIM, )
+    hyper_params: Tuple[str] = (EMBEDDING_DIM,)
 
     def __init__(
             self,

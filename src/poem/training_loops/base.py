@@ -11,6 +11,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from ..instance_creation_factories.instances import Instances
+from ..models.base import BaseModule
 from ..version import get_version
 
 __all__ = [
@@ -19,9 +20,10 @@ __all__ = [
 
 
 class TrainingLoop(ABC):
+
     def __init__(
             self,
-            model: nn.Module,
+            model: BaseModule,
             optimizer: torch.optim.Optimizer,
             all_entities: np.ndarray = None,
     ) -> None:

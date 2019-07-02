@@ -109,7 +109,7 @@ def main(training_file, test_file, output_direc, literals_file):
         INPUT_DROPOUT: input_dropout,
         LEARNING_RATE: learning_rate,
         BATCH_SIZE: batch_size,
-        NUM_EPOCHS: num_epochs
+        NUM_EPOCHS: num_epochs,
     }
 
     with open(eval_file, 'w') as file:
