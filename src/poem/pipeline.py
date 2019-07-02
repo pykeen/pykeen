@@ -75,7 +75,6 @@ class Helper:
             relation_to_id: Dict,
             training_triples: np.ndarray,
     ) -> Evaluator:
-        """."""
         evaluator_name = config.get(EVALUATOR)
         if evaluator_name is None:
             raise ValueError(f'Configuration is missing key: {EVALUATOR}')
@@ -128,7 +127,6 @@ class Helper:
 
     @staticmethod
     def get_factory(model_name, entity_to_id, relation_to_id) -> TriplesFactory:
-        """."""
         factory = Helper.MODEL_NAME_TO_FACTORY.get(model_name)
 
         if factory is None:
@@ -138,20 +136,17 @@ class Helper:
 
     @staticmethod
     def preprocess_train_triples(model_name, entity_to_id, relation_to_id, kg_assumption) -> Instances:
-        """"""
         # FIXME
         instance_factory = Helper.get_factory(config)
         return instance_factory.create_instances()
 
     @staticmethod
     def preprocess_train_and_test_triples(config) -> (Instances, Instances):
-        """"""
         instance_factory = Helper.get_factory(config)
         return instance_factory.create_train_and_test_instances()
 
 
 class Pipeline:
-    """."""
 
     def __init__(
             self,
@@ -189,12 +184,10 @@ class Pipeline:
             return Helper.preprocess_train_triples(config=self.config)
 
     def _perform_only_training(self):
-        """"""
-        if self.has_preprocessed_instances is False:
+        if not self.has_preprocessed_instances:
             self.training_instances = self.preprocess()
 
     def _train(self, model, training_instances):
-        """."""
         self.training_loop = Helper.get_training_loop(
             config=model.model_config.config,
             model=model,
@@ -207,10 +200,9 @@ class Pipeline:
         return model, losses_per_epochs
 
     def _perform_hpo(self):
-        """."""
+        pass
 
     def _evaluate(self, model, test_triples, entity_to_id, relation_to_id, training_triples):
-        """."""
         self.evaluator = Helper.get_evaluator(
             model=model,
             entity_to_id=entity_to_id,
@@ -222,8 +214,6 @@ class Pipeline:
         return metric_results
 
     def run(self):
-        """."""
-
         if EXECUTION_MODE not in self.config:
             raise KeyError()
 

@@ -34,8 +34,7 @@ class MetricResults:
 
 
 def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
-    """
-    Given scores, computes rank and adjusted rank.
+    """Compute rank and adjusted rank given scores.
 
     :param true_score: The score of the true triple.
     :param all_scores: The scores of all corrupted triples.
@@ -53,6 +52,7 @@ def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
 
 
 class RankBasedEvaluator(Evaluator):
+
     def __init__(
             self,
             model,
@@ -123,13 +123,31 @@ class RankBasedEvaluator(Evaluator):
         tuple_object_based = np.reshape(a=triple[0:2], newshape=(1, 2))
 
         # Copy current test tuple
-        tuples_subject_based = np.repeat(a=tuple_subject_based, repeats=candidate_entities_subject_based.shape[0],
-                                         axis=0)
-        tuples_object_based = np.repeat(a=tuple_object_based, repeats=candidate_entities_object_based.shape[0], axis=0)
+        tuples_subject_based = np.repeat(
+            a=tuple_subject_based,
+            repeats=candidate_entities_subject_based.shape[0],
+            axis=0,
+        )
+        tuples_object_based = np.repeat(
+            a=tuple_object_based,
+            repeats=candidate_entities_object_based.shape[0],
+            axis=0,
+        )
 
-        corrupted_subject_based = np.concatenate([candidate_entities_subject_based, tuples_subject_based], axis=1)
+        corrupted_subject_based = np.concatenate(
+            [
+                candidate_entities_subject_based,
+                tuples_subject_based, ],
+            axis=1,
+        )
 
-        corrupted_object_based = np.concatenate([tuples_object_based, candidate_entities_object_based], axis=1)
+        corrupted_object_based = np.concatenate(
+            [
+                tuples_object_based,
+                candidate_entities_object_based,
+            ],
+            axis=1,
+        )
 
         return corrupted_subject_based, corrupted_object_based
 
@@ -144,7 +162,8 @@ class RankBasedEvaluator(Evaluator):
         corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
-            all_pos_triples_hashed=all_pos_triples_hashed)
+            all_pos_triples_hashed=all_pos_triples_hashed,
+        )
 
         return self._compute_rank(
             kg_embedding_model=kg_embedding_model,
@@ -182,7 +201,7 @@ class RankBasedEvaluator(Evaluator):
             rank_of_positive_subject_based,
             rank_of_positive_object_based,
             adj_rank_of_positive_subject_based,
-            adj_rank_of_positive_object_based
+            adj_rank_of_positive_object_based,
         )
 
     def evaluate(self, test_triples: np.ndarray) -> MetricResults:

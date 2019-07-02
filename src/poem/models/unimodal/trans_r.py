@@ -106,7 +106,6 @@ class TransR(BaseModule):
         return projected_entity_embs
 
     def forward_owa(self, triples):
-        """"""
         heads, relations, tails = slice_triples(triples)
         head_embeddings = self._get_embeddings(
             elements=heads, embedding_module=self.entity_embeddings,

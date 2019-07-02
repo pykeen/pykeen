@@ -83,7 +83,6 @@ class StructuredEmbedding(BaseModule):
             norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight))
 
     def apply_forward_constraints(self):
-        """."""
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(

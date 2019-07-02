@@ -109,7 +109,6 @@ class HolE(BaseModule):
         )
 
     def apply_forward_constraints(self):
-        """."""
         # Do not compute gradients for forward constraints
         with torch.no_grad():
             # Ensure norm of entity embeddings is at most 1

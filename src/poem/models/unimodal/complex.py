@@ -79,8 +79,15 @@ class ComplEx(BaseModule):
 
     # TODO: Implement forward_cwa
 
-    def _compute_regularization_term(self, heads_real, relations_real, tails_real, heads_img, relations_img, tails_img):
-        """"""
+    def _compute_regularization_term(
+            self,
+            heads_real,
+            relations_real,
+            tails_real,
+            heads_img,
+            relations_img,
+            tails_img,
+    ):
         regularization_term = torch.mean(heads_real ** 2)
         regularization_term += torch.mean(heads_img ** 2)
         regularization_term += torch.mean(relations_real ** 2)
@@ -90,7 +97,6 @@ class ComplEx(BaseModule):
         return regularization_term
 
     def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor):
-        """."""
         loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor.item() * self.current_regularization_term
         return loss

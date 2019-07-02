@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import torch
 from torch._jit_internal import weak_script_method
 from torch.nn.modules.loss import _Loss
@@ -15,7 +17,6 @@ class SoftplusLoss(_Loss):
 
     @weak_script_method
     def forward(self, scores, labels):
-        """."""
         loss = self.softplus((-1) * labels * scores)
         loss = self._reduction_method(loss)
         return loss

@@ -70,7 +70,6 @@ class TransH(BaseModule):
         return projections
 
     def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """."""
         mrl_loss = super()._compute_mr_loss(positive_scores, negative_scores)
         soft_constraint_loss = self.compute_soft_constraint_loss()
         loss = mrl_loss + soft_constraint_loss

@@ -12,6 +12,7 @@ from poem.constants import CWA, OWA
 
 @dataclass
 class Instances:
+
     instances: np.ndarray
     entity_to_id: Dict[str, np.ndarray]
     relation_to_id: Dict[str, np.ndarray]
@@ -19,17 +20,20 @@ class Instances:
 
 @dataclass
 class OWAInstances(Instances):
+
     kg_assumption: str = OWA
 
 
 @dataclass
 class CWAInstances(Instances):
+
     labels: np.ndarray
     kg_assumption: str = CWA
 
 
 @dataclass
 class MultimodalInstances(Instances):
+
     multimodal_data: Dict[str, np.ndarray]
     data_relation_to_id: Dict[str, int]
 

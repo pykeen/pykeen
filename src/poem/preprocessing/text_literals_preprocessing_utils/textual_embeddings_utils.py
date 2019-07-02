@@ -64,5 +64,4 @@ def extract_first_n_sentences(
 
 
 def embedd_texts(texts: list) -> np.array:
-    """"""
     pass
