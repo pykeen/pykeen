@@ -4,7 +4,7 @@
 
 from typing import Iterable
 
-from torch import Tensor, nn
+from torch.nn import Module, Parameter
 
 __all__ = [
     'slice_triples',
@@ -21,6 +21,7 @@ def slice_triples(triples):
         triples[:, 2:3],  # tails
     )
 
+
 def slice_doubles(doubles):
     """Get the heads and relations from a matrix of doubles."""
     return (
@@ -28,6 +29,7 @@ def slice_doubles(doubles):
         doubles[:, 1:2],  # relations
     )
 
-def get_params_requiring_grad(model: nn.Module) -> Iterable[Tensor]:
+
+def get_params_requiring_grad(model: Module) -> Iterable[Parameter]:
     """Get the parameters that require gradients."""
     return filter(lambda p: p.requires_grad, model.parameters())

@@ -2,25 +2,25 @@
 
 """Utilities for getting and initializing KGE models."""
 
-from typing import Optional, Tuple
+import logging
+import random
+from abc import abstractmethod
+from typing import Iterable, Optional, Tuple
 
+import numpy as np
 import torch
 from torch import nn
-import numpy as np
-import random
-import logging
+from torch.nn import Parameter
 
-from torch._C import device
-from abc import abstractmethod
-from operator import attrgetter
-
-from ..constants import EMBEDDING_DIM, GPU, CPU
+from ..constants import EMBEDDING_DIM, GPU
+from ..utils import get_params_requiring_grad
 
 __all__ = [
     'BaseModule',
 ]
 
 log = logging.getLogger(__name__)
+
 
 class BaseModule(nn.Module):
     """A base class for all of the OWA based models."""
@@ -29,13 +29,15 @@ class BaseModule(nn.Module):
     entity_embedding_norm_type: int = 2
     hyper_params: Tuple[str] = [EMBEDDING_DIM]
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 criterion: nn.modules.loss = nn.MarginRankingLoss(),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            criterion: nn.modules.loss._Loss = nn.MarginRankingLoss(),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
         super().__init__()
 
         # Initialize the device
@@ -65,7 +67,6 @@ class BaseModule(nn.Module):
         # The embeddings are first initiated when calling the fit function
         self.entity_embeddings = None
 
-
     def _init_embeddings(self):
         self.entity_embeddings = nn.Embedding(
             self.num_entities,
@@ -74,9 +75,7 @@ class BaseModule(nn.Module):
             norm_type=self.entity_embedding_norm_type,
         )
 
-    def _set_device(self,
-                    device: str = 'cpu',
-                    ) -> None:
+    def _set_device(self, device: str = 'cpu') -> None:
         """Get the Torch device to use."""
         if device == 'gpu':
             if torch.cuda.is_available():
@@ -105,12 +104,10 @@ class BaseModule(nn.Module):
 
     @staticmethod
     def _get_embeddings(elements, embedding_module, embedding_dim):
-        """"""
         return embedding_module(elements).view(-1, embedding_dim)
 
     # TODO: Why this one?
     def compute_probabilities(self, scores):
-        """."""
         return self.sigmoid(scores)
 
     def compute_mr_loss(
@@ -124,11 +121,13 @@ class BaseModule(nn.Module):
         loss = self.criterion(pos_triple_scores, neg_triples_scores, y)
         return loss
 
-    def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """."""
-        assert self.compute_mr_loss == False,\
-            'The chosen criterion does not allow the calculation of label losses. Please use the' \
-            'compute_mr_loss method instead'
+    def compute_label_loss(
+            self,
+            predictions: torch.Tensor,
+            labels: torch.Tensor,
+    ) -> torch.Tensor:
+        assert not self.compute_mr_loss, 'The chosen criterion does not allow the calculation of label losses. ' \
+                                         'Please use the compute_mr_loss method instead'
         loss = self.criterion(predictions, labels)
         return loss
 
@@ -136,6 +135,7 @@ class BaseModule(nn.Module):
     def forward(self, batch):
         pass
 
-    def get_grad_params(self):
+    def get_grad_params(self) -> Iterable[Parameter]:
+        """Get the parameters that require gradients."""
         self._init_embeddings()
-        return filter(attrgetter('requires_grad'), self.parameters())
+        return get_params_requiring_grad(self)

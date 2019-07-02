@@ -64,7 +64,7 @@ class OWATrainingLoop(TrainingLoop):
         num_entities = len(training_instances.entity_to_id)
 
         if self.model.compute_mr_loss:
-            assert label_smoothing == False, 'Margin Ranking Loss cannot be used together with label smoothing'
+            assert not label_smoothing, 'Margin Ranking Loss cannot be used together with label smoothing'
 
         _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
         if tqdm_kwargs is not None:
