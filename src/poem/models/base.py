@@ -98,6 +98,7 @@ class BaseModule(nn.Module):
         self.to(self.device)
         torch.cuda.empty_cache()
 
+    # FIXME is this valid for CWA?
     def predict_scores(self, triples):
         scores = self.forward_owa(triples)
         return scores.detach().cpu().numpy()
@@ -132,9 +133,14 @@ class BaseModule(nn.Module):
         return loss
 
     @abstractmethod
-    def forward(self, batch):
-        pass
+    def forward_owa(self, batch):
+        raise NotImplementedError
 
+    @abstractmethod
+    def forward_cwa(self, batch):
+        raise NotImplementedError
+
+    # FIXME this isn't used anywhere
     def get_grad_params(self) -> Iterable[Parameter]:
         """Get the parameters that require gradients."""
         self._init_embeddings()
