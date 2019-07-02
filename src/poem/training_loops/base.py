@@ -2,7 +2,6 @@
 
 """Training loops for KGE models using multi-modal information."""
 
-import logging
 from abc import ABC, abstractmethod
 from typing import List, Mapping, Tuple
 
@@ -17,8 +16,6 @@ from ..version import get_version
 __all__ = [
     'TrainingLoop',
 ]
-
-log = logging.getLogger(__name__)
 
 
 class TrainingLoop(ABC):

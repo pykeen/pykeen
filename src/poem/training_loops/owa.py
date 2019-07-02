@@ -2,7 +2,6 @@
 
 """Training KGE models based on the OWA."""
 
-import logging
 from typing import Any, Mapping, Optional, Type
 
 import numpy as np
@@ -18,9 +17,6 @@ from ..negative_sampling.basic_negative_sampler import BasicNegativeSampler
 __all__ = [
     'OWATrainingLoop',
 ]
-
-log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
 
 
 class OWATrainingLoop(TrainingLoop):
@@ -41,7 +37,6 @@ class OWATrainingLoop(TrainingLoop):
             negative_sampler_cls = BasicNegativeSampler
 
         self.negative_sampler: NegativeSampler = negative_sampler_cls(all_entities=self.all_entities)
-
 
     def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
         return [
@@ -93,8 +88,10 @@ class OWATrainingLoop(TrainingLoop):
                 negative_scores = self.model.forward_owa(neg_batch)
 
                 if self.model.compute_mr_loss:
-                    loss = self.model.compute_mr_loss(positive_scores=positive_scores,
-                                                          negative_scores=negative_scores)
+                    loss = self.model.compute_mr_loss(
+                        positive_scores=positive_scores,
+                        negative_scores=negative_scores,
+                    )
                 else:
                     predictions = torch.cat([positive_scores, negative_scores], 0)
                     ones = torch.ones_like(positive_scores, device=self.device)
@@ -102,7 +99,7 @@ class OWATrainingLoop(TrainingLoop):
                     labels = torch.cat([ones, zeros], 0)
 
                     if label_smoothing:
-                        labels = (labels * (1.0 - label_smoothing_epsilon))\
+                        labels = (labels * (1.0 - label_smoothing_epsilon)) \
                                  + (label_smoothing_epsilon / (num_entities - 1))
 
                     loss = self.model.compute_label_loss(predictions=predictions, labels=labels)

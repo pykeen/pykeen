@@ -27,14 +27,31 @@ class BasicNegativeSampler(NegativeSampler):
         corrupted_subj_indices = np.random.choice(np.arange(0, self.num_entities), size=num_subj_corrupt)
         corrupted_subjects = np.reshape(self.all_entities[corrupted_subj_indices], newshape=(-1, 1))
         subject_based_corrupted_triples = np.concatenate(
-            [corrupted_subjects, batch_relations[:num_subj_corrupt], batch_tails[:num_subj_corrupt]], axis=1)
+            [
+                corrupted_subjects,
+                batch_relations[:num_subj_corrupt],
+                batch_tails[:num_subj_corrupt],
+            ],
+            axis=1,
+        )
 
         corrupted_obj_indices = np.random.choice(np.arange(0, self.num_entities), size=num_obj_corrupt)
         corrupted_objects = np.reshape(self.all_entities[corrupted_obj_indices], newshape=(-1, 1))
 
         object_based_corrupted_triples = np.concatenate(
-            [batch_heads[num_subj_corrupt:], batch_relations[num_subj_corrupt:], corrupted_objects], axis=1)
+            [
+                batch_heads[num_subj_corrupt:],
+                batch_relations[num_subj_corrupt:],
+                corrupted_objects],
+            axis=1,
+        )
 
-        neg_batch = np.concatenate([subject_based_corrupted_triples, object_based_corrupted_triples], axis=0)
+        neg_batch = np.concatenate(
+            [
+                subject_based_corrupted_triples,
+                object_based_corrupted_triples,
+            ],
+            axis=0,
+        )
 
         return neg_batch
