@@ -4,19 +4,18 @@
 
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
+from poem.constants import DISTMULT_LITERAL_NAME_OWA, GPU, INPUT_DROPOUT, NUMERIC_LITERALS
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
-from poem.constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS, GPU
+
 
 # TODO: Check entire build of the model
 class DistMultLiteral(BaseModule):
-    """
-    An implementation of DistMultLiteral [agustinus2018] based on the open world assumption (OWA)
+    """An implementation of DistMultLiteral [agustinus2018] based on the open world assumption (OWA).
 
     .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
                        arXiv preprint arXiv:1802.00934 (2018).
@@ -24,16 +23,23 @@ class DistMultLiteral(BaseModule):
     model_name = DISTMULT_LITERAL_NAME_OWA
     margin_ranking_loss_average: bool = True
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 multimodal_data: dict,
-                 embedding_dim: int = 50,
-                 criterion: nn.modules.loss = nn.MarginRankingLoss(),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            multimodal_data: dict,
+            embedding_dim: int = 50,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
 
         numeric_literals = multimodal_data.get(NUMERIC_LITERALS)
 
@@ -47,7 +53,6 @@ class DistMultLiteral(BaseModule):
         self.input_dropout = torch.nn.Dropout(
             self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.)
 
-
     def _init_embeddings(self):
         """Initialize the entities and relation embeddings based on the XAVIER initialization."""
         super()._init_embeddings()
@@ -56,34 +61,41 @@ class DistMultLiteral(BaseModule):
         xavier_normal_(self.relation_embeddings.weight.data)
 
     def _get_literals(self, heads, tails):
-        """"""
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.numeric_literals,
-                                 embedding_dim=self.num_of_literals),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.numeric_literals,
-                                 embedding_dim=self.num_of_literals),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.numeric_literals,
+                embedding_dim=self.num_of_literals,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.numeric_literals,
+                embedding_dim=self.num_of_literals,
+            ),
         )
 
     def _get_triple_embeddings(self, heads, relations, tails):
-        """"""
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
         )
 
     def _apply_g_function(self, entity_embeddings, literals):
-        """
-        Concatenate the entities with its literals and apply the g function which is a linear transformation
-        in this model.
+        """Concatenate the entities with its literals and apply the g function which is a linear transformation in this model.
+
         :param entity_embeddings: batch_size x self.embedding_dim
         :param literals: batch_size x self.num_literals
         :return:
@@ -91,11 +103,12 @@ class DistMultLiteral(BaseModule):
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
     def forward(self, triples):
-        """"""
         heads, relations, tails = slice_triples(triples)
-        head_embs, relation_embs, tail_embs = self._get_triple_embeddings(heads=heads,
-                                                                          relations=relations,
-                                                                          tails=tails)
+        head_embs, relation_embs, tail_embs = self._get_triple_embeddings(
+            heads=heads,
+            relations=relations,
+            tails=tails,
+        )
         head_literals, tail_literals = self._get_literals(heads=heads, tails=tails)
 
         g_heads = self._apply_g_function(entity_embeddings=head_embs, literals=head_literals)
@@ -110,7 +123,6 @@ class DistMultLiteral(BaseModule):
         return scores
 
     def compute_mr_loss(self, pos_triple_scores: torch.Tensor, neg_triples_scores: torch.Tensor) -> torch.Tensor:
-        """"""
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
         assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \

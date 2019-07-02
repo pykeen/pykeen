@@ -10,29 +10,37 @@ from torch.nn.init import xavier_normal_
 
 from poem.constants import COMPLEX_LITERAL_NAME_CWA, GPU, NUMERIC_LITERALS
 from poem.models.base import BaseModule
-from poem.utils import slice_triples, slice_doubles
+from poem.utils import slice_doubles
+
 
 # TODO: Check entire build of the model
 class ComplexLiteralCWA(BaseModule):
-    """
-        An implementation of ComplexLiteral [agustinus2018] based on the closed world assumption (CWA).
+    """An implementation of ComplexLiteral [agustinus2018] based on the closed world assumption (CWA).
 
-        .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
-                           arXiv preprint arXiv:1802.00934 (2018).
-        """
+    .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
+                       arXiv preprint arXiv:1802.00934 (2018).
+    """
     model_name = COMPLEX_LITERAL_NAME_CWA
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 multimodal_data: dict,
-                 embedding_dim: int = 50,
-                 input_dropout: float = 0.2,
-                 criterion: nn.modules.loss = nn.BCELoss(),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            multimodal_data: dict,
+            embedding_dim: int = 50,
+            input_dropout: float = 0.2,
+            criterion: nn.modules.loss = nn.BCELoss(),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
 
         self.entity_embs_real = None
         self.entity_embs_img = None

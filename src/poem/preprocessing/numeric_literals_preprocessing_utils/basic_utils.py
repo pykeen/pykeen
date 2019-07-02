@@ -7,10 +7,14 @@ from typing import Dict
 
 import numpy as np
 
+__all__ = [
+    'create_matrix_of_literals',
+]
+
 log = logging.getLogger(__name__)
 
 
-def create_matix_of_literals(numeric_triples: np.array, entity_to_id: Dict) -> np.ndarray:
+def create_matrix_of_literals(numeric_triples: np.array, entity_to_id: Dict) -> np.ndarray:
     """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
     data_relations = np.unique(np.ndarray.flatten(numeric_triples[:, 1:2]))
     data_rel_to_id: Dict[str, int] = {

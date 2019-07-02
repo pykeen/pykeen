@@ -12,7 +12,6 @@ from torch import nn
 from poem.constants import DISTMULT_NAME, GPU
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
-from torch import nn
 
 __all__ = ['DistMult']
 
@@ -25,8 +24,8 @@ class DistMult(BaseModule):
     .. [yang2014] Yang, B., Yih, W., He, X., Gao, J., & Deng, L. (2014). `Embedding Entities and Relations for Learning
                   and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
 
-                  Note:
-                    - For FB15k, yang et al. report 2 negatives per each positive.
+    Note:
+      - For FB15k, yang et al. report 2 negatives per each positive.
 
     .. seealso::
 
@@ -36,15 +35,23 @@ class DistMult(BaseModule):
     model_name = DISTMULT_NAME
     margin_ranking_loss_size_average: bool = True
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
         self.relation_embeddings = None
 
     def _init_embeddings(self):
@@ -84,13 +91,19 @@ class DistMult(BaseModule):
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
         )

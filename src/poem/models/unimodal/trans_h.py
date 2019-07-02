@@ -1,10 +1,11 @@
 from typing import Optional
 
 import torch
+from torch import nn
+
 from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
-from torch import nn
 
 
 class TransH(BaseModule):
@@ -22,21 +23,30 @@ class TransH(BaseModule):
 
     model_name = TRANS_H_NAME
     margin_ranking_loss_size_average: bool = False
-    hyper_params = [SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H]
+    # FIXME why is this not summing the BaseModule.hyper_params?
+    hyper_params = (SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H)
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 scoring_fct_norm: int = 1,
-                 soft_weight_constraint: float = 0.05,
-                 criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            scoring_fct_norm: int = 1,
+            soft_weight_constraint: float = 0.05,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
         self.weighting_soft_constraint = soft_weight_constraint
-        self.epsilon = nn.Parameter(torch.tensor(0.005, requires_grad=True))
+        self.epsilon = nn.Parameter(torch.Tensor(0.005, requires_grad=True))
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = None
         self.normal_vector_embeddings = None
@@ -94,27 +104,26 @@ class TransH(BaseModule):
         return soft_constraints_loss
 
     def forward_owa(self, triples):
-        """"""
         heads, relations, tails = slice_triples(triples)
         head_embeddings = self._get_embeddings(
             elements=heads, embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
 
         relation_embeddings = self._get_embeddings(
             elements=relations,
             embedding_module=self.relation_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
         tail_embeddings = self._get_embeddings(
             elements=tails,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
         normal_vec_embs = self._get_embeddings(
             elements=relations,
             embedding_module=self.normal_vector_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
         head_embeddings = head_embeddings.view(-1, 1, self.embedding_dim)
         tail_embeddings = tail_embeddings.view(-1, 1, self.embedding_dim)
@@ -131,7 +140,6 @@ class TransH(BaseModule):
     # TODO: Implement forward_cwa
 
     def apply_forward_constraints(self):
-        """."""
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(

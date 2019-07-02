@@ -5,7 +5,7 @@
 from poem.constants import NUMERIC_LITERALS
 from poem.instance_creation_factories.instances import MultimodalCWAInstances, MultimodalOWAInstances
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matix_of_literals
+from poem.preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matrix_of_literals
 
 
 class TriplesNumericLiteralsFactory(TriplesFactory):
@@ -20,8 +20,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
     def _create_numeric_literals(self) -> None:
         """"""
-        self.numeric_literals, self.literals_to_id = create_matix_of_literals(numeric_triples=self.numeric_triples,
-                                                         entity_to_id=self.entity_to_id)
+        self.numeric_literals, self.literals_to_id = create_matrix_of_literals(numeric_triples=self.numeric_triples,
+                                                                               entity_to_id=self.entity_to_id)
         self.multimodal_data = {
             NUMERIC_LITERALS: self.numeric_literals
         }

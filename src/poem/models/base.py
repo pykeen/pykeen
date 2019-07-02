@@ -27,7 +27,7 @@ class BaseModule(nn.Module):
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
-    hyper_params: Tuple[str] = [EMBEDDING_DIM]
+    hyper_params: Tuple[str] = (EMBEDDING_DIM, )
 
     def __init__(
             self,
@@ -106,7 +106,7 @@ class BaseModule(nn.Module):
     def _get_embeddings(elements, embedding_module, embedding_dim):
         return embedding_module(elements).view(-1, embedding_dim)
 
-    # TODO: Why this one?
+    # FIXME this is unused. remove.
     def compute_probabilities(self, scores):
         return self.sigmoid(scores)
 

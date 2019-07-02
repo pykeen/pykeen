@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.models.base_owa import BaseOWAModule
+from poem.models.base import BaseModule
 from ...constants import GPU, HOL_E_NAME, SCORING_FUNCTION_NORM
 from ...utils import slice_triples
 
@@ -50,7 +50,7 @@ def circular_correlation(
     return corr
 
 
-class HolE(BaseOWAModule):
+class HolE(BaseModule):
     """An implementation of HolE [nickel2016].
 
      This model uses circular correlation to compose subject and object embeddings to afterwards compute the inner product with a relation embedding.
@@ -68,11 +68,23 @@ class HolE(BaseOWAModule):
     """
 
     model_name = HOL_E_NAME
-    hyper_params = BaseOWAModule.hyper_params + [SCORING_FUNCTION_NORM]
+    hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
 
-    def __init__(self, num_entities, num_relations, embedding_dim=200,
-                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU) -> None:
-        super(HolE, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
+    def __init__(
+            self,
+            num_entities,
+            num_relations,
+            embedding_dim=200,
+            criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
+            preferred_device=GPU,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            criterion=criterion,
+            embedding_dim=embedding_dim,
+            preferred_device=preferred_device,
+        )
 
         # Embeddings
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
@@ -108,9 +120,12 @@ class HolE(BaseOWAModule):
         heads, relations, tails = slice_triples(triples)
 
         # Get embeddings
-        head_embeddings = self._get_embeddings(heads, embedding_module=self.entity_embeddings, embedding_dim=self.embedding_dim)
-        tail_embeddings = self._get_embeddings(tails, embedding_module=self.entity_embeddings, embedding_dim=self.embedding_dim)
-        relation_embeddings = self._get_embeddings(relations, embedding_module=self.relation_embeddings, embedding_dim=self.embedding_dim)
+        head_embeddings = self._get_embeddings(heads, embedding_module=self.entity_embeddings,
+                                               embedding_dim=self.embedding_dim)
+        tail_embeddings = self._get_embeddings(tails, embedding_module=self.entity_embeddings,
+                                               embedding_dim=self.embedding_dim)
+        relation_embeddings = self._get_embeddings(relations, embedding_module=self.relation_embeddings,
+                                                   embedding_dim=self.embedding_dim)
 
         # Circular correlation of entity embeddings
         composite = circular_correlation(a=head_embeddings, b=tail_embeddings)

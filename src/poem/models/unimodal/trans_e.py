@@ -10,8 +10,8 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.models.base import BaseModule
 from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_E_NAME
+from poem.models.base import BaseModule
 from poem.utils import slice_triples
 
 __all__ = [
@@ -36,18 +36,26 @@ class TransE(BaseModule):
     """
 
     model_name = TRANS_E_NAME
-    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM]
+    hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 scoring_fct_norm: int = 1,
-                 criterion: nn.modules.loss=nn.MarginRankingLoss(margin=1., reduction='mean'),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            scoring_fct_norm: int = 1,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = None
 
@@ -88,13 +96,19 @@ class TransE(BaseModule):
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
         )

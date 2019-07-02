@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import GPU, COMPLEX_NAME
+from poem.constants import COMPLEX_NAME, GPU
 from poem.customized_loss_functions.softplus_loss import SoftplusLoss
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
@@ -23,12 +23,24 @@ class ComplEx(BaseModule):
     """
     model_name = COMPLEX_NAME
 
-    def __init__(self, num_entities: int, num_relations: int,
-                 embedding_dim: int = 200, neg_label: float = -1., regularization_factor: float = 0.01,
-                 criterion: nn.modules.loss = SoftplusLoss(reduction='mean'), preferred_device: str =GPU,
-                 random_seed: Optional[int] = None):
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 200,
+            neg_label: float = -1.,
+            regularization_factor: float = 0.01,
+            criterion: nn.modules.loss = SoftplusLoss(reduction='mean'), preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ):
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
 
         self.neg_label = neg_label
         self.regularization_factor = torch.nn.Parameter(torch.Tensor([regularization_factor]))
@@ -52,7 +64,7 @@ class ComplEx(BaseModule):
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
     def forward_owa(self, triples):
-        heads_real, relations_real, tails_real, heads_img, relations_img, tails_img =\
+        heads_real, relations_real, tails_real, heads_img, relations_img, tails_img = \
             self._get_triple_embeddings(triples)
         # ComplEx space bilinear product (equivalent to HolE)
         # *: Elementwise multiplication
@@ -86,22 +98,34 @@ class ComplEx(BaseModule):
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings_real,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings_real,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings_real,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings_img,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings_img,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings_img,
-                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings_real,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings_real,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings_real,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings_img,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings_img,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings_img,
+                embedding_dim=self.embedding_dim,
+            ),
         )

@@ -25,5 +25,5 @@ __all__ = [
     'TransE',
     'TransH',
     'TransR',
-    'UnstructuredModel'
+    'UnstructuredModel',
 ]

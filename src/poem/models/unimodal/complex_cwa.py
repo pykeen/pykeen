@@ -6,10 +6,11 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from poem.constants import COMPLEX_CWA_NAME, CWA, GPU
+from torch.nn.init import xavier_normal_
+
+from poem.constants import COMPLEX_CWA_NAME, GPU
 from poem.models.base import BaseModule
 from poem.utils import slice_doubles
-from torch.nn.init import xavier_normal_
 
 
 # TODO: Combine with the Complex Module
@@ -21,16 +22,24 @@ class ComplexCWA(BaseModule):
     """
     model_name = COMPLEX_CWA_NAME
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 input_dropout: float = 0.2,
-                 criterion: nn.modules.loss = torch.nn.BCELoss(),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            input_dropout: float = 0.2,
+            criterion: nn.modules.loss = torch.nn.BCELoss(),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
         self.inp_drop = torch.nn.Dropout(input_dropout)
 
         # The embeddings are first initialized when calling the get_grad_params function

@@ -6,11 +6,11 @@ from typing import Optional
 
 import torch
 import torch.autograd
+from torch import nn
 
 from poem.constants import ERMLP_NAME, GPU
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
-from torch import nn
 
 __all__ = ['ERMLP']
 
@@ -28,15 +28,23 @@ class ERMLP(BaseModule):
     model_name = ERMLP_NAME
     margin_ranking_loss_size_average: bool = True
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
 
         """The mulit layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
            with self.embedding_dim neurons and output layer with one neuron.
@@ -65,13 +73,19 @@ class ERMLP(BaseModule):
     def _get_triple_embeddings(self, triples):
         heads, relations, tails = slice_triples(triples)
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
         )

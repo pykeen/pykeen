@@ -3,8 +3,10 @@
 """KGE Models."""
 
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
-from .unimodal import ComplEx, ComplexCWA, TransD, TransE, TransH, TransR, DistMult, ERMLP, RESCAL, StructuredEmbedding, \
-    UnstructuredModel
+from .unimodal import (
+    ComplEx, ComplexCWA, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR,
+    UnstructuredModel,
+)
 
 __all__ = [
     'ComplEx',

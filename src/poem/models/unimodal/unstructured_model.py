@@ -8,10 +8,11 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.autograd
+from torch import nn
+
 from poem.constants import GPU, SCORING_FUNCTION_NORM, UM_NAME
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
-from torch import nn
 
 __all__ = ['UnstructuredModel']
 
@@ -28,18 +29,26 @@ class UnstructuredModel(BaseModule):
 
     model_name = UM_NAME
     margin_ranking_loss_size_average: bool = True
-    hyper_params = BaseModule.hyper_params + [SCORING_FUNCTION_NORM]
+    hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
 
-    def __init__(self,
-                 num_entities: int,
-                 num_relations: int,
-                 embedding_dim: int = 50,
-                 scoring_fct_norm: int = 1,
-                 criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-                 preferred_device: str = GPU,
-                 random_seed: Optional[int] = None) -> None:
-        super().__init__(num_entities=num_entities, num_relations=num_relations, embedding_dim=embedding_dim,
-                         criterion=criterion, preferred_device=preferred_device, random_seed=random_seed)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            scoring_fct_norm: int = 1,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
         self.scoring_fct_norm = scoring_fct_norm
 
     def _init_embeddings(self):
