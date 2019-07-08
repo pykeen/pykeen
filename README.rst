@@ -16,12 +16,6 @@ sampling approaches and further evaluation metrics. Furthermore, we are integrat
 We are developing a new `package <https://github.com/SmartDataAnalytics/POEM>`_ for training and evaluating multimodal
 KGE models which will be later integrated into PyKEEN.
 
-Citation
---------
-If you find PyKEEN useful in your work, please consider citing:
-
-.. [1] Ali, M., et al.: The KEEN Universe: An ecosystem for knowledge graph embeddings with a focus on reproducibility
-   and transferability. In: International Semantic Web Conference (2019).
        
 Share Your Experimental Artifacts
 ---------------------------------
