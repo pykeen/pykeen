@@ -85,7 +85,7 @@ class RotatE(BaseOWAModule):
         rot_h = torch.stack([
             hr[:, :, 0, 0] - hr[:, :, 1, 1],
             hr[:, :, 0, 1] + hr[:, :, 1, 0],
-        ])
+        ]).view(-1, 2*self.embedding_dim)
 
         # use negative distance to tail as score
         scores = -torch.norm(rot_h - tail_embeddings, dim=-1)
