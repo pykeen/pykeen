@@ -21,7 +21,7 @@ Citation
 If you find PyKEEN useful in your work, please consider citing:
 
 .. [1] Ali, M., et al.: The KEEN Universe: An ecosystem for knowledge graph embeddings with a focus on reproducibility
- and transferability. In: International Semantic Web Conference (2019).
+and transferability. In: International Semantic Web Conference (2019).
        
 Share Your Experimental Artifacts
 ---------------------------------
