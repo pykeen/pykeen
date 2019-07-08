@@ -78,7 +78,16 @@ class RotatE(BaseOWAModule):
         tail_embeddings = self._get_embeddings(tails, embedding_module=self.entity_embeddings, embedding_dim=self.embedding_dim)
         relation_embeddings = self._get_embeddings(relations, embedding_module=self.relation_embeddings, embedding_dim=self.embedding_dim)
 
-        # rotate head embeddings in complex plane (equivalent to Hadamard product); then use negative distance to tail as score
-        scores = -torch.norm(head_embeddings * relation_embeddings - tail_embeddings, dim=-1)
+        # rotate head embeddings in complex plane (equivalent to Hadamard product)
+        h = head_embeddings.view(-1, self.embedding_dim, 2, 1)
+        r = relation_embeddings.view(-1, self.embedding_dim, 1, 2)
+        hr = (h * r)
+        rot_h = torch.stack([
+            hr[:, :, 0, 0] - hr[:, :, 1, 1],
+            hr[:, :, 0, 1] + hr[:, :, 1, 0],
+        ])
+
+        # use negative distance to tail as score
+        scores = -torch.norm(rot_h - tail_embeddings, dim=-1)
 
         return scores
