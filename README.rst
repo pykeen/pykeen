@@ -20,9 +20,7 @@ Citation
 --------
 If you find BioKEEN useful in your work, please consider citing:
 
-.. [1] Ali, M., et al.: The keen universe: An ecosystem for knowledge graph embeddings
-with a focus on reproducibility and transferability. In: International Semantic Web
-Conference (2019).
+.. [1] Ali, M., et al.: The keen universe: An ecosystem for knowledge graph embeddings with a focus on reproducibility and transferability. In: International Semantic Web Conference (2019).
        
 Share Your Experimental Artifacts
 ---------------------------------
