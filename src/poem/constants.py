@@ -70,6 +70,7 @@ SE_NAME = 'StructuredEmbedding'
 UM_NAME = 'UM'
 HOL_E_NAME = 'HolE'
 CONV_KB_NAME = 'ConvKB'
+ROTAT_E_NAME = 'RotatE'
 
 """DistMult related constants"""
 
