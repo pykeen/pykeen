@@ -5,6 +5,7 @@
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import xavier_normal_
 
 from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_D_NAME
 from poem.models.base_owa import BaseOWAModule, slice_triples
@@ -44,9 +45,15 @@ class TransD(BaseOWAModule):
         self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
 
-        # FIXME @mehdi what about initialization?
-
         self.scoring_fct_norm = scoring_fct_norm
+
+        self._initialize()
+
+    def _initialize(self):
+        xavier_normal_(self.entity_embeddings.weight.data)
+        xavier_normal_(self.relation_embeddings.weight.data)
+        xavier_normal_(self.entity_projections.weight.data)
+        xavier_normal_(self.relation_projections.weight.data)
 
     def _score_triples(self, triples):
         heads, relations, tails = slice_triples(triples)
