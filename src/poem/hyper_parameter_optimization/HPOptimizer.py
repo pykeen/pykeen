@@ -22,14 +22,3 @@ class HPOptimizer(ABC):
     def optimize_hyperparams(self, *args, **kwargs) -> HPOptimizerResult:
         """Run the optimizer."""
 
-    @staticmethod
-    def _sample_parameter_value(parameter_values: Mapping[str, Iterable[Any]]) -> Mapping[str, Any]:
-        """Randomly subsample a dictionary whose values are iterable."""
-        return {
-            parameter: (
-                random.choice(values)
-                if isinstance(values, list) else
-                values
-            )
-            for parameter, values in parameter_values.items()
-        }
