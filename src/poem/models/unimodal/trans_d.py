@@ -78,33 +78,33 @@ class TransD(BaseModule):
         h_embs = self._get_embeddings(
             elements=heads,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
         r_embs = self._get_embeddings(
             elements=relations,
             embedding_module=self.relation_embeddings,
-            embedding_dim=self.relation_embedding_dim
+            embedding_dim=self.relation_embedding_dim,
         )
         t_embs = self._get_embeddings(
             elements=tails,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
 
         h_proj_vec_embs = self._get_embeddings(
             elements=heads,
             embedding_module=self.entity_projections,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
         r_projs_embs = self._get_embeddings(
             elements=relations,
             embedding_module=self.relation_projections,
-            embedding_dim=self.relation_embedding_dim
+            embedding_dim=self.relation_embedding_dim,
         )
         t_proj_vec_embs = self._get_embeddings(
             elements=tails,
             embedding_module=self.entity_projections,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
 
         proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
