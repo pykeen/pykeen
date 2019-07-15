@@ -2,15 +2,24 @@
 
 """KGE Models."""
 
-from .model_config import ModelConfig
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
-from .unimodal import ComplexCWA, TransE, TransH
+from .unimodal import (
+    ComplEx, ComplexCWA, DistMult, ERMLP, RESCAL, StructuredEmbedding, TransD, TransE, TransH, TransR,
+    UnstructuredModel,
+)
 
 __all__ = [
-    'ModelConfig',
-    'ComplexLiteralCWA',
-    'DistMultLiteral',
+    'ComplEx',
     'ComplexCWA',
+    'ComplexLiteralCWA',
+    'DistMult',
+    'DistMultLiteral',
+    'ERMLP',
+    'RESCAL',
+    'StructuredEmbedding',
+    'TransD',
     'TransE',
     'TransH',
+    'TransR',
+    'UnstructuredModel',
 ]

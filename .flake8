@@ -14,6 +14,8 @@ ignore =
     S101
     # line break before binary operator
     W503
+    # Missing docstring in __init__
+    D107
 exclude =
     .tox,
     .git,

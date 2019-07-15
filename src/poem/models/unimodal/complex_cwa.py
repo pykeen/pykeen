@@ -2,57 +2,65 @@
 
 """Implementation of the Complex model based on the closed world assumption (CWA)."""
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import COMPLEX_CWA_NAME, CWA, GPU
+from poem.constants import COMPLEX_CWA_NAME, GPU
+from poem.models.base import BaseModule
+from poem.utils import slice_doubles
 
 
-class ComplexCWA(torch.nn.Module):
+# TODO: Combine with the Complex Module
+class ComplexCWA(BaseModule):
     """An implementation of Complex [agustinus2018] based on the closed world assumption (CWA).
 
     .. [trouillon2016complex] Trouillon, Théo, et al. "Complex embeddings for simple link prediction."
                               International Conference on Machine Learning. 2016.
     """
     model_name = COMPLEX_CWA_NAME
-    kg_assumption = CWA
 
-    def __init__(self, num_entities, num_relations, embedding_dim=50, input_dropout=0.2, preferred_device=GPU):
-        super(ComplexCWA, self).__init__()
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() and preferred_device else 'cpu')
-        # Entity dimensions
-        #: The number of entities in the knowledge graph
-        self.num_entities = num_entities
-        #: The number of unique relation types in the knowledge graph
-        self.num_relations = num_relations
-        #: The dimension of the embeddings to generate
-        self.embedding_dim = embedding_dim
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            embedding_dim: int = 50,
+            input_dropout: float = 0.2,
+            criterion: nn.modules.loss = torch.nn.BCELoss(),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
+        self.inp_drop = torch.nn.Dropout(input_dropout)
 
+        # The embeddings are first initialized when calling the get_grad_params function
+        self.entity_embeddings_real = None
+        self.entity_embeddings_img = None
+        self.relation_embeddings_real = None
+        self.relation_embeddings_img = None
+
+    def _init_embeddings(self):
         # TODO Why padding?
         self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.entity_embeddings_img = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
-
-        self.init()
-
-        self.inp_drop = torch.nn.Dropout(input_dropout)
-        self.criterion = torch.nn.BCELoss()
-
-    def init(self):
         xavier_normal_(self.entity_embeddings_real.weight.data)
         xavier_normal_(self.entity_embeddings_img.weight.data)
         xavier_normal_(self.relation_embeddings_real.weight.data)
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
-    def _compute_loss(self, predictions, labels):
-        return self.criterion(predictions, labels)
-
-    def forward(self, batch, labels):
-        batch_heads = batch[:, 0:1]
-        batch_relations = batch[:, 1:2]
+    def forward_cwa(self, doubles):
+        batch_heads, batch_relations = slice_doubles(doubles)
 
         subjects_embedded_real = self.entity_embeddings_real(batch_heads).view(-1, self.embedding_dim)
         relations_embedded_real = self.relation_embeddings_real(batch_relations).view(-1, self.embedding_dim)
@@ -78,5 +86,4 @@ class ComplexCWA(torch.nn.Module):
 
         predictions = real_real_real + real_img_img + img_real_img - img_img_real
         predictions = torch.sigmoid(predictions)
-        loss = self._compute_loss(predictions=predictions, labels=labels)
-        return loss
+        return predictions

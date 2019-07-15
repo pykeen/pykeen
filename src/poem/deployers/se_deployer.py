@@ -28,7 +28,6 @@ log = logging.getLogger(__name__)
 @click.option('-test', '--test_file')
 @click.option('-out', '--output_direc')
 def main(training_file, test_file, output_direc):
-    """"""
     output_directory = os.path.join(output_direc, time.strftime("%Y-%m-%d-%H-%M-%S"))
     os.mkdir(output_directory)
 

@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from ...utils import slice_triples
+from poem.utils import slice_triples
 
 
 def load_triples(path, delimiter='\t') -> np.array:

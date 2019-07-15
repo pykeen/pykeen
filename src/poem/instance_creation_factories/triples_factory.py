@@ -6,12 +6,11 @@ import numpy as np
 
 from .instances import CWAInstances, OWAInstances
 from ..preprocessing.instance_creation_utils.utils import create_multi_label_objects_instance
-from ..preprocessing.triples_preprocessing_utils.basic_triple_utils import (
-    map_triples_elements_to_ids,
-)
+from ..preprocessing.triples_preprocessing_utils.basic_triple_utils import map_triples_elements_to_ids
 
 
 class TriplesFactory:
+
     def __init__(self, entity_to_id, relation_to_id):
         self.entity_to_id = entity_to_id
         self.relation_to_id = relation_to_id

@@ -12,6 +12,7 @@ import torch
 from dataclasses_json import dataclass_json
 
 from .base import Evaluator
+from ..models.base import BaseModule
 
 __all__ = [
     'MetricResults',
@@ -34,8 +35,7 @@ class MetricResults:
 
 
 def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
-    """
-    Given scores, computes rank and adjusted rank.
+    """Compute rank and adjusted rank given scores.
 
     :param true_score: The score of the true triple.
     :param all_scores: The scores of all corrupted triples.
@@ -53,16 +53,21 @@ def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
 
 
 class RankBasedEvaluator(Evaluator):
+
     def __init__(
             self,
-            model,
+            model: BaseModule,
             entity_to_id,
             relation_to_id,
             training_triples: np.ndarray,
             filter_neg_triples=False,
             hits_at_k: Optional[List[int]] = None,
     ) -> None:
-        super().__init__(model=model, entity_to_id=entity_to_id, relation_to_id=relation_to_id)
+        super().__init__(
+            model=model,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+        )
 
         self.all_entities = np.arange(0, len(self.entity_to_id))
         self.filter_neg_triples = filter_neg_triples
@@ -123,19 +128,38 @@ class RankBasedEvaluator(Evaluator):
         tuple_object_based = np.reshape(a=triple[0:2], newshape=(1, 2))
 
         # Copy current test tuple
-        tuples_subject_based = np.repeat(a=tuple_subject_based, repeats=candidate_entities_subject_based.shape[0],
-                                         axis=0)
-        tuples_object_based = np.repeat(a=tuple_object_based, repeats=candidate_entities_object_based.shape[0], axis=0)
+        tuples_subject_based = np.repeat(
+            a=tuple_subject_based,
+            repeats=candidate_entities_subject_based.shape[0],
+            axis=0,
+        )
+        tuples_object_based = np.repeat(
+            a=tuple_object_based,
+            repeats=candidate_entities_object_based.shape[0],
+            axis=0,
+        )
 
-        corrupted_subject_based = np.concatenate([candidate_entities_subject_based, tuples_subject_based], axis=1)
+        corrupted_subject_based = np.concatenate(
+            [
+                candidate_entities_subject_based,
+                tuples_subject_based,
+            ],
+            axis=1,
+        )
 
-        corrupted_object_based = np.concatenate([tuples_object_based, candidate_entities_object_based], axis=1)
+        corrupted_object_based = np.concatenate(
+            [
+                tuples_object_based,
+                candidate_entities_object_based,
+            ],
+            axis=1,
+        )
 
         return corrupted_subject_based, corrupted_object_based
 
     def _compute_filtered_rank(
             self,
-            kg_embedding_model,
+            model: BaseModule,
             pos_triple,
             corrupted_subject_based,
             corrupted_object_based,
@@ -144,10 +168,11 @@ class RankBasedEvaluator(Evaluator):
         corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
-            all_pos_triples_hashed=all_pos_triples_hashed)
+            all_pos_triples_hashed=all_pos_triples_hashed,
+        )
 
         return self._compute_rank(
-            kg_embedding_model=kg_embedding_model,
+            model=model,
             pos_triple=pos_triple,
             corrupted_subject_based=corrupted_subject_based,
             corrupted_object_based=corrupted_object_based,
@@ -156,7 +181,7 @@ class RankBasedEvaluator(Evaluator):
 
     def _compute_rank(
             self,
-            kg_embedding_model,
+            model: BaseModule,
             pos_triple,
             corrupted_subject_based,
             corrupted_object_based,
@@ -167,10 +192,10 @@ class RankBasedEvaluator(Evaluator):
         corrupted_subject_based = torch.tensor(corrupted_subject_based, dtype=torch.long, device=self.device)
         corrupted_object_based = torch.tensor(corrupted_object_based, dtype=torch.long, device=self.device)
 
-        scores_of_corrupted_subjects = kg_embedding_model.predict_scores(corrupted_subject_based)
-        scores_of_corrupted_objects = kg_embedding_model.predict_scores(corrupted_object_based)
+        scores_of_corrupted_subjects = model.predict_scores(corrupted_subject_based)
+        scores_of_corrupted_objects = model.predict_scores(corrupted_object_based)
 
-        score_of_positive = kg_embedding_model.predict_scores(
+        score_of_positive = model.predict_scores(
             torch.tensor([pos_triple], dtype=torch.long, device=self.device))
 
         rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(
@@ -182,7 +207,7 @@ class RankBasedEvaluator(Evaluator):
             rank_of_positive_subject_based,
             rank_of_positive_object_based,
             adj_rank_of_positive_subject_based,
-            adj_rank_of_positive_object_based
+            adj_rank_of_positive_object_based,
         )
 
     def evaluate(self, test_triples: np.ndarray) -> MetricResults:
@@ -209,8 +234,12 @@ class RankBasedEvaluator(Evaluator):
             corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
                 triple=pos_triple)
 
-            rank_of_positive_subject_based, rank_of_positive_object_based, adjusted_rank_of_positive_subject_based, \
-            adjusted_rank_of_positive_object_based = compute_rank_fct(
+            (
+                rank_of_positive_subject_based,
+                rank_of_positive_object_based,
+                adjusted_rank_of_positive_subject_based,
+                adjusted_rank_of_positive_object_based,
+            ) = compute_rank_fct(
                 kg_embedding_model=self.model,
                 pos_triple=pos_triple,
                 corrupted_subject_based=corrupted_subject_based,

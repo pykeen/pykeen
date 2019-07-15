@@ -7,5 +7,5 @@ from .basic_negative_sampler import BasicNegativeSampler
 
 __all__ = [
     'NegativeSampler',
-    'BasicNegativeSampler'
+    'BasicNegativeSampler',
 ]

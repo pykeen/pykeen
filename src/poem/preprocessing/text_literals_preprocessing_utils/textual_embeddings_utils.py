@@ -35,9 +35,11 @@ def _extract_sentences(descriptions: np.array) -> list:
     return processed_descriptions
 
 
-def extract_first_n_sentences(entity_to_desc: Dict[str, str],
-                              max_num_sentences: int,
-                              num_processes=multiprocessing.cpu_count()) -> Dict[str, str]:
+def extract_first_n_sentences(
+        entity_to_desc: Dict[str, str],
+        max_num_sentences: int,
+        num_processes=multiprocessing.cpu_count(),
+) -> Dict[str, str]:
     """Extract first n sentences of description, and return mapping of entity to processed descriptions."""
     global MAX_NUM_SENTENCES
     MAX_NUM_SENTENCES = max_num_sentences
@@ -62,5 +64,4 @@ def extract_first_n_sentences(entity_to_desc: Dict[str, str],
 
 
 def embedd_texts(texts: list) -> np.array:
-    """"""
     pass

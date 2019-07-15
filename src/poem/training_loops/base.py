@@ -2,29 +2,29 @@
 
 """Training loops for KGE models using multi-modal information."""
 
-import logging
 from abc import ABC, abstractmethod
 from typing import List, Mapping, Tuple
 
 import numpy as np
+import torch
 import torch.nn as nn
 from tqdm import tqdm
 
 from ..instance_creation_factories.instances import Instances
+from ..models.base import BaseModule
 from ..version import get_version
 
 __all__ = [
     'TrainingLoop',
 ]
 
-log = logging.getLogger(__name__)
-
 
 class TrainingLoop(ABC):
+
     def __init__(
             self,
-            model: nn.Module,
-            optimizer,
+            model: BaseModule,
+            optimizer: torch.optim.Optimizer,
             all_entities: np.ndarray = None,
     ) -> None:
         self.model = model

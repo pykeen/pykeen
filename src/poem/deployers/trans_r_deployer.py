@@ -28,8 +28,6 @@ log = logging.getLogger(__name__)
 @click.option('-test', '--test_file')
 @click.option('-out', '--output_direc')
 def main(training_file, test_file, output_direc):
-    """"""
-
     output_directory = os.path.join(output_direc, time.strftime("%Y-%m-%d-%H-%M-%S"))
     os.mkdir(output_directory)
 
@@ -38,11 +36,15 @@ def main(training_file, test_file, output_direc):
     training_triples = load_triples(path=training_file)
 
     entity_to_id, relation_to_id = create_entity_and_relation_mappings(triples=training_triples)
-    mapped_training_triples = map_triples_elements_to_ids(triples=training_triples,
-                                                          entity_to_id=entity_to_id,
-                                                          rel_to_id=relation_to_id)
-    factory = TriplesFactory(entity_to_id=entity_to_id,
-                             relation_to_id=relation_to_id)
+    mapped_training_triples = map_triples_elements_to_ids(
+        triples=training_triples,
+        entity_to_id=entity_to_id,
+        rel_to_id=relation_to_id,
+    )
+    factory = TriplesFactory(
+        entity_to_id=entity_to_id,
+        relation_to_id=relation_to_id,
+    )
 
     instances = factory.create_owa_instances(triples=training_triples)
 

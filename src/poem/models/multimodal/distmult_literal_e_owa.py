@@ -2,19 +2,20 @@
 
 """Implementation of the DistMultLiteral model."""
 
-import numpy as np
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from ..base_owa import BaseOWAModule, slice_triples
-from ..model_config import ModelConfig
-from ...constants import DISTMULT_LITERAL_NAME_OWA, INPUT_DROPOUT, NUMERIC_LITERALS
+from poem.constants import DISTMULT_LITERAL_NAME_OWA, GPU, INPUT_DROPOUT, NUMERIC_LITERALS
+from poem.models.base import BaseModule
+from poem.utils import slice_triples
 
 
-class DistMultLiteral(BaseOWAModule):
-    """
-    An implementation of DistMultLiteral [agustinus2018] based on the open world assumption (OWA)
+# TODO: Check entire build of the model
+class DistMultLiteral(BaseModule):
+    """An implementation of DistMultLiteral [agustinus2018] based on the open world assumption (OWA).
 
     .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
                        arXiv preprint arXiv:1802.00934 (2018).
@@ -22,13 +23,28 @@ class DistMultLiteral(BaseOWAModule):
     model_name = DISTMULT_LITERAL_NAME_OWA
     margin_ranking_loss_average: bool = True
 
-    def __init__(self, model_config: ModelConfig) -> None:
-        super().__init__(model_config)
+    def __init__(
+            self,
+            num_entities: int,
+            num_relations: int,
+            multimodal_data: dict,
+            embedding_dim: int = 50,
+            criterion: nn.modules.loss = nn.MarginRankingLoss(),
+            preferred_device: str = GPU,
+            random_seed: Optional[int] = None) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            embedding_dim=embedding_dim,
+            criterion=criterion,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
 
-        numeric_literals = model_config.multimodal_data.get(NUMERIC_LITERALS)
+        numeric_literals = multimodal_data.get(NUMERIC_LITERALS)
 
         # Embeddings
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.relation_embeddings = None
         self.numeric_literals = nn.Embedding.from_pretrained(
             torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True)
         # Number of columns corresponds to number of literals
@@ -37,67 +53,62 @@ class DistMultLiteral(BaseOWAModule):
         self.input_dropout = torch.nn.Dropout(
             self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.)
 
-        self._initialize()
-
-    def _initialize(self):
+    def _init_embeddings(self):
         """Initialize the entities and relation embeddings based on the XAVIER initialization."""
+        super()._init_embeddings()
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         xavier_normal_(self.entity_embeddings.weight.data)
         xavier_normal_(self.relation_embeddings.weight.data)
 
     def _get_literals(self, heads, tails):
-        """"""
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.numeric_literals,
-                                 embedding_dim=self.num_of_literals),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.numeric_literals,
-                                 embedding_dim=self.num_of_literals),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.numeric_literals,
+                embedding_dim=self.num_of_literals,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.numeric_literals,
+                embedding_dim=self.num_of_literals,
+            ),
         )
 
     def _get_triple_embeddings(self, heads, relations, tails):
-        """"""
         return (
-            self._get_embeddings(elements=heads,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=relations,
-                                 embedding_module=self.relation_embeddings,
-                                 embedding_dim=self.embedding_dim),
-            self._get_embeddings(elements=tails,
-                                 embedding_module=self.entity_embeddings,
-                                 embedding_dim=self.embedding_dim),
+            self._get_embeddings(
+                elements=heads,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=relations,
+                embedding_module=self.relation_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
+            self._get_embeddings(
+                elements=tails,
+                embedding_module=self.entity_embeddings,
+                embedding_dim=self.embedding_dim,
+            ),
         )
 
     def _apply_g_function(self, entity_embeddings, literals):
-        """
-        Concatenate the entities with its literals and apply the g function which is a linear transformation
-        in this model.
+        """Concatenate the entities with its literals and apply the g function which is a linear transformation in this model.
+
         :param entity_embeddings: batch_size x self.embedding_dim
         :param literals: batch_size x self.num_literals
         :return:
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
-    def _compute_scores(self, head_embs, relation_embs, tail_embs):
-        """
-        Compute scores based on DistMult's scoring function.
-        :param head_embs: batch_size x self.embedding_dim
-        :param relation_embs: batch_size x self.embedding_dim
-        :param tail_embs: batch_size x self.embedding_dim
-        :return:
-        """
-
-        # -, because lower score shall correspond to a more plausible triple.
-        scores = - torch.sum(head_embs * relation_embs * tail_embs, dim=1)
-        return scores
-
-    def _score_triples(self, triples):
-        """"""
+    def forward(self, triples):
         heads, relations, tails = slice_triples(triples)
-        head_embs, relation_embs, tail_embs = self._get_triple_embeddings(heads=heads,
-                                                                          relations=relations,
-                                                                          tails=tails)
+        head_embs, relation_embs, tail_embs = self._get_triple_embeddings(
+            heads=heads,
+            relations=relations,
+            tails=tails,
+        )
         head_literals, tail_literals = self._get_literals(heads=heads, tails=tails)
 
         g_heads = self._apply_g_function(entity_embeddings=head_embs, literals=head_literals)
@@ -107,35 +118,15 @@ class DistMultLiteral(BaseOWAModule):
         g_heads = self.input_dropout(g_heads)
         g_tails = self.input_dropout(g_tails)
 
-        return self._compute_scores(head_embs=g_heads, relation_embs=relation_embs, tail_embs=g_tails)
+        # -, because lower score shall correspond to a more plausible triple.
+        scores = - torch.sum(g_heads * relation_embs * g_tails, dim=1)
+        return scores
 
-    def _compute_loss(self, positive_scores, negative_scores):
+    def compute_mr_loss(self, pos_triple_scores: torch.Tensor, neg_triples_scores: torch.Tensor) -> torch.Tensor:
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
-        # TODO: All other distance-based models implement _compute_scores and return the negative distance
-        y = torch.tensor([-1.0], device=self.device).expand(positive_scores.shape[0])
-
-        loss = self.criterion(positive_scores, negative_scores, y)
-        return loss
-
-    def predict_scores(self, triples: torch.tensor) -> np.array:
-        """
-        Compute predictions.
-        :param triples: num_triples x 3
-        :return:
-        """
-        scores = self._score_triples(triples)
-        return scores.detach().cpu().numpy()
-
-    def forward(self, batch_positives, batch_negatives):
-        """
-        Performs all the computation by the model for the passed batch.
-        :param batch_positives: batch_size x 3
-        :param batch_negatives: batch_size x 3
-        :return:
-        """
-
-        positive_scores = self._score_triples(batch_positives)
-        negative_scores = self._score_triples(batch_negatives)
-        loss = self._compute_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \
+                                     'Please use the compute_label_loss method instead'
+        y = torch.ones_like(neg_triples_scores, device=self.device) * -1
+        loss = self.criterion(pos_triple_scores, neg_triples_scores, y)
         return loss
