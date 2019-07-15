@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import xavier_normal_
 
 from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_D_NAME
 from poem.models.base import BaseModule
@@ -66,7 +67,10 @@ class TransD(BaseModule):
         self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1)
         self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
-        # FIXME @mehdi what about initialization?
+        xavier_normal_(self.entity_embeddings.weight.data)
+        xavier_normal_(self.relation_embeddings.weight.data)
+        xavier_normal_(self.entity_projections.weight.data)
+        xavier_normal_(self.relation_projections.weight.data)
 
     def forward_owa(self, triples):
         heads, relations, tails = slice_triples(triples)
@@ -74,33 +78,33 @@ class TransD(BaseModule):
         h_embs = self._get_embeddings(
             elements=heads,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=self.embedding_dim
         )
         r_embs = self._get_embeddings(
             elements=relations,
             embedding_module=self.relation_embeddings,
-            embedding_dim=self.relation_embedding_dim,
+            embedding_dim=self.relation_embedding_dim
         )
         t_embs = self._get_embeddings(
             elements=tails,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=self.embedding_dim
         )
 
         h_proj_vec_embs = self._get_embeddings(
             elements=heads,
             embedding_module=self.entity_projections,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=self.embedding_dim
         )
         r_projs_embs = self._get_embeddings(
             elements=relations,
             embedding_module=self.relation_projections,
-            embedding_dim=self.relation_embedding_dim,
+            embedding_dim=self.relation_embedding_dim
         )
         t_proj_vec_embs = self._get_embeddings(
             elements=tails,
             embedding_module=self.entity_projections,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=self.embedding_dim
         )
 
         proj_heads = self._project_entities(h_embs, h_proj_vec_embs, r_projs_embs)
