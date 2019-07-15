@@ -79,8 +79,11 @@ class DistMult(BaseModule):
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
             norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
+        self.forward_constraint_applied = True
 
     def forward_owa(self, triples):
+        if not self.forward_constraint_applied:
+            self.apply_forward_constraints()
         head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
         scores = torch.sum(head_embeddings * relation_embeddings * tail_embeddings, dim=1)
         return scores

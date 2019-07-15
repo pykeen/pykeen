@@ -67,6 +67,10 @@ class BaseModule(nn.Module):
         # The embeddings are first initiated when calling the fit function
         self.entity_embeddings = None
 
+        # Marker to check wether the forward constraints of a models has been applied before starting loss calculation
+        self.forward_constraint_applied = False
+
+
     def _init_embeddings(self):
         self.entity_embeddings = nn.Embedding(
             self.num_entities,
@@ -98,7 +102,7 @@ class BaseModule(nn.Module):
         self.to(self.device)
         torch.cuda.empty_cache()
 
-    # FIXME is this valid for CWA?
+    # Predicting scores calls the owa forward function, as this
     def predict_scores(self, triples):
         scores = self.forward_owa(triples)
         return scores.detach().cpu().numpy()
@@ -107,7 +111,7 @@ class BaseModule(nn.Module):
     def _get_embeddings(elements, embedding_module, embedding_dim):
         return embedding_module(elements).view(-1, embedding_dim)
 
-    # FIXME this is unused. remove.
+    # FIXME this will be used in a later commit for the restructuring
     def compute_probabilities(self, scores):
         return self.sigmoid(scores)
 

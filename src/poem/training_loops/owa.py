@@ -79,10 +79,6 @@ class OWATrainingLoop(TrainingLoop):
                 pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.device)
                 neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
-                # TODO: Should this be made clear within the model class itself?
-                # Apply forward constraint if defined for used KGE model, otherwise method just returns
-                self.model.apply_forward_constraints()
-
                 positive_scores = self.model.forward_owa(pos_batch)
                 positive_scores = positive_scores.repeat(num_negs_per_pos)
                 negative_scores = self.model.forward_owa(neg_batch)
@@ -110,6 +106,9 @@ class OWATrainingLoop(TrainingLoop):
                 loss.backward()
                 current_epoch_loss += (loss.item() * current_batch_size * num_negs_per_pos)
                 self.optimizer.step()
+                # After changing applying the gradients to the embeddings, the model is notified that the forward
+                # constraints are no longer applied
+                self.model.forward_constraint_applied = False
 
             # Track epoch loss
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))

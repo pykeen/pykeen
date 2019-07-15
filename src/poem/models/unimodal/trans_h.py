@@ -103,6 +103,8 @@ class TransH(BaseModule):
         return soft_constraints_loss
 
     def forward_owa(self, triples):
+        if not self.forward_constraint_applied:
+            self.apply_forward_constraints()
         heads, relations, tails = slice_triples(triples)
         head_embeddings = self._get_embeddings(
             elements=heads, embedding_module=self.entity_embeddings,
@@ -143,3 +145,4 @@ class TransH(BaseModule):
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
             norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))
+        self.forward_constraint_applied = True

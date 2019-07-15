@@ -114,8 +114,11 @@ class HolE(BaseModule):
             # Ensure norm of entity embeddings is at most 1
             norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1, keepdim=True)
             self.entity_embeddings.weight /= torch.max(norms, torch.ones(size=(), device=self.device))
+        self.forward_constraint_applied = True
 
     def _score_triples(self, triples):
+        if not self.forward_constraint_applied:
+            self.apply_forward_constraints()
         heads, relations, tails = slice_triples(triples)
 
         # Get embeddings
