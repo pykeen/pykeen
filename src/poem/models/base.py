@@ -120,7 +120,7 @@ class BaseModule(nn.Module):
             negative_scores: torch.Tensor,
     ) -> torch.Tensor:
         assert self.is_mr_loss, 'The chosen criterion does not allow the calculation of label losses. ' \
-                                     'Please use the compute_mr_loss method instead'
+                                'Please use the compute_mr_loss method instead'
         y = torch.ones_like(negative_scores, device=self.device)
         loss = self.criterion(positive_scores, negative_scores, y)
         return loss
@@ -131,7 +131,7 @@ class BaseModule(nn.Module):
             labels: torch.Tensor,
     ) -> torch.Tensor:
         assert not self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin ranking losses. ' \
-                                         'Please use the compute_label_loss method instead'
+                                    'Please use the compute_label_loss method instead'
         loss = self.criterion(predictions, labels)
         return loss
 
