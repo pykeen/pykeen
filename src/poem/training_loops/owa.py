@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from tqdm import trange
 
+from poem.models.base import BaseModule
 from .base import TrainingLoop
 from .utils import split_list_in_batches
 from ..negative_sampling import NegativeSampler
@@ -22,9 +23,9 @@ __all__ = [
 class OWATrainingLoop(TrainingLoop):
     def __init__(
             self,
-            model: nn.Module,
             optimizer,
             all_entities,
+            model: BaseModule = None,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
         super().__init__(
