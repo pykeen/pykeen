@@ -2,7 +2,7 @@
 
 """Constants defined for POEM."""
 
-from torch.optim import Adagrad, Adam, SGD
+from torch.optim import Adam, SGD
 
 """Device related constants"""
 
@@ -36,7 +36,7 @@ RELATION_EMBEDDING_DIM = 'relation_embedding_dim'
 
 """Optimizer related constants"""
 SGD_OPTIMIZER_NAME = SGD.__name__
-ADAGRAD_OPTIMIZER_NAME = Adagrad.__name__
+#ADAGRAD_OPTIMIZER_NAME = Adagrad.__name__
 ADAM_OPTIMIZER_NAME = Adam.__name__
 
 """Evaluator related constants"""
