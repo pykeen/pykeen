@@ -42,7 +42,8 @@ class BasicNegativeSampler(NegativeSampler):
             [
                 batch_heads[num_subj_corrupt:],
                 batch_relations[num_subj_corrupt:],
-                corrupted_objects],
+                corrupted_objects,
+            ],
             axis=1,
         )
 

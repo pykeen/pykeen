@@ -76,12 +76,14 @@ class TransE(BaseModule):
 
         norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
+            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight),
+        )
 
     def apply_forward_constraints(self):
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
-            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
+            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight),
+        )
         self.forward_constraint_applied = True
 
     def forward_owa(self, triples):

@@ -8,9 +8,9 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import ERMLP_NAME, GPU
-from poem.models.base import BaseModule
-from poem.utils import slice_triples
+from ..base import BaseModule
+from ...constants import ERMLP_NAME, GPU
+from ...utils import slice_triples
 
 __all__ = ['ERMLP']
 
@@ -22,7 +22,6 @@ class ERMLP(BaseModule):
 
     .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
                   <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
-
     """
 
     model_name = ERMLP_NAME

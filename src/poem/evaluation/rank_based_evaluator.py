@@ -95,8 +95,10 @@ class RankBasedEvaluator(Evaluator):
         mask = np.where(mask)[0]
 
         if mask.size == 0:
-            raise Exception("User selected filtered metric computation, but all corrupted triples exists"
-                            "also a positive triples.")
+            raise Exception(
+                "User selected filtered metric computation, but all corrupted triples exists"
+                "also a positive triples.",
+            )
         corrupted_object_based = corrupted_object_based[mask]
 
         return corrupted_subject_based, corrupted_object_based
@@ -105,7 +107,7 @@ class RankBasedEvaluator(Evaluator):
             self,
             hits_at_k_values: Dict[int, List[float]],
             rank_of_positive_subject_based: int,
-            rank_of_positive_object_based: int
+            rank_of_positive_object_based: int,
     ) -> None:
         """Update the Hits@K dictionary for two values."""
         for k, values in hits_at_k_values.items():
@@ -185,7 +187,7 @@ class RankBasedEvaluator(Evaluator):
             pos_triple,
             corrupted_subject_based,
             corrupted_object_based,
-            all_pos_triples_hashed=None
+            all_pos_triples_hashed=None,
     ) -> Tuple[int, int, float, float]:
 
         # Create tensors for numpy arrays
@@ -196,12 +198,15 @@ class RankBasedEvaluator(Evaluator):
         scores_of_corrupted_objects = model.predict_scores(corrupted_object_based)
 
         score_of_positive = model.predict_scores(
-            torch.tensor([pos_triple], dtype=torch.long, device=self.device))
+            torch.tensor([pos_triple], dtype=torch.long, device=self.device),
+        )
 
         rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(
-            true_score=score_of_positive, all_scores=scores_of_corrupted_subjects)
+            true_score=score_of_positive, all_scores=scores_of_corrupted_subjects,
+        )
         rank_of_positive_object_based, adj_rank_of_positive_object_based = _compute_rank_from_scores(
-            true_score=score_of_positive, all_scores=scores_of_corrupted_objects)
+            true_score=score_of_positive, all_scores=scores_of_corrupted_objects,
+        )
 
         return (
             rank_of_positive_subject_based,
@@ -232,7 +237,8 @@ class RankBasedEvaluator(Evaluator):
 
         for i, pos_triple in enumerate(test_triples):
             corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
-                triple=pos_triple)
+                triple=pos_triple,
+            )
 
             (
                 rank_of_positive_subject_based,

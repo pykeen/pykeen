@@ -84,7 +84,7 @@ def main(training_file, test_file, output_direc):
         training_instances=instances,
         num_epochs=num_epochs,
         batch_size=batch_size,
-        num_negs_per_pos=num_negs_per_pos
+        num_negs_per_pos=num_negs_per_pos,
     )
 
     # Step 4: Prepare test triples

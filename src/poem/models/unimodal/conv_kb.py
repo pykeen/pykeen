@@ -3,13 +3,14 @@
 """Implementation of the ConvKB model."""
 
 import logging
+from typing import Optional
 
 import torch
 import torch.autograd
 from torch import nn
 
-from poem.models.base_owa import BaseOWAModule
-from ...constants import GPU, CONV_KB_NAME
+from ..base import BaseModule
+from ...constants import CONV_KB_NAME, GPU
 from ...utils import slice_triples
 
 __all__ = [
@@ -19,9 +20,8 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-class ConvKB(BaseOWAModule):
+class ConvKB(BaseModule):
     """An implementation of ConvKB [nguyen2018].
-
 
     .. [nguyen2018] A Novel Embedding Model for Knowledge Base CompletionBased on Convolutional Neural Network
                     D. Q. Nguyen and T. D. Nguyen and D. Q. Nguyen and D. Phung
@@ -34,12 +34,24 @@ class ConvKB(BaseOWAModule):
     """
 
     model_name = CONV_KB_NAME
-    hyper_params = BaseOWAModule.hyper_params
 
-    def __init__(self, num_entities, num_relations, embedding_dim=200,
-                 criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU,
-                 num_filters: int = 400) -> None:
-        super(ConvKB, self).__init__(num_entities, num_relations, criterion, embedding_dim, preferred_device)
+    def __init__(
+            self,
+            num_entities,
+            num_relations,
+            embedding_dim=200,
+            criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU,
+            num_filters: int = 400,
+            random_seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(
+            num_entities=num_entities,
+            num_relations=num_relations,
+            criterion=criterion,
+            embedding_dim=embedding_dim,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
 
         # Embeddings
         self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
@@ -63,11 +75,30 @@ class ConvKB(BaseOWAModule):
         heads, relations, tails = slice_triples(triples)
 
         # Get embeddings
-        head_embeddings = self._get_embeddings(heads, embedding_module=self.entity_embeddings, embedding_dim=self.embedding_dim)
-        tail_embeddings = self._get_embeddings(tails, embedding_module=self.entity_embeddings, embedding_dim=self.embedding_dim)
-        relation_embeddings = self._get_embeddings(relations, embedding_module=self.relation_embeddings, embedding_dim=self.embedding_dim)
+        head_embeddings = self._get_embeddings(
+            heads,
+            embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim,
+        )
+        tail_embeddings = self._get_embeddings(
+            tails,
+            embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim,
+        )
+        relation_embeddings = self._get_embeddings(
+            relations,
+            embedding_module=self.relation_embeddings,
+            embedding_dim=self.embedding_dim,
+        )
 
-        conv_inp = torch.stack([head_embeddings, relation_embeddings, tail_embeddings], dim=-1).view(-1, 1, self.embedding_dim, 3)
+        conv_inp = torch.stack(
+            [
+                head_embeddings,
+                relation_embeddings,
+                tail_embeddings,
+            ],
+            dim=-1,
+        ).view(-1, 1, self.embedding_dim, 3)
 
         # Convolution
         conv_out = self.conv(conv_inp)

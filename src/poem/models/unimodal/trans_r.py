@@ -98,7 +98,8 @@ class TransR(BaseModule):
 
         norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
         self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight))
+            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight),
+        )
 
     def _project_entities(self, entity_embs, projection_matrix_embs):
         projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])

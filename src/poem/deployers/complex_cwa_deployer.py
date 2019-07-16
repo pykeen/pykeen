@@ -25,7 +25,7 @@ if __name__ == '__main__':
         EMBEDDING_DIM: 200,
         NUM_ENTITIES: len(entity_to_id),
         NUM_RELATIONS: len(relation_to_id),
-        INPUT_DROPOUT: 0.2
+        INPUT_DROPOUT: 0.2,
     }
 
     # Configure KGE model

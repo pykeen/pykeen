@@ -20,7 +20,7 @@ class RandomSearch(HPOptimizer):
             mapped_test_triples: np.ndarray,
             entity_to_id: Dict[str:int],
             rel_to_id: Dict[str:int],
-            device: torch.device
+            device: torch.device,
     ):
         """."""
         self.mapped_train_triples = mapped_train_triples

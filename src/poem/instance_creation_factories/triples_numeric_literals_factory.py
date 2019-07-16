@@ -23,7 +23,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             entity_to_id=self.entity_to_id,
         )
         self.multimodal_data = {
-            NUMERIC_LITERALS: self.numeric_literals
+            NUMERIC_LITERALS: self.numeric_literals,
         }
 
     def create_owa_instances(self, triples) -> MultimodalOWAInstances:

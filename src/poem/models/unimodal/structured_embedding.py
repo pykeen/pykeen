@@ -80,13 +80,15 @@ class StructuredEmbedding(BaseModule):
 
         norms = torch.norm(self.left_relation_embeddings.weight, p=2, dim=1).data
         self.left_relation_embeddings.weight.data = self.left_relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight))
+            norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight),
+        )
 
     def apply_forward_constraints(self):
         # Normalise embeddings of entities
         norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
         self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
-            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight))
+            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight),
+        )
         self.forward_constraint_applied = True
 
     def forward_owa(self, triples):
@@ -97,7 +99,7 @@ class StructuredEmbedding(BaseModule):
         head_embeddings = self._get_embeddings(
             elements=heads,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim
+            embedding_dim=self.embedding_dim,
         )
         left_relation_embeddings = self._get_left_relation_embeddings(relations)
         projected_head_embeddings = self._project_entities(
@@ -108,7 +110,8 @@ class StructuredEmbedding(BaseModule):
         tail_embeddings = self._get_embeddings(
             elements=tails,
             embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim)
+            embedding_dim=self.embedding_dim,
+        )
 
         right_relation_embeddings = self._get_right_relation_embeddings(relations)
         projected_tails_embeddings = self._project_entities(

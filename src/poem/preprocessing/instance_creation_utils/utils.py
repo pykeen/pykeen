@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 def create_multi_label_relation_instances(
         triples: np.array,
-        create_class_other=False
+        create_class_other=False,
 ) -> Dict[tuple, np.array]:
     """Create for each (s,o) pair the multi relation label."""
     log.info(f'Creating multi label relations instance')

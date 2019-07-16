@@ -31,7 +31,8 @@ class DistMultLiteral(BaseModule):
             embedding_dim: int = 50,
             criterion: nn.modules.loss = nn.MarginRankingLoss(),
             preferred_device: str = GPU,
-            random_seed: Optional[int] = None) -> None:
+            random_seed: Optional[int] = None,
+    ) -> None:
         super().__init__(
             num_entities=num_entities,
             num_relations=num_relations,
@@ -46,12 +47,14 @@ class DistMultLiteral(BaseModule):
         # Embeddings
         self.relation_embeddings = None
         self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True)
+            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+        )
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
         self.input_dropout = torch.nn.Dropout(
-            self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.)
+            self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.,
+        )
 
     def _init_embeddings(self):
         """Initialize the entities and relation embeddings based on the XAVIER initialization."""

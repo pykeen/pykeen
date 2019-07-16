@@ -3,13 +3,14 @@
 """Implementation of the HolE model."""
 
 import logging
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.autograd
 from torch import nn
 
-from poem.models.base import BaseModule
+from ..base import BaseModule
 from ...constants import GPU, HOL_E_NAME, SCORING_FUNCTION_NORM
 from ...utils import slice_triples
 
@@ -22,7 +23,7 @@ log = logging.getLogger(__name__)
 
 def circular_correlation(
         a: torch.tensor,
-        b: torch.tensor
+        b: torch.tensor,
 ) -> torch.tensor:
     r"""
     Computes the batched circular correlation between a and b using FFT.
@@ -77,6 +78,7 @@ class HolE(BaseModule):
             embedding_dim=200,
             criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device=GPU,
+            random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
             num_entities=num_entities,
@@ -84,6 +86,7 @@ class HolE(BaseModule):
             criterion=criterion,
             embedding_dim=embedding_dim,
             preferred_device=preferred_device,
+            random_seed=random_seed,
         )
 
         # Embeddings
@@ -94,14 +97,16 @@ class HolE(BaseModule):
     def _initialize(self):
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         entity_embeddings_init_bound = 6 / np.sqrt(
-            self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim)
+            self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,
+        )
         nn.init.uniform_(
             self.entity_embeddings.weight.data,
             a=-entity_embeddings_init_bound,
             b=+entity_embeddings_init_bound,
         )
         relation_embeddings_init_bound = 6 / np.sqrt(
-            self.relation_embeddings.num_embeddings + self.relation_embeddings.embedding_dim)
+            self.relation_embeddings.num_embeddings + self.relation_embeddings.embedding_dim,
+        )
         nn.init.uniform_(
             self.relation_embeddings.weight.data,
             a=-relation_embeddings_init_bound,
@@ -122,12 +127,18 @@ class HolE(BaseModule):
         heads, relations, tails = slice_triples(triples)
 
         # Get embeddings
-        head_embeddings = self._get_embeddings(heads, embedding_module=self.entity_embeddings,
-                                               embedding_dim=self.embedding_dim)
-        tail_embeddings = self._get_embeddings(tails, embedding_module=self.entity_embeddings,
-                                               embedding_dim=self.embedding_dim)
-        relation_embeddings = self._get_embeddings(relations, embedding_module=self.relation_embeddings,
-                                                   embedding_dim=self.embedding_dim)
+        head_embeddings = self._get_embeddings(
+            heads, embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim,
+        )
+        tail_embeddings = self._get_embeddings(
+            tails, embedding_module=self.entity_embeddings,
+            embedding_dim=self.embedding_dim,
+        )
+        relation_embeddings = self._get_embeddings(
+            relations, embedding_module=self.relation_embeddings,
+            embedding_dim=self.embedding_dim,
+        )
 
         # Circular correlation of entity embeddings
         composite = circular_correlation(a=head_embeddings, b=tail_embeddings)

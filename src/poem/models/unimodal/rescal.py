@@ -26,10 +26,8 @@ class RESCAL(BaseModule):
        - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py
     """
     # TODO: The paper uses a regularization term on both, the entity embeddings, as well as the relation matrices, to avoid overfitting.
-
     model_name = RESCAL_NAME
     margin_ranking_loss_size_average: bool = True
-    hyper_params = BaseModule.hyper_params
 
     def __init__(
             self,

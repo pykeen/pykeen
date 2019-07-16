@@ -75,14 +75,22 @@ class ComplexCWA(BaseModule):
 
         # complex space bilinear product (equivalent to HolE)
         # *: Elementwise multiplication; torch.mm: matrix multiplication (does not broadcast)
-        real_real_real = torch.mm(subjects_embedded_real * relations_embedded_real,
-                                  self.entity_embeddings_real.weight.transpose(1, 0))
-        real_img_img = torch.mm(subjects_embedded_real * relations_embedded_img,
-                                self.entity_embeddings_img.weight.transpose(1, 0))
-        img_real_img = torch.mm(subjects_embedded_img * relations_embedded_real,
-                                self.entity_embeddings_img.weight.transpose(1, 0))
-        img_img_real = torch.mm(subjects_embedded_img * relations_embedded_img,
-                                self.entity_embeddings_real.weight.transpose(1, 0))
+        real_real_real = torch.mm(
+            subjects_embedded_real * relations_embedded_real,
+            self.entity_embeddings_real.weight.transpose(1, 0),
+        )
+        real_img_img = torch.mm(
+            subjects_embedded_real * relations_embedded_img,
+            self.entity_embeddings_img.weight.transpose(1, 0),
+        )
+        img_real_img = torch.mm(
+            subjects_embedded_img * relations_embedded_real,
+            self.entity_embeddings_img.weight.transpose(1, 0),
+        )
+        img_img_real = torch.mm(
+            subjects_embedded_img * relations_embedded_img,
+            self.entity_embeddings_real.weight.transpose(1, 0),
+        )
 
         predictions = real_real_real + real_img_img + img_real_img - img_img_real
         predictions = torch.sigmoid(predictions)

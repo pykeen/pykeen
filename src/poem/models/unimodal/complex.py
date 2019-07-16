@@ -73,8 +73,10 @@ class ComplEx(BaseModule):
         img_real_img = heads_img * relations_real * tails_img
         img_img_real = heads_img * relations_img * tails_real
         scores = torch.sum(real_real_real + real_img_img + img_real_img - img_img_real, dim=1)
-        self.current_regularization_term = self._compute_regularization_term(heads_real, relations_real, tails_real,
-                                                                             heads_img, relations_img, tails_img)
+        self.current_regularization_term = self._compute_regularization_term(
+            heads_real, relations_real, tails_real,
+            heads_img, relations_img, tails_img,
+        )
         return scores
 
     # TODO: Implement forward_cwa

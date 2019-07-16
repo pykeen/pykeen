@@ -83,15 +83,21 @@ class TransH(BaseModule):
         entity_constraint = torch.abs(entity_constraint)
         entity_constraint = torch.sum(entity_constraint)
 
-        orthogonalty_constraint_numerator = torch.mul(self.normal_vector_embeddings.weight,
-                                                      self.relation_embeddings.weight)
+        orthogonalty_constraint_numerator = torch.mul(
+            self.normal_vector_embeddings.weight,
+            self.relation_embeddings.weight,
+        )
         orthogonalty_constraint_numerator = torch.sum(orthogonalty_constraint_numerator, dim=1)
-        orthogonalty_constraint_numerator = torch.mul(orthogonalty_constraint_numerator,
-                                                      orthogonalty_constraint_numerator)
+        orthogonalty_constraint_numerator = torch.mul(
+            orthogonalty_constraint_numerator,
+            orthogonalty_constraint_numerator,
+        )
 
         orthogonalty_constraint_denominator = torch.norm(self.relation_embeddings.weight, p=2, dim=1)
-        orthogonalty_constraint_denominator = torch.mul(orthogonalty_constraint_denominator,
-                                                        orthogonalty_constraint_denominator)
+        orthogonalty_constraint_denominator = torch.mul(
+            orthogonalty_constraint_denominator,
+            orthogonalty_constraint_denominator,
+        )
 
         orthogonalty_constraint = (orthogonalty_constraint_numerator / orthogonalty_constraint_denominator) - \
                                   (self.num_relations * self.epsilon)
@@ -144,5 +150,6 @@ class TransH(BaseModule):
         # Normalise the normal vectors by their l2 norms
         norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
         self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight))
+            norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight),
+        )
         self.forward_constraint_applied = True

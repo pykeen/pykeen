@@ -51,18 +51,19 @@ class ComplexLiteralCWA(BaseModule):
         # num_ent x num_lit
         numeric_literals = multimodal_data.get(NUMERIC_LITERALS)
         self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True)
+            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+        )
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
 
         self.real_non_lin_transf = torch.nn.Sequential(
             nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim),
-            torch.nn.Tanh()
+            torch.nn.Tanh(),
         )
 
         self.img_non_lin_transf = torch.nn.Sequential(
             nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim),
-            torch.nn.Tanh()
+            torch.nn.Tanh(),
         )
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
@@ -86,23 +87,29 @@ class ComplexLiteralCWA(BaseModule):
         batch_heads, batch_relations = slice_doubles(doubles)
 
         heads_embedded_real = self.inp_drop(self.entity_embs_real(batch_heads)).view(-1, self.embedding_dim)
-        rels_embedded_real = self.inp_drop(self.relation_embs_real(batch_relations)).view(-1,
-                                                                                          self.embedding_dim)
+        rels_embedded_real = self.inp_drop(self.relation_embs_real(batch_relations)).view(
+            -1,
+            self.embedding_dim,
+        )
         heads_embedded_img = self.inp_drop(self.entity_embs_img(batch_heads)).view(-1, self.embedding_dim)
-        relations_embedded_img = self.inp_drop(self.relation_embs_img(batch_relations)).view(-1,
-                                                                                             self.embedding_dim)
+        relations_embedded_img = self.inp_drop(self.relation_embs_img(batch_relations)).view(
+            -1,
+            self.embedding_dim,
+        )
         # Literals
         head_literals = self.numeric_literals(batch_heads).view(-1, self.num_of_literals)
         heads_embedded_real, heads_embedded_img = self._apply_g_function(
             real_embs=heads_embedded_real,
             img_embs=heads_embedded_img,
-            literals=head_literals
+            literals=head_literals,
         )
 
         e2_multi_emb_real = self.real_non_lin_transf(
-            torch.cat([self.entity_embs_real.weight, self.numeric_literals.weight], 1))
+            torch.cat([self.entity_embs_real.weight, self.numeric_literals.weight], 1),
+        )
         e2_multi_emb_img = self.img_non_lin_transf(
-            torch.cat([self.entity_embs_img.weight, self.numeric_literals.weight], 1))
+            torch.cat([self.entity_embs_img.weight, self.numeric_literals.weight], 1),
+        )
 
         # End literals
 
