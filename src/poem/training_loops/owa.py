@@ -50,7 +50,7 @@ class OWATrainingLoop(TrainingLoop):
             num_epochs,
             batch_size,
             num_negs_per_pos=1,
-            label_smoothing: bool = True,
+            label_smoothing: bool = False,
             label_smoothing_epsilon: float = 0.1,
             tqdm_kwargs: Optional[Mapping[str, Any]] = None,
     ):
@@ -83,7 +83,12 @@ class OWATrainingLoop(TrainingLoop):
                 positive_scores = positive_scores.repeat(num_negs_per_pos)
                 negative_scores = self.model.forward_owa(neg_batch)
 
-                if self.model.compute_mr_loss:
+                """
+                TODO: Define two functions, one for compute_mr_loss() and the other for model.compute_label_loss()
+                Check for self.model.compute_mr_loss when entering train(), and assign corresponding fct.
+                Avoids repetitive checks.
+                """
+                if self.model.is_mr_loss:
                     loss = self.model.compute_mr_loss(
                         positive_scores=positive_scores,
                         negative_scores=negative_scores,
