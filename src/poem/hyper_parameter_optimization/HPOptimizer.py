@@ -2,17 +2,17 @@
 
 """Utilities for hyper-parameter optimization."""
 
-import random
 from abc import ABC, abstractmethod
+from typing import Any, List, Tuple
+
 from torch.nn import Module
-from typing import Any, Iterable, List, Mapping, Tuple
 
 __all__ = [
     'HPOptimizerResult',
     'HPOptimizer',
 ]
 
-HPOptimizerResult = Tuple[Module, List[float], Any, Any, Any, Any]
+HPOptimizerResult = Tuple[Module, List[float], Any, Any]
 
 
 class HPOptimizer(ABC):
@@ -21,4 +21,3 @@ class HPOptimizer(ABC):
     @abstractmethod
     def optimize_hyperparams(self, *args, **kwargs) -> HPOptimizerResult:
         """Run the optimizer."""
-
