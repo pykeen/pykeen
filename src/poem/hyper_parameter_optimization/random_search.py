@@ -77,7 +77,7 @@ class RandomSearch(HPOptimizer):
             model = type(model_class.__name__, (), **params_to_values)
 
             # Train model
-            #FIXME: Pass model to training loop
+            training_loop.set_model(model=model)
             trained_model, losses_per_epochs = training_loop.train(
                 training_instances=training_instances,
                 **current_params_to_values,
