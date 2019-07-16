@@ -48,6 +48,8 @@ class RESCAL(BaseModule):
         )
         self.relation_embeddings = None
 
+        self._init_embeddings()
+
     def _init_embeddings(self):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)

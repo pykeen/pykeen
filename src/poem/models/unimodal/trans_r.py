@@ -71,6 +71,8 @@ class TransR(BaseModule):
         self.relation_embeddings = None
         self.projection_matrix_embs = None
 
+        self._init_embeddings()
+
     def _init_embeddings(self):
         super()._init_embeddings()
         # max_norm = 1 according to the paper

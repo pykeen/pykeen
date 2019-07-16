@@ -53,6 +53,8 @@ class ComplEx(BaseModule):
         self.relation_embeddings_real = None
         self.relation_embeddings_img = None
 
+        self._init_embeddings()
+
     def _init_embeddings(self):
         self.entity_embeddings_real = self.entity_embeddings
         self.entity_embeddings_img = nn.Embedding(self.num_entities, self.embedding_dim)

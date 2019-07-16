@@ -48,6 +48,8 @@ class ComplexCWA(BaseModule):
         self.relation_embeddings_real = None
         self.relation_embeddings_img = None
 
+        self._init_embeddings()
+
     def _init_embeddings(self):
         # TODO Why padding?
         self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)

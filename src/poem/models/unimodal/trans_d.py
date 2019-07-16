@@ -61,6 +61,8 @@ class TransD(BaseModule):
         self.entity_projections = None
         self.relation_projections = None
 
+        self._init_embeddings()
+
     def _init_embeddings(self):
         super()._init_embeddings()
         # A simple lookup table that stores embeddings of a fixed dictionary and size
