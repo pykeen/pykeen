@@ -23,8 +23,8 @@ class TrainingLoop(ABC):
 
     def __init__(
             self,
-            model: BaseModule,
             optimizer: torch.optim.Optimizer,
+            model: BaseModule = None,
             all_entities: np.ndarray = None,
     ) -> None:
         self.model = model
@@ -47,6 +47,10 @@ class TrainingLoop(ABC):
 
         :return: A pair of the KGE model and the losses per epoch.
         """
+
+    def set_model(self, model: BaseModule) -> None:
+        """Set model that should be trained."""
+        self.model = model
 
     def _get_entity_to_vector_dict(self) -> Mapping:
         raise NotImplementedError
