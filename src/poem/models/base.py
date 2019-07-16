@@ -54,7 +54,7 @@ class BaseModule(nn.Module):
         # Loss
         self.criterion = criterion
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.compute_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
+        self.is_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
 
         # Entity dimensions
         #: The number of entities in the knowledge graph
@@ -116,13 +116,13 @@ class BaseModule(nn.Module):
 
     def compute_mr_loss(
             self,
-            pos_triple_scores: torch.Tensor,
-            neg_triples_scores: torch.Tensor,
+            positive_scores: torch.Tensor,
+            negative_scores: torch.Tensor,
     ) -> torch.Tensor:
-        assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \
-                                     'Please use the compute_label_loss method instead'
-        y = torch.ones_like(neg_triples_scores, device=self.device)
-        loss = self.criterion(pos_triple_scores, neg_triples_scores, y)
+        assert self.is_mr_loss, 'The chosen criterion does not allow the calculation of label losses. ' \
+                                     'Please use the compute_mr_loss method instead'
+        y = torch.ones_like(negative_scores, device=self.device)
+        loss = self.criterion(positive_scores, negative_scores, y)
         return loss
 
     def compute_label_loss(
@@ -130,8 +130,8 @@ class BaseModule(nn.Module):
             predictions: torch.Tensor,
             labels: torch.Tensor,
     ) -> torch.Tensor:
-        assert not self.compute_mr_loss, 'The chosen criterion does not allow the calculation of label losses. ' \
-                                         'Please use the compute_mr_loss method instead'
+        assert not self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin ranking losses. ' \
+                                         'Please use the compute_label_loss method instead'
         loss = self.criterion(predictions, labels)
         return loss
 
