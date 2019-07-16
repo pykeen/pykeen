@@ -70,6 +70,7 @@ class BaseModule(nn.Module):
         # Marker to check wether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False
 
+
     def _init_embeddings(self):
         self.entity_embeddings = nn.Embedding(
             self.num_entities,
