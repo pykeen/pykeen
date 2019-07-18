@@ -2,6 +2,7 @@ from typing import Optional
 
 import torch
 from torch import nn
+from torch.nn import functional
 
 from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from poem.models.base import BaseModule
@@ -150,8 +151,5 @@ class TransH(BaseModule):
 
     def apply_forward_constraints(self):
         # Normalise the normal vectors by their l2 norms
-        norms = torch.norm(self.normal_vector_embeddings.weight, p=2, dim=1).data
-        self.normal_vector_embeddings.weight.data = self.normal_vector_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.normal_vector_embeddings.weight),
-        )
+        functional.normalize(self.normal_vector_embeddings.weight.data, out=self.normal_vector_embeddings.weight.data)
         self.forward_constraint_applied = True
