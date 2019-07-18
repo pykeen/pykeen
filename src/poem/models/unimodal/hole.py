@@ -70,6 +70,7 @@ class HolE(BaseModule):
 
     model_name = HOL_E_NAME
     hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
+    entity_embedding_max_norm = 1
 
     def __init__(
             self,
@@ -113,17 +114,7 @@ class HolE(BaseModule):
             b=+relation_embeddings_init_bound,
         )
 
-    def apply_forward_constraints(self):
-        # Do not compute gradients for forward constraints
-        with torch.no_grad():
-            # Ensure norm of entity embeddings is at most 1
-            norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1, keepdim=True)
-            self.entity_embeddings.weight /= torch.max(norms, torch.ones(size=(), device=self.device))
-        self.forward_constraint_applied = True
-
     def _score_triples(self, triples):
-        if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
         heads, relations, tails = slice_triples(triples)
 
         # Get embeddings
