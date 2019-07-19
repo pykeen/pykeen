@@ -5,7 +5,7 @@
 import logging
 import random
 from abc import abstractmethod
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuple, List
 
 import numpy as np
 import torch
@@ -149,3 +149,10 @@ class BaseModule(nn.Module):
         """Get the parameters that require gradients."""
         self._init_embeddings()
         return get_params_requiring_grad(self)
+
+    @classmethod
+    def get_model_params(cls) -> List:
+        """Returns the model parameters."""
+        return ['num_entities', 'num_relations', 'embedding_dim', 'criterion', 'preferred_device', 'random_seed']
+
+

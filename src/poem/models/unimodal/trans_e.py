@@ -3,7 +3,7 @@
 """Implementation of the TransE model."""
 
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import torch
@@ -116,3 +116,10 @@ class TransE(BaseModule):
                 embedding_dim=self.embedding_dim,
             ),
         )
+
+    @classmethod
+    def get_model_params(cls) -> List:
+        """Return model parameters."""
+        base_params = BaseModule.get_model_params()
+        return base_params + ['scoring_fct_norm']
+
