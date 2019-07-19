@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn import functional
 
 from poem.constants import GPU, SCORING_FUNCTION_NORM, SE_NAME
 from poem.models.base import BaseModule
@@ -87,10 +88,7 @@ class StructuredEmbedding(BaseModule):
 
     def apply_forward_constraints(self):
         # Normalise embeddings of entities
-        norms = torch.norm(self.entity_embeddings.weight, p=2, dim=1).data
-        self.entity_embeddings.weight.data = self.entity_embeddings.weight.data.div(
-            norms.view(self.num_entities, 1).expand_as(self.entity_embeddings.weight),
-        )
+        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
         self.forward_constraint_applied = True
 
     def forward_owa(self, triples):

@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn import functional
 
 from ..base import BaseModule
 from ...constants import GPU, ROTAT_E_NAME
@@ -77,14 +78,17 @@ class RotatE(BaseModule):
         )
 
     def apply_forward_constraints(self):
-        # Do not compute gradients for forward constraints
-        with torch.no_grad():
-            # Ensure norm of each complex number of the relation embedding is 1
-            norms = torch.norm(
-                self.relation_embeddings.weight.view(self.num_relations, self.embedding_dim, 2), dim=-1,
-                p=2, keepdim=True,
-            ).view(self.num_relations, 2 * self.embedding_dim)
-            self.relation_embeddings.weight /= norms
+        # Absolute value of complex number
+        # |a+ib| = sqrt(a**2 + b**2)
+        #
+        # L2 norm of complex vector:
+        # ||x||**2 = sum i=1..d |x_i|**2
+        #          = sum i=1..d (x_i.re**2 + x_i.im**2)
+        #          = (sum i=1..d x_i.re**2) + (sum i=1..d x_i.im**2)
+        #          = ||x.re||**2 + ||x.im||**2
+        #          = || [x.re; x.im] ||**2
+        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
+        self.forward_constraint_applied = True
 
     def _score_triples(self, triples):
         heads, relations, tails = slice_triples(triples)
