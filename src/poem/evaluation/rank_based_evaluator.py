@@ -56,10 +56,10 @@ class RankBasedEvaluator(Evaluator):
 
     def __init__(
             self,
-            model: BaseModule,
             entity_to_id,
             relation_to_id,
             training_triples: np.ndarray,
+            model: BaseModule = None,
             filter_neg_triples=False,
             hits_at_k: Optional[List[int]] = None,
     ) -> None:
