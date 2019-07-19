@@ -23,9 +23,9 @@ __all__ = [
 class OWATrainingLoop(TrainingLoop):
     def __init__(
             self,
-            optimizer,
             all_entities,
             model: BaseModule = None,
+            optimizer = None,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
         super().__init__(
