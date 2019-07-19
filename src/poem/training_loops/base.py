@@ -23,7 +23,7 @@ class TrainingLoop(ABC):
 
     def __init__(
             self,
-            optimizer: torch.optim.Optimizer,
+            optimizer: torch.optim.Optimizer = None,
             model: BaseModule = None,
             all_entities: np.ndarray = None,
     ) -> None:
@@ -51,6 +51,10 @@ class TrainingLoop(ABC):
     def set_model(self, model: BaseModule) -> None:
         """Set model that should be trained."""
         self.model = model
+
+    def set_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
+        """Set model that should be trained."""
+        self.optimizer = optimizer
 
     def _get_entity_to_vector_dict(self) -> Mapping:
         raise NotImplementedError
