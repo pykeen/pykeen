@@ -5,7 +5,6 @@ import random
 from typing import Dict, List, Mapping, Iterable, Any
 
 import numpy as np
-import torch
 from torch.nn import Module
 from tqdm import trange
 
@@ -13,6 +12,7 @@ from poem.evaluation import Evaluator
 from poem.hyper_parameter_optimization.HPOptimizer import HPOptimizer, HPOptimizerResult
 from poem.instance_creation_factories.instances import Instances
 from poem.training_loops import TrainingLoop
+from poem.utils import get_params_requiring_grad
 
 
 class RandomSearch(HPOptimizer):
@@ -20,23 +20,36 @@ class RandomSearch(HPOptimizer):
 
     def __init__(
             self,
-            mapped_train_triples: np.ndarray,
-            mapped_test_triples: np.ndarray,
-            entity_to_id: Dict[str:int],
-            rel_to_id: Dict[str:int],
-            device: torch.device,
+            model_class,
+            optimizer_class,
+            entity_to_id: Dict[str, int],
+            rel_to_id: Dict[str, int],
+            training_loop: TrainingLoop,
+            evaluator: Evaluator,
+
     ):
         """."""
-        self.mapped_train_triples = mapped_train_triples
-        self.mapped_test_triples = mapped_test_triples
+        self.model_class = model_class
+        self.optimizer_class = optimizer_class
         self.entity_to_id = entity_to_id
         self.rel_to_id = rel_to_id
-        self.device = device
+        self.training_loop = training_loop
+        self.evaluator = evaluator
+
         # TODO: Set seed?
 
     def _sample_conv_e_params(self) -> Dict[str, Any]:
         """."""
         pass
+
+    def extract_constructor_arguments(self, params_to_values):
+        """Extract params required to initialize model."""
+        constructor_args = {}
+        for p in self.model_class.get_model_params():
+            if p in params_to_values:
+                constructor_args[p] = params_to_values[p]
+
+        return constructor_args
 
     def _sample_parameter_value(self, parameter_to_values: Mapping[int, Iterable[Any]]) -> Mapping[int, Any]:
         """Randomly subsample a dictionary whose values are iterable."""
@@ -51,12 +64,9 @@ class RandomSearch(HPOptimizer):
 
     def optimize_hyperparams(
             self,
-            model_class,
             training_instances: Instances,
-            test_instances: Instances,
-            training_loop: TrainingLoop,
-            evaluator: Evaluator,
-            params_to_values: Mapping[str:List[Any]],
+            test_triples: np.ndarray,
+            params_to_values: Mapping[str, List[Any]],
             k_evaluation: int = 10,
             max_iters=2,
     ) -> HPOptimizerResult:
@@ -74,17 +84,34 @@ class RandomSearch(HPOptimizer):
         for _ in trange(max_iters, desc='HPO Iteration'):
             current_params_to_values: Dict[str, Any] = sample_fct(params_to_values)
             models_params.append(current_params_to_values)
-            model = type(model_class.__name__, (), **params_to_values)
+
+            constructor_args = self.extract_constructor_arguments(params_to_values=current_params_to_values)
+            # FIXME
+            M = type(self.model_class.__name__, (), constructor_args)
+
+            model = M(**constructor_args)
+
+            params = get_params_requiring_grad(model)
+
+            # Configure optimizer
+            optimizer_arguments = {
+                'params': params,
+                'lr': params_to_values['learning_rate']
+            }
+
+            optimizer = type(self.optimizer_class.__name__, (), **optimizer_arguments)
 
             # Train model
-            training_loop.set_model(model=model)
-            trained_model, losses_per_epochs = training_loop.train(
+            self.training_loop.set_model(model=model)
+            self.training_loop.set_optimizer(optimizer=optimizer)
+            trained_model, losses_per_epochs = self.training_loop.train(
                 training_instances=training_instances,
                 **current_params_to_values,
             )
 
             # Evaluate model
-            metric_results = evaluator.evaluate(triples=test_instances.instances)
+            self.evaluator.set_model(model=model)
+            metric_results = self.evaluator.evaluate(triples=test_triples)
             eval_summaries.append(metric_results)
 
             trained_kge_models.append(trained_model)
