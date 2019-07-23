@@ -11,6 +11,7 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
+from poem.instance_creation_factories import triples_factory
 from ..base import BaseModule
 from ...constants import GPU, ROTAT_E_NAME
 from ...utils import slice_triples
