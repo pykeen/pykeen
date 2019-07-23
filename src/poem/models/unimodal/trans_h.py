@@ -4,10 +4,10 @@ import torch
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_H_NAME, WEIGHT_SOFT_CONSTRAINT_TRANS_H
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ...typing import OptionalLoss
 
 
 class TransH(BaseModule):
@@ -15,18 +15,12 @@ class TransH(BaseModule):
 
     This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
 
-    .. [wang2014] Wang, Z., *et al.* (2014). `Knowledge Graph Embedding by Translating on Hyperplanes
-                  <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
-
     .. seealso::
 
-       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/TransH.py
+       - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
     """
 
-    model_name = TRANS_H_NAME
     margin_ranking_loss_size_average: bool = False
-    # FIXME why is this not summing the BaseModule.hyper_params?
-    hyper_params = (SCORING_FUNCTION_NORM, WEIGHT_SOFT_CONSTRAINT_TRANS_H)
 
     def __init__(
             self,
@@ -37,10 +31,12 @@ class TransH(BaseModule):
             scoring_fct_norm: int = 1,
             soft_weight_constraint: float = 0.05,
             epsilon: float = 0.005,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

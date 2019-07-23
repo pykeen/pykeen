@@ -9,10 +9,11 @@ import torch.autograd
 from torch import nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_D_NAME
+from poem.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ...typing import OptionalLoss
 
 __all__ = [
     'TransD',
@@ -20,19 +21,15 @@ __all__ = [
 
 
 class TransD(BaseModule):
-    """An implementation of TransD [ji2015]_.
+    """An implementation of TransD from [ji2015]_.
 
     This model extends TransR to use fewer parameters.
 
-    .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
-                <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
-
     .. seealso::
 
-       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/TransD.py
+       - OpenKE `implementation of TransD <https://github.com/thunlp/OpenKE/blob/master/models/TransD.py>`_
     """
 
-    model_name = TRANS_D_NAME
     margin_ranking_loss_size_average: bool = True
     entity_embedding_max_norm = 1
     hyper_params = BaseModule.hyper_params + (RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM)
@@ -45,12 +42,15 @@ class TransD(BaseModule):
             relation_dim: int = 30,
             relation_embeddings: nn.Embedding = None,
             scoring_fct_norm: int = 1,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings = entity_embeddings,
             criterion=criterion,

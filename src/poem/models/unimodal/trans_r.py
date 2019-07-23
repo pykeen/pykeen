@@ -9,36 +9,33 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
+from poem.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ...typing import OptionalLoss
 
 __all__ = ['TransR']
 
 
 class TransR(BaseModule):
-    """An implementation of TransR [lin2015]_.
+    """An implementation of TransR from [lin2015]_.
 
     This model extends TransE and TransH by considering different vector spaces for entities and relations.
 
-    .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion
-                 <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
-
     Constraints:
-     * ||h||_2 <= 1: Done
-     * ||r||_2 <= 1: Done
-     * ||t||_2 <= 1: Done
-     * ||h*M_r||_2 <= 1: Done
-     * ||t*M_r||_2 <= 1: Done
+     * $||h||_2 <= 1$: Done
+     * $||r||_2 <= 1$: Done
+     * $||t||_2 <= 1$: Done
+     * $||h*M_r||_2 <= 1$: Done
+     * $||t*M_r||_2 <= 1$: Done
 
     .. seealso::
 
-       - Implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/TransR.py
-       - PyTorch implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py
+       - OpenKE `TensorFlow implementation of TransR <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
+       - OpenKE `PyTorch implementation of TransR <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
     """
 
-    model_name = TRANS_R_NAME
     margin_ranking_loss_size_average: bool = True
     # TODO: max_norm < 1.
     # max_norm = 1 according to the paper
@@ -56,12 +53,15 @@ class TransR(BaseModule):
             relation_dim: int = 30,
             relation_embeddings: nn.Embedding = None,
             scoring_fct_norm: int = 1,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings= entity_embeddings,
             criterion=criterion,

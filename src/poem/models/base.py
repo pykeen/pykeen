@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..constants import EMBEDDING_DIM, GPU
+from ..constants import EMBEDDING_DIM
 from ..instance_creation_factories.triples_factory import TriplesFactory
 from ..typing import OptionalLoss
 from ..utils import get_params_requiring_grad
@@ -40,7 +40,7 @@ class BaseModule(nn.Module):
             embedding_dim: int = 50,
             entity_embeddings: nn.Embedding = None,
             criterion: OptionalLoss = None,
-            preferred_device: str = GPU,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__()
@@ -103,9 +103,9 @@ class BaseModule(nn.Module):
             norm_type=self.entity_embedding_norm_type,
         )
 
-    def _set_device(self, device: str = 'cpu') -> None:
+    def _set_device(self, device: Optional[str] = None) -> None:
         """Get the Torch device to use."""
-        if device == 'gpu':
+        if device is None or device == 'gpu':
             if torch.cuda.is_available():
                 self.device = torch.device('cuda')
             else:

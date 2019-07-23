@@ -36,7 +36,7 @@ RELATION_EMBEDDING_DIM = 'relation_embedding_dim'
 
 """Optimizer related constants"""
 SGD_OPTIMIZER_NAME = SGD.__name__
-#ADAGRAD_OPTIMIZER_NAME = Adagrad.__name__
+# ADAGRAD_OPTIMIZER_NAME = Adagrad.__name__
 ADAM_OPTIMIZER_NAME = Adam.__name__
 
 """Evaluator related constants"""
@@ -51,34 +51,7 @@ TEST_SET_PATH = 'test_set_path'
 TEST_SET_RATIO = 'test_set_ratio'
 PATH_TO_NUMERIC_LITERALS = 'path_to_numeric_literals'
 
-"""Model names"""
-
-MODEL_NAME = 'model_name'
-DISTMULT_LITERAL_NAME_OWA = 'DistMultLiteral_OWA'
-DISTMULT_LITERAL_NAME_CWA = 'DistMultLiteral_CWA'
-COMPLEX_NAME = 'ComplEx'
-COMPLEX_CWA_NAME = 'ComplEx_CWA'
-COMPLEX_LITERAL_NAME_CWA = 'ComplexLiteral_CWA'
-TRANS_E_NAME = 'TransE'
-TRANS_H_NAME = 'TransH'
-TRANS_R_NAME = 'TransR'
-TRANS_D_NAME = 'TransD'
-DISTMULT_NAME = 'DistMult'
-ERMLP_NAME = 'ERMLP'
-RESCAL_NAME = 'RESCAL'
-SE_NAME = 'StructuredEmbedding'
-UM_NAME = 'UM'
-HOL_E_NAME = 'HolE'
-CONV_KB_NAME = 'ConvKB'
-ROTAT_E_NAME = 'RotatE'
-
-"""DistMult related constants"""
-
-INPUT_DROPOUT = 'input_dropout'
-
 """Factory related constants"""
 FACTORY_NAME = 'factory_name'
 TRIPLES_FACTORY = 'triples_factory'
 NUMERIC_LITERALS_FACTORY = 'numeric_literals_factory'
-
-"""Training loops related constants"""

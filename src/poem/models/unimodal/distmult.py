@@ -10,7 +10,6 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import DISTMULT_NAME, GPU
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
@@ -19,22 +18,18 @@ __all__ = ['DistMult']
 
 
 class DistMult(BaseModule):
-    """An implementation of DistMult [yang2014]_.
+    """An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
 
-    .. [yang2014] Yang, B., Yih, W., He, X., Gao, J., & Deng, L. (2014). `Embedding Entities and Relations for Learning
-                  and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
-
     Note:
-      - For FB15k, yang et al. report 2 negatives per each positive.
+      - For FB15k, Yang *et al.* report 2 negatives per each positive.
 
     .. seealso::
 
-       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py
+       - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
     """
 
-    model_name = DISTMULT_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(
@@ -44,11 +39,11 @@ class DistMult(BaseModule):
             entity_embeddings: nn.Embedding = None,
             relation_embeddings:nn.Embedding = None,
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings= entity_embeddings,
             criterion=criterion,

@@ -3,10 +3,9 @@
 """Training loops for KGE models using multi-modal information."""
 
 from abc import ABC, abstractmethod
-from typing import List, Mapping, Optional, Tuple
+from typing import List, Mapping, Optional
 
 import torch
-import torch.nn as nn
 from tqdm import tqdm
 
 from ..instance_creation_factories.instances import Instances

@@ -11,10 +11,10 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import GPU, SCORING_FUNCTION_NORM, TRANS_E_NAME
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ...typing import OptionalLoss
 
 __all__ = [
     'TransE',
@@ -24,21 +24,14 @@ log = logging.getLogger(__name__)
 
 
 class TransE(BaseModule):
-    """An implementation of TransE [borders2013]_.
+    """An implementation of TransE from [bordes2013]_.
 
      This model considers a relation as a translation from the head to the tail entity.
 
-    .. [borders2013] Bordes, A., *et al.* (2013). `Translating embeddings for modeling multi-relational data
-                     <http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf>`_
-                     . NIPS.
-
     .. seealso::
 
-       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py
+       - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
-
-    model_name = TRANS_E_NAME
-    hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
 
     def __init__(
             self,
@@ -47,12 +40,15 @@ class TransE(BaseModule):
             entity_embeddings: nn.Embedding = None,
             relation_embeddings: nn.Embedding = None,
             scoring_fct_norm: int = 1,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
             criterion=criterion,
@@ -125,4 +121,3 @@ class TransE(BaseModule):
         """Return model parameters."""
         base_params = BaseModule.get_model_params()
         return base_params + ['scoring_fct_norm']
-

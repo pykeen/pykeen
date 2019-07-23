@@ -10,22 +10,18 @@ from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
-from ...constants import ERMLP_NAME, GPU
+from ...typing import OptionalLoss
 from ...utils import slice_triples
 
 __all__ = ['ERMLP']
 
 
 class ERMLP(BaseModule):
-    """An implementation of ERMLP [dong2014]_.
+    """An implementation of ERMLP from [dong2014]_.
 
     This model uses a neural network-based approach.
-
-    .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
-                  <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
     """
 
-    model_name = ERMLP_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(
@@ -34,12 +30,15 @@ class ERMLP(BaseModule):
             embedding_dim: int = 50,
             entity_embeddings: nn.Embedding = None,
             relation_embeddings: nn.Embedding = None,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings = entity_embeddings,
             criterion=criterion,
