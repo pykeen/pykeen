@@ -38,6 +38,7 @@ class BaseModule(nn.Module):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            entity_embeddings: nn.Embedding = None,
             criterion: OptionalLoss = None,
             preferred_device: str = GPU,
             random_seed: Optional[int] = None,
@@ -70,7 +71,7 @@ class BaseModule(nn.Module):
         self.embedding_dim = embedding_dim
 
         # The embeddings are first initiated when calling the fit function
-        self.entity_embeddings = None
+        self.entity_embeddings = entity_embeddings
 
         # Marker to check whether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False

@@ -52,7 +52,9 @@ class TransR(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            entity_embeddings: nn.Embedding = None,
             relation_dim: int = 30,
+            relation_embeddings: nn.Embedding = None,
             scoring_fct_norm: int = 1,
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device: str = GPU,
@@ -61,16 +63,18 @@ class TransR(BaseModule):
         super().__init__(
             triples_factory = triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings= entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
         self.relation_embedding_dim = relation_dim
         self.scoring_fct_norm = scoring_fct_norm
-        self.relation_embeddings = None
+        self.relation_embeddings = relation_embeddings
         self.projection_matrix_embs = None
 
-        self._init_embeddings()
+        if None in [self.entity_embeddings,self.relation_embeddings]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()

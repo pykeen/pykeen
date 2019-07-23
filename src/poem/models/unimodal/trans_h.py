@@ -32,6 +32,8 @@ class TransH(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            entity_embeddings: nn.Embedding = None,
+            relation_embeddings: nn.Embedding = None,
             scoring_fct_norm: int = 1,
             soft_weight_constraint: float = 0.05,
             epsilon: float = 0.005,
@@ -42,6 +44,7 @@ class TransH(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -50,10 +53,11 @@ class TransH(BaseModule):
         self.epsilon = nn.Parameter(torch.Tensor([epsilon]))
 
         self.scoring_fct_norm = scoring_fct_norm
-        self.relation_embeddings = None
+        self.relation_embeddings = relation_embeddings
         self.normal_vector_embeddings = None
 
-        self._init_embeddings()
+        if None in [self.entity_embeddings,self.relation_embeddings]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()

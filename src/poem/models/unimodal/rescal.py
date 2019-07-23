@@ -34,20 +34,24 @@ class RESCAL(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            entity_embeddings: nn.Embedding = None,
+            relation_embeddings: nn.Embedding = None,
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device: str = GPU,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        self.relation_embeddings = None
 
-        self._init_embeddings()
+        self.relation_embeddings = relation_embeddings
+        if None in [self.entity_embeddings, self.relation_embeddings]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()

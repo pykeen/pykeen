@@ -77,24 +77,31 @@ class HolE(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim=200,
+            entity_embeddings=None,
+            relation_embeddings=None,
             criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device=GPU,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             criterion=criterion,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
 
-        # Embeddings
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.relation_embeddings = relation_embeddings
 
-        self._initialize()
+        if None in [self.entity_embeddings, self.relation_embeddings]:
+            self._initialize()
 
     def _initialize(self):
+        """."""
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         entity_embeddings_init_bound = 6 / np.sqrt(
             self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,
