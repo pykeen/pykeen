@@ -5,6 +5,7 @@
 import logging
 import random
 from abc import abstractmethod
+from collections import defaultdict
 from typing import Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -25,6 +26,9 @@ log = logging.getLogger(__name__)
 
 class BaseModule(nn.Module):
     """A base module for all of the KGE models."""
+
+    # A dictionary of hyperpareters to the models that use them
+    _hyperparameter_usage = defaultdict(set)
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
@@ -70,6 +74,15 @@ class BaseModule(nn.Module):
 
         # Marker to check whether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Keep track of the hyper-parameters that are used across all
+        # subclasses of BaseModule
+        for k, v in cls.__init__.__annotations__.items():
+            if k not in {'return', 'triples_factory'}:
+                BaseModule._hyperparameter_usage[k].add(cls.__name__)
 
     @property
     def num_entities(self):
