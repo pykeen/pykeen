@@ -5,5 +5,5 @@ embedding models incorporating multi-modal information (e.g., numerical, textual
 
 This package is part of the `KEEN Universe <https://github.com/SmartDataAnalytics/PyKEEN>`_.
 
-. |build| image:: https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master
+.. |build| image:: https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master
     :target: https://travis-ci.com/mali-git/POEM_develop
