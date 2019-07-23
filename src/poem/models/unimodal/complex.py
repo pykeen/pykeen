@@ -27,6 +27,10 @@ class ComplEx(BaseModule):
     def __init__(
             self,
             triples_factory: TriplesFactory,
+            entity_embeddings_real=None,
+            entity_embeddings_img=None,
+            relation_embeddings_real=None,
+            relation_embeddings_img=None,
             embedding_dim: int = 200,
             neg_label: float = -1.,
             regularization_factor: float = 0.01,
@@ -34,7 +38,7 @@ class ComplEx(BaseModule):
             random_seed: Optional[int] = None,
     ):
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
@@ -47,15 +51,21 @@ class ComplEx(BaseModule):
         self.criterion = criterion
 
         # The embeddings are first initialized when calling the get_grad_params function
-        self.entity_embeddings_real = None
-        self.entity_embeddings_img = None
-        self.relation_embeddings_real = None
-        self.relation_embeddings_img = None
+        self.entity_embeddings_real = entity_embeddings_real
+        self.entity_embeddings_img = entity_embeddings_img
+        self.relation_embeddings_real = relation_embeddings_real
+        self.relation_embeddings_img = relation_embeddings_img
 
-        self._init_embeddings()
+        if None in [
+            self.entity_embeddings_real,
+            self.entity_embeddings_img,
+            self.relation_embeddings_real,
+            self.relation_embeddings_img,
+        ]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
-        self.entity_embeddings_real = self.entity_embeddings
+        self.entity_embeddings_real = nn.Embedding(self.num_entities, self.embedding_dim)
         self.entity_embeddings_img = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings_real = nn.Embedding(self.num_relations, self.embedding_dim)
         self.relation_embeddings_img = nn.Embedding(self.num_relations, self.embedding_dim)
