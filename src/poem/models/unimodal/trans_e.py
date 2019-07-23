@@ -76,10 +76,8 @@ class TransE(BaseModule):
             b=+embeddings_init_bound,
         )
 
-        norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
-        self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight),
-        )
+        # Initialise relation embeddings to unit length
+        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
     def apply_forward_constraints(self):
         functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)

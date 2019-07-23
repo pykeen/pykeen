@@ -81,10 +81,8 @@ class StructuredEmbedding(BaseModule):
 
         # FIXME @mehdi why aren't the right relation embeddings initialized?
 
-        norms = torch.norm(self.left_relation_embeddings.weight, p=2, dim=1).data
-        self.left_relation_embeddings.weight.data = self.left_relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.left_relation_embeddings.weight),
-        )
+        # Initialise left relation embeddings to unit length
+        functional.normalize(self.left_relation_embeddings.weight.data, out=self.left_relation_embeddings.weight.data)
 
     def apply_forward_constraints(self):
         # Normalise embeddings of entities
