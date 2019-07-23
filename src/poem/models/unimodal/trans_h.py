@@ -34,19 +34,21 @@ class TransH(BaseModule):
             embedding_dim: int = 50,
             scoring_fct_norm: int = 1,
             soft_weight_constraint: float = 0.05,
+            epsilon: float = 0.005,
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device: str = GPU,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
         self.weighting_soft_constraint = soft_weight_constraint
-        self.epsilon = nn.Parameter(torch.Tensor(0.005, requires_grad=True))
+        self.epsilon = nn.Parameter(torch.Tensor([epsilon]))
+
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = None
         self.normal_vector_embeddings = None
