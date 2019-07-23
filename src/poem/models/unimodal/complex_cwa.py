@@ -9,8 +9,9 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from poem.constants import COMPLEX_CWA_NAME, GPU
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
-from poem.utils import slice_doubles
+from poem.utils import slice_doubles, slice_triples
 
 
 # TODO: Combine with the Complex Module
@@ -24,8 +25,7 @@ class ComplexCWA(BaseModule):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
+            triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             input_dropout: float = 0.2,
             criterion: nn.modules.loss = torch.nn.BCELoss(),
@@ -33,8 +33,7 @@ class ComplexCWA(BaseModule):
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
@@ -92,6 +91,46 @@ class ComplexCWA(BaseModule):
         img_img_real = torch.mm(
             subjects_embedded_img * relations_embedded_img,
             self.entity_embeddings_real.weight.transpose(1, 0),
+        )
+
+        predictions = real_real_real + real_img_img + img_real_img - img_img_real
+        predictions = torch.sigmoid(predictions)
+        return predictions
+
+    def forward_owa(self, triples):
+        batch_heads, batch_relations, batch_tails = slice_triples(triples)
+
+        subjects_embedded_real = self.entity_embeddings_real(batch_heads).view(-1, self.embedding_dim)
+        relations_embedded_real = self.relation_embeddings_real(batch_relations).view(-1, self.embedding_dim)
+        objects_embedded_real = self.entity_embeddings_real(batch_tails).view(-1, self.embedding_dim)
+
+        subjects_embedded_img = self.entity_embeddings_img(batch_heads).view(-1, self.embedding_dim)
+        relations_embedded_img = self.relation_embeddings_img(batch_relations).view(-1, self.embedding_dim)
+        objects_embedded_img = self.entity_embeddings_img(batch_tails).view(-1, self.embedding_dim)
+
+        # Apply dropout
+        subjects_embedded_real = self.inp_drop(subjects_embedded_real)
+        relations_embedded_real = self.inp_drop(relations_embedded_real)
+        subjects_embedded_img = self.inp_drop(subjects_embedded_img)
+        relations_embedded_img = self.inp_drop(relations_embedded_img)
+
+        # complex space bilinear product (equivalent to HolE)
+        # *: Elementwise multiplication; torch.mm: matrix multiplication (does not broadcast)
+        real_real_real = torch.mm(
+            subjects_embedded_real * relations_embedded_real,
+            objects_embedded_real.transpose(1,0),
+        )
+        real_img_img = torch.mm(
+            subjects_embedded_real * relations_embedded_img,
+            objects_embedded_img.transpose(1,0),
+        )
+        img_real_img = torch.mm(
+            subjects_embedded_img * relations_embedded_real,
+            objects_embedded_img.transpose(1,0),
+        )
+        img_img_real = torch.mm(
+            subjects_embedded_img * relations_embedded_img,
+            objects_embedded_real.transpose(1,0),
         )
 
         predictions = real_real_real + real_img_img + img_real_img - img_img_real

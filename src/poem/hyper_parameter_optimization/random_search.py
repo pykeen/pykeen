@@ -2,7 +2,7 @@
 
 """A hyper-parameter optimizer that uses random search."""
 import random
-from typing import Dict, List, Mapping, Iterable, Any
+from typing import Any, Dict, Iterable, List, Mapping
 
 import numpy as np
 from torch.nn import Module
@@ -110,7 +110,7 @@ class RandomSearch(HPOptimizer):
             )
 
             # Evaluate model
-            self.evaluator.set_model(model=model)
+            self.evaluator.model = model
             metric_results = self.evaluator.evaluate(triples=test_triples)
             eval_summaries.append(metric_results)
 

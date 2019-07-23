@@ -56,25 +56,24 @@ class RankBasedEvaluator(Evaluator):
 
     def __init__(
             self,
-            entity_to_id,
-            relation_to_id,
-            training_triples: np.ndarray,
-            model: BaseModule = None,
-            filter_neg_triples=False,
+            model: Optional[BaseModule] = None,
+            filter_neg_triples: bool = False,
             hits_at_k: Optional[List[int]] = None,
     ) -> None:
-        super().__init__(
-            model=model,
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-        )
-
-        self.all_entities = np.arange(0, len(self.entity_to_id))
+        super().__init__(model=model)
         self.filter_neg_triples = filter_neg_triples
         self.hits_at_k = hits_at_k if hits_at_k is not None else [1, 3, 5, 10]
-        self.train_triples = training_triples
 
-    def _hash_triples(self, triples: Iterable[Hashable]) -> int:
+    @property
+    def train_triples(self):
+        return self.model.triples_factory.triples
+
+    @property
+    def all_entities(self):
+        return self.model.triples_factory.all_entities
+
+    @staticmethod
+    def _hash_triples(triples: Iterable[Hashable]) -> int:
         """Hash a list of triples."""
         return hash(tuple(triples))
 
@@ -246,7 +245,7 @@ class RankBasedEvaluator(Evaluator):
                 adjusted_rank_of_positive_subject_based,
                 adjusted_rank_of_positive_object_based,
             ) = compute_rank_fct(
-                kg_embedding_model=self.model,
+                model=self.model,
                 pos_triple=pos_triple,
                 corrupted_subject_based=corrupted_subject_based,
                 corrupted_object_based=corrupted_object_based,

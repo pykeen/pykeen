@@ -3,43 +3,28 @@
 """Basic structure of a evaluator."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, Mapping
+from typing import Optional
 
 import numpy as np
-import torch.nn as nn
 
-from poem.models.base import BaseModule
+from ..models.base import BaseModule
 
 __all__ = [
-    'EvaluatorConfig',
     'Evaluator',
 ]
 
 
-@dataclass
-class EvaluatorConfig:
-    config: Dict
-    model: nn.Module
-    entity_to_id: Dict[str, int]
-    relation_to_id: Dict[str, int]
-    training_triples: np.ndarray = None
-
-
 class Evaluator(ABC):
-    def __init__(
-            self,
-            entity_to_id: Mapping,
-            relation_to_id: Mapping,
-            model: nn.Module = None,
-    ) -> None:
-        self.model = model
-        self.entity_to_id = entity_to_id
-        self.relation_to_id = relation_to_id
 
-    def set_model(self, model: BaseModule) -> None:
-        """Set model that should be trained."""
+    def __init__(self, model: Optional[BaseModule] = None) -> None:
         self.model = model
+
+    @property
+    def entity_to_id(self):
+        return self.model.triples_factory.entity_to_id
+
+    def relation_to_id(self):
+        return self.model.triples_factory.relation_to_id
 
     @property
     def device(self):
@@ -47,4 +32,4 @@ class Evaluator(ABC):
 
     @abstractmethod
     def evaluate(self, triples: np.ndarray):
-        pass
+        raise NotImplementedError

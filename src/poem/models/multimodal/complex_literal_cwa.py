@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from poem.constants import COMPLEX_LITERAL_NAME_CWA, GPU, NUMERIC_LITERALS
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_doubles
 
@@ -24,9 +25,7 @@ class ComplexLiteralCWA(BaseModule):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
-            multimodal_data: dict,
+            triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             input_dropout: float = 0.2,
             criterion: nn.modules.loss = nn.BCELoss(),
@@ -34,8 +33,7 @@ class ComplexLiteralCWA(BaseModule):
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
@@ -49,7 +47,7 @@ class ComplexLiteralCWA(BaseModule):
 
         # Literal
         # num_ent x num_lit
-        numeric_literals = multimodal_data.get(NUMERIC_LITERALS)
+        numeric_literals = triples_factory.multimodal_data.get(NUMERIC_LITERALS)
         self.numeric_literals = nn.Embedding.from_pretrained(
             torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
         )
@@ -67,6 +65,8 @@ class ComplexLiteralCWA(BaseModule):
         )
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
+
+        self._init_embeddings()
 
     def _init_embeddings(self):
         self.entity_embs_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)

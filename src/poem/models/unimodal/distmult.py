@@ -11,6 +11,7 @@ from torch import nn
 from torch.nn import functional
 
 from poem.constants import DISTMULT_NAME, GPU
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
 
@@ -38,16 +39,14 @@ class DistMult(BaseModule):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
+            triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device: str = GPU,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,

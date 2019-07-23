@@ -10,6 +10,7 @@ from torch.nn.init import xavier_normal_
 
 from poem.constants import COMPLEX_NAME, GPU
 from poem.customized_loss_functions.softplus_loss import SoftplusLoss
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
 
@@ -25,8 +26,7 @@ class ComplEx(BaseModule):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
+            triples_factory: TriplesFactory,
             embedding_dim: int = 200,
             neg_label: float = -1.,
             regularization_factor: float = 0.01,
@@ -34,8 +34,7 @@ class ComplEx(BaseModule):
             random_seed: Optional[int] = None,
     ):
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,

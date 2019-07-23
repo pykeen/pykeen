@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from poem.constants import DISTMULT_LITERAL_NAME_OWA, GPU, INPUT_DROPOUT, NUMERIC_LITERALS
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
 
@@ -25,8 +26,7 @@ class DistMultLiteral(BaseModule):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
+            triples_factory: TriplesFactory,
             multimodal_data: dict,
             embedding_dim: int = 50,
             criterion: nn.modules.loss = nn.MarginRankingLoss(),
@@ -34,8 +34,7 @@ class DistMultLiteral(BaseModule):
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
@@ -55,6 +54,7 @@ class DistMultLiteral(BaseModule):
         self.input_dropout = torch.nn.Dropout(
             self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.,
         )
+        self._init_embeddings()
 
     def _init_embeddings(self):
         """Initialize the entities and relation embeddings based on the XAVIER initialization."""

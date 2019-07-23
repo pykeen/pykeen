@@ -10,6 +10,7 @@ import torch.autograd
 from torch import nn
 
 from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
 
@@ -49,8 +50,7 @@ class TransR(BaseModule):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
+            triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             relation_dim: int = 30,
             scoring_fct_norm: int = 1,
@@ -59,8 +59,7 @@ class TransR(BaseModule):
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,

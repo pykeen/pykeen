@@ -2,11 +2,10 @@
 
 """Evaluators."""
 
-from .base import Evaluator, EvaluatorConfig
+from .base import Evaluator
 from .rank_based_evaluator import RankBasedEvaluator
 
 __all__ = [
     'Evaluator',
-    'EvaluatorConfig',
     'RankBasedEvaluator',
 ]

@@ -48,8 +48,7 @@ class RotatE(BaseModule):
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             criterion=criterion,
             embedding_dim=2 * embedding_dim,
             preferred_device=preferred_device,

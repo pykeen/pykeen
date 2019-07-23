@@ -8,7 +8,6 @@ from tqdm import trange
 
 from .base import TrainingLoop
 from .utils import split_list_in_batches
-from ..instance_creation_factories.instances import CWAInstances
 
 __all__ = [
     'CWATrainingLoop',
@@ -20,7 +19,6 @@ class CWATrainingLoop(TrainingLoop):
 
     def train(
             self,
-            training_instances: CWAInstances,
             num_epochs: int,
             batch_size: int,
             label_smoothing: bool = True,
@@ -28,9 +26,10 @@ class CWATrainingLoop(TrainingLoop):
     ):
         """Train the model using the closed world assumption."""
         self.model = self.model.to(self.device)
+        training_instances = self.triples_factory.create_cwa_instances()
         subject_relation_pairs = training_instances.instances
         labels = training_instances.labels
-        num_entities = len(training_instances.entity_to_id)
+        num_entities = self.model.num_entities
 
         num_triples = subject_relation_pairs.shape[0]
 

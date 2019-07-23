@@ -12,6 +12,7 @@ import torch
 from torch import nn
 
 from ..constants import EMBEDDING_DIM, GPU
+from ..instance_creation_factories.triples_factory import TriplesFactory
 from ..typing import OptionalLoss
 from ..utils import get_params_requiring_grad
 
@@ -31,8 +32,7 @@ class BaseModule(nn.Module):
 
     def __init__(
             self,
-            num_entities: int,
-            num_relations: int,
+            triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             criterion: OptionalLoss = None,
             preferred_device: str = GPU,
@@ -60,19 +60,26 @@ class BaseModule(nn.Module):
         # TODO: Check loss functions that require 1 and -1 as label but only
         self.is_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
 
-        # Entity dimensions
-        #: The number of entities in the knowledge graph
-        self.num_entities = num_entities
-        #: The number of unique relation types in the knowledge graph
-        self.num_relations = num_relations
+        self.triples_factory = triples_factory
+
         #: The dimension of the embeddings to generate
         self.embedding_dim = embedding_dim
 
         # The embeddings are first initiated when calling the fit function
         self.entity_embeddings = None
 
-        # Marker to check wether the forward constraints of a models has been applied before starting loss calculation
+        # Marker to check whether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False
+
+    @property
+    def num_entities(self):
+        """The number of entities in the knowledge graph."""
+        return self.triples_factory.num_entities
+
+    @property
+    def num_relations(self):
+        """The number of unique relation types in the knowledge graph."""
+        return self.triples_factory.num_relations
 
     def _init_embeddings(self):
         self.entity_embeddings = nn.Embedding(
@@ -154,7 +161,6 @@ class BaseModule(nn.Module):
     # FIXME this isn't used anywhere
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
-        self._init_embeddings()
         return get_params_requiring_grad(self)
 
     @classmethod

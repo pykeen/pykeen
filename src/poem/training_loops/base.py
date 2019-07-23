@@ -3,9 +3,8 @@
 """Training loops for KGE models using multi-modal information."""
 
 from abc import ABC, abstractmethod
-from typing import List, Mapping, Tuple
+from typing import List, Mapping, Optional, Tuple
 
-import numpy as np
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -23,14 +22,20 @@ class TrainingLoop(ABC):
 
     def __init__(
             self,
-            optimizer: torch.optim.Optimizer = None,
-            model: BaseModule = None,
-            all_entities: np.ndarray = None,
+            optimizer: Optional[torch.optim.Optimizer] = None,
+            model: Optional[BaseModule] = None,
     ) -> None:
         self.model = model
         self.optimizer = optimizer
         self.losses_per_epochs = []
-        self.all_entities = all_entities
+
+    @property
+    def triples_factory(self):
+        return self.model.triples_factory
+
+    @property
+    def all_entities(self):
+        return self.model.all_entities
 
     @property
     def device(self):

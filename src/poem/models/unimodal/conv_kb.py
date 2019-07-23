@@ -9,6 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
+from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
 from ...constants import CONV_KB_NAME, GPU
 from ...utils import slice_triples
@@ -37,16 +38,14 @@ class ConvKB(BaseModule):
 
     def __init__(
             self,
-            num_entities,
-            num_relations,
+            triples_factory: TriplesFactory,
             embedding_dim=200,
             criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU,
             num_filters: int = 400,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            num_entities=num_entities,
-            num_relations=num_relations,
+            triples_factory = triples_factory,
             criterion=criterion,
             embedding_dim=embedding_dim,
             preferred_device=preferred_device,

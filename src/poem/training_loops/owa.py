@@ -6,14 +6,12 @@ from typing import Any, Mapping, Optional, Type
 
 import numpy as np
 import torch
-import torch.nn as nn
 from tqdm import trange
 
-from poem.models.base import BaseModule
 from .base import TrainingLoop
 from .utils import split_list_in_batches
-from ..negative_sampling import NegativeSampler
-from ..negative_sampling.basic_negative_sampler import BasicNegativeSampler
+from ..models import BaseModule
+from ..negative_sampling import BasicNegativeSampler, NegativeSampler
 
 __all__ = [
     'OWATrainingLoop',
@@ -21,23 +19,23 @@ __all__ = [
 
 
 class OWATrainingLoop(TrainingLoop):
+    negative_sampler: NegativeSampler
+
     def __init__(
             self,
-            all_entities,
-            model: BaseModule = None,
-            optimizer = None,
+            model: Optional[BaseModule] = None,
+            optimizer: Optional[torch.optim.Optimizer] = None,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
         super().__init__(
             model=model,
             optimizer=optimizer,
-            all_entities=all_entities,
         )
 
         if negative_sampler_cls is None:
             negative_sampler_cls = BasicNegativeSampler
 
-        self.negative_sampler: NegativeSampler = negative_sampler_cls(all_entities=self.all_entities)
+        self.negative_sampler = negative_sampler_cls(all_entities=self.all_entities)
 
     def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
         return [
@@ -47,7 +45,6 @@ class OWATrainingLoop(TrainingLoop):
 
     def train(
             self,
-            training_instances,
             num_epochs,
             batch_size,
             num_negs_per_pos=1,
@@ -55,6 +52,7 @@ class OWATrainingLoop(TrainingLoop):
             label_smoothing_epsilon: float = 0.1,
             tqdm_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        training_instances = self.model.triples_factory.create_owa_instances()
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
         num_entities = len(training_instances.entity_to_id)
