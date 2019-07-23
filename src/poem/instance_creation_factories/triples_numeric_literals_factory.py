@@ -8,16 +8,27 @@ from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.preprocessing.numeric_literals_preprocessing_utils.basic_utils import create_matrix_of_literals
 from poem.preprocessing.triples_preprocessing_utils.basic_triple_utils import load_triples
 
+__all__ = [
+    'TriplesNumericLiteralsFactory',
+]
+
 
 class TriplesNumericLiteralsFactory(TriplesFactory):
 
-    def __init__(self, path_to_triples: str, path_to_numeric_triples: str) -> None:
-        super().__init__(path_to_triples=path_to_triples)
-        self.numeric_triples = load_triples(path_to_numeric_triples)
+    def __init__(self, path: str, path_to_numeric_triples: str) -> None:
+        super().__init__(path=path)
+        self.path_to_numeric_triples = path_to_numeric_triples
+        self.numeric_triples = load_triples(self.path_to_numeric_triples)
+
         self.numeric_literals = None
         self.multimodal_data = None
         self.literals_to_id = None
+
         self._create_numeric_literals()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(path="{self.path}", ' \
+            f'path_to_numeric_triples="{self.path_to_numeric_triples}")'
 
     def _create_numeric_literals(self) -> None:
         self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
