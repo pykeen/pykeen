@@ -57,7 +57,7 @@ class RankBasedEvaluator(Evaluator):
 
     def __init__(
             self,
-            model: Optional[BaseModule] = None,
+            model: BaseModule = None,
             filter_neg_triples: bool = False,
             hits_at_k: Optional[List[int]] = None,
     ) -> None:
@@ -239,22 +239,24 @@ class RankBasedEvaluator(Evaluator):
             test_triples = tqdm(test_triples, desc=f'Evaluating triples')
 
         for i, pos_triple in enumerate(test_triples):
-            corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
-                triple=pos_triple,
-            )
+            # Disable gradient tracking
+            with torch.no_grad():
+                corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
+                    triple=pos_triple,
+                )
 
-            (
-                rank_of_positive_subject_based,
-                rank_of_positive_object_based,
-                adjusted_rank_of_positive_subject_based,
-                adjusted_rank_of_positive_object_based,
-            ) = compute_rank_fct(
-                model=self.model,
-                pos_triple=pos_triple,
-                corrupted_subject_based=corrupted_subject_based,
-                corrupted_object_based=corrupted_object_based,
-                all_pos_triples_hashed=all_pos_triples_hashed,
-            )
+                (
+                    rank_of_positive_subject_based,
+                    rank_of_positive_object_based,
+                    adjusted_rank_of_positive_subject_based,
+                    adjusted_rank_of_positive_object_based,
+                ) = compute_rank_fct(
+                    model=self.model,
+                    pos_triple=pos_triple,
+                    corrupted_subject_based=corrupted_subject_based,
+                    corrupted_object_based=corrupted_object_based,
+                    all_pos_triples_hashed=all_pos_triples_hashed,
+                )
 
             ranks.append(rank_of_positive_subject_based)
             ranks.append(rank_of_positive_object_based)
