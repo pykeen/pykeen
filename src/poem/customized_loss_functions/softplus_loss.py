@@ -4,6 +4,10 @@ import torch
 from torch._jit_internal import weak_script_method
 from torch.nn.modules.loss import _Loss
 
+__all__ = [
+    'SoftplusLoss',
+]
+
 
 class SoftplusLoss(_Loss):
 
