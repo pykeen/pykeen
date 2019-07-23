@@ -144,6 +144,10 @@ class BaseModule(nn.Module):
     def forward_cwa(self, batch):
         raise NotImplementedError
 
+    @abstractmethod
+    def forward_inverse_cwa(self, batch):
+        raise NotImplementedError
+
     # FIXME this isn't used anywhere
     def get_grad_params(self) -> Iterable[Parameter]:
         """Get the parameters that require gradients."""
