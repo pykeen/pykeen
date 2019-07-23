@@ -26,8 +26,8 @@ class TransH(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            entity_embeddings: nn.Embedding = None,
-            relation_embeddings: nn.Embedding = None,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
             soft_weight_constraint: float = 0.05,
             epsilon: float = 0.005,
@@ -52,7 +52,7 @@ class TransH(BaseModule):
         self.relation_embeddings = relation_embeddings
         self.normal_vector_embeddings = None
 
-        if None in [self.entity_embeddings,self.relation_embeddings]:
+        if None in [self.entity_embeddings, self.relation_embeddings]:
             self._init_embeddings()
 
     def _init_embeddings(self):

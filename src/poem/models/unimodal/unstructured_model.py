@@ -33,7 +33,7 @@ class UnstructuredModel(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            entity_embeddings: nn.Embedding = None,
+            entity_embeddings: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,

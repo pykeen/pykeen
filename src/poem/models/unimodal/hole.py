@@ -71,8 +71,8 @@ class HolE(BaseModule):
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            entity_embeddings=None,
-            relation_embeddings=None,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
             embedding_dim: int = 200,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,

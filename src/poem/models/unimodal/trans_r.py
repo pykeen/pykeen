@@ -50,9 +50,9 @@ class TransR(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            entity_embeddings: nn.Embedding = None,
+            entity_embeddings: Optional[nn.Embedding] = None,
             relation_dim: int = 30,
-            relation_embeddings: nn.Embedding = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
@@ -64,7 +64,7 @@ class TransR(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            entity_embeddings= entity_embeddings,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -74,7 +74,7 @@ class TransR(BaseModule):
         self.relation_embeddings = relation_embeddings
         self.projection_matrix_embs = None
 
-        if None in [self.entity_embeddings,self.relation_embeddings]:
+        if None in [self.entity_embeddings, self.relation_embeddings]:
             self._init_embeddings()
 
     def _init_embeddings(self):
