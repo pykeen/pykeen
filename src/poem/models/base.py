@@ -5,14 +5,14 @@
 import logging
 import random
 from abc import abstractmethod
-from typing import Iterable, Optional, Tuple, List
+from typing import Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
 from torch import nn
-from torch.nn import Parameter
 
 from ..constants import EMBEDDING_DIM, GPU
+from ..typing import OptionalLoss
 from ..utils import get_params_requiring_grad
 
 __all__ = [
@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 
 class BaseModule(nn.Module):
-    """A base class for all of the OWA based models."""
+    """A base module for all of the KGE models."""
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
@@ -34,7 +34,7 @@ class BaseModule(nn.Module):
             num_entities: int,
             num_relations: int,
             embedding_dim: int = 50,
-            criterion: nn.modules.loss._Loss = nn.MarginRankingLoss(),
+            criterion: OptionalLoss = None,
             preferred_device: str = GPU,
             random_seed: Optional[int] = None,
     ) -> None:
@@ -52,7 +52,11 @@ class BaseModule(nn.Module):
             random.seed(self.random_seed)
 
         # Loss
-        self.criterion = criterion
+        if criterion is None:
+            self.criterion = nn.MarginRankingLoss()
+        else:
+            self.criterion = criterion
+
         # TODO: Check loss functions that require 1 and -1 as label but only
         self.is_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
 
@@ -69,7 +73,6 @@ class BaseModule(nn.Module):
 
         # Marker to check wether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False
-
 
     def _init_embeddings(self):
         self.entity_embeddings = nn.Embedding(
@@ -149,7 +152,7 @@ class BaseModule(nn.Module):
         raise NotImplementedError
 
     # FIXME this isn't used anywhere
-    def get_grad_params(self) -> Iterable[Parameter]:
+    def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         self._init_embeddings()
         return get_params_requiring_grad(self)
@@ -158,5 +161,3 @@ class BaseModule(nn.Module):
     def get_model_params(cls) -> List:
         """Returns the model parameters."""
         return ['num_entities', 'num_relations', 'embedding_dim', 'criterion', 'preferred_device', 'random_seed']
-
-
