@@ -5,8 +5,10 @@
 from .complex import ComplEx
 from .complex_cwa import ComplexCWA
 from .distmult import DistMult
+from .hole import HolE
 from .ermlp import ERMLP
 from .rescal import RESCAL
+from .rotate import RotatE
 from .structured_embedding import StructuredEmbedding
 from .trans_d import TransD
 from .trans_e import TransE
@@ -19,11 +21,13 @@ __all__ = [
     'ComplexCWA',
     'DistMult',
     'ERMLP',
+    'HolE',
     'RESCAL',
     'StructuredEmbedding',
     'TransD',
     'TransE',
     'TransH',
     'TransR',
+    'RotatE',
     'UnstructuredModel',
 ]
