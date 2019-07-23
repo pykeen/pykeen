@@ -27,21 +27,20 @@ class DistMultLiteral(BaseModule):
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            multimodal_data: dict,
             embedding_dim: int = 50,
             criterion: nn.modules.loss = nn.MarginRankingLoss(),
             preferred_device: str = GPU,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
 
-        numeric_literals = multimodal_data.get(NUMERIC_LITERALS)
+        numeric_literals = triples_factory.multimodal_data.get(NUMERIC_LITERALS)
 
         # Embeddings
         self.relation_embeddings = None
