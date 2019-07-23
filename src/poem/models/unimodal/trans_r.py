@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn import functional
 
 from poem.constants import GPU, RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM, TRANS_R_NAME
 from poem.instance_creation_factories.triples_factory import TriplesFactory
@@ -97,10 +98,8 @@ class TransR(BaseModule):
             b=relation_embeddings_init_bound,
         )
 
-        norms = torch.norm(self.relation_embeddings.weight, p=2, dim=1).data
-        self.relation_embeddings.weight.data = self.relation_embeddings.weight.data.div(
-            norms.view(self.num_relations, 1).expand_as(self.relation_embeddings.weight),
-        )
+        # Initialise relation embeddings to unit length
+        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
     def _project_entities(self, entity_embs, projection_matrix_embs):
         projected_entity_embs = torch.einsum('nk,nkd->nd', [entity_embs, projection_matrix_embs])
