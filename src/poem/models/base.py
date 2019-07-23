@@ -160,16 +160,48 @@ class BaseModule(nn.Module):
         return loss
 
     @abstractmethod
-    def forward_owa(self, batch):
-        raise NotImplementedError
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass for training with the OWA.
+
+        :param batch: torch.tensor, shape: TODO: ???
+        :return: torch.tensor, shape: TODO: ???
+
+        """
+        raise NotImplementedError()
 
     @abstractmethod
-    def forward_cwa(self, batch):
-        raise NotImplementedError
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass for training and evaluation with the CWA.
+
+        :param batch: torch.tensor, shape: (batch_size, 2)
+            The indices of (subject, relation) pairs.
+        :return: torch.tensor, shape: (batch_size, num_entities)
+            For each s-p pair, the scores for all possible objects.
+        """
+        raise NotImplementedError()
 
     @abstractmethod
-    def forward_inverse_cwa(self, batch):
-        raise NotImplementedError
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass for evaluation with the CWA.
+
+        :param batch: torch.tensor, shape: (batch_size, 2)
+            The indices of (relation, object) pairs.
+        :return: torch.tensor, shape: (batch_size, num_entities)
+            For each p-o pair, the scores for all possible subjects.
+        """
+        raise NotImplementedError()
 
     # FIXME this isn't used anywhere
     def get_grad_params(self) -> Iterable[nn.Parameter]:
