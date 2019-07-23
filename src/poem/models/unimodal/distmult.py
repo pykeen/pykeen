@@ -13,6 +13,7 @@ from torch.nn import functional
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ...typing import OptionalLoss
 
 __all__ = ['DistMult']
 
@@ -36,16 +37,19 @@ class DistMult(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            entity_embeddings: nn.Embedding = None,
-            relation_embeddings:nn.Embedding = None,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
+            criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            entity_embeddings= entity_embeddings,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
