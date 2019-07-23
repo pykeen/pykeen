@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
 """A hyper-parameter optimizer that uses random search."""
+
 import random
-from typing import Any, Dict, Iterable, List, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Type
 
 import numpy as np
+import torch
 from torch.nn import Module
 from tqdm import trange
 
 from poem.evaluation import Evaluator
 from poem.hyper_parameter_optimization.HPOptimizer import HPOptimizer, HPOptimizerResult
 from poem.instance_creation_factories.instances import Instances
+from poem.models import BaseModule
 from poem.training_loops import TrainingLoop
 from poem.utils import get_params_requiring_grad
 
@@ -20,13 +23,12 @@ class RandomSearch(HPOptimizer):
 
     def __init__(
             self,
-            model_class,
-            optimizer_class,
+            model_class: Type[BaseModule],
+            optimizer_class: Type[torch.optim.Optimizer],
             entity_to_id: Dict[str, int],
             rel_to_id: Dict[str, int],
             training_loop: TrainingLoop,
             evaluator: Evaluator,
-
     ):
         """."""
         self.model_class = model_class
@@ -86,25 +88,22 @@ class RandomSearch(HPOptimizer):
             models_params.append(current_params_to_values)
 
             constructor_args = self.extract_constructor_arguments(params_to_values=current_params_to_values)
-            # FIXME
-            M = type(self.model_class.__name__, (), constructor_args)
-
-            model = M(**constructor_args)
+            model = self.model_class(**constructor_args)
 
             params = get_params_requiring_grad(model)
 
             # Configure optimizer
             optimizer_arguments = {
                 'params': params,
-                'lr': params_to_values['learning_rate']
+                'lr': params_to_values['learning_rate'],
             }
 
-            optimizer = type(self.optimizer_class.__name__, (), **optimizer_arguments)
+            optimizer = self.optimizer_class(**optimizer_arguments)
 
             # Train model
-            self.training_loop.set_model(model=model)
-            self.training_loop.set_optimizer(optimizer=optimizer)
-            trained_model, losses_per_epochs = self.training_loop.train(
+            self.training_loop.model = model
+            self.training_loop.optimizer = optimizer
+            losses_per_epochs = self.training_loop.train(
                 training_instances=training_instances,
                 **current_params_to_values,
             )
@@ -114,7 +113,7 @@ class RandomSearch(HPOptimizer):
             metric_results = self.evaluator.evaluate(triples=test_triples)
             eval_summaries.append(metric_results)
 
-            trained_kge_models.append(trained_model)
+            trained_kge_models.append(model)
             epoch_losses.append(losses_per_epochs)
 
             hits_at_k_evaluation = metric_results.hits_at_k[k_evaluation]
