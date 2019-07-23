@@ -1,61 +1,76 @@
 # -*- coding: utf-8 -*-
 
 """Test that models can be executed."""
+import os
 import unittest
+
+from poem.instance_creation_factories.triples_factory import TriplesFactory
+from poem.models.unimodal import *
+from tests.constants import RESOURCES_DIRECTORY
 
 
 class TestModels(unittest.TestCase):
     """Test that models can be executed."""
 
-    def __init__(self):
-        """."""
-        factory = None
-        path_to_training_file = None
+    path_to_training_data = os.path.join(RESOURCES_DIRECTORY, 'test.txt')
+    factory = TriplesFactory(path_to_triples=path_to_training_data)
 
     def test_um(self):
         """Tests that Unstructured Model can be executed."""
-        pass
+        um = UnstructuredModel(triples_factory=self.factory)
+        self.assertIsNotNone(um)
 
     def test_se(self):
         """Tests that Structured Embedding can be executed."""
-        pass
+        se = StructuredEmbedding(triples_factory=self.factory)
+        self.assertIsNotNone(se)
 
     def test_trans_e(self):
         """Tests that TransE can be executed."""
-        pass
+        trans_e = TransE(triples_factory=self.factory)
+        self.assertIsNotNone(trans_e)
 
     def test_trans_h(self):
         """Tests that TransH can be executed."""
-        pass
+        trans_h = TransH(triples_factory=self.factory)
+        self.assertIsNotNone(trans_h)
 
     def test_trans_r(self):
         """Tests that TransR can be executed."""
-        pass
+        trans_r = TransR(triples_factory=self.factory)
+        self.assertIsNotNone(trans_r)
 
     def test_trans_d(self):
         """Tests that TransD can be executed."""
-        pass
+        trans_d = TransD(triples_factory=self.factory)
+        self.assertIsNotNone(trans_d)
 
-    def test_rescale(self):
-        """Tests that RESCALE can be executed."""
-        pass
+    def test_rescal(self):
+        """Tests that RESCAL can be executed."""
+        rescale = RESCAL(triples_factory=self.factory)
+        self.assertIsNotNone(rescale)
 
     def test_distmult(self):
         """Tests that DISTMULT can be executed."""
-        pass
+        distmult = DistMult(triples_factory=self.factory)
+        self.assertIsNotNone(distmult)
 
     def test_complex(self):
         """Tests that COMPLEX can be executed."""
-        pass
+        complex = ComplEx(triples_factory=self.factory)
+        self.assertIsNotNone(complex)
 
+    # TODO
     def test_rotate(self):
         """Tests that Rotate can be executed."""
         pass
 
     def test_hole(self):
         """Tests that HolE can be executed."""
-        pass
+        hole = HolE(triples_factory=self.factory)
+        self.assertIsNotNone(hole)
 
+    # TODO
     def test_conv_kb(self):
         """Tests that ConvKB can be executed."""
         pass
