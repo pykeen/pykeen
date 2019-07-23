@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 class BaseModule(nn.Module):
     """A base module for all of the KGE models."""
 
-    # A dictionary of hyperpareters to the models that use them
+    # A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage = defaultdict(set)
 
     entity_embedding_max_norm: Optional[int] = None
