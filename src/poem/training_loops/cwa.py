@@ -2,6 +2,8 @@
 
 """Training KGE models based on the CWA."""
 
+from typing import List
+
 import numpy as np
 import torch
 from tqdm import trange
@@ -23,7 +25,7 @@ class CWATrainingLoop(TrainingLoop):
             batch_size: int,
             label_smoothing: bool = True,
             label_smoothing_epsilon: float = 0.1,
-    ):
+    ) -> List[float]:
         """Train the model using the closed world assumption."""
         self.model = self.model.to(self.device)
         training_instances = self.triples_factory.create_cwa_instances()
@@ -69,4 +71,4 @@ class CWATrainingLoop(TrainingLoop):
             # Track epoch loss
             self.losses_per_epochs.append(current_epoch_loss / len(subject_relation_pairs))
 
-        return self.model, self.losses_per_epochs
+        return self.losses_per_epochs

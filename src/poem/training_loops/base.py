@@ -45,21 +45,13 @@ class TrainingLoop(ABC):
     def train(
             self,
             training_instances: Instances,
-            num_epochs,
-            batch_size,
-    ) -> Tuple[nn.Module, List[float]]:
+            num_epochs: int,
+            batch_size: int,
+    ) -> List[float]:
         """Train the KGE model.
 
         :return: A pair of the KGE model and the losses per epoch.
         """
-
-    def set_model(self, model: BaseModule) -> None:
-        """Set model that should be trained."""
-        self.model = model
-
-    def set_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
-        """Set model that should be trained."""
-        self.optimizer = optimizer
 
     def _get_entity_to_vector_dict(self) -> Mapping:
         raise NotImplementedError

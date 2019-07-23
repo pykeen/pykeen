@@ -51,7 +51,7 @@ class OWATrainingLoop(TrainingLoop):
             label_smoothing: bool = False,
             label_smoothing_epsilon: float = 0.1,
             tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-    ):
+    ) -> List[str]:
         training_instances = self.model.triples_factory.create_owa_instances()
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
@@ -118,4 +118,4 @@ class OWATrainingLoop(TrainingLoop):
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
             it.write(f'Losses: {self.losses_per_epochs}')
 
-        return self.model, self.losses_per_epochs
+        return self.losses_per_epochs
