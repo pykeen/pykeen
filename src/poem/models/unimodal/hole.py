@@ -90,7 +90,7 @@ class HolE(BaseModule):
         )
 
         # Embeddings
-        self.relation_embeddings = nn.Embedding(num_relations, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         self._initialize()
 
