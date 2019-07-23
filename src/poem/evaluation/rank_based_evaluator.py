@@ -10,6 +10,7 @@ from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 import numpy as np
 import torch
 from dataclasses_json import dataclass_json
+from tdqm import tqdm
 
 from .base import Evaluator
 from ..models.base import BaseModule
@@ -214,7 +215,7 @@ class RankBasedEvaluator(Evaluator):
             adj_rank_of_positive_object_based,
         )
 
-    def evaluate(self, test_triples: np.ndarray) -> MetricResults:
+    def evaluate(self, test_triples: np.ndarray, use_tdqm: bool = True) -> MetricResults:
         start = timeit.default_timer()
         ranks: List[int] = []
         adj_ranks = np.empty(shape=(test_triples.shape[0], 2), dtype=np.float)
@@ -233,6 +234,9 @@ class RankBasedEvaluator(Evaluator):
             if self.filter_neg_triples else
             self._compute_rank
         )
+
+        if use_tdqm:
+            test_triples = tqdm(test_triples, desc=f'Evaluating triples')
 
         for i, pos_triple in enumerate(test_triples):
             corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
