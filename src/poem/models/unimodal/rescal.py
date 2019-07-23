@@ -7,8 +7,8 @@ from typing import Optional
 from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ..base import BaseModule
 from ...typing import OptionalLoss
 
 __all__ = ['RESCAL']

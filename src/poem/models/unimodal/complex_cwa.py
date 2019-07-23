@@ -9,8 +9,8 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_doubles, slice_triples
+from ..base import BaseModule
 from ...typing import OptionalLoss
 
 

@@ -15,7 +15,7 @@ later, but that will cause problems - the code will get executed twice:
 
 import click
 
-from .models import BaseModule
+from .models.base import BaseModule
 
 
 @click.group()

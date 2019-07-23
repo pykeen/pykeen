@@ -12,10 +12,10 @@ from tqdm import trange
 
 from poem.evaluation import Evaluator
 from poem.instance_creation_factories.instances import Instances
-from poem.models import BaseModule
 from poem.training import TrainingLoop
 from poem.utils import get_params_requiring_grad
 from .hyper_parameter_optimizer import HPOptimizer, HPOptimizerResult
+from ..models.base import BaseModule
 
 __all__ = [
     'RandomSearch',
