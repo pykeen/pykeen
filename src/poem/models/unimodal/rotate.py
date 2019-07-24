@@ -78,7 +78,7 @@ class RotatE(BaseModule):
             b=2.0 * np.pi,
         )
 
-    def _apply_forward_constraints(self):
+    def _apply_forward_constraints_if_necessary(self):
         # Absolute value of complex number
         # |a+ib| = sqrt(a**2 + b**2)
         #
@@ -96,9 +96,7 @@ class RotatE(BaseModule):
             batch: torch.tensor,
     ) -> torch.tensor:
         # Apply forward constraints if necessary
-        if not self.forward_constraint_applied:
-            self._apply_forward_constraints()
-            self.forward_constraint_applied = True
+        self._apply_forward_constraints_if_necessary()
 
         h, r, t = slice_triples(batch)
 
@@ -124,9 +122,7 @@ class RotatE(BaseModule):
             batch: torch.tensor,
     ) -> torch.tensor:
         # Apply forward constraints if necessary
-        if not self.forward_constraint_applied:
-            self._apply_forward_constraints()
-            self.forward_constraint_applied = True
+        self._apply_forward_constraints_if_necessary()
 
         # rotate head embeddings in complex plane (equivalent to Hadamard product)
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 2, 1)
@@ -151,9 +147,7 @@ class RotatE(BaseModule):
             batch: torch.tensor,
     ) -> torch.tensor:
         # Apply forward constraints if necessary
-        if not self.forward_constraint_applied:
-            self._apply_forward_constraints()
-            self.forward_constraint_applied = True
+        self._apply_forward_constraints_if_necessary()
 
         # r expresses a rotation in complex plane.
         # The inverse rotation is expressed by the complex conjugate of r.
