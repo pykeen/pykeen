@@ -60,10 +60,10 @@ class TestModels(unittest.TestCase):
         complex = ComplEx(triples_factory=self.factory)
         self.assertIsNotNone(complex)
 
-    # TODO
     def test_rotate(self):
         """Tests that Rotate can be executed."""
-        pass
+        rotate = RotatE(triples_factory=self.factory)
+        self.assertIsNotNone(rotate)
 
     def test_hole(self):
         """Tests that HolE can be executed."""
