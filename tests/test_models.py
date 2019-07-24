@@ -4,6 +4,8 @@
 import os
 import unittest
 
+import torch
+
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.unimodal import *
 from tests.constants import RESOURCES_DIRECTORY
@@ -64,6 +66,11 @@ class TestModels(unittest.TestCase):
         """Tests that Rotate can be executed."""
         rotate = RotatE(triples_factory=self.factory)
         self.assertIsNotNone(rotate)
+
+        # Dummy forward passes
+        rotate.forward_owa(torch.zeros(16, 3, dtype=torch.long))
+        rotate.forward_cwa(torch.zeros(16, 2, dtype=torch.long))
+        rotate.forward_inverse_cwa(torch.zeros(16, 2, dtype=torch.long))
 
     def test_hole(self):
         """Tests that HolE can be executed."""
