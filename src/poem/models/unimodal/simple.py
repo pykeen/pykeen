@@ -21,8 +21,6 @@ class SimplE(BaseModule):
 
     This model extends CP by updating a triple, and the inverse triple.
 
-    .. [kazemi2018] S. M. Kazemi, D. Poole (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs` <https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs>_. NIPS'18
-
     .. seealso::
 
        - Official implementation: https://github.com/Mehran-k/SimplE
