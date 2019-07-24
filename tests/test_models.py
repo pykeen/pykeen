@@ -68,6 +68,7 @@ class TestModels(unittest.TestCase):
         self.assertIsNotNone(rotate)
 
         # Dummy forward passes
+        # TODO: Use triple factory
         rotate.forward_owa(torch.zeros(16, 3, dtype=torch.long))
         rotate.forward_cwa(torch.zeros(16, 2, dtype=torch.long))
         rotate.forward_inverse_cwa(torch.zeros(16, 2, dtype=torch.long))
