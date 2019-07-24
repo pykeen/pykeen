@@ -8,32 +8,30 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import COMPLEX_CWA_NAME, GPU
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_doubles, slice_triples
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
 
 # TODO: Combine with the Complex Module
 class ComplexCWA(BaseModule):
-    """An implementation of Complex [agustinus2018] based on the closed world assumption (CWA).
-
-    .. [trouillon2016complex] Trouillon, Théo, et al. "Complex embeddings for simple link prediction."
-                              International Conference on Machine Learning. 2016.
-    """
-    model_name = COMPLEX_CWA_NAME
+    """An implementation of Complex [trouillon2016]_ based on the closed world assumption (CWA)."""
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             input_dropout: float = 0.2,
-            criterion: nn.modules.loss = torch.nn.BCELoss(),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = torch.nn.BCELoss()
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
@@ -118,19 +116,19 @@ class ComplexCWA(BaseModule):
         # *: Elementwise multiplication; torch.mm: matrix multiplication (does not broadcast)
         real_real_real = torch.mm(
             subjects_embedded_real * relations_embedded_real,
-            objects_embedded_real.transpose(1,0),
+            objects_embedded_real.transpose(1, 0),
         )
         real_img_img = torch.mm(
             subjects_embedded_real * relations_embedded_img,
-            objects_embedded_img.transpose(1,0),
+            objects_embedded_img.transpose(1, 0),
         )
         img_real_img = torch.mm(
             subjects_embedded_img * relations_embedded_real,
-            objects_embedded_img.transpose(1,0),
+            objects_embedded_img.transpose(1, 0),
         )
         img_img_real = torch.mm(
             subjects_embedded_img * relations_embedded_img,
-            objects_embedded_real.transpose(1,0),
+            objects_embedded_real.transpose(1, 0),
         )
 
         predictions = real_real_real + real_img_img + img_real_img - img_img_real

@@ -10,51 +10,54 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import DISTMULT_NAME, GPU
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
 __all__ = ['DistMult']
 
 
 class DistMult(BaseModule):
-    """An implementation of DistMult [yang2014]_.
+    """An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
 
-    .. [yang2014] Yang, B., Yih, W., He, X., Gao, J., & Deng, L. (2014). `Embedding Entities and Relations for Learning
-                  and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
-
     Note:
-      - For FB15k, yang et al. report 2 negatives per each positive.
+      - For FB15k, Yang *et al.* report 2 negatives per each positive.
 
     .. seealso::
 
-       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py
+       - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
     """
 
-    model_name = DISTMULT_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        self.relation_embeddings = None
+        self.relation_embeddings = relation_embeddings
 
-        self._init_embeddings()
+        if None in [self.entity_embeddings, self.relation_embeddings]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()

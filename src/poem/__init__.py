@@ -2,4 +2,4 @@
 
 """POEM."""
 
-from .version import get_version
+from .version import get_version  # noqa: F401

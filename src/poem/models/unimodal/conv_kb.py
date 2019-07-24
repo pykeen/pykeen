@@ -11,7 +11,7 @@ from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
-from ...constants import CONV_KB_NAME, GPU
+from ...typing import OptionalLoss
 from ...utils import slice_triples
 
 __all__ = [
@@ -22,30 +22,26 @@ log = logging.getLogger(__name__)
 
 
 class ConvKB(BaseModule):
-    """An implementation of ConvKB [nguyen2018].
-
-    .. [nguyen2018] A Novel Embedding Model for Knowledge Base CompletionBased on Convolutional Neural Network
-                    D. Q. Nguyen and T. D. Nguyen and D. Q. Nguyen and D. Phung
-                    <https://www.aclweb.org/anthology/N18-2053>
-                     NAACL-HLT 2018
+    """An implementation of ConvKB from [nguyen2018]_.
 
     .. seealso::
 
-       - Authors' implementation: https://github.com/daiquocnguyen/ConvKBsE.py
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
     """
-
-    model_name = CONV_KB_NAME
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            embedding_dim=200,
-            criterion=nn.MarginRankingLoss(margin=1., reduction='mean'), preferred_device=GPU,
+            embedding_dim: int = 200,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             num_filters: int = 400,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             criterion=criterion,
             embedding_dim=embedding_dim,
             preferred_device=preferred_device,

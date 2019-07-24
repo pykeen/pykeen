@@ -2,7 +2,7 @@
 
 """Training KGE models based on the OWA."""
 
-from typing import Any, Mapping, Optional, Type
+from typing import Any, List, Mapping, Optional, Type
 
 import numpy as np
 import torch
@@ -45,13 +45,13 @@ class OWATrainingLoop(TrainingLoop):
 
     def train(
             self,
-            num_epochs,
-            batch_size,
-            num_negs_per_pos=1,
+            num_epochs: int,
+            batch_size: int,
+            num_negs_per_pos: int = 1,
             label_smoothing: bool = False,
             label_smoothing_epsilon: float = 0.1,
             tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> List[str]:
+    ) -> List[float]:
         training_instances = self.model.triples_factory.create_owa_instances()
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]

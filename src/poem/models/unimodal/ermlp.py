@@ -10,35 +10,37 @@ from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
-from ...constants import ERMLP_NAME, GPU
+from ...typing import OptionalLoss
 from ...utils import slice_triples
 
 __all__ = ['ERMLP']
 
 
 class ERMLP(BaseModule):
-    """An implementation of ERMLP [dong2014]_.
+    """An implementation of ERMLP from [dong2014]_.
 
     This model uses a neural network-based approach.
-
-    .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
-                  <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
     """
 
-    model_name = ERMLP_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings = entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -54,9 +56,10 @@ class ERMLP(BaseModule):
             nn.Linear(self.embedding_dim, 1),
         )
 
-        self.relation_embeddings = None
+        self.relation_embeddings = relation_embeddings
 
-        self._init_embeddings()
+        if None in [self.entity_embeddings,self.relation_embeddings]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()

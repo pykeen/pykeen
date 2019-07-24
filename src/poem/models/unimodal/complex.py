@@ -8,35 +8,34 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import COMPLEX_NAME, GPU
 from poem.customized_loss_functions.softplus_loss import SoftplusLoss
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
 
 # TODO: Combine with the ComplexCWA Module
 class ComplEx(BaseModule):
-    """An implementation of ComplEx [Trouillon2016complex].
-
-    .. [trouillon2016complex] Trouillon, Théo, et al. "Complex embeddings for simple link prediction."
-                              International Conference on Machine Learning. 2016.
-    """
-    model_name = COMPLEX_NAME
+    """An implementation of ComplEx [trouillon2016]_."""
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            entity_embeddings_real=None,
-            entity_embeddings_img=None,
-            relation_embeddings_real=None,
-            relation_embeddings_img=None,
+            entity_embeddings_real: Optional[nn.Embedding] = None,
+            entity_embeddings_img: Optional[nn.Embedding] = None,
+            relation_embeddings_real: Optional[nn.Embedding] = None,
+            relation_embeddings_img: Optional[nn.Embedding] = None,
             embedding_dim: int = 200,
             neg_label: float = -1.,
             regularization_factor: float = 0.01,
-            criterion: nn.modules.loss = SoftplusLoss(reduction='mean'), preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ):
+        if criterion is None:
+            criterion = SoftplusLoss(reduction='mean')
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

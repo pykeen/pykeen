@@ -11,11 +11,15 @@ from torch.nn import Module
 from tqdm import trange
 
 from poem.evaluation import Evaluator
-from poem.hyper_parameter_optimization.HPOptimizer import HPOptimizer, HPOptimizerResult
 from poem.instance_creation_factories.instances import Instances
-from poem.models import BaseModule
-from poem.training_loops import TrainingLoop
+from poem.training import TrainingLoop
 from poem.utils import get_params_requiring_grad
+from .hyper_parameter_optimizer import HPOptimizer, HPOptimizerResult
+from ..models.base import BaseModule
+
+__all__ = [
+    'RandomSearch',
+]
 
 
 class RandomSearch(HPOptimizer):
@@ -30,7 +34,6 @@ class RandomSearch(HPOptimizer):
             training_loop: TrainingLoop,
             evaluator: Evaluator,
     ):
-        """."""
         self.model_class = model_class
         self.optimizer_class = optimizer_class
         self.entity_to_id = entity_to_id
@@ -41,7 +44,6 @@ class RandomSearch(HPOptimizer):
         # TODO: Set seed?
 
     def _sample_conv_e_params(self) -> Dict[str, Any]:
-        """."""
         pass
 
     def extract_constructor_arguments(self, params_to_values):

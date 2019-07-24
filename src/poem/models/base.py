@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..constants import EMBEDDING_DIM, GPU
+from ..constants import EMBEDDING_DIM
 from ..instance_creation_factories.triples_factory import TriplesFactory
 from ..typing import OptionalLoss
 from ..utils import get_params_requiring_grad
@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 class BaseModule(nn.Module):
     """A base module for all of the KGE models."""
 
-    # A dictionary of hyperpareters to the models that use them
+    # A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage = defaultdict(set)
 
     entity_embedding_max_norm: Optional[int] = None
@@ -38,8 +38,9 @@ class BaseModule(nn.Module):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            entity_embeddings: nn.Embedding = None,
             criterion: OptionalLoss = None,
-            preferred_device: str = GPU,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__()
@@ -70,7 +71,7 @@ class BaseModule(nn.Module):
         self.embedding_dim = embedding_dim
 
         # The embeddings are first initiated when calling the fit function
-        self.entity_embeddings = None
+        self.entity_embeddings = entity_embeddings
 
         # Marker to check whether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False
@@ -102,9 +103,9 @@ class BaseModule(nn.Module):
             norm_type=self.entity_embedding_norm_type,
         )
 
-    def _set_device(self, device: str = 'cpu') -> None:
+    def _set_device(self, device: Optional[str] = None) -> None:
         """Get the Torch device to use."""
-        if device == 'gpu':
+        if device is None or device == 'gpu':
             if torch.cuda.is_available():
                 self.device = torch.device('cuda')
             else:
@@ -125,8 +126,16 @@ class BaseModule(nn.Module):
         self.to(self.device)
         torch.cuda.empty_cache()
 
-    # Predicting scores calls the owa forward function, as this
     def predict_scores(self, triples):
+        """
+        Calculate the scores for triples.
+        This method takes subject, relation and object of each triple and calculates the corresponding score.
+
+        :param triples: torch.tensor, shape: (number of triples, 3)
+            The indices of (subject, relation, object) triples.
+        :return: numpy.ndarray, shape: (number of triples, 1)
+            The score for each triple.
+        """
         scores = self.forward_owa(triples)
         return scores.detach().cpu().numpy()
 
@@ -160,18 +169,54 @@ class BaseModule(nn.Module):
         return loss
 
     @abstractmethod
-    def forward_owa(self, batch):
-        raise NotImplementedError
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass for training with the OWA.
+        This method takes subject, relation and object of each triple and calculates the corresponding score.
+
+        :param batch: torch.tensor, shape: (batch_size, 3)
+            The indices of (subject, relation, object) triples.
+        :return: torch.tensor, shape: (batch_size, 1)
+            The score for each triple.
+
+        """
+        raise NotImplementedError()
 
     @abstractmethod
-    def forward_cwa(self, batch):
-        raise NotImplementedError
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass using right side (object) prediction for training with the CWA.
+        This method calculates the score for all possible objects for each (subject, relation) pair.
+
+        :param batch: torch.tensor, shape: (batch_size, 2)
+            The indices of (subject, relation) pairs.
+        :return: torch.tensor, shape: (batch_size, num_entities)
+            For each s-p pair, the scores for all possible objects.
+        """
+        raise NotImplementedError()
 
     @abstractmethod
-    def forward_inverse_cwa(self, batch):
-        raise NotImplementedError
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass using left side (subject) prediction for training with the CWA.
+        This method calculates the score for all possible subjects for each (relation, object) pair.
 
-    # FIXME this isn't used anywhere
+        :param batch: torch.tensor, shape: (batch_size, 2)
+            The indices of (relation, object) pairs.
+        :return: torch.tensor, shape: (batch_size, num_entities)
+            For each p-o pair, the scores for all possible subjects.
+        """
+        raise NotImplementedError()
+
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         return get_params_requiring_grad(self)

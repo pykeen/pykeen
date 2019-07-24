@@ -8,30 +8,29 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import DISTMULT_LITERAL_NAME_OWA, GPU, INPUT_DROPOUT, NUMERIC_LITERALS
+from poem.constants import NUMERIC_LITERALS
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
 
 # TODO: Check entire build of the model
 class DistMultLiteral(BaseModule):
-    """An implementation of DistMultLiteral [agustinus2018] based on the open world assumption (OWA).
-
-    .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
-                       arXiv preprint arXiv:1802.00934 (2018).
-    """
-    model_name = DISTMULT_LITERAL_NAME_OWA
-    margin_ranking_loss_average: bool = True
+    """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(),
-            preferred_device: str = GPU,
+            input_dropout: int = 0,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss()
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -50,9 +49,7 @@ class DistMultLiteral(BaseModule):
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
-        self.input_dropout = torch.nn.Dropout(
-            self.config[INPUT_DROPOUT] if INPUT_DROPOUT in self.config else 0.,
-        )
+        self.input_dropout = torch.nn.Dropout(input_dropout)
         self._init_embeddings()
 
     def _init_embeddings(self):

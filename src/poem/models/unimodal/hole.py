@@ -12,7 +12,8 @@ from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
-from ...constants import GPU, HOL_E_NAME, SCORING_FUNCTION_NORM
+from ...constants import SCORING_FUNCTION_NORM
+from ...typing import OptionalLoss
 from ...utils import slice_triples
 
 __all__ = [
@@ -26,8 +27,7 @@ def circular_correlation(
         a: torch.tensor,
         b: torch.tensor,
 ) -> torch.tensor:
-    r"""
-    Computes the batched circular correlation between a and b using FFT.
+    r"""Compute the batched circular correlation between a and b using FFT.
 
     `a \ast b = \mathcal{F}^{-1}(\overline{\mathcal{F}(a)} \odot \mathcal{F}(b))`
 
@@ -53,48 +53,53 @@ def circular_correlation(
 
 
 class HolE(BaseModule):
-    """An implementation of HolE [nickel2016].
+    """An implementation of HolE [nickel2016]_.
 
-     This model uses circular correlation to compose subject and object embeddings to afterwards compute the inner product with a relation embedding.
-
-    .. [nickel2016] Holographic Embeddings of Knowledge Graphs
-                    M. Nickel and L. Rosasco and T. Poggio
-                    <https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828>
-                    AAAI 2016.
+     This model uses circular correlation to compose subject and object embeddings to afterwards compute the inner
+     product with a relation embedding.
 
     .. seealso::
 
-       - Authors' implementation: https://github.com/mnick/holographic-embeddings
-       - Implementation in scikit-kge: https://github.com/mnick/scikit-kge
-       - Alternative implementation in OpenKE: https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py
+       - `author's implementation of HolE <https://github.com/mnick/holographic-embeddings>`_
+       - `scikit-kge implementation of HolE <https://github.com/mnick/scikit-kge>`_
+       - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
 
-    model_name = HOL_E_NAME
     hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
     entity_embedding_max_norm = 1
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            embedding_dim=200,
-            criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device=GPU,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
+            embedding_dim: int = 200,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             criterion=criterion,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
 
-        # Embeddings
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.relation_embeddings = relation_embeddings
 
-        self._initialize()
+        if None in [self.entity_embeddings, self.relation_embeddings]:
+            self._initialize()
 
     def _initialize(self):
+        """."""
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         entity_embeddings_init_bound = 6 / np.sqrt(
             self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,

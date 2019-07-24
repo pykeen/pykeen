@@ -10,25 +10,22 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import GPU, SCORING_FUNCTION_NORM, UM_NAME
+from poem.constants import SCORING_FUNCTION_NORM
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
-__all__ = ['UnstructuredModel']
+__all__ = [
+    'UnstructuredModel',
+]
 
 log = logging.getLogger(__name__)
 
 
 class UnstructuredModel(BaseModule):
-    """An implementation of Unstructured Model (UM) [bordes2014]_.
+    """An implementation of Unstructured Model (UM) from [bordes2014]_."""
 
-    .. [bordes2014] Bordes, A., *et al.* (2014). `A semantic matching energy function for learning with
-                    multi-relational data <https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf>`_.
-                    Machine
-    """
-
-    model_name = UM_NAME
     margin_ranking_loss_size_average: bool = True
     hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
 
@@ -36,14 +33,19 @@ class UnstructuredModel(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            entity_embeddings: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,

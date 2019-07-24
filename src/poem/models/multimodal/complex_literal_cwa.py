@@ -8,32 +8,31 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import COMPLEX_LITERAL_NAME_CWA, GPU, NUMERIC_LITERALS
+from poem.constants import NUMERIC_LITERALS
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_doubles
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
 
 # TODO: Check entire build of the model
 class ComplexLiteralCWA(BaseModule):
-    """An implementation of ComplexLiteral [agustinus2018] based on the closed world assumption (CWA).
-
-    .. [agustinus2018] Kristiadi, Agustinus, et al. "Incorporating literals into knowledge graph embeddings."
-                       arXiv preprint arXiv:1802.00934 (2018).
-    """
-    model_name = COMPLEX_LITERAL_NAME_CWA
+    """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             input_dropout: float = 0.2,
-            criterion: nn.modules.loss = nn.BCELoss(),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.BCELoss()
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,

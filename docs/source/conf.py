@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # sys.path.insert(0, os.path.abspath('..'))
 
 # -- Mockup PyTorch to exclude it while compiling the docs--------------------
-autodoc_mock_imports = ['torch', 'torchvision']
+# autodoc_mock_imports = ['torch', 'torchvision']
 
 # from unittest.mock import Mock
 # sys.modules['numpy'] = Mock()
@@ -46,11 +46,11 @@ autodoc_mock_imports = ['torch', 'torchvision']
 # -- Project information -----------------------------------------------------
 
 project = 'poem'
-copyright = '2018, Mehdi Ali'
+copyright = '2019, Mehdi Ali'
 author = 'Mehdi Ali'
 
 # The full version, including alpha/beta/rc tags.
-release = '0.0.1'
+release = '0.0.1-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -216,3 +216,5 @@ intersphinx_mapping = {
     'torch': ('https://pytorch.org/docs/0.3.0', None),
     'numpy': ('https://docs.scipy.org/doc/numpy', None),
 }
+
+autoclass_content = 'both'

@@ -11,10 +11,10 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import GPU, SCORING_FUNCTION_NORM, SE_NAME
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
 from poem.utils import slice_triples
+from ..base import BaseModule
+from ...typing import OptionalLoss
 
 __all__ = [
     'StructuredEmbedding',
@@ -24,29 +24,29 @@ log = logging.getLogger(__name__)
 
 
 class StructuredEmbedding(BaseModule):
-    """An implementation of Structured Embedding (SE) [bordes2011]_.
+    """An implementation of Structured Embedding (SE) from [bordes2011]_.
 
     This model projects different matrices for each relation head and tail entity.
-
-    .. [bordes2011] Bordes, A., *et al.* (2011). `Learning Structured Embeddings of Knowledge Bases
-                    <http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898>`_. AAAI. Vol. 6. No. 1.
     """
 
-    model_name = SE_NAME
     margin_ranking_loss_size_average: bool = True
-    hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
+            left_relation_embeddings: Optional[nn.Embedding] = None,
+            right_relation_embeddings: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
-            triples_factory = triples_factory,
+            triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
             preferred_device=preferred_device,
@@ -56,10 +56,11 @@ class StructuredEmbedding(BaseModule):
         # Embeddings
         self.scoring_fct_norm = scoring_fct_norm
 
-        self.left_relation_embeddings = None
-        self.right_relation_embeddings = None
+        self.left_relation_embeddings = left_relation_embeddings
+        self.right_relation_embeddings = right_relation_embeddings
 
-        self._init_embeddings()
+        if None in [self.left_relation_embeddings, self.right_relation_embeddings]:
+            self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()

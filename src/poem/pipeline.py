@@ -20,7 +20,7 @@ from poem.instance_creation_factories.instances import Instances, MultimodalInst
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 from poem.models import DistMultLiteral, ModelConfig
-from poem.training_loops import OWATrainingLoop, TrainingLoop
+from poem.training import OWATrainingLoop, TrainingLoop
 
 log = logging.getLogger(__name__)
 

@@ -13,7 +13,8 @@ from torch.nn import functional
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
-from ...constants import GPU, ROTAT_E_NAME
+from ...typing import OptionalLoss
+from ...utils import slice_triples
 
 __all__ = [
     'RotatE',
@@ -23,29 +24,30 @@ log = logging.getLogger(__name__)
 
 
 class RotatE(BaseModule):
-    """An implementation of RotatE [Sun2019]_.
+    """An implementation of RotatE from [sun2019]_.
 
      This model uses models relations as cotations in complex plane.
 
-    .. [Sun2019] RotatE: Knowledge Graph Embeddings by relational rotation in complex space
+    .. [sun2019] RotatE: Knowledge Graph Embeddings by relational rotation in complex space
                  Z. Sun and  Z.H. Dong and J.Y. Nie and J. Tang
                  <https://arxiv.org/pdf/1902.10197v1.pdf> ICLR 2019.
 
     .. seealso::
 
-       - Authors' implementation (as part of DGL library): https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228
+       - Author's `implementation of RotatE <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
     """
-
-    model_name = ROTAT_E_NAME
 
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            embedding_dim=200,
-            criterion=nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            embedding_dim: int = 200,
+            criterion: OptionalLoss = None,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
             triples_factory=triples_factory,
             criterion=criterion,
@@ -55,12 +57,11 @@ class RotatE(BaseModule):
         )
 
         # Embeddings
-        self.relation_embeddings = None
+        self.relation_embeddings = nn.Embedding(self.num_relations, 2 * self.embedding_dim)
 
-        self._init_embeddings()
+        self._initialize()
 
-    def _init_embeddings(self):
-        self.relation_embeddings = nn.Embedding(self.triples_factory.num_relations, self.embedding_dim)
+    def _initialize(self):
         entity_embeddings_init_bound = 6 / np.sqrt(
             self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,
         )
