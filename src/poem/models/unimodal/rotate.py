@@ -57,11 +57,12 @@ class RotatE(BaseModule):
         )
 
         # Embeddings
-        self.relation_embeddings = nn.Embedding(self.num_relations, 2 * self.embedding_dim)
+        self.relation_embeddings = None
 
         self._initialize()
 
     def _initialize(self):
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         entity_embeddings_init_bound = 6 / np.sqrt(
             self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,
         )
