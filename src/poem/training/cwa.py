@@ -40,7 +40,6 @@ class CWATrainingLoop(TrainingLoop):
             indices = np.arange(num_triples)
             np.random.shuffle(indices)
             subject_relation_pairs = subject_relation_pairs[indices]
-            # TODO: replace with: labels = labels[indicies]
             labels = [labels[i] for i in indices]
             batches = split_list_in_batches(input_list=subject_relation_pairs, batch_size=batch_size)
             labels_batches = split_list_in_batches(input_list=labels, batch_size=batch_size)

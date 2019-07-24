@@ -46,12 +46,11 @@ def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
         adjusted_avg_rank: float (adjusted_avg_rank > 0)
             The avg rank of the true triple divided by the expected rank in random scoring.
     """
-    best_rank = np.greater(all_scores, true_score).sum() + 1
-    worst_rank = np.greater_equal(all_scores, true_score).sum() + 1
+    best_rank = (all_scores > true_score).sum(dim=1) + 1
+    worst_rank = (all_scores >= true_score).sum(dim=1) + 1
     avg_rank = (best_rank + worst_rank) / 2.0
     adjusted_avg_rank = avg_rank / ((all_scores.shape[0] + 1) / 2)
-    return best_rank, adjusted_avg_rank
-
+    return best_rank.detach().cpu().numpy(), adjusted_avg_rank.detach().cpu().numpy()
 
 class RankBasedEvaluator(Evaluator):
 
@@ -80,28 +79,35 @@ class RankBasedEvaluator(Evaluator):
 
     def _filter_corrupted_triples(
             self,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed,
+            pos_triple,
+            subject_batch,
+            object_batch,
+            all_pos_triples,
     ):
-        # TODO: Check
-        corrupted_subject_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_subject_based)
-        mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
-        mask = np.where(mask)[0]
-        corrupted_subject_based = corrupted_subject_based[mask]
+        subject = pos_triple[0:1]
+        relation = pos_triple[1:2]
+        object = pos_triple[2:3]
 
-        corrupted_object_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_object_based)
-        mask = np.in1d(corrupted_object_based_hashed, all_pos_triples_hashed, invert=True)
-        mask = np.where(mask)[0]
+        subject_filter = all_pos_triples[:, 0:1] == subject
+        relation_filter = all_pos_triples[:, 1:2] == relation
+        object_filter = all_pos_triples[:, 2:3] == object
 
-        if mask.size == 0:
-            raise Exception(
-                "User selected filtered metric computation, but all corrupted triples exists"
-                "also a positive triples.",
-            )
-        corrupted_object_based = corrupted_object_based[mask]
+        # Short objects batch list
+        filter = (subject_filter & relation_filter)
+        objects_in_triples = all_pos_triples[:, 2:3][filter]
+        object_batch[objects_in_triples] = 0
 
-        return corrupted_subject_based, corrupted_object_based
+        # Short subjects batch list
+        filter = (object_filter & relation_filter)
+        subjects_in_triples = all_pos_triples[:, 0:1][filter]
+        subject_batch[subjects_in_triples] = 0
+
+        # TODO: Create warning when all triples will be filtered
+        # if mask.size == 0:
+        #     raise Exception("User selected filtered metric computation, but all corrupted triples exists"
+        #                     "also as positive triples.")
+
+        return subject_batch, object_batch
 
     def _update_hits_at_k(
             self,
@@ -121,91 +127,50 @@ class RankBasedEvaluator(Evaluator):
             else:
                 values.append(0.0)
 
-    def _create_corrupted_triples(self, triple):
-        candidate_entities_subject_based = self.all_entities[self.all_entities != triple[0:1]].reshape((-1, 1))
-        candidate_entities_object_based = self.all_entities[self.all_entities != triple[2:3]].reshape((-1, 1))
-
-        # Extract current test tuple: Either (subject,predicate) or (predicate,object)
-        tuple_subject_based = np.reshape(a=triple[1:3], newshape=(1, 2))
-        tuple_object_based = np.reshape(a=triple[0:2], newshape=(1, 2))
-
-        # Copy current test tuple
-        tuples_subject_based = np.repeat(
-            a=tuple_subject_based,
-            repeats=candidate_entities_subject_based.shape[0],
-            axis=0,
-        )
-        tuples_object_based = np.repeat(
-            a=tuple_object_based,
-            repeats=candidate_entities_object_based.shape[0],
-            axis=0,
-        )
-
-        corrupted_subject_based = np.concatenate(
-            [
-                candidate_entities_subject_based,
-                tuples_subject_based,
-            ],
-            axis=1,
-        )
-
-        corrupted_object_based = np.concatenate(
-            [
-                tuples_object_based,
-                candidate_entities_object_based,
-            ],
-            axis=1,
-        )
-
-        return corrupted_subject_based, corrupted_object_based
-
     def _compute_filtered_rank(
             self,
-            model: BaseModule,
             pos_triple,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed,
+            subject_batch,
+            object_batch,
+            all_pos_triples,
     ) -> Tuple[int, int, float, float]:
-        corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
-            corrupted_subject_based=corrupted_subject_based,
-            corrupted_object_based=corrupted_object_based,
-            all_pos_triples_hashed=all_pos_triples_hashed,
+        subject_batch, object_batch = self._filter_corrupted_triples(
+            pos_triple=pos_triple,
+            subject_batch=subject_batch,
+            object_batch=object_batch,
+            all_pos_triples=all_pos_triples,
         )
 
         return self._compute_rank(
-            model=model,
             pos_triple=pos_triple,
-            corrupted_subject_based=corrupted_subject_based,
-            corrupted_object_based=corrupted_object_based,
-            all_pos_triples_hashed=all_pos_triples_hashed,
+            subject_batch=subject_batch,
+            object_batch=object_batch,
+            all_pos_triples=all_pos_triples,
         )
 
     def _compute_rank(
             self,
-            model: BaseModule,
             pos_triple,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed=None,
+            subject_batch,
+            object_batch,
+            all_pos_triples,
     ) -> Tuple[int, int, float, float]:
+        subject = pos_triple[0:1]
+        object = pos_triple[2:3]
 
-        # Create tensors for numpy arrays
-        corrupted_subject_based = torch.tensor(corrupted_subject_based, dtype=torch.long, device=self.device)
-        corrupted_object_based = torch.tensor(corrupted_object_based, dtype=torch.long, device=self.device)
+        scores_of_corrupted_subjects = self.model.predict_scores_all_subjects(pos_triple[1:3])
+        score_of_positive_subject = scores_of_corrupted_subjects[:, subject]
+        scores_of_corrupted_subjects = scores_of_corrupted_subjects[:, subject_batch]
 
-        scores_of_corrupted_subjects = model.predict_scores(corrupted_subject_based)
-        scores_of_corrupted_objects = model.predict_scores(corrupted_object_based)
-
-        score_of_positive = model.predict_scores(
-            torch.tensor([pos_triple], dtype=torch.long, device=self.device),
-        )
+        scores_of_corrupted_objects = self.model.predict_scores_all_objects(pos_triple[0:2])
+        score_of_positive_object = scores_of_corrupted_objects[:, object]
+        scores_of_corrupted_objects = scores_of_corrupted_objects[:, object_batch]
 
         rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(
-            true_score=score_of_positive, all_scores=scores_of_corrupted_subjects,
+            true_score=score_of_positive_subject, all_scores=scores_of_corrupted_subjects,
         )
         rank_of_positive_object_based, adj_rank_of_positive_object_based = _compute_rank_from_scores(
-            true_score=score_of_positive, all_scores=scores_of_corrupted_objects,
+            true_score=score_of_positive_object, all_scores=scores_of_corrupted_objects,
         )
 
         return (
@@ -226,8 +191,11 @@ class RankBasedEvaluator(Evaluator):
         # Set eval mode in order to ignore functionalities such as dropout
         self.model = self.model.eval()
 
-        all_pos_triples = np.concatenate([self.train_triples, test_triples], axis=0)
-        all_pos_triples_hashed = np.apply_along_axis(self._hash_triples, 1, all_pos_triples)
+        all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, test_triples], axis=0)
+        all_pos_triples = torch.tensor(all_pos_triples, device=self.device)
+        all_entities = torch.tensor(self.model.triples_factory.all_entities, device=self.device)
+
+        test_triples = torch.tensor(test_triples, dtype=torch.long, device=self.device)
 
         compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank
@@ -239,23 +207,23 @@ class RankBasedEvaluator(Evaluator):
             test_triples = tqdm(test_triples, desc=f'Evaluating triples')
 
         for i, pos_triple in enumerate(test_triples):
+            subject = pos_triple[0:1]
+            object = pos_triple[2:3]
+            subject_batch = all_entities != subject
+            object_batch = all_entities != object
+
             # Disable gradient tracking
             with torch.no_grad():
-                corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
-                    triple=pos_triple,
-                )
-
                 (
                     rank_of_positive_subject_based,
                     rank_of_positive_object_based,
                     adjusted_rank_of_positive_subject_based,
                     adjusted_rank_of_positive_object_based,
                 ) = compute_rank_fct(
-                    model=self.model,
                     pos_triple=pos_triple,
-                    corrupted_subject_based=corrupted_subject_based,
-                    corrupted_object_based=corrupted_object_based,
-                    all_pos_triples_hashed=all_pos_triples_hashed,
+                    subject_batch=subject_batch,
+                    object_batch=object_batch,
+                    all_pos_triples=all_pos_triples,
                 )
 
             ranks.append(rank_of_positive_subject_based)

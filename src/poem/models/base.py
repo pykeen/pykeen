@@ -126,7 +126,10 @@ class BaseModule(nn.Module):
         self.to(self.device)
         torch.cuda.empty_cache()
 
-    def predict_scores(self, triples):
+    def predict_scores(
+            self,
+            triples: torch.tensor
+    ):
         """
         Calculate the scores for triples.
         This method takes subject, relation and object of each triple and calculates the corresponding score.
@@ -137,7 +140,60 @@ class BaseModule(nn.Module):
             The score for each triple.
         """
         scores = self.forward_owa(triples)
-        return scores.detach().cpu().numpy()
+        return scores
+
+    def predict_scores_all_objects(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass using right side (object) prediction for obtaining scores of all possible objects.
+        This method calculates the score for all possible objects for each (subject, relation) pair.
+
+        :param batch: torch.tensor, shape: (batch_size, 2)
+            The indices of (subject, relation) pairs.
+        :return: torch.tensor, shape: (batch_size, num_entities)
+            For each s-p pair, the scores for all possible objects.
+        """
+        scores = self.forward_cwa(batch)
+        return scores
+
+    def predict_scores_all_subjects(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        """
+        Forward pass using left side (subject) prediction for obtaining scores of all possible subjects.
+        This method calculates the score for all possible subjects for each (relation, object) pair.
+
+        :param batch: torch.tensor, shape: (batch_size, 2)
+            The indices of (relation, object) pairs.
+        :return: torch.tensor, shape: (batch_size, num_entities)
+            For each p-o pair, the scores for all possible subjects.
+        """
+        '''
+        In case the model was trained using inverse triples, the scoring of all subjects is not handled by calculating
+        the scores for all subjects based on a (relation, object) pair, but instead all possible objects are calculated
+        for a (object, inverse_relation) pair.
+        '''
+        if self.triples_factory.create_inverse_triples:
+            '''
+            The POEM package handles _inverse relations_ by adding the number of relations to the index of the
+            _native relation_.
+            Example:
+            The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
+            the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
+            of the _inverse relation_ is 103.  
+            '''
+            # The number of relations stored in the triples factory includes the number of inverse relations
+            num_relations = self.triples_factory.num_relations // 2
+            batch.view(-1, 2)[:, 0] = batch.view(-1, 2)[:, 0] + num_relations
+            # The forward cwa function requires (entity, relation) pairs instead of (relation, entity)
+            batch = batch.view(-1, 2).flip(1)
+            scores = self.forward_cwa(batch)
+        else:
+            scores = self.forward_inverse_cwa(batch)
+        return scores
 
     @staticmethod
     def _get_embeddings(elements, embedding_module, embedding_dim):

@@ -59,7 +59,7 @@ class ComplexCWA(BaseModule):
         xavier_normal_(self.relation_embeddings_img.weight.data)
 
     def forward_cwa(self, doubles):
-        batch_heads, batch_relations = slice_doubles(doubles)
+        batch_heads, batch_relations = slice_doubles(doubles.view(-1, 2))
 
         subjects_embedded_real = self.entity_embeddings_real(batch_heads).view(-1, self.embedding_dim)
         relations_embedded_real = self.relation_embeddings_real(batch_relations).view(-1, self.embedding_dim)
@@ -95,8 +95,47 @@ class ComplexCWA(BaseModule):
         predictions = torch.sigmoid(predictions)
         return predictions
 
+    def forward_inverse_cwa(self, doubles):
+        batch_relations, batch_tails = slice_doubles(doubles.view(-1, 2))
+
+        relations_embedded_real = self.relation_embeddings_real(batch_relations).view(-1, self.embedding_dim)
+        objects_embedded_real = self.entity_embeddings_real(batch_tails).view(-1, self.embedding_dim)
+
+        relations_embedded_img = self.relation_embeddings_img(batch_relations).view(-1, self.embedding_dim)
+        objects_embedded_img = self.entity_embeddings_img(batch_tails).view(-1, self.embedding_dim)
+
+        # Apply dropout
+        relations_embedded_real = self.inp_drop(relations_embedded_real)
+        objects_embedded_real = self.inp_drop(objects_embedded_real)
+
+        relations_embedded_img = self.inp_drop(relations_embedded_img)
+        objects_embedded_img = self.inp_drop(objects_embedded_img)
+
+        # complex space bilinear product (equivalent to HolE)
+        # *: Elementwise multiplication; torch.mm: matrix multiplication (does not broadcast)
+        real_real_real = torch.mm(
+            objects_embedded_real * relations_embedded_real,
+            self.entity_embeddings_real.weight.transpose(1, 0),
+        )
+        real_img_img = torch.mm(
+            objects_embedded_img * relations_embedded_img,
+            self.entity_embeddings_real.weight.transpose(1, 0),
+        )
+        img_real_img = torch.mm(
+            objects_embedded_img * relations_embedded_real,
+            self.entity_embeddings_img.weight.transpose(1, 0),
+        )
+        img_img_real = torch.mm(
+            objects_embedded_real * relations_embedded_img,
+            self.entity_embeddings_img.weight.transpose(1, 0),
+        )
+
+        predictions = real_real_real + real_img_img + img_real_img - img_img_real
+        predictions = torch.sigmoid(predictions)
+        return predictions
+
     def forward_owa(self, triples):
-        batch_heads, batch_relations, batch_tails = slice_triples(triples)
+        batch_heads, batch_relations, batch_tails = slice_triples(triples.view(-1, 3))
 
         subjects_embedded_real = self.entity_embeddings_real(batch_heads).view(-1, self.embedding_dim)
         relations_embedded_real = self.relation_embeddings_real(batch_relations).view(-1, self.embedding_dim)
@@ -109,8 +148,11 @@ class ComplexCWA(BaseModule):
         # Apply dropout
         subjects_embedded_real = self.inp_drop(subjects_embedded_real)
         relations_embedded_real = self.inp_drop(relations_embedded_real)
+        objects_embedded_real = self.inp_drop(objects_embedded_real)
+
         subjects_embedded_img = self.inp_drop(subjects_embedded_img)
         relations_embedded_img = self.inp_drop(relations_embedded_img)
+        objects_embedded_img = self.inp_drop(objects_embedded_img)
 
         # complex space bilinear product (equivalent to HolE)
         # *: Elementwise multiplication; torch.mm: matrix multiplication (does not broadcast)
