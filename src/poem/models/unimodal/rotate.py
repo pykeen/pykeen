@@ -91,6 +91,34 @@ class RotatE(BaseModule):
         functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
         self.forward_constraint_applied = True
 
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Apply forward constraints if necessary
+        if not self.forward_constraint_applied:
+            self.apply_forward_constraints()
+            self.forward_constraint_applied = True
+
+        h, r, t = slice_triples(batch)
+
+        # rotate head embeddings in complex plane (equivalent to Hadamard product)
+        h = self.entity_embeddings(h).view(-1, self.embedding_dim // 2, 2, 1)
+        r = self.relation_embeddings(r).view(-1, self.embedding_dim // 2, 1, 2)
+
+        hr = (h * r)
+        rot_h = torch.cat([
+            hr[:, :, 0, 0] - hr[:, :, 1, 1],
+            hr[:, :, 0, 1] + hr[:, :, 1, 0],
+        ], dim=-1).view(-1, self.embedding_dim)
+
+        t = self.entity_embeddings(t)
+
+        # use negative distance to tail as score
+        scores = -torch.norm(rot_h - t, dim=-1, keepdim=True)
+
+        return scores
+
     def forward_cwa(
             self,
             batch: torch.tensor,
