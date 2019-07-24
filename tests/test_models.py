@@ -4,6 +4,8 @@
 import os
 import unittest
 
+import torch
+
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.unimodal import *
 from tests.constants import RESOURCES_DIRECTORY
@@ -13,7 +15,7 @@ class TestModels(unittest.TestCase):
     """Test that models can be executed."""
 
     path_to_training_data = os.path.join(RESOURCES_DIRECTORY, 'test.txt')
-    factory = TriplesFactory(path_to_triples=path_to_training_data)
+    factory = TriplesFactory(path=path_to_training_data)
 
     def test_um(self):
         """Tests that Unstructured Model can be executed."""
@@ -74,3 +76,14 @@ class TestModels(unittest.TestCase):
     def test_conv_kb(self):
         """Tests that ConvKB can be executed."""
         pass
+
+    def test_simple(self):
+        """Tests that SimplE can be executed."""
+        model = SimplE(triples_factory=self.factory)
+        self.assertIsNotNone(model)
+
+        # Dummy forward passes
+        # TODO: Use triple factory
+        model.forward_owa(torch.zeros(16, 3, dtype=torch.long))
+        model.forward_cwa(torch.zeros(16, 2, dtype=torch.long))
+        model.forward_inverse_cwa(torch.zeros(16, 2, dtype=torch.long))
