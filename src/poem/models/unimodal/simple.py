@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import GPU, SIMPLE_NAME
+from poem.constants import GPU
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.base import BaseModule
 from poem.utils import slice_triples
@@ -29,7 +29,6 @@ class SimplE(BaseModule):
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
     """
 
-    model_name = SIMPLE_NAME
     margin_ranking_loss_size_average: bool = True
 
     def __init__(
@@ -57,9 +56,12 @@ class SimplE(BaseModule):
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.inverse_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def forward_owa(self, triples):
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ):
         # Split triple in head, relation, tail
-        h_ind, r_ind, t_ind = slice_triples(triples)
+        h_ind, r_ind, t_ind = slice_triples(batch)
 
         # Lookup embeddings
         hh = self.entity_embeddings(h_ind)
@@ -81,4 +83,53 @@ class SimplE(BaseModule):
 
         return scores
 
-    # TODO: Implement forward_cwa
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        h_ind = batch[:, 0]
+        r_ind = batch[:, 1]
+
+        # Lookup embeddings
+        hh = self.entity_embeddings(h_ind)
+        th = self.tail_entity_embeddings(h_ind)
+        r = self.rel_embs(r_ind)
+        r_inv = self.rel_inv_embs(r_ind)
+        ht = self.entity_embeddings.weight
+        tt = self.tail_entity_embeddings.weight
+
+        # Compute CP scores for triple, and inverse triple
+        score = torch.sum(hh[:, None, :] * r[:, None, :] * tt[None, :, :], dim=-1)
+        inverse_score = torch.sum(ht[None, :, :] * r_inv[:, None, :] * th[:, None, :], dim=-1)
+
+        # Final score is average
+        scores = 0.5 * (score + inverse_score)
+
+        return scores
+
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        r_ind = batch[:, 0]
+        t_ind = batch[:, 1]
+
+        # Lookup embeddings
+        hh = self.entity_embeddings.weight
+        ht = self.entity_embeddings(t_ind)
+        th = self.tail_entity_embeddings.weight
+        tt = self.tail_entity_embeddings(t_ind)
+        r = self.rel_embs(r_ind)
+        r_inv = self.rel_inv_embs(r_ind)
+
+        # Compute CP scores for triple, and inverse triple
+        score = torch.sum(hh[None, :, :] * r[:, None, :] * tt[:, None, :], dim=-1)
+        inverse_score = torch.sum(ht[None, :, :] * r_inv[:, None, :] * th[:, None, :], dim=-1)
+
+        # Final score is average
+        scores = 0.5 * (score + inverse_score)
+
+        # Note: In the code in their repository, the score is clamped to [-20, 20].
+        #       That is not mentioned in the paper, so it is omitted here.
+
+        return scores
