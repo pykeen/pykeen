@@ -169,7 +169,7 @@ class RotatE(BaseModule):
         ], dim=-1).view(-1, 1, self.embedding_dim)
 
         # Rank against all entities
-        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim // 2, 2, 1)
+        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
 
         # use negative distance to tail as score
         scores = -torch.norm(h - rot_t, dim=-1)
