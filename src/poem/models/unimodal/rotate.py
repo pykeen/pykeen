@@ -157,10 +157,10 @@ class RotatE(BaseModule):
         # |h * r - t| = |h - conj(r) * t|
 
         # Get relation rotations
-        r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim // 2, 1, 2)
+        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
 
         # rotate tail embeddings in complex plane (equivalent to Hadamard product)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim // 2, 2, 1)
+        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
 
         # Use complex conjugate of r
         rt = (r * t)
