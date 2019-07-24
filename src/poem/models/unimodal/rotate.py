@@ -78,7 +78,7 @@ class RotatE(BaseModule):
             b=2.0 * np.pi,
         )
 
-    def apply_forward_constraints(self):
+    def _apply_forward_constraints(self):
         # Absolute value of complex number
         # |a+ib| = sqrt(a**2 + b**2)
         #
@@ -97,7 +97,7 @@ class RotatE(BaseModule):
     ) -> torch.tensor:
         # Apply forward constraints if necessary
         if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
+            self._apply_forward_constraints()
             self.forward_constraint_applied = True
 
         h, r, t = slice_triples(batch)
@@ -125,7 +125,7 @@ class RotatE(BaseModule):
     ) -> torch.tensor:
         # Apply forward constraints if necessary
         if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
+            self._apply_forward_constraints()
             self.forward_constraint_applied = True
 
         # rotate head embeddings in complex plane (equivalent to Hadamard product)
@@ -152,7 +152,7 @@ class RotatE(BaseModule):
     ) -> torch.tensor:
         # Apply forward constraints if necessary
         if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
+            self._apply_forward_constraints()
             self.forward_constraint_applied = True
 
         # r expresses a rotation in complex plane.
