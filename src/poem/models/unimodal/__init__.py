@@ -42,6 +42,7 @@ from .ermlp import ERMLP
 from .hole import HolE
 from .rescal import RESCAL
 from .rotate import RotatE
+from .simple import SimplE
 from .structured_embedding import StructuredEmbedding
 from .trans_d import TransD
 from .trans_e import TransE
@@ -57,6 +58,7 @@ __all__ = [
     'ERMLP',
     'HolE',
     'RESCAL',
+    'SimplE',
     'StructuredEmbedding',
     'TransD',
     'TransE',
