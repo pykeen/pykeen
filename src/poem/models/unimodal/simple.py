@@ -68,8 +68,8 @@ class SimplE(BaseModule):
         ht = self.entity_embeddings(t_ind)
         th = self.tail_entity_embeddings(h_ind)
         tt = self.tail_entity_embeddings(t_ind)
-        r = self.rel_embs(r_ind)
-        r_inv = self.rel_inv_embs(r_ind)
+        r = self.relation_embeddings(r_ind)
+        r_inv = self.inverse_relation_embeddings(r_ind)
 
         # Compute CP scores for triple, and inverse triple
         score = torch.sum(hh * r * tt, dim=-1)
@@ -93,8 +93,8 @@ class SimplE(BaseModule):
         # Lookup embeddings
         hh = self.entity_embeddings(h_ind)
         th = self.tail_entity_embeddings(h_ind)
-        r = self.rel_embs(r_ind)
-        r_inv = self.rel_inv_embs(r_ind)
+        r = self.relation_embeddings(r_ind)
+        r_inv = self.inverse_relation_embeddings(r_ind)
         ht = self.entity_embeddings.weight
         tt = self.tail_entity_embeddings.weight
 
@@ -119,12 +119,12 @@ class SimplE(BaseModule):
         ht = self.entity_embeddings(t_ind)
         th = self.tail_entity_embeddings.weight
         tt = self.tail_entity_embeddings(t_ind)
-        r = self.rel_embs(r_ind)
-        r_inv = self.rel_inv_embs(r_ind)
+        r = self.relation_embeddings(r_ind)
+        r_inv = self.inverse_relation_embeddings(r_ind)
 
         # Compute CP scores for triple, and inverse triple
         score = torch.sum(hh[None, :, :] * r[:, None, :] * tt[:, None, :], dim=-1)
-        inverse_score = torch.sum(ht[None, :, :] * r_inv[:, None, :] * th[:, None, :], dim=-1)
+        inverse_score = torch.sum(ht[:, None, :] * r_inv[:, None, :] * th[None, :, :], dim=-1)
 
         # Final score is average
         scores = 0.5 * (score + inverse_score)
