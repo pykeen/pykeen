@@ -126,8 +126,16 @@ class BaseModule(nn.Module):
         self.to(self.device)
         torch.cuda.empty_cache()
 
-    # Predicting scores calls the owa forward function, as this
     def predict_scores(self, triples):
+        """
+        Calculate the scores for triples.
+        This method takes subject, relation and object of each triple and calculates the corresponding score.
+
+        :param triples: torch.tensor, shape: (number of triples, 3)
+            The indices of (subject, relation, object) triples.
+        :return: numpy.ndarray, shape: (number of triples, 1)
+            The score for each triple.
+        """
         scores = self.forward_owa(triples)
         return scores.detach().cpu().numpy()
 
@@ -167,9 +175,12 @@ class BaseModule(nn.Module):
     ) -> torch.tensor:
         """
         Forward pass for training with the OWA.
+        This method takes subject, relation and object of each triple and calculates the corresponding score.
 
-        :param batch: torch.tensor, shape: TODO: ???
-        :return: torch.tensor, shape: TODO: ???
+        :param batch: torch.tensor, shape: (batch_size, 3)
+            The indices of (subject, relation, object) triples.
+        :return: torch.tensor, shape: (batch_size, 1)
+            The score for each triple.
 
         """
         raise NotImplementedError()
@@ -180,7 +191,8 @@ class BaseModule(nn.Module):
             batch: torch.tensor,
     ) -> torch.tensor:
         """
-        Forward pass for training and evaluation with the CWA.
+        Forward pass using right side (object) prediction for training with the CWA.
+        This method calculates the score for all possible objects for each (subject, relation) pair.
 
         :param batch: torch.tensor, shape: (batch_size, 2)
             The indices of (subject, relation) pairs.
@@ -195,7 +207,8 @@ class BaseModule(nn.Module):
             batch: torch.tensor,
     ) -> torch.tensor:
         """
-        Forward pass for evaluation with the CWA.
+        Forward pass using left side (subject) prediction for training with the CWA.
+        This method calculates the score for all possible subjects for each (relation, object) pair.
 
         :param batch: torch.tensor, shape: (batch_size, 2)
             The indices of (relation, object) pairs.
@@ -204,7 +217,6 @@ class BaseModule(nn.Module):
         """
         raise NotImplementedError()
 
-    # FIXME this isn't used anywhere
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         return get_params_requiring_grad(self)
