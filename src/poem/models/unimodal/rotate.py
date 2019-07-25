@@ -14,7 +14,6 @@ from torch.nn import functional
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
 from ...typing import OptionalLoss
-from ...utils import slice_triples
 
 __all__ = [
     'RotatE',
@@ -88,6 +87,30 @@ class RotatE(BaseModule):
         functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
         self.forward_constraint_applied = True
 
+    def _rotate_entity(
+            self,
+            entity_indices: torch.tensor,
+            relation_indices: torch.tensor,
+            inverse: bool = False
+    ) -> torch.tensor:
+        # rotate head embeddings in complex plane (equivalent to Hadamard product)
+        e = self.entity_embeddings(entity_indices).view(-1, self.embedding_dim // 2, 2, 1)
+        r = self.relation_embeddings(relation_indices).view(-1, self.embedding_dim // 2, 1, 2)
+
+        # r expresses a rotation in complex plane.
+        # The inverse rotation is expressed by the complex conjugate of r.
+        if inverse:
+            r[:, :, 0, 1] *= -1
+
+        # Compute Hadamard product
+        er = (e * r)
+        rot_e = torch.cat([
+            er[:, :, 0, 0] - er[:, :, 1, 1],
+            er[:, :, 0, 1] + er[:, :, 1, 0],
+        ], dim=-1)
+
+        return rot_e
+
     def forward_owa(
             self,
             batch: torch.tensor,
@@ -95,16 +118,13 @@ class RotatE(BaseModule):
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
-        # rotate head embeddings in complex plane (equivalent to Hadamard product)
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 2, 1)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 1, 2)
+        # Rotate head by relation
+        rot_h = self._rotate_entity(
+            entity_indices=batch[:, 0],
+            relation_indices=batch[:, 1],
+        )
 
-        hr = (h * r)
-        rot_h = torch.cat([
-            hr[:, :, 0, 0] - hr[:, :, 1, 1],
-            hr[:, :, 0, 1] + hr[:, :, 1, 0],
-        ], dim=-1).view(-1, self.embedding_dim)
-
+        # Get tail embeddings
         t = self.entity_embeddings(batch[:, 2])
 
         # use negative distance to tail as score
@@ -119,21 +139,17 @@ class RotatE(BaseModule):
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
-        # rotate head embeddings in complex plane (equivalent to Hadamard product)
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 2, 1)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 1, 2)
-
-        hr = (h * r)
-        rot_h = torch.cat([
-            hr[:, :, 0, 0] - hr[:, :, 1, 1],
-            hr[:, :, 0, 1] + hr[:, :, 1, 0],
-        ], dim=-1).view(-1, 1, self.embedding_dim)
+        # Rotate head by relation
+        rot_h = self._rotate_entity(
+            entity_indices=batch[:, 0],
+            relation_indices=batch[:, 1],
+        )
 
         # Rank against all entities
-        t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
+        t = self.entity_embeddings.weight
 
         # use negative distance to tail as score
-        scores = -torch.norm(rot_h - t, dim=-1)
+        scores = -torch.norm(rot_h[:, None, :] - t[None, :, :], dim=-1)
 
         return scores
 
@@ -150,23 +166,13 @@ class RotatE(BaseModule):
         # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
         # |h * r - t| = |h - conj(r) * t|
 
-        # Get relation rotations
-        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
-
-        # rotate tail embeddings in complex plane (equivalent to Hadamard product)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
-
-        # Use complex conjugate of r
-        rt = (r * t)
-        rot_t = torch.cat([
-            rt[:, :, 0, 0] + rt[:, :, 1, 1],
-            rt[:, :, 0, 1] - rt[:, :, 1, 0],
-        ], dim=-1).view(-1, 1, self.embedding_dim)
+        # Rotate head by inverse of relation
+        rot_t = self._rotate_entity(entity_indices=batch[:, 1], relation_indices=batch[:, 0], inverse=True)
 
         # Rank against all entities
-        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
+        h = self.entity_embeddings.weight
 
         # use negative distance to tail as score
-        scores = -torch.norm(h - rot_t, dim=-1)
+        scores = -torch.norm(h[None, :, :] - rot_t[:, None, :], dim=-1)
 
         return scores
