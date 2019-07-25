@@ -84,6 +84,21 @@ class TestModels(unittest.TestCase):
 
         # Dummy forward passes
         # TODO: Use triple factory
-        model.forward_owa(torch.zeros(16, 3, dtype=torch.long))
-        model.forward_cwa(torch.zeros(16, 2, dtype=torch.long))
-        model.forward_inverse_cwa(torch.zeros(16, 2, dtype=torch.long))
+        batch_size = 16
+        triples = torch.zeros(batch_size, 3, dtype=torch.long)
+
+        # TODO: Refactor common tests for all models, e.g. shape checking
+        # Test forward_owa
+        scores = model.forward_owa(triples)
+        # Check shape
+        assert scores.shape == (batch_size, 1)
+
+        # Test forward_cwa
+        scores = model.forward_cwa(triples[:, :2])
+        # Check shape
+        assert scores.shape == (batch_size, model.num_entities)
+
+        # Test forward_inverse_cwa
+        scores = model.forward_inverse_cwa(triples[:, 1:])
+        # Check shape
+        assert scores.shape == (batch_size, model.num_entities)
