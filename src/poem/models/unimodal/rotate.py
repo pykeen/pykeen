@@ -75,6 +75,9 @@ class RotatE(BaseModule):
         )
 
     def _apply_forward_constraints_if_necessary(self):
+        """
+        Normalizes the length of relation vectors, if the forward constraint has not been applied yet.
+        """
         # Absolute value of complex number
         # |a+ib| = sqrt(a**2 + b**2)
         #
@@ -84,8 +87,9 @@ class RotatE(BaseModule):
         #          = (sum i=1..d x_i.re**2) + (sum i=1..d x_i.im**2)
         #          = ||x.re||**2 + ||x.im||**2
         #          = || [x.re; x.im] ||**2
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-        self.forward_constraint_applied = True
+        if not self.forward_constraint_applied:
+            functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
+            self.forward_constraint_applied = True
 
     def _rotate_entities(
             self,
