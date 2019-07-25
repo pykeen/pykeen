@@ -87,12 +87,25 @@ class RotatE(BaseModule):
         functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
         self.forward_constraint_applied = True
 
-    def _rotate_entity(
+    def _rotate_entities(
             self,
             entity_indices: torch.tensor,
             relation_indices: torch.tensor,
             inverse: bool = False
     ) -> torch.tensor:
+        """
+        Rotate entity embeddings in complex plane by relation embeddings.
+
+        :param entity_indices: torch.tensor, dtype: long, shape: (batch_size,)
+            The indices of the entities.
+        :param relation_indices: torch.tensor, dtype: long, shape: (batch_size,)
+            The indices of the relations.
+        :param inverse: bool (default: False)
+            Whether to rotate by the inverse of the relation.
+
+        :return: torch.tensor, dtype: float, shape: (batch_size, embedding_dim)
+            The rotated entity embeddings.
+        """
         # rotate head embeddings in complex plane (equivalent to Hadamard product)
         e = self.entity_embeddings(entity_indices).view(-1, self.embedding_dim // 2, 2, 1)
         r = self.relation_embeddings(relation_indices).view(-1, self.embedding_dim // 2, 1, 2)
@@ -119,7 +132,7 @@ class RotatE(BaseModule):
         self._apply_forward_constraints_if_necessary()
 
         # Rotate head by relation
-        rot_h = self._rotate_entity(
+        rot_h = self._rotate_entities(
             entity_indices=batch[:, 0],
             relation_indices=batch[:, 1],
         )
@@ -140,7 +153,7 @@ class RotatE(BaseModule):
         self._apply_forward_constraints_if_necessary()
 
         # Rotate head by relation
-        rot_h = self._rotate_entity(
+        rot_h = self._rotate_entities(
             entity_indices=batch[:, 0],
             relation_indices=batch[:, 1],
         )
@@ -167,7 +180,7 @@ class RotatE(BaseModule):
         # |h * r - t| = |h - conj(r) * t|
 
         # Rotate head by inverse of relation
-        rot_t = self._rotate_entity(entity_indices=batch[:, 1], relation_indices=batch[:, 0], inverse=True)
+        rot_t = self._rotate_entities(entity_indices=batch[:, 1], relation_indices=batch[:, 0], inverse=True)
 
         # Rank against all entities
         h = self.entity_embeddings.weight
