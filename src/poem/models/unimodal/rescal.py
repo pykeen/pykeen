@@ -4,10 +4,11 @@
 
 from typing import Optional
 
+import torch
 from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_triples
+from poem.utils import slice_triples, slice_doubles
 from ..base import BaseModule
 from ...typing import OptionalLoss
 
@@ -57,9 +58,12 @@ class RESCAL(BaseModule):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 
-    def forward_owa(self, triples):
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
         # Get triple embeddings
-        heads, relations, tails = slice_triples(triples)
+        heads, relations, tails = slice_triples(batch)
 
         # shape: (b, d)
         head_embeddings = self.entity_embeddings(heads).view(-1, 1, self.embedding_dim)
@@ -70,6 +74,32 @@ class RESCAL(BaseModule):
 
         scores = head_embeddings @ relation_embeddings @ tail_embeddings
 
-        return scores
+        return scores[:, :, 0]
 
-    # TODO: Implement forward_cwa
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        heads, relations = slice_doubles(batch)
+
+        h = self.entity_embeddings(heads).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
+
+        scores = h @ r @ t
+
+        return scores[:, 0, :]
+
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        relations, tails = slice_doubles(batch)
+
+        h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)
+        r = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(tails).transpose(0, 1).view(-1, self.embedding_dim, 1)
+
+        scores = h @ r @ t
+
+        return scores[:, :, 0]
