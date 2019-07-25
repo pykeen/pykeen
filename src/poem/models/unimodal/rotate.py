@@ -28,10 +28,6 @@ class RotatE(BaseModule):
 
      This model uses models relations as cotations in complex plane.
 
-    .. [sun2019] RotatE: Knowledge Graph Embeddings by relational rotation in complex space
-                 Z. Sun and  Z.H. Dong and J.Y. Nie and J. Tang
-                 <https://arxiv.org/pdf/1902.10197v1.pdf> ICLR 2019.
-
     .. seealso::
 
        - Author's `implementation of RotatE <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
