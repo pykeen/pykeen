@@ -13,7 +13,7 @@ class TestModels(unittest.TestCase):
     """Test that models can be executed."""
 
     path_to_training_data = os.path.join(RESOURCES_DIRECTORY, 'test.txt')
-    factory = TriplesFactory(path_to_triples=path_to_training_data)
+    factory = TriplesFactory(path=path_to_training_data)
 
     def test_um(self):
         """Tests that Unstructured Model can be executed."""
