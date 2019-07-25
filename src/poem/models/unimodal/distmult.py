@@ -11,7 +11,6 @@ from torch import nn
 from torch.nn import functional
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_triples
 from ..base import BaseModule
 from ...typing import OptionalLoss
 
@@ -78,36 +77,59 @@ class DistMult(BaseModule):
         # Initialise relation embeddings to unit length
         functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
-    def apply_forward_constraints(self):
+    def _apply_forward_constraints_if_necessary(self):
         # Normalize embeddings of entities
-        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
-        self.forward_constraint_applied = True
-
-    def forward_owa(self, triples):
         if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
-        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
-        scores = torch.sum(head_embeddings * relation_embeddings * tail_embeddings, dim=1)
+            functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
+            self.forward_constraint_applied = True
+
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Normalize embeddings
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings(batch[:, 2])
+
+        # Compute score
+        scores = torch.sum(h * r * t, dim=-1, keepdim=True)
+
         return scores
 
-    # TODO: Implement forward_cwa
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Normalize embeddings
+        self._apply_forward_constraints_if_necessary()
 
-    def _get_triple_embeddings(self, triples):
-        heads, relations, tails = slice_triples(triples)
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=relations,
-                embedding_module=self.relation_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-        )
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings.weight
+
+        # Rank against all entities
+        scores = torch.sum(h[:, None, :] * r[:, None, :] * t[None, :, :], dim=-1)
+
+        return scores
+
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Normalize embeddings
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings.weight
+        r = self.relation_embeddings(batch[:, 0])
+        t = self.entity_embeddings(batch[:, 1])
+
+        # Rank against all entities
+        scores = torch.sum(h[None, :, :] * r[:, None, :] * t[:, None, :], dim=-1)
+
+        return scores
