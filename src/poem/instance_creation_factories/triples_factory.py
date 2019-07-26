@@ -4,7 +4,9 @@
 
 import os
 
+import logging
 import numpy as np
+import timeit
 
 from .instances import CWAInstances, OWAInstances
 from ..preprocessing.instance_creation_utils.utils import create_multi_label_objects_instance
@@ -16,43 +18,52 @@ __all__ = [
     'TriplesFactory',
 ]
 
+log = logging.getLogger(__name__)
 
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, create_inverse_triples: bool = False) -> None:
         self.path = os.path.abspath(path)
         # TODO: Check if lazy evaluation would make sense
         self.triples = load_triples(self.path)
         self.entity_to_id, self.relation_to_id = create_entity_and_relation_mappings(self.triples)
-        self.all_entities = np.array(list(self.entity_to_id.values()))
-        self.num_entities = len(self.entity_to_id)
-        self.num_relations = len(self.relation_to_id)
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}(path="{self.path}")'
-
-    def create_owa_instances(self) -> OWAInstances:
-        mapped_triples = map_triples_elements_to_ids(
+        self.mapped_triples = map_triples_elements_to_ids(
             triples=self.triples,
             entity_to_id=self.entity_to_id,
             rel_to_id=self.relation_to_id,
         )
+        self.all_entities = np.array(list(self.entity_to_id.values()))
+        self.num_entities = len(self.entity_to_id)
+        self.num_relations = len(self.relation_to_id)
+        self.create_inverse_triples = create_inverse_triples
+        # This creates inverse triples and appends them to the mapped triples
+        if self.create_inverse_triples:
+            self._create_inverse_triples()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(path="{self.path}")'
+
+    def _create_inverse_triples(self):
+        start = timeit.default_timer()
+        log.info(f'Creating inverse triples')
+        inverse_triples = np.flip(self.mapped_triples.copy())
+        inverse_triples[:, 1:2] += self.num_relations
+        self.mapped_triples = np.concatenate((self.mapped_triples, inverse_triples))
+        log.info(f'Created inverse triples. It took {timeit.default_timer() - start:.2f} seconds')
+        # The number of relations has to be doubled when using inverse triples
+        self.num_relations = self.num_relations * 2
+
+    def create_owa_instances(self) -> OWAInstances:
         return OWAInstances(
-            instances=mapped_triples,
+            instances=self.mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
     def create_cwa_instances(self):
-        mapped_triples = map_triples_elements_to_ids(
-            triples=self.triples,
-            entity_to_id=self.entity_to_id,
-            rel_to_id=self.relation_to_id,
-        )
-
         s_r_to_mulit_objects = create_multi_label_objects_instance(
-            triples=mapped_triples,
+            triples=self.mapped_triples,
         )
 
         subject_relation_pairs = np.array(list(s_r_to_mulit_objects.keys()), dtype=np.float)
