@@ -147,4 +147,36 @@ class ConvKB(BaseModule):
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        raise NotImplementedError()
+        h = self.entity_embeddings.weight
+        r = self.relation_embeddings(batch[:, 0])
+        t = self.entity_embeddings(batch[:, 1])
+
+        # Explicitly perform convolution to exploit broadcasting
+
+        # Convolve head and relation
+        # Shapes:
+        #  rt: (batch_size, embedding_dim, 2)
+        #  conv.weight: (num_filters, 1, 1, 3)
+        #  conv.bias: (num_filters,)
+        #  rt_conv_out: (batch_size, embedding_dim, num_filters)
+        rt = torch.stack([r, t], dim=-1)
+        rt_conv_out = torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1) + self.conv.bias[None, None, :]
+
+        # Convolve tail
+        # Shapes:
+        #  h: (num_entities, embedding_dim)
+        #  conv_h_out: (num_entities, embedding_dim, num_filters)
+        h_conv_out = h[:, :, None] * self.conv.weight[None, None, :, 0, 0, 0]
+
+        # Combine
+        conv_out = rt_conv_out[:, None, :, :] + h_conv_out[None, :, :, :]
+        hidden = self.relu(conv_out)
+
+        # Dropout
+        hidden = hidden.view(-1, self.embedding_dim * self.num_filters)
+        hidden = self.hidden_dropout(hidden)
+
+        # Linear layer for final scores
+        scores = self.linear(hidden)
+
+        return scores.view(-1, self.num_entities)
