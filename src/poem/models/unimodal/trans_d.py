@@ -97,6 +97,10 @@ class TransD(BaseModule):
         t_bot = rp * torch.sum(tp * t, dim=-1, keepdim=True)
         t_bot[:, :self.change_dim] += t[:, :self.change_dim]
 
+        # Enforce constraints
+        torch.renorm(h_bot, p=2, dim=-1, maxnorm=1, out=h_bot)
+        torch.renorm(t_bot, p=2, dim=-1, maxnorm=1, out=t_bot)
+
         # score = -||h_bot + r - t_bot||_2^2
         return -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True, p=2) ** 2
 
@@ -123,6 +127,10 @@ class TransD(BaseModule):
         t_bot = rp[:, None, :] * torch.sum(tp * t, dim=-1)[None, :, None]
         t_bot[:, :, :self.change_dim] += t[None, :, :self.change_dim]
 
+        # Enforce constraints
+        torch.renorm(h_bot, p=2, dim=-1, maxnorm=1, out=h_bot)
+        torch.renorm(t_bot, p=2, dim=-1, maxnorm=1, out=t_bot)
+
         # score = -||h_bot + r - t_bot||_2^2
         return -torch.norm(h_bot[:, None, :] + r[:, None, :] - t_bot, dim=-1, p=2) ** 2
 
@@ -148,6 +156,10 @@ class TransD(BaseModule):
         h_bot[:, :, :self.change_dim] += h[None, :, :self.change_dim]
         t_bot = rp * torch.sum(tp * t, dim=-1, keepdim=True)
         t_bot[:, :self.change_dim] += t[:, :self.change_dim]
+
+        # Enforce constraints
+        torch.renorm(h_bot, p=2, dim=-1, maxnorm=1, out=h_bot)
+        torch.renorm(t_bot, p=2, dim=-1, maxnorm=1, out=t_bot)
 
         # score = -||h_bot + r - t_bot||_2^2
         return -torch.norm(h_bot + r[:, None, :] - t_bot[:, None, :], dim=-1, p=2) ** 2
