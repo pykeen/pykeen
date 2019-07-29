@@ -4,6 +4,8 @@
 import os
 import unittest
 
+import torch
+
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.unimodal import *
 from tests.constants import RESOURCES_DIRECTORY
@@ -73,4 +75,26 @@ class TestModels(unittest.TestCase):
     # TODO
     def test_conv_kb(self):
         """Tests that ConvKB can be executed."""
-        pass
+        model = ConvKB(triples_factory=self.factory, embedding_dim=4, num_filters=8)
+        self.assertIsNotNone(model)
+
+        # Dummy forward passes
+        # TODO: Use triple factory
+        batch_size = 16
+        triples = torch.zeros(batch_size, 3, dtype=torch.long)
+
+        # TODO: Refactor common tests for all models, e.g. shape checking
+        # Test forward_owa
+        scores = model.forward_owa(triples)
+        # Check shape
+        assert scores.shape == (batch_size, 1)
+
+        # Test forward_cwa
+        scores = model.forward_cwa(triples[:, :2])
+        # Check shape
+        assert scores.shape == (batch_size, model.num_entities)
+
+        # Test forward_inverse_cwa
+        scores = model.forward_inverse_cwa(triples[:, 1:])
+        # Check shape
+        assert scores.shape == (batch_size, model.num_entities)
