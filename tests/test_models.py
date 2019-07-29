@@ -49,8 +49,29 @@ class TestModels(unittest.TestCase):
 
     def test_rescal(self):
         """Tests that RESCAL can be executed."""
-        rescale = RESCAL(triples_factory=self.factory)
-        self.assertIsNotNone(rescale)
+        model = RESCAL(triples_factory=self.factory)
+        self.assertIsNotNone(model)
+
+        # Dummy forward passes
+        # TODO: Use triple factory
+        batch_size = 16
+        triples = torch.zeros(batch_size, 3, dtype=torch.long)
+
+        # TODO: Refactor common tests for all models, e.g. shape checking
+        # Test forward_owa
+        scores = model.forward_owa(triples)
+        # Check shape
+        assert scores.shape == (batch_size, 1)
+
+        # Test forward_cwa
+        scores = model.forward_cwa(triples[:, :2])
+        # Check shape
+        assert scores.shape == (batch_size, model.num_entities)
+
+        # Test forward_inverse_cwa
+        scores = model.forward_inverse_cwa(triples[:, 1:])
+        # Check shape
+        assert scores.shape == (batch_size, model.num_entities)
 
     def test_distmult(self):
         """Tests that DISTMULT can be executed."""
