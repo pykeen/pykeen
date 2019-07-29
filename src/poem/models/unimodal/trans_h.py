@@ -5,7 +5,6 @@ from torch import nn
 from torch.nn import functional
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_triples
 from ..base import BaseModule
 from ...typing import OptionalLoss
 
@@ -37,7 +36,7 @@ class TransH(BaseModule):
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-        super().__init__(
+        super(TransH, self).__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
@@ -45,8 +44,10 @@ class TransH(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        self.weighting_soft_constraint = soft_weight_constraint
-        self.epsilon = nn.Parameter(torch.Tensor([epsilon]))
+        self.regularization_factor = soft_weight_constraint
+        self.epsilon = torch.tensor([epsilon], requires_grad=False)
+
+        self.current_regularization_term = None
 
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
@@ -56,101 +57,106 @@ class TransH(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        super()._init_embeddings()
+        super(TransH, self)._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         # TODO: Add initialization
 
-    def project_to_hyperplane(self, entity_embs, normal_vec_embs):
-        """
+    def _apply_forward_constraints_if_necessary(self):
+        if not self.forward_constraint_applied:
+            # Normalise the normal vectors by their l2 norms
+            functional.normalize(self.normal_vector_embeddings.weight.data, out=self.normal_vector_embeddings.weight.data)
 
-        :param entity_embs: Embeddings of entities with shape batch_size x 1 x embedding_dimension
-        :param normal_vec_embs: Normal vectors with shape batch_size x 1 x embedding_dimension
-        :return: Projected entities of shape batch_size x embedding_dim
-        """
-        scaling_factors = torch.sum(normal_vec_embs * entity_embs, dim=-1).unsqueeze(1)
-        heads_projected_on_normal_vecs = scaling_factors * normal_vec_embs
-        projections = (entity_embs - heads_projected_on_normal_vecs).view(-1, self.embedding_dim)
-        return projections
+            self.forward_constraint_applied = True
 
-    def _compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        mrl_loss = super()._compute_mr_loss(positive_scores, negative_scores)
-        soft_constraint_loss = self.compute_soft_constraint_loss()
-        loss = mrl_loss + soft_constraint_loss
+    def _update_regularization_term(self) -> None:
+        w_r = self.normal_vector_embeddings.weight
+        d_r = self.relation_embeddings.weight
+        d_r_n = functional.normalize(d_r, dim=-1)
+        ortho_constraint = torch.sum(functional.relu(torch.sum((w_r * d_r_n) ** 2, dim=-1) - self.epsilon))
+        entity_constraint = torch.sum(functional.relu(torch.norm(self.entity_embeddings.weight, dim=-1) ** 2 - 1.0))
+        self.current_regularization_term = ortho_constraint + entity_constraint
+
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Guarantee forward constraints
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        d_r = self.relation_embeddings(batch[:, 1])
+        w_r = self.normal_vector_embeddings(batch[:, 1])
+        t = self.entity_embeddings(batch[:, 2])
+
+        # Project to hyperplane
+        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
+        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
+
+        # Regularization term
+        self._update_regularization_term()
+
+        return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
+
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Guarantee forward constraints
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        d_r = self.relation_embeddings(batch[:, 1])
+        w_r = self.normal_vector_embeddings(batch[:, 1])
+        t = self.entity_embeddings.weight
+
+        # Project to hyperplane
+        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
+        pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
+
+        # Regularization term
+        self._update_regularization_term()
+
+        return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
+
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Guarantee forward constraints
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings.weight
+        d_r = self.relation_embeddings(batch[:, 0])
+        w_r = self.normal_vector_embeddings(batch[:, 0])
+        t = self.entity_embeddings(batch[:, 0])
+
+        # Project to hyperplane
+        ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
+        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
+
+        # Regularization term
+        self._update_regularization_term()
+
+        return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
+
+    def _compute_mr_loss(
+            self,
+            positive_scores: torch.tensor,
+            negative_scores: torch.tensor,
+    ) -> torch.tensor:
+        loss = super(TransH, self)._compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        loss += self.regularization_factor * self.current_regularization_term
         return loss
 
-    def compute_soft_constraint_loss(self):
-        """Compute the soft constraints."""
-        norm_of_entities = torch.norm(self.entity_embeddings.weight, p=2, dim=1)
-        square_norms_entities = torch.mul(norm_of_entities, norm_of_entities)
-        entity_constraint = square_norms_entities - self.num_entities * 1.
-        entity_constraint = torch.abs(entity_constraint)
-        entity_constraint = torch.sum(entity_constraint)
-
-        orthogonalty_constraint_numerator = torch.mul(
-            self.normal_vector_embeddings.weight,
-            self.relation_embeddings.weight,
-        )
-        orthogonalty_constraint_numerator = torch.sum(orthogonalty_constraint_numerator, dim=1)
-        orthogonalty_constraint_numerator = torch.mul(
-            orthogonalty_constraint_numerator,
-            orthogonalty_constraint_numerator,
-        )
-
-        orthogonalty_constraint_denominator = torch.norm(self.relation_embeddings.weight, p=2, dim=1)
-        orthogonalty_constraint_denominator = torch.mul(
-            orthogonalty_constraint_denominator,
-            orthogonalty_constraint_denominator,
-        )
-
-        orthogonalty_constraint = (orthogonalty_constraint_numerator / orthogonalty_constraint_denominator) - \
-                                  (self.num_relations * self.epsilon)
-        orthogonalty_constraint = torch.abs(orthogonalty_constraint)
-        orthogonalty_constraint = torch.sum(orthogonalty_constraint)
-
-        soft_constraints_loss = self.weighting_soft_constraint * (entity_constraint + orthogonalty_constraint)
-
-        return soft_constraints_loss
-
-    def forward_owa(self, triples):
-        if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
-        heads, relations, tails = slice_triples(triples)
-        head_embeddings = self._get_embeddings(
-            elements=heads, embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
-
-        relation_embeddings = self._get_embeddings(
-            elements=relations,
-            embedding_module=self.relation_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
-        tail_embeddings = self._get_embeddings(
-            elements=tails,
-            embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
-        normal_vec_embs = self._get_embeddings(
-            elements=relations,
-            embedding_module=self.normal_vector_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
-        head_embeddings = head_embeddings.view(-1, 1, self.embedding_dim)
-        tail_embeddings = tail_embeddings.view(-1, 1, self.embedding_dim)
-        normal_vec_embs = normal_vec_embs.view(-1, 1, self.embedding_dim)
-
-        projected_heads = self.project_to_hyperplane(entity_embs=head_embeddings, normal_vec_embs=normal_vec_embs)
-        projected_tails = self.project_to_hyperplane(entity_embs=tail_embeddings, normal_vec_embs=normal_vec_embs)
-
-        sum_res = projected_heads + relation_embeddings - projected_tails
-        norms = torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        scores = - torch.mul(norms, norms)
-        return scores
-
-    # TODO: Implement forward_cwa
-
-    def apply_forward_constraints(self):
-        # Normalise the normal vectors by their l2 norms
-        functional.normalize(self.normal_vector_embeddings.weight.data, out=self.normal_vector_embeddings.weight.data)
-        self.forward_constraint_applied = True
+    def compute_label_loss(
+            self,
+            predictions: torch.tensor,
+            labels: torch.tensor,
+    ) -> torch.tensor:
+        loss = super(TransH, self)._compute_label_loss(predictions=predictions, labels=labels)
+        loss += self.regularization_factor * self.current_regularization_term
+        return loss
