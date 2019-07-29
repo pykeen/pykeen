@@ -35,7 +35,6 @@
 """
 
 from .complex import ComplEx
-from .complex_cwa import ComplexCWA
 from .conv_kb import ConvKB
 from .distmult import DistMult
 from .ermlp import ERMLP
@@ -52,7 +51,6 @@ from .unstructured_model import UnstructuredModel
 __all__ = [
     'ConvKB',
     'ComplEx',
-    'ComplexCWA',
     'DistMult',
     'ERMLP',
     'HolE',
