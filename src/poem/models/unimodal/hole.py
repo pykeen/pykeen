@@ -12,44 +12,13 @@ from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
-from ...constants import SCORING_FUNCTION_NORM
 from ...typing import OptionalLoss
-from ...utils import slice_triples
 
 __all__ = [
     'HolE',
 ]
 
 log = logging.getLogger(__name__)
-
-
-def circular_correlation(
-        a: torch.tensor,
-        b: torch.tensor,
-) -> torch.tensor:
-    r"""Compute the batched circular correlation between a and b using FFT.
-
-    `a \ast b = \mathcal{F}^{-1}(\overline{\mathcal{F}(a)} \odot \mathcal{F}(b))`
-
-    :param a: torch.tensor, shape: (batch_size, dim)
-    :param b: torch.tensor, shape: (batch_size, dim)
-
-    :return: torch.tensor, shape: (batch_size, dim)
-    """
-    # TODO: Explicitly exploit symmetry and set onesided=True
-    a_fft = torch.rfft(a, signal_ndim=1, onesided=False)
-    b_fft = torch.rfft(b, signal_ndim=1, onesided=False)
-
-    # complex conjugate
-    a_fft[:, :, 1] *= -1
-
-    # Hadamard product in frequency domain
-    p_fft = a_fft * b_fft
-
-    # inverse real FFT
-    corr = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=a.shape[1:])
-
-    return corr
 
 
 class HolE(BaseModule):
@@ -65,7 +34,6 @@ class HolE(BaseModule):
        - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
 
-    hyper_params = BaseModule.hyper_params + (SCORING_FUNCTION_NORM,)
     entity_embedding_max_norm = 1
 
     def __init__(
@@ -93,10 +61,9 @@ class HolE(BaseModule):
         self.relation_embeddings = relation_embeddings
 
         if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._initialize()
+            self._init_embeddings()
 
-    def _initialize(self):
-        """."""
+    def _init_embeddings(self):
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
@@ -118,27 +85,81 @@ class HolE(BaseModule):
             b=+relation_embeddings_init_bound,
         )
 
-    def _score_triples(self, triples):
-        heads, relations, tails = slice_triples(triples)
-
-        # Get embeddings
-        head_embeddings = self._get_embeddings(
-            heads, embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
-        tail_embeddings = self._get_embeddings(
-            tails, embedding_module=self.entity_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
-        relation_embeddings = self._get_embeddings(
-            relations, embedding_module=self.relation_embeddings,
-            embedding_dim=self.embedding_dim,
-        )
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings(batch[:, 2])
 
         # Circular correlation of entity embeddings
-        composite = circular_correlation(a=head_embeddings, b=tail_embeddings)
+        # TODO: Explicitly exploit symmetry and set onesided=True
+        a_fft = torch.rfft(h, signal_ndim=1, onesided=False)
+        b_fft = torch.rfft(t, signal_ndim=1, onesided=False)
+
+        # complex conjugate
+        a_fft[:, :, 1] *= -1
+
+        # Hadamard product in frequency domain
+        p_fft = a_fft * b_fft
+
+        # inverse real FFT
+        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=h.shape[1:])
 
         # inner product with relation embedding
-        scores = torch.sum(relation_embeddings * composite, dim=1)
+        scores = torch.sum(r * composite, dim=-1, keepdim=True)
+
+        return scores
+
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings.weight
+
+        # TODO: Explicitly exploit symmetry and set onesided=True
+        h_fft = torch.rfft(h, signal_ndim=1, onesided=False)
+        t_fft = torch.rfft(t, signal_ndim=1, onesided=False)
+
+        # complex conjugate
+        h_fft[:, :, 1] *= -1
+
+        # Hadamard product in frequency domain
+        p_fft = h_fft[:, None, :, :] * t_fft[None, :, :, :]
+
+        # inverse real FFT
+        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=(self.embedding_dim,))
+
+        # inner product with relation embedding
+        scores = torch.sum(r[:, None, :] * composite, dim=-1)
+
+        return scores
+
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        h = self.entity_embeddings.weight
+        r = self.relation_embeddings(batch[:, 0])
+        t = self.entity_embeddings(batch[:, 1])
+
+        # TODO: Explicitly exploit symmetry and set onesided=True
+        h_fft = torch.rfft(h, signal_ndim=1, onesided=False)
+        t_fft = torch.rfft(t, signal_ndim=1, onesided=False)
+
+        # complex conjugate
+        h_fft[:, :, 1] *= -1
+
+        # Hadamard product in frequency domain
+        p_fft = h_fft[None, :, :, :] * t_fft[:, None, :, :]
+
+        # inverse real FFT
+        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=(self.embedding_dim,))
+
+        # inner product with relation embedding
+        scores = torch.sum(r[:, None, :] * composite, dim=-1)
 
         return scores
