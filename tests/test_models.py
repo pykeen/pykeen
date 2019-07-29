@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Test that models can be executed."""
-import os
 import unittest
 from typing import ClassVar, Type
 
@@ -10,7 +9,7 @@ import torch
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import BaseModule
 from poem.models.unimodal import *
-from tests.constants import RESOURCES_DIRECTORY, TEST_DATA
+from tests.constants import TEST_DATA
 
 
 class ModelTestCase(unittest.TestCase):
@@ -24,10 +23,14 @@ class ModelTestCase(unittest.TestCase):
         self.factory = TriplesFactory(path=TEST_DATA)
         self.model = self.model_cls(self.factory, embedding_dim=self.embedding_dim)
 
+    def check_scores(self, batch, scores):
+        pass
+
     def test_forward_owa(self):
         batch = torch.zeros(self.batch_size, 3, dtype=torch.long)
         scores = self.model.forward_owa(batch)
         assert scores.shape == (self.batch_size, 1)
+        self.check_scores(batch, scores)
 
     def test_forward_cwa(self):
         batch = torch.zeros(self.batch_size, 2, dtype=torch.long)
@@ -36,6 +39,7 @@ class ModelTestCase(unittest.TestCase):
         except NotImplementedError:
             self.fail(msg='Forward CWA not yet implemented')
         assert scores.shape == (self.batch_size, self.model.num_entities)
+        self.check_scores(batch, scores)
 
     def test_forward_inverse_cwa(self):
         batch = torch.zeros(self.batch_size, 2, dtype=torch.long)
@@ -44,6 +48,7 @@ class ModelTestCase(unittest.TestCase):
         except NotImplementedError:
             self.fail(msg='Forward Inverse CWA not yet implemented')
         assert scores.shape == (self.batch_size, self.model.num_entities)
+        self.check_scores(batch, scores)
 
 
 class TestCaseComplex(ModelTestCase):
@@ -77,6 +82,12 @@ class TestCaseSE(ModelTestCase):
 class TestCaseTransD(ModelTestCase):
     model_cls = TransD
 
+    def check_scores(self, batch, scores):
+        super(TestCaseTransD, self).check_scores(batch=batch, scores=scores)
+
+        # Distance-based model
+        assert (scores <= 0.0).all()
+
 
 class TestCaseTransE(ModelTestCase):
     model_cls = TransE
@@ -88,7 +99,6 @@ class TestCaseTransR(ModelTestCase):
 
 class TestCaseUM(ModelTestCase):
     model_cls = UnstructuredModel
-
 
 # class TestModels(unittest.TestCase):
 #     """Test that models can be executed."""
