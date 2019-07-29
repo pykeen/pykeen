@@ -121,3 +121,9 @@ class TestCaseTransR(ModelTestCase):
 
 class TestCaseUM(ModelTestCase):
     model_cls = UnstructuredModel
+
+    def check_scores(self, batch, scores):
+        super(TestCaseUM, self).check_scores(batch=batch, scores=scores)
+
+        # Distance-based model
+        assert (scores <= 0.0).all()
