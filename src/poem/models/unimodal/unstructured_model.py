@@ -49,6 +49,9 @@ class UnstructuredModel(BaseModule):
         )
         self.scoring_fct_norm = scoring_fct_norm
 
+        if None in [self.entity_embeddings]:
+            self._init_embeddings()
+
     def _init_embeddings(self):
         super(UnstructuredModel, self)._init_embeddings()
         entity_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
