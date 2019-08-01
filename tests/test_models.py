@@ -12,7 +12,7 @@ from poem.models.unimodal import *
 from tests.constants import TEST_DATA
 
 
-class ModelTestCase(unittest.TestCase):
+class AbstractModelTestCase(object):
     """A test case for quickly defining common tests for KGE models."""
 
     model_cls: ClassVar[Type[BaseModule]]
@@ -51,39 +51,39 @@ class ModelTestCase(unittest.TestCase):
         self.check_scores(batch, scores)
 
 
-class TestCaseComplex(ModelTestCase):
+class TestCaseComplex(AbstractModelTestCase, unittest.TestCase):
     model_cls = ComplEx
 
 
-class TestCaseConvKB(ModelTestCase):
+class TestCaseConvKB(AbstractModelTestCase, unittest.TestCase):
     model_cls = ConvKB
 
 
-class TestCaseDistMult(ModelTestCase):
+class TestCaseDistMult(AbstractModelTestCase, unittest.TestCase):
     model_cls = DistMult
 
 
-class TestCaseHolE(ModelTestCase):
+class TestCaseHolE(AbstractModelTestCase, unittest.TestCase):
     model_cls = HolE
 
 
-class TestCaseNTN(ModelTestCase):
+class TestCaseNTN(AbstractModelTestCase, unittest.TestCase):
     model_cls = NTN
 
 
-class TestCaseRESCAL(ModelTestCase):
+class TestCaseRESCAL(AbstractModelTestCase, unittest.TestCase):
     model_cls = RESCAL
 
 
-class TestCaseRotatE(ModelTestCase):
+class TestCaseRotatE(AbstractModelTestCase, unittest.TestCase):
     model_cls = RotatE
 
 
-class TestCaseSE(ModelTestCase):
+class TestCaseSE(AbstractModelTestCase, unittest.TestCase):
     model_cls = StructuredEmbedding
 
 
-class TestCaseTransD(ModelTestCase):
+class TestCaseTransD(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransD
 
     def check_scores(self, batch, scores):
@@ -93,7 +93,7 @@ class TestCaseTransD(ModelTestCase):
         assert (scores <= 0.0).all()
 
 
-class TestCaseTransE(ModelTestCase):
+class TestCaseTransE(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransE
 
     def check_scores(self, batch, scores):
@@ -103,7 +103,7 @@ class TestCaseTransE(ModelTestCase):
         assert (scores <= 0.0).all()
 
 
-class TestCaseTransH(ModelTestCase):
+class TestCaseTransH(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransH
 
     def check_scores(self, batch, scores):
@@ -113,7 +113,7 @@ class TestCaseTransH(ModelTestCase):
         assert (scores <= 0.0).all()
 
 
-class TestCaseTransR(ModelTestCase):
+class TestCaseTransR(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransR
 
     def check_scores(self, batch, scores):
@@ -123,7 +123,7 @@ class TestCaseTransR(ModelTestCase):
         assert (scores <= 0.0).all()
 
 
-class TestCaseUM(ModelTestCase):
+class TestCaseUM(AbstractModelTestCase, unittest.TestCase):
     model_cls = UnstructuredModel
 
     def check_scores(self, batch, scores):
