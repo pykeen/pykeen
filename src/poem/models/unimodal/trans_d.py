@@ -45,7 +45,7 @@ class TransD(BaseModule):
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
-        super(TransD, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
@@ -64,7 +64,7 @@ class TransD(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        super(TransD, self)._init_embeddings()
+        super()._init_embeddings()
         # A simple lookup table that stores embeddings of a fixed dictionary and size
         self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1.)
         self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)

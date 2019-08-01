@@ -60,7 +60,7 @@ class TransR(BaseModule):
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
-        super(TransR, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
@@ -77,7 +77,7 @@ class TransR(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        super(TransR, self)._init_embeddings()
+        super()._init_embeddings()
         # max_norm = 1 according to the paper
         self.relation_embeddings = nn.Embedding(
             self.num_relations,

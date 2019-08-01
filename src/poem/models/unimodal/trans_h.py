@@ -36,7 +36,7 @@ class TransH(BaseModule):
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-        super(TransH, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
@@ -57,7 +57,7 @@ class TransH(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        super(TransH, self)._init_embeddings()
+        super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         # TODO: Add initialization
@@ -148,7 +148,7 @@ class TransH(BaseModule):
             positive_scores: torch.tensor,
             negative_scores: torch.tensor,
     ) -> torch.tensor:
-        loss = super(TransH, self)._compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        loss = super()._compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
@@ -157,6 +157,6 @@ class TransH(BaseModule):
             predictions: torch.tensor,
             labels: torch.tensor,
     ) -> torch.tensor:
-        loss = super(TransH, self)._compute_label_loss(predictions=predictions, labels=labels)
+        loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss

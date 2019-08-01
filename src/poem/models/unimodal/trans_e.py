@@ -46,7 +46,7 @@ class TransE(BaseModule):
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
-        super(TransE, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
@@ -61,7 +61,7 @@ class TransE(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        super(TransE, self)._init_embeddings()
+        super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(

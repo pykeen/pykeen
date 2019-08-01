@@ -44,7 +44,7 @@ class StructuredEmbedding(BaseModule):
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
-        super(StructuredEmbedding, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             criterion=criterion,
@@ -62,7 +62,7 @@ class StructuredEmbedding(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        super(StructuredEmbedding, self)._init_embeddings()
+        super()._init_embeddings()
         self.left_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
         self.right_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 

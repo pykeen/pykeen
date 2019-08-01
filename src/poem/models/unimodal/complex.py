@@ -72,7 +72,7 @@ class ComplEx(BaseModule):
         if criterion is None:
             criterion = SoftplusLoss(reduction='mean')
 
-        super(ComplEx, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
             criterion=criterion,
@@ -103,7 +103,7 @@ class ComplEx(BaseModule):
         xavier_normal_(self.relation_embeddings.weight.data)
 
     def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor):
-        loss = super(ComplEx, self)._compute_label_loss(predictions=predictions, labels=labels)
+        loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
