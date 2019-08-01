@@ -22,6 +22,38 @@ def _compute_regularization_term(
     return (torch.mean(h ** 2) + torch.mean(r ** 2) + torch.mean(t ** 2)) / 3.
 
 
+def _compute_complex_scoring(
+        h: torch.tensor,
+        r: torch.tensor,
+        t: torch.tensor,
+) -> torch.tensor:
+    """
+    Evaluates the score function Re(h * r * t) for already broadcastable h, r, t.
+
+    :param h: torch.tensor, shape: (..., 2)
+        Head embeddings. Last dimension corresponds to (real, imag).
+    :param r: torch.tensor, shape: (..., 2)
+        Relation embeddings. Last dimension corresponds to (real, imag).
+    :param t: torch.tensor, shape: (..., 2)
+        Tail embeddings. Last dimension corresponds to (real, imag).
+
+    :return: torch.tensor
+        The scores.
+    """
+    # Regularization term
+    regularization_term = _compute_regularization_term(h, r, t)
+
+    # ComplEx space bilinear product (equivalent to HolE)
+    # *: Elementwise multiplication
+    re_re_re = h[..., 0] * r[..., 0] * t[..., 0]
+    re_im_im = h[..., 0] * r[..., 1] * t[..., 1]
+    im_re_im = h[..., 1] * r[..., 0] * t[..., 1]
+    im_im_re = h[..., 1] * r[..., 1] * t[..., 0]
+    scores = torch.sum(re_re_re + re_im_im + im_re_im - im_im_re, dim=-1)
+
+    return scores, regularization_term
+
+
 class ComplEx(BaseModule):
     """An implementation of ComplEx [trouillon2016]_."""
 
@@ -48,6 +80,7 @@ class ComplEx(BaseModule):
             random_seed=random_seed,
         )
 
+        self.real_embedding_dim = embedding_dim
         self.neg_label = neg_label
         self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False)
         self.current_regularization_term = None
@@ -78,43 +111,27 @@ class ComplEx(BaseModule):
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+        # view as (batch_size, embedding_dim, 2)
+        h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
-        # Regularization term
-        self.current_regularization_term = _compute_regularization_term(h, r, t)
+        # Compute scores and update regularization term
+        scores, self.current_regularization_term = _compute_complex_scoring(h=h, r=r, t=t)
 
-        # ComplEx space bilinear product (equivalent to HolE)
-        # *: Elementwise multiplication
-        i = self.embedding_dim // 2
-        re_re_re = h[:, :i] * r[:, :i] * t[:, :i]
-        re_im_im = h[:, :i] * r[:, i:] * t[:, i:]
-        im_re_im = h[:, i:] * r[:, :i] * t[:, i:]
-        im_im_re = h[:, i:] * r[:, i:] * t[:, :i]
-        scores = torch.sum(re_re_re + re_im_im + im_re_im + im_im_re, dim=-1, keepdim=True)
-
-        return scores
+        return scores.view(-1, 1)
 
     def forward_cwa(
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings.weight
+        # view as (batch_size, num_entities, embedding_dim, 2)
+        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
-        # Regularization term
-        self.current_regularization_term = _compute_regularization_term(h, r, t)
-
-        # ComplEx space bilinear product (equivalent to HolE)
-        # *: Elementwise multiplication
-        i = self.embedding_dim // 2
-        re_re_re = h[:, None, :i] * r[:, None, :i] * t[None, :, :i]
-        re_im_im = h[:, None, :i] * r[:, None, i:] * t[None, :, i:]
-        im_re_im = h[:, None, i:] * r[:, None, :i] * t[None, :, i:]
-        im_im_re = h[:, None, i:] * r[:, None, i:] * t[None, :, :i]
-        scores = torch.sum(re_re_re + re_im_im + im_re_im + im_im_re, dim=-1)
+        # Compute scores and update regularization term
+        scores, self.current_regularization_term = _compute_complex_scoring(h=h, r=r, t=t)
 
         return scores
 
@@ -122,20 +139,12 @@ class ComplEx(BaseModule):
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1])
+        # view as (batch_size, num_entities, embedding_dim, 2)
+        h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
-        # Regularization term
-        self.current_regularization_term = _compute_regularization_term(h, r, t)
-
-        # ComplEx space bilinear product (equivalent to HolE)
-        # *: Elementwise multiplication
-        i = self.embedding_dim // 2
-        re_re_re = h[None, :, :i] * r[:, None, :i] * t[:, None, :i]
-        re_im_im = h[None, :, :i] * r[:, None, i:] * t[:, None, i:]
-        im_re_im = h[None, :, i:] * r[:, None, :i] * t[:, None, i:]
-        im_im_re = h[None, :, i:] * r[:, None, i:] * t[:, None, :i]
-        scores = torch.sum(re_re_re + re_im_im + im_re_im + im_im_re, dim=-1)
+        # Compute scores and update regularization term
+        scores, self.current_regularization_term = _compute_complex_scoring(h=h, r=r, t=t)
 
         return scores
