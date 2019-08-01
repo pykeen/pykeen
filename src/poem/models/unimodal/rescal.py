@@ -62,17 +62,15 @@ class RESCAL(BaseModule):
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        # Get triple embeddings
-        heads, relations, tails = slice_triples(batch)
-
+        # Get embeddings
         # shape: (b, d)
-        head_embeddings = self.entity_embeddings(heads).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         # shape: (b, d, d)
-        relation_embeddings = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         # shape: (b, d)
-        tail_embeddings = self.entity_embeddings(tails).view(-1, self.embedding_dim, 1)
+        t = self.entity_embeddings(batch[:, 2]).view(-1, self.embedding_dim, 1)
 
-        scores = head_embeddings @ relation_embeddings @ tail_embeddings
+        scores = h @ r @ t
 
         return scores[:, :, 0]
 
@@ -80,10 +78,9 @@ class RESCAL(BaseModule):
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        heads, relations = slice_doubles(batch)
-
-        h = self.entity_embeddings(heads).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
 
         scores = h @ r @ t
@@ -94,11 +91,10 @@ class RESCAL(BaseModule):
             self,
             batch: torch.tensor,
     ) -> torch.tensor:
-        relations, tails = slice_doubles(batch)
-
+        # Get embeddings
         h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)
-        r = self.relation_embeddings(relations).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(tails).transpose(0, 1).view(-1, self.embedding_dim, 1)
+        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(batch[:, 1]).transpose(0, 1).view(-1, self.embedding_dim, 1)
 
         scores = h @ r @ t
 
