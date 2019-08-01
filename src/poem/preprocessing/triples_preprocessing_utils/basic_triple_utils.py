@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import logging
 from typing import Dict, Optional, Tuple
 
 import numpy as np
 
 from poem.utils import slice_triples
 
+log = logging.getLogger(__name__)
 
 def load_triples(path, delimiter='\t') -> np.array:
     """Load triples saved as tab separated values."""
@@ -20,6 +22,7 @@ def load_triples(path, delimiter='\t') -> np.array:
 
 def create_entity_and_relation_mappings(triples: np.array) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Map entities and relations to ids."""
+    # Slice triples returns two dimensional vectors that can't be used here
     subjects, relations, objects = triples[:, 0], triples[:, 1], triples[:, 2]
 
     # Sorting ensures consistent results when the triples are permuted
@@ -60,9 +63,29 @@ def map_triples_elements_to_ids(
     """Map entities and relations to predefined ids."""
     heads, relations, tails = slice_triples(triples)
 
-    subject_column = np.vectorize(entity_to_id.get)(heads)
-    relation_column = np.vectorize(rel_to_id.get)(relations)
-    object_column = np.vectorize(entity_to_id.get)(tails)
+    # When triples that don't exist are trying to be mapped, they get the id "-1"
+    subject_column = np.vectorize(entity_to_id.get)(heads, [-1])
+    relation_column = np.vectorize(rel_to_id.get)(relations, [-1])
+    object_column = np.vectorize(entity_to_id.get)(tails, [-1])
+
+    # Filter all non-existent triples
+    subject_filter = subject_column < 0
+    relation_filter = relation_column < 0
+    object_filter = object_column < 0
+    num_no_subject = subject_filter.sum()
+    num_no_relation = relation_filter.sum()
+    num_no_object = object_filter.sum()
+
+    if (num_no_subject > 0) or (num_no_relation > 0) or (num_no_object > 0):
+        log.warning(
+            "You're trying to map triples with entities and/or relations that are not in the training set."
+            "These triples will be excluded from the mapping")
+        non_mappable_triples = (subject_filter | relation_filter | object_filter)
+        subject_column = subject_column[~non_mappable_triples, None]
+        relation_column = relation_column[~non_mappable_triples, None]
+        object_column = object_column[~non_mappable_triples, None]
+        log.warning(f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out")
+
     triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)

@@ -47,7 +47,7 @@ from . import multimodal, unimodal
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, RESCAL, RotatE, StructuredEmbedding, TransD, TransE, TransH,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, NTN, RESCAL, RotatE, StructuredEmbedding, TransD, TransE, TransH,
     TransR, UnstructuredModel,
 )
 
@@ -59,6 +59,7 @@ __all__ = [
     'DistMultLiteral',
     'ERMLP',
     'HolE',
+    'NTN',
     'RESCAL',
     'StructuredEmbedding',
     'TransD',
