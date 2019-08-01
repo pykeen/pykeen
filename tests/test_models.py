@@ -60,7 +60,7 @@ class TestCaseConvKB(ModelTestCase):
 
 
 class TestCaseDistMult(ModelTestCase):
-    model = DistMult
+    model_cls = DistMult
 
 
 class TestCaseHolE(ModelTestCase):
