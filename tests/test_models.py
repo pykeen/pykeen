@@ -67,6 +67,10 @@ class TestCaseHolE(ModelTestCase):
     model_cls = HolE
 
 
+class TestCaseNTN(ModelTestCase):
+    model_cls = NTN
+
+
 class TestCaseRESCAL(ModelTestCase):
     model_cls = RESCAL
 
