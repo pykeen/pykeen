@@ -4,6 +4,8 @@
 import os
 import unittest
 
+import torch
+
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models.unimodal import *
 from tests.constants import RESOURCES_DIRECTORY
@@ -74,3 +76,20 @@ class TestModels(unittest.TestCase):
     def test_conv_kb(self):
         """Tests that ConvKB can be executed."""
         pass
+
+    def test_ntn(self):
+        """Tests that NTN can be executed."""
+        model = NTN(triples_factory=self.factory, embedding_dim=16)
+        self.assertIsNotNone(model)
+
+        batch_size = 8
+
+        batch = torch.zeros(batch_size, 3, dtype=torch.long)
+        scores = model.forward_owa(batch)
+        assert scores.shape == (batch_size, 1)
+
+        scores = model.forward_cwa(batch)
+        assert scores.shape == (batch_size, model.num_entities)
+
+        scores = model.forward_inverse_cwa(batch)
+        assert scores.shape == (batch_size, model.num_entities)
