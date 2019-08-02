@@ -79,6 +79,10 @@ class TestCaseRotatE(AbstractModelTestCase, unittest.TestCase):
     model_cls = RotatE
 
 
+class TestCaseSimplE(AbstractModelTestCase, unittest.TestCase):
+    model_cls = SimplE
+
+
 class TestCaseSE(AbstractModelTestCase, unittest.TestCase):
     model_cls = StructuredEmbedding
 
