@@ -3,7 +3,7 @@
 """Implementation of the TransE model."""
 
 import logging
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import torch
@@ -12,7 +12,6 @@ from torch import nn
 from torch.nn import functional
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_triples
 from ..base import BaseModule
 from ...typing import OptionalLoss
 
@@ -79,43 +78,49 @@ class TransE(BaseModule):
         # Initialise relation embeddings to unit length
         functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
-    def apply_forward_constraints(self):
-        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
-        self.forward_constraint_applied = True
-
-    def forward_owa(self, triples):
+    def _apply_forward_constraints_if_necessary(self):
         if not self.forward_constraint_applied:
-            self.apply_forward_constraints()
-        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
-        # Add the vector element wise
-        sum_res = head_embeddings + relation_embeddings - tail_embeddings
-        scores = - torch.norm(sum_res, dim=1, p=self.scoring_fct_norm).view(size=(-1,))
-        return scores
+            functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
+            self.forward_constraint_applied = True
 
-    # TODO: Implement forward_cwa
+    def forward_owa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Guarantee forward constraints
+        self._apply_forward_constraints_if_necessary()
 
-    def _get_triple_embeddings(self, triples):
-        heads, relations, tails = slice_triples(triples)
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=relations,
-                embedding_module=self.relation_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-        )
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings(batch[:, 2])
 
-    @classmethod
-    def get_model_params(cls) -> List:
-        """Return model parameters."""
-        base_params = BaseModule.get_model_params()
-        return base_params + ['scoring_fct_norm']
+        return -torch.norm(h + r - t, dim=-1, p=self.scoring_fct_norm, keepdim=True)
+
+    def forward_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Guarantee forward constraints
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings.weight
+
+        return -torch.norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, p=self.scoring_fct_norm)
+
+    def forward_inverse_cwa(
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Guarantee forward constraints
+        self._apply_forward_constraints_if_necessary()
+
+        # Get embeddings
+        h = self.entity_embeddings.weight
+        r = self.relation_embeddings(batch[:, 0])
+        t = self.entity_embeddings(batch[:, 1])
+
+        return -torch.norm(h[None, :, :] + r[:, None, :] - t[:, None, :], dim=-1, p=self.scoring_fct_norm)
