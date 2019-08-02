@@ -8,19 +8,19 @@
 +===========================+=============================================+
 | ComplEx                   | :py:class:`poem.models.ComplEx`             |
 +---------------------------+---------------------------------------------+
-| ComplEx (CWA)             | :py:class:`poem.models.ComplexCWA`          |
-+---------------------------+---------------------------------------------+
 | ComplExLiteral            | :py:class:`poem.models.ComplexLiteralCWA`   |
-+---------------------------+---------------------------------------------+
-| DistmultLiteral           | :py:class:`poem.models.DistMultLiteral`     |
 +---------------------------+---------------------------------------------+
 | ConvKB                    | :py:class:`poem.models.ConvKB`              |
 +---------------------------+---------------------------------------------+
 | DistMult                  | :py:class:`poem.models.DistMult`            |
 +---------------------------+---------------------------------------------+
-| ERMLP                     | :py:class:`poem.models.ERMLP`               |
+| DistmultLiteral           | :py:class:`poem.models.DistMultLiteral`     |
++---------------------------+---------------------------------------------+
+| ER-MLP                    | :py:class:`poem.models.ERMLP`               |
 +---------------------------+---------------------------------------------+
 | HolE                      | :py:class:`poem.models.HolE`                |
++---------------------------+---------------------------------------------+
+| NTN                       | :py:class:`poem.models.NTN`                 |
 +---------------------------+---------------------------------------------+
 | RESCAL                    | :py:class:`poem.models.RESCAL`              |
 +---------------------------+---------------------------------------------+
@@ -38,34 +38,43 @@
 +---------------------------+---------------------------------------------+
 | Unstructured Model (UM)   | :py:class:`poem.models.UnstructuredModel`   |
 +---------------------------+---------------------------------------------+
-
-
-
 """
 
 from . import multimodal, unimodal
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, NTN, RESCAL, RotatE, StructuredEmbedding, TransD, TransE, TransH,
-    TransR, UnstructuredModel,
+    ComplEx,
+    ConvKB,
+    DistMult,
+    ERMLP,
+    HolE,
+    NTN,
+    RESCAL,
+    RotatE,
+    StructuredEmbedding,
+    TransD,
+    TransE,
+    TransH,
+    TransR,
+    UnstructuredModel,
 )
 
 __all__ = [
-    'ConvKB',
     'ComplEx',
     'ComplexLiteralCWA',
+    'ConvKB',
     'DistMult',
     'DistMultLiteral',
     'ERMLP',
     'HolE',
     'NTN',
     'RESCAL',
+    'RotatE',
     'StructuredEmbedding',
     'TransD',
     'TransE',
     'TransH',
     'TransR',
-    'RotatE',
     'UnstructuredModel',
 ]
