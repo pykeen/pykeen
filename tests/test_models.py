@@ -91,7 +91,7 @@ class TestCaseTransD(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransD
 
     def check_scores(self, batch, scores):
-        super(TestCaseTransD, self).check_scores(batch=batch, scores=scores)
+        super().check_scores(batch=batch, scores=scores)
 
         # Distance-based model
         assert (scores <= 0.0).all()
@@ -101,7 +101,7 @@ class TestCaseTransE(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransE
 
     def check_scores(self, batch, scores):
-        super(TestCaseTransE, self).check_scores(batch=batch, scores=scores)
+        super().check_scores(batch=batch, scores=scores)
 
         # Distance-based model
         assert (scores <= 0.0).all()
@@ -111,7 +111,7 @@ class TestCaseTransH(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransH
 
     def check_scores(self, batch, scores):
-        super(TestCaseTransH, self).check_scores(batch=batch, scores=scores)
+        super().check_scores(batch=batch, scores=scores)
 
         # Distance-based model
         assert (scores <= 0.0).all()
@@ -121,7 +121,7 @@ class TestCaseTransR(AbstractModelTestCase, unittest.TestCase):
     model_cls = TransR
 
     def check_scores(self, batch, scores):
-        super(TestCaseTransR, self).check_scores(batch=batch, scores=scores)
+        super().check_scores(batch=batch, scores=scores)
 
         # Distance-based model
         assert (scores <= 0.0).all()
@@ -131,7 +131,7 @@ class TestCaseUM(AbstractModelTestCase, unittest.TestCase):
     model_cls = UnstructuredModel
 
     def check_scores(self, batch, scores):
-        super(TestCaseUM, self).check_scores(batch=batch, scores=scores)
+        super().check_scores(batch=batch, scores=scores)
 
         # Distance-based model
         assert (scores <= 0.0).all()
