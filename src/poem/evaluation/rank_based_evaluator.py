@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 from .base import Evaluator
 from ..models.base import BaseModule
+from ..training.utils import split_list_in_batches
 
 __all__ = [
     'MetricResults',
@@ -38,23 +39,35 @@ class MetricResults:
 def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
     """Compute rank and adjusted rank given scores.
 
-    :param true_score: The score of the true triple.
-    :param all_scores: The scores of all corrupted triples.
+    :param true_score: torch.tensor, shape: (batch_size, 1)
+        The score of the true triple.
+    :param all_scores: torch.tensor, shape: (batch_size, num_entities)
+        The scores of all corrupted triples.
     :return: a tuple (best_rank, adjusted_avg_rank) where
-        best_rank: int (best_rank >= 1)
+        best_rank: np.ndarray (batch_size, 1)
             The rank of the true triple as given as the number of elements having a better score plus one.
-        adjusted_avg_rank: float (adjusted_avg_rank > 0)
+        adjusted_avg_rank: np.ndarray (batch_size, 1)
             The avg rank of the true triple divided by the expected rank in random scoring.
     """
-    best_rank = np.greater(all_scores, true_score).sum() + 1
-    worst_rank = np.greater_equal(all_scores, true_score).sum() + 1
-    avg_rank = (best_rank + worst_rank) / 2.0
-    adjusted_avg_rank = avg_rank / ((all_scores.shape[0] + 1) / 2)
-    return best_rank, adjusted_avg_rank
-
+    best_rank = (all_scores > true_score).sum(dim=1) + 1
+    worst_rank = (all_scores >= true_score).sum(dim=1) + 1
+    avg_rank = (best_rank + worst_rank).to(dtype=torch.float) * 0.5
+    adjusted_avg_rank = avg_rank / ((all_scores.shape[1] + 1) * 0.5)
+    return best_rank.detach().cpu().numpy(), adjusted_avg_rank.detach().cpu().numpy()
 
 class RankBasedEvaluator(Evaluator):
+    """
+    The evaluator module for all KGE models.
 
+    :param model: Basemodule
+        The fitted KGE model that is to be evaluated.
+    :param filter_neg_triples: bool
+        Indicating whether negative triples should be filtered, by default 'False'
+    :param hits_at_k: List[int], optional
+        A list containing all integers that represent the 'k's to be used for the hits@k evaluation,
+        by default [1, 3, 5, 10]
+    :return: None
+    """
     def __init__(
             self,
             model: BaseModule = None,
@@ -80,133 +93,100 @@ class RankBasedEvaluator(Evaluator):
 
     def _filter_corrupted_triples(
             self,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed,
+            batch,
+            subject_batch,
+            object_batch,
+            all_pos_triples,
     ):
-        # TODO: Check
-        corrupted_subject_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_subject_based)
-        mask = np.in1d(corrupted_subject_based_hashed, all_pos_triples_hashed, invert=True)
-        mask = np.where(mask)[0]
-        corrupted_subject_based = corrupted_subject_based[mask]
+        subjects = batch[:, 0:1]
+        relations = batch[:, 1:2]
+        objects = batch[:, 2:3]
+        batch_size = batch.shape[0]
 
-        corrupted_object_based_hashed = np.apply_along_axis(self._hash_triples, 1, corrupted_object_based)
-        mask = np.in1d(corrupted_object_based_hashed, all_pos_triples_hashed, invert=True)
-        mask = np.where(mask)[0]
+        subject_filter = (all_pos_triples[:, 0:1]).view(1, -1).repeat(batch_size, 1) == subjects
+        relation_filter = (all_pos_triples[:, 1:2]).view(1, -1).repeat(batch_size, 1) == relations
+        object_filter = (all_pos_triples[:, 2:3]).view(1, -1).repeat(batch_size, 1) == objects
 
-        if mask.size == 0:
-            raise Exception(
-                "User selected filtered metric computation, but all corrupted triples exists"
-                "also a positive triples.",
-            )
-        corrupted_object_based = corrupted_object_based[mask]
+        # Short objects batch list
+        pairs_filter = (subject_filter & relation_filter)
+        objects_in_triples = (all_pos_triples[:, 2:3]).view(1, -1).repeat(batch_size, 1)[pairs_filter]
+        row_indices = pairs_filter.nonzero()[:,0]
+        object_batch[row_indices, objects_in_triples] = 1
 
-        return corrupted_subject_based, corrupted_object_based
+        # Short subjects batch list
+        pairs_filter = (object_filter & relation_filter)
+        subjects_in_triples = (all_pos_triples[:, 0:1]).view(1, -1).repeat(batch_size, 1)[pairs_filter]
+        row_indices = pairs_filter.nonzero()[:,0]
+        subject_batch[row_indices, subjects_in_triples] = 1
+
+        # TODO: Create warning when all triples will be filtered
+        # if mask.size == 0:
+        #     raise Exception("User selected filtered metric computation, but all corrupted triples exists"
+        #                     "also as positive triples.")
+
+        return subject_batch, object_batch
 
     def _update_hits_at_k(
             self,
             hits_at_k_values: Dict[int, List[float]],
-            rank_of_positive_subject_based: int,
-            rank_of_positive_object_based: int,
+            ranks: List[int],
     ) -> None:
         """Update the Hits@K dictionary for two values."""
         for k, values in hits_at_k_values.items():
-            if rank_of_positive_subject_based <= k:
-                values.append(1.0)
-            else:
-                values.append(0.0)
-
-            if rank_of_positive_object_based <= k:
-                values.append(1.0)
-            else:
-                values.append(0.0)
-
-    def _create_corrupted_triples(self, triple):
-        candidate_entities_subject_based = self.all_entities[self.all_entities != triple[0:1]].reshape((-1, 1))
-        candidate_entities_object_based = self.all_entities[self.all_entities != triple[2:3]].reshape((-1, 1))
-
-        # Extract current test tuple: Either (subject,predicate) or (predicate,object)
-        tuple_subject_based = np.reshape(a=triple[1:3], newshape=(1, 2))
-        tuple_object_based = np.reshape(a=triple[0:2], newshape=(1, 2))
-
-        # Copy current test tuple
-        tuples_subject_based = np.repeat(
-            a=tuple_subject_based,
-            repeats=candidate_entities_subject_based.shape[0],
-            axis=0,
-        )
-        tuples_object_based = np.repeat(
-            a=tuple_object_based,
-            repeats=candidate_entities_object_based.shape[0],
-            axis=0,
-        )
-
-        corrupted_subject_based = np.concatenate(
-            [
-                candidate_entities_subject_based,
-                tuples_subject_based,
-            ],
-            axis=1,
-        )
-
-        corrupted_object_based = np.concatenate(
-            [
-                tuples_object_based,
-                candidate_entities_object_based,
-            ],
-            axis=1,
-        )
-
-        return corrupted_subject_based, corrupted_object_based
+            hits_at_k = (np.array(ranks) <= k) * 1
+            values.extend(hits_at_k)
 
     def _compute_filtered_rank(
             self,
-            model: BaseModule,
-            pos_triple,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed,
+            batch,
+            subject_batch,
+            object_batch,
+            all_pos_triples,
     ) -> Tuple[int, int, float, float]:
-        corrupted_subject_based, corrupted_object_based = self._filter_corrupted_triples(
-            corrupted_subject_based=corrupted_subject_based,
-            corrupted_object_based=corrupted_object_based,
-            all_pos_triples_hashed=all_pos_triples_hashed,
+        subject_batch, object_batch = self._filter_corrupted_triples(
+            batch=batch,
+            subject_batch=subject_batch,
+            object_batch=object_batch,
+            all_pos_triples=all_pos_triples,
         )
 
         return self._compute_rank(
-            model=model,
-            pos_triple=pos_triple,
-            corrupted_subject_based=corrupted_subject_based,
-            corrupted_object_based=corrupted_object_based,
-            all_pos_triples_hashed=all_pos_triples_hashed,
+            batch=batch,
+            subject_batch=subject_batch,
+            object_batch=object_batch,
+            all_pos_triples=all_pos_triples,
         )
 
     def _compute_rank(
             self,
-            model: BaseModule,
-            pos_triple,
-            corrupted_subject_based,
-            corrupted_object_based,
-            all_pos_triples_hashed=None,
+            batch,
+            subject_batch,
+            object_batch,
+            all_pos_triples,
     ) -> Tuple[int, int, float, float]:
+        subjects = batch[:, 0:1]
+        objects = batch[:, 2:3]
+        batch_size = batch.shape[0]
 
-        # Create tensors for numpy arrays
-        corrupted_subject_based = torch.tensor(corrupted_subject_based, dtype=torch.long, device=self.device)
-        corrupted_object_based = torch.tensor(corrupted_object_based, dtype=torch.long, device=self.device)
+        scores_of_corrupted_subjects_batch = self.model.predict_scores_all_subjects(batch[:, 1:3])
+        score_of_positive_subject_batch = (
+            scores_of_corrupted_subjects_batch[torch.arange(0, batch_size), subjects.flatten()]
+        ).view(-1,1)
+        scores_of_corrupted_subjects_batch[subject_batch] = score_of_positive_subject_batch.min() - 1
 
-        scores_of_corrupted_subjects = model.predict_scores(corrupted_subject_based)
-        scores_of_corrupted_objects = model.predict_scores(corrupted_object_based)
-
-        score_of_positive = model.predict_scores(
-            torch.tensor([pos_triple], dtype=torch.long, device=self.device),
-        )
+        scores_of_corrupted_objects_batch = self.model.predict_scores_all_objects(batch[:, 0:2])
+        score_of_positive_object_batch = (
+            scores_of_corrupted_objects_batch[torch.arange(0, batch_size), objects.flatten()]
+        ).view(-1,1)
+        scores_of_corrupted_objects_batch[object_batch] = score_of_positive_object_batch.min() - 1
 
         rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(
-            true_score=score_of_positive, all_scores=scores_of_corrupted_subjects,
+            true_score=score_of_positive_subject_batch, all_scores=scores_of_corrupted_subjects_batch,
         )
         rank_of_positive_object_based, adj_rank_of_positive_object_based = _compute_rank_from_scores(
-            true_score=score_of_positive, all_scores=scores_of_corrupted_objects,
+            true_score=score_of_positive_object_batch, all_scores=scores_of_corrupted_objects_batch,
         )
+
 
         return (
             rank_of_positive_subject_based,
@@ -215,10 +195,24 @@ class RankBasedEvaluator(Evaluator):
             adj_rank_of_positive_object_based,
         )
 
-    def evaluate(self, test_triples: np.ndarray, use_tqdm: bool = True) -> MetricResults:
+    def evaluate(self, test_triples: np.ndarray, batch_size: int = 1) -> MetricResults:
+        """
+        Evaluating a given KGE model based on a test-set of triples.
+
+        :param test_triples: np.ndarray, shape: (number of triples, 3)
+            The mapped triples to be used for evaluation.
+        :param batch_size: int, optional
+            The batch size to be used for the evaluation. A bigger batch size increases the utilization of GPUs during
+            evaluation. However due to memory limitations, the maximum possible batch size depends on the number of
+            entities contained in the triples when using the setting without filtering negative triples and the amount
+            of triples in the train and test set for the filtered setting. By default '1'
+        :return: MetricResults
+            The dataclass containing the mean_rank, mean_reciprocal_rank, adjusted_mean_rank,
+            adjusted_mean_reciprocal_rank and hits_at_k results from the evaluation.
+        """
         start = timeit.default_timer()
         ranks: List[int] = []
-        adj_ranks = np.empty(shape=(test_triples.shape[0], 2), dtype=np.float)
+        adj_ranks: List[int] = []
         hits_at_k_values = {
             k: []
             for k in self.hits_at_k
@@ -226,8 +220,11 @@ class RankBasedEvaluator(Evaluator):
         # Set eval mode in order to ignore functionalities such as dropout
         self.model = self.model.eval()
 
-        all_pos_triples = np.concatenate([self.train_triples, test_triples], axis=0)
-        all_pos_triples_hashed = np.apply_along_axis(self._hash_triples, 1, all_pos_triples)
+        all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, test_triples], axis=0)
+        all_pos_triples = torch.tensor(all_pos_triples, device=self.device)
+        all_entities = torch.tensor(self.model.triples_factory.all_entities, device=self.device)
+
+        test_triples = torch.tensor(test_triples, dtype=torch.long, device=self.device)
 
         compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank
@@ -235,39 +232,50 @@ class RankBasedEvaluator(Evaluator):
             self._compute_rank
         )
 
-        if use_tqdm:
-            test_triples = tqdm(test_triples, desc=f'Evaluating triples')
+        batches = split_list_in_batches(input_list=test_triples, batch_size=batch_size)
 
-        for i, pos_triple in enumerate(test_triples):
-            # Disable gradient tracking
-            with torch.no_grad():
-                corrupted_subject_based, corrupted_object_based = self._create_corrupted_triples(
-                    triple=pos_triple,
-                )
+        num_triples = test_triples.shape[0]
 
-                (
-                    rank_of_positive_subject_based,
-                    rank_of_positive_object_based,
-                    adjusted_rank_of_positive_subject_based,
-                    adjusted_rank_of_positive_object_based,
-                ) = compute_rank_fct(
-                    model=self.model,
-                    pos_triple=pos_triple,
-                    corrupted_subject_based=corrupted_subject_based,
-                    corrupted_object_based=corrupted_object_based,
-                    all_pos_triples_hashed=all_pos_triples_hashed,
-                )
+        with tqdm(
+                desc = f'⚡️ Evaluating triples ',
+                total = num_triples,
+                unit = 'triple(s)',
+                unit_scale = True,
+        ) as progress_bar:
+            for i, batch in enumerate(batches):
+                subjects = batch[:, 0:1]
+                objects = batch[:, 2:3]
+                batch_size = subjects.shape[0]
 
-            ranks.append(rank_of_positive_subject_based)
-            ranks.append(rank_of_positive_object_based)
-            adj_ranks[i, :] = (adjusted_rank_of_positive_subject_based, adjusted_rank_of_positive_object_based)
+                subject_batch = all_entities.repeat(batch_size, 1) == subjects
+                object_batch = all_entities.repeat(batch_size, 1) == objects
 
-            # Compute hits@k for k in {1,3,5,10}
-            self._update_hits_at_k(
-                hits_at_k_values,
-                rank_of_positive_subject_based=rank_of_positive_subject_based,
-                rank_of_positive_object_based=rank_of_positive_object_based,
-            )
+                # Disable gradient tracking
+                with torch.no_grad():
+                    (
+                        rank_of_positive_subject_based,
+                        rank_of_positive_object_based,
+                        adjusted_rank_of_positive_subject_based,
+                        adjusted_rank_of_positive_object_based,
+                    ) = compute_rank_fct(
+                        batch=batch,
+                        subject_batch=subject_batch,
+                        object_batch=object_batch,
+                        all_pos_triples=all_pos_triples,
+                    )
+
+                ranks.extend(rank_of_positive_subject_based)
+                ranks.extend(rank_of_positive_object_based)
+                adj_ranks.extend(adjusted_rank_of_positive_subject_based)
+                adj_ranks.extend(adjusted_rank_of_positive_object_based)
+
+                progress_bar.update(batch_size)
+
+        # Compute hits@k for k in {1,3,5,10}
+        self._update_hits_at_k(
+            hits_at_k_values,
+            ranks,
+        )
 
         mean_rank = float(np.mean(ranks))
         mean_reciprocal_rank = float(np.mean(np.reciprocal(ranks)))

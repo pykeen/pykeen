@@ -34,14 +34,15 @@
                   <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
 .. [yang2014] Yang, B., *et al.* (2014). `Embedding Entities and Relations for Learning
                   and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
+.. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion. <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_ NIPS. 2013.
 """
 
 from .complex import ComplEx
-from .complex_cwa import ComplexCWA
 from .conv_kb import ConvKB
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .hole import HolE
+from .ntn import NTN
 from .rescal import RESCAL
 from .rotate import RotatE
 from .simple import SimplE
@@ -55,10 +56,10 @@ from .unstructured_model import UnstructuredModel
 __all__ = [
     'ConvKB',
     'ComplEx',
-    'ComplexCWA',
     'DistMult',
     'ERMLP',
     'HolE',
+    'NTN',
     'RESCAL',
     'SimplE',
     'StructuredEmbedding',
