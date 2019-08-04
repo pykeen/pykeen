@@ -5,10 +5,12 @@
 from abc import ABC, abstractmethod
 from typing import List, Mapping, Optional
 
+import numpy as np
 import torch
 from tqdm import tqdm
 
 from ..instance_creation_factories.instances import Instances
+from ..instance_creation_factories.triples_factory import TriplesFactory
 from ..models.base import BaseModule
 from ..version import get_version
 
@@ -18,26 +20,31 @@ __all__ = [
 
 
 class TrainingLoop(ABC):
+    """A training loop."""
 
     def __init__(
             self,
             optimizer: Optional[torch.optim.Optimizer] = None,
             model: Optional[BaseModule] = None,
     ) -> None:
+        """Initialize the training loop."""
         self.model = model
         self.optimizer = optimizer
         self.losses_per_epochs = []
 
     @property
-    def triples_factory(self):
+    def triples_factory(self) -> TriplesFactory:  # noqa: D401
+        """The triples factory in the model."""
         return self.model.triples_factory
 
     @property
-    def all_entities(self):
-        return self.model.all_entities
+    def all_entities(self) -> np.ndarray:  # noqa: D401
+        """All entities in the triples factory."""
+        return self.model.triples_factory.all_entities
 
     @property
-    def device(self):
+    def device(self):  # noqa: D401
+        """The device used by the model."""
         return self.model.device
 
     @abstractmethod
@@ -51,6 +58,7 @@ class TrainingLoop(ABC):
 
         :return: A pair of the KGE model and the losses per epoch.
         """
+        raise NotImplementedError
 
     def _get_entity_to_vector_dict(self) -> Mapping:
         raise NotImplementedError

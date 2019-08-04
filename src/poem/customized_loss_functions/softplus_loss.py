@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""A loss function for the softplus."""
+
 import torch
 from torch._jit_internal import weak_script_method
 from torch.nn.modules.loss import _Loss
@@ -10,8 +12,9 @@ __all__ = [
 
 
 class SoftplusLoss(_Loss):
+    """A loss function for the softplus."""
 
-    def __init__(self, reduction='mean'):
+    def __init__(self, reduction='mean') -> None:
         super(SoftplusLoss, self).__init__(reduction=reduction)
         self.softplus = torch.nn.Softplus(beta=1, threshold=20)
         if self.reduction == 'mean':
@@ -21,6 +24,7 @@ class SoftplusLoss(_Loss):
 
     @weak_script_method
     def forward(self, scores, labels):
+        """Calculate the loss for the given scores and labels."""
         loss = self.softplus((-1) * labels * scores)
         loss = self._reduction_method(loss)
         return loss

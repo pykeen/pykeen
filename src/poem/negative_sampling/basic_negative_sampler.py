@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Negative sampling algorithm based on the work og of Bordes *et al.*."""
+"""Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
 import numpy as np
 
@@ -13,11 +13,10 @@ __all__ = [
 
 
 class BasicNegativeSampler(NegativeSampler):
-    def __init__(self, all_entities):
-        self.all_entities = all_entities
-        self.num_entities = self.all_entities.shape[0]
+    """A basic negative sampler."""
 
     def sample(self, positive_batch) -> np.ndarray:
+        """Generate negative samples from the positive batch."""
         batch_heads, batch_relations, batch_tails = slice_triples(positive_batch)
 
         num_subj_corrupt = len(positive_batch) // 2

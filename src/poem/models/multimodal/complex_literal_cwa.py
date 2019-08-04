@@ -28,6 +28,7 @@ class ComplexLiteralCWA(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = nn.BCELoss()
 
@@ -82,7 +83,8 @@ class ComplexLiteralCWA(BaseModule):
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
 
-    def forward_cwa(self, doubles):
+    def forward_cwa(self, doubles: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         batch_heads, batch_relations = slice_doubles(doubles)
 
         heads_embedded_real = self.inp_drop(self.entity_embs_real(batch_heads)).view(-1, self.embedding_dim)

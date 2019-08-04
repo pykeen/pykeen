@@ -40,7 +40,6 @@
 +---------------------------+---------------------------------------------+
 """
 
-from . import multimodal, unimodal
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
@@ -61,6 +60,7 @@ from .unimodal import (
 )
 
 __all__ = [
+    'BaseModule',
     'ComplEx',
     'ComplexLiteralCWA',
     'ConvKB',

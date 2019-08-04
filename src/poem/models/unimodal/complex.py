@@ -27,8 +27,7 @@ def _compute_complex_scoring(
         r: torch.tensor,
         t: torch.tensor,
 ) -> torch.tensor:
-    """
-    Evaluates the score function Re(h * r * t) for already broadcastable h, r, t.
+    """Evaluate the score function Re(h * r * t) for already broadcastable h, r, t.
 
     :param h: torch.tensor, shape: (..., 2)
         Head embeddings. Last dimension corresponds to (real, imag).
@@ -68,7 +67,8 @@ class ComplEx(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
-    ):
+    ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = SoftplusLoss(reduction='mean')
 
@@ -103,14 +103,13 @@ class ComplEx(BaseModule):
         xavier_normal_(self.relation_embeddings.weight.data)
 
     def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor):
+        """Compute the labeled mean ranking loss for the positive and negative scores with the ComplEx flavor."""
         loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # view as (batch_size, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
@@ -121,10 +120,8 @@ class ComplEx(BaseModule):
 
         return scores.view(-1, 1)
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         # view as (batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
@@ -135,10 +132,8 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # view as (batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)

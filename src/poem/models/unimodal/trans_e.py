@@ -83,10 +83,8 @@ class TransE(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -97,10 +95,8 @@ class TransE(BaseModule):
 
         return -torch.norm(h + r - t, dim=-1, p=self.scoring_fct_norm, keepdim=True)
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -111,10 +107,8 @@ class TransE(BaseModule):
 
         return -torch.norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, p=self.scoring_fct_norm)
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 

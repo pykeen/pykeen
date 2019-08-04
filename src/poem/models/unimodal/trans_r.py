@@ -57,6 +57,7 @@ class TransR(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
@@ -110,10 +111,8 @@ class TransR(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -121,19 +120,17 @@ class TransR(BaseModule):
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2]).view(-1, 1, self.embedding_dim)
-        M_r = self.relation_projections(batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         # Project entities
-        h_bot = torch.renorm(h @ M_r, p=2, dim=-1, maxnorm=1.).view(-1, self.relation_embedding_dim)
-        t_bot = torch.renorm(t @ M_r, p=2, dim=-1, maxnorm=1.).view(-1, self.relation_embedding_dim)
+        h_bot = torch.renorm(h @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, self.relation_embedding_dim)
+        t_bot = torch.renorm(t @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, self.relation_embedding_dim)
 
         score = -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True) ** 2
         return score
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -141,19 +138,17 @@ class TransR(BaseModule):
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.relation_embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        M_r = self.relation_projections(batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         # Project entities
-        h_bot = torch.renorm(h @ M_r, p=2, dim=-1, maxnorm=1.).view(-1, 1, self.relation_embedding_dim)
-        t_bot = torch.renorm(t @ M_r, p=2, dim=-1, maxnorm=1.).view(-1, self.num_entities, self.relation_embedding_dim)
+        h_bot = torch.renorm(h @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, 1, self.relation_embedding_dim)
+        t_bot = torch.renorm(t @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, self.num_entities, self.relation_embedding_dim)
 
         score = -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
         return score
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -161,11 +156,11 @@ class TransR(BaseModule):
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.relation_embedding_dim)
         t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
-        M_r = self.relation_projections(batch[:, 0]).view(-1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(batch[:, 0]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         # Project entities
-        h_bot = torch.renorm(h @ M_r, p=2, dim=-1, maxnorm=1.).view(-1, self.num_entities, self.relation_embedding_dim)
-        t_bot = torch.renorm(t @ M_r, p=2, dim=-1, maxnorm=1.).view(-1, 1, self.relation_embedding_dim)
+        h_bot = torch.renorm(h @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, self.num_entities, self.relation_embedding_dim)
+        t_bot = torch.renorm(t @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, 1, self.relation_embedding_dim)
 
         score = -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
         return score

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from tqdm import trange
 
-from .base import TrainingLoop
+from .training_loop import TrainingLoop
 from .utils import split_list_in_batches
 
 __all__ = [

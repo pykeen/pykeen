@@ -75,18 +75,18 @@ class RotatE(BaseModule):
         )
 
     def _apply_forward_constraints_if_necessary(self):
+        """Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+
+        Absolute value of complex number
+        |a+ib| = sqrt(a**2 + b**2)
+
+        L2 norm of complex vector:
+        ||x||**2 = sum i=1..d |x_i|**2
+                 = sum i=1..d (x_i.re**2 + x_i.im**2)
+                 = (sum i=1..d x_i.re**2) + (sum i=1..d x_i.im**2)
+                 = ||x.re||**2 + ||x.im||**2
+                 = || [x.re; x.im] ||**2
         """
-        Normalizes the length of relation vectors, if the forward constraint has not been applied yet.
-        """
-        # Absolute value of complex number
-        # |a+ib| = sqrt(a**2 + b**2)
-        #
-        # L2 norm of complex vector:
-        # ||x||**2 = sum i=1..d |x_i|**2
-        #          = sum i=1..d (x_i.re**2 + x_i.im**2)
-        #          = (sum i=1..d x_i.re**2) + (sum i=1..d x_i.im**2)
-        #          = ||x.re||**2 + ||x.im||**2
-        #          = || [x.re; x.im] ||**2
         if not self.forward_constraint_applied:
             functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
             self.forward_constraint_applied = True
@@ -97,8 +97,7 @@ class RotatE(BaseModule):
             relation_indices: torch.tensor,
             inverse: bool = False
     ) -> torch.tensor:
-        """
-        Rotate entity embeddings in complex plane by relation embeddings.
+        """Rotate entity embeddings in complex plane by relation embeddings.
 
         :param entity_indices: torch.tensor, dtype: long, shape: (batch_size,)
             The indices of the entities.
@@ -128,10 +127,8 @@ class RotatE(BaseModule):
 
         return rot_e
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
@@ -149,10 +146,8 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
@@ -170,10 +165,8 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 

@@ -4,7 +4,7 @@
 
 import multiprocessing
 from multiprocessing import Pool
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import spacy
@@ -12,7 +12,7 @@ import spacy
 nlp = spacy.load('en')
 
 
-def _extract_sentences(descriptions: np.array) -> list:
+def _extract_sentences(descriptions: np.array) -> List[str]:
     """Extract first n sentence of description."""
     processed_descriptions = []
 
@@ -38,9 +38,9 @@ def _extract_sentences(descriptions: np.array) -> list:
 def extract_first_n_sentences(
         entity_to_desc: Dict[str, str],
         max_num_sentences: int,
-        num_processes=multiprocessing.cpu_count(),
+        num_processes: int = multiprocessing.cpu_count(),
 ) -> Dict[str, str]:
-    """Extract first n sentences of description, and return mapping of entity to processed descriptions."""
+    """Extract the first n sentences of description, and return mapping of entity to processed descriptions."""
     global MAX_NUM_SENTENCES
     MAX_NUM_SENTENCES = max_num_sentences
 
@@ -61,7 +61,3 @@ def extract_first_n_sentences(
     entity_to_desc = dict(zip(entities, processed_decs))
 
     return entity_to_desc
-
-
-def embedd_texts(texts: list) -> np.array:
-    pass

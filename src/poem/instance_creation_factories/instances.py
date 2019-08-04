@@ -7,25 +7,37 @@ from typing import Dict
 
 import numpy as np
 
-from poem.constants import CWA, OWA
+from ..constants import CWA, OWA
+
+__all__ = [
+    'Instances',
+    'OWAInstances',
+    'CWAInstances',
+    'MultimodalInstances',
+    'MultimodalOWAInstances',
+    'MultimodalCWAInstances',
+]
 
 
 @dataclass
 class Instances:
+    """Triples and mappings to their indices."""
 
     instances: np.ndarray
-    entity_to_id: Dict[str, np.ndarray]
-    relation_to_id: Dict[str, np.ndarray]
+    entity_to_id: Dict[str, int]
+    relation_to_id: Dict[str, int]
 
 
 @dataclass
 class OWAInstances(Instances):
+    """Triples and mappings to their indices for OWA."""
 
     kg_assumption: str = OWA
 
 
 @dataclass
 class CWAInstances(Instances):
+    """Triples and mappings to their indices for CWA."""
 
     labels: np.ndarray
     kg_assumption: str = CWA
@@ -33,6 +45,7 @@ class CWAInstances(Instances):
 
 @dataclass
 class MultimodalInstances(Instances):
+    """Triples and mappings to their indices as well as multimodal data."""
 
     multimodal_data: Dict[str, np.ndarray]
     data_relation_to_id: Dict[str, int]
@@ -40,9 +53,9 @@ class MultimodalInstances(Instances):
 
 @dataclass
 class MultimodalOWAInstances(OWAInstances, MultimodalInstances):
-    pass
+    """Triples and mappings to their indices as well as multimodal data for OWA."""
 
 
 @dataclass
 class MultimodalCWAInstances(CWAInstances, MultimodalInstances):
-    pass
+    """Triples and mappings to their indices as well as multimodal data for CWA."""

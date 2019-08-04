@@ -46,6 +46,7 @@ class NTN(BaseModule):
             random_seed: Optional[int] = None,
             non_linearity=nn.Tanh(),
     ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
@@ -81,10 +82,8 @@ class NTN(BaseModule):
         # u_R: (k,)
         self.u_relation = nn.Embedding(self.num_relations, self.num_slices)
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # Get entity embeddings
         h = self.entity_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 2])
@@ -110,10 +109,8 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1, keepdim=True)
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         # General dimension usage: (b, n, s, ...)
         # b: batch_size
         # n: num_entities
@@ -149,10 +146,8 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1)
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # General dimension usage: (b, n, s, ...)
         # b: batch_size
         # n: num_entities
