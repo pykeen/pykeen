@@ -76,7 +76,6 @@ class TestComplex(_ModelTestCase, unittest.TestCase):
     model_cls = ComplEx
 
 
-@skip_until_fixed
 class TestConvKB(_ModelTestCase, unittest.TestCase):
     """Test the ConvKB model."""
 
@@ -101,7 +100,6 @@ class TestNTN(_ModelTestCase, unittest.TestCase):
     model_cls = NTN
 
 
-@skip_until_fixed
 class TestRESCAL(_ModelTestCase, unittest.TestCase):
     """Test the RESCAL model."""
 
