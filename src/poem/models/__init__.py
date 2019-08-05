@@ -43,19 +43,7 @@
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx,
-    ConvKB,
-    DistMult,
-    ERMLP,
-    HolE,
-    NTN,
-    RESCAL,
-    RotatE,
-    StructuredEmbedding,
-    TransD,
-    TransE,
-    TransH,
-    TransR,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, NTN, RESCAL, RotatE, StructuredEmbedding, TransD, TransE, TransH, TransR,
     UnstructuredModel,
 )
 
