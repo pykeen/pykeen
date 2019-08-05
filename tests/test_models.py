@@ -3,7 +3,7 @@
 """Test that models can be executed."""
 
 import unittest
-from typing import ClassVar, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 
@@ -22,13 +22,14 @@ class _ModelTestCase:
     """A test case for quickly defining common tests for KGE models."""
 
     model_cls: ClassVar[Type[BaseModule]]
+    model_kwargs: Optional[Mapping[str, Any]] = None
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
         self.batch_size = 16
         self.embedding_dim = 8
         self.factory = TriplesFactory(path=TEST_DATA)
-        self.model = self.model_cls(self.factory, embedding_dim=self.embedding_dim)
+        self.model = self.model_cls(self.factory, embedding_dim=self.embedding_dim, **(self.model_kwargs or {}))
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -80,6 +81,9 @@ class TestConvKB(_ModelTestCase, unittest.TestCase):
     """Test the ConvKB model."""
 
     model_cls = ConvKB
+    model_kwargs = {
+        'num_filters': 32,
+    }
 
 
 class TestDistMult(_ModelTestCase, unittest.TestCase):
