@@ -3,9 +3,10 @@
 """Test that models can be executed."""
 
 import unittest
-from typing import ClassVar, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from torch.optim import Adagrad
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import BaseModule
@@ -13,6 +14,7 @@ from poem.models.unimodal import (
     ComplEx, ConvKB, DistMult, HolE, NTN, RESCAL, RotatE, StructuredEmbedding, TransD,
     TransE, TransH, TransR, UnstructuredModel,
 )
+from poem.training import CWATrainingLoop, OWATrainingLoop
 from tests.constants import TEST_DATA
 
 skip_until_fixed = unittest.skip('Something wrong with model. Needs fixing')
@@ -22,13 +24,18 @@ class _ModelTestCase:
     """A test case for quickly defining common tests for KGE models."""
 
     model_cls: ClassVar[Type[BaseModule]]
+    model_kwargs: Optional[Mapping[str, Any]] = None
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
         self.batch_size = 16
         self.embedding_dim = 8
         self.factory = TriplesFactory(path=TEST_DATA)
-        self.model = self.model_cls(self.factory, embedding_dim=self.embedding_dim)
+        self.model = self.model_cls(
+            self.factory,
+            embedding_dim=self.embedding_dim,
+            **(self.model_kwargs or {}),
+        )
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -59,6 +66,18 @@ class _ModelTestCase:
             self.fail(msg='Forward Inverse CWA not yet implemented')
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(batch, scores)
+
+    def test_train_owa(self) -> None:
+        """Test that OWA training does not fail."""
+        optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
+        loop = OWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+        loop.train(num_epochs=5, batch_size=128)
+
+    def test_train_cwa(self) -> None:
+        """Test that CWA training does not fail."""
+        optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
+        loop = CWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+        loop.train(num_epochs=5, batch_size=128)
 
 
 class _DistanceModelTestCase(_ModelTestCase):
