@@ -82,7 +82,7 @@ class ComplEx(BaseModule):
 
         self.real_embedding_dim = embedding_dim
         self.neg_label = neg_label
-        self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False)
+        self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False, device=self.device)[0]
         self.current_regularization_term = None
         self.criterion = criterion
 
@@ -104,7 +104,7 @@ class ComplEx(BaseModule):
 
     def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor):
         """Compute the labeled mean ranking loss for the positive and negative scores with the ComplEx flavor."""
-        loss = super()._compute_label_loss(predictions=predictions, labels=labels)
+        loss = super().compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
