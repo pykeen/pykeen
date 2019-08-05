@@ -87,7 +87,7 @@ class RESCAL(BaseModule):
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).transpose(0, 1).view(-1, self.embedding_dim, 1)
+        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim, 1)
 
         scores = h @ r @ t
 
