@@ -2,9 +2,20 @@
 
 """A loss function for the softplus."""
 
+import logging
+
 import torch
-from torch._jit_internal import weak_script_method
 from torch.nn.modules.loss import _Loss
+
+
+try:
+    from torch._jit_internal import weak_script_method
+except ImportError:
+    logging.warn('torch._jit_internal is not available')
+
+    def weak_script_method(f):
+        """Return the original function because weak_script_method is not available."""
+        return f
 
 __all__ = [
     'SoftplusLoss',
@@ -14,8 +25,8 @@ __all__ = [
 class SoftplusLoss(_Loss):
     """A loss function for the softplus."""
 
-    def __init__(self, reduction='mean') -> None:
-        super(SoftplusLoss, self).__init__(reduction=reduction)
+    def __init__(self, reduction: str = 'mean') -> None:
+        super().__init__(reduction=reduction)
         self.softplus = torch.nn.Softplus(beta=1, threshold=20)
         if self.reduction == 'mean':
             self._reduction_method = torch.mean
