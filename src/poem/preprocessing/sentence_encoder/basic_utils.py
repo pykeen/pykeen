@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Utilities for encoding sentences."""
+
 from typing import Dict
 
 import numpy as np

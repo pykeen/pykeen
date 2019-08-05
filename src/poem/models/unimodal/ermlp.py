@@ -34,13 +34,14 @@ class ERMLP(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            entity_embeddings = entity_embeddings,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -58,15 +59,16 @@ class ERMLP(BaseModule):
 
         self.relation_embeddings = relation_embeddings
 
-        if None in [self.entity_embeddings,self.relation_embeddings]:
+        if None in [self.entity_embeddings, self.relation_embeddings]:
             self._init_embeddings()
 
     def _init_embeddings(self):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def forward_owa(self, triples):
-        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(triples)
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
+        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(batch)
         x_s = torch.cat([head_embeddings, relation_embeddings, tail_embeddings], 1)
         scores = self.mlp(x_s)
         return scores

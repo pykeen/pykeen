@@ -1,3 +1,6 @@
+
+"""An implementation of TransH."""
+
 from typing import Optional
 
 import torch
@@ -77,10 +80,8 @@ class TransH(BaseModule):
         entity_constraint = torch.sum(functional.relu(torch.norm(self.entity_embeddings.weight, dim=-1) ** 2 - 1.0))
         self.current_regularization_term = ortho_constraint + entity_constraint
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -99,10 +100,8 @@ class TransH(BaseModule):
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -121,10 +120,8 @@ class TransH(BaseModule):
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -157,6 +154,7 @@ class TransH(BaseModule):
             predictions: torch.tensor,
             labels: torch.tensor,
     ) -> torch.tensor:
+        """Compute the labeled mean ranking loss for the positive and negative scores with TransH specific flavor."""
         loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss

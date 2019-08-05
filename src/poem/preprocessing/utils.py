@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""Utilities for pre-processing triples."""
+
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 
@@ -9,15 +11,15 @@ from poem.utils import slice_triples
 
 log = logging.getLogger(__name__)
 
-def load_triples(path, delimiter='\t') -> np.array:
+
+def load_triples(path: Union[str, TextIO], delimiter='\t') -> np.array:
     """Load triples saved as tab separated values."""
-    triples = np.loadtxt(
+    return np.loadtxt(
         fname=path,
         dtype=str,
         comments='@Comment@ Subject Predicate Object',
         delimiter=delimiter,
     )
-    return triples
 
 
 def create_entity_and_relation_mappings(triples: np.array) -> Tuple[Dict[str, int], Dict[str, int]]:

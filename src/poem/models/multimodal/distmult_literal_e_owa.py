@@ -101,8 +101,9 @@ class DistMultLiteral(BaseModule):
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
-    def forward(self, triples):
-        heads, relations, tails = slice_triples(triples)
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
+        heads, relations, tails = slice_triples(batch)
         head_embs, relation_embs, tail_embs = self._get_triple_embeddings(
             heads=heads,
             relations=relations,
@@ -121,7 +122,9 @@ class DistMultLiteral(BaseModule):
         scores = - torch.sum(g_heads * relation_embs * g_tails, dim=1)
         return scores
 
+    # TODO check if this is the same as the BaseModule
     def compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+        """Compute the mean ranking loss for the positive and negative scores."""
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
         assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \

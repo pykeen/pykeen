@@ -61,28 +61,22 @@ class UnstructuredModel(BaseModule):
             b=entity_embeddings_init_bound,
         )
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         h = self.entity_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 2])
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm, keepdim=True) ** 2
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
         t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
 

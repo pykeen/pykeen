@@ -54,19 +54,19 @@ from .trans_r import TransR
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
-    'ConvKB',
     'ComplEx',
+    'ConvKB',
     'DistMult',
     'ERMLP',
     'HolE',
     'NTN',
     'RESCAL',
+    'RotatE',
     'SimplE',
     'StructuredEmbedding',
     'TransD',
     'TransE',
     'TransH',
     'TransR',
-    'RotatE',
     'UnstructuredModel',
 ]

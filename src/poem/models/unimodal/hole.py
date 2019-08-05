@@ -46,6 +46,7 @@ class HolE(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
@@ -85,10 +86,8 @@ class HolE(BaseModule):
             b=+relation_embeddings_init_bound,
         )
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2])
@@ -112,10 +111,8 @@ class HolE(BaseModule):
 
         return scores
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings.weight
@@ -138,10 +135,8 @@ class HolE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 1])

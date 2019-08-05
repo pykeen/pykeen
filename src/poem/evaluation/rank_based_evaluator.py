@@ -55,35 +55,38 @@ def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
     adjusted_avg_rank = avg_rank / ((all_scores.shape[1] + 1) * 0.5)
     return best_rank.detach().cpu().numpy(), adjusted_avg_rank.detach().cpu().numpy()
 
-class RankBasedEvaluator(Evaluator):
-    """
-    The evaluator module for all KGE models.
 
-    :param model: Basemodule
-        The fitted KGE model that is to be evaluated.
-    :param filter_neg_triples: bool
-        Indicating whether negative triples should be filtered, by default 'False'
-    :param hits_at_k: List[int], optional
-        A list containing all integers that represent the 'k's to be used for the hits@k evaluation,
-        by default [1, 3, 5, 10]
-    :return: None
-    """
+class RankBasedEvaluator(Evaluator):
+    """A rank-based evaluator for KGE models."""
+
     def __init__(
             self,
             model: BaseModule = None,
             filter_neg_triples: bool = False,
             hits_at_k: Optional[List[int]] = None,
     ) -> None:
+        """Initialize the evaluator.
+
+        :param model
+            The fitted KGE model that is to be evaluated.
+        :param filter_neg_triples
+            Indicating whether negative triples should be filtered, by default 'False'
+        :param hits_at_k
+            A list containing all integers that represent the 'k's to be used for the hits@k evaluation,
+            by default [1, 3, 5, 10]
+        """
         super().__init__(model=model)
         self.filter_neg_triples = filter_neg_triples
         self.hits_at_k = hits_at_k if hits_at_k is not None else [1, 3, 5, 10]
 
     @property
-    def train_triples(self):
+    def train_triples(self):  # noqa: D401
+        """The training triples."""
         return self.model.triples_factory.triples
 
     @property
-    def all_entities(self):
+    def all_entities(self):  # noqa: D401
+        """All triples in the factory."""
         return self.model.triples_factory.all_entities
 
     @staticmethod
@@ -110,13 +113,13 @@ class RankBasedEvaluator(Evaluator):
         # Short objects batch list
         pairs_filter = (subject_filter & relation_filter)
         objects_in_triples = (all_pos_triples[:, 2:3]).view(1, -1).repeat(batch_size, 1)[pairs_filter]
-        row_indices = pairs_filter.nonzero()[:,0]
+        row_indices = pairs_filter.nonzero()[:, 0]
         object_batch[row_indices, objects_in_triples] = 1
 
         # Short subjects batch list
         pairs_filter = (object_filter & relation_filter)
         subjects_in_triples = (all_pos_triples[:, 0:1]).view(1, -1).repeat(batch_size, 1)[pairs_filter]
-        row_indices = pairs_filter.nonzero()[:,0]
+        row_indices = pairs_filter.nonzero()[:, 0]
         subject_batch[row_indices, subjects_in_triples] = 1
 
         # TODO: Create warning when all triples will be filtered
@@ -171,13 +174,13 @@ class RankBasedEvaluator(Evaluator):
         scores_of_corrupted_subjects_batch = self.model.predict_scores_all_subjects(batch[:, 1:3])
         score_of_positive_subject_batch = (
             scores_of_corrupted_subjects_batch[torch.arange(0, batch_size), subjects.flatten()]
-        ).view(-1,1)
+        ).view(-1, 1)
         scores_of_corrupted_subjects_batch[subject_batch] = score_of_positive_subject_batch.min() - 1
 
         scores_of_corrupted_objects_batch = self.model.predict_scores_all_objects(batch[:, 0:2])
         score_of_positive_object_batch = (
             scores_of_corrupted_objects_batch[torch.arange(0, batch_size), objects.flatten()]
-        ).view(-1,1)
+        ).view(-1, 1)
         scores_of_corrupted_objects_batch[object_batch] = score_of_positive_object_batch.min() - 1
 
         rank_of_positive_subject_based, adj_rank_of_positive_subject_based = _compute_rank_from_scores(
@@ -187,7 +190,6 @@ class RankBasedEvaluator(Evaluator):
             true_score=score_of_positive_object_batch, all_scores=scores_of_corrupted_objects_batch,
         )
 
-
         return (
             rank_of_positive_subject_based,
             rank_of_positive_object_based,
@@ -196,8 +198,7 @@ class RankBasedEvaluator(Evaluator):
         )
 
     def evaluate(self, test_triples: np.ndarray, batch_size: int = 1) -> MetricResults:
-        """
-        Evaluating a given KGE model based on a test-set of triples.
+        """Evaluate a given KGE model based on a test-set of triples.
 
         :param test_triples: np.ndarray, shape: (number of triples, 3)
             The mapped triples to be used for evaluation.
@@ -237,10 +238,10 @@ class RankBasedEvaluator(Evaluator):
         num_triples = test_triples.shape[0]
 
         with tqdm(
-                desc = f'⚡️ Evaluating triples ',
-                total = num_triples,
-                unit = 'triple(s)',
-                unit_scale = True,
+                desc=f'⚡️ Evaluating triples ',
+                total=num_triples,
+                unit='triple(s)',
+                unit_scale=True,
         ) as progress_bar:
             for i, batch in enumerate(batches):
                 subjects = batch[:, 0:1]

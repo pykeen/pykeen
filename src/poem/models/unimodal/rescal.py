@@ -8,7 +8,6 @@ import torch
 from torch import nn
 
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_triples, slice_doubles
 from ..base import BaseModule
 from ...typing import OptionalLoss
 
@@ -38,6 +37,7 @@ class RESCAL(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
+        """Initialize the model."""
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
@@ -58,10 +58,8 @@ class RESCAL(BaseModule):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 
-    def forward_owa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass for training with the OWA."""
         # Get embeddings
         # shape: (b, d)
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
@@ -74,11 +72,8 @@ class RESCAL(BaseModule):
 
         return scores[:, :, 0]
 
-    def forward_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
-        # Get embeddings
+    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using right side (object) prediction for training with the CWA."""
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
@@ -87,10 +82,8 @@ class RESCAL(BaseModule):
 
         return scores[:, 0, :]
 
-    def forward_inverse_cwa(
-            self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+        """Forward pass using left side (subject) prediction for training with the CWA."""
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)

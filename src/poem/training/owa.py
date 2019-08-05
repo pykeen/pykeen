@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from tqdm import trange
 
-from .base import TrainingLoop
+from .training_loop import TrainingLoop
 from .utils import split_list_in_batches
 from ..models import BaseModule
 from ..negative_sampling import BasicNegativeSampler, NegativeSampler
@@ -19,6 +19,8 @@ __all__ = [
 
 
 class OWATrainingLoop(TrainingLoop):
+    """A training loop using the OWA."""
+
     negative_sampler: NegativeSampler
 
     def __init__(
@@ -27,6 +29,7 @@ class OWATrainingLoop(TrainingLoop):
             optimizer: Optional[torch.optim.Optimizer] = None,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
+        """Initialize the training loop."""
         super().__init__(
             model=model,
             optimizer=optimizer,
@@ -52,6 +55,7 @@ class OWATrainingLoop(TrainingLoop):
             label_smoothing_epsilon: float = 0.1,
             tqdm_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> List[float]:
+        """Train the KGE model."""
         training_instances = self.model.triples_factory.create_owa_instances()
         pos_triples = training_instances.instances
         num_pos_triples = pos_triples.shape[0]
@@ -99,8 +103,10 @@ class OWATrainingLoop(TrainingLoop):
                     labels = torch.cat([ones, zeros], 0)
 
                     if label_smoothing:
-                        labels = (labels * (1.0 - label_smoothing_epsilon)) \
-                                 + (label_smoothing_epsilon / (num_entities - 1))
+                        # TODO give variables better names
+                        _a = labels * (1.0 - label_smoothing_epsilon)
+                        _b = label_smoothing_epsilon / (num_entities - 1)
+                        labels = _a + _b
 
                     loss = self.model.compute_label_loss(predictions=predictions, labels=labels)
 
