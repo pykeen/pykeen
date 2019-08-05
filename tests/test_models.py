@@ -10,7 +10,7 @@ import torch
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import BaseModule
 from poem.models.unimodal import (
-    ComplEx, ConvKB, DistMult, HolE, NTN, RESCAL, RotatE, StructuredEmbedding, TransD,
+    ComplEx, ConvKB, DistMult, HolE, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
     TransE, TransH, TransR, UnstructuredModel,
 )
 from tests.constants import TEST_DATA
@@ -114,6 +114,12 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
     """Test the RotatE model."""
 
     model_cls = RotatE
+
+
+class TestSimplE(_ModelTestCase, unittest.TestCase):
+    """Test the SimplE model."""
+
+    model_cls = SimplE
 
 
 class TestSE(_ModelTestCase, unittest.TestCase):

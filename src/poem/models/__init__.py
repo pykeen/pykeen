@@ -36,6 +36,8 @@
 +---------------------------+---------------------------------------------+
 | TransR                    | :py:class:`poem.models.TransR`              |
 +---------------------------+---------------------------------------------+
+| SimplE                    | :py:class:`poem.models.SimplE`              |
++---------------------------+---------------------------------------------+
 | Unstructured Model (UM)   | :py:class:`poem.models.UnstructuredModel`   |
 +---------------------------+---------------------------------------------+
 """
@@ -43,7 +45,7 @@
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, NTN, RESCAL, RotatE, StructuredEmbedding, TransD, TransE, TransH, TransR,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD, TransE, TransH, TransR,
     UnstructuredModel,
 )
 
@@ -59,6 +61,7 @@ __all__ = [
     'NTN',
     'RESCAL',
     'RotatE',
+    'SimplE',
     'StructuredEmbedding',
     'TransD',
     'TransE',
