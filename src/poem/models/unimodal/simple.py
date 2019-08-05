@@ -27,8 +27,6 @@ class SimplE(BaseModule):
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
     """
 
-    margin_ranking_loss_size_average: bool = True
-
     def __init__(
             self,
             triples_factory: TriplesFactory,
