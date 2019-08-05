@@ -52,6 +52,7 @@ class SimplE(BaseModule):
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         self.inverse_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
+    # noqa: D102
     def forward_owa(
             self,
             batch: torch.tensor,
@@ -79,6 +80,7 @@ class SimplE(BaseModule):
 
         return scores
 
+    # noqa: D102
     def forward_cwa(
             self,
             batch: torch.tensor,
@@ -103,6 +105,7 @@ class SimplE(BaseModule):
 
         return scores
 
+    # noqa: D102
     def forward_inverse_cwa(
             self,
             batch: torch.tensor,
