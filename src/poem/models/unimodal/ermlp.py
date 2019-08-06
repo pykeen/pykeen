@@ -11,7 +11,6 @@ from torch import nn
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
 from ...typing import OptionalLoss
-from ...utils import slice_triples
 
 __all__ = ['ERMLP']
 
@@ -22,8 +21,6 @@ class ERMLP(BaseModule):
     This model uses a neural network-based approach.
     """
 
-    margin_ranking_loss_size_average: bool = True
-
     def __init__(
             self,
             triples_factory: TriplesFactory,
@@ -33,10 +30,14 @@ class ERMLP(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            hidden_dim: Optional[int] = None,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
+        if hidden_dim is None:
+            hidden_dim = embedding_dim
 
         super().__init__(
             triples_factory=triples_factory,
@@ -47,14 +48,15 @@ class ERMLP(BaseModule):
             random_seed=random_seed,
         )
 
-        """The mulit layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
+        self.hidden_dim = hidden_dim
+        """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
            with self.embedding_dim neurons and output layer with one neuron.
            The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
         """
         self.mlp = nn.Sequential(
-            nn.Linear(3 * self.embedding_dim, self.embedding_dim),
+            nn.Linear(3 * self.embedding_dim, self.hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.embedding_dim, 1),
+            nn.Linear(self.hidden_dim, 1),
         )
 
         self.relation_embeddings = relation_embeddings
@@ -66,31 +68,70 @@ class ERMLP(BaseModule):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
-        """Forward pass for training with the OWA."""
-        head_embeddings, relation_embeddings, tail_embeddings = self._get_triple_embeddings(batch)
-        x_s = torch.cat([head_embeddings, relation_embeddings, tail_embeddings], 1)
-        scores = self.mlp(x_s)
+    def forward_owa(  # noqa: D102
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings(batch[:, 2])
+
+        # Concatenate them
+        x_s = torch.cat([h, r, t], dim=-1)
+
+        # Compute scores
+        return self.mlp(x_s)
+
+    def forward_cwa(  # noqa: D102
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0])
+        r = self.relation_embeddings(batch[:, 1])
+        t = self.entity_embeddings.weight
+
+        # First layer can be unrolled
+        layers = self.mlp.children()
+        first_layer = next(layers)
+        w = first_layer.weight
+        i = 2 * self.hidden_dim
+        w_hr = w[None, :, :i] @ torch.cat([h, r], dim=-1).unsqueeze(-1)
+        w_t = w[None, :, i:] @ t.unsqueeze(-1)
+        b = first_layer.bias
+        scores = (b[None, None, :] + w_hr[:, None, :, 0]) + w_t[None, :, :, 0]
+
+        # Send scores through rest of the network
+        scores = scores.view(-1, self.hidden_dim)
+        for remaining_layer in layers:
+            scores = remaining_layer(scores)
+        scores = scores.view(-1, self.num_entities)
         return scores
 
-    # TODO: Implement forward_cwa
+    def forward_inverse_cwa(  # noqa: D102
+            self,
+            batch: torch.tensor,
+    ) -> torch.tensor:
+        # Get embeddings
+        h = self.entity_embeddings.weight
+        r = self.relation_embeddings(batch[:, 0])
+        t = self.entity_embeddings(batch[:, 1])
 
-    def _get_triple_embeddings(self, triples):
-        heads, relations, tails = slice_triples(triples)
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=relations,
-                embedding_module=self.relation_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-        )
+        # First layer can be unrolled
+        layers = self.mlp.children()
+        first_layer = next(layers)
+        w = first_layer.weight
+        i = self.hidden_dim
+        w_h = w[None, :, :i] @ h.unsqueeze(-1)
+        w_rt = w[None, :, i:] @ torch.cat([r, t], dim=-1).unsqueeze(-1)
+        b = first_layer.bias
+        scores = (b[None, None, :] + w_rt[:, None, :, 0]) + w_h[None, :, :, 0]
+
+        # Send scores through rest of the network
+        scores = scores.view(-1, self.hidden_dim)
+        for remaining_layer in layers:
+            scores = remaining_layer(scores)
+        scores = scores.view(-1, self.num_entities)
+
+        return scores

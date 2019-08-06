@@ -10,7 +10,7 @@ import torch
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import BaseModule
 from poem.models.unimodal import (
-    ComplEx, ConvKB, DistMult, HolE, KG2E, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
     TransE, TransH, TransR, UnstructuredModel,
 )
 from tests.constants import TEST_DATA
@@ -92,6 +92,12 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
     """Test the DistMult model."""
 
     model_cls = DistMult
+
+
+class TestERMLP(_ModelTestCase, unittest.TestCase):
+    """Test the ERMLP model."""
+
+    model_cls = ERMLP
 
 
 class TestHolE(_ModelTestCase, unittest.TestCase):
