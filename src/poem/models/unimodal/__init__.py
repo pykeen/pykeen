@@ -28,6 +28,8 @@
 
 .. [nickel2016] Nickel, M. *et al.* (2016) `Holographic Embeddings of Knowledge Graphs
                 <https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828>`_. AAAI 2016.
+.. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
+
 .. [sun2019] Sun, Z., *et al.* (2019) `RotatE: Knowledge Graph Embeddings by relational rotation in complex space
              <https://arxiv.org/pdf/1902.10197v1.pdf>`_. ICLR 2019.
 .. [trouillon2016] Trouillon, T., *et al.* (2016) Complex embeddings for simple link prediction.
@@ -46,6 +48,7 @@ from .ermlp import ERMLP
 from .hole import HolE
 from .kg2e import KG2E
 from .ntn import NTN
+from .proj_e import ProjE
 from .rescal import RESCAL
 from .rotate import RotatE
 from .simple import SimplE
@@ -64,6 +67,7 @@ __all__ = [
     'HolE',
     'KG2E',
     'NTN',
+    'ProjE',
     'RESCAL',
     'RotatE',
     'SimplE',

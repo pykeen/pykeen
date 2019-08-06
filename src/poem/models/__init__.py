@@ -24,6 +24,8 @@
 +---------------------------+---------------------------------------------+
 | NTN                       | :py:class:`poem.models.NTN`                 |
 +---------------------------+---------------------------------------------+
+| ProjE                     | :py:class:`poem.models.ProjE`               |
++---------------------------+---------------------------------------------+
 | RESCAL                    | :py:class:`poem.models.RESCAL`              |
 +---------------------------+---------------------------------------------+
 | RotatE                    | :py:class:`poem.models.RotatE`              |
@@ -47,8 +49,8 @@
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD, TransE, TransH, TransR,
-    UnstructuredModel,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD, TransE,
+    TransH, TransR, UnstructuredModel,
 )
 
 __all__ = [
@@ -62,6 +64,7 @@ __all__ = [
     'HolE',
     'KG2E',
     'NTN',
+    'ProjE',
     'RESCAL',
     'RotatE',
     'SimplE',

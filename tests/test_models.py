@@ -10,7 +10,7 @@ import torch
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import BaseModule
 from poem.models.unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
     TransE, TransH, TransR, UnstructuredModel,
 )
 from tests.constants import TEST_DATA
@@ -128,6 +128,12 @@ class TestNTN(_ModelTestCase, unittest.TestCase):
     """Test the NTN model."""
 
     model_cls = NTN
+
+
+class TestProjE(_ModelTestCase, unittest.TestCase):
+    """Test the ProjE model."""
+
+    model_cls = ProjE
 
 
 class TestRESCAL(_ModelTestCase, unittest.TestCase):
