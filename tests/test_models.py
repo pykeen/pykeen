@@ -10,7 +10,7 @@ import torch
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from poem.models import BaseModule
 from poem.models.unimodal import (
-    ComplEx, ConvKB, DistMult, HolE, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
+    ComplEx, ConvKB, DistMult, HolE, KG2E, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
     TransE, TransH, TransR, UnstructuredModel,
 )
 from tests.constants import TEST_DATA
@@ -33,6 +33,8 @@ class _ModelTestCase:
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
+        # check for finite values by default
+        assert torch.all(torch.isfinite(scores)).item()
 
     def test_forward_owa(self) -> None:
         """Test the model's ``forward_owa()`` function."""
@@ -96,6 +98,24 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
     """Test the HolE model."""
 
     model_cls = HolE
+
+
+class TestCaseKG2EWithKL(_ModelTestCase, unittest.TestCase):
+    """Test the KG2E model with KL similarity."""
+
+    model_cls = KG2E
+    model_kwargs = {
+        'dist_similarity': 'KL',
+    }
+
+
+class TestCaseKG2EWithEL(_ModelTestCase, unittest.TestCase):
+    """Test the KG2E model with EL similarity."""
+
+    model_cls = KG2E
+    model_kwargs = {
+        'dist_similarity': 'EL',
+    }
 
 
 class TestNTN(_ModelTestCase, unittest.TestCase):

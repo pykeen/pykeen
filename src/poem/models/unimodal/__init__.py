@@ -16,6 +16,8 @@
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
 .. [kazemi2018] S. M. Kazemi, D. Poole (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs`
             <https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs>_. NIPS'18
+.. [he2015] Shizhu He, *et al.* (2017). `Learning to Represent Knowledge Graphs with Gaussian Embedding
+            <http://ir.ia.ac.cn/bitstream/173211/20634/1/Learning%20to%20Represent%20Knowledge%20Graphs%20with%20Gaussian%20Embedding.pdf>`_. CIKM'17.
 .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion
              <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
 .. [nguyen2018] Nguyen, D. Q., *et al* (2018) `A Novel Embedding Model for Knowledge Base CompletionBased on
@@ -42,6 +44,7 @@ from .conv_kb import ConvKB
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .hole import HolE
+from .kg2e import KG2E
 from .ntn import NTN
 from .rescal import RESCAL
 from .rotate import RotatE
@@ -59,6 +62,7 @@ __all__ = [
     'DistMult',
     'ERMLP',
     'HolE',
+    'KG2E',
     'NTN',
     'RESCAL',
     'RotatE',

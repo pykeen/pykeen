@@ -20,6 +20,8 @@
 +---------------------------+---------------------------------------------+
 | HolE                      | :py:class:`poem.models.HolE`                |
 +---------------------------+---------------------------------------------+
+| KG2E                      | :py:class:`poem.models.KG2E`                |
++---------------------------+---------------------------------------------+
 | NTN                       | :py:class:`poem.models.NTN`                 |
 +---------------------------+---------------------------------------------+
 | RESCAL                    | :py:class:`poem.models.RESCAL`              |
@@ -45,7 +47,7 @@
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD, TransE, TransH, TransR,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD, TransE, TransH, TransR,
     UnstructuredModel,
 )
 
@@ -58,6 +60,7 @@ __all__ = [
     'DistMultLiteral',
     'ERMLP',
     'HolE',
+    'KG2E',
     'NTN',
     'RESCAL',
     'RotatE',
