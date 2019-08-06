@@ -6,11 +6,11 @@ from typing import Optional, TextIO, Union
 
 import numpy as np
 
-from poem.constants import NUMERIC_LITERALS
-from poem.instance_creation_factories.instances import MultimodalCWAInstances, MultimodalOWAInstances
-from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.preprocessing.instance_creation_utils import create_matrix_of_literals
-from poem.preprocessing.utils import load_triples
+from .instances import MultimodalCWAInstances, MultimodalOWAInstances
+from .triples_factory import TriplesFactory
+from ..constants import NUMERIC_LITERALS
+from ..preprocessing.instance_creation_utils import create_matrix_of_literals
+from ..preprocessing.utils import load_triples
 
 __all__ = [
     'TriplesNumericLiteralsFactory',

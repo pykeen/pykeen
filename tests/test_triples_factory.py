@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from poem.instance_creation_factories.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
+from poem.instance_creation_factories import TriplesFactory, TriplesNumericLiteralsFactory
 
 triples = np.array(
     [
@@ -66,3 +66,31 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
         self.assertEqual(literals[id_chocolate_cake, id_age], 0)
         self.assertEqual(literals[id_chocolate_cake, id_height], 0)
         self.assertEqual(literals[id_chocolate_cake, id_num_children], 0)
+
+    def test_triples(self):
+        """Test properties of the triples factory."""
+        triples_factory = TriplesFactory(triples=triples)
+        self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
+        self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
+
+    def test_inverse_triples(self):
+        """Test that the right number of entities and triples exist after inverting them."""
+        triples_factory = TriplesFactory(triples=triples, create_inverse_triples=True)
+        self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
+        self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
+
+        relations = set(triples[:, 1])
+        entities = set(triples[:, 0]).union(triples[:, 2])
+        self.assertEqual(len(entities), triples_factory.num_entities)
+        self.assertEqual(2, len(relations), msg='Wrong number of relations in set')
+        self.assertEqual(2 * len(relations), triples_factory.num_relations, msg='Wrong number of relations in factory')
+
+        self.assertIn('likes_inverse', triples_factory.relation_to_id)
+        self.assertEqual(
+            triples_factory.relation_to_id['likes'] + triples_factory.num_relations / 2,
+            triples_factory.relation_to_id['likes_inverse']
+        )
+        self.assertEqual(
+            triples_factory.relation_to_id['likes'] + triples_factory.num_relations / 2,
+            triples_factory.get_inverse_relation_id('likes')
+        )

@@ -78,6 +78,12 @@ class TriplesFactory:
         """The number of unique relations."""
         return len(self.relation_to_id)
 
+    def get_inverse_relation_id(self, relation: str) -> int:
+        """Get the inverse relation identifier for the given relation."""
+        if not self.create_inverse_triples:
+            raise ValueError('Can not get inverse triple, they have not been created.')
+        return self.relation_to_id[relation] + self.num_relations // 2
+
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}(path="{self.path}")'
 
@@ -88,9 +94,12 @@ class TriplesFactory:
         inverse_triples[:, 1:2] += self.num_relations
         self.mapped_triples = np.concatenate((self.mapped_triples, inverse_triples))
         log.info(f'Created inverse triples. It took {timeit.default_timer() - start:.2f} seconds')
-        # The number of relations has to be doubled when using inverse triples
-        # FIXME need to update self.relation_to_id dictionary!
-        self.num_relations = self.num_relations * 2
+        # The newly added inverse relations have to be added to the relation_id mapping
+        inverse_triples_to_id_mapping = {
+            f"{relation}_inverse": relation_id + self.num_relations
+            for relation, relation_id in self.relation_to_id.items()
+        }
+        self.relation_to_id.update(inverse_triples_to_id_mapping)
 
     def create_owa_instances(self) -> OWAInstances:
         """Create OWA instances for this factory's triples."""
