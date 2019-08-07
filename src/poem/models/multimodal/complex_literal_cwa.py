@@ -8,15 +8,15 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import NUMERIC_LITERALS
-from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_doubles
-from ..base import BaseModule
+from .base_module import MultimodalBaseModule
+from ...constants import NUMERIC_LITERALS
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
+from ...utils import slice_doubles
 
 
 # TODO: Check entire build of the model
-class ComplexLiteralCWA(BaseModule):
+class ComplexLiteralCWA(MultimodalBaseModule):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
 
     def __init__(

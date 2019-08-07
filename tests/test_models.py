@@ -2,20 +2,23 @@
 
 """Test that models can be executed."""
 
+import importlib
+import os
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 
+import poem.models
 from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models import BaseModule
-from poem.models.unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
-    TransE, TransH, TransR, UnstructuredModel,
+from poem.models import (
+    BaseModule, ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE,
+    StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
+from poem.models.multimodal import MultimodalBaseModule
 from tests.constants import TEST_DATA
 
-skip_until_fixed = unittest.skip('Something wrong with model. Needs fixing')
+SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule'}
 
 
 class _ModelTestCase:
@@ -188,3 +191,64 @@ class TestUM(_DistanceModelTestCase, unittest.TestCase):
     """Test the Unstructured Model."""
 
     model_cls = UnstructuredModel
+
+
+class TestTesting(unittest.TestCase):
+    """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
+
+    def test_testing(self):
+        """Check that there's a test for all models.
+
+        For now, this is excluding multimodel models. Not sure how to test those yet.
+        """
+        model_names = {
+            cls.__name__
+            for cls in BaseModule.__subclasses__()
+        } - SKIP_MODULES
+
+        tested_model_names = {
+            value.model_cls.__name__
+            for name, value in globals().items()
+            if (
+                isinstance(value, type)
+                and issubclass(value, _ModelTestCase)
+                and not name.startswith('_')
+                and not issubclass(value.model_cls, MultimodalBaseModule)
+            )
+        } - SKIP_MODULES
+
+        self.assertEqual(model_names, tested_model_names, msg='Some models have not been tested')
+
+    def test_importing(self):
+        """Test that all models are available from :mod:`poem.models`."""
+        models_path = os.path.abspath(os.path.dirname(poem.models.__file__))
+
+        model_names = set()
+        for directory, subdirectories, filenames in os.walk(models_path):
+            for filename in filenames:
+                if not filename.endswith('.py'):
+                    continue
+
+                path = os.path.join(directory, filename)
+                relpath = os.path.relpath(path, models_path)
+                if relpath.endswith('__init__.py'):
+                    continue
+
+                import_path = 'poem.models.' + relpath[:-len('.py')].replace(os.sep, '.')
+                module = importlib.import_module(import_path)
+
+                for name in dir(module):
+                    value = getattr(module, name)
+                    if (
+                        isinstance(value, type)
+                        and issubclass(value, poem.models.BaseModule)
+                    ):
+                        model_names.add(value.__name__)
+
+        star_model_names = set(poem.models.__all__) - SKIP_MODULES
+        model_names -= SKIP_MODULES
+
+        self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
+
+        for name in model_names:
+            self.assertIn(f':py:class:`poem.models.{name}`', poem.models.__doc__, msg=f'Forgot to document {name}')

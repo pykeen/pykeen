@@ -8,15 +8,15 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.constants import NUMERIC_LITERALS
-from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.utils import slice_triples
-from ..base import BaseModule
+from .base_module import MultimodalBaseModule
+from ...constants import NUMERIC_LITERALS
+from ...instance_creation_factories.triples_factory import TriplesFactory
 from ...typing import OptionalLoss
+from ...utils import slice_triples
 
 
 # TODO: Check entire build of the model
-class DistMultLiteral(BaseModule):
+class DistMultLiteral(MultimodalBaseModule):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     def __init__(
