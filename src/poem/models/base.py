@@ -15,7 +15,6 @@ from torch import nn
 from ..constants import EMBEDDING_DIM
 from ..instance_creation_factories.triples_factory import TriplesFactory
 from ..typing import OptionalLoss
-from ..utils import get_params_requiring_grad
 
 __all__ = [
     'BaseModule',
@@ -195,11 +194,6 @@ class BaseModule(nn.Module):
     def _get_embeddings(elements, embedding_module, embedding_dim):
         return embedding_module(elements).view(-1, embedding_dim)
 
-    # FIXME this will be used in a later commit for the restructuring, fix documentation
-    def compute_probabilities(self, scores):
-        """Compute probabilities."""
-        return self.sigmoid(scores)
-
     def compute_mr_loss(
             self,
             positive_scores: torch.Tensor,
@@ -264,7 +258,7 @@ class BaseModule(nn.Module):
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
-        return get_params_requiring_grad(self)
+        return filter(lambda p: p.requires_grad, self.parameters())
 
     @classmethod
     def get_model_params(cls) -> List[str]:

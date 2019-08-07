@@ -6,8 +6,8 @@ import random
 from typing import Any, Dict, Iterable, List, Mapping, Type
 
 import numpy as np
-import torch
 from torch.nn import Module
+from torch.optim.optimizer import Optimizer
 from tqdm import trange
 
 from .hyper_parameter_optimizer import HPOptimizer, HPOptimizerResult
@@ -15,7 +15,6 @@ from ..evaluation import Evaluator
 from ..instance_creation_factories.instances import Instances
 from ..models.base import BaseModule
 from ..training import TrainingLoop
-from ..utils import get_params_requiring_grad
 
 __all__ = [
     'RandomSearch',
@@ -27,16 +26,16 @@ class RandomSearch(HPOptimizer):
 
     def __init__(
             self,
-            model_class: Type[BaseModule],
-            optimizer_class: Type[torch.optim.Optimizer],
+            model_cls: Type[BaseModule],
+            optimizer_cls: Type[Optimizer],
             entity_to_id: Dict[str, int],
             rel_to_id: Dict[str, int],
             training_loop: TrainingLoop,
             evaluator: Evaluator,
     ) -> None:
         """Initialize the random search hyper-parameter optimizer."""
-        self.model_class = model_class
-        self.optimizer_class = optimizer_class
+        self.model_cls = model_cls
+        self.optimizer_cls = optimizer_cls
         self.entity_to_id = entity_to_id
         self.rel_to_id = rel_to_id
         self.training_loop = training_loop
@@ -44,17 +43,17 @@ class RandomSearch(HPOptimizer):
 
         # TODO: Set seed?
 
+
     def _sample_conv_e_params(self) -> Dict[str, Any]:
         pass
 
     def extract_constructor_arguments(self, params_to_values):
         """Extract params required to initialize model."""
-        constructor_args = {}
-        for p in self.model_class.get_model_params():
-            if p in params_to_values:
-                constructor_args[p] = params_to_values[p]
-
-        return constructor_args
+        return {
+            p: params_to_values[p]
+            for p in self.model_cls.get_model_params()
+            if p in params_to_values
+        }
 
     def _sample_parameter_value(self, parameter_to_values: Mapping[int, Iterable[Any]]) -> Mapping[int, Any]:
         """Randomly subsample a dictionary whose values are iterable."""
@@ -90,9 +89,9 @@ class RandomSearch(HPOptimizer):
             models_params.append(current_params_to_values)
 
             constructor_args = self.extract_constructor_arguments(params_to_values=current_params_to_values)
-            model = self.model_class(**constructor_args)
+            model = self.model_cls(**constructor_args)
 
-            params = get_params_requiring_grad(model)
+            params = model.get_grad_params()
 
             # Configure optimizer
             optimizer_arguments = {
@@ -100,7 +99,7 @@ class RandomSearch(HPOptimizer):
                 'lr': params_to_values['learning_rate'],
             }
 
-            optimizer = self.optimizer_class(**optimizer_arguments)
+            optimizer = self.optimizer_cls(**optimizer_arguments)
 
             # Train model
             self.training_loop.model = model
