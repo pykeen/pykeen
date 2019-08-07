@@ -43,7 +43,6 @@ class RandomSearch(HPOptimizer):
 
         # TODO: Set seed?
 
-
     def _sample_conv_e_params(self) -> Dict[str, Any]:
         pass
 
