@@ -4,6 +4,7 @@
 
 from typing import Optional
 
+import numpy
 import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
@@ -12,14 +13,7 @@ from poem.customized_loss_functions.softplus_loss import SoftplusLoss
 from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
 from ...typing import OptionalLoss
-
-
-def _compute_regularization_term(
-        h: torch.tensor,
-        r: torch.tensor,
-        t: torch.tensor,
-) -> torch.tensor:
-    return (torch.mean(h ** 2) + torch.mean(r ** 2) + torch.mean(t ** 2)) / 3.
+from ...utils import l2_regularization
 
 
 def _compute_complex_scoring(
@@ -40,7 +34,8 @@ def _compute_complex_scoring(
         The scores.
     """
     # Regularization term
-    regularization_term = _compute_regularization_term(h, r, t)
+    # Normalize by size
+    regularization_term = l2_regularization(h, r, t) / sum(numpy.prod(x.shape) for x in (h, r, t))
 
     # ComplEx space bilinear product (equivalent to HolE)
     # *: Elementwise multiplication

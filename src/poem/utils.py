@@ -2,10 +2,27 @@
 
 """Utilities for POEM."""
 
+import torch
+
 __all__ = [
+    'l2_regularization',
     'slice_triples',
     'slice_doubles',
 ]
+
+
+def l2_regularization(
+        *xs: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Compute squared L2-regularization term.
+
+    :param xs: a list of torch.Tensor
+        The tensors for which to compute the regularization.
+
+    :return: The sum of squared value across all tensors.
+    """
+    return sum(x.pow(2).sum() for x in xs)
 
 
 def slice_triples(triples):
