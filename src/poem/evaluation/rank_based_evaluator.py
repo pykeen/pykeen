@@ -4,36 +4,21 @@
 
 import logging
 import timeit
-from dataclasses import dataclass
 from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
-from dataclasses_json import dataclass_json
 from tqdm import tqdm
 
-from .base import Evaluator
+from .base import Evaluator, MetricResults
 from ..models.base import BaseModule
 from ..training.utils import split_list_in_batches
 
 __all__ = [
-    'MetricResults',
     'RankBasedEvaluator',
 ]
 
 log = logging.getLogger(__name__)
-
-
-@dataclass_json
-@dataclass
-class MetricResults:
-    """Results from computing metrics."""
-
-    mean_rank: float
-    mean_reciprocal_rank: float
-    adjusted_mean_rank: float
-    adjusted_mean_reciprocal_rank: float
-    hits_at_k: Dict[int, float]
 
 
 def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:

@@ -3,15 +3,30 @@
 """Basic structure of a evaluator."""
 
 from abc import ABC, abstractmethod
-from typing import Mapping, Optional
+from dataclasses import dataclass
+from typing import Dict, Mapping, Optional
 
 import numpy as np
+from dataclasses_json import dataclass_json
 
 from ..models.base import BaseModule
 
 __all__ = [
     'Evaluator',
+    'MetricResults',
 ]
+
+
+@dataclass_json
+@dataclass
+class MetricResults:
+    """Results from computing metrics."""
+
+    mean_rank: float
+    mean_reciprocal_rank: float
+    adjusted_mean_rank: float
+    adjusted_mean_reciprocal_rank: float
+    hits_at_k: Dict[int, float]
 
 
 class Evaluator(ABC):
@@ -36,6 +51,6 @@ class Evaluator(ABC):
         return self.model.device
 
     @abstractmethod
-    def evaluate(self, triples: np.ndarray):
+    def evaluate(self, triples: np.ndarray) -> MetricResults:
         """Evaluate the triples."""
         raise NotImplementedError

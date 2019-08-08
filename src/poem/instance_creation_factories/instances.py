@@ -27,6 +27,16 @@ class Instances:
     entity_to_id: Dict[str, int]
     relation_to_id: Dict[str, int]
 
+    @property
+    def num_instances(self) -> int:  # noqa: D401
+        """The number of instances."""
+        return self.instances.shape[0]
+
+    @property
+    def num_entities(self) -> int:  # noqa: D401
+        """The number of entities."""
+        return len(self.entity_to_id)
+
 
 @dataclass
 class OWAInstances(Instances):

@@ -6,8 +6,10 @@ from typing import Any, List, Mapping, Optional, Type
 
 import numpy as np
 import torch
+from torch.optim.optimizer import Optimizer
 from tqdm import trange
 
+from .early_stopping import EarlyStopper
 from .training_loop import TrainingLoop
 from .utils import split_list_in_batches
 from ..models import BaseModule
@@ -26,7 +28,7 @@ class OWATrainingLoop(TrainingLoop):
     def __init__(
             self,
             model: Optional[BaseModule] = None,
-            optimizer: Optional[torch.optim.Optimizer] = None,
+            optimizer: Optional[Optimizer] = None,
             negative_sampler_cls: Type[NegativeSampler] = None,
     ):
         """Initialize the training loop."""
@@ -54,21 +56,22 @@ class OWATrainingLoop(TrainingLoop):
             label_smoothing: bool = False,
             label_smoothing_epsilon: float = 0.1,
             tqdm_kwargs: Optional[Mapping[str, Any]] = None,
+            early_stopper: Optional[EarlyStopper] = None,
     ) -> List[float]:
         """Train the KGE model."""
+        if self.model.compute_mr_loss and label_smoothing:
+            raise ValueError('Margin Ranking Loss cannot be used together with label smoothing')
+
         training_instances = self.model.triples_factory.create_owa_instances()
         pos_triples = training_instances.instances
-        num_pos_triples = pos_triples.shape[0]
-        num_entities = len(training_instances.entity_to_id)
-
-        if self.model.compute_mr_loss:
-            assert not label_smoothing, 'Margin Ranking Loss cannot be used together with label smoothing'
+        num_pos_triples = training_instances.num_instances
+        num_entities = training_instances.num_entities
 
         _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
         if tqdm_kwargs is not None:
             _tqdm_kwargs.update(tqdm_kwargs)
-        it = trange(num_epochs, **_tqdm_kwargs)
-        for _ in it:
+        epochs = trange(num_epochs, **_tqdm_kwargs)
+        for epoch in epochs:
             indices = np.arange(num_pos_triples)
             np.random.shuffle(indices)
             pos_triples = pos_triples[indices]
@@ -122,6 +125,14 @@ class OWATrainingLoop(TrainingLoop):
 
             # Track epoch loss
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
-            it.write(f'Losses: {self.losses_per_epochs}')
+
+            if (
+                early_stopper is not None
+                and 0 == (epoch % early_stopper.frequency)  # only check with given frequency
+                and early_stopper.should_stop()
+            ):
+                return self.losses_per_epochs
+
+            epochs.write(f'Losses: {self.losses_per_epochs}')
 
         return self.losses_per_epochs
