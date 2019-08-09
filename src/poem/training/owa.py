@@ -82,8 +82,8 @@ class OWATrainingLoop(TrainingLoop):
                 current_batch_size = len(pos_batch)
 
                 neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
-                pos_batch = torch.Tensor(pos_batch, dtype=torch.long, device=self.device)
-                neg_batch = torch.Tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
+                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.device)
+                neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
                 positive_scores = self.model.forward_owa(pos_batch)
                 positive_scores = positive_scores.repeat(num_negs_per_pos)

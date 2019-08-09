@@ -207,10 +207,10 @@ class RankBasedEvaluator(Evaluator):
         self.model = self.model.eval()
 
         all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, test_triples], axis=0)
-        all_pos_triples = torch.Tensor(all_pos_triples, device=self.device)
-        all_entities = torch.Tensor(self.model.triples_factory.all_entities, device=self.device)
+        all_pos_triples = torch.tensor(all_pos_triples, device=self.device)
+        all_entities = torch.tensor(self.model.triples_factory.all_entities, device=self.device)
 
-        test_triples = torch.Tensor(test_triples, dtype=torch.long, device=self.device)
+        test_triples = torch.tensor(test_triples, dtype=torch.long, device=self.device)
 
         compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank
