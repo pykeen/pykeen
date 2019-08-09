@@ -11,7 +11,6 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import BaseModule
-from ...constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
@@ -45,7 +44,6 @@ class TransR(BaseModule):
     entity_embedding_norm_type = 2
     relation_embedding_max_norm = 1
     relation_embedding_norm_type = 2
-    hyper_params = BaseModule.hyper_params + (RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM)
 
     def __init__(
             self,
