@@ -2,7 +2,7 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy
 import torch
@@ -17,21 +17,24 @@ from ...utils import l2_regularization
 
 
 def _compute_complex_scoring(
-        h: torch.tensor,
-        r: torch.tensor,
-        t: torch.tensor,
-) -> torch.tensor:
+        h: torch.Tensor,
+        r: torch.Tensor,
+        t: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """Evaluate the score function Re(h * r * t) for already broadcastable h, r, t.
 
-    :param h: torch.tensor, shape: (..., 2)
+    :param h: torch.Tensor, shape: (d1, ..., dk, 2), dtype: float
         Head embeddings. Last dimension corresponds to (real, imag).
-    :param r: torch.tensor, shape: (..., 2)
+    :param r: torch.Tensor, shape: (d1, ..., dk,, 2), dtype: float
         Relation embeddings. Last dimension corresponds to (real, imag).
-    :param t: torch.tensor, shape: (..., 2)
+    :param t: torch.Tensor, shape: (d1, ..., dk,, 2), dtype: float
         Tail embeddings. Last dimension corresponds to (real, imag).
 
-    :return: torch.tensor
-        The scores.
+    :return:
+        torch.Tensor, shape: (d1, ..., dk),  dtype: float
+            The scores.
+        torch.Tensor, shape: scalar, dtype: float
+            The regularization term.
     """
     # Regularization term
     # Normalize by size
