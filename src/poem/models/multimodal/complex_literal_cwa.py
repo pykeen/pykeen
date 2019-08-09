@@ -49,7 +49,7 @@ class ComplexLiteralCWA(MultimodalBaseModule):
         # num_ent x num_lit
         numeric_literals = triples_factory.multimodal_data.get(NUMERIC_LITERALS)
         self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.Tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
         )
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]

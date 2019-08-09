@@ -21,7 +21,7 @@ class BasicNegativeSampler(NegativeSampler):
 
         num_subj_corrupt = len(positive_batch) // 2
         num_obj_corrupt = len(positive_batch) - num_subj_corrupt
-        # pos_batch = torch.Tensor(pos_batch, dtype=torch.long, device=self.model.device)
+        # pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.model.device)
 
         corrupted_subj_indices = np.random.choice(np.arange(0, self.num_entities), size=num_subj_corrupt)
         corrupted_subjects = np.reshape(self.all_entities[corrupted_subj_indices], newshape=(-1, 1))

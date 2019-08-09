@@ -100,7 +100,7 @@ class ComplEx(BaseModule):
         self.real_embedding_dim = embedding_dim
 
         # ComplEx uses regularization
-        self.regularization_factor = torch.Tensor([regularization_factor], requires_grad=False, device=self.device)[0]
+        self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False, device=self.device)[0]
         self.current_regularization_term = None
 
         # The embeddings are first initialized when calling the get_grad_params function

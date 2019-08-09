@@ -49,7 +49,7 @@ class TransH(BaseModule):
             random_seed=random_seed,
         )
         self.regularization_factor = soft_weight_constraint
-        self.epsilon = torch.Tensor([epsilon], requires_grad=False)
+        self.epsilon = torch.tensor([epsilon], requires_grad=False)
 
         self.current_regularization_term = None
 
