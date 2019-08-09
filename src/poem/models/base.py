@@ -6,13 +6,12 @@ import logging
 import random
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional
 
 import numpy as np
 import torch
 from torch import nn
 
-from ..constants import EMBEDDING_DIM
 from ..instance_creation_factories.triples_factory import TriplesFactory
 from ..typing import OptionalLoss
 
@@ -31,7 +30,6 @@ class BaseModule(nn.Module):
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
-    hyper_params: Tuple[str] = (EMBEDDING_DIM,)
 
     def __init__(
             self,
