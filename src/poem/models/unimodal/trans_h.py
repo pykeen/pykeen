@@ -47,7 +47,7 @@ class TransH(BaseModule):
             random_seed=random_seed,
         )
         self.regularization_factor = soft_weight_constraint
-        self.epsilon = torch.tensor([epsilon], requires_grad=False)
+        self.epsilon = torch.Tensor([epsilon], requires_grad=False)
 
         self.current_regularization_term = None
 
@@ -79,7 +79,7 @@ class TransH(BaseModule):
         entity_constraint = torch.sum(functional.relu(torch.norm(self.entity_embeddings.weight, dim=-1) ** 2 - 1.0))
         self.current_regularization_term = ortho_constraint + entity_constraint
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -99,7 +99,7 @@ class TransH(BaseModule):
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -119,7 +119,7 @@ class TransH(BaseModule):
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -141,18 +141,18 @@ class TransH(BaseModule):
 
     def _compute_mr_loss(
             self,
-            positive_scores: torch.tensor,
-            negative_scores: torch.tensor,
-    ) -> torch.tensor:
+            positive_scores: torch.Tensor,
+            negative_scores: torch.Tensor,
+    ) -> torch.Tensor:
         loss = super()._compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
     def compute_label_loss(
             self,
-            predictions: torch.tensor,
-            labels: torch.tensor,
-    ) -> torch.tensor:
+            predictions: torch.Tensor,
+            labels: torch.Tensor,
+    ) -> torch.Tensor:
         """Compute the labeled mean ranking loss for the positive and negative scores with TransH specific flavor."""
         loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term

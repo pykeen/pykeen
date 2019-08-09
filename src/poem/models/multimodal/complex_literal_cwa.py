@@ -49,7 +49,7 @@ class ComplexLiteralCWA(MultimodalBaseModule):
         # num_ent x num_lit
         numeric_literals = triples_factory.multimodal_data.get(NUMERIC_LITERALS)
         self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+            torch.Tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
         )
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
@@ -83,7 +83,7 @@ class ComplexLiteralCWA(MultimodalBaseModule):
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
 
-    def forward_cwa(self, doubles: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, doubles: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         batch_heads, batch_relations = slice_doubles(doubles)
 

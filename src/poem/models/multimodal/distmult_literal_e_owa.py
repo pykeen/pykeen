@@ -44,7 +44,7 @@ class DistMultLiteral(MultimodalBaseModule):
         # Embeddings
         self.relation_embeddings = None
         self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+            torch.Tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
         )
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
@@ -101,7 +101,7 @@ class DistMultLiteral(MultimodalBaseModule):
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         heads, relations, tails = slice_triples(batch)
         head_embs, relation_embs, tail_embs = self._get_triple_embeddings(

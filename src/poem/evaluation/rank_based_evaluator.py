@@ -24,9 +24,9 @@ log = logging.getLogger(__name__)
 def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
     """Compute rank and adjusted rank given scores.
 
-    :param true_score: torch.tensor, shape: (batch_size, 1)
+    :param true_score: torch.Tensor, shape: (batch_size, 1)
         The score of the true triple.
-    :param all_scores: torch.tensor, shape: (batch_size, num_entities)
+    :param all_scores: torch.Tensor, shape: (batch_size, num_entities)
         The scores of all corrupted triples.
     :return: a tuple (best_rank, adjusted_avg_rank) where
         best_rank: np.ndarray (batch_size, 1)
@@ -207,10 +207,10 @@ class RankBasedEvaluator(Evaluator):
         self.model = self.model.eval()
 
         all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, test_triples], axis=0)
-        all_pos_triples = torch.tensor(all_pos_triples, device=self.device)
-        all_entities = torch.tensor(self.model.triples_factory.all_entities, device=self.device)
+        all_pos_triples = torch.Tensor(all_pos_triples, device=self.device)
+        all_entities = torch.Tensor(self.model.triples_factory.all_entities, device=self.device)
 
-        test_triples = torch.tensor(test_triples, dtype=torch.long, device=self.device)
+        test_triples = torch.Tensor(test_triples, dtype=torch.long, device=self.device)
 
         compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank

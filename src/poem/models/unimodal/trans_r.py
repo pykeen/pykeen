@@ -111,7 +111,7 @@ class TransR(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -129,7 +129,7 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True) ** 2
         return score
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -147,7 +147,7 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
         return score
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()

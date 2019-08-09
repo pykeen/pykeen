@@ -54,7 +54,7 @@ class SimplE(BaseModule):
 
     def forward_owa(  # noqa: D102
             self,
-            batch: torch.tensor,
+            batch: torch.Tensor,
     ):
         # Split triple in head, relation, tail
         h_ind, r_ind, t_ind = slice_triples(batch)
@@ -81,8 +81,8 @@ class SimplE(BaseModule):
 
     def forward_cwa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         h_ind = batch[:, 0]
         r_ind = batch[:, 1]
 
@@ -105,8 +105,8 @@ class SimplE(BaseModule):
 
     def forward_inverse_cwa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         r_ind = batch[:, 0]
         t_ind = batch[:, 1]
 

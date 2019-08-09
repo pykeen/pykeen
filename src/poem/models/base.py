@@ -259,10 +259,10 @@ class BaseModule(nn.Module, ABC):
 
         This method takes subject, relation and object of each triple and calculates the corresponding score.
 
-        :param batch: torch.tensor, shape: (batch_size, 3), dtype: long
+        :param batch: torch.Tensor, shape: (batch_size, 3), dtype: long
             The indices of (subject, relation, object) triples.
 
-        :return: torch.tensor, shape: (batch_size, 1), dtype: float
+        :return: torch.Tensor, shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
         raise NotImplementedError
@@ -273,10 +273,10 @@ class BaseModule(nn.Module, ABC):
 
         This method calculates the score for all possible objects for each (subject, relation) pair.
 
-        :param batch: torch.tensor, shape: (batch_size, 2), dtype: long
+        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (subject, relation) pairs.
 
-        :return: torch.tensor, shape: (batch_size, num_entities), dtype: float
+        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each s-p pair, the scores for all possible objects.
         """
         raise NotImplementedError
@@ -287,10 +287,10 @@ class BaseModule(nn.Module, ABC):
 
         This method calculates the score for all possible subjects for each (relation, object) pair.
 
-        :param batch: torch.tensor, shape: (batch_size, 2), dtype: long
+        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (relation, object) pairs.
 
-        :return: torch.tensor, shape: (batch_size, num_entities), dtype: float
+        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each p-o pair, the scores for all possible subjects.
         """
         raise NotImplementedError

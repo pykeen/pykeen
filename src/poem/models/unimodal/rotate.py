@@ -93,20 +93,20 @@ class RotatE(BaseModule):
 
     def _rotate_entities(
             self,
-            entity_indices: torch.tensor,
-            relation_indices: torch.tensor,
+            entity_indices: torch.Tensor,
+            relation_indices: torch.Tensor,
             inverse: bool = False
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         """Rotate entity embeddings in complex plane by relation embeddings.
 
-        :param entity_indices: torch.tensor, dtype: long, shape: (batch_size,)
+        :param entity_indices: torch.Tensor, dtype: long, shape: (batch_size,)
             The indices of the entities.
-        :param relation_indices: torch.tensor, dtype: long, shape: (batch_size,)
+        :param relation_indices: torch.Tensor, dtype: long, shape: (batch_size,)
             The indices of the relations.
         :param inverse: bool (default: False)
             Whether to rotate by the inverse of the relation.
 
-        :return: torch.tensor, dtype: float, shape: (batch_size, embedding_dim)
+        :return: torch.Tensor, dtype: float, shape: (batch_size, embedding_dim)
             The rotated entity embeddings.
         """
         # rotate head embeddings in complex plane (equivalent to Hadamard product)
@@ -127,7 +127,7 @@ class RotatE(BaseModule):
 
         return rot_e
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
@@ -146,7 +146,7 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
@@ -165,7 +165,7 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()

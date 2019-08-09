@@ -87,8 +87,8 @@ class ProjE(BaseModule):
 
     def forward_owa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
 
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
@@ -103,8 +103,8 @@ class ProjE(BaseModule):
 
     def forward_cwa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -118,8 +118,8 @@ class ProjE(BaseModule):
 
     def forward_inverse_cwa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         # Get embeddings
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])

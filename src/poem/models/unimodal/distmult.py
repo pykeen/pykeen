@@ -84,7 +84,7 @@ class DistMult(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
@@ -99,7 +99,7 @@ class DistMult(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
@@ -114,7 +114,7 @@ class DistMult(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
