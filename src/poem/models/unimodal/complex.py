@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the Complex model based on the open world assumption (OWA)."""
+"""Implementation of the ComplEx model."""
 
 from typing import Optional
 
