@@ -60,7 +60,6 @@ class ComplEx(BaseModule):
             entity_embeddings: Optional[nn.Embedding] = None,
             relation_embeddings: Optional[nn.Embedding] = None,
             embedding_dim: int = 200,
-            neg_label: float = -1.,
             regularization_factor: float = 0.01,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
@@ -79,7 +78,6 @@ class ComplEx(BaseModule):
         )
 
         self.real_embedding_dim = embedding_dim
-        self.neg_label = neg_label
         self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False, device=self.device)[0]
         self.current_regularization_term = None
         self.criterion = criterion
