@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Utilities for getting and initializing KGE models."""
+"""Base module for all KGE models."""
 
 import logging
 import random
