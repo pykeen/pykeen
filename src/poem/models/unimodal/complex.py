@@ -57,35 +57,57 @@ class ComplEx(BaseModule):
     def __init__(
             self,
             triples_factory: TriplesFactory,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
             embedding_dim: int = 200,
-            regularization_factor: float = 0.01,
+            entity_embeddings: Optional[nn.Embedding] = None,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
+            regularization_factor: float = 0.01,
     ) -> None:
-        """Initialize the model."""
+        """Initialize the module.
+
+        :param triples_factory: TriplesFactory
+            The triple factory connected to the model.
+        :param embedding_dim: int
+            The embedding dimensionality of the entity embeddings.
+        :param entity_embeddings: nn.Embedding (optional)
+            Initialization for the entity embeddings.
+        :param criterion: OptionalLoss (optional)
+            The loss criterion to use. Defaults to SoftplusLoss.
+        :param preferred_device: str (optional)
+            The default device where to model is located.
+        :param random_seed: int (optional)
+            An optional random seed to set before the initialization of weights.
+        :param relation_embeddings: nn.Embedding (optional)
+            Relation embeddings initialization.
+        :param regularization_factor: float
+            A weight for the regularization term's contribution relative to the loss value.
+        """
         if criterion is None:
             criterion = SoftplusLoss(reduction='mean')
 
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
 
+        # Store the real embedding size
         self.real_embedding_dim = embedding_dim
+
+        # ComplEx uses regularization
         self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False, device=self.device)[0]
         self.current_regularization_term = None
-        self.criterion = criterion
 
         # The embeddings are first initialized when calling the get_grad_params function
-        self.entity_embeddings = entity_embeddings
         self.relation_embeddings = relation_embeddings
 
+        # Initialize embeddings if no explicit ones were passed.
+        # TODO: What about initializing e.g. only entity embeddings explicitly?
         if None in [
             self.entity_embeddings,
             self.relation_embeddings,
@@ -93,19 +115,20 @@ class ComplEx(BaseModule):
             self._init_embeddings()
 
     def _init_embeddings(self):
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        # Initialize entity embeddings
+        super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+        # Use Glorot initialization
         xavier_normal_(self.entity_embeddings.weight.data)
         xavier_normal_(self.relation_embeddings.weight.data)
 
-    def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor):
-        """Compute the labeled mean ranking loss for the positive and negative scores with the ComplEx flavor."""
+    def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:  # noqa: D102
         loss = super().compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # view as (batch_size, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
@@ -116,8 +139,7 @@ class ComplEx(BaseModule):
 
         return scores.view(-1, 1)
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # view as (batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
@@ -128,8 +150,7 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # view as (batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
