@@ -9,9 +9,9 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from poem.customized_loss_functions.softplus_loss import SoftplusLoss
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...customized_loss_functions.softplus_loss import SoftplusLoss
+from ...instance_creation_factories.triples_factory import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import l2_regularization
 

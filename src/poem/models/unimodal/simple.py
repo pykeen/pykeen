@@ -8,10 +8,10 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.constants import GPU
-from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models.base import BaseModule
-from poem.utils import slice_triples
+from ...constants import GPU
+from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...models.base import BaseModule
+from ...utils import slice_triples
 
 __all__ = ['SimplE']
 

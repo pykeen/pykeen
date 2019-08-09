@@ -10,9 +10,9 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
+from ...instance_creation_factories.triples_factory import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['TransR']

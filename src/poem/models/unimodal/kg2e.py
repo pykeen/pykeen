@@ -8,8 +8,8 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories.triples_factory import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['KG2E']
