@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Base module for all KGE models."""
-
 import logging
 import random
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Iterable, List, Optional
 
@@ -22,7 +21,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-class BaseModule(nn.Module):
+class BaseModule(nn.Module, ABC):
     """A base module for all of the KGE models."""
 
     # A dictionary of hyper-parameters to the models that use them
