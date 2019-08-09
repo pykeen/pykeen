@@ -59,6 +59,10 @@ class DistMultLiteral(MultimodalBaseModule):
         xavier_normal_(self.entity_embeddings.weight.data)
         xavier_normal_(self.relation_embeddings.weight.data)
 
+    @staticmethod
+    def _get_embeddings(elements, embedding_module, embedding_dim):
+        return embedding_module(elements).view(-1, embedding_dim)
+
     def _get_literals(self, heads, tails):
         return (
             self._get_embeddings(

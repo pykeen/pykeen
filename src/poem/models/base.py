@@ -208,11 +208,6 @@ class BaseModule(nn.Module, ABC):
         scores = self.forward_cwa(batch)
         return scores
 
-    @staticmethod
-    def _get_embeddings(elements, embedding_module, embedding_dim):
-        # TODO: Only usage is poem.models.multimodal.distmult_literal_e_owa
-        return embedding_module(elements).view(-1, embedding_dim)
-
     def compute_mr_loss(
             self,
             positive_scores: torch.Tensor,
