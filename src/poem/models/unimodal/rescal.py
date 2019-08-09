@@ -8,7 +8,7 @@ import torch
 from torch import nn
 
 from ..base import BaseModule
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['RESCAL']
@@ -24,7 +24,8 @@ class RESCAL(BaseModule):
        - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
     """
 
-    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as the relation matrices, to avoid overfitting.
+    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as the relation matrices,
+    #  to avoid overfitting.
     margin_ranking_loss_size_average: bool = True
 
     def __init__(

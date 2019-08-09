@@ -9,7 +9,7 @@ import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['KG2E']
@@ -55,8 +55,9 @@ def _kullback_leibler_similarity(
         sigma_r: torch.Tensor,
         epsilon: float = 1.0e-10,
 ) -> torch.Tensor:
-    """
-    Compute the similarity based on KL divergence between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
+    """Compute the similarity based on KL divergence.
+
+    This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
 
     :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the first Gaussian.
@@ -91,7 +92,8 @@ class KG2E(BaseModule):
     Each entity is represented as
         E ~ N(mu_e, Sigma_e)
 
-    For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div, Expected Likelihood).
+    For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div,
+    Expected Likelihood).
     """
 
     entity_embedding_max_norm = 1

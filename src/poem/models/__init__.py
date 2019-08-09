@@ -49,8 +49,8 @@
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD, TransE,
-    TransH, TransR, UnstructuredModel,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
+    TransE, TransH, TransR, UnstructuredModel,
 )
 
 __all__ = [

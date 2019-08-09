@@ -10,7 +10,7 @@ import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['ProjE']
@@ -72,7 +72,8 @@ class ProjE(BaseModule):
     def _init_embeddings(self):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        # The same bound is used for both entity embeddings and relation embeddings because they have the same dimension
+        # The same bound is used for both entity embeddings and
+        # relation embeddings because they have the same dimension
         embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
         nn.init.uniform_(
             self.entity_embeddings.weight.data,
@@ -126,7 +127,10 @@ class ProjE(BaseModule):
         t = self.entity_embeddings(batch[:, 1])
 
         # Rank against all entities
-        hidden = self.inner_non_linearity(self.d_e[None, None, :] * h[None, :, :] + (self.d_r[None, None, :] * r[:, None, :] + self.b_c[None, None, :]))
+        hidden = self.inner_non_linearity(
+            self.d_e[None, None, :] * h[None, :, :]
+            + (self.d_r[None, None, :] * r[:, None, :] + self.b_c[None, None, :])
+        )
         scores = torch.sum(hidden * t[:, None, :], dim=-1) + self.b_p
 
         return scores

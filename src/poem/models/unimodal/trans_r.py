@@ -12,7 +12,7 @@ from torch.nn import functional
 
 from ..base import BaseModule
 from ...constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['TransR']
@@ -32,8 +32,10 @@ class TransR(BaseModule):
 
     .. seealso::
 
-       - OpenKE `TensorFlow implementation of TransR <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
-       - OpenKE `PyTorch implementation of TransR <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
+       - OpenKE `TensorFlow implementation of TransR
+         <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
+       - OpenKE `PyTorch implementation of TransR
+         <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
     """
 
     margin_ranking_loss_size_average: bool = True

@@ -11,7 +11,7 @@ from torch.nn.init import xavier_normal_
 
 from ..base import BaseModule
 from ...customized_loss_functions.softplus_loss import SoftplusLoss
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import l2_regularization
 

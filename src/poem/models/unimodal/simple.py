@@ -9,7 +9,7 @@ import torch.autograd
 from torch import nn
 
 from ...constants import GPU
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...models.base import BaseModule
 from ...utils import slice_triples
 

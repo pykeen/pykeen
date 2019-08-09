@@ -12,7 +12,7 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import BaseModule
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [
@@ -29,7 +29,8 @@ class RotatE(BaseModule):
 
     .. seealso::
 
-       - Author's `implementation of RotatE <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
+       - Author's `implementation of RotatE
+         <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
     """
 
     def __init__(

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Base module for all KGE models."""
+
 import logging
 import random
 from abc import ABC, abstractmethod
@@ -11,7 +12,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..instance_creation_factories.triples_factory import TriplesFactory
+from ..instance_creation_factories import TriplesFactory
 from ..typing import OptionalLoss
 
 __all__ = [

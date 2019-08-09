@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """An implementation of TransH."""
 
 from typing import Optional
@@ -7,7 +9,7 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import BaseModule
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 
@@ -67,7 +69,10 @@ class TransH(BaseModule):
     def _apply_forward_constraints_if_necessary(self):
         if not self.forward_constraint_applied:
             # Normalise the normal vectors by their l2 norms
-            functional.normalize(self.normal_vector_embeddings.weight.data, out=self.normal_vector_embeddings.weight.data)
+            functional.normalize(
+                self.normal_vector_embeddings.weight.data,
+                out=self.normal_vector_embeddings.weight.data,
+            )
 
             self.forward_constraint_applied = True
 
