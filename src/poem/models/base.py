@@ -4,7 +4,7 @@
 
 import logging
 import random
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections import defaultdict
 from typing import Iterable, List, Optional
 
@@ -22,7 +22,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-class BaseModule(nn.Module, ABC):
+class BaseModule(nn.Module):
     """A base module for all of the KGE models."""
 
     # A dictionary of hyper-parameters to the models that use them
@@ -40,21 +40,7 @@ class BaseModule(nn.Module, ABC):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
-        """Initialize the module.
-
-        :param triples_factory: TriplesFactory
-            The triple factory connected to the model.
-        :param embedding_dim: int
-            The embedding dimensionality of the entity embeddings.
-        :param entity_embeddings: nn.Embedding (optional)
-            Initialization for the entity embeddings.
-        :param criterion: OptionalLoss (optional)
-            The loss criterion to use. Defaults to MarginRankingLoss.
-        :param preferred_device: str (optional)
-            The default device where to model is located.
-        :param random_seed: int (optional)
-            An optional random seed to set before the initialization of weights.
-        """
+        """Initialize the module."""
         super().__init__()
 
         # Initialize the device
