@@ -8,8 +8,6 @@ ignore =
     S311
     # Related to security for pickles
     S403
-    # Line length
-	E501
     # Don't complain about asserts
     S101
     # line break before binary operator
@@ -29,6 +27,7 @@ exclude =
     .cache,
     .eggs,
     data
+max-line-length = 120
 max-complexity = 20
 import-order-style = pycharm
 application-import-names =

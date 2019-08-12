@@ -10,9 +10,8 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.constants import RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['TransR']
@@ -32,8 +31,10 @@ class TransR(BaseModule):
 
     .. seealso::
 
-       - OpenKE `TensorFlow implementation of TransR <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
-       - OpenKE `PyTorch implementation of TransR <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
+       - OpenKE `TensorFlow implementation of TransR
+         <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
+       - OpenKE `PyTorch implementation of TransR
+         <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
     """
 
     margin_ranking_loss_size_average: bool = True
@@ -43,7 +44,6 @@ class TransR(BaseModule):
     entity_embedding_norm_type = 2
     relation_embedding_max_norm = 1
     relation_embedding_norm_type = 2
-    hyper_params = BaseModule.hyper_params + (RELATION_EMBEDDING_DIM, SCORING_FUNCTION_NORM)
 
     def __init__(
             self,
@@ -111,7 +111,7 @@ class TransR(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -129,7 +129,7 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True) ** 2
         return score
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
@@ -147,7 +147,7 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
         return score
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()

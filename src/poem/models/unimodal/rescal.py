@@ -7,8 +7,8 @@ from typing import Optional
 import torch
 from torch import nn
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['RESCAL']
@@ -24,7 +24,8 @@ class RESCAL(BaseModule):
        - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
     """
 
-    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as the relation matrices, to avoid overfitting.
+    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as the relation matrices,
+    #  to avoid overfitting.
     margin_ranking_loss_size_average: bool = True
 
     def __init__(
@@ -58,7 +59,7 @@ class RESCAL(BaseModule):
         super()._init_embeddings()
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Get embeddings
         # shape: (b, d)
@@ -72,7 +73,7 @@ class RESCAL(BaseModule):
 
         return scores[:, :, 0]
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
@@ -82,7 +83,7 @@ class RESCAL(BaseModule):
 
         return scores[:, 0, :]
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)

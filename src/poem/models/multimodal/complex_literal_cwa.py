@@ -10,7 +10,7 @@ from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
 from ...constants import NUMERIC_LITERALS
-from ...instance_creation_factories import TriplesFactory
+from ...instance_creation_factories import TriplesNumericLiteralsFactory
 from ...typing import OptionalLoss
 from ...utils import slice_doubles
 
@@ -21,7 +21,7 @@ class ComplexLiteralCWA(MultimodalBaseModule):
 
     def __init__(
             self,
-            triples_factory: TriplesFactory,
+            triples_factory: TriplesNumericLiteralsFactory,
             embedding_dim: int = 50,
             input_dropout: float = 0.2,
             criterion: OptionalLoss = None,
@@ -83,7 +83,7 @@ class ComplexLiteralCWA(MultimodalBaseModule):
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
 
-    def forward_cwa(self, doubles: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, doubles: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         batch_heads, batch_relations = slice_doubles(doubles)
 

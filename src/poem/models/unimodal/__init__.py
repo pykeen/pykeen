@@ -15,9 +15,10 @@
 .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
 .. [kazemi2018] S. M. Kazemi, D. Poole (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs`
-            <https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs>_. NIPS'18
+                <https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs>_. NIPS'18
 .. [he2015] Shizhu He, *et al.* (2017). `Learning to Represent Knowledge Graphs with Gaussian Embedding
-            <http://ir.ia.ac.cn/bitstream/173211/20634/1/Learning%20to%20Represent%20Knowledge%20Graphs%20with%20Gaussian%20Embedding.pdf>`_. CIKM'17.
+            <http://ir.ia.ac.cn/bitstream/173211/20634/1/Learning%20to%20Represent%20Knowledge%20Graphs%20with%20Gaussian%20Embedding.pdf>`_.
+            CIKM'17.
 .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion
              <http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/>`_. AAAI. Vol. 15.
 .. [nguyen2018] Nguyen, D. Q., *et al* (2018) `A Novel Embedding Model for Knowledge Base CompletionBased on
@@ -25,20 +26,21 @@
                 *NAACL-HLT 2018*
 .. [nickel2011] Nickel, M., *et al.* (2011) `A Three-Way Model for Collective Learning on Multi-Relational Data
                 <http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf>`_. ICML. Vol. 11.
-
 .. [nickel2016] Nickel, M. *et al.* (2016) `Holographic Embeddings of Knowledge Graphs
                 <https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828>`_. AAAI 2016.
-.. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
-
+.. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion
+             <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
 .. [sun2019] Sun, Z., *et al.* (2019) `RotatE: Knowledge Graph Embeddings by relational rotation in complex space
              <https://arxiv.org/pdf/1902.10197v1.pdf>`_. ICLR 2019.
 .. [trouillon2016] Trouillon, T., *et al.* (2016) Complex embeddings for simple link prediction.
                    International Conference on Machine Learning. 2016.
 .. [wang2014] Wang, Z., *et al.* (2014). `Knowledge Graph Embedding by Translating on Hyperplanes
-                  <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
+              <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
 .. [yang2014] Yang, B., *et al.* (2014). `Embedding Entities and Relations for Learning
-                  and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
-.. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion. <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_ NIPS. 2013.
+              and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
+.. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
+                <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
+                NIPS. 2013.
 """
 
 from .complex import ComplEx

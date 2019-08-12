@@ -9,8 +9,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from ..instance_creation_factories.instances import Instances
-from ..instance_creation_factories.triples_factory import TriplesFactory
+from ..instance_creation_factories import Instances, TriplesFactory
 from ..models.base import BaseModule
 from ..version import get_version
 

@@ -8,35 +8,35 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['KG2E']
 
 
 def _expected_likelihood(
-        mu_e: torch.tensor,
-        mu_r: torch.tensor,
-        sigma_e: torch.tensor,
-        sigma_r: torch.tensor,
+        mu_e: torch.Tensor,
+        mu_r: torch.Tensor,
+        sigma_e: torch.Tensor,
+        sigma_r: torch.Tensor,
         epsilon: float = 1.0e-10,
-) -> torch.tensor:
+) -> torch.Tensor:
     """
     Compute the similarity based on expected likelihood.
 
-    :param mu_e: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the first Gaussian.
-    :param mu_r: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the second Gaussian.
-    :param sigma_e: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The diagonal covariance matrix of the first Gaussian.
-    :param sigma_r: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
         The diagonal covariance matrix of the second Gaussian.
     :param epsilon: float (default=1.0)
         Small constant used to avoid numerical issues when dividing.
 
-    :return: torch.tensor, shape: (s_1, ..., s_k)
+    :return: torch.Tensor, shape: (s_1, ..., s_k)
         The similarity.
     """
     sigma = sigma_r + sigma_e
@@ -49,27 +49,28 @@ def _expected_likelihood(
 
 
 def _kullback_leibler_similarity(
-        mu_e: torch.tensor,
-        mu_r: torch.tensor,
-        sigma_e: torch.tensor,
-        sigma_r: torch.tensor,
+        mu_e: torch.Tensor,
+        mu_r: torch.Tensor,
+        sigma_e: torch.Tensor,
+        sigma_r: torch.Tensor,
         epsilon: float = 1.0e-10,
-) -> torch.tensor:
-    """
-    Compute the similarity based on KL divergence between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
+) -> torch.Tensor:
+    """Compute the similarity based on KL divergence.
 
-    :param mu_e: torch.tensor, shape: (s_1, ..., s_k, d)
+    This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
+
+    :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the first Gaussian.
-    :param mu_r: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the second Gaussian.
-    :param sigma_e: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The diagonal covariance matrix of the first Gaussian.
-    :param sigma_r: torch.tensor, shape: (s_1, ..., s_k, d)
+    :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
         The diagonal covariance matrix of the second Gaussian.
     :param epsilon: float (default=1.0)
         Small constant used to avoid numerical issues when dividing.
 
-    :return: torch.tensor, shape: (s_1, ..., s_k)
+    :return: torch.Tensor, shape: (s_1, ..., s_k)
         The similarity.
     """
     safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
@@ -91,7 +92,8 @@ class KG2E(BaseModule):
     Each entity is represented as
         E ~ N(mu_e, Sigma_e)
 
-    For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div, Expected Likelihood).
+    For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div,
+    Expected Likelihood).
     """
 
     entity_embedding_max_norm = 1
@@ -173,8 +175,8 @@ class KG2E(BaseModule):
 
     def forward_owa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
 
@@ -203,8 +205,8 @@ class KG2E(BaseModule):
 
     def forward_cwa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
 
@@ -232,8 +234,8 @@ class KG2E(BaseModule):
 
     def forward_inverse_cwa(  # noqa: D102
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.Tensor,
+    ) -> torch.Tensor:
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
 

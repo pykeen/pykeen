@@ -12,7 +12,7 @@ from tqdm import trange
 
 from .hyper_parameter_optimizer import HPOptimizer, HPOptimizerResult
 from ..evaluation import Evaluator
-from ..instance_creation_factories.instances import Instances
+from ..instance_creation_factories import Instances
 from ..models.base import BaseModule
 from ..training import TrainingLoop
 

@@ -10,7 +10,7 @@ from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
 from ...constants import NUMERIC_LITERALS
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...instance_creation_factories import TriplesNumericLiteralsFactory
 from ...typing import OptionalLoss
 from ...utils import slice_triples
 
@@ -21,7 +21,7 @@ class DistMultLiteral(MultimodalBaseModule):
 
     def __init__(
             self,
-            triples_factory: TriplesFactory,
+            triples_factory: TriplesNumericLiteralsFactory,
             embedding_dim: int = 50,
             input_dropout: int = 0,
             criterion: OptionalLoss = None,
@@ -58,6 +58,10 @@ class DistMultLiteral(MultimodalBaseModule):
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         xavier_normal_(self.entity_embeddings.weight.data)
         xavier_normal_(self.relation_embeddings.weight.data)
+
+    @staticmethod
+    def _get_embeddings(elements, embedding_module, embedding_dim):
+        return embedding_module(elements).view(-1, embedding_dim)
 
     def _get_literals(self, heads, tails):
         return (
@@ -101,7 +105,7 @@ class DistMultLiteral(MultimodalBaseModule):
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         heads, relations, tails = slice_triples(batch)
         head_embs, relation_embs, tail_embs = self._get_triple_embeddings(

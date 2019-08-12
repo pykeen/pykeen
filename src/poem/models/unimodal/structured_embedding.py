@@ -11,8 +11,8 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [
@@ -93,7 +93,7 @@ class StructuredEmbedding(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         self._apply_forward_constraints_if_necessary()
 
@@ -110,7 +110,7 @@ class StructuredEmbedding(BaseModule):
         scores = -torch.norm(proj_h - proj_t, dim=1, p=self.scoring_fct_norm)
         return scores
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         self._apply_forward_constraints_if_necessary()
 
@@ -128,7 +128,7 @@ class StructuredEmbedding(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         self._apply_forward_constraints_if_necessary()
 

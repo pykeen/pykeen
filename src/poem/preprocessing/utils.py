@@ -7,7 +7,7 @@ from typing import Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 
-from poem.utils import slice_triples
+from ..utils import slice_triples
 
 log = logging.getLogger(__name__)
 

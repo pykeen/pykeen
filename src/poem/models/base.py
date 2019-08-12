@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 
-"""Utilities for getting and initializing KGE models."""
+"""Base module for all KGE models."""
 
 import logging
 import random
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional
 
 import numpy as np
 import torch
 from torch import nn
 
-from ..constants import EMBEDDING_DIM
-from ..instance_creation_factories.triples_factory import TriplesFactory
+from ..instance_creation_factories import TriplesFactory
 from ..typing import OptionalLoss
 
 __all__ = [
@@ -31,7 +30,6 @@ class BaseModule(nn.Module):
 
     entity_embedding_max_norm: Optional[int] = None
     entity_embedding_norm_type: int = 2
-    hyper_params: Tuple[str] = (EMBEDDING_DIM,)
 
     def __init__(
             self,
@@ -65,6 +63,7 @@ class BaseModule(nn.Module):
         # TODO: Check loss functions that require 1 and -1 as label but only
         self.is_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
 
+        # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
 
         #: The dimension of the embeddings to generate
@@ -87,19 +86,20 @@ class BaseModule(nn.Module):
                 BaseModule._hyperparameter_usage[k].add(cls.__name__)
 
     @property
-    def num_entities(self):  # noqa: D401
+    def num_entities(self) -> int:  # noqa: D401
         """The number of entities in the knowledge graph."""
         return self.triples_factory.num_entities
 
     @property
-    def num_relations(self):  # noqa: D401
+    def num_relations(self) -> int:  # noqa: D401
         """The number of unique relation types in the knowledge graph."""
         return self.triples_factory.num_relations
 
-    def _init_embeddings(self):
+    def _init_embeddings(self) -> None:  # noqa: D401
+        """Initialize the entity embeddings."""
         self.entity_embeddings = nn.Embedding(
-            self.num_entities,
-            self.embedding_dim,
+            num_embeddings=self.num_entities,
+            embedding_dim=self.embedding_dim,
             max_norm=self.entity_embedding_max_norm,
             norm_type=self.entity_embedding_norm_type,
         )
@@ -115,39 +115,41 @@ class BaseModule(nn.Module):
         else:
             self.device = torch.device('cpu')
 
-    def _to_cpu(self):
+    def _to_cpu(self) -> None:
         """Transfer the entire model to CPU."""
         self._set_device('cpu')
         self.to(self.device)
         torch.cuda.empty_cache()
 
-    def _to_gpu(self):
+    def _to_gpu(self) -> None:
         """Transfer the entire model to GPU."""
         self._set_device('gpu')
         self.to(self.device)
         torch.cuda.empty_cache()
 
-    def predict_scores(self, triples: torch.tensor):
+    def predict_scores(self, triples: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
         This method takes subject, relation and object of each triple and calculates the corresponding score.
 
-        :param triples: torch.tensor, shape: (number of triples, 3)
+        :param triples: torch.Tensor, shape: (number of triples, 3), dtype: long
             The indices of (subject, relation, object) triples.
-        :return: numpy.ndarray, shape: (number of triples, 1)
+
+        :return: torch.Tensor, shape: (number of triples, 1), dtype: float
             The score for each triple.
         """
         scores = self.forward_owa(triples)
         return scores
 
-    def predict_scores_all_objects(self, batch: torch.tensor) -> torch.tensor:
+    def predict_scores_all_objects(self, batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (object) prediction for obtaining scores of all possible objects.
 
         This method calculates the score for all possible objects for each (subject, relation) pair.
 
-        :param batch: torch.tensor, shape: (batch_size, 2)
+        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (subject, relation) pairs.
-        :return: torch.tensor, shape: (batch_size, num_entities)
+
+        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each s-p pair, the scores for all possible objects.
         """
         scores = self.forward_cwa(batch)
@@ -155,15 +157,16 @@ class BaseModule(nn.Module):
 
     def predict_scores_all_subjects(
             self,
-            batch: torch.tensor,
-    ) -> torch.tensor:
+            batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
         """Forward pass using left side (subject) prediction for obtaining scores of all possible subjects.
 
         This method calculates the score for all possible subjects for each (relation, object) pair.
 
-        :param batch: torch.tensor, shape: (batch_size, 2)
+        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (relation, object) pairs.
-        :return: torch.tensor, shape: (batch_size, num_entities)
+
+        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each p-o pair, the scores for all possible subjects.
         """
         '''
@@ -184,74 +187,92 @@ class BaseModule(nn.Module):
         '''
         # The number of relations stored in the triples factory includes the number of inverse relations
         num_relations = self.triples_factory.num_relations // 2
-        batch.view(-1, 2)[:, 0] = batch.view(-1, 2)[:, 0] + num_relations
+        batch[:, 0] = batch[:, 0] + num_relations
+
         # The forward cwa function requires (entity, relation) pairs instead of (relation, entity)
-        batch = batch.view(-1, 2).flip(1)
+        batch = batch.flip(1)
         scores = self.forward_cwa(batch)
         return scores
 
-    @staticmethod
-    def _get_embeddings(elements, embedding_module, embedding_dim):
-        return embedding_module(elements).view(-1, embedding_dim)
-
     def compute_mr_loss(
             self,
-            positive_scores: torch.Tensor,
-            negative_scores: torch.Tensor,
-    ) -> torch.Tensor:
-        """Compute the mean ranking loss for the positive and negative scores."""
-        assert self.is_mr_loss, 'The chosen criterion does not allow the calculation of label losses. ' \
-                                'Please use the compute_mr_loss method instead'
+            positive_scores: torch.FloatTensor,
+            negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the mean ranking loss for the positive and negative scores.
+
+        :param positive_scores: torch.Tensor, shape: s, dtype: float
+            The scores for positive triples.
+        :param negative_scores: torch.Tensor, shape: s, dtype: float
+            The scores for negative triples.
+
+        :return: torch.Tensor, dtype: float, scalar
+            The margin ranking loss value.
+        """
+        assert self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin ranking losses. ' \
+                                'Please use the compute_label_loss method instead.'
         y = torch.ones_like(negative_scores, device=self.device)
         loss = self.criterion(positive_scores, negative_scores, y)
         return loss
 
     def compute_label_loss(
             self,
-            predictions: torch.Tensor,
-            labels: torch.Tensor,
-    ) -> torch.Tensor:
-        """Compute the labeled mean ranking loss for the positive and negative scores."""
-        assert not self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin ranking losses. ' \
-                                    'Please use the compute_label_loss method instead'
+            predictions: torch.FloatTensor,
+            labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the labeled mean ranking loss for the positive and negative scores.
+
+        :param predictions: torch.Tensor, shape: s, dtype: float
+            The predicted scores.
+        :param labels: torch.Tensor, shape: s, dtype: float
+            The target values.
+
+        :return: torch.Tensor, dtype: float, scalar
+            The label loss value.
+        """
+        assert not self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin label losses. ' \
+                                    'Please use the compute_mr_loss method instead.'
         loss = self.criterion(predictions, labels)
         return loss
 
     @abstractmethod
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass for training with the OWA.
 
         This method takes subject, relation and object of each triple and calculates the corresponding score.
 
-        :param batch: torch.tensor, shape: (batch_size, 3)
+        :param batch: torch.Tensor, shape: (batch_size, 3), dtype: long
             The indices of (subject, relation, object) triples.
-        :return: torch.tensor, shape: (batch_size, 1)
+
+        :return: torch.Tensor, shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (object) prediction for training with the CWA.
 
         This method calculates the score for all possible objects for each (subject, relation) pair.
 
-        :param batch: torch.tensor, shape: (batch_size, 2)
+        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (subject, relation) pairs.
-        :return: torch.tensor, shape: (batch_size, num_entities)
+
+        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each s-p pair, the scores for all possible objects.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (subject) prediction for training with the CWA.
 
         This method calculates the score for all possible subjects for each (relation, object) pair.
 
-        :param batch: torch.tensor, shape: (batch_size, 2)
+        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (relation, object) pairs.
-        :return: torch.tensor, shape: (batch_size, num_entities)
+
+        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each p-o pair, the scores for all possible subjects.
         """
         raise NotImplementedError
@@ -263,4 +284,5 @@ class BaseModule(nn.Module):
     @classmethod
     def get_model_params(cls) -> List[str]:
         """Return the model parameters."""
+        # TODO: not used anymore?
         return ['num_entities', 'num_relations', 'embedding_dim', 'criterion', 'preferred_device', 'random_seed']

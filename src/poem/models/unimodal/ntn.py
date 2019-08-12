@@ -7,8 +7,8 @@ from typing import Optional
 import torch
 from torch import nn
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['NTN']
@@ -82,7 +82,7 @@ class NTN(BaseModule):
         # u_R: (k,)
         self.u_relation = nn.Embedding(self.num_relations, self.num_slices)
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         # Get entity embeddings
         h = self.entity_embeddings(batch[:, 0])
@@ -109,7 +109,7 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1, keepdim=True)
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         # General dimension usage: (b, n, s, ...)
         # b: batch_size
@@ -146,7 +146,7 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1)
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # General dimension usage: (b, n, s, ...)
         # b: batch_size

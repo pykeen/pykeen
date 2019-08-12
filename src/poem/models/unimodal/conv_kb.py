@@ -9,8 +9,8 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
 from ..base import BaseModule
+from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [
@@ -62,7 +62,8 @@ class ConvKB(BaseModule):
         if None in [self.entity_embeddings, self.relation_embeddings]:
             self._init_embeddings()
 
-        # TODO: Initialize filters to [0.1, 0.1, -0.1], c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
+        # TODO: Initialize filters to [0.1, 0.1, -0.1],
+        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
         self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
 
         self.relu = nn.ReLU()
@@ -84,7 +85,7 @@ class ConvKB(BaseModule):
             embedding_dim=self.embedding_dim,
         )
 
-    def forward_owa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass for training with the OWA."""
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -105,7 +106,7 @@ class ConvKB(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (object) prediction for training with the CWA."""
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -120,7 +121,10 @@ class ConvKB(BaseModule):
         #  conv.bias: (num_filters,)
         #  hr_conv_out: (batch_size, embedding_dim, num_filters)
         hr = torch.stack([h, r], dim=-1)
-        hr_conv_out = torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1) + self.conv.bias[None, None, :]
+        hr_conv_out = (
+            torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1)
+            + self.conv.bias[None, None, :]
+        )
 
         # Convolve tail
         # Shapes:
@@ -141,7 +145,7 @@ class ConvKB(BaseModule):
 
         return scores.view(-1, self.num_entities)
 
-    def forward_inverse_cwa(self, batch: torch.tensor) -> torch.tensor:
+    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using left side (subject) prediction for training with the CWA."""
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])
@@ -156,7 +160,10 @@ class ConvKB(BaseModule):
         #  conv.bias: (num_filters,)
         #  rt_conv_out: (batch_size, embedding_dim, num_filters)
         rt = torch.stack([r, t], dim=-1)
-        rt_conv_out = torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1) + self.conv.bias[None, None, :]
+        rt_conv_out = (
+            torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1)
+            + self.conv.bias[None, None, :]
+        )
 
         # Convolve tail
         # Shapes:
