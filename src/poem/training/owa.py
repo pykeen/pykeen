@@ -86,7 +86,7 @@ class OWATrainingLoop(TrainingLoop):
                 neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
                 positive_scores = self.model.forward_owa(pos_batch)
-                positive_scores = positive_scores.repeat(num_negs_per_pos)
+                positive_scores = positive_scores.repeat(num_negs_per_pos, 1)
                 negative_scores = self.model.forward_owa(neg_batch)
 
                 """
@@ -127,9 +127,9 @@ class OWATrainingLoop(TrainingLoop):
             self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
 
             if (
-                early_stopper is not None
-                and 0 == (epoch % early_stopper.frequency)  # only check with given frequency
-                and early_stopper.should_stop()
+                    early_stopper is not None
+                    and 0 == (epoch % early_stopper.frequency)  # only check with given frequency
+                    and early_stopper.should_stop()
             ):
                 return self.losses_per_epochs
 
