@@ -7,7 +7,7 @@ from typing import Callable, Dict
 import numpy as np
 from pkg_resources import iter_entry_points
 
-VERSION = '0.0.26'
+VERSION = '0.0.27-dev'
 EMOJI = '⚽️'
 
 #: Functions for specifying exotic resources with a given prefix
