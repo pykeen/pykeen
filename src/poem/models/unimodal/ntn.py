@@ -67,23 +67,28 @@ class NTN(BaseModule):
         self.u_relation = u_relation
         self.non_linearity = non_linearity
 
-        if None in [self.entity_embeddings, self.w_relation, self.v_relation, self.b_relation, self.u_relation]:
-            self._init_embeddings()
+        # Initialize embeddings
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super(NTN, self)._init_embeddings()
+    def _init_embeddings(self) -> None:
+        # Initialize entity embeddings
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         # bi-linear tensor layer
         # W_R: (d, d, k); store as (k, d, d)
-        self.w_relation = nn.Embedding(self.num_relations, self.embedding_dim ** 2 * self.num_slices)
+        if self.w_relation is None:
+            self.w_relation = nn.Embedding(self.num_relations, self.embedding_dim ** 2 * self.num_slices)
         # V_R: (k, 2d)
-        self.v_relation = nn.Embedding(self.num_relations, 2 * self.embedding_dim * self.num_slices)
+        if self.v_relation is None:
+            self.v_relation = nn.Embedding(self.num_relations, 2 * self.embedding_dim * self.num_slices)
         # b_R: (k,)
-        self.b_relation = nn.Embedding(self.num_relations, self.num_slices)
+        if self.b_relation is None:
+            self.b_relation = nn.Embedding(self.num_relations, self.num_slices)
         # u_R: (k,)
-        self.u_relation = nn.Embedding(self.num_relations, self.num_slices)
+        if self.u_relation is None:
+            self.u_relation = nn.Embedding(self.num_relations, self.num_slices)
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get entity embeddings
         h = self.entity_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 2])
@@ -109,8 +114,7 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1, keepdim=True)
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # General dimension usage: (b, n, s, ...)
         # b: batch_size
         # n: num_entities
@@ -146,8 +150,7 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1)
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # General dimension usage: (b, n, s, ...)
         # b: batch_size
         # n: num_entities

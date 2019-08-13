@@ -23,14 +23,13 @@ class TransH(BaseModule):
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
     """
 
-    margin_ranking_loss_size_average: bool = False
-
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             entity_embeddings: Optional[nn.Embedding] = None,
             relation_embeddings: Optional[nn.Embedding] = None,
+            normal_vector_embeddings: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
             soft_weight_constraint: float = 0.05,
             epsilon: float = 0.005,
@@ -55,18 +54,20 @@ class TransH(BaseModule):
 
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
-        self.normal_vector_embeddings = None
+        self.normal_vector_embeddings = normal_vector_embeddings
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        if self.normal_vector_embeddings is None:
+            self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         # TODO: Add initialization
 
-    def _apply_forward_constraints_if_necessary(self):
+    def _apply_forward_constraints_if_necessary(self) -> None:
         if not self.forward_constraint_applied:
             # Normalise the normal vectors by their l2 norms
             functional.normalize(
@@ -84,8 +85,7 @@ class TransH(BaseModule):
         entity_constraint = torch.sum(functional.relu(torch.norm(self.entity_embeddings.weight, dim=-1) ** 2 - 1.0))
         self.current_regularization_term = ortho_constraint + entity_constraint
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -104,8 +104,7 @@ class TransH(BaseModule):
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -124,8 +123,7 @@ class TransH(BaseModule):
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -144,21 +142,20 @@ class TransH(BaseModule):
 
         return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
 
-    def _compute_mr_loss(
+    def compute_mr_loss(
             self,
-            positive_scores: torch.Tensor,
-            negative_scores: torch.Tensor,
-    ) -> torch.Tensor:
+            positive_scores: torch.FloatTensor,
+            negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
         loss = super()._compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
     def compute_label_loss(
             self,
-            predictions: torch.Tensor,
-            labels: torch.Tensor,
-    ) -> torch.Tensor:
-        """Compute the labeled mean ranking loss for the positive and negative scores with TransH specific flavor."""
+            predictions: torch.FloatTensor,
+            labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
         loss = super()._compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss

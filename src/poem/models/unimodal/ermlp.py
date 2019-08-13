@@ -61,17 +61,16 @@ class ERMLP(BaseModule):
 
         self.relation_embeddings = relation_embeddings
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+    def _init_embeddings(self) -> None:
+        # The authors do not specify which initialization was used. Hence, we use the pytorch default.
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def forward_owa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -83,10 +82,7 @@ class ERMLP(BaseModule):
         # Compute scores
         return self.mlp(x_s)
 
-    def forward_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -109,10 +105,7 @@ class ERMLP(BaseModule):
         scores = scores.view(-1, self.num_entities)
         return scores
 
-    def forward_inverse_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])

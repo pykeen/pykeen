@@ -8,7 +8,6 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ...constants import GPU
 from ...instance_creation_factories import TriplesFactory
 from ...models.base import BaseModule
 from ...utils import slice_triples
@@ -31,31 +30,40 @@ class SimplE(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 200,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            tail_entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
+            inverse_relation_embeddings: Optional[nn.Embedding] = None,
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
-            preferred_device: str = GPU,
+            preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        self.relation_embeddings = None
+        self.relation_embeddings = relation_embeddings
+        self.tail_entity_embeddings = tail_entity_embeddings
+        self.inverse_relation_embeddings = inverse_relation_embeddings
 
+        # Initialize embeddings
         self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        self.tail_entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        self.inverse_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        if self.tail_entity_embeddings is None:
+            self.tail_entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        if self.inverse_relation_embeddings is None:
+            self.inverse_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def forward_owa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ):
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Split triple in head, relation, tail
         h_ind, r_ind, t_ind = slice_triples(batch)
 
@@ -79,10 +87,7 @@ class SimplE(BaseModule):
 
         return scores
 
-    def forward_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h_ind = batch[:, 0]
         r_ind = batch[:, 1]
 
@@ -103,10 +108,7 @@ class SimplE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         r_ind = batch[:, 0]
         t_ind = batch[:, 1]
 

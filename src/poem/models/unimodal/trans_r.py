@@ -4,13 +4,13 @@
 
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
 from torch.nn import functional
 
 from ..base import BaseModule
+from ..init import embedding_xavier_uniform_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
@@ -37,14 +37,6 @@ class TransR(BaseModule):
          <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
     """
 
-    margin_ranking_loss_size_average: bool = True
-    # TODO: max_norm < 1.
-    # max_norm = 1 according to the paper
-    entity_embedding_max_norm = 1
-    entity_embedding_norm_type = 2
-    relation_embedding_max_norm = 1
-    relation_embedding_norm_type = 2
-
     def __init__(
             self,
             triples_factory: TriplesFactory,
@@ -52,6 +44,7 @@ class TransR(BaseModule):
             entity_embeddings: Optional[nn.Embedding] = None,
             relation_dim: int = 30,
             relation_embeddings: Optional[nn.Embedding] = None,
+            relation_projections: Optional[nn.Embedding] = None,
             scoring_fct_norm: int = 1,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
@@ -72,47 +65,32 @@ class TransR(BaseModule):
         self.relation_embedding_dim = relation_dim
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
-        self.relation_projections = None
+        self.relation_projections = relation_projections
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        # max_norm = 1 according to the paper
-        self.relation_embeddings = nn.Embedding(
-            self.num_relations,
-            self.relation_embedding_dim,
-            norm_type=self.relation_embedding_norm_type,
-            max_norm=self.relation_embedding_max_norm,
-        )
-        self.relation_projections = nn.Embedding(
-            self.num_relations,
-            self.relation_embedding_dim * self.embedding_dim,
-        )
-        entity_embeddings_init_bound = relation_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-entity_embeddings_init_bound,
-            b=entity_embeddings_init_bound,
-        )
-        nn.init.uniform_(
-            self.relation_embeddings.weight.data,
-            a=-relation_embeddings_init_bound,
-            b=relation_embeddings_init_bound,
-        )
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
+            embedding_xavier_uniform_(self.entity_embeddings)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1)
+            embedding_xavier_uniform_(self.relation_embeddings)
+            # Initialise relation embeddings to unit length
+            functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
+        if self.relation_projections is None:
+            self.relation_projections = nn.Embedding(
+                self.num_relations,
+                self.relation_embedding_dim * self.embedding_dim,
+            )
 
-        # Initialise relation embeddings to unit length
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-
-    def _apply_forward_constraints_if_necessary(self):
+    def _apply_forward_constraints_if_necessary(self) -> None:
         # Normalize embeddings of entities
         if not self.forward_constraint_applied:
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -129,8 +107,7 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True) ** 2
         return score
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -147,8 +124,7 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
         return score
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 

@@ -28,9 +28,6 @@ class BaseModule(nn.Module):
     # A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage = defaultdict(set)
 
-    entity_embedding_max_norm: Optional[int] = None
-    entity_embedding_norm_type: int = 2
-
     def __init__(
             self,
             triples_factory: TriplesFactory,
@@ -94,15 +91,6 @@ class BaseModule(nn.Module):
     def num_relations(self) -> int:  # noqa: D401
         """The number of unique relation types in the knowledge graph."""
         return self.triples_factory.num_relations
-
-    def _init_embeddings(self) -> None:  # noqa: D401
-        """Initialize the entity embeddings."""
-        self.entity_embeddings = nn.Embedding(
-            num_embeddings=self.num_entities,
-            embedding_dim=self.embedding_dim,
-            max_norm=self.entity_embedding_max_norm,
-            norm_type=self.entity_embedding_norm_type,
-        )
 
     def _set_device(self, device: Optional[str] = None) -> None:
         """Get the Torch device to use."""

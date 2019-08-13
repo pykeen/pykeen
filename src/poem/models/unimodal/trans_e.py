@@ -2,24 +2,21 @@
 
 """Implementation of the TransE model."""
 
-import logging
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
 from torch.nn import functional
 
 from ..base import BaseModule
+from ..init import embedding_xavier_uniform_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [
     'TransE',
 ]
-
-log = logging.getLogger(__name__)
 
 
 class TransE(BaseModule):
@@ -57,34 +54,24 @@ class TransE(BaseModule):
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-embeddings_init_bound,
-            b=+embeddings_init_bound,
-        )
-        nn.init.uniform_(
-            self.relation_embeddings.weight.data,
-            a=-embeddings_init_bound,
-            b=+embeddings_init_bound,
-        )
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+            embedding_xavier_uniform_(self.entity_embeddings)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+            embedding_xavier_uniform_(self.relation_embeddings)
+            # Initialise relation embeddings to unit length
+            functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
-        # Initialise relation embeddings to unit length
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-
-    def _apply_forward_constraints_if_necessary(self):
+    def _apply_forward_constraints_if_necessary(self) -> None:
         if not self.forward_constraint_applied:
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -95,8 +82,7 @@ class TransE(BaseModule):
 
         return -torch.norm(h + r - t, dim=-1, p=self.scoring_fct_norm, keepdim=True)
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 
@@ -107,8 +93,7 @@ class TransE(BaseModule):
 
         return -torch.norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, p=self.scoring_fct_norm)
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Guarantee forward constraints
         self._apply_forward_constraints_if_necessary()
 

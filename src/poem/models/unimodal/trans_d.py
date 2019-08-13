@@ -7,9 +7,9 @@ from typing import Optional
 import torch
 import torch.autograd
 from torch import nn
-from torch.nn.init import xavier_normal_
 
 from ..base import BaseModule
+from ..init import embedding_xavier_normal_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
@@ -28,16 +28,15 @@ class TransD(BaseModule):
        - OpenKE `implementation of TransD <https://github.com/thunlp/OpenKE/blob/master/models/TransD.py>`_
     """
 
-    margin_ranking_loss_size_average: bool = True
-    entity_embedding_max_norm = 1
-
     def __init__(
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 50,
             entity_embeddings: Optional[nn.Embedding] = None,
+            entity_projections: Optional[nn.Embedding] = None,
             relation_dim: int = 30,
             relation_embeddings: Optional[nn.Embedding] = None,
+            relation_projections: Optional[nn.Embedding] = None,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
@@ -57,25 +56,26 @@ class TransD(BaseModule):
         # The dimensions affected by h_bot
         self.change_dim = min(self.embedding_dim, self.relation_embedding_dim)
         self.relation_embeddings = relation_embeddings
-        self.entity_projections = None
-        self.relation_projections = None
+        self.entity_projections = entity_projections
+        self.relation_projections = relation_projections
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        # A simple lookup table that stores embeddings of a fixed dictionary and size
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1.)
-        self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
-        xavier_normal_(self.entity_embeddings.weight.data)
-        xavier_normal_(self.relation_embeddings.weight.data)
-        xavier_normal_(self.entity_projections.weight.data)
-        xavier_normal_(self.relation_projections.weight.data)
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
+            embedding_xavier_normal_(self.entity_embeddings)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim, max_norm=1.)
+            embedding_xavier_normal_(self.relation_embeddings)
+        if self.entity_projections is None:
+            self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
+            embedding_xavier_normal_(self.entity_projections)
+        if self.relation_projections is None:
+            self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
+            embedding_xavier_normal_(self.relation_projections)
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -102,8 +102,7 @@ class TransD(BaseModule):
         # score = -||h_bot + r - t_bot||_2^2
         return -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True, p=2) ** 2
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -130,8 +129,7 @@ class TransD(BaseModule):
         # score = -||h_bot + r - t_bot||_2^2
         return -torch.norm(h_bot[:, None, :] + r[:, None, :] - t_bot, dim=-1, p=2) ** 2
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])

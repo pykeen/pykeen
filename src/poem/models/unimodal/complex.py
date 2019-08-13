@@ -7,9 +7,9 @@ from typing import Optional, Tuple
 import numpy
 import torch
 import torch.nn as nn
-from torch.nn.init import xavier_normal_
 
 from ..base import BaseModule
+from ..init import embedding_xavier_normal_
 from ...customized_loss_functions.softplus_loss import SoftplusLoss
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
@@ -17,10 +17,10 @@ from ...utils import l2_regularization
 
 
 def _compute_complex_scoring(
-        h: torch.Tensor,
-        r: torch.Tensor,
-        t: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """Evaluate the score function Re(h * r * t) for already broadcastable h, r, t.
 
     :param h: torch.Tensor, shape: (d1, ..., dk, 2), dtype: float
@@ -106,29 +106,30 @@ class ComplEx(BaseModule):
         # The embeddings are first initialized when calling the get_grad_params function
         self.relation_embeddings = relation_embeddings
 
-        # Initialize embeddings if no explicit ones were passed.
-        # TODO: What about initializing e.g. only entity embeddings explicitly?
-        if None in [
-            self.entity_embeddings,
-            self.relation_embeddings,
-        ]:
-            self._init_embeddings()
+        # Initialize embeddings
+        self._init_embeddings()
 
-    def _init_embeddings(self):
+    def _init_embeddings(self) -> None:
         # Initialize entity embeddings
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+            embedding_xavier_normal_(self.entity_embeddings)
 
-        # Use Glorot initialization
-        xavier_normal_(self.entity_embeddings.weight.data)
-        xavier_normal_(self.relation_embeddings.weight.data)
+        # Initialize relation embeddings
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+            embedding_xavier_normal_(self.relation_embeddings)
 
-    def compute_label_loss(self, predictions: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:  # noqa: D102
+    def compute_label_loss(
+            self,
+            predictions: torch.FloatTensor,
+            labels: torch.FloatTensor
+    ) -> torch.FloatTensor:  # noqa: D102
         loss = super().compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:  # noqa: D102
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
@@ -139,7 +140,7 @@ class ComplEx(BaseModule):
 
         return scores.view(-1, 1)
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:  # noqa: D102
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
@@ -150,7 +151,7 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:  # noqa: D102
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)

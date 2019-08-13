@@ -2,15 +2,14 @@
 
 """Implementation of UM."""
 
-import logging
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
+from ..init import embedding_xavier_uniform_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
@@ -18,13 +17,9 @@ __all__ = [
     'UnstructuredModel',
 ]
 
-log = logging.getLogger(__name__)
-
 
 class UnstructuredModel(BaseModule):
     """An implementation of Unstructured Model (UM) from [bordes2014]_."""
-
-    margin_ranking_loss_size_average: bool = True
 
     def __init__(
             self,
@@ -49,34 +44,26 @@ class UnstructuredModel(BaseModule):
         )
         self.scoring_fct_norm = scoring_fct_norm
 
-        if None in [self.entity_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        entity_embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-entity_embeddings_init_bound,
-            b=entity_embeddings_init_bound,
-        )
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+            embedding_xavier_uniform_(self.entity_embeddings)
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 2])
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm, keepdim=True) ** 2
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
         t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
 

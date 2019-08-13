@@ -2,23 +2,20 @@
 
 """Implementation of the HolE model."""
 
-import logging
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
+from ..init import embedding_xavier_uniform_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [
     'HolE',
 ]
-
-log = logging.getLogger(__name__)
 
 
 class HolE(BaseModule):
@@ -33,8 +30,6 @@ class HolE(BaseModule):
        - `scikit-kge implementation of HolE <https://github.com/mnick/scikit-kge>`_
        - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
-
-    entity_embedding_max_norm = 1
 
     def __init__(
             self,
@@ -61,33 +56,19 @@ class HolE(BaseModule):
 
         self.relation_embeddings = relation_embeddings
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-
+    def _init_embeddings(self) -> None:
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        entity_embeddings_init_bound = 6 / np.sqrt(
-            self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,
-        )
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-entity_embeddings_init_bound,
-            b=+entity_embeddings_init_bound,
-        )
-        relation_embeddings_init_bound = 6 / np.sqrt(
-            self.relation_embeddings.num_embeddings + self.relation_embeddings.embedding_dim,
-        )
-        nn.init.uniform_(
-            self.relation_embeddings.weight.data,
-            a=-relation_embeddings_init_bound,
-            b=+relation_embeddings_init_bound,
-        )
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
+            embedding_xavier_uniform_(self.entity_embeddings)
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+            embedding_xavier_uniform_(self.relation_embeddings)
+
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2])
@@ -111,8 +92,7 @@ class HolE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings.weight
@@ -135,8 +115,7 @@ class HolE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 1])

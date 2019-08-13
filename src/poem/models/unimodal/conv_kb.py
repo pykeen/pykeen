@@ -2,7 +2,6 @@
 
 """Implementation of the ConvKB model."""
 
-import logging
 from typing import Optional
 
 import torch
@@ -16,8 +15,6 @@ from ...typing import OptionalLoss
 __all__ = [
     'ConvKB',
 ]
-
-log = logging.getLogger(__name__)
 
 
 class ConvKB(BaseModule):
@@ -40,7 +37,10 @@ class ConvKB(BaseModule):
             num_filters: int = 400,
             random_seed: Optional[int] = None,
     ) -> None:
-        """Initialize the model."""
+        """Initialize the model.
+
+        To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
+        """
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
@@ -58,9 +58,8 @@ class ConvKB(BaseModule):
         self.entity_embeddings = entity_embeddings
         self.relation_embeddings = relation_embeddings
 
-        # Initialize embeddings if necessary
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        # Initialize embeddings
+        self._init_embeddings()
 
         # TODO: Initialize filters to [0.1, 0.1, -0.1],
         #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
@@ -76,17 +75,13 @@ class ConvKB(BaseModule):
 
     def _init_embeddings(self):
         # TODO: Use TransE embeddings for initialization..
-        self.entity_embeddings = nn.Embedding(
-            num_embeddings=self.num_entities,
-            embedding_dim=self.embedding_dim,
-        )
-        self.relation_embeddings = nn.Embedding(
-            num_embeddings=self.num_relations,
-            embedding_dim=self.embedding_dim,
-        )
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2])
@@ -106,8 +101,7 @@ class ConvKB(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings.weight
@@ -121,10 +115,8 @@ class ConvKB(BaseModule):
         #  conv.bias: (num_filters,)
         #  hr_conv_out: (batch_size, embedding_dim, num_filters)
         hr = torch.stack([h, r], dim=-1)
-        hr_conv_out = (
-            torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1)
+        hr_conv_out = torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1) \
             + self.conv.bias[None, None, :]
-        )
 
         # Convolve tail
         # Shapes:
@@ -145,8 +137,7 @@ class ConvKB(BaseModule):
 
         return scores.view(-1, self.num_entities)
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 1])
@@ -160,10 +151,8 @@ class ConvKB(BaseModule):
         #  conv.bias: (num_filters,)
         #  rt_conv_out: (batch_size, embedding_dim, num_filters)
         rt = torch.stack([r, t], dim=-1)
-        rt_conv_out = (
-            torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1)
+        rt_conv_out = torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1) \
             + self.conv.bias[None, None, :]
-        )
 
         # Convolve tail
         # Shapes:

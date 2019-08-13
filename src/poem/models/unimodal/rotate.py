@@ -2,7 +2,6 @@
 
 """Implementation of the RotatE model."""
 
-import logging
 from typing import Optional
 
 import numpy as np
@@ -12,14 +11,13 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import BaseModule
+from ..init import embedding_xavier_uniform_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [
     'RotatE',
 ]
-
-log = logging.getLogger(__name__)
 
 
 class RotatE(BaseModule):
@@ -37,6 +35,8 @@ class RotatE(BaseModule):
             self,
             triples_factory: TriplesFactory,
             embedding_dim: int = 200,
+            entity_embeddings: Optional[nn.Embedding] = None,
+            relation_embeddings: Optional[nn.Embedding] = None,
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
@@ -48,34 +48,28 @@ class RotatE(BaseModule):
             triples_factory=triples_factory,
             criterion=criterion,
             embedding_dim=2 * embedding_dim,  # for complex numbers
+            entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
 
         # Embeddings
-        self.relation_embeddings = None
+        self.relation_embeddings = relation_embeddings
 
+        # Initialize if necessary
         self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        entity_embeddings_init_bound = 6 / np.sqrt(
-            self.entity_embeddings.num_embeddings + self.entity_embeddings.embedding_dim,
-        )
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-entity_embeddings_init_bound,
-            b=+entity_embeddings_init_bound,
-        )
-        # phases randomly between 0 and 2 pi
-        nn.init.uniform_(
-            self.relation_embeddings.weight.data,
-            a=0,
-            b=2.0 * np.pi,
-        )
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+            embedding_xavier_uniform_(self.entity_embeddings)
 
-    def _apply_forward_constraints_if_necessary(self):
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+            # phases randomly between 0 and 2 pi
+            nn.init.uniform_(self.relation_embeddings.weight, a=0, b=2.0 * np.pi)
+
+    def _apply_forward_constraints_if_necessary(self) -> None:
         """Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 
         Absolute value of complex number
@@ -94,10 +88,10 @@ class RotatE(BaseModule):
 
     def _rotate_entities(
             self,
-            entity_indices: torch.Tensor,
-            relation_indices: torch.Tensor,
+            entity_indices: torch.LongTensor,
+            relation_indices: torch.LongTensor,
             inverse: bool = False
-    ) -> torch.Tensor:
+    ) -> torch.FloatTensor:
         """Rotate entity embeddings in complex plane by relation embeddings.
 
         :param entity_indices: torch.Tensor, dtype: long, shape: (batch_size,)
@@ -128,8 +122,7 @@ class RotatE(BaseModule):
 
         return rot_e
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
@@ -147,8 +140,7 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
@@ -166,8 +158,7 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 

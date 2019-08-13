@@ -16,12 +16,12 @@ __all__ = ['KG2E']
 
 
 def _expected_likelihood(
-        mu_e: torch.Tensor,
-        mu_r: torch.Tensor,
-        sigma_e: torch.Tensor,
-        sigma_r: torch.Tensor,
+        mu_e: torch.FloatTensor,
+        mu_r: torch.FloatTensor,
+        sigma_e: torch.FloatTensor,
+        sigma_r: torch.FloatTensor,
         epsilon: float = 1.0e-10,
-) -> torch.Tensor:
+) -> torch.FloatTensor:
     """
     Compute the similarity based on expected likelihood.
 
@@ -49,12 +49,12 @@ def _expected_likelihood(
 
 
 def _kullback_leibler_similarity(
-        mu_e: torch.Tensor,
-        mu_r: torch.Tensor,
-        sigma_e: torch.Tensor,
-        sigma_r: torch.Tensor,
+        mu_e: torch.FloatTensor,
+        mu_r: torch.FloatTensor,
+        sigma_e: torch.FloatTensor,
+        sigma_r: torch.FloatTensor,
         epsilon: float = 1.0e-10,
-) -> torch.Tensor:
+) -> torch.FloatTensor:
     """Compute the similarity based on KL divergence.
 
     This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
@@ -95,9 +95,6 @@ class KG2E(BaseModule):
     For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div,
     Expected Likelihood).
     """
-
-    entity_embedding_max_norm = 1
-    entity_embedding_norm_type = 2
 
     def __init__(
             self,
@@ -145,24 +142,22 @@ class KG2E(BaseModule):
         self.relation_covariances = relation_covariances
 
         # Initialize if necessary
-        if None in [
-            self.entity_embeddings,
-            self.relation_embeddings,
-            self.entity_covariances,
-            self.relation_covariances,
-        ]:
-            self._init_embeddings()
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
+    def _init_embeddings(self) -> None:
         # means are restricted to max norm of 1
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim, max_norm=1)
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim, max_norm=1)
 
         # covariance constraints are applied at _apply_forward_constraints_if_necessary
-        self.entity_covariances = nn.Embedding(self.num_entities, self.embedding_dim)
-        self.relation_covariances = nn.Embedding(self.num_relations, self.embedding_dim)
+        if self.entity_covariances is None:
+            self.entity_covariances = nn.Embedding(self.num_entities, self.embedding_dim)
+        if self.relation_covariances is None:
+            self.relation_covariances = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def _apply_forward_constraints_if_necessary(self):
+    def _apply_forward_constraints_if_necessary(self) -> None:
         # Ensure positive definite covariances matrices and appropriate size by clamping
         if not self.forward_constraint_applied:
             for cov in (
@@ -173,10 +168,7 @@ class KG2E(BaseModule):
                 torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
             self.forward_constraint_applied = True
 
-    def forward_owa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
 
@@ -203,10 +195,7 @@ class KG2E(BaseModule):
 
         return scores
 
-    def forward_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
 
@@ -232,10 +221,7 @@ class KG2E(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
 

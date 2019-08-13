@@ -4,12 +4,13 @@
 
 from typing import Optional
 
-import numpy as np
+import numpy
 import torch
 import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
+from ..init import embedding_xavier_uniform_
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 
@@ -52,45 +53,36 @@ class ProjE(BaseModule):
         self.relation_embeddings = relation_embeddings
         self.inner_non_linearity = inner_non_linearity
 
-        init_bound = 6 / np.sqrt(self.embedding_dim)
-
         # Global entity projection
-        self.d_e = (torch.rand(self.embedding_dim, requires_grad=True) - 2.0) * init_bound
+        bound = numpy.sqrt(6) / self.embedding_dim
+        self.d_e = torch.empty(self.embedding_dim, requires_grad=True)
+        nn.init.uniform_(self.d_e, a=-bound, b=bound)
 
         # Global relation projection
-        self.d_r = (torch.rand(self.embedding_dim, requires_grad=True) - 2.0) * init_bound
+        self.d_r = torch.empty(self.embedding_dim, requires_grad=True)
+        nn.init.uniform_(self.d_r, a=-bound, b=bound)
 
         # Global combination bias
-        self.b_c = (torch.rand(self.embedding_dim, requires_grad=True) - 2.0) * init_bound
+        self.b_c = torch.empty(self.embedding_dim, requires_grad=True)
+        nn.init.uniform_(self.b_c, a=-bound, b=bound)
 
         # Global combination bias
-        self.b_p = (torch.rand(1, requires_grad=True) - 2.0) * init_bound
+        self.b_p = torch.empty(1, requires_grad=True)
+        nn.init.uniform_(self.b_p, a=-bound, b=bound)
 
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+        # Initialize embeddings
+        self._init_embeddings()
 
-    def _init_embeddings(self):
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        # The same bound is used for both entity embeddings and
-        # relation embeddings because they have the same dimension
-        embeddings_init_bound = 6 / np.sqrt(self.embedding_dim)
-        nn.init.uniform_(
-            self.entity_embeddings.weight.data,
-            a=-embeddings_init_bound,
-            b=+embeddings_init_bound,
-        )
-        nn.init.uniform_(
-            self.relation_embeddings.weight.data,
-            a=-embeddings_init_bound,
-            b=+embeddings_init_bound,
-        )
+    def _init_embeddings(self) -> None:
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+            embedding_xavier_uniform_(self.entity_embeddings)
 
-    def forward_owa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+            embedding_xavier_uniform_(self.relation_embeddings)
 
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -102,10 +94,7 @@ class ProjE(BaseModule):
 
         return scores
 
-    def forward_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -117,10 +106,7 @@ class ProjE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(  # noqa: D102
-            self,
-            batch: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])

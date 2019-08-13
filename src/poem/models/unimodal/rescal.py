@@ -24,9 +24,8 @@ class RESCAL(BaseModule):
        - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
     """
 
-    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as the relation matrices,
-    #  to avoid overfitting.
-    margin_ranking_loss_size_average: bool = True
+    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as
+    #  the relation matrices, to avoid overfitting.
 
     def __init__(
             self,
@@ -52,15 +51,17 @@ class RESCAL(BaseModule):
         )
 
         self.relation_embeddings = relation_embeddings
-        if None in [self.entity_embeddings, self.relation_embeddings]:
-            self._init_embeddings()
+
+        # Initialize embeddings
+        self._init_embeddings()
 
     def _init_embeddings(self):
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
+        if self.entity_embeddings is None:
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        if self.relation_embeddings is None:
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
 
-    def forward_owa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass for training with the OWA."""
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
@@ -73,8 +74,7 @@ class RESCAL(BaseModule):
 
         return scores[:, :, 0]
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
@@ -83,7 +83,7 @@ class RESCAL(BaseModule):
 
         return scores[:, 0, :]
 
-    def forward_inverse_cwa(self, batch: torch.Tensor) -> torch.Tensor:
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         """Forward pass using left side (subject) prediction for training with the CWA."""
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)
