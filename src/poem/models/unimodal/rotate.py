@@ -52,6 +52,7 @@ class RotatE(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
+        self.real_embedding_dim = embedding_dim
 
         # Embeddings
         self.relation_embeddings = relation_embeddings
@@ -86,57 +87,54 @@ class RotatE(BaseModule):
             functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
             self.forward_constraint_applied = True
 
-    def _rotate_entities(
-            self,
-            entity_indices: torch.LongTensor,
-            relation_indices: torch.LongTensor,
-            inverse: bool = False
+    @staticmethod
+    def interaction_function(
+            h: torch.FloatTensor,
+            r: torch.FloatTensor,
+            t: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """Rotate entity embeddings in complex plane by relation embeddings.
+        """Evaluate the interaction function of ComplEx for given embeddings.
 
-        :param entity_indices: torch.Tensor, dtype: long, shape: (batch_size,)
-            The indices of the entities.
-        :param relation_indices: torch.Tensor, dtype: long, shape: (batch_size,)
-            The indices of the relations.
-        :param inverse: bool (default: False)
-            Whether to rotate by the inverse of the relation.
+        The embeddings have to be in a broadcastable shape.
 
-        :return: torch.Tensor, dtype: float, shape: (batch_size, embedding_dim)
-            The rotated entity embeddings.
+        WARNING: No forward constraints are applied.
+
+        :param h: shape: (..., e, 2)
+            Head embeddings. Last dimension corresponds to (real, imag).
+        :param r: shape: (..., e, 2)
+            Relation embeddings. Last dimension corresponds to (real, imag).
+        :param t: shape: (..., e, 2)
+            Tail embeddings. Last dimension corresponds to (real, imag).
+
+        :return: shape: (...)
+            The scores.
         """
-        # rotate head embeddings in complex plane (equivalent to Hadamard product)
-        e = self.entity_embeddings(entity_indices).view(-1, self.embedding_dim // 2, 2, 1)
-        r = self.relation_embeddings(relation_indices).view(-1, self.embedding_dim // 2, 1, 2)
+        # Decompose into real and imaginary part
+        h_re = h[..., 0]
+        h_im = h[..., 1]
+        r_re = r[..., 0]
+        r_im = r[..., 1]
 
-        # r expresses a rotation in complex plane.
-        # The inverse rotation is expressed by the complex conjugate of r.
-        if inverse:
-            r[:, :, 0, 1] *= -1
-
-        # Compute Hadamard product
-        er = (e * r)
-        rot_e = torch.cat([
-            er[:, :, 0, 0] - er[:, :, 1, 1],
-            er[:, :, 0, 1] + er[:, :, 1, 0],
+        # Rotate (=Hadamard product in complex space).
+        rot_h = torch.stack([
+            h_re * r_re - h_im * r_im,
+            h_re * r_im + h_im * r_re,
         ], dim=-1)
+        scores = -torch.norm(rot_h - t, dim=(-2, -1))
 
-        return rot_e
+        return scores
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
-        # Rotate head by relation
-        rot_h = self._rotate_entities(
-            entity_indices=batch[:, 0],
-            relation_indices=batch[:, 1],
-        )
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
+        r = self.entity_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
-        # Get tail embeddings
-        t = self.entity_embeddings(batch[:, 2])
-
-        # use negative distance to tail as score
-        scores = -torch.norm(rot_h - t, dim=-1, keepdim=True)
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
         return scores
 
@@ -144,17 +142,15 @@ class RotatE(BaseModule):
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
-        # Rotate head by relation
-        rot_h = self._rotate_entities(
-            entity_indices=batch[:, 0],
-            relation_indices=batch[:, 1],
-        )
+        # Get embeddings
+        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Rank against all entities
-        t = self.entity_embeddings.weight
+        t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
-        # use negative distance to tail as score
-        scores = -torch.norm(rot_h[:, None, :] - t[None, :, :], dim=-1)
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores
 
@@ -162,14 +158,23 @@ class RotatE(BaseModule):
         # Apply forward constraints if necessary
         self._apply_forward_constraints_if_necessary()
 
+        # Get embeddings
+        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
+        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
+
         # r expresses a rotation in complex plane.
         # The inverse rotation is expressed by the complex conjugate of r.
         # The score is computed as the distance of the relation-rotated head to the tail.
         # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
         # |h * r - t| = |h - conj(r) * t|
+        r[:, :, 0, 1] *= -1
 
-        # Rotate head by inverse of relation
-        rot_t = self._rotate_entities(entity_indices=batch[:, 1], relation_indices=batch[:, 0], inverse=True)
+        # Compute Hadamard product (=rotate tail by inverse relation)
+        er = (t * r)
+        rot_t = torch.cat([
+            er[:, :, 0, 0] - er[:, :, 1, 1],
+            er[:, :, 0, 1] + er[:, :, 1, 0],
+        ], dim=-1)
 
         # Rank against all entities
         h = self.entity_embeddings.weight

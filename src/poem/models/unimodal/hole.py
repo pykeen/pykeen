@@ -68,27 +68,46 @@ class HolE(BaseModule):
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             embedding_xavier_uniform_(self.relation_embeddings)
 
+    @staticmethod
+    def interaction_function(
+            h: torch.FloatTensor,
+            r: torch.FloatTensor,
+            t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        :param h: shape: (..., e, 2)
+            Head embeddings. Last dimension corresponds to (real, imag).
+        :param r: shape: (..., e, 2)
+            Relation embeddings. Last dimension corresponds to (real, imag).
+        :param t: shape: (..., e, 2)
+            Tail embeddings. Last dimension corresponds to (real, imag).
+
+        :return: shape: (...)
+            The scores.
+        """
+        # Circular correlation of entity embeddings
+        # TODO: Explicitly exploit symmetry and set onesided=True
+        a_fft = torch.rfft(h, signal_ndim=1, onesided=False)
+        b_fft = torch.rfft(t, signal_ndim=1, onesided=False)
+        # complex conjugate
+        a_fft[:, :, 1] *= -1
+        # Hadamard product in frequency domain
+        p_fft = a_fft * b_fft
+        # inverse real FFT
+        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=h.shape[1:])
+        # inner product with relation embedding
+        scores = torch.sum(r * composite, dim=-1, keepdim=True)
+        return scores
+
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2])
 
-        # Circular correlation of entity embeddings
-        # TODO: Explicitly exploit symmetry and set onesided=True
-        a_fft = torch.rfft(h, signal_ndim=1, onesided=False)
-        b_fft = torch.rfft(t, signal_ndim=1, onesided=False)
-
-        # complex conjugate
-        a_fft[:, :, 1] *= -1
-
-        # Hadamard product in frequency domain
-        p_fft = a_fft * b_fft
-
-        # inverse real FFT
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=h.shape[1:])
-
-        # inner product with relation embedding
-        scores = torch.sum(r * composite, dim=-1, keepdim=True)
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores
 

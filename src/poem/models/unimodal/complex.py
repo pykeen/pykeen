@@ -2,7 +2,7 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy
 import torch
@@ -14,41 +14,6 @@ from ...customized_loss_functions.softplus_loss import SoftplusLoss
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import l2_regularization
-
-
-def _compute_complex_scoring(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-    """Evaluate the score function Re(h * r * t) for already broadcastable h, r, t.
-
-    :param h: torch.Tensor, shape: (d1, ..., dk, 2), dtype: float
-        Head embeddings. Last dimension corresponds to (real, imag).
-    :param r: torch.Tensor, shape: (d1, ..., dk,, 2), dtype: float
-        Relation embeddings. Last dimension corresponds to (real, imag).
-    :param t: torch.Tensor, shape: (d1, ..., dk,, 2), dtype: float
-        Tail embeddings. Last dimension corresponds to (real, imag).
-
-    :return:
-        torch.Tensor, shape: (d1, ..., dk),  dtype: float
-            The scores.
-        torch.Tensor, shape: scalar, dtype: float
-            The regularization term.
-    """
-    # Regularization term
-    # Normalize by size
-    regularization_term = l2_regularization(h, r, t) / sum(numpy.prod(x.shape) for x in (h, r, t))
-
-    # ComplEx space bilinear product (equivalent to HolE)
-    # *: Elementwise multiplication
-    re_re_re = h[..., 0] * r[..., 0] * t[..., 0]
-    re_im_im = h[..., 0] * r[..., 1] * t[..., 1]
-    im_re_im = h[..., 1] * r[..., 0] * t[..., 1]
-    im_im_re = h[..., 1] * r[..., 1] * t[..., 0]
-    scores = torch.sum(re_re_re + re_im_im + im_re_im - im_im_re, dim=-1)
-
-    return scores, regularization_term
 
 
 class ComplEx(BaseModule):
@@ -120,6 +85,57 @@ class ComplEx(BaseModule):
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             embedding_xavier_normal_(self.relation_embeddings)
 
+    @staticmethod
+    def interaction_function(
+            h: torch.FloatTensor,
+            r: torch.FloatTensor,
+            t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function of ComplEx for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        :param h: shape: (..., e, 2)
+            Head embeddings. Last dimension corresponds to (real, imag).
+        :param r: shape: (..., e, 2)
+            Relation embeddings. Last dimension corresponds to (real, imag).
+        :param t: shape: (..., e, 2)
+            Tail embeddings. Last dimension corresponds to (real, imag).
+
+        :return: shape: (...)
+            The scores.
+        """
+        assert all(x.shape[-1] == 2 for x in (h, r, t))
+
+        # ComplEx space bilinear product (equivalent to HolE)
+        # *: Elementwise multiplication
+        re_re_re = h[..., 0] * r[..., 0] * t[..., 0]
+        re_im_im = h[..., 0] * r[..., 1] * t[..., 1]
+        im_re_im = h[..., 1] * r[..., 0] * t[..., 1]
+        im_im_re = h[..., 1] * r[..., 1] * t[..., 0]
+        scores = torch.sum(re_re_re + re_im_im + im_re_im - im_im_re, dim=-1)
+
+        return scores
+
+    def _update_regularization_term(
+            self,
+            h: torch.FloatTensor,
+            r: torch.FloatTensor,
+            t: torch.FloatTensor,
+    ) -> None:
+        """Update the regularization term for the given embeddings.
+
+        :param h: The head embeddings.
+        :param r: The relation embeddings.
+        :param t: The tail embeddings.
+        :return:
+        """
+        # L2 regularization
+        self.current_regularization_term = l2_regularization(h, r, t)
+
+        # normalize by number of elements in tensors
+        self.current_regularization_term /= sum(numpy.prod(x.shape) for x in (h, r, t))
+
     def compute_label_loss(
             self,
             predictions: torch.FloatTensor,
@@ -135,10 +151,13 @@ class ComplEx(BaseModule):
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
         t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
-        # Compute scores and update regularization term
-        scores, self.current_regularization_term = _compute_complex_scoring(h=h, r=r, t=t)
+        # Update regularization term
+        self._update_regularization_term(h=h, r=r, t=t)
 
-        return scores.view(-1, 1)
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
+
+        return scores
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, num_entities, embedding_dim, 2)
@@ -146,8 +165,11 @@ class ComplEx(BaseModule):
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
         t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
-        # Compute scores and update regularization term
-        scores, self.current_regularization_term = _compute_complex_scoring(h=h, r=r, t=t)
+        # Update regularization term
+        self._update_regularization_term(h=h, r=r, t=t)
+
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores
 
@@ -157,7 +179,10 @@ class ComplEx(BaseModule):
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
         t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
-        # Compute scores and update regularization term
-        scores, self.current_regularization_term = _compute_complex_scoring(h=h, r=r, t=t)
+        # Update regularization term
+        self._update_regularization_term(h=h, r=r, t=t)
+
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores

@@ -73,6 +73,32 @@ class DistMult(BaseModule):
             functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
             self.forward_constraint_applied = True
 
+    @staticmethod
+    def interaction_function(
+            h: torch.FloatTensor,
+            r: torch.FloatTensor,
+            t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        WARNING: Does not ensure forward constraints.
+
+        :param h: shape: (..., e)
+            Head embeddings.
+        :param r: shape: (..., e)
+            Relation embeddings.
+        :param t: shape: (..., e)
+            Tail embeddings.
+
+        :return: shape: (...)
+            The scores.
+        """
+        # ComplEx space bilinear product (equivalent to HolE)
+        # *: Elementwise multiplication
+        return torch.sum(h * r * t, dim=-1)
+
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Normalize embeddings
         self._apply_forward_constraints_if_necessary()
@@ -83,7 +109,7 @@ class DistMult(BaseModule):
         t = self.entity_embeddings(batch[:, 2])
 
         # Compute score
-        scores = torch.sum(h * r * t, dim=-1, keepdim=True)
+        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
         return scores
 
@@ -92,12 +118,12 @@ class DistMult(BaseModule):
         self._apply_forward_constraints_if_necessary()
 
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings.weight
+        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
 
         # Rank against all entities
-        scores = torch.sum(h[:, None, :] * r[:, None, :] * t[None, :, :], dim=-1)
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores
 
@@ -106,11 +132,11 @@ class DistMult(BaseModule):
         self._apply_forward_constraints_if_necessary()
 
         # Get embeddings
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1])
+        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
+        r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
 
         # Rank against all entities
-        scores = torch.sum(h[None, :, :] * r[:, None, :] * t[:, None, :], dim=-1)
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores
