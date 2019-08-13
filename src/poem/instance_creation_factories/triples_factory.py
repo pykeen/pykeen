@@ -111,12 +111,12 @@ class TriplesFactory:
 
     def create_cwa_instances(self) -> CWAInstances:
         """Create CWA instances for this factory's triples."""
-        s_r_to_mulit_objects = create_multi_label_objects_instance(
+        s_r_to_multi_objects = create_multi_label_objects_instance(
             triples=self.mapped_triples,
         )
 
-        subject_relation_pairs = np.array(list(s_r_to_mulit_objects.keys()), dtype=np.float)
-        labels = np.array(list(s_r_to_mulit_objects.values()))
+        subject_relation_pairs = np.array(list(s_r_to_multi_objects.keys()), dtype=np.float)
+        labels = np.array(list(s_r_to_multi_objects.values()))
 
         return CWAInstances(
             instances=subject_relation_pairs,
