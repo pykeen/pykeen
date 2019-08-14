@@ -101,6 +101,9 @@ class TestERMLP(_ModelTestCase, unittest.TestCase):
     """Test the ERMLP model."""
 
     model_cls = ERMLP
+    model_kwargs = {
+        'hidden_dim': 32,
+    }
 
 
 class TestHolE(_ModelTestCase, unittest.TestCase):
