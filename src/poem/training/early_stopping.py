@@ -16,7 +16,7 @@ class EarlyStopper:
     """A harness for early stopping.
 
     If you want to change the validation criteria, inherit from this
-    class and override ``EarlyStopper_validate()``.
+    class and override ``EarlyStopper._validate()``.
     """
 
     #: The evaluator
@@ -30,6 +30,8 @@ class EarlyStopper:
     window: int = 2
     #: The name of the metric to use
     metric: str = 'hits_at_k'
+    #: The minimum improvement between two iterations
+    delta: float = 0.005
     #: The metric results from all evaluations
     results: List[float] = dataclasses.field(default_factory=list)
 
@@ -70,10 +72,9 @@ class EarlyStopper:
         """Check whether the performance has recently improved."""
         return self.initialized and self._validate(self.current_result, self.recent_results)
 
-    @staticmethod
-    def _validate(current_result: float, recent_results: Iterable[float]) -> bool:
+    def _validate(self, current_result: float, recent_results: Iterable[float]) -> bool:
         return all(
-            previous_result <= current_result
+            previous_result - current_result <= self.delta
             for previous_result in recent_results
         )
 

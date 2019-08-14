@@ -3,7 +3,7 @@
 """Tests of early stopping."""
 
 import unittest
-from typing import Iterable
+from typing import Iterable, List
 
 import numpy as np
 from torch.optim import Adagrad
@@ -42,16 +42,23 @@ class MockEvaluator(Evaluator):
 class TestEarlyStopping(unittest.TestCase):
     """Tests for early stopping."""
 
+    #: The window size used by the early stopper
+    window: int = 2
+    #: The mock losses the mock evaluator will return
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
+    #: The (zeroed) index  - 1 at which stopping will occur
+    stop_constant: int = 4
+    #: The minimum improvement
+    delta: float = 0.0
+
     def setUp(self):
         """Prepare for testing the early stopper."""
-        self.window = 2
-        self.mock_losses = 10.0, 9.0, 8.0, 8.0, 8.0, 8.0
-        self.stop_constant = 4  # the position - 1 at which stopping will occur
         self.mock_evaluator = MockEvaluator(self.mock_losses)
         self.early_stopper = EarlyStopper(
             evaluator=self.mock_evaluator,
             window=self.window,
             triples=np.ndarray([]),
+            delta=self.delta,
         )
 
     def test_initialization(self):
@@ -90,3 +97,11 @@ class TestEarlyStopping(unittest.TestCase):
             early_stopper=self.early_stopper,
         )
         self.assertEqual(5, len(losses), msg='Did not stop early like it should have')
+
+
+class TestDeltaEarlyStopping(TestEarlyStopping):
+    """Test early stopping with a tiny delta."""
+
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
+    stop_constant: int = 4
+    delta: float = 0.1
