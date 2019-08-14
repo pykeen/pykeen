@@ -120,12 +120,17 @@ class BaseModule(nn.Module):
 
         This method takes subject, relation and object of each triple and calculates the corresponding score.
 
+        Additionally, the model is set to evaluation mode.
+
         :param triples: torch.Tensor, shape: (number of triples, 3), dtype: long
             The indices of (subject, relation, object) triples.
 
         :return: torch.Tensor, shape: (number of triples, 1), dtype: float
             The score for each triple.
         """
+        # Enforce evaluation mode
+        self.eval()
+
         scores = self.forward_owa(triples)
         return scores
 
@@ -134,12 +139,17 @@ class BaseModule(nn.Module):
 
         This method calculates the score for all possible objects for each (subject, relation) pair.
 
+        Additionally, the model is set to evaluation mode.
+
         :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (subject, relation) pairs.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each s-p pair, the scores for all possible objects.
         """
+        # Enforce evaluation mode
+        self.eval()
+
         scores = self.forward_cwa(batch)
         return scores
 
@@ -151,12 +161,17 @@ class BaseModule(nn.Module):
 
         This method calculates the score for all possible subjects for each (relation, object) pair.
 
+        Additionally, the model is set to evaluation mode.
+
         :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (relation, object) pairs.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each p-o pair, the scores for all possible subjects.
         """
+        # Enforce evaluation mode
+        self.eval()
+
         '''
         In case the model was trained using inverse triples, the scoring of all subjects is not handled by calculating
         the scores for all subjects based on a (relation, object) pair, but instead all possible objects are calculated

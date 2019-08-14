@@ -78,6 +78,9 @@ class OWATrainingLoop(TrainingLoop):
             pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
             current_epoch_loss = 0.
 
+            # Enforce training mode
+            self.model.train()
+
             for i, pos_batch in enumerate(pos_batches):
                 current_batch_size = len(pos_batch)
 
