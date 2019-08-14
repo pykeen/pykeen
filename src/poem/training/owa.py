@@ -61,6 +61,9 @@ class OWATrainingLoop(TrainingLoop):
         """Train the KGE model."""
         if self.model.compute_mr_loss and label_smoothing:
             raise ValueError('Margin Ranking Loss cannot be used together with label smoothing')
+            
+        # Ensure the model is on the correct device
+        self.model = self.model.to(self.device)
 
         training_instances = self.model.triples_factory.create_owa_instances()
         pos_triples = training_instances.instances
