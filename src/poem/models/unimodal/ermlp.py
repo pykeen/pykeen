@@ -92,7 +92,7 @@ class ERMLP(BaseModule):
         layers = self.mlp.children()
         first_layer = next(layers)
         w = first_layer.weight
-        i = 2 * self.hidden_dim
+        i = 2 * self.embedding_dim
         w_hr = w[None, :, :i] @ torch.cat([h, r], dim=-1).unsqueeze(-1)
         w_t = w[None, :, i:] @ t.unsqueeze(-1)
         b = first_layer.bias
@@ -115,7 +115,7 @@ class ERMLP(BaseModule):
         layers = self.mlp.children()
         first_layer = next(layers)
         w = first_layer.weight
-        i = self.hidden_dim
+        i = self.embedding_dim
         w_h = w[None, :, :i] @ h.unsqueeze(-1)
         w_rt = w[None, :, i:] @ torch.cat([r, t], dim=-1).unsqueeze(-1)
         b = first_layer.bias
