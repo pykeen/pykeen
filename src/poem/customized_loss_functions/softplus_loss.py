@@ -11,7 +11,7 @@ from torch.nn.modules.loss import _Loss
 try:
     from torch._jit_internal import weak_script_method
 except ImportError:
-    logging.warn('torch._jit_internal is not available')
+    logging.warning('torch._jit_internal is not available')
 
     def weak_script_method(f):
         """Return the original function because weak_script_method is not available."""
