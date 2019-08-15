@@ -145,6 +145,7 @@ class KG2E(BaseModule):
         self._init_embeddings()
 
     def _init_embeddings(self) -> None:
+        """Initialize entity and relation embeddings."""
         # means are restricted to max norm of 1
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)

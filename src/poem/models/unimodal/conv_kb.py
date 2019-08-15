@@ -74,6 +74,7 @@ class ConvKB(BaseModule):
         torch.nn.init.zeros_(self.linear.bias)
 
     def _init_embeddings(self):
+        """Initialize entity and relation embeddings."""
         # TODO: Use TransE embeddings for initialization..
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

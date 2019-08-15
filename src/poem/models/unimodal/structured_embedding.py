@@ -57,6 +57,7 @@ class StructuredEmbedding(BaseModule):
         self._init_embeddings()
 
     def _init_embeddings(self) -> None:
+        """Initialize entity and relation embeddings."""
         init_bound = 6 / np.sqrt(self.embedding_dim)
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

@@ -59,6 +59,7 @@ class HolE(BaseModule):
         self._init_embeddings()
 
     def _init_embeddings(self) -> None:
+        """Initialize entity and relation embeddings."""
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)

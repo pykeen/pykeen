@@ -64,6 +64,7 @@ class ERMLP(BaseModule):
         self._init_embeddings()
 
     def _init_embeddings(self) -> None:
+        """Initialize entity and relation embeddings."""
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)

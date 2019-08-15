@@ -59,6 +59,7 @@ class TransH(BaseModule):
         self._init_embeddings()
 
     def _init_embeddings(self) -> None:
+        """Initialize entity and relation embeddings."""
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         if self.relation_embeddings is None:
