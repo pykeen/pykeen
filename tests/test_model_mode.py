@@ -6,19 +6,24 @@ import unittest
 
 import torch
 
-from poem.instance_creation_factories.triples_factory import TriplesFactory
-from poem.models import TransE
-from tests.constants import TEST_DATA
+from poem.datasets.nations import NationsTrainingTriplesFactory
+from poem.instance_creation_factories import TriplesFactory
+from poem.models import BaseModule, TransE
 
 
 class TestBaseModel(unittest.TestCase):
     """Test models are set in the right mode at the right time."""
 
+    batch_size: int
+    embedding_dim: 8
+    factory: TriplesFactory
+    model: BaseModule
+
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""
         self.batch_size = 16
         self.embedding_dim = 8
-        self.factory = TriplesFactory(path=TEST_DATA)
+        self.factory = NationsTrainingTriplesFactory()
         self.model = TransE(self.factory, embedding_dim=self.embedding_dim)
 
     def _check_scores(self, batch, scores) -> None:

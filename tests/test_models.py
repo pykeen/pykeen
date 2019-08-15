@@ -10,13 +10,13 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 
 import poem.models
-from poem.instance_creation_factories.triples_factory import TriplesFactory
+from poem.datasets.nations import NationsTrainingTriplesFactory
+from poem.instance_creation_factories import TriplesFactory
 from poem.models import (
     BaseModule, ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE,
     StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
 from poem.models.multimodal import MultimodalBaseModule
-from tests.constants import TEST_DATA
 
 SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule'}
 
@@ -25,13 +25,18 @@ class _ModelTestCase:
     """A test case for quickly defining common tests for KGE models."""
 
     model_cls: ClassVar[Type[BaseModule]]
-    model_kwargs: Optional[Mapping[str, Any]] = None
+    model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
+    batch_size: int
+    embedding_dim: 8
+    factory: TriplesFactory
+    model: BaseModule
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
         self.batch_size = 16
         self.embedding_dim = 8
-        self.factory = TriplesFactory(path=TEST_DATA)
+        self.factory = NationsTrainingTriplesFactory()
         self.model = self.model_cls(self.factory, embedding_dim=self.embedding_dim, **(self.model_kwargs or {}))
 
     def _check_scores(self, batch, scores) -> None:

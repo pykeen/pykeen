@@ -8,11 +8,10 @@ from typing import Iterable, List
 import numpy as np
 from torch.optim import Adagrad
 
+from poem.datasets.nations import NationsTrainingTriplesFactory
 from poem.evaluation import Evaluator, MetricResults
-from poem.instance_creation_factories import TriplesFactory
 from poem.models import TransE
 from poem.training import EarlyStopper, OWATrainingLoop
-from tests.constants import TEST_DATA
 
 
 class MockEvaluator(Evaluator):
@@ -83,7 +82,7 @@ class TestEarlyStopping(unittest.TestCase):
     @unittest.skip('Blocked by issues with models')
     def test_early_stopping(self):
         """Tests early stopping."""
-        triple_factory = TriplesFactory(path=TEST_DATA)
+        triple_factory = NationsTrainingTriplesFactory()
         model = TransE(triples_factory=triple_factory)
         optimizer = Adagrad(params=model.get_grad_params())
         training_loop = OWATrainingLoop(
