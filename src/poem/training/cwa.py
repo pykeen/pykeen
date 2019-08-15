@@ -9,7 +9,7 @@ import torch
 from tqdm import trange
 
 from .training_loop import TrainingLoop
-from .utils import split_list_in_batches
+from .utils import apply_label_smoothing, lazy_compile_random_batches
 
 __all__ = [
     'CWATrainingLoop',
@@ -34,31 +34,37 @@ class CWATrainingLoop(TrainingLoop):
         num_entities = self.model.num_entities
 
         num_triples = subject_relation_pairs.shape[0]
+        indices = np.arange(num_triples)
 
         _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
         for _ in trange(num_epochs, **_tqdm_kwargs):
-            indices = np.arange(num_triples)
-            np.random.shuffle(indices)
-            subject_relation_pairs = subject_relation_pairs[indices]
-            labels = [labels[i] for i in indices]
-            batches = split_list_in_batches(input_list=subject_relation_pairs, batch_size=batch_size)
-            labels_batches = split_list_in_batches(input_list=labels, batch_size=batch_size)
-            current_epoch_loss = 0.
+            # Compile training batches using random shuffling
+            train_batches = lazy_compile_random_batches(
+                indices=indices,
+                input_array=subject_relation_pairs,
+                target_array=labels,
+                batch_size=batch_size,
+            )
 
             # Enforce training mode
             self.model.train()
 
-            for batch_pairs, batch_labels in zip(batches, labels_batches):
+            current_epoch_loss = 0.
+            for batch_pairs, batch_labels in train_batches:
                 current_batch_size = len(batch_pairs)
                 batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.device)
 
+                # Construct dense target
                 batch_labels_full = torch.zeros((current_batch_size, num_entities), device=self.device)
                 for i in range(current_batch_size):
                     batch_labels_full[i, batch_labels[i]] = 1
 
                 if label_smoothing:
-                    batch_labels_full = (batch_labels_full * (1.0 - label_smoothing_epsilon)) + \
-                                        (label_smoothing_epsilon / (num_entities - 1))
+                    batch_labels_full = apply_label_smoothing(
+                        batch_labels_full,
+                        label_smoothing_epsilon,
+                        num_entities,
+                    )
 
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
@@ -71,6 +77,6 @@ class CWATrainingLoop(TrainingLoop):
                 self.optimizer.step()
 
             # Track epoch loss
-            self.losses_per_epochs.append(current_epoch_loss / len(subject_relation_pairs))
+            self.losses_per_epochs.append(current_epoch_loss / num_triples)
 
         return self.losses_per_epochs

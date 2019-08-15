@@ -11,7 +11,7 @@ from tqdm import trange
 
 from .early_stopping import EarlyStopper
 from .training_loop import TrainingLoop
-from .utils import split_list_in_batches
+from .utils import apply_label_smoothing, split_list_in_batches
 from ..models import BaseModule
 from ..negative_sampling import BasicNegativeSampler, NegativeSampler
 
@@ -61,7 +61,7 @@ class OWATrainingLoop(TrainingLoop):
         """Train the KGE model."""
         if self.model.compute_mr_loss and label_smoothing:
             raise ValueError('Margin Ranking Loss cannot be used together with label smoothing')
-            
+
         # Ensure the model is on the correct device
         self.model = self.model.to(self.device)
 
@@ -112,10 +112,11 @@ class OWATrainingLoop(TrainingLoop):
                     labels = torch.cat([ones, zeros], 0)
 
                     if label_smoothing:
-                        # TODO give variables better names
-                        _a = labels * (1.0 - label_smoothing_epsilon)
-                        _b = label_smoothing_epsilon / (num_entities - 1)
-                        labels = _a + _b
+                        labels = apply_label_smoothing(
+                            labels=labels,
+                            epsilon=label_smoothing_epsilon,
+                            num_classes=num_entities,
+                        )
 
                     loss = self.model.compute_label_loss(predictions=predictions, labels=labels)
 
