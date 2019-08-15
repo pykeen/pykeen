@@ -51,6 +51,6 @@ class Evaluator(ABC):
         return self.model.device
 
     @abstractmethod
-    def evaluate(self, triples: np.ndarray) -> MetricResults:
+    def evaluate(self, triples: np.ndarray, **kwargs) -> MetricResults:
         """Evaluate the triples."""
         raise NotImplementedError
