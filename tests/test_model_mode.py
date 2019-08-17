@@ -15,7 +15,7 @@ class TestBaseModel(unittest.TestCase):
     """Test models are set in the right mode at the right time."""
 
     batch_size: int
-    embedding_dim: 8
+    embedding_dim: int
     factory: TriplesFactory
     model: BaseModule
 

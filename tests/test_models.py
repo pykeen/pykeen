@@ -28,7 +28,7 @@ class _ModelTestCase:
     model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
     batch_size: int
-    embedding_dim: 8
+    embedding_dim: int
     factory: TriplesFactory
     model: BaseModule
 
