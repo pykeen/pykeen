@@ -39,6 +39,7 @@ class DistMult(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -54,10 +55,10 @@ class DistMult(BaseModule):
         )
         self.relation_embeddings = relation_embeddings
 
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
             embedding_xavier_uniform_(self.entity_embeddings)
@@ -67,6 +68,13 @@ class DistMult(BaseModule):
             embedding_xavier_uniform_(self.relation_embeddings)
             # Initialise relation embeddings to unit length
             functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def _apply_forward_constraints_if_necessary(self) -> None:
         # Normalize embeddings of entities

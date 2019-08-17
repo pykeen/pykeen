@@ -45,6 +45,7 @@ class NTN(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
             non_linearity=nn.Tanh(),
+            init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -67,11 +68,10 @@ class NTN(BaseModule):
         self.u_relation = u_relation
         self.non_linearity = non_linearity
 
-        # Initialize embeddings
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         # Initialize entity embeddings
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
@@ -88,6 +88,16 @@ class NTN(BaseModule):
         # u_R: (k,)
         if self.u_relation is None:
             self.u_relation = nn.Embedding(self.num_relations, self.num_slices)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.w_relation = None
+        self.v_relation = None
+        self.b_relation = None
+        self.u_relation = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get entity embeddings

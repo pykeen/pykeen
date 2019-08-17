@@ -36,6 +36,7 @@ class TransH(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -56,10 +57,10 @@ class TransH(BaseModule):
         self.relation_embeddings = relation_embeddings
         self.normal_vector_embeddings = normal_vector_embeddings
 
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         if self.relation_embeddings is None:
@@ -67,6 +68,12 @@ class TransH(BaseModule):
         if self.normal_vector_embeddings is None:
             self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         # TODO: Add initialization
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def _apply_forward_constraints_if_necessary(self) -> None:
         if not self.forward_constraint_applied:

@@ -27,7 +27,9 @@ class CWATrainingLoop(TrainingLoop):
             label_smoothing_epsilon: float = 0.1,
     ) -> List[float]:
         """Train the model using the closed world assumption."""
+        # Ensure the model is on the correct device
         self.model = self.model.to(self.device)
+
         training_instances = self.triples_factory.create_cwa_instances()
         subject_relation_pairs = training_instances.instances
         labels = training_instances.labels

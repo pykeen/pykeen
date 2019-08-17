@@ -280,6 +280,20 @@ class BaseModule(nn.Module):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def init_empty_weights_(self):
+        """Initialize all uninitialized weights and embeddings."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_weights_(self):
+        """Clear all weights and embeddings."""
+        raise NotImplementedError
+
+    def reset_weights_(self):
+        """Force re-initialization of all weights."""
+        return self.clear_weights_().init_empty_weights_()
+
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         return filter(lambda p: p.requires_grad, self.parameters())

@@ -35,6 +35,7 @@ class ProjE(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
             inner_non_linearity: Optional[nn.Module] = None,
+            init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.BCEWithLogitsLoss(reduction='mean')
@@ -54,27 +55,21 @@ class ProjE(BaseModule):
         self.inner_non_linearity = inner_non_linearity
 
         # Global entity projection
-        bound = numpy.sqrt(6) / self.embedding_dim
         self.d_e = torch.empty(self.embedding_dim, requires_grad=True)
-        nn.init.uniform_(self.d_e, a=-bound, b=bound)
 
         # Global relation projection
         self.d_r = torch.empty(self.embedding_dim, requires_grad=True)
-        nn.init.uniform_(self.d_r, a=-bound, b=bound)
 
         # Global combination bias
         self.b_c = torch.empty(self.embedding_dim, requires_grad=True)
-        nn.init.uniform_(self.b_c, a=-bound, b=bound)
 
         # Global combination bias
         self.b_p = torch.empty(1, requires_grad=True)
-        nn.init.uniform_(self.b_p, a=-bound, b=bound)
 
-        # Initialize embeddings
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
             embedding_xavier_uniform_(self.entity_embeddings)
@@ -82,6 +77,20 @@ class ProjE(BaseModule):
         if self.relation_embeddings is None:
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             embedding_xavier_uniform_(self.relation_embeddings)
+
+        # TODO: How to determine whether weights have been initialized
+        bound = numpy.sqrt(6) / self.embedding_dim
+        nn.init.uniform_(self.d_e, a=-bound, b=bound)
+        nn.init.uniform_(self.d_r, a=-bound, b=bound)
+        nn.init.uniform_(self.b_c, a=-bound, b=bound)
+        nn.init.uniform_(self.b_p, a=-bound, b=bound)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

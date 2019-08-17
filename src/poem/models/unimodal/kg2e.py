@@ -110,6 +110,7 @@ class KG2E(BaseModule):
             dist_similarity: Optional[str] = None,
             c_min: float = 0.05,
             c_max: float = 5.,
+            init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -141,11 +142,10 @@ class KG2E(BaseModule):
         self.entity_covariances = entity_covariances
         self.relation_covariances = relation_covariances
 
-        # Initialize if necessary
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         # means are restricted to max norm of 1
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
@@ -157,6 +157,15 @@ class KG2E(BaseModule):
             self.entity_covariances = nn.Embedding(self.num_entities, self.embedding_dim)
         if self.relation_covariances is None:
             self.relation_covariances = nn.Embedding(self.num_relations, self.embedding_dim)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.entity_covariances = None
+        self.relation_embeddings = None
+        self.relation_covariances = None
+        return self
 
     def _apply_forward_constraints_if_necessary(self) -> None:
         # Ensure positive definite covariances matrices and appropriate size by clamping

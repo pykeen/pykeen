@@ -49,6 +49,7 @@ class TransR(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = False,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -67,10 +68,10 @@ class TransR(BaseModule):
         self.relation_embeddings = relation_embeddings
         self.relation_projections = relation_projections
 
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
             embedding_xavier_uniform_(self.entity_embeddings)
@@ -84,6 +85,12 @@ class TransR(BaseModule):
                 self.num_relations,
                 self.relation_embedding_dim * self.embedding_dim,
             )
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def _apply_forward_constraints_if_necessary(self) -> None:
         # Normalize embeddings of entities

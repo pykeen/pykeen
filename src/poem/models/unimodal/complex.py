@@ -29,6 +29,7 @@ class ComplEx(BaseModule):
             random_seed: Optional[int] = None,
             relation_embeddings: Optional[nn.Embedding] = None,
             regularization_factor: float = 0.01,
+            init: bool = True,
     ) -> None:
         """Initialize the module.
 
@@ -72,10 +73,10 @@ class ComplEx(BaseModule):
         self.relation_embeddings = relation_embeddings
 
         # Initialize embeddings
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         # Initialize entity embeddings
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
@@ -85,6 +86,13 @@ class ComplEx(BaseModule):
         if self.relation_embeddings is None:
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             embedding_xavier_normal_(self.relation_embeddings)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     @staticmethod
     def interaction_function(

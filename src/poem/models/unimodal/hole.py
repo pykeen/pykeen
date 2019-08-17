@@ -40,6 +40,7 @@ class HolE(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -56,10 +57,10 @@ class HolE(BaseModule):
 
         self.relation_embeddings = relation_embeddings
 
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
@@ -68,6 +69,13 @@ class HolE(BaseModule):
         if self.relation_embeddings is None:
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             embedding_xavier_uniform_(self.relation_embeddings)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     @staticmethod
     def interaction_function(

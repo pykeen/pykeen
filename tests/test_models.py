@@ -37,7 +37,35 @@ class _ModelTestCase:
         self.batch_size = 16
         self.embedding_dim = 8
         self.factory = NationsTrainingTriplesFactory()
-        self.model = self.model_cls(self.factory, embedding_dim=self.embedding_dim, **(self.model_kwargs or {}))
+        self.model = self.model_cls(
+            self.factory,
+            embedding_dim=self.embedding_dim,
+            init=True,
+            **(self.model_kwargs or {})
+        )
+
+    def test_init(self):
+        """Test the model's ``init_empty_weights_()`` function."""
+        # get number of parameters and shape
+        init_model = self.model.init_empty_weights_()
+        assert init_model == self.model
+        params = list(init_model.parameters())
+        param_shapes = set(p.shape for p in params)
+        num_params = len(params)
+
+        # clear model
+        clear_model = self.model.clear_weights_()
+        assert clear_model == self.model
+        # init model
+        new_model = self.model.init_empty_weights_()
+        assert new_model == self.model
+
+        # check if number and shapes match
+        params = list(init_model.parameters())
+        new_num_params = len(params)
+        assert new_num_params == num_params
+        new_param_shapes = set(p.shape for p in params)
+        assert new_param_shapes == param_shapes
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""

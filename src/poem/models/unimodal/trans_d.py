@@ -40,6 +40,7 @@ class TransD(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -59,10 +60,10 @@ class TransD(BaseModule):
         self.entity_projections = entity_projections
         self.relation_projections = relation_projections
 
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
             embedding_xavier_normal_(self.entity_embeddings)
@@ -75,6 +76,15 @@ class TransD(BaseModule):
         if self.relation_projections is None:
             self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
             embedding_xavier_normal_(self.relation_projections)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.entity_projections = None
+        self.relation_embeddings = None
+        self.relation_projections = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

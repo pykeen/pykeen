@@ -31,6 +31,7 @@ class ERMLP(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
             hidden_dim: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -53,23 +54,39 @@ class ERMLP(BaseModule):
            with self.embedding_dim neurons and output layer with one neuron.
            The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
         """
+        self.linear1 = nn.Linear(3 * self.embedding_dim, self.hidden_dim)
+        self.linear2 = nn.Linear(self.hidden_dim, 1)
         self.mlp = nn.Sequential(
-            nn.Linear(3 * self.embedding_dim, self.hidden_dim),
+            self.linear1,
             nn.ReLU(),
-            nn.Linear(self.hidden_dim, 1),
+            self.linear2,
         )
 
         self.relation_embeddings = relation_embeddings
 
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         if self.relation_embeddings is None:
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+        # TODO: How to determine whether weights have been initialized
+        # weight (re-)initialization
+        nn.init.zeros_(self.linear1.bias)
+        nn.init.xavier_uniform_(self.linear1.weight)
+        nn.init.zeros_(self.linear2.bias)
+        nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

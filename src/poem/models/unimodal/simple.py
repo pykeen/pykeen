@@ -37,6 +37,7 @@ class SimplE(BaseModule):
             criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -50,11 +51,10 @@ class SimplE(BaseModule):
         self.tail_entity_embeddings = tail_entity_embeddings
         self.inverse_relation_embeddings = inverse_relation_embeddings
 
-        # Initialize embeddings
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         if self.tail_entity_embeddings is None:
@@ -63,6 +63,15 @@ class SimplE(BaseModule):
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
         if self.inverse_relation_embeddings is None:
             self.inverse_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.tail_entity_embeddings = None
+        self.relation_embeddings = None
+        self.inverse_relation_embeddings = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Split triple in head, relation, tail

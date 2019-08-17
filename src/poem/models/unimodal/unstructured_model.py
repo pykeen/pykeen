@@ -30,6 +30,7 @@ class UnstructuredModel(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -43,14 +44,18 @@ class UnstructuredModel(BaseModule):
             random_seed=random_seed,
         )
         self.scoring_fct_norm = scoring_fct_norm
+        if init:
+            self.init_empty_weights_()
 
-        self._init_embeddings()
-
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
             embedding_xavier_uniform_(self.entity_embeddings)
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])

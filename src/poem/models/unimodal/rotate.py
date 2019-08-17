@@ -40,6 +40,7 @@ class RotatE(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -57,11 +58,10 @@ class RotatE(BaseModule):
         # Embeddings
         self.relation_embeddings = relation_embeddings
 
-        # Initialize if necessary
-        self._init_embeddings()
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self) -> None:
-        """Initialize entity and relation embeddings."""
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
             embedding_xavier_uniform_(self.entity_embeddings)
@@ -70,6 +70,13 @@ class RotatE(BaseModule):
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             # phases randomly between 0 and 2 pi
             nn.init.uniform_(self.relation_embeddings.weight, a=0, b=2.0 * np.pi)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def _apply_forward_constraints_if_necessary(self) -> None:
         """Normalize the length of relation vectors, if the forward constraint has not been applied yet.

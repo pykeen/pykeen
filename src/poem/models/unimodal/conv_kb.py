@@ -2,6 +2,7 @@
 
 """Implementation of the ConvKB model."""
 
+import logging
 from typing import Optional
 
 import torch
@@ -36,6 +37,7 @@ class ConvKB(BaseModule):
             preferred_device: Optional[str] = None,
             num_filters: int = 400,
             random_seed: Optional[int] = None,
+            init: bool = True,
     ) -> None:
         """Initialize the model.
 
@@ -55,32 +57,44 @@ class ConvKB(BaseModule):
         self.num_filters = num_filters
 
         # Embeddings
+        if None in (entity_embeddings, relation_embeddings):
+            logging.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
         self.entity_embeddings = entity_embeddings
         self.relation_embeddings = relation_embeddings
 
-        # Initialize embeddings
-        self._init_embeddings()
-
-        # TODO: Initialize filters to [0.1, 0.1, -0.1],
-        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
+        # The interaction model
         self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
-
         self.relu = nn.ReLU()
         self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
-        # Use Xavier initialization for weight; bias to zero
-        torch.nn.init.xavier_uniform_(self.linear.weight)
-        torch.nn.init.zeros_(self.linear.bias)
+        if init:
+            self.init_empty_weights_()
 
-    def _init_embeddings(self):
-        """Initialize entity and relation embeddings."""
-        # TODO: Use TransE embeddings for initialization..
+    def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
 
         if self.relation_embeddings is None:
             self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+        # TODO: How to determine whether weights have been initialized
+        # Use Xavier initialization for weight; bias to zero
+        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.zeros_(self.linear.bias)
+
+        # Initialize all filters to [0.1, 0.1, -0.1],
+        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
+        nn.init.constant_(self.conv.weight[..., :2], 0.1)
+        nn.init.constant_(self.conv.weight[..., 2], -0.1)
+        nn.init.zeros_(self.conv.bias)
+
+        return self
+
+    def clear_weights_(self):  # noqa: D102
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        return self
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(batch[:, 0])
