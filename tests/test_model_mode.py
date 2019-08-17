@@ -24,8 +24,7 @@ class TestBaseModel(unittest.TestCase):
         self.batch_size = 16
         self.embedding_dim = 8
         self.factory = NationsTrainingTriplesFactory()
-        self.model = TransE(self.factory, embedding_dim=self.embedding_dim)
-        self.model.init_empty_weights_()
+        self.model = TransE(self.factory, embedding_dim=self.embedding_dim, init=True)
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
