@@ -4,7 +4,10 @@ POEM
    :maxdepth: 2
 
    models
+   datasets
+   pipeline
    training
+   references
 
 Indices and Tables
 ------------------

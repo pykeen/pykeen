@@ -4,6 +4,7 @@
 
 import os
 
+from ..dataset import DataSet
 from ...instance_creation_factories import TriplesFactory
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     'NationsTestingTriplesFactory',
     'NationsTrainingTriplesFactory',
     'NationsValidationTriplesFactory',
+    'nations',
 ]
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -41,3 +43,10 @@ class NationsValidationTriplesFactory(TriplesFactory):
 
     def __init__(self):
         super().__init__(path=VALIDATE_PATH)
+
+
+nations = DataSet(
+    training_cls=NationsTrainingTriplesFactory,
+    testing_cls=NationsTestingTriplesFactory,
+    validation_cls=NationsValidationTriplesFactory,
+)
