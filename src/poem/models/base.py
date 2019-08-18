@@ -17,6 +17,7 @@ from ..typing import OptionalLoss
 
 __all__ = [
     'BaseModule',
+    'RegularizedModel',
 ]
 
 log = logging.getLogger(__name__)
@@ -29,13 +30,13 @@ class BaseModule(nn.Module):
     _hyperparameter_usage = defaultdict(set)
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 50,
-            entity_embeddings: nn.Embedding = None,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        entity_embeddings: nn.Embedding = None,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the module."""
         super().__init__()
@@ -154,8 +155,8 @@ class BaseModule(nn.Module):
         return scores
 
     def predict_scores_all_subjects(
-            self,
-            batch: torch.LongTensor,
+        self,
+        batch: torch.LongTensor,
     ) -> torch.FloatTensor:
         """Forward pass using left side (subject) prediction for obtaining scores of all possible subjects.
 
@@ -198,9 +199,9 @@ class BaseModule(nn.Module):
         return scores
 
     def compute_mr_loss(
-            self,
-            positive_scores: torch.FloatTensor,
-            negative_scores: torch.FloatTensor,
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Compute the mean ranking loss for the positive and negative scores.
 
@@ -219,9 +220,9 @@ class BaseModule(nn.Module):
         return loss
 
     def compute_label_loss(
-            self,
-            predictions: torch.FloatTensor,
-            labels: torch.FloatTensor,
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Compute the labeled mean ranking loss for the positive and negative scores.
 
@@ -303,3 +304,47 @@ class BaseModule(nn.Module):
         """Return the model parameters."""
         # TODO: not used anymore?
         return ['num_entities', 'num_relations', 'embedding_dim', 'criterion', 'preferred_device', 'random_seed']
+
+
+class RegularizedModel(BaseModule):
+    """Adds regularization to the BaseModule.
+
+    The class modifies the loss method by adding a weighted regularization term. The computation of the regularization
+    term is left to the subclass that usually computes such in every forward pass.
+    """
+
+    #: Current regularization term
+    #: Except for initialization to None, all management is left to the subclass.
+    current_regularization_term: Optional[torch.FloatTensor]
+
+    def __init__(
+        self,
+        *args,
+        regularization_weight: float,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.regularization_weight = regularization_weight
+        self.current_regularization_term = None
+
+    def compute_label_loss(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor
+    ) -> torch.FloatTensor:  # noqa: D102
+        assert self.current_regularization_term is not None, \
+            "Regularized models have to set 'self.current_regularization_term' in the forward pass"
+        loss = super().compute_label_loss(predictions=predictions, labels=labels)
+        loss += self.regularization_weight * self.current_regularization_term
+        return loss
+
+    def compute_mr_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        assert self.current_regularization_term is not None, \
+            "Regularized models have to set 'self.current_regularization_term' in the forward pass"
+        loss = super().compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        loss += self.regularization_weight * self.current_regularization_term
+        return loss

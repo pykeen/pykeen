@@ -4,11 +4,10 @@
 
 from typing import Optional
 
-import numpy
 import torch
 import torch.nn as nn
 
-from ..base import BaseModule
+from ..base import RegularizedModel
 from ..init import embedding_xavier_normal_
 from ...customized_loss_functions.softplus_loss import SoftplusLoss
 from ...instance_creation_factories import TriplesFactory
@@ -16,7 +15,7 @@ from ...typing import OptionalLoss
 from ...utils import l2_regularization
 
 
-class ComplEx(BaseModule):
+class ComplEx(RegularizedModel):
     """An implementation of ComplEx [trouillon2016]_."""
 
     def __init__(
@@ -28,7 +27,7 @@ class ComplEx(BaseModule):
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
             relation_embeddings: Optional[nn.Embedding] = None,
-            regularization_factor: float = 0.01,
+            regularization_weight: float = 0.01,
             init: bool = True,
     ) -> None:
         """Initialize the module.
@@ -47,13 +46,14 @@ class ComplEx(BaseModule):
             An optional random seed to set before the initialization of weights.
         :param relation_embeddings: nn.Embedding (optional)
             Relation embeddings initialization.
-        :param regularization_factor: float
+        :param regularization_weight: float
             A weight for the regularization term's contribution relative to the loss value.
         """
         if criterion is None:
             criterion = SoftplusLoss(reduction='mean')
 
         super().__init__(
+            regularization_weight=regularization_weight,
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
             entity_embeddings=entity_embeddings,
@@ -64,10 +64,6 @@ class ComplEx(BaseModule):
 
         # Store the real embedding size
         self.real_embedding_dim = embedding_dim
-
-        # ComplEx uses regularization
-        self.regularization_factor = torch.tensor([regularization_factor], requires_grad=False, device=self.device)[0]
-        self.current_regularization_term = None
 
         # The embeddings are first initialized when calling the get_grad_params function
         self.relation_embeddings = relation_embeddings
@@ -126,34 +122,6 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def _update_regularization_term(
-            self,
-            h: torch.FloatTensor,
-            r: torch.FloatTensor,
-            t: torch.FloatTensor,
-    ) -> None:
-        """Update the regularization term for the given embeddings.
-
-        :param h: The head embeddings.
-        :param r: The relation embeddings.
-        :param t: The tail embeddings.
-        :return:
-        """
-        # L2 regularization
-        self.current_regularization_term = l2_regularization(h, r, t)
-
-        # normalize by number of elements in tensors
-        self.current_regularization_term /= sum(numpy.prod(x.shape) for x in (h, r, t))
-
-    def compute_label_loss(
-            self,
-            predictions: torch.FloatTensor,
-            labels: torch.FloatTensor
-    ) -> torch.FloatTensor:  # noqa: D102
-        loss = super().compute_label_loss(predictions=predictions, labels=labels)
-        loss += self.regularization_factor * self.current_regularization_term
-        return loss
-
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, embedding_dim, 2)
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
@@ -161,7 +129,7 @@ class ComplEx(BaseModule):
         t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
         # Update regularization term
-        self._update_regularization_term(h=h, r=r, t=t)
+        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -175,7 +143,7 @@ class ComplEx(BaseModule):
         t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
         # Update regularization term
-        self._update_regularization_term(h=h, r=r, t=t)
+        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
@@ -189,7 +157,7 @@ class ComplEx(BaseModule):
         t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Update regularization term
-        self._update_regularization_term(h=h, r=r, t=t)
+        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)

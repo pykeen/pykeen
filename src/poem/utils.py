@@ -2,6 +2,7 @@
 
 """Utilities for POEM."""
 
+import numpy
 import torch
 
 __all__ = [
@@ -13,16 +14,25 @@ __all__ = [
 
 def l2_regularization(
         *xs: torch.Tensor,
+        normalize: bool = False
 ) -> torch.Tensor:
     """
     Compute squared L2-regularization term.
 
     :param xs: a list of torch.Tensor
         The tensors for which to compute the regularization.
+    :param normalize:
+        Whether to divide the term by the total number of elements in the tensors.
 
     :return: The sum of squared value across all tensors.
     """
-    return sum(x.pow(2).sum() for x in xs)
+    regularization_term = sum(x.pow(2).sum() for x in xs)
+
+    # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
+    if normalize:
+        regularization_term /= sum(numpy.prod(x.shape) for x in xs)
+
+    return regularization_term
 
 
 def slice_triples(triples):

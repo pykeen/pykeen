@@ -14,14 +14,15 @@ import poem.models
 from poem.datasets.nations import NationsTrainingTriplesFactory
 from poem.instance_creation_factories import TriplesFactory
 from poem.models import (
-    BaseModule, ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE,
+    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE,
     StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
+from poem.models.base import BaseModule, RegularizedModel
 from poem.models.multimodal import MultimodalBaseModule
 from poem.training import CWATrainingLoop, OWATrainingLoop
 from poem.training.cwa import CWANotImplementedError
 
-SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule'}
+SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel'}
 
 
 class _ModelTestCase:
@@ -276,7 +277,7 @@ class TestTesting(unittest.TestCase):
         """
         model_names = {
             cls.__name__
-            for cls in BaseModule.__subclasses__()
+            for cls in BaseModule.__subclasses__() + RegularizedModel.__subclasses__()
         } - SKIP_MODULES
 
         tested_model_names = {
@@ -314,7 +315,7 @@ class TestTesting(unittest.TestCase):
                     value = getattr(module, name)
                     if (
                         isinstance(value, type)
-                        and issubclass(value, poem.models.BaseModule)
+                        and issubclass(value, BaseModule)
                     ):
                         model_names.add(value.__name__)
 

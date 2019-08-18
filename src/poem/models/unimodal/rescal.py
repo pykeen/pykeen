@@ -7,14 +7,15 @@ from typing import Optional
 import torch
 from torch import nn
 
-from ..base import BaseModule
+from ..base import RegularizedModel
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
+from ...utils import l2_regularization
 
 __all__ = ['RESCAL']
 
 
-class RESCAL(BaseModule):
+class RESCAL(RegularizedModel):
     """An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -23,9 +24,6 @@ class RESCAL(BaseModule):
 
        - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
     """
-
-    # TODO: The paper uses a regularization term on both, the entity embeddings, as well as
-    #  the relation matrices, to avoid overfitting.
 
     def __init__(
             self,
@@ -36,6 +34,7 @@ class RESCAL(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
+            regularization_weight: float = 0.01,
             init: bool = True,
     ) -> None:
         """Initialize the model."""
@@ -43,6 +42,7 @@ class RESCAL(BaseModule):
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
 
         super().__init__(
+            regularization_weight=regularization_weight,
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
@@ -78,6 +78,10 @@ class RESCAL(BaseModule):
         # shape: (b, d)
         t = self.entity_embeddings(batch[:, 2]).view(-1, self.embedding_dim, 1)
 
+        # Update regularization term
+        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
+
+        # Compute scores
         scores = h @ r @ t
 
         return scores[:, :, 0]
@@ -87,6 +91,10 @@ class RESCAL(BaseModule):
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
 
+        # Update regularization term
+        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
+
+        # Compute scores
         scores = h @ r @ t
 
         return scores[:, 0, :]
@@ -98,6 +106,10 @@ class RESCAL(BaseModule):
         r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim, 1)
 
+        # Update regularization term
+        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
+
+        # Compute scores
         scores = h @ r @ t
 
         return scores[:, :, 0]
