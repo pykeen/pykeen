@@ -78,7 +78,13 @@ class _ModelTestCase:
     def test_forward_owa(self) -> None:
         """Test the model's ``forward_owa()`` function."""
         batch = torch.zeros(self.batch_size, 3, dtype=torch.long)
-        scores = self.model.forward_owa(batch)
+        try:
+            scores = self.model.forward_owa(batch)
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
         assert scores.shape == (self.batch_size, 1)
         self._check_scores(batch, scores)
 
@@ -89,6 +95,11 @@ class _ModelTestCase:
             scores = self.model.forward_cwa(batch)
         except NotImplementedError:
             self.fail(msg='Forward CWA not yet implemented')
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(batch, scores)
 
@@ -99,6 +110,11 @@ class _ModelTestCase:
             scores = self.model.forward_inverse_cwa(batch)
         except NotImplementedError:
             self.fail(msg='Forward Inverse CWA not yet implemented')
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(batch, scores)
 
