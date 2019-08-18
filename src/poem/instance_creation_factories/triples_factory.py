@@ -5,7 +5,7 @@
 import logging
 import os
 import timeit
-from typing import Optional, TextIO, Union
+from typing import Mapping, Optional, TextIO, Union
 
 import numpy as np
 
@@ -25,12 +25,32 @@ log = logging.getLogger(__name__)
 class TriplesFactory:
     """Create instances given the path to triples."""
 
+    #: The integer indexes for each entity
+    all_entities: np.ndarray
+
+    #: The mapping from entities' labels to their indexes
+    entity_to_id: Mapping[str, int]
+
+    #: The integer indexes for each relation
+    all_relations: np.ndarray
+
+    #: The mapping from relations' labels to their indexes
+    relation_to_id: Mapping[str, int]
+
+    #: A three-column matrix where each row are the subject label,
+    #: relation label, then object label
+    triples: np.ndarray
+
+    #: A three-column matrix where each row are the subject identifier,
+    #: relation identifier, then object identifier
+    mapped_triples: np.ndarray
+
     def __init__(
-            self,
-            *,
-            path: Union[None, str, TextIO] = None,
-            triples: Optional[np.ndarray] = None,
-            create_inverse_triples: bool = False,
+        self,
+        *,
+        path: Union[None, str, TextIO] = None,
+        triples: Optional[np.ndarray] = None,
+        create_inverse_triples: bool = False,
     ) -> None:
         """Initialize the triples factory.
 
@@ -56,13 +76,19 @@ class TriplesFactory:
             self.path = '<None>'
             self.triples = triples
 
-        self.entity_to_id, self.relation_to_id = create_entity_and_relation_mappings(self.triples)
+        (
+            self.all_entities,
+            self.entity_to_id,
+            self.all_relations,
+            self.relation_to_id,
+        ) = create_entity_and_relation_mappings(self.triples)
+
         self.mapped_triples = map_triples_elements_to_ids(
             triples=self.triples,
             entity_to_id=self.entity_to_id,
-            rel_to_id=self.relation_to_id,
+            relation_to_id=self.relation_to_id,
         )
-        self.all_entities = np.array(list(self.entity_to_id.values()))
+
         self.create_inverse_triples = create_inverse_triples
         # This creates inverse triples and appends them to the mapped triples
         if self.create_inverse_triples:
@@ -123,13 +149,4 @@ class TriplesFactory:
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
             labels=labels,
-        )
-
-    def map_triples_to_id(self, path_to_triples: str) -> np.array:
-        """Load triples and map to ids based on the existing id mappings of the triples factory."""
-        triples = load_triples(path_to_triples)
-        return map_triples_elements_to_ids(
-            triples=triples,
-            entity_to_id=self.entity_to_id,
-            rel_to_id=self.relation_to_id,
         )

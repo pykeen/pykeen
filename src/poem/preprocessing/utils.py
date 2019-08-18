@@ -3,7 +3,7 @@
 """Utilities for pre-processing triples."""
 
 import logging
-from typing import Dict, Optional, TextIO, Tuple, Union
+from typing import Dict, Mapping, TextIO, Tuple, Union
 
 import numpy as np
 
@@ -22,26 +22,28 @@ def load_triples(path: Union[str, TextIO], delimiter='\t') -> np.array:
     )
 
 
-def create_entity_and_relation_mappings(triples: np.array) -> Tuple[Dict[str, int], Dict[str, int]]:
+def create_entity_and_relation_mappings(
+    triples: np.array,
+) -> Tuple[np.ndarray, Dict[str, int], np.ndarray, Dict[str, int]]:
     """Map entities and relations to ids."""
-    # Slice triples returns two dimensional vectors that can't be used here
     subjects, relations, objects = triples[:, 0], triples[:, 1], triples[:, 2]
 
     # Sorting ensures consistent results when the triples are permuted
-    entities = sorted(set(subjects).union(objects))
-    relations = sorted(set(relations))
+    entity_labels = sorted(set(subjects).union(objects))
+    relation_labels = sorted(set(relations))
 
-    entity_to_id: Dict[str, int] = {
-        value: key
-        for key, value in enumerate(entities)
-    }
+    entity_ids = np.arange(len(entity_labels))
+    entity_label_to_id = dict(zip(entity_labels, entity_ids))
 
-    rel_to_id: Dict[str, int] = {
-        value: key
-        for key, value in enumerate(relations)
-    }
+    relation_ids = np.arange(len(entity_labels))
+    relation_label_to_id = dict(zip(relation_labels, relation_ids))
 
-    return entity_to_id, rel_to_id
+    return (
+        entity_ids,
+        entity_label_to_id,
+        relation_ids,
+        relation_label_to_id,
+    )
 
 
 def create_triple_mappings(triples: np.array, are_triples_unique=True) -> Dict[tuple, int]:
@@ -58,16 +60,16 @@ def create_triple_mappings(triples: np.array, are_triples_unique=True) -> Dict[t
 
 
 def map_triples_elements_to_ids(
-        triples: np.array,
-        entity_to_id: Optional[Dict[str, int]],
-        rel_to_id: Optional[Dict[str, int]],
+    triples: np.array,
+    entity_to_id: Mapping[str, int],
+    relation_to_id: Mapping[str, int],
 ) -> np.ndarray:
-    """Map entities and relations to predefined ids."""
+    """Map entities and relations to pre-defined ids."""
     heads, relations, tails = slice_triples(triples)
 
     # When triples that don't exist are trying to be mapped, they get the id "-1"
     subject_column = np.vectorize(entity_to_id.get)(heads, [-1])
-    relation_column = np.vectorize(rel_to_id.get)(relations, [-1])
+    relation_column = np.vectorize(relation_to_id.get)(relations, [-1])
     object_column = np.vectorize(entity_to_id.get)(tails, [-1])
 
     # Filter all non-existent triples
