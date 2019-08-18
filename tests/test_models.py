@@ -8,6 +8,7 @@ import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from torch.optim import Adagrad
 
 import poem.models
 from poem.datasets.nations import NationsTrainingTriplesFactory
@@ -17,6 +18,8 @@ from poem.models import (
     StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
 )
 from poem.models.multimodal import MultimodalBaseModule
+from poem.training import CWATrainingLoop, OWATrainingLoop
+from poem.training.cwa import CWANotImplementedError
 
 SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule'}
 
@@ -98,6 +101,24 @@ class _ModelTestCase:
             self.fail(msg='Forward Inverse CWA not yet implemented')
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(batch, scores)
+
+    def test_train_owa(self) -> None:
+        """Test that OWA training does not fail."""
+        optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
+        loop = OWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+        losses = loop.train(num_epochs=5, batch_size=128)
+        self.assertIsInstance(losses, list)
+
+    def test_train_cwa(self) -> None:
+        """Test that CWA training does not fail."""
+        optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
+        loop = CWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+        try:
+            losses = loop.train(num_epochs=5, batch_size=128)
+        except CWANotImplementedError:
+            pass  # don't worry about this for now
+        else:
+            self.assertIsInstance(losses, list)
 
 
 class _DistanceModelTestCase(_ModelTestCase):

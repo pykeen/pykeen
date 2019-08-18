@@ -138,7 +138,7 @@ class RotatE(BaseModule):
 
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.entity_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
         t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
         # Compute scores
@@ -152,7 +152,7 @@ class RotatE(BaseModule):
 
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Rank against all entities
         t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)

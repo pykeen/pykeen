@@ -155,7 +155,7 @@ class TransH(BaseModule):
             positive_scores: torch.FloatTensor,
             negative_scores: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        loss = super()._compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
+        loss = super().compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
         loss += self.regularization_factor * self.current_regularization_term
         return loss
 
@@ -164,6 +164,6 @@ class TransH(BaseModule):
             predictions: torch.FloatTensor,
             labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        loss = super()._compute_label_loss(predictions=predictions, labels=labels)
+        loss = super().compute_label_loss(predictions=predictions, labels=labels)
         loss += self.regularization_factor * self.current_regularization_term
         return loss

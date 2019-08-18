@@ -13,7 +13,12 @@ from .utils import apply_label_smoothing, lazy_compile_random_batches
 
 __all__ = [
     'CWATrainingLoop',
+    'CWANotImplementedError',
 ]
+
+
+class CWANotImplementedError(NotImplementedError):
+    """Raised when trying to train with CWA on the wrong type of criterion."""
 
 
 class CWATrainingLoop(TrainingLoop):
@@ -72,6 +77,10 @@ class CWATrainingLoop(TrainingLoop):
                 # new instance, you need to zero out the gradients from the old instance
                 self.optimizer.zero_grad()
                 predictions = self.model.forward_cwa(batch_pairs)
+
+                if self.model.is_mr_loss:
+                    raise CWANotImplementedError('CWA has not been implemented for mean ranking loss yet')
+
                 loss = self.model.compute_label_loss(predictions, batch_labels_full)
                 current_epoch_loss += (loss.item() * current_batch_size)
 
