@@ -6,13 +6,19 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+from ..instance_creation_factories import TriplesFactory
+
+__all__ = [
+    'NegativeSampler',
+]
+
 
 class NegativeSampler(ABC):
     """A negative sampler."""
 
-    def __init__(self, all_entities) -> None:
+    def __init__(self, triples_factory: TriplesFactory) -> None:
         """Initialize the negative sampler with the given entities."""
-        self.all_entities = all_entities
+        self.all_entities = triples_factory.all_entities
 
     @property
     def num_entities(self) -> int:  # noqa: D401

@@ -62,11 +62,16 @@ class BatchCompilationTest(unittest.TestCase):
         for i in range(self.num_samples):
             targets.append(list(set(numpy.random.randint(low=0, high=self.num_entities, size=(5,), dtype=numpy.long))))
         target_array = numpy.asarray(targets)
+
+        def _batch_compiler(batch_indices):
+            input_batch = input_array[batch_indices]
+            target_batch = target_array[batch_indices]
+            return input_batch, target_batch
+
         iterator = lazy_compile_random_batches(
             indices=indices,
-            input_array=input_array,
-            target_array=target_array,
-            batch_size=self.batch_size
+            batch_size=self.batch_size,
+            batch_compiler=_batch_compiler
         )
         all_elements = list(iterator)
         for input_batch, target_batch in all_elements[:-1]:

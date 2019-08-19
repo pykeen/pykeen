@@ -2,13 +2,14 @@
 
 """Utilities for training KGE models."""
 
-from typing import Iterable, List, Tuple, TypeVar
+from typing import Callable, Iterable, List, TypeVar
 
 import numpy
 import torch
 
 __all__ = [
     'apply_label_smoothing',
+    'lazy_compile_random_batches',
     'split_list_in_batches_iter',
     'split_list_in_batches',
 ]
@@ -30,9 +31,9 @@ def split_list_in_batches(input_list: List[X], batch_size: int) -> List[List[X]]
 
 
 def apply_label_smoothing(
-        labels: torch.FloatTensor,
-        epsilon: float,
-        num_classes: int,
+    labels: torch.FloatTensor,
+    epsilon: float,
+    num_classes: int,
 ) -> torch.FloatTensor:
     """Apply label smoothing to a target tensor.
 
@@ -59,21 +60,22 @@ def apply_label_smoothing(
 
 def lazy_compile_random_batches(
     indices: numpy.ndarray,
-    input_array: numpy.ndarray,
-    target_array: numpy.ndarray,
     batch_size: int,
-) -> Iterable[Tuple[numpy.ndarray, numpy.ndarray]]:
-    """Compile training batches of given size using random shuffling."""
+    batch_compiler: Callable[[numpy.ndarray], X]
+) -> Iterable[X]:
+    """Compile training batches of given size using random shuffling.
+
+    :param indices:
+        The indices to training samples. Is modified through shuffling.
+    :param batch_size:
+        The desired batch size.
+    :param batch_compiler:
+        A callable which takes the indices to put into a batch, and returns the batch of elements.
+    """
     # Shuffle each epoch
     numpy.random.shuffle(indices)
 
     # Lazy-splitting into batches
     index_batches = split_list_in_batches_iter(indices, batch_size=batch_size)
 
-    # Re-order according to indices
-    def _compile_batch_from_indices(batch_indices):
-        input_batch = input_array[batch_indices]
-        target_batch = target_array[batch_indices]
-        return input_batch, target_batch
-
-    return map(_compile_batch_from_indices, index_batches)
+    return map(batch_compiler, index_batches)

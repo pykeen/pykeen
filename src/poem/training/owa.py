@@ -7,11 +7,9 @@ from typing import Any, List, Mapping, Optional, Type
 import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
-from tqdm import trange
 
-from .early_stopping import EarlyStopper
 from .training_loop import TrainingLoop
-from .utils import apply_label_smoothing, split_list_in_batches
+from .utils import apply_label_smoothing
 from ..models import BaseModule
 from ..negative_sampling import BasicNegativeSampler, NegativeSampler
 
@@ -21,17 +19,28 @@ __all__ = [
 
 
 class OWATrainingLoop(TrainingLoop):
-    """A training loop using the OWA."""
+    """A training loop that uses the open world assumption."""
 
     negative_sampler: NegativeSampler
 
     def __init__(
-            self,
-            model: Optional[BaseModule] = None,
-            optimizer: Optional[Optimizer] = None,
-            negative_sampler_cls: Type[NegativeSampler] = None,
+        self,
+        model: BaseModule,
+        optimizer: Optional[Optimizer] = None,
+        negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
+        negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
+        num_negs_per_pos: int = 1,
     ):
-        """Initialize the training loop."""
+        """Initialize the training loop.
+
+        :param model: The model to train
+        :param optimizer: The optimizer to use while training the model
+        :param negative_sampler_cls: The class of the negative sampler
+        :param negative_sampler_kwargs: Keyword arguments to pass to the
+         negative sampler on instantiation
+        :param num_negs_per_pos: The number of negative triples to generate
+         for every positive one
+        """
         super().__init__(
             model=model,
             optimizer=optimizer,
@@ -40,106 +49,73 @@ class OWATrainingLoop(TrainingLoop):
         if negative_sampler_cls is None:
             negative_sampler_cls = BasicNegativeSampler
 
-        self.negative_sampler = negative_sampler_cls(all_entities=self.all_entities)
+        self.negative_sampler = negative_sampler_cls(
+            triples_factory=self.triples_factory,
+            **(negative_sampler_kwargs or {}),
+        )
 
-    def _create_negative_samples(self, pos_batch, num_negs_per_pos=1):
+        # TODO: Make this part of the negative sampler?
+        self.num_negs_per_pos = num_negs_per_pos
+
+        if self.model.is_mr_loss:
+            self._loss_helper = self._mr_loss_helper
+        else:
+            self._loss_helper = self._label_loss_helper
+
+    def _create_negative_samples(self, pos_batch, num_negs_per_pos: int = 1) -> List[np.ndarray]:
         return [
             self.negative_sampler.sample(positive_batch=pos_batch)
             for _ in range(num_negs_per_pos)
         ]
 
-    def train(
-            self,
-            num_epochs: int,
-            batch_size: int,
-            num_negs_per_pos: int = 1,
-            label_smoothing: bool = False,
-            label_smoothing_epsilon: float = 0.1,
-            tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-            early_stopper: Optional[EarlyStopper] = None,
-    ) -> List[float]:
-        """Train the KGE model."""
-        if self.model.compute_mr_loss and label_smoothing:
-            raise ValueError('Margin Ranking Loss cannot be used together with label smoothing')
+    def _create_instances(self):  # noqa: D102
+        return self.triples_factory.create_owa_instances()
 
-        # Ensure the model is on the correct device
-        self.model = self.model.to(self.device)
+    def _compile_batch(self, batch_indices: np.ndarray) -> np.ndarray:  # noqa: D102
+        return self.training_instances.instances[batch_indices]
 
-        training_instances = self.model.triples_factory.create_owa_instances()
-        pos_triples = training_instances.instances
-        num_pos_triples = training_instances.num_instances
-        num_entities = training_instances.num_entities
+    def _process_batch(self, batch: np.ndarray, label_smoothing: float = 0.) -> torch.FloatTensor:  # noqa: D102
+        # Send positive batch to device
+        pos_batch = torch.tensor(batch, dtype=torch.long, device=self.device)
 
-        _tqdm_kwargs = dict(desc=f'Training epoch on {self.device}')
-        if tqdm_kwargs is not None:
-            _tqdm_kwargs.update(tqdm_kwargs)
-        epochs = trange(num_epochs, **_tqdm_kwargs)
-        for epoch in epochs:
-            indices = np.arange(num_pos_triples)
-            np.random.shuffle(indices)
-            pos_triples = pos_triples[indices]
-            pos_batches = split_list_in_batches(input_list=pos_triples, batch_size=batch_size)
-            current_epoch_loss = 0.
+        # Create negative samples and send them to the device
+        neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=self.num_negs_per_pos)
+        neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
 
-            # Enforce training mode
-            self.model.train()
+        # Compute negative and positive scores
+        positive_scores = self.model.forward_owa(pos_batch)
+        negative_scores = self.model.forward_owa(neg_batch)
 
-            for i, pos_batch in enumerate(pos_batches):
-                current_batch_size = len(pos_batch)
+        # Repeat positives scores
+        # TODO: Is this always necessary?
+        positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
 
-                neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=num_negs_per_pos)
-                pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.device)
-                neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
+        loss = self._loss_helper(
+            positive_scores,
+            negative_scores,
+            label_smoothing,
+        )
 
-                positive_scores = self.model.forward_owa(pos_batch)
-                positive_scores = positive_scores.repeat(num_negs_per_pos, 1)
-                negative_scores = self.model.forward_owa(neg_batch)
+        return loss
 
-                """
-                TODO: Define two functions, one for compute_mr_loss() and the other for model.compute_label_loss()
-                Check for self.model.compute_mr_loss when entering train(), and assign corresponding fct.
-                Avoids repetitive checks.
-                """
-                if self.model.is_mr_loss:
-                    loss = self.model.compute_mr_loss(
-                        positive_scores=positive_scores,
-                        negative_scores=negative_scores,
-                    )
-                else:
-                    predictions = torch.cat([positive_scores, negative_scores], 0)
-                    ones = torch.ones_like(positive_scores, device=self.device)
-                    zeros = torch.zeros_like(negative_scores, device=self.device)
-                    labels = torch.cat([ones, zeros], 0)
+    def _mr_loss_helper(self, positive_scores, negative_scores, _):
+        return self.model.compute_mr_loss(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+        )
 
-                    if label_smoothing:
-                        labels = apply_label_smoothing(
-                            labels=labels,
-                            epsilon=label_smoothing_epsilon,
-                            num_classes=num_entities,
-                        )
+    def _label_loss_helper(self, positive_scores, negative_scores, label_smoothing):
+        predictions = torch.cat([positive_scores, negative_scores], 0)
+        ones = torch.ones_like(positive_scores, device=self.device)
+        zeros = torch.zeros_like(negative_scores, device=self.device)
+        labels = torch.cat([ones, zeros], 0)
 
-                    loss = self.model.compute_label_loss(predictions=predictions, labels=labels)
+        if label_smoothing > 0.:
+            labels = apply_label_smoothing(
+                labels=labels,
+                epsilon=label_smoothing,
+                num_classes=self.model.num_entities,
+            )
 
-                # Recall that torch *accumulates* gradients. Before passing in a
-                # new instance, you need to zero out the gradients from the old instance
-                self.optimizer.zero_grad()
-                loss.backward()
-                current_epoch_loss += (loss.item() * current_batch_size * num_negs_per_pos)
-                self.optimizer.step()
-                # After changing applying the gradients to the embeddings, the model is notified that the forward
-                # constraints are no longer applied
-                self.model.forward_constraint_applied = False
-
-            # Track epoch loss
-            self.losses_per_epochs.append(current_epoch_loss / (len(pos_triples) * num_negs_per_pos))
-
-            if (
-                    early_stopper is not None
-                    and 0 == (epoch % early_stopper.frequency)  # only check with given frequency
-                    and early_stopper.should_stop()
-            ):
-                return self.losses_per_epochs
-
-            epochs.write(f'Losses: {self.losses_per_epochs}')
-
-        return self.losses_per_epochs
+        loss = self.model.compute_label_loss(predictions=predictions, labels=labels)
+        return loss

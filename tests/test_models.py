@@ -123,19 +123,26 @@ class _ModelTestCase:
         """Test that OWA training does not fail."""
         optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
         loop = OWATrainingLoop(model=self.model, optimizer=optimizer_instance)
-        losses = loop.train(num_epochs=5, batch_size=128)
+        try:
+            losses = loop.train(num_epochs=5, batch_size=128)
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
+
         self.assertIsInstance(losses, list)
 
     def test_train_cwa(self) -> None:
         """Test that CWA training does not fail."""
         optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
-        loop = CWATrainingLoop(model=self.model, optimizer=optimizer_instance)
         try:
-            losses = loop.train(num_epochs=5, batch_size=128)
-        except CWANotImplementedError:
-            pass  # don't worry about this for now
-        else:
-            self.assertIsInstance(losses, list)
+            loop = CWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+        except CWANotImplementedError as e:
+            self.skipTest(str(e))
+
+        losses = loop.train(num_epochs=5, batch_size=128)
+        self.assertIsInstance(losses, list)
 
 
 class _DistanceModelTestCase(_ModelTestCase):
