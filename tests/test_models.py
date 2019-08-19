@@ -8,7 +8,7 @@ import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-from torch.optim import Adagrad
+from torch.optim.adagrad import Adagrad
 
 import poem.models
 from poem.datasets.nations import NationsTrainingTriplesFactory
