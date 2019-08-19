@@ -10,6 +10,7 @@ from torch import nn
 
 from ...instance_creation_factories import TriplesFactory
 from ...models.base import BaseModule
+from ...typing import OptionalLoss
 from ...utils import slice_triples
 
 __all__ = ['SimplE']
@@ -39,6 +40,9 @@ class SimplE(BaseModule):
             random_seed: Optional[int] = None,
             init: bool = True,
     ) -> None:
+        if criterion is None:
+            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

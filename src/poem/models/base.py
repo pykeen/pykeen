@@ -59,7 +59,7 @@ class BaseModule(nn.Module):
             self.criterion = criterion
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(criterion, nn.MarginRankingLoss)
+        self.is_mr_loss = isinstance(self.criterion, nn.MarginRankingLoss)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
