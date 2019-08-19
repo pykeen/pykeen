@@ -35,7 +35,7 @@ class SimplE(BaseModule):
             tail_entity_embeddings: Optional[nn.Embedding] = None,
             relation_embeddings: Optional[nn.Embedding] = None,
             inverse_relation_embeddings: Optional[nn.Embedding] = None,
-            criterion: nn.modules.loss = nn.MarginRankingLoss(margin=1., reduction='mean'),
+            criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
             init: bool = True,
