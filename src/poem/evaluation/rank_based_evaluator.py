@@ -134,7 +134,6 @@ class RankBasedEvaluator(Evaluator):
             batch=batch,
             subject_batch=subject_batch,
             object_batch=object_batch,
-            all_pos_triples=all_pos_triples,
         )
 
     def _compute_rank(
@@ -142,7 +141,6 @@ class RankBasedEvaluator(Evaluator):
             batch,
             subject_batch,
             object_batch,
-            all_pos_triples,
     ) -> Tuple[int, int, float, float]:
         subjects = batch[:, 0:1]
         objects = batch[:, 2:3]
