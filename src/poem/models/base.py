@@ -224,11 +224,11 @@ class BaseModule(nn.Module):
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """Compute the labeled mean ranking loss for the positive and negative scores.
+        """Compute the classification loss.
 
-        :param predictions: torch.Tensor, shape: s, dtype: float
+        :param predictions: shape: s
             The predicted scores.
-        :param labels: torch.Tensor, shape: s, dtype: float
+        :param labels: shape: s
             The target values.
 
         :return: torch.Tensor, dtype: float, scalar
