@@ -18,14 +18,19 @@ class NegativeSampler(ABC):
 
     def __init__(self, triples_factory: TriplesFactory) -> None:
         """Initialize the negative sampler with the given entities."""
-        self.all_entities = triples_factory.all_entities
+        self.triples_factory = triples_factory
 
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of entities to sample from."""
-        return self.all_entities.shape[0]
+        return self.triples_factory.num_entities
+
+    @property
+    def all_entities(self) -> np.ndarray:  # noqa: D401
+        """The array of all entities."""
+        return self.triples_factory.all_entities
 
     @abstractmethod
-    def sample(self, positive_batch) -> np.ndarray:
+    def sample(self, positive_batch: np.ndarray) -> np.ndarray:
         """Generate negative samples from the positive batch."""
         raise NotImplementedError

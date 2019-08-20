@@ -4,7 +4,7 @@
 
 import logging
 import timeit
-from typing import Callable, Dict, Hashable, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -65,19 +65,9 @@ class RankBasedEvaluator(Evaluator):
         self.hits_at_k = hits_at_k if hits_at_k is not None else [1, 3, 5, 10]
 
     @property
-    def train_triples(self):  # noqa: D401
-        """The training triples."""
-        return self.model.triples_factory.triples
-
-    @property
     def all_entities(self):  # noqa: D401
         """All triples in the factory."""
         return self.model.triples_factory.all_entities
-
-    @staticmethod
-    def _hash_triples(triples: Iterable[Hashable]) -> int:
-        """Hash a list of triples."""
-        return hash(tuple(triples))
 
     def _filter_corrupted_triples(
             self,
@@ -86,6 +76,7 @@ class RankBasedEvaluator(Evaluator):
             object_batch,
             all_pos_triples,
     ):
+        # TODO: Make static method / function
         subjects = batch[:, 0:1]
         relations = batch[:, 1:2]
         objects = batch[:, 2:3]
@@ -120,6 +111,7 @@ class RankBasedEvaluator(Evaluator):
             ranks: List[int],
     ) -> None:
         """Update the Hits@K dictionary for two values."""
+        # TODO: Make static method / function
         for k, values in hits_at_k_values.items():
             hits_at_k = (np.array(ranks) <= k) * 1
             values.extend(hits_at_k)

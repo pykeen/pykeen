@@ -6,7 +6,7 @@ import logging
 import random
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 
 import numpy as np
 import torch
@@ -94,7 +94,7 @@ class BaseModule(nn.Module):
         return self.triples_factory.num_relations
 
     def _set_device(self, device: Optional[str] = None) -> None:
-        """Get the Torch device to use."""
+        """Set the Torch device to use."""
         if device is None or device == 'gpu':
             if torch.cuda.is_available():
                 self.device = torch.device('cuda')
@@ -297,13 +297,8 @@ class BaseModule(nn.Module):
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
+        # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
         return filter(lambda p: p.requires_grad, self.parameters())
-
-    @classmethod
-    def get_model_params(cls) -> List[str]:
-        """Return the model parameters."""
-        # TODO: not used anymore?
-        return ['num_entities', 'num_relations', 'embedding_dim', 'criterion', 'preferred_device', 'random_seed']
 
 
 class RegularizedModel(BaseModule):

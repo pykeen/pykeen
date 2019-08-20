@@ -5,21 +5,121 @@
 import logging
 import os
 import timeit
-from typing import Mapping, Optional, TextIO, Union
+from collections import defaultdict
+from typing import Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
+from tqdm import tqdm
 
 from .instances import CWAInstances, OWAInstances
-from ..preprocessing.instance_creation_utils import create_multi_label_objects_instance
-from ..preprocessing.utils import (
-    create_entity_and_relation_mappings, load_triples, map_triples_elements_to_ids,
-)
+from .utils import load_triples
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
+from ..utils import slice_triples
 
 __all__ = [
     'TriplesFactory',
 ]
 
 log = logging.getLogger(__name__)
+
+
+def _create_multi_label_objects_instance(triples: np.array) -> Dict[tuple, np.array]:
+    """Create for each (s,r) pair the multi object label."""
+    log.info(f'Creating multi label objects instance')
+
+    s_r_to_multi_objects_new = _create_multi_label_instances(
+        triples,
+        element_1_index=0,
+        element_2_index=1,
+        label_index=2,
+    )
+
+    log.info(f'Created multi label objects instance')
+
+    return s_r_to_multi_objects_new
+
+
+def _create_multi_label_instances(
+    triples: np.array,
+    element_1_index: int,
+    element_2_index: int,
+    label_index: int,
+) -> Dict[tuple, np.array]:
+    """Create for each (element_1, element_2) pair the multi-label."""
+    instance_to_multi_label = defaultdict(set)
+    for row in tqdm(triples):
+        instance_to_multi_label[(row[element_1_index], row[element_2_index])].add(row[label_index])
+
+    # Create lists out of sets for proper numpy indexing when loading the labels
+    instance_to_multi_label_new = {
+        key: list(value)
+        for key, value in instance_to_multi_label.items()
+    }
+
+    return instance_to_multi_label_new
+
+
+def _create_entity_and_relation_mappings(
+    triples: np.array
+) -> Tuple[np.ndarray, EntityMapping, np.ndarray, RelationMapping]:
+    """Map entities and relations to ids."""
+    subjects, relations, objects = triples[:, 0], triples[:, 1], triples[:, 2]
+
+    # Sorting ensures consistent results when the triples are permuted
+    entity_labels = sorted(set(subjects).union(objects))
+    relation_labels = sorted(set(relations))
+
+    entity_ids = np.arange(len(entity_labels))
+    entity_label_to_id = dict(zip(entity_labels, entity_ids))
+
+    relation_ids = np.arange(len(entity_labels))
+    relation_label_to_id = dict(zip(relation_labels, relation_ids))
+
+    return (
+        entity_ids,
+        entity_label_to_id,
+        relation_ids,
+        relation_label_to_id,
+    )
+
+
+def _map_triples_elements_to_ids(
+    triples: LabeledTriples,
+    entity_to_id: EntityMapping,
+    relation_to_id: RelationMapping,
+) -> np.ndarray:
+    """Map entities and relations to pre-defined ids."""
+    heads, relations, tails = slice_triples(triples)
+
+    # When triples that don't exist are trying to be mapped, they get the id "-1"
+    subject_column = np.vectorize(entity_to_id.get)(heads, [-1])
+    relation_column = np.vectorize(relation_to_id.get)(relations, [-1])
+    object_column = np.vectorize(entity_to_id.get)(tails, [-1])
+
+    # Filter all non-existent triples
+    subject_filter = subject_column < 0
+    relation_filter = relation_column < 0
+    object_filter = object_column < 0
+    num_no_subject = subject_filter.sum()
+    num_no_relation = relation_filter.sum()
+    num_no_object = object_filter.sum()
+
+    if (num_no_subject > 0) or (num_no_relation > 0) or (num_no_object > 0):
+        log.warning(
+            "You're trying to map triples with entities and/or relations that are not in the training set."
+            "These triples will be excluded from the mapping")
+        non_mappable_triples = (subject_filter | relation_filter | object_filter)
+        subject_column = subject_column[~non_mappable_triples, None]
+        relation_column = relation_column[~non_mappable_triples, None]
+        object_column = object_column[~non_mappable_triples, None]
+        log.warning(f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out")
+
+    triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
+
+    triples_of_ids = np.array(triples_of_ids, dtype=np.long)
+    # Note: Unique changes the order of the triples
+    # Note: Using unique means implicit balancing of training samples
+    return np.unique(ar=triples_of_ids, axis=0)
 
 
 class TriplesFactory:
@@ -29,34 +129,36 @@ class TriplesFactory:
     all_entities: np.ndarray
 
     #: The mapping from entities' labels to their indexes
-    entity_to_id: Mapping[str, int]
+    entity_to_id: EntityMapping
 
     #: The integer indexes for each relation
     all_relations: np.ndarray
 
     #: The mapping from relations' labels to their indexes
-    relation_to_id: Mapping[str, int]
+    relation_to_id: RelationMapping
 
     #: A three-column matrix where each row are the subject label,
     #: relation label, then object label
-    triples: np.ndarray
+    triples: LabeledTriples
 
     #: A three-column matrix where each row are the subject identifier,
     #: relation identifier, then object identifier
-    mapped_triples: np.ndarray
+    mapped_triples: MappedTriples
 
     def __init__(
         self,
         *,
         path: Union[None, str, TextIO] = None,
-        triples: Optional[np.ndarray] = None,
+        triples: Optional[LabeledTriples] = None,
         create_inverse_triples: bool = False,
     ) -> None:
         """Initialize the triples factory.
 
-        :param path:
-        :param triples:
-        :param create_inverse_triples:
+        :param path: The path to a 3-column TSV file with triples in it. If not specified,
+         you should specify ``triples``.
+        :param triples:  A 3-column numpy array with triples in it. If not specified,
+         you should specify ``path``
+        :param create_inverse_triples: Should inverse triples be created? Defaults to False.
         """
         if path is None and triples is None:
             raise ValueError('Must specify either triples or path')
@@ -81,9 +183,9 @@ class TriplesFactory:
             self.entity_to_id,
             self.all_relations,
             self.relation_to_id,
-        ) = create_entity_and_relation_mappings(self.triples)
+        ) = _create_entity_and_relation_mappings(self.triples)
 
-        self.mapped_triples = map_triples_elements_to_ids(
+        self.mapped_triples = _map_triples_elements_to_ids(
             triples=self.triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
@@ -130,14 +232,14 @@ class TriplesFactory:
     def create_owa_instances(self) -> OWAInstances:
         """Create OWA instances for this factory's triples."""
         return OWAInstances(
-            instances=self.mapped_triples,
+            mapped_triples=self.mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
     def create_cwa_instances(self) -> CWAInstances:
         """Create CWA instances for this factory's triples."""
-        s_r_to_multi_objects = create_multi_label_objects_instance(
+        s_r_to_multi_objects = _create_multi_label_objects_instance(
             triples=self.mapped_triples,
         )
 
@@ -145,7 +247,7 @@ class TriplesFactory:
         labels = np.array(list(s_r_to_multi_objects.values()))
 
         return CWAInstances(
-            instances=subject_relation_pairs,
+            mapped_triples=subject_relation_pairs,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
             labels=labels,

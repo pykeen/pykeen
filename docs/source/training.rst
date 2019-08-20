@@ -12,8 +12,3 @@ Loops
 
 .. autoclass:: poem.training.EarlyStopper
    :members:
-
-Hyper-parameter Optimization
-----------------------------
-.. autoclass:: poem.optim.RandomSearch
-   :members:

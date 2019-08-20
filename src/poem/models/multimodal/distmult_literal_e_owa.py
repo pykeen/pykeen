@@ -9,7 +9,6 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
-from ...constants import NUMERIC_LITERALS
 from ...instance_creation_factories import TriplesNumericLiteralsFactory
 from ...typing import OptionalLoss
 from ...utils import slice_triples
@@ -39,7 +38,7 @@ class DistMultLiteral(MultimodalBaseModule):
             random_seed=random_seed,
         )
 
-        numeric_literals = triples_factory.multimodal_data.get(NUMERIC_LITERALS)
+        numeric_literals = triples_factory.numeric_literals
 
         # Embeddings
         self.relation_embeddings = None

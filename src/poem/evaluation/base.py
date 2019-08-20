@@ -4,7 +4,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Mapping, Optional
+from typing import Dict, Optional
 
 import numpy as np
 from dataclasses_json import dataclass_json
@@ -34,16 +34,6 @@ class Evaluator(ABC):
 
     def __init__(self, model: Optional[BaseModule] = None) -> None:
         self.model = model
-
-    @property
-    def entity_to_id(self) -> Mapping[str, int]:  # noqa: D401
-        """A mapping from entities to their numeric identifiers."""
-        return self.model.triples_factory.entity_to_id
-
-    @property
-    def relation_to_id(self) -> Mapping[str, int]:  # noqa: D401
-        """A mapping from entities to their numeric identifiers."""
-        return self.model.triples_factory.relation_to_id
 
     @property
     def device(self):  # noqa: D401

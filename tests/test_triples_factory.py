@@ -37,35 +37,32 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
         factory = TriplesNumericLiteralsFactory(triples=triples, numeric_triples=numeric_triples)
         instances = factory.create_cwa_instances()
 
-        literals = instances.multimodal_data['numeric_literals']
-        literals_to_id = instances.data_relation_to_id
-
         id_peter = factory.entity_to_id['peter']
-        id_age = literals_to_id['/lit/hasAge']
-        id_height = literals_to_id['/lit/hasHeight']
-        id_num_children = literals_to_id['/lit/hasChildren']
+        id_age = instances.literals_to_id['/lit/hasAge']
+        id_height = instances.literals_to_id['/lit/hasHeight']
+        id_num_children = instances.literals_to_id['/lit/hasChildren']
 
-        self.assertEqual(literals[id_peter, id_age], 30)
-        self.assertEqual(literals[id_peter, id_height], 185)
-        self.assertEqual(literals[id_peter, id_num_children], 2)
+        self.assertEqual(instances.numeric_literals[id_peter, id_age], 30)
+        self.assertEqual(instances.numeric_literals[id_peter, id_height], 185)
+        self.assertEqual(instances.numeric_literals[id_peter, id_num_children], 2)
 
         id_susan = factory.entity_to_id['susan']
-        id_age = literals_to_id['/lit/hasAge']
-        id_height = literals_to_id['/lit/hasHeight']
-        id_num_children = literals_to_id['/lit/hasChildren']
+        id_age = instances.literals_to_id['/lit/hasAge']
+        id_height = instances.literals_to_id['/lit/hasHeight']
+        id_num_children = instances.literals_to_id['/lit/hasChildren']
 
-        self.assertEqual(literals[id_susan, id_age], 28)
-        self.assertEqual(literals[id_susan, id_height], 170)
-        self.assertEqual(literals[id_susan, id_num_children], 0)
+        self.assertEqual(instances.numeric_literals[id_susan, id_age], 28)
+        self.assertEqual(instances.numeric_literals[id_susan, id_height], 170)
+        self.assertEqual(instances.numeric_literals[id_susan, id_num_children], 0)
 
         id_chocolate_cake = factory.entity_to_id['chocolate_cake']
-        id_age = literals_to_id['/lit/hasAge']
-        id_height = literals_to_id['/lit/hasHeight']
-        id_num_children = literals_to_id['/lit/hasChildren']
+        id_age = instances.literals_to_id['/lit/hasAge']
+        id_height = instances.literals_to_id['/lit/hasHeight']
+        id_num_children = instances.literals_to_id['/lit/hasChildren']
 
-        self.assertEqual(literals[id_chocolate_cake, id_age], 0)
-        self.assertEqual(literals[id_chocolate_cake, id_height], 0)
-        self.assertEqual(literals[id_chocolate_cake, id_num_children], 0)
+        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_age], 0)
+        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_height], 0)
+        self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_num_children], 0)
 
     def test_triples(self):
         """Test properties of the triples factory."""

@@ -39,7 +39,7 @@ class CWATrainingLoop(TrainingLoop):
         return self.triples_factory.create_cwa_instances()
 
     def _compile_batch(self, batch_indices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:  # noqa: D102
-        input_batch = self.training_instances.instances[batch_indices]
+        input_batch = self.training_instances.mapped_triples[batch_indices]
         target_batch = self.training_instances.labels[batch_indices]
         return input_batch, target_batch
 

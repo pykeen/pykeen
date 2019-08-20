@@ -3,11 +3,12 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Mapping
 
 import numpy as np
 
-from ..constants import CWA, OWA
+from .utils import Assumption
+from ..typing import EntityMapping, MappedTriples, RelationMapping
 
 __all__ = [
     'Instances',
@@ -23,14 +24,14 @@ __all__ = [
 class Instances:
     """Triples and mappings to their indices."""
 
-    instances: np.ndarray
-    entity_to_id: Dict[str, int]
-    relation_to_id: Dict[str, int]
+    mapped_triples: MappedTriples
+    entity_to_id: EntityMapping
+    relation_to_id: RelationMapping
 
     @property
     def num_instances(self) -> int:  # noqa: D401
         """The number of instances."""
-        return self.instances.shape[0]
+        return self.mapped_triples.shape[0]
 
     @property
     def num_entities(self) -> int:  # noqa: D401
@@ -42,7 +43,7 @@ class Instances:
 class OWAInstances(Instances):
     """Triples and mappings to their indices for OWA."""
 
-    kg_assumption: str = OWA
+    assumption: Assumption = Assumption.open
 
 
 @dataclass
@@ -50,15 +51,15 @@ class CWAInstances(Instances):
     """Triples and mappings to their indices for CWA."""
 
     labels: np.ndarray
-    kg_assumption: str = CWA
+    assumption: Assumption = Assumption.closed
 
 
 @dataclass
 class MultimodalInstances(Instances):
     """Triples and mappings to their indices as well as multimodal data."""
 
-    multimodal_data: Dict[str, np.ndarray]
-    data_relation_to_id: Dict[str, int]
+    numeric_literals: Mapping[str, np.ndarray]
+    literals_to_id: Mapping[str, int]
 
 
 @dataclass

@@ -9,7 +9,6 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
-from ...constants import NUMERIC_LITERALS
 from ...instance_creation_factories import TriplesNumericLiteralsFactory
 from ...typing import OptionalLoss
 from ...utils import slice_doubles
@@ -47,7 +46,7 @@ class ComplexLiteralCWA(MultimodalBaseModule):
 
         # Literal
         # num_ent x num_lit
-        numeric_literals = triples_factory.multimodal_data.get(NUMERIC_LITERALS)
+        numeric_literals = triples_factory.numeric_literals
         self.numeric_literals = nn.Embedding.from_pretrained(
             torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
         )

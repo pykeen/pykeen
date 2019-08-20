@@ -24,6 +24,9 @@ __all__ = [
 class TrainingLoop(ABC):
     """A training loop."""
 
+    training_instances: Optional[Instances]
+    losses_per_epochs: List[float]
+
     def __init__(
         self,
         model: BaseModule,
@@ -43,11 +46,6 @@ class TrainingLoop(ABC):
     def triples_factory(self) -> TriplesFactory:  # noqa: D401
         """The triples factory in the model."""
         return self.model.triples_factory
-
-    @property
-    def all_entities(self) -> np.ndarray:  # noqa: D401
-        """All entities in the triples factory."""
-        return self.model.triples_factory.all_entities
 
     @property
     def device(self):  # noqa: D401
