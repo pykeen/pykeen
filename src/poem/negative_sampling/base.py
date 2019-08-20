@@ -4,7 +4,6 @@
 
 from abc import ABC, abstractmethod
 
-import numpy as np
 import torch
 
 from ..instance_creation_factories import TriplesFactory
@@ -25,11 +24,6 @@ class NegativeSampler(ABC):
     def num_entities(self) -> int:  # noqa: D401
         """The number of entities to sample from."""
         return self.triples_factory.num_entities
-
-    @property
-    def all_entities(self) -> np.ndarray:  # noqa: D401
-        """The array of all entities."""
-        return self.triples_factory.all_entities
 
     @abstractmethod
     def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:

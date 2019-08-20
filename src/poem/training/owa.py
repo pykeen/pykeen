@@ -2,7 +2,7 @@
 
 """Training KGE models based on the OWA."""
 
-from typing import Any, Mapping, Optional, Type
+from typing import Optional, Type
 
 import numpy as np
 import torch
@@ -28,7 +28,6 @@ class OWATrainingLoop(TrainingLoop):
         model: BaseModule,
         optimizer: Optional[Optimizer] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
-        negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         num_negs_per_pos: int = 1,
     ):
         """Initialize the training loop.
@@ -36,8 +35,6 @@ class OWATrainingLoop(TrainingLoop):
         :param model: The model to train
         :param optimizer: The optimizer to use while training the model
         :param negative_sampler_cls: The class of the negative sampler
-        :param negative_sampler_kwargs: Keyword arguments to pass to the
-         negative sampler on instantiation
         :param num_negs_per_pos: The number of negative triples to generate
          for every positive one
         """
@@ -51,7 +48,6 @@ class OWATrainingLoop(TrainingLoop):
 
         self.negative_sampler = negative_sampler_cls(
             triples_factory=self.triples_factory,
-            **(negative_sampler_kwargs or {}),
         )
 
         # TODO: Make this part of the negative sampler?
