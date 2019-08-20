@@ -5,6 +5,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+import torch
 
 from ..instance_creation_factories import TriplesFactory
 
@@ -31,6 +32,6 @@ class NegativeSampler(ABC):
         return self.triples_factory.all_entities
 
     @abstractmethod
-    def sample(self, positive_batch: np.ndarray) -> np.ndarray:
+    def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
         """Generate negative samples from the positive batch."""
         raise NotImplementedError

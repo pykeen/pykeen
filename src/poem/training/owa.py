@@ -2,7 +2,7 @@
 
 """Training KGE models based on the OWA."""
 
-from typing import Any, List, Mapping, Optional, Type
+from typing import Any, Mapping, Optional, Type
 
 import numpy as np
 import torch
@@ -62,11 +62,16 @@ class OWATrainingLoop(TrainingLoop):
         else:
             self._loss_helper = self._label_loss_helper
 
-    def _create_negative_samples(self, pos_batch, num_negs_per_pos: int = 1) -> List[np.ndarray]:
-        return [
-            self.negative_sampler.sample(positive_batch=pos_batch)
+    def _create_negative_samples(
+        self,
+        positive_batch: torch.LongTensor,
+        num_negs_per_pos: int = 1,
+    ) -> torch.LongTensor:
+        # TODO: Pass num_negs_per_pos to sampler to allow further optimization
+        return torch.cat([
+            self.negative_sampler.sample(positive_batch=positive_batch)
             for _ in range(num_negs_per_pos)
-        ]
+        ], dim=0)
 
     def _create_instances(self):  # noqa: D102
         return self.triples_factory.create_owa_instances()
@@ -76,15 +81,24 @@ class OWATrainingLoop(TrainingLoop):
 
     def _process_batch(self, batch: np.ndarray, label_smoothing: float = 0.) -> torch.FloatTensor:  # noqa: D102
         # Send positive batch to device
-        pos_batch = torch.tensor(batch, dtype=torch.long, device=self.device)
+        positive_batch = torch.tensor(batch, dtype=torch.long, device=self.device)
 
-        # Create negative samples and send them to the device
-        neg_samples = self._create_negative_samples(pos_batch, num_negs_per_pos=self.num_negs_per_pos)
-        neg_batch = torch.tensor(neg_samples, dtype=torch.long, device=self.device).view(-1, 3)
+        # Create negative samples
+        neg_samples = self._create_negative_samples(
+            positive_batch=positive_batch,
+            num_negs_per_pos=self.num_negs_per_pos,
+        )
+
+        # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
+        # BasicNegativeSampler, BernoulliNegativeSampler
+        negative_batch = neg_samples.to(self.device)
+
+        # Make it negative batch broadcastable (required for self.num_negs_per_pos > 1).
+        negative_batch = negative_batch.view(-1, 3)
 
         # Compute negative and positive scores
-        positive_scores = self.model.forward_owa(pos_batch)
-        negative_scores = self.model.forward_owa(neg_batch)
+        positive_scores = self.model.forward_owa(positive_batch)
+        negative_scores = self.model.forward_owa(negative_batch)
 
         # Repeat positives scores
         # TODO: Is this always necessary?

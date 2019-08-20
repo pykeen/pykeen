@@ -2,10 +2,9 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
-import numpy as np
+import torch
 
 from .base import NegativeSampler
-from ..utils import slice_triples
 
 __all__ = [
     'BasicNegativeSampler',
@@ -15,43 +14,20 @@ __all__ = [
 class BasicNegativeSampler(NegativeSampler):
     """A basic negative sampler."""
 
-    def sample(self, positive_batch) -> np.ndarray:
+    def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
         """Generate negative samples from the positive batch."""
-        batch_heads, batch_relations, batch_tails = slice_triples(positive_batch)
+        # Bind batch size
+        batch_size = positive_batch.shape[0]
 
-        num_subj_corrupt = len(positive_batch) // 2
-        num_obj_corrupt = len(positive_batch) - num_subj_corrupt
-        # pos_batch = torch.tensor(pos_batch, dtype=torch.long, device=self.model.device)
+        # Equally corrupt subject and object
+        split_idx = batch_size // 2
 
-        corrupted_subj_indices = np.random.choice(np.arange(0, self.num_entities), size=num_subj_corrupt)
-        corrupted_subjects = np.reshape(self.all_entities[corrupted_subj_indices], newshape=(-1, 1))
-        subject_based_corrupted_triples = np.concatenate(
-            [
-                corrupted_subjects,
-                batch_relations[:num_subj_corrupt],
-                batch_tails[:num_subj_corrupt],
-            ],
-            axis=1,
-        )
+        # Copy positive batch for corruption. Do not detach, as no gradients should flow into the indices.
+        negative_batch = positive_batch.detach().clone()
 
-        corrupted_obj_indices = np.random.choice(np.arange(0, self.num_entities), size=num_obj_corrupt)
-        corrupted_objects = np.reshape(self.all_entities[corrupted_obj_indices], newshape=(-1, 1))
+        # Corrupt subjects
+        negative_batch[:split_idx, 0] = torch.randint(high=self.num_entities, size=(split_idx,))
+        # Corrupt objects
+        negative_batch[split_idx:, 2] = torch.randint(high=self.num_entities, size=(batch_size - split_idx,))
 
-        object_based_corrupted_triples = np.concatenate(
-            [
-                batch_heads[num_subj_corrupt:],
-                batch_relations[num_subj_corrupt:],
-                corrupted_objects,
-            ],
-            axis=1,
-        )
-
-        neg_batch = np.concatenate(
-            [
-                subject_based_corrupted_triples,
-                object_based_corrupted_triples,
-            ],
-            axis=0,
-        )
-
-        return neg_batch
+        return negative_batch
