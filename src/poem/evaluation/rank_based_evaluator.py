@@ -13,6 +13,7 @@ from tqdm import tqdm
 from .base import Evaluator, MetricResults
 from ..models.base import BaseModule
 from ..training.utils import split_list_in_batches
+from ..typing import MappedTriples
 
 __all__ = [
     'RankBasedEvaluator',
@@ -63,11 +64,6 @@ class RankBasedEvaluator(Evaluator):
         super().__init__(model=model)
         self.filter_neg_triples = filter_neg_triples
         self.hits_at_k = hits_at_k if hits_at_k is not None else [1, 3, 5, 10]
-
-    @property
-    def all_entities(self):  # noqa: D401
-        """All triples in the factory."""
-        return self.model.triples_factory.all_entities
 
     def _filter_corrupted_triples(
             self,
@@ -174,10 +170,10 @@ class RankBasedEvaluator(Evaluator):
             adj_rank_of_positive_object_based,
         )
 
-    def evaluate(self, test_triples: np.ndarray, batch_size: int = 1) -> MetricResults:
-        """Evaluate a given KGE model based on a test-set of triples.
+    def evaluate(self, mapped_triples: MappedTriples, batch_size: int = 1) -> MetricResults:
+        """Evaluate a given KGE model based on a test-set of mapped triples.
 
-        :param test_triples: np.ndarray, shape: (number of triples, 3)
+        :param mapped_triples: np.ndarray, shape: (number of triples, 3)
             The mapped triples to be used for evaluation.
         :param batch_size: int, optional
             The batch size to be used for the evaluation. A bigger batch size increases the utilization of GPUs during
@@ -198,11 +194,11 @@ class RankBasedEvaluator(Evaluator):
         # Set eval mode in order to ignore functionalities such as dropout
         self.model = self.model.eval()
 
-        all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, test_triples], axis=0)
+        all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, mapped_triples], axis=0)
         all_pos_triples = torch.tensor(all_pos_triples, device=self.device)
         all_entities = torch.tensor(self.model.triples_factory.all_entities, device=self.device)
 
-        test_triples = torch.tensor(test_triples, dtype=torch.long, device=self.device)
+        mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=self.device)
 
         compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank
@@ -210,9 +206,9 @@ class RankBasedEvaluator(Evaluator):
             self._compute_rank
         )
 
-        batches = split_list_in_batches(input_list=test_triples, batch_size=batch_size)
+        batches = split_list_in_batches(input_list=mapped_triples, batch_size=batch_size)
 
-        num_triples = test_triples.shape[0]
+        num_triples = mapped_triples.shape[0]
 
         with tqdm(
                 desc=f'⚡️ Evaluating triples ',

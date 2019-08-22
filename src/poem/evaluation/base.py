@@ -6,10 +6,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-import numpy as np
 from dataclasses_json import dataclass_json
 
 from ..models.base import BaseModule
+from ..typing import MappedTriples
 
 __all__ = [
     'Evaluator',
@@ -41,6 +41,6 @@ class Evaluator(ABC):
         return self.model.device
 
     @abstractmethod
-    def evaluate(self, triples: np.ndarray, **kwargs) -> MetricResults:
-        """Evaluate the triples."""
+    def evaluate(self, mapped_triples: MappedTriples, **kwargs) -> MetricResults:
+        """Evaluate the mapped triples."""
         raise NotImplementedError
