@@ -46,7 +46,7 @@ class NationsValidationTriplesFactory(TriplesFactory):
 
 
 nations = DataSet(
-    training_cls=NationsTrainingTriplesFactory,
-    testing_cls=NationsTestingTriplesFactory,
-    validation_cls=NationsValidationTriplesFactory,
+    training_path=TRAIN_PATH,
+    testing_path=TEST_PATH,
+    validation_path=VALIDATE_PATH,
 )

@@ -60,30 +60,32 @@ def _create_multi_label_instances(
     return instance_to_multi_label_new
 
 
-def _create_entity_and_relation_mappings(
-    triples: np.array
-) -> Tuple[torch.LongTensor, EntityMapping, torch.LongTensor, RelationMapping]:
-    """Map entities and relations to ids."""
-    subjects, relations, objects = triples[:, 0], triples[:, 1], triples[:, 2]
+def _create_entity_mapping(triples: np.ndarray) -> EntityMapping:
+    """Create mapping from entity labels to IDs.
 
+    :param triples: shape: (n, 3), dtype: str
+    """
+    # Split triples
+    subjects, objects = triples[:, 0], triples[:, 2]
     # Sorting ensures consistent results when the triples are permuted
     entity_labels = sorted(set(subjects).union(objects))
+    # Create mapping
+    entity_label_to_id = {label: i for (i, label) in enumerate(entity_labels)}
+    return entity_label_to_id
+
+
+def _create_relation_mapping(triples: np.ndarray) -> RelationMapping:
+    """Create mapping from relation labels to IDs.
+
+    :param triples: shape: (n, 3), dtype: str
+    """
+    # Extract relation labels
+    relations = triples[:, 1]
+    # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(set(relations))
-
-    entity_ids_np = np.arange(len(entity_labels))
-    entity_label_to_id = dict(zip(entity_labels, entity_ids_np))
-    entity_ids: torch.LongTensor = torch.tensor(entity_ids_np, dtype=torch.long)
-
-    relation_ids_np = np.arange(len(entity_labels))
-    relation_label_to_id = dict(zip(relation_labels, relation_ids_np))
-    relation_ids: torch.LongTensor = torch.tensor(relation_ids_np, dtype=torch.long)
-
-    return (
-        entity_ids,
-        entity_label_to_id,
-        relation_ids,
-        relation_label_to_id,
-    )
+    # Create mapping
+    relation_label_to_id = {label: i for (i, label) in enumerate(relation_labels)}
+    return relation_label_to_id
 
 
 def _map_triples_elements_to_ids(
@@ -155,6 +157,8 @@ class TriplesFactory:
         path: Union[None, str, TextIO] = None,
         triples: Optional[LabeledTriples] = None,
         create_inverse_triples: bool = False,
+        entity_to_id: EntityMapping = None,
+        relation_to_id: RelationMapping = None,
     ) -> None:
         """Initialize the triples factory.
 
@@ -182,13 +186,21 @@ class TriplesFactory:
             self.path = '<None>'
             self.triples = triples
 
-        (
-            self.all_entities,
-            self.entity_to_id,
-            self.all_relations,
-            self.relation_to_id,
-        ) = _create_entity_and_relation_mappings(self.triples)
+        # Generate entity mapping if necessary
+        if entity_to_id is None:
+            entity_to_id = _create_entity_mapping(triples=self.triples)
+        self.entity_to_id = entity_to_id
 
+        # Generate relation mapping if necessary
+        if relation_to_id is None:
+            relation_to_id = _create_relation_mapping(triples=self.triples)
+        self.relation_to_id = relation_to_id
+
+        # Store entity and relation IDs
+        self.all_entities = np.arange(self.num_entities)
+        self.all_relations = np.arange(self.num_relations)
+
+        # Map triples of labels to triples of IDs.
         self.mapped_triples = _map_triples_elements_to_ids(
             triples=self.triples,
             entity_to_id=self.entity_to_id,
@@ -196,6 +208,7 @@ class TriplesFactory:
         )
 
         self.create_inverse_triples = create_inverse_triples
+
         # This creates inverse triples and appends them to the mapped triples
         if self.create_inverse_triples:
             self._create_inverse_triples()

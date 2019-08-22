@@ -46,7 +46,7 @@ class KinshipValidationTriplesFactory(TriplesFactory):
 
 
 kinship = DataSet(
-    training_cls=KinshipTrainingTriplesFactory,
-    testing_cls=KinshipTestingTriplesFactory,
-    validation_cls=KinshipValidationTriplesFactory,
+    training_path=TRAIN_PATH,
+    testing_path=TEST_PATH,
+    validation_path=VALIDATE_PATH,
 )

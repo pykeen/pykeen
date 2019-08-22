@@ -46,7 +46,7 @@ class UmlsValidationTriplesFactory(TriplesFactory):
 
 
 umls = DataSet(
-    training_cls=UmlsTrainingTriplesFactory,
-    testing_cls=UmlsTestingTriplesFactory,
-    validation_cls=UmlsValidationTriplesFactory,
+    training_path=TRAIN_PATH,
+    testing_path=TEST_PATH,
+    validation_path=VALIDATE_PATH,
 )
