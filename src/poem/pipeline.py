@@ -16,6 +16,7 @@ from poem.datasets import DataSet, datasets
 from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator
 from poem.instance_creation_factories import TriplesFactory
 from poem.models import BaseModule
+from poem.negative_sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from poem.training import CWATrainingLoop, OWATrainingLoop, TrainingLoop
 
 __all__ = [
@@ -58,6 +59,11 @@ _training_loops = {
     _normalize_string('cwa'): CWATrainingLoop,
 }
 
+_negative_samplers = {
+    'basic': BasicNegativeSampler,
+    'bernoulli': BernoulliNegativeSampler,
+}
+
 
 @dataclass
 class PipelineResult:
@@ -85,6 +91,7 @@ def pipeline(  # noqa: C901
         dataset: Union[None, str, DataSet] = None,
         training_triples_factory: Optional[TriplesFactory] = None,
         testing_triples_factory: Optional[TriplesFactory] = None,
+        negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
         evaluator: Union[str, Type[Evaluator]] = RankBasedEvaluator,
         model_kwargs: Optional[Mapping[str, Any]] = None,
         optimizer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -105,6 +112,8 @@ def pipeline(  # noqa: C901
      dataset was not specified
     :param training_loop: The name of the training loop's assumpiton ('owa' or 'cwa')
      or the training loop class.
+    :param negative_sampler: The name of the negative sampler ('basic' or 'bernoulli')
+     or the negative sampler class
     :param evaluator: The name of the evaluator or an evaluator class. Defaults to
      rank based evaluator
     :param model_kwargs: Keyword arguments to pass to the model class on instantiation
@@ -231,10 +240,29 @@ def pipeline(  # noqa: C901
     elif not issubclass(training_loop, TrainingLoop):
         raise TypeError(f'Not subclass of TrainingLoop: {training_loop}')
 
-    training_loop_instance: TrainingLoop = training_loop(
-        model=model_instance,
-        optimizer=optimizer_instance,
-    )
+    if negative_sampler is None:
+        training_loop_instance: TrainingLoop = training_loop(
+            model=model_instance,
+            optimizer=optimizer_instance,
+        )
+    else:
+        if training_loop is not OWATrainingLoop:
+            raise ValueError('Can not specify negative sampler with CWA')
+        elif _not_str_or_type(negative_sampler):
+            raise TypeError(f'Invalid training negative sampler type: {type(negative_sampler)} - {negative_sampler}')
+        elif isinstance(negative_sampler, str):
+            try:
+                negative_sampler = _negative_samplers[_normalize_string(negative_sampler)]
+            except KeyError:
+                raise ValueError(f'Invalid negative sampler name: {negative_sampler}')
+        elif not issubclass(negative_sampler, NegativeSampler):
+            raise TypeError(f'Not subclass of NegativeSampler: {negative_sampler}')
+
+        training_loop_instance: TrainingLoop = training_loop(
+            model=model_instance,
+            optimizer=optimizer_instance,
+            negative_sampler_cls=negative_sampler,
+        )
 
     if training_kwargs is None:
         training_kwargs = {}

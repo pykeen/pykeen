@@ -10,7 +10,7 @@ import torch
 
 from poem.datasets import NationsTrainingTriplesFactory
 from poem.instance_creation_factories import OWAInstances, TriplesFactory
-from poem.negative_sampling import BasicNegativeSampler, NegativeSampler
+from poem.negative_sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 
 
 def _array_check_bounds(
@@ -75,3 +75,9 @@ class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
     """Test the basic negative sampler."""
 
     negative_sampling_cls = BasicNegativeSampler
+
+
+class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
+    """Test the Bernoulli negative sampler."""
+
+    negative_sampling_cls = BernoulliNegativeSampler
