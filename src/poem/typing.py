@@ -5,6 +5,7 @@
 from typing import Mapping, Optional
 
 import numpy as np
+import torch
 from torch import nn
 
 __all__ = [
@@ -16,7 +17,7 @@ __all__ = [
 ]
 
 LabeledTriples = np.ndarray
-MappedTriples = np.ndarray
+MappedTriples = torch.LongTensor
 OptionalLoss = Optional[nn.modules.loss._Loss]
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]

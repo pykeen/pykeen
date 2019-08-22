@@ -5,13 +5,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Mapping, Optional
 
-import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
+from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 
 from .early_stopping import EarlyStopper
-from .utils import lazy_compile_random_batches
 from ..instance_creation_factories import Instances, TriplesFactory
 from ..models.base import BaseModule
 from ..version import get_version
@@ -94,6 +93,9 @@ class TrainingLoop(ABC):
         # Create training instances
         self.training_instances = self._create_instances()
 
+        # Create data loader for training
+        train_data_loader = DataLoader(dataset=self.training_instances, batch_size=batch_size, shuffle=True)
+
         # Bind
         num_training_instances = self.training_instances.num_instances
 
@@ -104,7 +106,6 @@ class TrainingLoop(ABC):
         epochs = trange(num_epochs, **_tqdm_kwargs)
 
         # Training Loop
-        indices = np.arange(num_training_instances)
         for epoch in epochs:
             # Enforce training mode
             self.model.train()
@@ -113,11 +114,7 @@ class TrainingLoop(ABC):
             current_epoch_loss = 0.
 
             # Batching
-            for batch in lazy_compile_random_batches(
-                indices=indices,
-                batch_size=batch_size,
-                batch_compiler=self._compile_batch
-            ):
+            for batch in train_data_loader:
                 loss = self._process_batch(batch=batch, label_smoothing=label_smoothing)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
@@ -151,11 +148,6 @@ class TrainingLoop(ABC):
     @abstractmethod
     def _create_instances(self) -> Instances:
         """Create the training instances at the beginning of the training loop."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def _compile_batch(self, batch_indices: np.ndarray) -> Any:
-        """Compile a single training batch."""
         raise NotImplementedError
 
     @abstractmethod

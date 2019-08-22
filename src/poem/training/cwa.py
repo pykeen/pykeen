@@ -2,9 +2,8 @@
 
 """Training KGE models based on the CWA."""
 
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
-import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 
@@ -38,24 +37,19 @@ class CWATrainingLoop(TrainingLoop):
     def _create_instances(self) -> Instances:  # noqa: D102
         return self.triples_factory.create_cwa_instances()
 
-    def _compile_batch(self, batch_indices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:  # noqa: D102
-        input_batch = self.training_instances.mapped_triples[batch_indices]
-        target_batch = self.training_instances.labels[batch_indices]
-        return input_batch, target_batch
-
-    def _process_batch(self, batch: Any, label_smoothing: float = 0.0) -> torch.FloatTensor:  # noqa: D102
+    def _process_batch(
+        self,
+        batch: Tuple[torch.LongTensor, torch.FloatTensor],
+        label_smoothing: float = 0.0,
+    ) -> torch.FloatTensor:  # noqa: D102
         # Split batch components
-        batch_pairs, batch_labels = batch
+        batch_pairs, batch_labels_full = batch
 
         # Send batch to device
         batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.device)
 
-        # Construct dense target
-        current_batch_size = len(batch_pairs)
+        # Bind number of entities
         num_entities = self.model.num_entities
-        batch_labels_full = torch.zeros((current_batch_size, num_entities), device=self.device)
-        for i in range(current_batch_size):
-            batch_labels_full[i, batch_labels[i]] = 1
 
         # Apply label smoothing
         if label_smoothing > 0.:

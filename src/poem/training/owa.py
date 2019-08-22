@@ -72,9 +72,6 @@ class OWATrainingLoop(TrainingLoop):
     def _create_instances(self):  # noqa: D102
         return self.triples_factory.create_owa_instances()
 
-    def _compile_batch(self, batch_indices: np.ndarray) -> np.ndarray:  # noqa: D102
-        return self.training_instances.mapped_triples[batch_indices]
-
     def _process_batch(self, batch: np.ndarray, label_smoothing: float = 0.) -> torch.FloatTensor:  # noqa: D102
         # Send positive batch to device
         positive_batch = torch.tensor(batch, dtype=torch.long, device=self.device)

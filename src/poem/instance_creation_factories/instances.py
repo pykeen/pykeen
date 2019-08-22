@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Mapping
 
 import numpy as np
+import torch
+from torch.utils import data
 
 from .utils import Assumption
 from ..typing import EntityMapping, MappedTriples, RelationMapping
@@ -21,7 +23,7 @@ __all__ = [
 
 
 @dataclass
-class Instances:
+class Instances(data.Dataset):
     """Triples and mappings to their indices."""
 
     mapped_triples: MappedTriples
@@ -38,12 +40,18 @@ class Instances:
         """The number of entities."""
         return len(self.entity_to_id)
 
+    def __len__(self):  # noqa: D105
+        return self.num_instances
+
 
 @dataclass
 class OWAInstances(Instances):
     """Triples and mappings to their indices for OWA."""
 
     assumption: Assumption = Assumption.open
+
+    def __getitem__(self, item):  # noqa: D105
+        return self.mapped_triples[item]
 
 
 @dataclass
@@ -52,6 +60,12 @@ class CWAInstances(Instances):
 
     labels: np.ndarray
     assumption: Assumption = Assumption.closed
+
+    def __getitem__(self, item):  # noqa: D105
+        # Create dense target
+        batch_labels_full = torch.zeros(self.num_entities)
+        batch_labels_full[self.labels[item]] = 1
+        return self.mapped_triples[item], batch_labels_full
 
 
 @dataclass
