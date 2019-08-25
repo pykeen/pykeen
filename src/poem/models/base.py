@@ -11,9 +11,11 @@ from typing import Iterable, Optional
 import numpy as np
 import torch
 from torch import nn
+from tqdm import tqdm
 
 from ..instance_creation_factories import TriplesFactory
 from ..typing import OptionalLoss
+from ..version import get_version
 
 __all__ = [
     'BaseModule',
@@ -299,6 +301,44 @@ class BaseModule(nn.Module):
         """Get the parameters that require gradients."""
         # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
         return filter(lambda p: p.requires_grad, self.parameters())
+
+    def to_embeddingdb(self, session=None, use_tqdm: bool = False):
+        """Upload to the embedding database.
+
+        :param session: Optional SQLAlchemy session
+        :param use_tqdm: Use :mod:`tqdm` progress bar?
+        :rtype: embeddingdb.sql.models.Collection
+        """
+        from embeddingdb.sql.models import Embedding, Collection
+
+        if session is None:
+            from embeddingdb.sql.models import get_session
+            session = get_session()
+
+        collection = Collection(
+            package_name='poem',
+            package_version=get_version(),
+            dimensions=self.embedding_dim,
+        )
+
+        embeddings = self.entity_embeddings.weight.detach().cpu().numpy()
+        names = sorted(
+            self.triples_factory.entity_to_id,
+            key=self.triples_factory.entity_to_id.get
+        )
+
+        if use_tqdm:
+            names = tqdm(names, desc='Building SQLAlchemy models')
+        for name, embedding in zip(names, embeddings):
+            embedding = Embedding(
+                collection=collection,
+                curie=name,
+                vector=list(embedding),
+            )
+            session.add(embedding)
+        session.add(collection)
+        session.commit()
+        return collection
 
 
 class RegularizedModel(BaseModule):

@@ -8,12 +8,11 @@ from typing import Any, List, Mapping, Optional
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
-from tqdm import tqdm, trange
+from tqdm import trange
 
 from .early_stopping import EarlyStopper
 from ..instance_creation_factories import Instances, TriplesFactory
 from ..models.base import BaseModule
-from ..version import get_version
 
 __all__ = [
     'TrainingLoop',
@@ -155,9 +154,6 @@ class TrainingLoop(ABC):
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 
-    def _get_entity_to_vector_dict(self) -> Mapping:
-        raise NotImplementedError
-
     def to_embeddingdb(self, session=None, use_tqdm: bool = False):
         """Upload to the embedding database.
 
@@ -165,29 +161,4 @@ class TrainingLoop(ABC):
         :param use_tqdm: Use :mod:`tqdm` progress bar?
         :rtype: embeddingdb.sql.models.Collection
         """
-        from embeddingdb.sql.models import Embedding, Collection
-
-        if session is None:
-            from embeddingdb.sql.models import get_session
-            session = get_session()
-
-        collection = Collection(
-            package_name='poem',
-            package_version=get_version(),
-            dimensions=...,
-            extras=...,
-        )
-
-        it = self._get_entity_to_vector_dict().items()
-        if use_tqdm:
-            it = tqdm(it, desc='Building SQLAlchemy models')
-        for curie, vector in it:
-            embedding = Embedding(
-                collection=collection,
-                curie=curie,
-                vector=vector,
-            )
-            session.add(embedding)
-        session.add(collection)
-        session.commit()
-        return collection
+        return self.model.to_embeddingdb(session=session, use_tqdm=use_tqdm)
