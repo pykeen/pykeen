@@ -17,7 +17,7 @@ from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator
 from poem.instance_creation_factories import TriplesFactory
 from poem.models import BaseModule
 from poem.negative_sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
-from poem.training import CWATrainingLoop, OWATrainingLoop, TrainingLoop
+from poem.training import CWATrainingLoop, EarlyStopper, OWATrainingLoop, TrainingLoop
 
 __all__ = [
     'PipelineResult',
@@ -84,20 +84,23 @@ def _not_str_or_type(x):
 
 
 def pipeline(  # noqa: C901
-        model: Union[str, Type[BaseModule]],
-        *,
-        optimizer: Union[str, Type[Optimizer]] = Adagrad,
-        training_loop: Union[str, Type[TrainingLoop]] = OWATrainingLoop,
-        dataset: Union[None, str, DataSet] = None,
-        training_triples_factory: Optional[TriplesFactory] = None,
-        testing_triples_factory: Optional[TriplesFactory] = None,
-        negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
-        evaluator: Union[str, Type[Evaluator]] = RankBasedEvaluator,
-        model_kwargs: Optional[Mapping[str, Any]] = None,
-        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
-        training_kwargs: Optional[Mapping[str, Any]] = None,
-        evaluator_kwargs: Optional[Mapping[str, Any]] = None,
-        evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    model: Union[str, Type[BaseModule]],
+    *,
+    optimizer: Union[str, Type[Optimizer]] = Adagrad,
+    training_loop: Union[str, Type[TrainingLoop]] = OWATrainingLoop,
+    dataset: Union[None, str, DataSet] = None,
+    training_triples_factory: Optional[TriplesFactory] = None,
+    testing_triples_factory: Optional[TriplesFactory] = None,
+    validation_triples_factory: Optional[TriplesFactory] = None,
+    negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
+    evaluator: Union[str, Type[Evaluator]] = RankBasedEvaluator,
+    early_stopping: bool = False,
+    model_kwargs: Optional[Mapping[str, Any]] = None,
+    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    training_kwargs: Optional[Mapping[str, Any]] = None,
+    early_stopping_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -110,16 +113,20 @@ def pipeline(  # noqa: C901
      a dataset was not specified
     :param testing_triples_factory: A triples factory with training instances if a
      dataset was not specified
-    :param training_loop: The name of the training loop's assumpiton ('owa' or 'cwa')
+    :param validation_triples_factory: A triples factory with validation instances if a
+     a dataset was not specified
+    :param training_loop: The name of the training loop's assumption ('owa' or 'cwa')
      or the training loop class.
     :param negative_sampler: The name of the negative sampler ('basic' or 'bernoulli')
      or the negative sampler class
     :param evaluator: The name of the evaluator or an evaluator class. Defaults to
      rank based evaluator
+    :param early_stopping: Whether to use early stopping.
     :param model_kwargs: Keyword arguments to pass to the model class on instantiation
     :param optimizer_kwargs: Keyword arguments to pass to the optimizer on instantiation
     :param training_kwargs: Keyword arguments to pass to the training loop's train
      function on call
+    :param early_stopping_kwargs: Keyword arguments to pass to the EarlyStopper upon instantiation.
     :param evaluator_kwargs: Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs: Keyword arguments to pass to the evaluator's evaluate
      function on call
@@ -181,12 +188,8 @@ def pipeline(  # noqa: C901
     ... )
     """
     if dataset is not None:
-        if testing_triples_factory is not None and training_triples_factory is not None:
-            raise ValueError('Can not specify both dataset and training_triples_factory/testing_triples_factory.')
-        elif training_triples_factory is not None:
-            raise ValueError('Can not specify training_triples_factory after specifying dataset.')
-        elif testing_triples_factory is not None:
-            raise ValueError('Can not specify testing_triples_factory after specifying dataset.')
+        if any(f is not None for f in (training_triples_factory, testing_triples_factory, validation_triples_factory)):
+            raise ValueError('Can not specify both dataset and any triples factory.')
 
         if isinstance(dataset, str):
             try:
@@ -196,6 +199,7 @@ def pipeline(  # noqa: C901
         dataset.load()
         training_triples_factory = dataset.training
         testing_triples_factory = dataset.testing
+        validation_triples_factory = dataset.validation
     elif testing_triples_factory is None or training_triples_factory is None:
         raise ValueError('Must specify either dataset or both training_triples_factory and testing_triples_factory.')
 
@@ -224,11 +228,6 @@ def pipeline(  # noqa: C901
     elif not issubclass(optimizer, Optimizer):
         raise TypeError(f'Not subclass of Optimizer: {optimizer}')
 
-    optimizer_instance: Optimizer = optimizer(
-        params=model_instance.get_grad_params(),
-        **(optimizer_kwargs or {}),
-    )
-
     # Pick a training assumption (OWA or CWA)
     if _not_str_or_type(training_loop):
         raise TypeError(f'Invalid training loop type: {type(training_loop)} - {training_loop}')
@@ -240,10 +239,14 @@ def pipeline(  # noqa: C901
     elif not issubclass(training_loop, TrainingLoop):
         raise TypeError(f'Not subclass of TrainingLoop: {training_loop}')
 
+    if optimizer_kwargs is None:
+        optimizer_kwargs = {}
+
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
-            optimizer=optimizer_instance,
+            optimizer_cls=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
         )
     else:
         if training_loop is not OWATrainingLoop:
@@ -260,17 +263,10 @@ def pipeline(  # noqa: C901
 
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
-            optimizer=optimizer_instance,
+            optimizer_cls=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
             negative_sampler_cls=negative_sampler,
         )
-
-    if training_kwargs is None:
-        training_kwargs = {}
-    training_kwargs.setdefault('num_epochs', 5)
-    training_kwargs.setdefault('batch_size', 256)
-
-    # Train like Cristiano Ronaldo
-    training_loop_instance.train(**training_kwargs)
 
     # Pick an evaluator
     if _not_str_or_type(evaluator):
@@ -287,6 +283,29 @@ def pipeline(  # noqa: C901
         model=model_instance,
         **(evaluator_kwargs or {}),
     )
+
+    # Early stopping
+    if early_stopping:
+        if early_stopping_kwargs is None:
+            early_stopping_kwargs = {}
+        if validation_triples_factory is None:
+            raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
+        early_stopper = EarlyStopper(
+            evaluator=evaluator_instance,
+            evaluation_triples_factory=validation_triples_factory,
+            **early_stopping_kwargs
+        )
+    else:
+        early_stopper = None
+
+    if training_kwargs is None:
+        training_kwargs = {}
+    training_kwargs.setdefault('num_epochs', 5)
+    training_kwargs.setdefault('batch_size', 256)
+    training_kwargs.setdefault('early_stopper', early_stopper)
+
+    # Train like Cristiano Ronaldo
+    training_loop_instance.train(**training_kwargs)
 
     # Evaluate
     metric_results = evaluator_instance.evaluate(

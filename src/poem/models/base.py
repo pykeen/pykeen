@@ -2,11 +2,10 @@
 
 """Base module for all KGE models."""
 
-import logging
 import random
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 
 import numpy as np
 import torch
@@ -15,14 +14,13 @@ from tqdm import tqdm
 
 from ..instance_creation_factories import TriplesFactory
 from ..typing import OptionalLoss
+from ..utils import resolve_device
 from ..version import get_version
 
 __all__ = [
     'BaseModule',
     'RegularizedModel',
 ]
-
-log = logging.getLogger(__name__)
 
 
 class BaseModule(nn.Module):
@@ -95,28 +93,25 @@ class BaseModule(nn.Module):
         """The number of unique relation types in the knowledge graph."""
         return self.triples_factory.num_relations
 
-    def _set_device(self, device: Optional[str] = None) -> None:
+    def _set_device(self, device: Union[None, str, torch.device] = None) -> None:
         """Set the Torch device to use."""
-        if device is None or device == 'gpu':
-            if torch.cuda.is_available():
-                self.device = torch.device('cuda')
-            else:
-                self.device = torch.device('cpu')
-                log.info('No cuda devices were available. The model runs on CPU')
-        else:
-            self.device = torch.device('cpu')
+        self.device = resolve_device(device=device)
 
-    def _to_cpu(self) -> None:
+    def to_device_(self) -> 'BaseModule':
+        """Transfer model to device."""
+        self.to(self.device)
+        torch.cuda.empty_cache()
+        return self
+
+    def to_cpu_(self) -> 'BaseModule':
         """Transfer the entire model to CPU."""
         self._set_device('cpu')
-        self.to(self.device)
-        torch.cuda.empty_cache()
+        return self.to_device_()
 
-    def _to_gpu(self) -> None:
+    def to_gpu_(self) -> 'BaseModule':
         """Transfer the entire model to GPU."""
-        self._set_device('gpu')
-        self.to(self.device)
-        torch.cuda.empty_cache()
+        self._set_device('cuda')
+        return self.to_device_()
 
     def predict_scores(self, triples: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -284,18 +279,18 @@ class BaseModule(nn.Module):
         raise NotImplementedError
 
     @abstractmethod
-    def init_empty_weights_(self):
+    def init_empty_weights_(self) -> 'BaseModule':
         """Initialize all uninitialized weights and embeddings."""
         raise NotImplementedError
 
     @abstractmethod
-    def clear_weights_(self):
+    def clear_weights_(self) -> 'BaseModule':
         """Clear all weights and embeddings."""
         raise NotImplementedError
 
-    def reset_weights_(self):
+    def reset_weights_(self) -> 'BaseModule':
         """Force re-initialization of all weights."""
-        return self.clear_weights_().init_empty_weights_()
+        return self.clear_weights_().init_empty_weights_().to_device_()
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""

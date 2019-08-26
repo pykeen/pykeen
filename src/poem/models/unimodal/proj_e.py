@@ -55,16 +55,16 @@ class ProjE(BaseModule):
         self.inner_non_linearity = inner_non_linearity
 
         # Global entity projection
-        self.d_e = torch.empty(self.embedding_dim, requires_grad=True)
+        self.d_e = nn.Parameter(torch.empty(self.embedding_dim, requires_grad=True))
 
         # Global relation projection
-        self.d_r = torch.empty(self.embedding_dim, requires_grad=True)
+        self.d_r = nn.Parameter(torch.empty(self.embedding_dim, requires_grad=True))
 
         # Global combination bias
-        self.b_c = torch.empty(self.embedding_dim, requires_grad=True)
+        self.b_c = nn.Parameter(torch.empty(self.embedding_dim, requires_grad=True))
 
         # Global combination bias
-        self.b_p = torch.empty(1, requires_grad=True)
+        self.b_p = nn.Parameter(torch.empty(1, requires_grad=True))
 
         if init:
             self.init_empty_weights_()

@@ -3,7 +3,7 @@
 """Training loops for KGE models using multi-modal information."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Type
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -28,15 +28,18 @@ class TrainingLoop(ABC):
     def __init__(
         self,
         model: BaseModule,
-        optimizer: Optional[Optimizer] = None,
+        optimizer_cls: Optional[Type[Optimizer]] = None,
+        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the training loop.
 
         :param model: The model to train
-        :param optimizer: The optimizer to use while training the model
+        :param optimizer_cls: The optimizer to use while training the model
         """
         self.model = model
-        self.optimizer = optimizer
+        self.optimizer_class = optimizer_cls
+        self.optimizer_kwargs = optimizer_kwargs or {}
+        self.optimizer = None
         self.training_instances = None
         self.losses_per_epochs = []
 
@@ -74,7 +77,6 @@ class TrainingLoop(ABC):
         :param early_stopper:
             An instance of :class:`poem.training.EarlyStopper` with settings for checking
             if training should stop early
-
         :return:
             A pair of the KGE model and the losses per epoch.
         """
@@ -87,18 +89,28 @@ class TrainingLoop(ABC):
 
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
+            # Reset the weights
             self.model.reset_weights_()
+
+            # Create new optimizer
+            self.optimizer = self.optimizer_class(params=self.model.get_grad_params(), **self.optimizer_kwargs)
+        elif self.optimizer is None:
+            raise ValueError('Cannot continue_training without being trained once.')
 
         # Create training instances
         self.training_instances = self._create_instances()
 
         # Create data loader for training
-        train_data_loader = DataLoader(dataset=self.training_instances, batch_size=batch_size, shuffle=True)
+        train_data_loader = DataLoader(
+            dataset=self.training_instances,
+            batch_size=batch_size,
+            shuffle=True,
+        )
 
         # Bind
         num_training_instances = self.training_instances.num_instances
 
-        # Create progressbar
+        # Create progress bar
         _tqdm_kwargs = dict(desc=f'⚽ Training epoch on {self.device}', unit='epoch', unit_scale=True)
         if tqdm_kwargs is not None:
             _tqdm_kwargs.update(tqdm_kwargs)

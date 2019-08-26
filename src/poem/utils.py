@@ -2,19 +2,25 @@
 
 """Utilities for POEM."""
 
+import logging
+from typing import Union
+
 import numpy
 import torch
 
 __all__ = [
     'l2_regularization',
+    'resolve_device',
     'slice_triples',
     'slice_doubles',
 ]
 
+log = logging.getLogger(__name__)
+
 
 def l2_regularization(
-        *xs: torch.Tensor,
-        normalize: bool = False
+    *xs: torch.Tensor,
+    normalize: bool = False
 ) -> torch.Tensor:
     """
     Compute squared L2-regularization term.
@@ -33,6 +39,18 @@ def l2_regularization(
         regularization_term /= sum(numpy.prod(x.shape) for x in xs)
 
     return regularization_term
+
+
+def resolve_device(device: Union[None, str, torch.device] = None) -> torch.device:
+    """Resolve a torch.device given a desired device (string)."""
+    if device is None or device == 'gpu':
+        device = 'cuda'
+    if isinstance(device, str):
+        device = torch.device(device)
+    if not torch.cuda.is_available() and device.type == 'cuda':
+        device = torch.device('cpu')
+        log.info('No cuda devices were available. The model runs on CPU')
+    return device
 
 
 def slice_triples(triples):

@@ -2,9 +2,8 @@
 
 """Training KGE models based on the OWA."""
 
-from typing import Optional, Type
+from typing import Any, Mapping, Optional, Type
 
-import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 
@@ -12,6 +11,7 @@ from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..models import BaseModule
 from ..negative_sampling import BasicNegativeSampler, NegativeSampler
+from ..typing import MappedTriples
 
 __all__ = [
     'OWATrainingLoop',
@@ -26,21 +26,23 @@ class OWATrainingLoop(TrainingLoop):
     def __init__(
         self,
         model: BaseModule,
-        optimizer: Optional[Optimizer] = None,
+        optimizer_cls: Optional[Type[Optimizer]] = None,
+        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
         num_negs_per_pos: int = 1,
     ):
         """Initialize the training loop.
 
         :param model: The model to train
-        :param optimizer: The optimizer to use while training the model
+        :param optimizer_cls: The optimizer to use while training the model
         :param negative_sampler_cls: The class of the negative sampler
         :param num_negs_per_pos: The number of negative triples to generate
          for every positive one
         """
         super().__init__(
             model=model,
-            optimizer=optimizer,
+            optimizer_cls=optimizer_cls,
+            optimizer_kwargs=optimizer_kwargs,
         )
 
         if negative_sampler_cls is None:
@@ -72,9 +74,9 @@ class OWATrainingLoop(TrainingLoop):
     def _create_instances(self):  # noqa: D102
         return self.triples_factory.create_owa_instances()
 
-    def _process_batch(self, batch: np.ndarray, label_smoothing: float = 0.) -> torch.FloatTensor:  # noqa: D102
+    def _process_batch(self, batch: MappedTriples, label_smoothing: float = 0.) -> torch.FloatTensor:  # noqa: D102
         # Send positive batch to device
-        positive_batch = torch.tensor(batch, dtype=torch.long, device=self.device)
+        positive_batch = batch.to(device=self.device)
 
         # Create negative samples
         neg_samples = self._create_negative_samples(
@@ -93,10 +95,6 @@ class OWATrainingLoop(TrainingLoop):
         positive_scores = self.model.forward_owa(positive_batch)
         negative_scores = self.model.forward_owa(negative_batch)
 
-        # Repeat positives scores
-        # TODO: Is this always necessary?
-        positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
-
         loss = self._loss_helper(
             positive_scores,
             negative_scores,
@@ -105,17 +103,33 @@ class OWATrainingLoop(TrainingLoop):
 
         return loss
 
-    def _mr_loss_helper(self, positive_scores, negative_scores, _):
+    def _mr_loss_helper(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        _label_smoothing: float,
+    ) -> torch.FloatTensor:
+        # Repeat positives scores (necessary for more than one negative per positive)
+        if self.num_negs_per_pos > 1:
+            positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
+
         return self.model.compute_mr_loss(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
         )
 
-    def _label_loss_helper(self, positive_scores, negative_scores, label_smoothing):
-        predictions = torch.cat([positive_scores, negative_scores], 0)
+    def _label_loss_helper(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: float,
+    ) -> torch.FloatTensor:
+        # Stack predictions
+        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+        # Create target
         ones = torch.ones_like(positive_scores, device=self.device)
         zeros = torch.zeros_like(negative_scores, device=self.device)
-        labels = torch.cat([ones, zeros], 0)
+        labels = torch.cat([ones, zeros], dim=0)
 
         if label_smoothing > 0.:
             labels = apply_label_smoothing(
@@ -124,5 +138,7 @@ class OWATrainingLoop(TrainingLoop):
                 num_classes=self.model.num_entities,
             )
 
-        loss = self.model.compute_label_loss(predictions=predictions, labels=labels)
+        # Normalize the loss to have the average loss per positive triple
+        # This allows comparability of OWA and CWA losses
+        loss = self.model.compute_label_loss(predictions=predictions, labels=labels) / (self.num_negs_per_pos + 1)
         return loss

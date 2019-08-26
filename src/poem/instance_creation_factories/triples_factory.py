@@ -197,8 +197,8 @@ class TriplesFactory:
         self.relation_to_id = relation_to_id
 
         # Store entity and relation IDs
-        self.all_entities = np.arange(self.num_entities)
-        self.all_relations = np.arange(self.num_relations)
+        self.all_entities = torch.arange(self.num_entities)
+        self.all_relations = torch.arange(self.num_relations)
 
         # Map triples of labels to triples of IDs.
         self.mapped_triples = _map_triples_elements_to_ids(

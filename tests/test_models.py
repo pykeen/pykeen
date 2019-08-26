@@ -46,7 +46,7 @@ class _ModelTestCase:
             embedding_dim=self.embedding_dim,
             init=True,
             **(self.model_kwargs or {})
-        )
+        ).to_device_()
 
     def test_init(self):
         """Test the model's ``init_empty_weights_()`` function."""
@@ -78,7 +78,7 @@ class _ModelTestCase:
 
     def test_forward_owa(self) -> None:
         """Test the model's ``forward_owa()`` function."""
-        batch = torch.zeros(self.batch_size, 3, dtype=torch.long)
+        batch = torch.zeros(self.batch_size, 3, dtype=torch.long, device=self.model.device)
         try:
             scores = self.model.forward_owa(batch)
         except RuntimeError as e:
@@ -91,7 +91,7 @@ class _ModelTestCase:
 
     def test_forward_cwa(self) -> None:
         """Test the model's ``forward_cwa()`` function."""
-        batch = torch.zeros(self.batch_size, 2, dtype=torch.long)
+        batch = torch.zeros(self.batch_size, 2, dtype=torch.long, device=self.model.device)
         try:
             scores = self.model.forward_cwa(batch)
         except NotImplementedError:
@@ -106,7 +106,7 @@ class _ModelTestCase:
 
     def test_forward_inverse_cwa(self) -> None:
         """Test the model's ``forward_inverse_cwa()`` function."""
-        batch = torch.zeros(self.batch_size, 2, dtype=torch.long)
+        batch = torch.zeros(self.batch_size, 2, dtype=torch.long, device=self.model.device)
         try:
             scores = self.model.forward_inverse_cwa(batch)
         except NotImplementedError:
@@ -121,8 +121,13 @@ class _ModelTestCase:
 
     def test_train_owa(self) -> None:
         """Test that OWA training does not fail."""
-        optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
-        loop = OWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+        loop = OWATrainingLoop(
+            model=self.model,
+            optimizer_cls=Adagrad,
+            optimizer_kwargs={
+                'lr': 0.001,
+            },
+        )
         try:
             losses = loop.train(num_epochs=5, batch_size=128)
         except RuntimeError as e:
@@ -135,9 +140,14 @@ class _ModelTestCase:
 
     def test_train_cwa(self) -> None:
         """Test that CWA training does not fail."""
-        optimizer_instance = Adagrad(params=self.model.get_grad_params(), lr=0.001)
         try:
-            loop = CWATrainingLoop(model=self.model, optimizer=optimizer_instance)
+            loop = CWATrainingLoop(
+                model=self.model,
+                optimizer_cls=Adagrad,
+                optimizer_kwargs={
+                    'lr': 0.001,
+                },
+            )
         except CWANotImplementedError as e:
             self.skipTest(str(e))
 

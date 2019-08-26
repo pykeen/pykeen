@@ -79,6 +79,7 @@ class TestEarlyStopping(unittest.TestCase):
             evaluation_triples_factory=NationsValidationTriplesFactory(),
             patience=self.patience,
             delta=self.delta,
+            larger_is_better=False,
         )
 
     def test_initialization(self):
@@ -152,10 +153,9 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             delta=self.delta,
             metric='mean_rank',
         )
-        optimizer = Adam(params=model.get_grad_params())
         training_loop = OWATrainingLoop(
             model=model,
-            optimizer=optimizer,
+            optimizer_cls=Adam,
         )
         losses = training_loop.train(
             num_epochs=self.max_num_epochs,

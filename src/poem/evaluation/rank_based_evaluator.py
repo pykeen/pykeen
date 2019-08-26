@@ -194,11 +194,11 @@ class RankBasedEvaluator(Evaluator):
         # Set eval mode in order to ignore functionalities such as dropout
         self.model = self.model.eval()
 
-        all_pos_triples = np.concatenate([self.model.triples_factory.mapped_triples, mapped_triples], axis=0)
-        all_pos_triples = torch.tensor(all_pos_triples, device=self.device)
-        all_entities = torch.tensor(self.model.triples_factory.all_entities, device=self.device)
+        all_pos_triples = torch.cat([self.model.triples_factory.mapped_triples, mapped_triples], dim=0)
+        all_pos_triples = all_pos_triples.to(device=self.device)
+        all_entities = self.model.triples_factory.all_entities.to(device=self.device)
 
-        mapped_triples = torch.tensor(mapped_triples, dtype=torch.long, device=self.device)
+        mapped_triples = mapped_triples.to(device=self.device)
 
         compute_rank_fct: Callable[..., Tuple[int, int, float, float]] = (
             self._compute_filtered_rank

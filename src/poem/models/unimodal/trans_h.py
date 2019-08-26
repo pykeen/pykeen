@@ -49,7 +49,7 @@ class TransH(RegularizedModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        self.epsilon = torch.tensor([epsilon], requires_grad=False)
+        self.epsilon = nn.Parameter(torch.tensor([epsilon], device=self.device), requires_grad=False)
 
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
@@ -71,6 +71,7 @@ class TransH(RegularizedModel):
     def clear_weights_(self):  # noqa: D102
         self.entity_embeddings = None
         self.relation_embeddings = None
+        self.normal_vector_embeddings = None
         return self
 
     def _apply_forward_constraints_if_necessary(self) -> None:

@@ -82,7 +82,7 @@ class EarlyStopper:
     #: A counter for the ring buffer
     number_evaluations: int = 0
     #: Whether a larger value is better, or a smaller
-    larger_is_better: bool = False
+    larger_is_better: bool = True
     #: The criterion. Set in the constructor based on larger_is_better
     improvement_criterion: Callable[[numpy.ndarray, float, float], bool] = None
 

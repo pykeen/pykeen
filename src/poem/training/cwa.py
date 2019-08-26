@@ -2,7 +2,7 @@
 
 """Training KGE models based on the CWA."""
 
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple, Type
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -28,9 +28,14 @@ class CWATrainingLoop(TrainingLoop):
     def __init__(
         self,
         model: BaseModule,
-        optimizer: Optional[Optimizer] = None,
+        optimizer_cls: Optional[Type[Optimizer]] = None,
+        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        super().__init__(model=model, optimizer=optimizer)
+        super().__init__(
+            model=model,
+            optimizer_cls=optimizer_cls,
+            optimizer_kwargs=optimizer_kwargs,
+        )
         if self.model.is_mr_loss:
             raise CWANotImplementedError('CWA has not been implemented for mean ranking loss yet')
 
@@ -46,7 +51,8 @@ class CWATrainingLoop(TrainingLoop):
         batch_pairs, batch_labels_full = batch
 
         # Send batch to device
-        batch_pairs = torch.tensor(batch_pairs, dtype=torch.long, device=self.device)
+        batch_pairs = batch_pairs.to(device=self.device)
+        batch_labels_full = batch_labels_full.to(device=self.device)
 
         # Bind number of entities
         num_entities = self.model.num_entities
@@ -60,6 +66,8 @@ class CWATrainingLoop(TrainingLoop):
             )
 
         predictions = self.model.forward_cwa(batch=batch_pairs)
+        # Normalize the loss to have the average loss per positive triple
+        # This allows comparability of OWA and CWA losses
         loss = self.model.compute_label_loss(predictions=predictions, labels=batch_labels_full) / num_entities
 
         return loss
