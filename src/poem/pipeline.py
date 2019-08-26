@@ -196,7 +196,6 @@ def pipeline(  # noqa: C901
                 dataset = datasets[dataset]
             except KeyError:
                 raise ValueError(f'Invalid dataset name: {dataset}')
-        dataset.load()
         training_triples_factory = dataset.training
         testing_triples_factory = dataset.testing
         validation_triples_factory = dataset.validation

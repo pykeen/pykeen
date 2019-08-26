@@ -2,19 +2,19 @@
 
 """Sample datasets for use with POEM, borrowed from https://github.com/ZhenfengLei/KGDatasets."""
 
+from typing import Mapping
+
 from .dataset import DataSet
-from .freebase import fb15k, fb15k237
+from .freebase import FB15k, FB15k237, fb15k, fb15k237
 from .kinship import (
-    KinshipTestingTriplesFactory, KinshipTrainingTriplesFactory, KinshipValidationTriplesFactory,
-    kinship,
+    KinshipTestingTriplesFactory, KinshipTrainingTriplesFactory, KinshipValidationTriplesFactory, kinship,
 )
 from .nations import (
-    NationsTestingTriplesFactory, NationsTrainingTriplesFactory, NationsValidationTriplesFactory,
-    nations,
+    NationsTestingTriplesFactory, NationsTrainingTriplesFactory, NationsValidationTriplesFactory, nations,
 )
 from .umls import UmlsTestingTriplesFactory, UmlsTrainingTriplesFactory, UmlsValidationTriplesFactory, umls
-from .wordnet import wn18, wn18rr
-from .yago import yago3_10
+from .wordnet import WN18, WN18RR, wn18, wn18rr
+from .yago import YAGO310, yago3_10
 
 __all__ = [
     'DataSet',
@@ -31,15 +31,20 @@ __all__ = [
     'UmlsTrainingTriplesFactory',
     'UmlsTestingTriplesFactory',
     'UmlsValidationTriplesFactory',
+    'FB15k',
     'fb15k',
+    'FB15k237',
     'fb15k237',
+    'WN18',
     'wn18',
+    'WN18RR',
     'wn18rr',
+    'YAGO310',
     'yago3_10',
 ]
 
 #: A maintained dictionary of pre-packaged data sets
-datasets = dict(
+datasets: Mapping[str, DataSet] = dict(
     nations=nations,
     kinship=kinship,
     umls=umls,

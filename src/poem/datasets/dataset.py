@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
+
 """Sample datasets for use with POEM, borrowed from https://github.com/ZhenfengLei/KGDatasets."""
 
 import logging
 import os
-import tempfile
+import tarfile
+import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Optional, Tuple
+from typing import Optional, TextIO, Tuple, Union
 
 import requests
 
@@ -15,67 +17,111 @@ from ..instance_creation_factories import TriplesFactory
 __all__ = [
     'DataSet',
     'RemoteDataSet',
+    'TarFileRemoteDataSet',
+    'ZipFileRemoteDataSet',
 ]
 
 
 class DataSet:
     """Contains a lazy reference to a training, testing, and validation data set."""
 
-    training: Optional[TriplesFactory]
-    testing: Optional[TriplesFactory]
-    validation: Optional[TriplesFactory]
-
-    _loaded: bool = False
+    _training: Optional[TriplesFactory]
+    _testing: Optional[TriplesFactory]
+    _validation: Optional[TriplesFactory]
 
     def __init__(
         self,
-        training_path: str,
-        testing_path: str,
-        validation_path: str,
-    ):
-        self._loaded = False
+        training_path: Union[str, TextIO],
+        testing_path: Union[str, TextIO],
+        validation_path: Union[str, TextIO],
+        eager: bool = False,
+    ) -> None:
+        """Initialize the data set.
+
+        :param training_path: Path to the training triples file or training triples file.
+        :param testing_path: Path to the testing triples file or testing triples file.
+        :param validation_path: Path to the validation triples file or validation triples file.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        """
         self.training_path = training_path
         self.testing_path = testing_path
         self.validation_path = validation_path
-        self.training = None
-        self.testing = None
-        self.validation = None
 
-    def load(self) -> 'DataSet':
-        """Load the data sets."""
-        if not self._loaded:
-            self.training = TriplesFactory(path=self.training_path)
-            self.testing = TriplesFactory(
-                path=self.testing_path,
-                entity_to_id=self.training.entity_to_id,
-                relation_to_id=self.training.relation_to_id,
-            )
-            self.validation = TriplesFactory(
-                path=self.validation_path,
-                entity_to_id=self.training.entity_to_id,
-                relation_to_id=self.training.relation_to_id,
-            )
-            self._loaded = True
-        return self
+        self._training = None
+        self._testing = None
+        self._validation = None
+
+        if eager:
+            self._load()
+            self._load_validation()
 
     @property
-    def entity_to_id(self):
-        """Mapping of entity labels to IDs."""  # noqa: D401
+    def _loaded(self) -> bool:
+        return self._training is not None and self._testing is not None
+
+    @property
+    def _loaded_validation(self):
+        return self._validation is not None
+
+    def _load(self) -> None:
+        self._training = TriplesFactory(
+            path=self.training_path,
+        )
+        self._testing = TriplesFactory(
+            path=self.testing_path,
+            entity_to_id=self._training.entity_to_id,  # share entity index with training
+            relation_to_id=self._training.relation_to_id,  # share relation index with training
+        )
+
+    def _load_validation(self) -> None:
+        if not self._loaded:
+            self._load()
+
+        self._validation = TriplesFactory(
+            path=self.validation_path,
+            entity_to_id=self._training.entity_to_id,  # share entity index with training
+            relation_to_id=self._training.relation_to_id,  # share relation index with training
+        )
+
+    @property
+    def training(self) -> TriplesFactory:  # noqa: D401
+        """The training triples factory."""
+        if not self._loaded:
+            self._load()
+        return self._training
+
+    @property
+    def testing(self) -> TriplesFactory:  # noqa: D401
+        """The testing triples factory that shares indexes with the training triples factory."""
+        if not self._loaded:
+            self._load()
+        return self._testing
+
+    @property
+    def validation(self) -> TriplesFactory:  # noqa: D401
+        """The validation triples factory that shares indexes with the training triples factory."""
+        if not self._loaded_validation:
+            self._load_validation()
+        return self._validation
+
+    @property
+    def entity_to_id(self):  # noqa: D401
+        """Mapping of entity labels to IDs."""
         return self.training.entity_to_id
 
     @property
-    def relation_to_id(self):
-        """Mapping of relation labels to IDs."""  # noqa: D401
+    def relation_to_id(self):  # noqa: D401
+        """Mapping of relation labels to IDs."""
         return self.training.relation_to_id
 
     @property
-    def num_entities(self):
-        """The number of entities."""  # noqa: D401
+    def num_entities(self):  # noqa: D401
+        """The number of entities."""
         return self.training.num_entities
 
     @property
-    def num_relations(self):
-        """The number of relations."""  # noqa: D401
+    def num_relations(self):  # noqa: D401
+        """The number of relations."""
         return self.training.num_relations
 
 
@@ -88,10 +134,9 @@ class RemoteDataSet(DataSet):
         relative_training_path: str,
         relative_testing_path: str,
         relative_validation_path: str,
-        cache_root: str = None,
+        cache_root: Optional[str] = None,
     ):
-        """
-        Constructor.
+        """Constructor.
 
         :param url:
             The url where to download the dataset from.
@@ -99,8 +144,10 @@ class RemoteDataSet(DataSet):
             An optional directory to store the extracted files. Is none is given, the default tmp directory is used.
         """
         if cache_root is None:
-            cache_root = tempfile.gettempdir()
-        self.cache_root = os.path.join(cache_root, 'poem', self.__class__.__name__)
+            cache_root = os.path.join(os.path.expanduser('~'), 'poem')
+        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
+        os.makedirs(cache_root, exist_ok=True)
+
         self.url = url
         self._relative_training_path = relative_training_path
         self._relative_testing_path = relative_testing_path
@@ -116,26 +163,44 @@ class RemoteDataSet(DataSet):
     def _get_paths(self) -> Tuple[str, str, str]:  # noqa: D401
         """The paths where the extracted files can be found."""
         return (
-            self._get_rel_path(self._relative_training_path),
-            self._get_rel_path(self._relative_testing_path),
-            self._get_rel_path(self._relative_validation_path),
+            os.path.join(self.cache_root, self._relative_training_path),
+            os.path.join(self.cache_root, self._relative_testing_path),
+            os.path.join(self.cache_root, self._relative_validation_path),
         )
 
-    def _get_rel_path(self, path: str) -> str:
-        """Construct a path relative to the cache root."""
-        return os.path.join(self.cache_root, path)
-
     @abstractmethod
-    def _extract(self, archive_file: BytesIO):
+    def _extract(self, archive_file: BytesIO) -> None:
         """Extract from the downloaded file."""
         raise NotImplementedError
 
-    def load(self) -> DataSet:  # noqa: D102
-        if not all(map(os.path.isfile, self._get_paths())):
+    def _load(self) -> None:  # noqa: D102
+        all_unpacked = all(
+            os.path.exists(path) and os.path.isfile(path)
+            for path in self._get_paths()
+        )
+
+        if not all_unpacked:
             logging.info(f'Requesting dataset from {self.url}')
             r = requests.get(url=self.url)
             assert r.status_code == requests.codes.ok
             archive_file = BytesIO(r.content)
             self._extract(archive_file=archive_file)
             logging.info(f'Extracted to {self.cache_root}.')
-        return super().load()
+
+        super()._load()
+
+
+class TarFileRemoteDataSet(RemoteDataSet):
+    """A remote dataset stored as a tar file."""
+
+    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
+        with tarfile.open(fileobj=archive_file) as tf:
+            tf.extractall(path=self.cache_root)
+
+
+class ZipFileRemoteDataSet(RemoteDataSet):
+    """A remote dataset stored as a zip file."""
+
+    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
+        with zipfile.ZipFile(file=archive_file) as zf:
+            zf.extractall(path=self.cache_root)
