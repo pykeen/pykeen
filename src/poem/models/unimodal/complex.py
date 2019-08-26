@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from ..base import RegularizedModel
 from ..init import embedding_xavier_normal_
-from ...customized_loss_functions.softplus_loss import SoftplusLoss
+from ...customized_loss_functions import SoftplusLoss
 from ...instance_creation_factories import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import l2_regularization
@@ -19,16 +19,16 @@ class ComplEx(RegularizedModel):
     """An implementation of ComplEx [trouillon2016]_."""
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 200,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            regularization_weight: float = 0.01,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 200,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        regularization_weight: float = 0.01,
+        init: bool = True,
     ) -> None:
         """Initialize the module.
 
@@ -92,9 +92,9 @@ class ComplEx(RegularizedModel):
 
     @staticmethod
     def interaction_function(
-            h: torch.FloatTensor,
-            r: torch.FloatTensor,
-            t: torch.FloatTensor,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Evaluate the interaction function of ComplEx for given embeddings.
 
