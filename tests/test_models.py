@@ -192,8 +192,6 @@ class _ModelTestCase:
             self.skipTest('ConvKB takes too long')
         if self.model_cls is HolE:
             self.skipTest('Might not pass HolE due to missing MKL support')
-        if self.model_cls is TransH:
-            self.skipTest('TransH can not handle datasets with more relations than entities')
         runner = CliRunner()
         result: Result = runner.invoke(self.model_cls.cli, args)
 

@@ -136,9 +136,10 @@ class TransH(RegularizedModel):
 
         # Get embeddings
         h = self.entity_embeddings.weight
-        d_r = self.relation_embeddings(batch[:, 0])
-        w_r = self.normal_vector_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 0])
+        rel_id = batch[:, 0]
+        d_r = self.relation_embeddings(rel_id)
+        w_r = self.normal_vector_embeddings(rel_id)
+        t = self.entity_embeddings(batch[:, 1])
 
         # Project to hyperplane
         ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
