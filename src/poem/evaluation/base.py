@@ -44,3 +44,7 @@ class Evaluator(ABC):
     def evaluate(self, mapped_triples: MappedTriples, **kwargs) -> MetricResults:
         """Evaluate the mapped triples."""
         raise NotImplementedError
+
+    def evaluate_with_training(self) -> MetricResults:
+        """Evaluate using the same triples as in training."""
+        return self.evaluate(self.model.triples_factory.mapped_triples)

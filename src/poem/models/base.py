@@ -5,13 +5,15 @@
 import random
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Iterable, Optional, Union
+from typing import ClassVar, Dict, Iterable, Optional, Set, Union
 
+import click
 import numpy as np
 import torch
 from torch import nn
 from tqdm import tqdm
 
+from .cli import build_cli_from_cls
 from ..instance_creation_factories import TriplesFactory
 from ..typing import OptionalLoss
 from ..utils import resolve_device
@@ -26,8 +28,11 @@ __all__ = [
 class BaseModule(nn.Module):
     """A base module for all of the KGE models."""
 
-    # A dictionary of hyper-parameters to the models that use them
-    _hyperparameter_usage = defaultdict(set)
+    #: A dictionary of hyper-parameters to the models that use them
+    _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
+
+    #: The command line interface for this model
+    cli: ClassVar[click.Command]
 
     def __init__(
         self,
@@ -82,6 +87,8 @@ class BaseModule(nn.Module):
         for k, v in cls.__init__.__annotations__.items():
             if k not in {'return', 'triples_factory'}:
                 BaseModule._hyperparameter_usage[k].add(cls.__name__)
+
+        cls.cli = build_cli_from_cls(cls)
 
     @property
     def num_entities(self) -> int:  # noqa: D401

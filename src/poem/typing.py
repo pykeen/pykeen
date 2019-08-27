@@ -11,6 +11,7 @@ from torch import nn
 __all__ = [
     'LabeledTriples',
     'MappedTriples',
+    'Loss',
     'OptionalLoss',
     'EntityMapping',
     'RelationMapping',
@@ -18,6 +19,7 @@ __all__ = [
 
 LabeledTriples = np.ndarray
 MappedTriples = torch.LongTensor
-OptionalLoss = Optional[nn.modules.loss._Loss]
+Loss = nn.modules.loss._Loss
+OptionalLoss = Optional[Loss]
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]

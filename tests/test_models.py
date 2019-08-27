@@ -4,14 +4,21 @@
 
 import importlib
 import os
+import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from click.testing import CliRunner, Result
+from torch.optim import SGD
 from torch.optim.adagrad import Adagrad
 
 import poem.models
-from poem.datasets.nations import NationsTrainingTriplesFactory
+from poem.datasets.kinship import TRAIN_PATH as KINSHIP_TRAIN_PATH
+from poem.datasets.nations import (
+    NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
+    TRAIN_PATH as NATIONS_TRAIN_PATH,
+)
 from poem.instance_creation_factories import TriplesFactory
 from poem.models import (
     ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE,
@@ -44,9 +51,22 @@ class _ModelTestCase:
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
-            init=True,
+            # init=True,
             **(self.model_kwargs or {})
         ).to_device_()
+
+    def test_get_grad_parameters(self):
+        """Test the model's ``get_grad_params()`` method."""
+        # assert there is at least one trainable parameter
+        assert len(list(self.model.get_grad_params())) > 0
+
+        # Check that all the parameters actually require a gradient
+        for parameter in self.model.get_grad_params():
+            assert parameter.requires_grad
+
+        # Try to initialize an optimizer
+        optimizer = SGD(params=self.model.get_grad_params(), lr=1.0)
+        assert optimizer is not None
 
     def test_init(self):
         """Test the model's ``init_empty_weights_()`` function."""
@@ -153,6 +173,51 @@ class _ModelTestCase:
 
         losses = loop.train(num_epochs=5, batch_size=128)
         self.assertIsInstance(losses, list)
+
+    def test_cli_training_nations(self):
+        """Test rnuning the pipeline on almost all models with only training data."""
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH])
+
+    def test_cli_training_kinship(self):
+        """Test rnuning the pipeline on almost all models with only training data."""
+        self._help_test_cli(['-t', KINSHIP_TRAIN_PATH])
+
+    def test_cli_training_nations_testing(self):
+        """Test running the pipeline on almost all models with only training data."""
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH])
+
+    def _help_test_cli(self, args):
+        """Test running the pipeline on all models."""
+        if self.model_cls is ConvKB:
+            self.skipTest('ConvKB takes too long')
+        if self.model_cls is HolE:
+            self.skipTest('Might not pass HolE due to missing MKL support')
+        if self.model_cls is TransH:
+            self.skipTest('TransH can not handle datasets with more relations than entities')
+        runner = CliRunner()
+        result: Result = runner.invoke(self.model_cls.cli, args)
+
+        self.assertEqual(
+            0,
+            result.exit_code,
+            msg=f'''
+Command
+=======
+$ poem train {self.model_cls.__name__.lower()} {' '.join(args)}
+
+Output
+======
+{result.output}
+
+Exception
+=========
+{result.exc_info[1]}
+
+Traceback
+=========
+{''.join(traceback.format_tb(result.exc_info[2]))}
+            '''
+        )
 
 
 class _DistanceModelTestCase(_ModelTestCase):

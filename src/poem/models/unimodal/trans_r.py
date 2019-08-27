@@ -49,7 +49,7 @@ class TransR(BaseModule):
             criterion: OptionalLoss = None,
             preferred_device: Optional[str] = None,
             random_seed: Optional[int] = None,
-            init: bool = False,
+            init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
