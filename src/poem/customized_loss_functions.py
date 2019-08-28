@@ -43,5 +43,5 @@ class BCEAfterSigmoid(nn.Module):
         labels: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        post_sigmoid = functional.sigmoid(logits)
+        post_sigmoid = torch.sigmoid(logits)
         return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
