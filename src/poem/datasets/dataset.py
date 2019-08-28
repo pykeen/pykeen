@@ -126,7 +126,7 @@ class DataSet:
 
 
 class RemoteDataSet(DataSet):
-    """Contains a lazy reference to a remove dataset that is loaded if needed."""
+    """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
     def __init__(
         self,
