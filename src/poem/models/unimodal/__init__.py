@@ -12,6 +12,8 @@
                 Machine
 .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
               <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
+.. [balazevic2019] Balažević, *et al.* (2019) `TuckER: Tensor Factorization for Knowledge Graph Completion
+              <https://arxiv.org/pdf/1901.09590.pdf>`_. EMNLP'19
 .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
 .. [kazemi2018] S. M. Kazemi, D. Poole (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs`
@@ -59,6 +61,7 @@ from .trans_d import TransD
 from .trans_e import TransE
 from .trans_h import TransH
 from .trans_r import TransR
+from .tucker import TuckEr
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
@@ -78,5 +81,6 @@ __all__ = [
     'TransE',
     'TransH',
     'TransR',
+    'TuckEr',
     'UnstructuredModel',
 ]

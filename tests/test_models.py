@@ -21,8 +21,24 @@ from poem.datasets.nations import (
 )
 from poem.instance_creation_factories import TriplesFactory
 from poem.models import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE,
-    StructuredEmbedding, TransD, TransE, TransH, TransR, UnstructuredModel,
+    ComplEx,
+    ConvKB,
+    DistMult,
+    ERMLP,
+    HolE,
+    KG2E,
+    NTN,
+    ProjE,
+    RESCAL,
+    RotatE,
+    SimplE,
+    StructuredEmbedding,
+    TransD,
+    TransE,
+    TransH,
+    TransR,
+    TuckEr,
+    UnstructuredModel,
 )
 from poem.models.base import BaseModule, RegularizedModel
 from poem.models.multimodal import MultimodalBaseModule
@@ -339,6 +355,15 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransR model."""
 
     model_cls = TransR
+
+
+class TestTuckEr(_ModelTestCase, unittest.TestCase):
+    """Test the TuckEr model."""
+
+    model_cls = TuckEr
+    model_kwargs = {
+        'relation_embedding_dim': 4,
+    }
 
 
 class TestUM(_DistanceModelTestCase, unittest.TestCase):
