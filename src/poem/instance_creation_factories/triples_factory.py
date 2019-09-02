@@ -282,3 +282,18 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             labels=labels,
         )
+
+    def map_triples_to_id(self, triples: Union[str, LabeledTriples]) -> MappedTriples:
+        """Load triples and map to ids based on the existing id mappings of the triples factory.
+
+        Works from either the path to a file containing triples given as string or a numpy array containing triples.
+        """
+        if isinstance(triples, str):
+            triples = load_triples(triples)
+        # Ensure 2d array in case only one triple was given
+        triples = np.atleast_2d(triples)
+        return _map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+        )
