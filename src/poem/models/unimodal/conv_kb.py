@@ -17,6 +17,8 @@ __all__ = [
     'ConvKB',
 ]
 
+logger = logging.getLogger(__name__)
+
 
 class ConvKB(BaseModule):
     """An implementation of ConvKB from [nguyen2018]_.
@@ -58,7 +60,7 @@ class ConvKB(BaseModule):
 
         # Embeddings
         if None in (entity_embeddings, relation_embeddings):
-            logging.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
+            logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
         self.entity_embeddings = entity_embeddings
         self.relation_embeddings = relation_embeddings
 

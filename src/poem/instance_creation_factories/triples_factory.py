@@ -21,12 +21,12 @@ __all__ = [
     'TriplesFactory',
 ]
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _create_multi_label_objects_instance(mapped_triples: MappedTriples) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (s,r) pair the multi object label."""
-    log.info(f'Creating multi label objects instance')
+    logger.debug('Creating multi label objects instance')
 
     '''
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
@@ -41,7 +41,7 @@ def _create_multi_label_objects_instance(mapped_triples: MappedTriples) -> Dict[
         label_index=2,
     )
 
-    log.info(f'Created multi label objects instance')
+    logger.debug('Created multi label objects instance')
 
     return s_r_to_multi_objects_new
 
@@ -51,13 +51,19 @@ def _create_multi_label_instances(
     element_1_index: int,
     element_2_index: int,
     label_index: int,
+    use_tqdm: bool = True,
 ) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (element_1, element_2) pair the multi-label."""
     instance_to_multi_label = defaultdict(set)
-    for row in tqdm(mapped_triples, unit='triple', unit_scale=True, desc='Grouping triples'):
-        instance_to_multi_label[(row[element_1_index], row[element_2_index])].add(row[label_index])
+
+    it = mapped_triples
+    if use_tqdm:
+        it = tqdm(mapped_triples, unit='triple', unit_scale=True, desc='Grouping triples')
+    for row in it:
+        instance_to_multi_label[row[element_1_index], row[element_2_index]].add(row[label_index])
 
     # Create lists out of sets for proper numpy indexing when loading the labels
+    # TODO is there a need to have a canonical sort order here?
     instance_to_multi_label_new = {
         key: list(value)
         for key, value in instance_to_multi_label.items()
@@ -66,7 +72,7 @@ def _create_multi_label_instances(
     return instance_to_multi_label_new
 
 
-def _create_entity_mapping(triples: np.ndarray) -> EntityMapping:
+def _create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
@@ -80,7 +86,7 @@ def _create_entity_mapping(triples: np.ndarray) -> EntityMapping:
     return entity_label_to_id
 
 
-def _create_relation_mapping(triples: np.ndarray) -> RelationMapping:
+def _create_relation_mapping(triples: LabeledTriples) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
@@ -116,14 +122,15 @@ def _map_triples_elements_to_ids(
     num_no_object = object_filter.sum()
 
     if (num_no_subject > 0) or (num_no_relation > 0) or (num_no_object > 0):
-        log.warning(
+        logger.warning(
             "You're trying to map triples with entities and/or relations that are not in the training set."
             "These triples will be excluded from the mapping")
         non_mappable_triples = (subject_filter | relation_filter | object_filter)
         subject_column = subject_column[~non_mappable_triples, None]
         relation_column = relation_column[~non_mappable_triples, None]
         object_column = object_column[~non_mappable_triples, None]
-        log.warning(f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out")
+        logger.warning(
+            f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out")
 
     triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
 
@@ -240,11 +247,11 @@ class TriplesFactory:
 
     def _create_inverse_triples(self) -> None:
         start = timeit.default_timer()
-        log.info('Creating inverse triples')
+        logger.debug('Creating inverse triples')
         inverse_triples = self.mapped_triples.clone().flip(1)
         inverse_triples[:, 1:2] += self.num_relations
         self.mapped_triples = torch.cat((self.mapped_triples, inverse_triples), dim=0)
-        log.info(f'Created inverse triples. It took {timeit.default_timer() - start:.2f} seconds')
+        logger.debug(f'Creating inverse triples done after {timeit.default_timer() - start:.2f} seconds')
         # The newly added inverse relations have to be added to the relation_id mapping
         inverse_triples_to_id_mapping = {
             f"{relation}_inverse": relation_id + self.num_relations

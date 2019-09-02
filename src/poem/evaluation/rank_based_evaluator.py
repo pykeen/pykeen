@@ -19,7 +19,7 @@ __all__ = [
     'RankBasedEvaluator',
 ]
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _compute_rank_from_scores(true_score, all_scores) -> Tuple[int, float]:
@@ -261,7 +261,7 @@ class RankBasedEvaluator(Evaluator):
         }
 
         stop = timeit.default_timer()
-        log.info("Evaluation took %.2fs seconds", stop - start)
+        logger.info("Evaluation took %.2fs seconds", stop - start)
 
         return MetricResults(
             mean_rank=mean_rank,

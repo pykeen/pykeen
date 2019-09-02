@@ -16,7 +16,7 @@ __all__ = [
     'TriplesNumericLiteralsFactory',
 ]
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def create_matrix_of_literals(
@@ -38,7 +38,7 @@ def create_matrix_of_literals(
             # row define entity, and column the literal. Set the corresponding literal for the entity
             num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
         except KeyError:
-            log.info("Either entity or relation to literal doesn't exist.")
+            logger.info("Either entity or relation to literal doesn't exist.")
             continue
 
     return num_literals, data_rel_to_id

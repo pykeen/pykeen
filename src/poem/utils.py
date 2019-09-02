@@ -15,7 +15,7 @@ __all__ = [
     'slice_doubles',
 ]
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def l2_regularization(
@@ -49,7 +49,7 @@ def resolve_device(device: Union[None, str, torch.device] = None) -> torch.devic
         device = torch.device(device)
     if not torch.cuda.is_available() and device.type == 'cuda':
         device = torch.device('cpu')
-        log.info('No cuda devices were available. The model runs on CPU')
+        logger.warning('No cuda devices were available. The model runs on CPU')
     return device
 
 

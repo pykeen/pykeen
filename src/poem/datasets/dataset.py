@@ -21,6 +21,8 @@ __all__ = [
     'ZipFileRemoteDataSet',
 ]
 
+logger = logging.getLogger(__name__)
+
 
 class DataSet:
     """Contains a lazy reference to a training, testing, and validation data set."""
@@ -180,12 +182,12 @@ class RemoteDataSet(DataSet):
         )
 
         if not all_unpacked:
-            logging.info(f'Requesting dataset from {self.url}')
+            logger.info(f'Requesting dataset from {self.url}')
             r = requests.get(url=self.url)
             assert r.status_code == requests.codes.ok
             archive_file = BytesIO(r.content)
             self._extract(archive_file=archive_file)
-            logging.info(f'Extracted to {self.cache_root}.')
+            logger.info(f'Extracted to {self.cache_root}.')
 
         super()._load()
 
