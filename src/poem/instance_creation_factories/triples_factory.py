@@ -28,6 +28,8 @@ def _create_multi_label_objects_instance(mapped_triples: MappedTriples) -> Dict[
     """Create for each (s,r) pair the multi object label."""
     log.info(f'Creating multi label objects instance')
 
+    mapped_triples = mapped_triples.cpu().detach().numpy()
+
     s_r_to_multi_objects_new = _create_multi_label_instances(
         mapped_triples,
         element_1_index=0,
