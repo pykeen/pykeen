@@ -28,6 +28,10 @@ def _create_multi_label_objects_instance(mapped_triples: MappedTriples) -> Dict[
     """Create for each (s,r) pair the multi object label."""
     log.info(f'Creating multi label objects instance')
 
+    '''
+    The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
+    https://github.com/mali-git/POEM_develop/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
+    '''
     mapped_triples = mapped_triples.cpu().detach().numpy()
 
     s_r_to_multi_objects_new = _create_multi_label_instances(

@@ -13,8 +13,25 @@ triples = np.array(
         ['peter', 'likes', 'chocolate_cake'],
         ['chocolate_cake', 'isA', 'dish'],
         ['susan', 'likes', 'pizza'],
+        ['peter', 'likes', 'susan'],
     ],
     dtype=np.str,
+)
+
+instance_mapped_triples = np.array(
+    [
+        [0, 0],
+        [2, 1],
+        [4, 1],
+    ],
+)
+
+instance_labels = np.array(
+    [
+        [1],
+        [0, 4],
+        [3],
+    ],
 )
 
 numeric_triples = np.array(
@@ -63,6 +80,10 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_age], 0)
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_height], 0)
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_num_children], 0)
+
+        # Check if multilabels are working correctly
+        self.assertTrue((instance_mapped_triples == instances.mapped_triples.cpu().detach().numpy()).all())
+        self.assertTrue((instance_labels == instances.labels).all())
 
     def test_triples(self):
         """Test properties of the triples factory."""
