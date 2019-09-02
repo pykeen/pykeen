@@ -2,7 +2,7 @@
 
 """Training KGE models based on the CWA."""
 
-from typing import Any, Mapping, Optional, Tuple, Type
+from typing import Optional, Tuple
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -28,13 +28,11 @@ class CWATrainingLoop(TrainingLoop):
     def __init__(
         self,
         model: BaseModule,
-        optimizer_cls: Optional[Type[Optimizer]] = None,
-        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+        optimizer: Optional[Optimizer] = None,
     ) -> None:
         super().__init__(
             model=model,
-            optimizer_cls=optimizer_cls,
-            optimizer_kwargs=optimizer_kwargs,
+            optimizer=optimizer,
         )
         if self.model.is_mr_loss:
             raise CWANotImplementedError('CWA has not been implemented for mean ranking loss yet')

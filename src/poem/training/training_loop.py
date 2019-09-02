@@ -3,7 +3,7 @@
 """Training loops for KGE models using multi-modal information."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Optional, Type
+from typing import Any, List, Mapping, Optional
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -19,6 +19,16 @@ __all__ = [
 ]
 
 
+def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
+    optimizer_kwargs = optimizer.state_dict()
+    optimizer_kwargs = {
+        key: value
+        for key, value in optimizer_kwargs['param_groups'][0].items()
+        if key != 'params'
+    }
+    return optimizer_kwargs
+
+
 class TrainingLoop(ABC):
     """A training loop."""
 
@@ -28,18 +38,15 @@ class TrainingLoop(ABC):
     def __init__(
         self,
         model: BaseModule,
-        optimizer_cls: Optional[Type[Optimizer]] = None,
-        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+        optimizer: Optional[Optimizer] = None,
     ) -> None:
         """Initialize the training loop.
 
         :param model: The model to train
-        :param optimizer_cls: The optimizer to use while training the model
+        :param optimizer: The optimizer to use while training the model
         """
         self.model = model
-        self.optimizer_class = optimizer_cls
-        self.optimizer_kwargs = optimizer_kwargs or {}
-        self.optimizer = None
+        self.optimizer = optimizer
         self.training_instances = None
         self.losses_per_epochs = []
 
@@ -93,8 +100,12 @@ class TrainingLoop(ABC):
             self.model.reset_weights_()
 
             # Create new optimizer
-            self.optimizer = self.optimizer_class(params=self.model.get_grad_params(), **self.optimizer_kwargs)
-        elif self.optimizer is None:
+            optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
+            self.optimizer = self.optimizer.__class__(
+                params=self.model.get_grad_params(),
+                **optimizer_kwargs
+            )
+        elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
 
         # Create training instances

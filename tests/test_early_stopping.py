@@ -155,7 +155,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         )
         training_loop = OWATrainingLoop(
             model=model,
-            optimizer_cls=Adam,
+            optimizer=Adam(params=model.get_grad_params()),
         )
         losses = training_loop.train(
             num_epochs=self.max_num_epochs,

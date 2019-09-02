@@ -159,10 +159,7 @@ class _ModelTestCase:
         """Test that OWA training does not fail."""
         loop = OWATrainingLoop(
             model=self.model,
-            optimizer_cls=Adagrad,
-            optimizer_kwargs={
-                'lr': 0.001,
-            },
+            optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
         try:
             losses = loop.train(num_epochs=5, batch_size=128)
@@ -179,10 +176,7 @@ class _ModelTestCase:
         try:
             loop = CWATrainingLoop(
                 model=self.model,
-                optimizer_cls=Adagrad,
-                optimizer_kwargs={
-                    'lr': 0.001,
-                },
+                optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
             )
         except CWANotImplementedError as e:
             self.skipTest(str(e))

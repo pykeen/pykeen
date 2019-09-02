@@ -2,7 +2,7 @@
 
 """Training KGE models based on the OWA."""
 
-from typing import Any, Mapping, Optional, Type
+from typing import Optional, Type
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -26,23 +26,21 @@ class OWATrainingLoop(TrainingLoop):
     def __init__(
         self,
         model: BaseModule,
-        optimizer_cls: Optional[Type[Optimizer]] = None,
-        optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+        optimizer: Optional[Optimizer] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
         num_negs_per_pos: int = 1,
     ):
         """Initialize the training loop.
 
         :param model: The model to train
-        :param optimizer_cls: The optimizer to use while training the model
+        :param optimizer: The optimizer to use while training the model
         :param negative_sampler_cls: The class of the negative sampler
         :param num_negs_per_pos: The number of negative triples to generate
          for every positive one
         """
         super().__init__(
             model=model,
-            optimizer_cls=optimizer_cls,
-            optimizer_kwargs=optimizer_kwargs,
+            optimizer=optimizer,
         )
 
         if negative_sampler_cls is None:

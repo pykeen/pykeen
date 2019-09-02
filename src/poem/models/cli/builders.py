@@ -56,10 +56,10 @@ def build_cli_from_cls(cls) -> click.Command:  # noqa: D202
         model = cls(**kwargs)
         loop = training_loop_cls(
             model=model,
-            optimizer_cls=optimizer,
-            optimizer_kwargs={
-                'lr': learning_rate,
-            },
+            optimizer=optimizer(
+                params=model.get_grad_params(),
+                lr=learning_rate,
+            ),
         )
         loop.train(
             num_epochs=number_epochs,

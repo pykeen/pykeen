@@ -241,11 +241,15 @@ def pipeline(  # noqa: C901
     if optimizer_kwargs is None:
         optimizer_kwargs = {}
 
+    optimizer_instance = optimizer(
+        params=model_instance.get_grad_params(),
+        **optimizer_kwargs
+    )
+
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
-            optimizer_cls=optimizer,
-            optimizer_kwargs=optimizer_kwargs,
+            optimizer=optimizer_instance,
         )
     else:
         if training_loop is not OWATrainingLoop:
@@ -262,8 +266,7 @@ def pipeline(  # noqa: C901
 
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
-            optimizer_cls=optimizer,
-            optimizer_kwargs=optimizer_kwargs,
+            optimizer=optimizer_instance,
             negative_sampler_cls=negative_sampler,
         )
 
