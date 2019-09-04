@@ -43,7 +43,6 @@ from poem.models import (
 from poem.models.base import BaseModule, RegularizedModel
 from poem.models.multimodal import MultimodalBaseModule
 from poem.training import CWATrainingLoop, OWATrainingLoop
-from poem.training.cwa import CWANotImplementedError
 
 SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel'}
 
@@ -173,13 +172,10 @@ class _ModelTestCase:
 
     def test_train_cwa(self) -> None:
         """Test that CWA training does not fail."""
-        try:
-            loop = CWATrainingLoop(
-                model=self.model,
-                optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
-            )
-        except CWANotImplementedError as e:
-            self.skipTest(str(e))
+        loop = CWATrainingLoop(
+            model=self.model,
+            optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+        )
 
         losses = loop.train(num_epochs=5, batch_size=128)
         self.assertIsInstance(losses, list)

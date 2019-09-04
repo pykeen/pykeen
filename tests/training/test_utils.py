@@ -1,36 +1,107 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
 
 """Unittest for training utilities."""
 
 import unittest
+from typing import Type
 
-import numpy
+import numpy as np
 import torch
 
+from poem.instance_creation_factories import TriplesFactory
+from poem.models import BaseModule, TransE
+from poem.training.cwa import CWATrainingLoop
 from poem.training.utils import apply_label_smoothing, lazy_compile_random_batches
+
+
+class LossTensorTest(unittest.TestCase):
+    """Test label smoothing."""
+
+    model_cls: Type[BaseModule] = TransE
+    embedding_dim: int = 8
+
+    def setUp(self):
+        """Set up the loss tensor tests."""
+        self.triples = np.array(
+            [
+                ['peter', 'likes', 'chocolate_cake'],
+                ['chocolate_cake', 'isA', 'dish'],
+                ['susan', 'likes', 'pizza'],
+                ['peter', 'likes', 'susan'],
+            ],
+            dtype=np.str,
+        )
+
+        self.labels = torch.tensor([
+            [0., 1., 0., 0., 0.],
+            [0., 0., 0., 1., 0.],
+            [1., 0., 0., 0., 1.],
+        ])
+
+        self.predictions = torch.tensor([
+            [1., 0., 1., 1., 1.],
+            [1., 1., 1., 0., 1.],
+            [0., 1., 1., 1., 0.],
+        ])
+
+    def test_cwa_margin_ranking_loss_helper(self):
+        """Test if output is correct for the CWA training loop use case."""
+        factory = TriplesFactory(triples=self.triples)
+
+        criterion = torch.nn.MarginRankingLoss(
+            margin=0,
+            reduction='sum',
+        )
+
+        model = TransE(
+            factory,
+            embedding_dim=8,
+            preferred_device='cpu',
+            criterion=criterion,
+        )
+
+        loop = CWATrainingLoop(model=model)
+        loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
+        self.assertEqual(14, loss)
+
+        criterion = torch.nn.MarginRankingLoss(
+            margin=0,
+            reduction='mean',
+        )
+
+        model = TransE(
+            factory,
+            embedding_dim=8,
+            preferred_device='cpu',
+            criterion=criterion,
+        )
+
+        loop = CWATrainingLoop(model=model)
+        loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
+        self.assertEqual(1, loss)
 
 
 class LabelSmoothingTest(unittest.TestCase):
     """Test label smoothing."""
 
-    batch_size = 16
-    num_entities = 32
-    epsilon = 0.1
-    relative_tolerance = 1.e-4  # larger tolerance for float32
+    batch_size: int = 16
+    num_entities: int = 32
+    epsilon: float = 0.1
+    relative_tolerance: float = 1.e-4  # larger tolerance for float32
 
     def test_cwa_label_smoothing(self):
         """Test if output is correct for the CWA training loop use case."""
         # Create dummy dense labels
         labels = torch.zeros(self.batch_size, self.num_entities)
         for i in range(self.batch_size):
-            labels[i, numpy.random.randint(self.num_entities)] = 1.0
+            labels[i, np.random.randint(self.num_entities)] = 1.0
         # Check if labels form a probability distribution
-        numpy.testing.assert_allclose(torch.sum(labels, dim=1).numpy(), 1.0)
+        np.testing.assert_allclose(torch.sum(labels, dim=1).numpy(), 1.0)
 
         # Apply label smoothing
         smooth_labels = apply_label_smoothing(labels=labels, epsilon=self.epsilon, num_classes=self.num_entities)
         # Check if smooth labels form probability distribution
-        numpy.testing.assert_allclose(torch.sum(smooth_labels, dim=1).numpy(), 1.0, rtol=self.relative_tolerance)
+        np.testing.assert_allclose(torch.sum(smooth_labels, dim=1).numpy(), 1.0, rtol=self.relative_tolerance)
 
     def test_owa_label_smoothing(self):
         """Test if output is correct for the OWA training loop use case."""
@@ -42,31 +113,29 @@ class LabelSmoothingTest(unittest.TestCase):
         # Apply label smoothing
         smooth_labels = apply_label_smoothing(labels=labels, epsilon=self.epsilon, num_classes=self.num_entities)
         exp_true = 1.0 - self.epsilon
-        numpy.testing.assert_allclose(smooth_labels[:self.batch_size], exp_true, rtol=self.relative_tolerance)
+        np.testing.assert_allclose(smooth_labels[:self.batch_size], exp_true, rtol=self.relative_tolerance)
         exp_false = self.epsilon / (self.num_entities - 1.)
-        numpy.testing.assert_allclose(smooth_labels[self.batch_size:], exp_false, rtol=self.relative_tolerance)
+        np.testing.assert_allclose(smooth_labels[self.batch_size:], exp_false, rtol=self.relative_tolerance)
 
 
 class BatchCompilationTest(unittest.TestCase):
     """Test compilation of random batches."""
 
-    batch_size = 64
-    num_samples = 256 + batch_size // 2  # to check whether the method works for incomplete batches
-    num_entities = 10
+    batch_size: int = 64
+    num_samples: int = 256 + batch_size // 2  # to check whether the method works for incomplete batches
+    num_entities: int = 10
 
     def test_lazy_compile_random_batches(self):
         """Test method lazy_compile_random_batches."""
-        indices = numpy.arange(self.num_samples)
-        input_array = numpy.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=numpy.long)
+        indices = np.arange(self.num_samples)
+        input_array = np.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.long)
         targets = []
         for i in range(self.num_samples):
-            targets.append(list(set(numpy.random.randint(low=0, high=self.num_entities, size=(5,), dtype=numpy.long))))
-        target_array = numpy.asarray(targets)
+            targets.append(list(set(np.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.long))))
+        target_array = np.asarray(targets)
 
         def _batch_compiler(batch_indices):
-            input_batch = input_array[batch_indices]
-            target_batch = target_array[batch_indices]
-            return input_batch, target_batch
+            return input_array[batch_indices], target_array[batch_indices]
 
         iterator = lazy_compile_random_batches(
             indices=indices,

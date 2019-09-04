@@ -50,6 +50,11 @@ class TrainingLoop(ABC):
         self.training_instances = None
         self.losses_per_epochs = []
 
+        if self.model.is_mr_loss:
+            self._loss_helper = self._mr_loss_helper
+        else:
+            self._loss_helper = self._label_loss_helper
+
     @property
     def triples_factory(self) -> TriplesFactory:  # noqa: D401
         """The triples factory in the model."""
@@ -175,6 +180,22 @@ class TrainingLoop(ABC):
     @abstractmethod
     def _process_batch(self, batch: Any, label_smoothing: float = 0.0) -> torch.FloatTensor:
         """Process a single batch and returns the loss."""
+        raise NotImplementedError
+
+    def _mr_loss_helper(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        _label_smoothing=None,
+    ) -> torch.FloatTensor:
+        raise NotImplementedError
+
+    def _label_loss_helper(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: float,
+    ) -> torch.FloatTensor:
         raise NotImplementedError
 
     def to_embeddingdb(self, session=None, use_tqdm: bool = False):

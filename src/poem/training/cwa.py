@@ -2,40 +2,21 @@
 
 """Training KGE models based on the CWA."""
 
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
-from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..instance_creation_factories import Instances
-from ..models import BaseModule
 
 __all__ = [
     'CWATrainingLoop',
-    'CWANotImplementedError',
 ]
-
-
-class CWANotImplementedError(NotImplementedError):
-    """Raised when trying to train with CWA on the wrong type of criterion."""
 
 
 class CWATrainingLoop(TrainingLoop):
     """A training loop that uses the closed world assumption."""
-
-    def __init__(
-        self,
-        model: BaseModule,
-        optimizer: Optional[Optimizer] = None,
-    ) -> None:
-        super().__init__(
-            model=model,
-            optimizer=optimizer,
-        )
-        if self.model.is_mr_loss:
-            raise CWANotImplementedError('CWA has not been implemented for mean ranking loss yet')
 
     def _create_instances(self) -> Instances:  # noqa: D102
         return self.triples_factory.create_cwa_instances()
@@ -52,20 +33,55 @@ class CWATrainingLoop(TrainingLoop):
         batch_pairs = batch_pairs.to(device=self.device)
         batch_labels_full = batch_labels_full.to(device=self.device)
 
-        # Bind number of entities
-        num_entities = self.model.num_entities
+        predictions = self.model.forward_cwa(batch=batch_pairs)
 
+        loss = self._loss_helper(
+            predictions,
+            batch_labels_full,
+            label_smoothing,
+        )
+        return loss
+
+    def _label_loss_helper(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: float,
+    ) -> torch.FloatTensor:
         # Apply label smoothing
         if label_smoothing > 0.:
-            batch_labels_full = apply_label_smoothing(
-                labels=batch_labels_full,
+            labels = apply_label_smoothing(
+                labels=labels,
                 epsilon=label_smoothing,
-                num_classes=num_entities,
+                num_classes=self.model.num_entities,
             )
 
-        predictions = self.model.forward_cwa(batch=batch_pairs)
-        # Normalize the loss to have the average loss per positive triple
-        # This allows comparability of OWA and CWA losses
-        loss = self.model.compute_label_loss(predictions=predictions, labels=batch_labels_full) / num_entities
+        loss = self.model.compute_label_loss(
+            predictions=predictions,
+            labels=labels,
+        )
 
         return loss
+
+    def _mr_loss_helper(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        _label_smoothing=None,
+    ) -> torch.FloatTensor:
+        # This shows how often one row has to be repeated
+        repeat_rows = (labels == 1).nonzero()[:, 0]
+        # Create boolean indices for negative labels in the repeated rows
+        labels_negative = labels[repeat_rows] == 0
+        # Repeat the predictions and filter for negative labels
+        negative_scores = predictions[repeat_rows][labels_negative]
+
+        # This tells us how often each true label should be repeated
+        repeat_true_labels = (labels[repeat_rows] == 0).nonzero()[:, 0]
+        # First filter the predictions for true labels and then repeat them based on the repeat vector
+        positive_scores = predictions[labels == 1][repeat_true_labels]
+
+        return self.model.compute_mr_loss(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+        )

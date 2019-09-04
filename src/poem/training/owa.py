@@ -53,11 +53,6 @@ class OWATrainingLoop(TrainingLoop):
         # TODO: Make this part of the negative sampler?
         self.num_negs_per_pos = num_negs_per_pos
 
-        if self.model.is_mr_loss:
-            self._loss_helper = self._mr_loss_helper
-        else:
-            self._loss_helper = self._label_loss_helper
-
     def _create_negative_samples(
         self,
         positive_batch: torch.LongTensor,
@@ -72,7 +67,11 @@ class OWATrainingLoop(TrainingLoop):
     def _create_instances(self):  # noqa: D102
         return self.triples_factory.create_owa_instances()
 
-    def _process_batch(self, batch: MappedTriples, label_smoothing: float = 0.) -> torch.FloatTensor:  # noqa: D102
+    def _process_batch(
+        self,
+        batch: MappedTriples,
+        label_smoothing: float = 0.0,
+    ) -> torch.FloatTensor:  # noqa: D102
         # Send positive batch to device
         positive_batch = batch.to(device=self.device)
 
@@ -98,14 +97,13 @@ class OWATrainingLoop(TrainingLoop):
             negative_scores,
             label_smoothing,
         )
-
         return loss
 
     def _mr_loss_helper(
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        _label_smoothing: float,
+        _label_smoothing=None,
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
         if self.num_negs_per_pos > 1:
@@ -138,5 +136,7 @@ class OWATrainingLoop(TrainingLoop):
 
         # Normalize the loss to have the average loss per positive triple
         # This allows comparability of OWA and CWA losses
-        loss = self.model.compute_label_loss(predictions=predictions, labels=labels) / (self.num_negs_per_pos + 1)
-        return loss
+        return self.model.compute_label_loss(
+            predictions=predictions,
+            labels=labels,
+        )
