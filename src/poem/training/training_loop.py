@@ -93,7 +93,7 @@ class TrainingLoop(ABC):
             A pair of the KGE model and the losses per epoch.
         """
         # Sanity check
-        if self.model.compute_mr_loss and label_smoothing > 0.:
+        if self.model.is_mr_loss and label_smoothing > 0.:
             raise ValueError('Margin Ranking Loss cannot be used together with label smoothing.')
 
         # Ensure the model is on the correct device
