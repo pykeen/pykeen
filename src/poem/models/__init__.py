@@ -10,6 +10,8 @@
 +---------------------------+---------------------------------------------+
 | ComplExLiteral            | :py:class:`poem.models.ComplexLiteralCWA`   |
 +---------------------------+---------------------------------------------+
+| ConvE                     | :py:class:`poem.models.ConvE`               |
++---------------------------+---------------------------------------------+
 | ConvKB                    | :py:class:`poem.models.ConvKB`              |
 +---------------------------+---------------------------------------------+
 | DistMult                  | :py:class:`poem.models.DistMult`            |
@@ -51,14 +53,32 @@
 from .base import BaseModule
 from .multimodal import ComplexLiteralCWA, DistMultLiteral
 from .unimodal import (
-    ComplEx, ConvKB, DistMult, ERMLP, HolE, KG2E, NTN, ProjE, RESCAL, RotatE, SimplE, StructuredEmbedding, TransD,
-    TransE, TransH, TransR, TuckEr, UnstructuredModel,
+    ComplEx,
+    ConvE,
+    ConvKB,
+    DistMult,
+    ERMLP,
+    HolE,
+    KG2E,
+    NTN,
+    ProjE,
+    RESCAL,
+    RotatE,
+    SimplE,
+    StructuredEmbedding,
+    TransD,
+    TransE,
+    TransH,
+    TransR,
+    TuckEr,
+    UnstructuredModel,
 )
 
 __all__ = [
     'BaseModule',
     'ComplEx',
     'ComplexLiteralCWA',
+    'ConvE',
     'ConvKB',
     'DistMult',
     'DistMultLiteral',

@@ -22,6 +22,7 @@ from poem.datasets.nations import (
 from poem.instance_creation_factories import TriplesFactory
 from poem.models import (
     ComplEx,
+    ConvE,
     ConvKB,
     DistMult,
     ERMLP,
@@ -58,11 +59,13 @@ class _ModelTestCase:
     factory: TriplesFactory
     model: BaseModule
 
+    batch_size: int = 16
+    embedding_dim: int = 8
+    create_inverse_triples: bool = False
+
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
-        self.batch_size = 16
-        self.embedding_dim = 8
-        self.factory = NationsTrainingTriplesFactory()
+        self.factory = NationsTrainingTriplesFactory(create_inverse_triples=self.create_inverse_triples)
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
@@ -196,6 +199,8 @@ class _ModelTestCase:
         """Test running the pipeline on all models."""
         if self.model_cls is ConvKB:
             self.skipTest('ConvKB takes too long')
+        if self.model_cls is ConvE:
+            self.skipTest('ConvE needs more work in the magical CLI')
         if self.model_cls is HolE:
             self.skipTest('Might not pass HolE due to missing MKL support')
         runner = CliRunner()
@@ -237,6 +242,14 @@ class TestComplex(_ModelTestCase, unittest.TestCase):
     """Test the ComplEx model."""
 
     model_cls = ComplEx
+
+
+class TestConvE(_ModelTestCase, unittest.TestCase):
+    """Test the ConvE model."""
+
+    model_cls = ConvE
+    embedding_dim = 200
+    create_inverse_triples = True
 
 
 class TestConvKB(_ModelTestCase, unittest.TestCase):

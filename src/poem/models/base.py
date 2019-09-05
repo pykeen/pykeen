@@ -40,6 +40,7 @@ class BaseModule(nn.Module):
         embedding_dim: int = 50,
         entity_embeddings: nn.Embedding = None,
         criterion: OptionalLoss = None,
+        predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
     ) -> None:
@@ -77,6 +78,12 @@ class BaseModule(nn.Module):
 
         # Marker to check whether the forward constraints of a models has been applied before starting loss calculation
         self.forward_constraint_applied = False
+
+        '''
+        When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
+        also for predictions after training, but has no effect on the training.
+        '''
+        self.predict_with_sigmoid = predict_with_sigmoid
 
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass while keeping track of hyper-parameters."""
@@ -137,6 +144,8 @@ class BaseModule(nn.Module):
         self.eval()
 
         scores = self.forward_owa(triples)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
         return scores
 
     def predict_scores_all_objects(self, batch: torch.LongTensor) -> torch.FloatTensor:
@@ -156,6 +165,8 @@ class BaseModule(nn.Module):
         self.eval()
 
         scores = self.forward_cwa(batch)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
         return scores
 
     def predict_scores_all_subjects(
@@ -200,6 +211,8 @@ class BaseModule(nn.Module):
         # The forward cwa function requires (entity, relation) pairs instead of (relation, entity)
         batch = batch.flip(1)
         scores = self.forward_cwa(batch)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
         return scores
 
     def compute_mr_loss(

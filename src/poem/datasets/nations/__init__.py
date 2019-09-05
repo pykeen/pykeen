@@ -27,22 +27,22 @@ VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 class NationsTrainingTriplesFactory(TriplesFactory):
     """A factory for the training portion of the Nations data set."""
 
-    def __init__(self):
-        super().__init__(path=TRAIN_PATH)
+    def __init__(self, **kwargs):
+        super().__init__(path=TRAIN_PATH, **kwargs)
 
 
 class NationsTestingTriplesFactory(TriplesFactory):
     """A factory for the testing portion of the Nations data set."""
 
-    def __init__(self):
-        super().__init__(path=TEST_PATH)
+    def __init__(self, **kwargs):
+        super().__init__(path=TEST_PATH, **kwargs)
 
 
 class NationsValidationTriplesFactory(TriplesFactory):
     """A factory for the validation portion of the Nations data set."""
 
-    def __init__(self):
-        super().__init__(path=VALIDATE_PATH)
+    def __init__(self, **kwargs):
+        super().__init__(path=VALIDATE_PATH, **kwargs)
 
 
 nations = DataSet(

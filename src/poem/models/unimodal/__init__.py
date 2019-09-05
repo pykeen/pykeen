@@ -10,6 +10,9 @@
 .. [bordes2014] Bordes, A., *et al.* (2014). `A semantic matching energy function for learning with
                 multi-relational data <https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf>`_.
                 Machine
+.. [dettmers2018] Dettmers, T., *et al.* (2018) `Convolutional 2d knowledge graph embeddings
+                <https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366>`_.
+                Thirty-Second AAAI Conference on Artificial Intelligence.
 .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
               <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
 .. [balazevic2019] Balažević, *et al.* (2019) `TuckER: Tensor Factorization for Knowledge Graph Completion
@@ -46,6 +49,7 @@
 """
 
 from .complex import ComplEx
+from .conv_e import ConvE
 from .conv_kb import ConvKB
 from .distmult import DistMult
 from .ermlp import ERMLP
@@ -66,6 +70,7 @@ from .unstructured_model import UnstructuredModel
 
 __all__ = [
     'ComplEx',
+    'ConvE',
     'ConvKB',
     'DistMult',
     'ERMLP',
