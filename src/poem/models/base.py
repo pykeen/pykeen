@@ -194,7 +194,10 @@ class BaseModule(nn.Module):
         for a (object, inverse_relation) pair.
         '''
         if not self.triples_factory.create_inverse_triples:
-            return self.forward_inverse_cwa(batch)
+            scores = self.forward_inverse_cwa(batch)
+            if self.predict_with_sigmoid:
+                scores = torch.sigmoid(scores)
+            return scores
 
         '''
         The POEM package handles _inverse relations_ by adding the number of relations to the index of the
