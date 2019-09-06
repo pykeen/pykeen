@@ -19,7 +19,6 @@ from poem.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
 )
-from poem.instance_creation_factories import TriplesFactory
 from poem.models import (
     ComplEx,
     ConvE,
@@ -44,6 +43,7 @@ from poem.models import (
 from poem.models.base import BaseModule, RegularizedModel
 from poem.models.multimodal import MultimodalBaseModule
 from poem.training import CWATrainingLoop, OWATrainingLoop
+from poem.triples import TriplesFactory
 
 SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel'}
 

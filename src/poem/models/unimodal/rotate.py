@@ -12,7 +12,7 @@ from torch.nn import functional
 
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
-from ...instance_creation_factories import TriplesFactory
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = [

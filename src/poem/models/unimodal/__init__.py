@@ -2,6 +2,8 @@
 
 """Unimodal KGE Models.
 
+.. [balazevic2019] Balažević, *et al.* (2019) `TuckER: Tensor Factorization for Knowledge Graph Completion
+                   <https://arxiv.org/pdf/1901.09590.pdf>`_. EMNLP'19
 .. [bordes2011] Bordes, A., *et al.* (2011). `Learning Structured Embeddings of Knowledge Bases
                 <http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898>`_. AAAI. Vol. 6. No. 1.
 .. [bordes2013] Bordes, A., *et al.* (2013). `Translating embeddings for modeling multi-relational data
@@ -15,13 +17,11 @@
                 Thirty-Second AAAI Conference on Artificial Intelligence.
 .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
               <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
-.. [balazevic2019] Balažević, *et al.* (2019) `TuckER: Tensor Factorization for Knowledge Graph Completion
-              <https://arxiv.org/pdf/1901.09590.pdf>`_. EMNLP'19
 .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
-.. [kazemi2018] S. M. Kazemi, D. Poole (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs`
-                <https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs>_. NIPS'18
-.. [he2015] Shizhu He, *et al.* (2017). `Learning to Represent Knowledge Graphs with Gaussian Embedding
+.. [kazemi2018] Kazemi, S.M. and Poole, D. (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs
+                <https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs>`_. NIPS'18
+.. [he2015] Shizhu, H., *et al.* (2017). `Learning to Represent Knowledge Graphs with Gaussian Embedding
             <http://ir.ia.ac.cn/bitstream/173211/20634/1/Learning%20to%20Represent%20Knowledge%20Graphs%20with%20Gaussian%20Embedding.pdf>`_.
             CIKM'17.
 .. [lin2015] Lin, Y., *et al.* (2015). `Learning entity and relation embeddings for knowledge graph completion

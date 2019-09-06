@@ -8,10 +8,10 @@ import torch
 import torch.autograd
 from torch import nn
 
-from poem.models.init import embedding_xavier_normal_
 from ..base import BaseModule
-from ...customized_loss_functions import BCEAfterSigmoid
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ..init import embedding_xavier_normal_
+from ...loss_functions import BCEAfterSigmoid
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['TuckEr']

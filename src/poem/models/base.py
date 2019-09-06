@@ -14,7 +14,7 @@ from torch import nn
 from tqdm import tqdm
 
 from .cli import build_cli_from_cls
-from ..instance_creation_factories import TriplesFactory
+from ..triples import TriplesFactory
 from ..typing import OptionalLoss
 from ..utils import resolve_device
 from ..version import get_version

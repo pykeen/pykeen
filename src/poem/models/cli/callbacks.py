@@ -9,7 +9,7 @@ import click
 from torch.optim.optimizer import Optimizer
 
 from .constants import criteria_map, optimizer_map
-from ...instance_creation_factories import TriplesFactory
+from ...triples import TriplesFactory
 from ...typing import Loss
 from ...utils import resolve_device
 

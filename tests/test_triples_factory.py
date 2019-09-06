@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from poem.instance_creation_factories import TriplesFactory, TriplesNumericLiteralsFactory
+from poem.triples import TriplesFactory, TriplesNumericLiteralsFactory
 
 triples = np.array(
     [

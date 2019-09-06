@@ -1,7 +1,5 @@
 Training
 ========
-Loops
------
 .. autoclass:: poem.training.OWATrainingLoop
    :members:
    :inherited-members:

@@ -7,8 +7,8 @@ import unittest
 import torch
 
 from poem.datasets.nations import NationsTrainingTriplesFactory
-from poem.instance_creation_factories import TriplesFactory
 from poem.models import BaseModule, TransE
+from poem.triples import TriplesFactory
 
 
 class TestBaseModel(unittest.TestCase):

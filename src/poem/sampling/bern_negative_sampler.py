@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """Negative sampling algorithm based on the work of Wang *et al.*."""
+
 import torch
 
-from .base import NegativeSampler
-from ..instance_creation_factories import TriplesFactory
+from .negative_sampler import NegativeSampler
+from ..triples import TriplesFactory
 
 __all__ = [
     'BernoulliNegativeSampler',

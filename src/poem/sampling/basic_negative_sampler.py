@@ -4,7 +4,7 @@
 
 import torch
 
-from .base import NegativeSampler
+from .negative_sampler import NegativeSampler
 
 __all__ = [
     'BasicNegativeSampler',

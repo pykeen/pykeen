@@ -12,5 +12,5 @@ class TestPipeline(unittest.TestCase):
 
     def test_pipeline(self):
         """Test the pipeline on TransE and nations."""
-        pipeline_results = pipeline(model='TransE', dataset='nations')
+        pipeline_results = pipeline(model='TransE', data_set='nations')
         self.assertIsInstance(pipeline_results, PipelineResult)

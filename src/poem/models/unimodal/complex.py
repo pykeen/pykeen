@@ -9,8 +9,8 @@ import torch.nn as nn
 
 from ..base import RegularizedModel
 from ..init import embedding_xavier_normal_
-from ...customized_loss_functions import SoftplusLoss
-from ...instance_creation_factories import TriplesFactory
+from ...loss_functions import SoftplusLoss
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import l2_regularization
 

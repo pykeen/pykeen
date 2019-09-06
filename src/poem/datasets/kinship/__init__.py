@@ -5,7 +5,7 @@
 import os
 
 from ..dataset import DataSet
-from ...instance_creation_factories import TriplesFactory
+from ...triples import TriplesFactory
 
 __all__ = [
     'TRAIN_PATH',
@@ -14,6 +14,7 @@ __all__ = [
     'KinshipTestingTriplesFactory',
     'KinshipTrainingTriplesFactory',
     'KinshipValidationTriplesFactory',
+    'Kinship',
     'kinship',
 ]
 
@@ -45,8 +46,16 @@ class KinshipValidationTriplesFactory(TriplesFactory):
         super().__init__(path=VALIDATE_PATH)
 
 
-kinship = DataSet(
-    training_path=TRAIN_PATH,
-    testing_path=TEST_PATH,
-    validation_path=VALIDATE_PATH,
-)
+class Kinship(DataSet):
+    """The kinship data set."""
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            training_path=TRAIN_PATH,
+            testing_path=TEST_PATH,
+            validation_path=VALIDATE_PATH,
+            **kwargs,
+        )
+
+
+kinship = Kinship()

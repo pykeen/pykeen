@@ -9,7 +9,7 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import RegularizedModel
-from ...instance_creation_factories import TriplesFactory
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 
 

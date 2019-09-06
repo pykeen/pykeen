@@ -12,7 +12,7 @@ from typing import Optional, TextIO, Tuple, Union
 
 import requests
 
-from ..instance_creation_factories import TriplesFactory
+from ..triples import TriplesFactory
 
 __all__ = [
     'DataSet',
@@ -37,6 +37,7 @@ class DataSet:
         testing_path: Union[str, TextIO],
         validation_path: Union[str, TextIO],
         eager: bool = False,
+        create_inverse_triples: bool = False,
     ) -> None:
         """Initialize the data set.
 
@@ -44,11 +45,13 @@ class DataSet:
         :param testing_path: Path to the testing triples file or testing triples file.
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.training_path = training_path
         self.testing_path = testing_path
         self.validation_path = validation_path
 
+        self._create_inverse_triples = create_inverse_triples
         self._training = None
         self._testing = None
         self._validation = None
@@ -68,11 +71,13 @@ class DataSet:
     def _load(self) -> None:
         self._training = TriplesFactory(
             path=self.training_path,
+            create_inverse_triples=self._create_inverse_triples
         )
         self._testing = TriplesFactory(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self._create_inverse_triples,
         )
 
     def _load_validation(self) -> None:
@@ -83,6 +88,7 @@ class DataSet:
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self._create_inverse_triples,
         )
 
     @property

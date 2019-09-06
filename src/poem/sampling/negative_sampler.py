@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 import torch
 
-from ..instance_creation_factories import TriplesFactory
+from ..triples import TriplesFactory
 
 __all__ = [
     'NegativeSampler',

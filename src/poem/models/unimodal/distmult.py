@@ -11,7 +11,7 @@ from torch.nn import functional
 
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
-from ...instance_creation_factories.triples_factory import TriplesFactory
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['DistMult']

@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Evaluators."""
+"""Evaluators.
+
++----------------+------------------------------------------------+
+| Evaluator Name | Reference                                      |
++================+================================================+
+| Rank-Based     | :py:class:`poem.evaluation.RankBasedEvaluator` |
++----------------+------------------------------------------------+
+"""
 
 from .base import Evaluator, MetricResults
 from .rank_based_evaluator import RankBasedEvaluator

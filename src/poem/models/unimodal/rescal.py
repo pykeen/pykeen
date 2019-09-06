@@ -8,7 +8,7 @@ import torch
 from torch import nn
 
 from ..base import RegularizedModel
-from ...instance_creation_factories import TriplesFactory
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import l2_regularization
 

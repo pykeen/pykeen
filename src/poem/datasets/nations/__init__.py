@@ -5,7 +5,7 @@
 import os
 
 from ..dataset import DataSet
-from ...instance_creation_factories import TriplesFactory
+from ...triples import TriplesFactory
 
 __all__ = [
     'TRAIN_PATH',
@@ -14,6 +14,7 @@ __all__ = [
     'NationsTestingTriplesFactory',
     'NationsTrainingTriplesFactory',
     'NationsValidationTriplesFactory',
+    'Nations',
     'nations',
 ]
 
@@ -45,8 +46,16 @@ class NationsValidationTriplesFactory(TriplesFactory):
         super().__init__(path=VALIDATE_PATH, **kwargs)
 
 
-nations = DataSet(
-    training_path=TRAIN_PATH,
-    testing_path=TEST_PATH,
-    validation_path=VALIDATE_PATH,
-)
+class Nations(DataSet):
+    """The nations data set."""
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            training_path=TRAIN_PATH,
+            testing_path=TEST_PATH,
+            validation_path=VALIDATE_PATH,
+            **kwargs,
+        )
+
+
+nations = Nations()

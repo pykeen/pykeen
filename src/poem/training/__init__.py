@@ -6,3 +6,16 @@ from .cwa import CWATrainingLoop  # noqa: F401
 from .early_stopping import EarlyStopper  # noqa: F401
 from .owa import OWATrainingLoop  # noqa: F401
 from .training_loop import TrainingLoop  # noqa: F401
+
+__all__ = [
+    'TrainingLoop',
+    'OWATrainingLoop',
+    'CWATrainingLoop',
+    'EarlyStopper',
+    'training_loops',
+]
+
+training_loops = {
+    'owa': OWATrainingLoop,
+    'cwa': CWATrainingLoop,
+}

@@ -12,8 +12,8 @@ from torch.nn import functional as F  # noqa: N812
 
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
-from ...customized_loss_functions import BCEAfterSigmoid
-from ...instance_creation_factories import TriplesFactory
+from ...loss_functions import BCEAfterSigmoid
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 
 __all__ = ['ConvE']

@@ -2,8 +2,8 @@
 
 """Multimodal KGE Models.
 
-.. [agustinus2018] Agustinus, K., *et al.* (2018) Incorporating literals into knowledge graph embeddings.
-                   arXiv preprint arXiv:1802.00934.
+.. [agustinus2018] Agustinus, K., *et al.* (2018) `Incorporating literals into knowledge graph embeddings.
+                   <https://arxiv.org/pdf/1802.00934.pdf>`_ arXiv preprint arXiv:1802.00934.
 """
 
 from .base_module import MultimodalBaseModule

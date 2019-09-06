@@ -8,7 +8,7 @@ import torch
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
-from ..instance_creation_factories import Instances
+from ..triples import Instances
 
 __all__ = [
     'CWATrainingLoop',

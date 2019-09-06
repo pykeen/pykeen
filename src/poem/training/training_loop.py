@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from tqdm import trange
 
 from .early_stopping import EarlyStopper
-from ..instance_creation_factories import Instances, TriplesFactory
 from ..models.base import BaseModule
+from ..triples import Instances, TriplesFactory
 
 __all__ = [
     'TrainingLoop',

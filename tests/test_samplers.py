@@ -9,8 +9,8 @@ import numpy
 import torch
 
 from poem.datasets import NationsTrainingTriplesFactory
-from poem.instance_creation_factories import OWAInstances, TriplesFactory
-from poem.negative_sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
+from poem.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
+from poem.triples import OWAInstances, TriplesFactory
 
 
 def _array_check_bounds(

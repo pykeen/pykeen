@@ -11,7 +11,7 @@ from torch.optim.adagrad import Adagrad
 from torch.optim.optimizer import Optimizer
 from torch.optim.rmsprop import RMSprop
 
-from ...customized_loss_functions import SoftplusLoss
+from ...loss_functions import SoftplusLoss
 from ...typing import Loss
 
 __all__ = [

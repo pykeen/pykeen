@@ -9,7 +9,7 @@ from typing import Callable, List
 import numpy
 
 from ..evaluation import Evaluator, MetricResults
-from ..instance_creation_factories import TriplesFactory
+from ..triples import TriplesFactory
 
 __all__ = [
     'smaller_than_any_buffer_element',

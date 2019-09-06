@@ -8,8 +8,8 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ...instance_creation_factories import TriplesFactory
-from ...models.base import BaseModule
+from ..base import BaseModule
+from ...triples import TriplesFactory
 from ...typing import OptionalLoss
 from ...utils import slice_triples
 
