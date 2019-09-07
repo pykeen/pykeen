@@ -17,7 +17,6 @@ jobs:
     # docs stage
     - stage: docs
       env: TOXENV=doc8
-    - env: TOXENV=readme
     - env: TOXENV=docs
     # test stage
     - stage: test
