@@ -4,16 +4,16 @@
 
 from typing import Optional
 
-from poem.datasets.dataset import TarFileRemoteDataSet
+from .dataset import TarFileRemoteDataSet
 
 __all__ = [
     'YAGO310',
-    'yago3_10',
+    'yago310',
 ]
 
 
 class YAGO310(TarFileRemoteDataSet):
-    """YAGO3-10 contains a subset of YAGO3, with only those entities with at least 10 relations."""
+    """The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations."""
 
     def __init__(self, cache_root: Optional[str] = None):
         super().__init__(
@@ -25,4 +25,4 @@ class YAGO310(TarFileRemoteDataSet):
         )
 
 
-yago3_10 = YAGO310()
+yago310 = YAGO310()

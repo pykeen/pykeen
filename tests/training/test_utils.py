@@ -8,7 +8,8 @@ from typing import Type
 import numpy as np
 import torch
 
-from poem.models import BaseModule, TransE
+from poem.models import TransE
+from poem.models.base import BaseModule
 from poem.training.cwa import CWATrainingLoop
 from poem.training.utils import apply_label_smoothing, lazy_compile_random_batches
 from poem.triples import TriplesFactory

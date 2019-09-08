@@ -20,7 +20,7 @@ __all__ = [
 
 
 class FB15k(TarFileRemoteDataSet):
-    """FB15k dataset."""
+    """The FB15k data set."""
 
     def __init__(self, cache_root: Optional[str] = None):
         super().__init__(
@@ -33,7 +33,7 @@ class FB15k(TarFileRemoteDataSet):
 
 
 class FB15k237(ZipFileRemoteDataSet):
-    """FB15k-237 dataset."""
+    """The FB15k-237 data set."""
 
     def __init__(self, cache_root: Optional[str] = None):
         super().__init__(

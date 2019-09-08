@@ -165,56 +165,23 @@ the default data sets are also provided as subclasses of :class:`poem.triples.Tr
 """
 
 from dataclasses import dataclass
-from typing import Any, List, Mapping, Optional, Type, Union
+from typing import Any, Mapping, Optional, Type, Union
 
-from torch.optim import Adam, SGD
-from torch.optim.adadelta import Adadelta
-from torch.optim.adagrad import Adagrad
-from torch.optim.adamax import Adamax
-from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 
-from .datasets import DataSet, datasets
-from .evaluation import Evaluator, MetricResults, RankBasedEvaluator
-from .models import BaseModule
-from .sampling import NegativeSampler, negative_samplers
-from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, training_loops
+from .datasets import DataSet, get_data_set
+from .evaluation import Evaluator, MetricResults, get_evaluator_cls
+from .models import get_model_cls
+from .models.base import BaseModule
+from .sampling import NegativeSampler, get_negative_sampler_cls
+from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
+from .utils import get_optimizer_cls
 
 __all__ = [
     'PipelineResult',
     'pipeline',
 ]
-
-
-def _normalize_string(s):
-    return s.lower().replace('-', '').replace('_', '')
-
-
-def _make_class_lookup(classes: List[type]):
-    return {
-        _normalize_string(cls.__name__): cls
-        for cls in classes
-    }
-
-
-_models = _make_class_lookup(BaseModule.__subclasses__())
-
-# TODO add more optimizers, or get with Optimizer.__subclasses__()?
-_optimizer_list = [
-    Adam,
-    SGD,
-    AdamW,
-    Adagrad,
-    Adadelta,
-    Adamax,
-]
-_optimizers = _make_class_lookup(_optimizer_list)
-
-_evaluator_list = [
-    RankBasedEvaluator,
-]
-_evaluators = _make_class_lookup(_evaluator_list)
 
 
 @dataclass
@@ -229,10 +196,6 @@ class PipelineResult:
 
     #: The results evaluated by the pipeline
     metric_results: MetricResults
-
-
-def _not_str_or_type(x):
-    return not isinstance(x, (str, type))
 
 
 def pipeline(  # noqa: C901
@@ -285,60 +248,21 @@ def pipeline(  # noqa: C901
     :param evaluation_kwargs: Keyword arguments to pass to the evaluator's evaluate
      function on call
     """
-    if data_set is not None:
-        if any(f is not None for f in (training_triples_factory, testing_triples_factory, validation_triples_factory)):
-            raise ValueError('Can not specify both dataset and any triples factory.')
+    training_triples_factory, testing_triples_factory, validation_triples_factory = get_data_set(
+        data_set=data_set,
+        training_triples_factory=training_triples_factory,
+        testing_triples_factory=testing_triples_factory,
+        validation_triples_factory=validation_triples_factory,
+    )
 
-        if isinstance(data_set, str):
-            try:
-                data_set = datasets[data_set]
-            except KeyError:
-                raise ValueError(f'Invalid dataset name: {data_set}')
-        training_triples_factory = data_set.training
-        testing_triples_factory = data_set.testing
-        validation_triples_factory = data_set.validation
-    elif testing_triples_factory is None or training_triples_factory is None:
-        raise ValueError('Must specify either dataset or both training_triples_factory and testing_triples_factory.')
-
-    if _not_str_or_type(model):
-        raise TypeError(f'Invalid model type: {type(model)}')
-    elif isinstance(model, str):
-        try:
-            model = _models[_normalize_string(model)]
-        except KeyError:
-            raise ValueError(f'Invalid model name: {model}')
-    elif not issubclass(model, BaseModule):
-        raise TypeError(f'Not subclass of BaseModule: {model}')
-
+    model = get_model_cls(model)
     model_instance: BaseModule = model(
         triples_factory=training_triples_factory,
         **(model_kwargs or {}),
     )
 
-    if optimizer is None:
-        optimizer = Adagrad
-    elif _not_str_or_type(optimizer):
-        raise TypeError(f'Invalid optimizer type: {type(optimizer)} - {optimizer}')
-    elif isinstance(optimizer, str):
-        try:
-            optimizer = _optimizers[_normalize_string(optimizer)]
-        except KeyError:
-            raise ValueError(f'Invalid optimizer name: {optimizer}')
-    elif not issubclass(optimizer, Optimizer):
-        raise TypeError(f'Not subclass of Optimizer: {optimizer}')
-
-    # Pick a training assumption (OWA or CWA)
-    if training_loop is None:
-        training_loop = OWATrainingLoop
-    elif _not_str_or_type(training_loop):
-        raise TypeError(f'Invalid training loop type: {type(training_loop)} - {training_loop}')
-    elif isinstance(training_loop, str):
-        try:
-            training_loop = training_loops[_normalize_string(training_loop)]
-        except KeyError:
-            raise ValueError(f'Invalid training loop name: {training_loop}')
-    elif not issubclass(training_loop, TrainingLoop):
-        raise TypeError(f'Not subclass of TrainingLoop: {training_loop}')
+    optimizer = get_optimizer_cls(optimizer)
+    training_loop = get_training_loop_cls(training_loop)
 
     if optimizer_kwargs is None:
         optimizer_kwargs = {}
@@ -353,38 +277,17 @@ def pipeline(  # noqa: C901
             model=model_instance,
             optimizer=optimizer_instance,
         )
+    elif training_loop is not OWATrainingLoop:
+        raise ValueError('Can not specify negative sampler with CWA')
     else:
-        if training_loop is not OWATrainingLoop:
-            raise ValueError('Can not specify negative sampler with CWA')
-        elif _not_str_or_type(negative_sampler):
-            raise TypeError(f'Invalid training negative sampler type: {type(negative_sampler)} - {negative_sampler}')
-        elif isinstance(negative_sampler, str):
-            try:
-                negative_sampler = negative_samplers[_normalize_string(negative_sampler)]
-            except KeyError:
-                raise ValueError(f'Invalid negative sampler name: {negative_sampler}')
-        elif not issubclass(negative_sampler, NegativeSampler):
-            raise TypeError(f'Not subclass of NegativeSampler: {negative_sampler}')
-
+        negative_sampler = get_negative_sampler_cls(negative_sampler)
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
             optimizer=optimizer_instance,
             negative_sampler_cls=negative_sampler,
         )
 
-    # Pick an evaluator
-    if evaluator is None:
-        evaluator = RankBasedEvaluator
-    elif _not_str_or_type(evaluator):
-        raise TypeError(f'Invalid evaluator type: {type(evaluator)} - {evaluator}')
-    elif isinstance(evaluator, str):
-        try:
-            evaluator = _evaluators[_normalize_string(evaluator)]
-        except KeyError:
-            raise ValueError(f'Invalid evaluator name: {evaluator}')
-    elif not issubclass(evaluator, Evaluator):
-        raise TypeError(f'Not subclass of Evaluator: {evaluator}')
-
+    evaluator = get_evaluator_cls(evaluator)
     evaluator_instance: Evaluator = evaluator(
         model=model_instance,
         **(evaluator_kwargs or {}),

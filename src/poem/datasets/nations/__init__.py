@@ -47,7 +47,7 @@ class NationsValidationTriplesFactory(TriplesFactory):
 
 
 class Nations(DataSet):
-    """The nations data set."""
+    """The Nations data set."""
 
     def __init__(self, **kwargs):
         super().__init__(

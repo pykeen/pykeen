@@ -15,7 +15,7 @@ from ...utils import slice_doubles
 
 
 # TODO: Check entire build of the model
-class ComplexLiteralCWA(MultimodalBaseModule):
+class ComplExLiteralCWA(MultimodalBaseModule):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
 
     def __init__(

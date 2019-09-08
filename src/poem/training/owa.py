@@ -9,7 +9,7 @@ from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
-from ..models import BaseModule
+from ..models.base import BaseModule
 from ..sampling import BasicNegativeSampler, NegativeSampler
 from ..typing import MappedTriples
 

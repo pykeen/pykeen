@@ -127,7 +127,7 @@ class TrainingLoop(ABC):
         num_training_instances = self.training_instances.num_instances
 
         # Create progress bar
-        _tqdm_kwargs = dict(desc=f'⚽ Training epoch on {self.device}', unit='epoch', unit_scale=True)
+        _tqdm_kwargs = dict(desc=f'Training on {self.device}', unit='epoch')
         if tqdm_kwargs is not None:
             _tqdm_kwargs.update(tqdm_kwargs)
         epochs = trange(num_epochs, **_tqdm_kwargs)

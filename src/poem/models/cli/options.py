@@ -3,11 +3,35 @@
 """Click options for building magical KGE model CLIs."""
 
 import random
+from typing import Optional
 
 import click
 
-from .callbacks import criterion_callback, device_callback, optimizer_callback, triples_factory_callback
-from .constants import criteria_map, optimizer_map
+from ...evaluation import evaluators, get_evaluator_cls
+from ...loss_functions import get_loss_cls, losses
+from ...training import get_training_loop_cls, training_loops
+from ...triples import TriplesFactory
+from ...utils import get_optimizer_cls, optimizers, resolve_device
+
+
+def _make_callback(f):
+    def _callback(_, __, value):
+        return f(value)
+
+    return _callback
+
+
+def _make_instantiation_callback(f):
+    def _callback(_, __, value):
+        return f(value)()
+
+    return _callback
+
+
+def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:
+    """Generate a triples factory using the given path."""
+    return path and TriplesFactory(path=path)
+
 
 CLI_OPTIONS = {
     'triples_factory': click.option(
@@ -18,14 +42,15 @@ CLI_OPTIONS = {
     ),
     'preferred_device': click.option(
         '--preferred-device',
-        callback=device_callback,
-        help='Defaults to cpu. Can either be gpu/cuda or cuda:<ID>',
+        callback=_make_callback(resolve_device),
+        help='Can either be gpu/cuda or cuda:<ID>. Defaults to cuda, if available.',
     ),
     'embedding_dim': click.option(
         '--embedding-dim',
         type=int,
         default=50,
         show_default=True,
+        help='Embedding dimensions for entities.'
     ),
     'epsilon': click.option(
         '--epsilon',
@@ -35,13 +60,17 @@ CLI_OPTIONS = {
     ),
     'criterion': click.option(
         '--criterion',
-        type=click.Choice(criteria_map),
-        callback=criterion_callback,
+        type=click.Choice(losses),
+        callback=_make_instantiation_callback(get_loss_cls),
+        default='marginrankingloss',
+        show_default=True
     ),
     'random_seed': click.option(
-        '--random_seed',
+        '--random-seed',
         type=int,
         default=random.randint(0, 2 ** 32 - 1),
+        show_default=True,
+        help='Random seed for PyTorch, NumPy, and Python.'
     ),
     'regularization_factor': click.option(  # ComplEx
         '--regularization-factor',
@@ -82,24 +111,33 @@ CLI_OPTIONS = {
     ),
 }
 optimizer_option = click.option(
-    '--optimizer',
-    type=click.Choice(list(optimizer_map)),
-    default='SGD',
+    '-o', '--optimizer',
+    type=click.Choice(list(optimizers)),
+    default='sgd',
     show_default=True,
-    callback=optimizer_callback,
+    callback=_make_callback(get_optimizer_cls),
 )
-closed_world_option = click.option(
-    '--closed-world',
-    is_flag=True,
+evaluator_option = click.option(
+    '--evaluator',
+    type=click.Choice(list(evaluators)),
+    show_default=True,
+    callback=_make_callback(get_evaluator_cls),
+)
+training_loop_option = click.option(
+    '--training-loop',
+    type=click.Choice(list(training_loops)),
+    callback=_make_callback(get_training_loop_cls),
+    default='owa',
+    show_default=True,
 )
 number_epochs_option = click.option(
-    '--number-epochs',
+    '-n', '--number-epochs',
     type=int,
     default=5,
     show_default=True,
 )
 batch_size_option = click.option(
-    '--batch-size',
+    '-b', '--batch-size',
     type=int,
     default=256,
     show_default=True,
@@ -114,4 +152,9 @@ testing_option = click.option(
     '-q', '--testing',
     callback=triples_factory_callback,
     help='Path to testing data. If not supplied, then evaluation occurs on training data.',
+)
+early_stopping_option = click.option(
+    '-s', '--early-stopping',
+    callback=triples_factory_callback,
+    help='Path to evaluation data for early stopping.',
 )

@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from .base import Evaluator, MetricResults
+from .evaluator import Evaluator, MetricResults
 from ..models.base import BaseModule
 from ..training.utils import split_list_in_batches
 from ..typing import MappedTriples

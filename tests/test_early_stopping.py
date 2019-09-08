@@ -11,7 +11,8 @@ from torch.optim import Adam
 
 from poem.datasets.nations import NationsTrainingTriplesFactory, NationsValidationTriplesFactory
 from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator
-from poem.models import BaseModule, TransE
+from poem.models import TransE
+from poem.models.base import BaseModule
 from poem.training import EarlyStopper, OWATrainingLoop
 from poem.training.early_stopping import larger_than_any_buffer_element, smaller_than_any_buffer_element
 from poem.typing import MappedTriples

@@ -43,7 +43,7 @@ class TuckEr(BaseModule):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        relation_embedding_dim: Optional[int] = None,
+        relation_dim: Optional[int] = None,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         criterion: OptionalLoss = None,
@@ -75,16 +75,15 @@ class TuckEr(BaseModule):
             random_seed=random_seed,
         )
 
-        if relation_embedding_dim is None:
-            relation_embedding_dim = embedding_dim
-        self.relation_embedding_dim = relation_embedding_dim
+        if relation_dim is None:
+            relation_dim = embedding_dim
+        self.relation_dim = relation_dim
 
         self.relation_embeddings = relation_embeddings
 
         # Core tensor
         # Note: we use a different dimension permutation as in the official implementation to match the paper.
-        self.core_tensor = nn.Parameter(
-            torch.empty(self.embedding_dim, self.relation_embedding_dim, self.embedding_dim))
+        self.core_tensor = nn.Parameter(torch.empty(self.embedding_dim, self.relation_dim, self.embedding_dim))
 
         # Dropout
         self.input_dropout = nn.Dropout(dropout0)
@@ -103,7 +102,7 @@ class TuckEr(BaseModule):
             embedding_xavier_normal_(self.entity_embeddings)
 
         if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim)
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_dim)
             embedding_xavier_normal_(self.relation_embeddings)
 
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
@@ -139,7 +138,7 @@ class TuckEr(BaseModule):
         # Abbreviation
         w = self.core_tensor
         d_e = self.embedding_dim
-        d_r = self.relation_embedding_dim
+        d_r = self.relation_dim
 
         # Compute h_n = DO(BN(h))
         h_n = _apply_bn_to_tensor(batch_norm=self.bn0, tensor=h)

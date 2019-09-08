@@ -7,7 +7,8 @@ import unittest
 import torch
 
 from poem.datasets.nations import NationsTrainingTriplesFactory
-from poem.models import BaseModule, TransE
+from poem.models import TransE
+from poem.models.base import BaseModule
 from poem.triples import TriplesFactory
 
 

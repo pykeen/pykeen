@@ -7,11 +7,11 @@
 """
 
 from .base_module import MultimodalBaseModule
-from .complex_literal_cwa import ComplexLiteralCWA
+from .complex_literal_cwa import ComplExLiteralCWA
 from .distmult_literal_e_owa import DistMultLiteral
 
 __all__ = [
     'MultimodalBaseModule',
-    'ComplexLiteralCWA',
+    'ComplExLiteralCWA',
     'DistMultLiteral',
 ]

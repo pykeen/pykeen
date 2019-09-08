@@ -18,8 +18,6 @@ class BernoulliNegativeSampler(NegativeSampler):
     def __init__(self, triples_factory: TriplesFactory) -> None:
         super().__init__(triples_factory=triples_factory)
 
-        self.triples_factory = triples_factory
-
         # Preprocessing: Compute corruption probabilities
         triples = torch.tensor(self.triples_factory.mapped_triples)
         head_rel_uniq, tail_count = torch.unique(triples[:, :2], return_counts=True, dim=0)

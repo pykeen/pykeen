@@ -47,7 +47,7 @@ class KinshipValidationTriplesFactory(TriplesFactory):
 
 
 class Kinship(DataSet):
-    """The kinship data set."""
+    """The Kinship data set."""
 
     def __init__(self, **kwargs):
         super().__init__(

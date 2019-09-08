@@ -16,7 +16,7 @@ __all__ = [
 
 
 class WN18(TarFileRemoteDataSet):
-    """WN18 dataset."""
+    """The WN18 data set."""
 
     def __init__(self, cache_root: Optional[str] = None):
         super().__init__(
@@ -29,7 +29,7 @@ class WN18(TarFileRemoteDataSet):
 
 
 class WN18RR(TarFileRemoteDataSet):
-    """WN18-RR dataset."""
+    """The WN18-RR data set."""
 
     def __init__(self, cache_root: Optional[str] = None):
         super().__init__(

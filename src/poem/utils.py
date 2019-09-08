@@ -3,16 +3,26 @@
 """Utilities for POEM."""
 
 import logging
-from typing import Union
+from typing import Mapping, Optional, Type, TypeVar, Union
 
 import numpy
 import torch
+from torch.optim import Adam, SGD
+from torch.optim.adadelta import Adadelta
+from torch.optim.adagrad import Adagrad
+from torch.optim.adamax import Adamax
+from torch.optim.adamw import AdamW
+from torch.optim.optimizer import Optimizer
 
 __all__ = [
     'l2_regularization',
     'resolve_device',
     'slice_triples',
     'slice_doubles',
+    'normalize_string',
+    'get_cls',
+    'optimizers',
+    'get_optimizer_cls',
 ]
 
 logger = logging.getLogger(__name__)
@@ -67,4 +77,59 @@ def slice_doubles(doubles):
     return (
         doubles[:, 0:1],  # heads
         doubles[:, 1:2],  # relations
+    )
+
+
+X = TypeVar('X')
+
+
+def normalize_string(s: str) -> str:
+    """Normalize a string for lookup."""
+    return s.lower().replace('-', '').replace('_', '')
+
+
+def get_cls(
+    query: Union[None, str, Type[X]],
+    base: Type[X],
+    lookup_dict: Mapping[str, Type[X]],
+    default: Optional[Type[X]] = None,
+) -> Type[X]:
+    """Get a class by string, default, or implementation."""
+    if query is None:
+        if default is None:
+            raise ValueError(f'No default {base.__name__} set')
+        return default
+    elif not isinstance(query, (str, type)):
+        raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
+    elif isinstance(query, str):
+        try:
+            return lookup_dict[normalize_string(query)]
+        except KeyError:
+            raise ValueError(f'Invalid {base.__name__} name: {query}')
+    elif issubclass(query, base):
+        return query
+    raise TypeError(f'Not subclass of {base.__name__}: {query}')
+
+
+_OPTIMIZER_LIST = [
+    Adam,
+    SGD,
+    AdamW,
+    Adagrad,
+    Adadelta,
+    Adamax,
+]
+optimizers = {
+    normalize_string(optimizer.__name__): optimizer
+    for optimizer in _OPTIMIZER_LIST
+}
+
+
+def get_optimizer_cls(query: Union[None, str, Type[Optimizer]]) -> Type[Optimizer]:
+    """Get the optimizer class."""
+    return get_cls(
+        query,
+        base=Optimizer,
+        lookup_dict=optimizers,
+        default=Adagrad,
     )

@@ -41,11 +41,12 @@ from poem.models import (
     UnstructuredModel,
 )
 from poem.models.base import BaseModule, RegularizedModel
+from poem.models.cli import build_cli_from_cls
 from poem.models.multimodal import MultimodalBaseModule
-from poem.training import CWATrainingLoop, OWATrainingLoop
+from poem.training import CWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
 
-SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel'}
+SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel', 'models', 'get_model_cls'}
 
 
 class _ModelTestCase:
@@ -163,14 +164,7 @@ class _ModelTestCase:
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
-        try:
-            losses = loop.train(num_epochs=5, batch_size=128)
-        except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
-                self.skipTest(str(e))
-            else:
-                raise e
-
+        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128)
         self.assertIsInstance(losses, list)
 
     def test_train_cwa(self) -> None:
@@ -179,9 +173,19 @@ class _ModelTestCase:
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
-
-        losses = loop.train(num_epochs=5, batch_size=128)
+        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128)
         self.assertIsInstance(losses, list)
+
+    def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size):
+        try:
+            losses = loop.train(num_epochs=5, batch_size=128)
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
+        else:
+            return losses
 
     def test_cli_training_nations(self):
         """Test rnuning the pipeline on almost all models with only training data."""
@@ -204,7 +208,8 @@ class _ModelTestCase:
         if self.model_cls is HolE:
             self.skipTest('Might not pass HolE due to missing MKL support')
         runner = CliRunner()
-        result: Result = runner.invoke(self.model_cls.cli, args)
+        cli = build_cli_from_cls(self.model_cls)
+        result: Result = runner.invoke(cli, args)
 
         self.assertEqual(
             0,
@@ -365,7 +370,7 @@ class TestTuckEr(_ModelTestCase, unittest.TestCase):
 
     model_cls = TuckEr
     model_kwargs = {
-        'relation_embedding_dim': 4,
+        'relation_dim': 4,
     }
 
 
@@ -433,4 +438,4 @@ class TestTesting(unittest.TestCase):
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
         for name in model_names:
-            self.assertIn(f':py:class:`poem.models.{name}`', poem.models.__doc__, msg=f'Forgot to document {name}')
+            self.assertIn(f':class:`poem.models.{name}`', poem.models.__doc__, msg=f'Forgot to document {name}')

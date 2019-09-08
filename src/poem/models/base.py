@@ -13,7 +13,6 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
-from .cli import build_cli_from_cls
 from ..triples import TriplesFactory
 from ..typing import OptionalLoss
 from ..utils import resolve_device
@@ -38,7 +37,7 @@ class BaseModule(nn.Module):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        entity_embeddings: nn.Embedding = None,
+        entity_embeddings: Optional[nn.Embedding] = None,
         criterion: OptionalLoss = None,
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
@@ -94,8 +93,6 @@ class BaseModule(nn.Module):
         for k, v in cls.__init__.__annotations__.items():
             if k not in {'return', 'triples_factory'}:
                 BaseModule._hyperparameter_usage[k].add(cls.__name__)
-
-        cls.cli = build_cli_from_cls(cls)
 
     @property
     def num_entities(self) -> int:  # noqa: D401
