@@ -130,7 +130,9 @@ POEM is extensible such that:
 |----|--------|---------------------------------|---------------------------------|
 |  1 | metric | `poem.evaluators.MetricResults` | Results from computing metrics. |
 
-## Supporters
+## Acknowledgements
+
+### Supporters
 
 This project has been supported by several organizations:
 
@@ -141,3 +143,7 @@ This project has been supported by several organizations:
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
+
+### Logo
+
+The PyKEEN logo was designed by Carina Steinborn.
