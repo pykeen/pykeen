@@ -46,7 +46,7 @@ from poem.models.multimodal import MultimodalBaseModule
 from poem.training import CWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
 
-SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel', 'models', 'get_model_cls'}
+SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel', 'MockModel', 'models', 'get_model_cls'}
 
 
 class _ModelTestCase:

@@ -13,14 +13,16 @@
 
 from typing import Type, Union
 
-from .evaluator import Evaluator, MetricResults
-from .rank_based_evaluator import RankBasedEvaluator
+from .evaluator import Evaluator, MetricResults, evaluate
+from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
 from ..utils import get_cls
 
 __all__ = [
+    'evaluate',
     'Evaluator',
     'MetricResults',
     'RankBasedEvaluator',
+    'RankBasedMetricResults',
     'metrics',
     'evaluators',
     'get_evaluator_cls',

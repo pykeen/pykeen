@@ -3,7 +3,7 @@
 """Utilities for POEM."""
 
 import logging
-from typing import Mapping, Optional, Type, TypeVar, Union
+from typing import Iterable, List, Mapping, Optional, Type, TypeVar, Union
 
 import numpy
 import torch
@@ -19,6 +19,8 @@ __all__ = [
     'resolve_device',
     'slice_triples',
     'slice_doubles',
+    'split_list_in_batches_iter',
+    'split_list_in_batches',
     'normalize_string',
     'get_cls',
     'optimizers',
@@ -81,6 +83,19 @@ def slice_doubles(doubles):
 
 
 X = TypeVar('X')
+
+
+def split_list_in_batches(input_list: List[X], batch_size: int) -> List[List[X]]:
+    """Split a list of instances in batches of size batch_size."""
+    return list(split_list_in_batches_iter(input_list=input_list, batch_size=batch_size))
+
+
+def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
+    """Split a list of instances in batches of size batch_size."""
+    return (
+        input_list[i:i + batch_size]
+        for i in range(0, len(input_list), batch_size)
+    )
 
 
 def normalize_string(s: str) -> str:

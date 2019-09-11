@@ -87,21 +87,24 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
                 lr=learning_rate,
             ),
         )
+        evaluator_instance = evaluator()
+
         training_loop_instance.train(
             num_epochs=number_epochs,
             batch_size=batch_size,
             early_stopper=EarlyStopper(
-                evaluator=evaluator(model_instance),
+                model=model_instance,
+                evaluator=evaluator_instance,
                 evaluation_triples_factory=early_stopping,
             ) if early_stopping else None,
         )
-        evaluator_instance = evaluator(model_instance)
-        if testing is None:
-            results = evaluator_instance.evaluate_with_training()
-        else:
-            results = evaluator_instance.evaluate(testing.mapped_triples)
 
-        json.dump(results.to_dict(), output, indent=2)
+        result = evaluator_instance.evaluate(
+            model=model_instance,
+            mapped_triples=testing and testing.mapped_triples,
+        )
+
+        json.dump(result.to_dict(), output, indent=2)
         click.echo('')
         return sys.exit(0)
 

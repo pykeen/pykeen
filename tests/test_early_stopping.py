@@ -10,11 +10,12 @@ import torch
 from torch.optim import Adam
 
 from poem.datasets.nations import NationsTrainingTriplesFactory, NationsValidationTriplesFactory
-from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator
+from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from poem.models import TransE
 from poem.models.base import BaseModule
 from poem.training import EarlyStopper, OWATrainingLoop
 from poem.training.early_stopping import larger_than_any_buffer_element, smaller_than_any_buffer_element
+from poem.triples import TriplesFactory
 from poem.typing import MappedTriples
 
 
@@ -40,16 +41,26 @@ class MockEvaluator(Evaluator):
     """A mock evaluator for testing early stopping."""
 
     def __init__(self, losses: Iterable[float]) -> None:
-        super().__init__(None)
+        super().__init__()
         self.losses = tuple(losses)
         self.losses_iter = iter(self.losses)
 
-    def __repr__(self):  # noqa: D105
-        return f'MockEvaluator(losses={self.losses})'
+    def process_object_scores_(
+        self,
+        batch: MappedTriples,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        pass
 
-    def evaluate(self, mapped_triples: MappedTriples, **kwargs) -> MetricResults:
-        """Return a metric package with the next loss."""
-        return MetricResults(
+    def process_subject_scores_(
+        self,
+        batch: MappedTriples,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        pass
+
+    def finalize(self) -> MetricResults:  # noqa: D102
+        return RankBasedMetricResults(
             mean_rank=None,
             mean_reciprocal_rank=None,
             adjusted_mean_rank=None,
@@ -58,6 +69,40 @@ class MockEvaluator(Evaluator):
                 10: next(self.losses_iter),
             },
         )
+
+    def __repr__(self):  # noqa: D105
+        return f'{self.__class__.__name__}(losses={self.losses})'
+
+
+class MockModel(BaseModule):
+    """A mock model returning fake scores."""
+
+    def __init__(self, triples_factory: TriplesFactory):
+        super().__init__(triples_factory=triples_factory)
+        num_entities = self.num_entities
+        self.scores = torch.arange(num_entities, dtype=torch.float)
+
+    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
+        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
+        batch_size = batch.shape[0]
+        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
+        assert batch_scores.shape == (batch_size, self.num_entities)
+        return batch_scores
+
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=batch)
+
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=batch)
+
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=batch)
+
+    def init_empty_weights_(self) -> BaseModule:  # noqa: D102
+        raise NotImplementedError('Not needed for unittest')
+
+    def clear_weights_(self) -> BaseModule:  # noqa: D102
+        raise NotImplementedError('Not needed for unittest')
 
 
 class TestEarlyStopping(unittest.TestCase):
@@ -75,7 +120,9 @@ class TestEarlyStopping(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the early stopper."""
         self.mock_evaluator = MockEvaluator(self.mock_losses)
+        self.model = MockModel(triples_factory=NationsTrainingTriplesFactory())
         self.early_stopper = EarlyStopper(
+            model=self.model,
             evaluator=self.mock_evaluator,
             evaluation_triples_factory=NationsValidationTriplesFactory(),
             patience=self.patience,
@@ -146,8 +193,9 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
     def test_early_stopping(self):
         """Tests early stopping."""
         model: BaseModule = TransE(triples_factory=NationsTrainingTriplesFactory())
-        evaluator = RankBasedEvaluator(model=model)
+        evaluator = RankBasedEvaluator()
         early_stopper = EarlyStopper(
+            model=model,
             evaluator=evaluator,
             evaluation_triples_factory=NationsValidationTriplesFactory(),
             patience=self.patience,

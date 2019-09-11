@@ -57,8 +57,8 @@ class ConvE(BaseModule):
     >>> losses = training_loop.train(num_epochs=5, batch_size=256)
     >>> # Step 5: Evaluate the model
     >>> from poem.evaluation import RankBasedEvaluator
-    >>> evaluator = RankBasedEvaluator(model, filter_neg_triples=False)
-    >>> metric_result = evaluator.evaluate(dataset.testing, batch_size=8192)
+    >>> evaluator = RankBasedEvaluator()
+    >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
     """
 
     def __init__(

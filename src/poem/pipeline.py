@@ -289,7 +289,6 @@ def pipeline(  # noqa: C901
 
     evaluator = get_evaluator_cls(evaluator)
     evaluator_instance: Evaluator = evaluator(
-        model=model_instance,
         **(evaluator_kwargs or {}),
     )
 
@@ -300,9 +299,10 @@ def pipeline(  # noqa: C901
         if validation_triples_factory is None:
             raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
         early_stopper = EarlyStopper(
+            model=model_instance,
             evaluator=evaluator_instance,
             evaluation_triples_factory=validation_triples_factory,
-            **early_stopping_kwargs
+            **early_stopping_kwargs,
         )
     else:
         early_stopper = None
@@ -317,8 +317,9 @@ def pipeline(  # noqa: C901
     training_loop_instance.train(**training_kwargs)
 
     # Evaluate
-    metric_results = evaluator_instance.evaluate(
-        testing_triples_factory.mapped_triples,
+    metric_results: MetricResults = evaluator_instance.evaluate(
+        model=model_instance,
+        mapped_triples=testing_triples_factory.mapped_triples,
         **(evaluation_kwargs or {}),
     )
 

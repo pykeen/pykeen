@@ -9,6 +9,7 @@ from typing import Callable, List
 import numpy
 
 from ..evaluation import Evaluator, MetricResults
+from ..models import BaseModule
 from ..triples import TriplesFactory
 
 __all__ = [
@@ -62,6 +63,8 @@ class EarlyStopper:
     class and override ``EarlyStopper._validate()``.
     """
 
+    #: The model
+    model: BaseModule
     #: The evaluator
     evaluator: Evaluator
     #: The triples to use for evaluation
@@ -88,8 +91,9 @@ class EarlyStopper:
 
     def __post_init__(self):
         """Run after initialization and check the metric is valid."""
-        if all(f.name != self.metric for f in dataclasses.fields(MetricResults)):
-            raise ValueError(f'Invalid metric name: {self.metric}')
+        # TODO: Fix this
+        # if all(f.name != self.metric for f in dataclasses.fields(self.evaluator.__class__)):
+        #     raise ValueError(f'Invalid metric name: {self.metric}')
         if self.larger_is_better:
             self.improvement_criterion = larger_than_any_buffer_element
         else:
@@ -106,7 +110,11 @@ class EarlyStopper:
     def should_stop(self) -> bool:
         """Validate on validation set and check for termination condition."""
         # Evaluate
-        metric_results = self.evaluator.evaluate(mapped_triples=self.evaluation_triples_factory.mapped_triples)
+        metric_results = self.evaluator.evaluate(
+            model=self.model,
+            mapped_triples=self.evaluation_triples_factory.mapped_triples,
+            use_tqdm=False,
+        )
         result = self._get_result(metric_results)
 
         # Only check if enough values are already collected
