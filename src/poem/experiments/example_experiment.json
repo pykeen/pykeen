@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "title": "Learn Nations Data Set with TransE/OWA/Adagrad"
+  },
+  "pipeline": {
+    "data_set": "nations",
+    "model": "TransE",
+    "optimizer": "Adagrad",
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000
+    }
+  }
+}

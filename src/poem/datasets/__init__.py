@@ -32,6 +32,7 @@ from .umls import Umls, UmlsTestingTriplesFactory, UmlsTrainingTriplesFactory, U
 from .wordnet import WN18, WN18RR, wn18, wn18rr
 from .yago import YAGO310, yago310
 from ..triples import TriplesFactory
+from ..utils import normalize_string
 
 __all__ = [
     'DataSet',
@@ -90,7 +91,7 @@ def get_data_set(
 
         if isinstance(data_set, str):
             try:
-                data_set = data_sets[data_set]
+                data_set = data_sets[normalize_string(data_set)]
             except KeyError:
                 raise ValueError(f'Invalid dataset name: {data_set}')
 

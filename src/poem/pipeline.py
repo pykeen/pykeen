@@ -164,18 +164,20 @@ the default data sets are also provided as subclasses of :class:`poem.triples.Tr
 ... )
 """
 
-from dataclasses import dataclass
-from typing import Any, Mapping, Optional, Type, Union
+from dataclasses import dataclass, field
+from typing import Any, List, Mapping, Optional, Type, Union
 
 from torch.optim.optimizer import Optimizer
 
 from .datasets import DataSet, get_data_set
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
+from .loss_functions import get_loss_cls
 from .models import get_model_cls
 from .models.base import BaseModule
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
+from .typing import Loss
 from .utils import get_optimizer_cls
 
 __all__ = [
@@ -194,14 +196,37 @@ class PipelineResult:
     #: The training loop used by the pipeline
     training_loop: TrainingLoop
 
+    #: The losses during training
+    losses: List[float]
+
     #: The results evaluated by the pipeline
     metric_results: MetricResults
+
+    #: Any additional metadata as a dictionary
+    metadata: Optional[Mapping[str, Any]] = field(default_factory=dict)
+
+    @property
+    def title(self) -> Optional[str]:  # noqa:D401
+        """The title of the experiment."""
+        return self.metadata.get('title')
+
+    def plot_losses(self):
+        """Plot the losses per epoch."""
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        sns.set()
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        if self.title is not None:
+            plt.title(self.title)
+        return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
 
 def pipeline(  # noqa: C901
     model: Union[str, Type[BaseModule]],
     *,
     optimizer: Union[None, str, Type[Optimizer]] = None,
+    criterion: Union[None, str, Type[Loss]] = None,
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
     data_set: Union[None, str, DataSet] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
@@ -212,6 +237,7 @@ def pipeline(  # noqa: C901
     early_stopping: bool = False,
     model_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    criterion_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     early_stopping_kwargs: Optional[Mapping[str, Any]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
@@ -255,10 +281,18 @@ def pipeline(  # noqa: C901
         validation_triples_factory=validation_triples_factory,
     )
 
+    if model_kwargs is None:
+        model_kwargs = {}
+
+    if criterion is not None:
+        criterion_cls = get_loss_cls(criterion)
+        _criterion = criterion_cls(**(criterion_kwargs or {}))
+        model_kwargs.setdefault('criterion', _criterion)
+
     model = get_model_cls(model)
     model_instance: BaseModule = model(
         triples_factory=training_triples_factory,
-        **(model_kwargs or {}),
+        **model_kwargs,
     )
 
     optimizer = get_optimizer_cls(optimizer)
@@ -269,7 +303,7 @@ def pipeline(  # noqa: C901
 
     optimizer_instance = optimizer(
         params=model_instance.get_grad_params(),
-        **optimizer_kwargs
+        **optimizer_kwargs,
     )
 
     if negative_sampler is None:
@@ -314,7 +348,7 @@ def pipeline(  # noqa: C901
     training_kwargs.setdefault('early_stopper', early_stopper)
 
     # Train like Cristiano Ronaldo
-    training_loop_instance.train(**training_kwargs)
+    losses = training_loop_instance.train(**training_kwargs)
 
     # Evaluate
     metric_results: MetricResults = evaluator_instance.evaluate(
@@ -326,5 +360,6 @@ def pipeline(  # noqa: C901
     return PipelineResult(
         model=model_instance,
         training_loop=training_loop_instance,
+        losses=losses,
         metric_results=metric_results,
     )

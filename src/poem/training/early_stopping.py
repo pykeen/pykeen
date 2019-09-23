@@ -3,6 +3,7 @@
 """Implementation of early stopping."""
 
 import dataclasses
+import logging
 from dataclasses import dataclass
 from typing import Callable, List
 
@@ -17,6 +18,8 @@ __all__ = [
     'larger_than_any_buffer_element',
     'EarlyStopper',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def smaller_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: float = 0.) -> bool:
@@ -121,6 +124,7 @@ class EarlyStopper:
         if self.number_evaluations >= self.patience:
             # Stop if the result did not improve more than delta for patience epochs.
             if not self.improvement_criterion(buffer=self.buffer, result=result, delta=self.delta):
+                logger.info(f'Stopping early after {self.number_evaluations} evaluations with {self.metric}={result}')
                 return True
 
         # Update ring buffer

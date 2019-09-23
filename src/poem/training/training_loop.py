@@ -8,7 +8,7 @@ from typing import Any, List, Mapping, Optional
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
-from tqdm import trange
+from tqdm import tqdm, trange
 
 from .early_stopping import EarlyStopper
 from ..models.base import BaseModule
@@ -130,7 +130,7 @@ class TrainingLoop(ABC):
         _tqdm_kwargs = dict(desc=f'Training on {self.device}', unit='epoch')
         if tqdm_kwargs is not None:
             _tqdm_kwargs.update(tqdm_kwargs)
-        epochs = trange(num_epochs, **_tqdm_kwargs)
+        epochs = trange(1, 1 + num_epochs, **_tqdm_kwargs)
 
         # Training Loop
         for epoch in epochs:
@@ -141,7 +141,8 @@ class TrainingLoop(ABC):
             current_epoch_loss = 0.
 
             # Batching
-            for batch in train_data_loader:
+            batches = tqdm(train_data_loader, desc=f'Training batches', leave=False, unit='batch')
+            for batch in batches:
                 loss = self._process_batch(batch=batch, label_smoothing=label_smoothing)
 
                 # Recall that torch *accumulates* gradients. Before passing in a
@@ -167,7 +168,7 @@ class TrainingLoop(ABC):
             # Print loss information to console
             epochs.set_postfix({
                 'loss': self.losses_per_epochs[-1],
-                'prev_loss': self.losses_per_epochs[-2] if epoch > 1 else float('nan')
+                'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan')
             })
 
         return self.losses_per_epochs

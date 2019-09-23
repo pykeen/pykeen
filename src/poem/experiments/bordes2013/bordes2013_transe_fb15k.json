@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "title": "Learn FB15K Data Set with TransE as described by Bordes et al., 2013"
+  },
+  "pipeline": {
+    "data_set": "fb15k",
+    "model": "TransE",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "scoring_fct_norm": 1
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.01
+    },
+    "criterion": "MarginRankingLoss",
+    "criterion_kwargs": {
+      "margin": 1
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000
+    }
+  }
+}
