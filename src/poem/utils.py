@@ -7,11 +7,11 @@ from typing import Iterable, List, Mapping, Optional, Type, TypeVar, Union
 
 import numpy
 import torch
-from torch.optim import SGD
+from torch.optim import Adam, SGD
 from torch.optim.adadelta import Adadelta
 from torch.optim.adagrad import Adagrad
-from torch.optim.adam import Adam
 from torch.optim.adamax import Adamax
+from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 
 __all__ = [
@@ -129,7 +129,7 @@ def get_cls(
 _OPTIMIZER_LIST = [
     Adam,
     SGD,
-    Adam,
+    AdamW,
     Adagrad,
     Adadelta,
     Adamax,
