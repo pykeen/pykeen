@@ -167,6 +167,7 @@ the default data sets are also provided as subclasses of :class:`poem.triples.Tr
 from dataclasses import dataclass, field
 from typing import Any, List, Mapping, Optional, Type, Union
 
+import torch
 from torch.optim.optimizer import Optimizer
 
 from .datasets import DataSet, get_data_set
@@ -220,6 +221,13 @@ class PipelineResult:
         if self.title is not None:
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
+
+    def save_model(self, path) -> None:
+        """Save the trained model to the given path using :func:`torch.save`.
+
+        The model contains within it the triples factory that was used for training.
+        """
+        torch.save(self.model, path)
 
 
 def pipeline(  # noqa: C901
