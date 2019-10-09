@@ -82,8 +82,10 @@ def _create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     # Sorting ensures consistent results when the triples are permuted
     entity_labels = sorted(set(subjects).union(objects))
     # Create mapping
-    entity_label_to_id = {label: i for (i, label) in enumerate(entity_labels)}
-    return entity_label_to_id
+    return {
+        str(label): i
+        for (i, label) in enumerate(entity_labels)
+    }
 
 
 def _create_relation_mapping(triples: LabeledTriples) -> RelationMapping:
@@ -96,8 +98,10 @@ def _create_relation_mapping(triples: LabeledTriples) -> RelationMapping:
     # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(set(relations))
     # Create mapping
-    relation_label_to_id = {label: i for (i, label) in enumerate(relation_labels)}
-    return relation_label_to_id
+    return {
+        str(label): i
+        for (i, label) in enumerate(relation_labels)
+    }
 
 
 def _map_triples_elements_to_ids(
