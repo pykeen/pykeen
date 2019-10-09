@@ -38,7 +38,7 @@ The development version of PyKEEN (POEM) can be downloaded and installed from
 [GitHub](https://github.com/mali-git/POEM_develop) on Python 3.7+ with:
 
 ```bash
-$ git clone https://github.com/mali-git/POEM_develop.git poem
+$ git clone https://github.com/mali-git/POEM_develop.git
 $ cd poem
 $ pip install -e .
 ```
