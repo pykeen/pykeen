@@ -113,7 +113,6 @@ def filter_scores_(
     batch: MappedTriples,
     scores: torch.FloatTensor,
     all_pos_triples: torch.LongTensor,
-    all_entities: torch.LongTensor = None,
     relation_filter: torch.BoolTensor = None,
     filter_col: int = 0,
 ) -> Tuple[torch.FloatTensor, torch.BoolTensor]:
@@ -153,35 +152,24 @@ def filter_scores_(
     # Bind shape
     batch_size, num_entities = scores.shape
 
-    # Default values.
-    if all_entities is None:
-        all_entities = torch.arange(num_entities)
-
     if relation_filter is None:
         relations = batch[:, 1:2]
-        relation_filter = (all_pos_triples[:, 1:2]).view(1, -1).repeat(batch_size, 1) == relations
+        relation_filter = (all_pos_triples[:, 1:2]).view(1, -1) == relations
 
     # Split batch
     other_col = 2 - filter_col
     entities = batch[:, other_col:other_col + 1]
 
-    # Create filters for same subject/object and relation
-    entity_filter = (all_pos_triples[:, other_col:other_col + 1]).view(1, -1).repeat(batch_size, 1) == entities
-    pairs_filter = (entity_filter & relation_filter)
+    entity_filter_test = (all_pos_triples[:, other_col:other_col + 1]).view(1, -1) == entities
+    filter_batch = (entity_filter_test & relation_filter).nonzero()
+    filter_batch[:, 1] = all_pos_triples[:, filter_col:filter_col + 1].view(1, -1)[:, filter_batch[:, 1]]
 
-    # Create filter mask
-    filter_col_in_all_triples = (all_pos_triples[:, filter_col:filter_col + 1])
-    filter_entities_in_triples = filter_col_in_all_triples.view(1, -1).repeat(batch_size, 1)[pairs_filter]
-    row_indices = pairs_filter.nonzero()[:, 0]
-    filter_entities = batch[:, filter_col:filter_col + 1]
-    col_filter_mask = all_entities.repeat(batch_size, 1) == filter_entities
-    col_filter_mask[row_indices, filter_entities_in_triples] = 1
-
-    # Set scores of ignored entries to something below all others
-    scores[col_filter_mask] = float('nan')
+    # Set all filtered triples to NaN to ensure their exclusion in subsequent calculations
+    scores[filter_batch[:, 0], filter_batch[:, 1]] = float('nan')
 
     # Warn if all entities will be filtered
-    if (col_filter_mask.sum(dim=1) == num_entities).any():
+    # (scores != scores) yields true for all NaN instances (IEEE 754), thus allowing to count the filtered triples.
+    if ((scores != scores).sum(dim=1) == num_entities).any():
         _LOGGER.warning("User selected filtered metric computation, but all corrupted triples exists also as positive "
                         "triples")
 
@@ -249,7 +237,6 @@ def evaluate(
 
     # Send tensors to device
     mapped_triples = mapped_triples.to(device=device)
-    all_entities = model.triples_factory.all_entities.to(device=device)
 
     # Prepare batches
     batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
@@ -288,7 +275,6 @@ def evaluate(
                     batch=batch,
                     scores=scores_of_corrupted_objects_batch,
                     all_pos_triples=all_pos_triples,
-                    all_entities=all_entities,
                     relation_filter=None,
                     filter_col=2,
                 )
@@ -318,7 +304,6 @@ def evaluate(
                     batch=batch,
                     scores=scores_of_corrupted_subjects_batch,
                     all_pos_triples=all_pos_triples,
-                    all_entities=all_entities,
                     relation_filter=relation_filter,
                     filter_col=0,
                 )

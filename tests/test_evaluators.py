@@ -161,7 +161,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
             [False, False, True, False],
             [True, False, False, True],
         ], dtype=torch.bool)
-        all_entities = torch.arange(num_entities, dtype=torch.long)
         assert batch.shape == (batch_size, 3)
         assert subject_filter_mask.shape == (batch_size, num_entities)
         assert object_filter_mask.shape == (batch_size, num_entities)
@@ -173,7 +172,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
             batch=batch,
             scores=subject_scores,
             all_pos_triples=all_pos_triples,
-            all_entities=all_entities,
             filter_col=0,
         )
         # Assert in-place modification
@@ -192,7 +190,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
             batch=batch,
             scores=object_scores,
             all_pos_triples=all_pos_triples,
-            all_entities=all_entities,
             relation_filter=relation_filter,
             filter_col=2,
         )
