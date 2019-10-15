@@ -160,7 +160,7 @@ class TrainingLoop(ABC):
 
             if (
                 early_stopper is not None
-                and 0 == (epoch % early_stopper.frequency)  # only check with given frequency
+                and 0 == ((epoch - 1) % early_stopper.frequency)  # only check with given frequency
                 and early_stopper.should_stop()
             ):
                 return self.losses_per_epochs
