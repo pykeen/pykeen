@@ -72,63 +72,66 @@ POEM is extensible such that:
 
 ## Implementation
 
+Below are the models, data sets, training modes, evaluators, and metrics implemented
+in POEM. These markdown tables can be regenerated with `poem ls`.
+
 ### Models
 
-|    | Name                | Reference                         | Citation                 |
-|----|---------------------|-----------------------------------|--------------------------|
-|  1 | ComplEx             | `poem.models.ComplEx`             | Trouillon *et al.*, 2016 |
-|  2 | ComplExLiteralCWA   | `poem.models.ComplExLiteralCWA`   | Agustinus *et al.*, 2018 |
-|  3 | ConvE               | `poem.models.ConvE`               | Dettmers *et al.*, 2018  |
-|  4 | ConvKB              | `poem.models.ConvKB`              | Nguyen *et al.*, 2018    |
-|  5 | DistMult            | `poem.models.DistMult`            | Yang *et al.*, 2014      |
-|  6 | DistMultLiteral     | `poem.models.DistMultLiteral`     | Agustinus *et al.*, 2018 |
-|  7 | ERMLP               | `poem.models.ERMLP`               | Dong *et al.*, 2014      |
-|  8 | HolE                | `poem.models.HolE`                | Nickel *et al.*, 2016    |
-|  9 | KG2E                | `poem.models.KG2E`                | He *et al.*, 2015        |
-| 10 | NTN                 | `poem.models.NTN`                 | Socher *et al.*, 2013    |
-| 11 | ProjE               | `poem.models.ProjE`               | Shi *et al.*, 2017       |
-| 12 | RESCAL              | `poem.models.RESCAL`              | Nickel *et al.*, 2011    |
-| 13 | RotatE              | `poem.models.RotatE`              | Sun *et al.*, 2019       |
-| 14 | SimplE              | `poem.models.SimplE`              | Kazemi *et al.*, 2018    |
-| 15 | StructuredEmbedding | `poem.models.StructuredEmbedding` | Bordes *et al.*, 2011    |
-| 16 | TransD              | `poem.models.TransD`              | Ji *et al.*, 2015        |
-| 17 | TransE              | `poem.models.TransE`              | Bordes *et al.*, 2013    |
-| 18 | TransH              | `poem.models.TransH`              | Wang *et al.*, 2014      |
-| 19 | TransR              | `poem.models.TransR`              | Lin *et al.*, 2015       |
-| 20 | TuckEr              | `poem.models.TuckEr`              | Balazevic *et al.*, 2019 |
-| 21 | UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014    |
+| Name                | Reference                         | Citation                 |
+|---------------------|-----------------------------------|--------------------------|
+| ComplEx             | `poem.models.ComplEx`             | Trouillon *et al.*, 2016 |
+| ComplExLiteralCWA   | `poem.models.ComplExLiteralCWA`   | Agustinus *et al.*, 2018 |
+| ConvE               | `poem.models.ConvE`               | Dettmers *et al.*, 2018  |
+| ConvKB              | `poem.models.ConvKB`              | Nguyen *et al.*, 2018    |
+| DistMult            | `poem.models.DistMult`            | Yang *et al.*, 2014      |
+| DistMultLiteral     | `poem.models.DistMultLiteral`     | Agustinus *et al.*, 2018 |
+| ERMLP               | `poem.models.ERMLP`               | Dong *et al.*, 2014      |
+| HolE                | `poem.models.HolE`                | Nickel *et al.*, 2016    |
+| KG2E                | `poem.models.KG2E`                | He *et al.*, 2015        |
+| NTN                 | `poem.models.NTN`                 | Socher *et al.*, 2013    |
+| ProjE               | `poem.models.ProjE`               | Shi *et al.*, 2017       |
+| RESCAL              | `poem.models.RESCAL`              | Nickel *et al.*, 2011    |
+| RotatE              | `poem.models.RotatE`              | Sun *et al.*, 2019       |
+| SimplE              | `poem.models.SimplE`              | Kazemi *et al.*, 2018    |
+| StructuredEmbedding | `poem.models.StructuredEmbedding` | Bordes *et al.*, 2011    |
+| TransD              | `poem.models.TransD`              | Ji *et al.*, 2015        |
+| TransE              | `poem.models.TransE`              | Bordes *et al.*, 2013    |
+| TransH              | `poem.models.TransH`              | Wang *et al.*, 2014      |
+| TransR              | `poem.models.TransR`              | Lin *et al.*, 2015       |
+| TuckEr              | `poem.models.TuckEr`              | Balazevic *et al.*, 2019 |
+| UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014    |
 
 ### Data Sets
 
-|    | Name     | Reference                | Description                                                                                        |
-|----|----------|--------------------------|----------------------------------------------------------------------------------------------------|
-|  1 | fb15k    | `poem.datasets.fb15k`    | The FB15k data set.                                                                                |
-|  2 | fb15k237 | `poem.datasets.fb15k237` | The FB15k-237 data set.                                                                            |
-|  3 | kinship  | `poem.datasets.kinship`  | The Kinship data set.                                                                              |
-|  4 | nations  | `poem.datasets.nations`  | The Nations data set.                                                                              |
-|  5 | umls     | `poem.datasets.umls`     | The UMLS data set.                                                                                 |
-|  6 | wn18     | `poem.datasets.wn18`     | The WN18 data set.                                                                                 |
-|  7 | wn18rr   | `poem.datasets.wn18rr`   | The WN18-RR data set.                                                                              |
-|  8 | yago310  | `poem.datasets.yago310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| Name     | Reference                | Description                                                                                        |
+|----------|--------------------------|----------------------------------------------------------------------------------------------------|
+| fb15k    | `poem.datasets.fb15k`    | The FB15k data set.                                                                                |
+| fb15k237 | `poem.datasets.fb15k237` | The FB15k-237 data set.                                                                            |
+| kinship  | `poem.datasets.kinship`  | The Kinship data set.                                                                              |
+| nations  | `poem.datasets.nations`  | The Nations data set.                                                                              |
+| umls     | `poem.datasets.umls`     | The UMLS data set.                                                                                 |
+| wn18     | `poem.datasets.wn18`     | The WN18 data set.                                                                                 |
+| wn18rr   | `poem.datasets.wn18rr`   | The WN18-RR data set.                                                                              |
+| yago310  | `poem.datasets.yago310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Training Modes
 
-|    | Name   | Reference                       | Description                                            |
-|----|--------|---------------------------------|--------------------------------------------------------|
-|  1 | cwa    | `poem.training.CWATrainingLoop` | A training loop that uses the closed world assumption. |
-|  2 | owa    | `poem.training.OWATrainingLoop` | A training loop that uses the open world assumption.   |
+| Name   | Reference                       | Description                                            |
+|--------|---------------------------------|--------------------------------------------------------|
+| cwa    | `poem.training.CWATrainingLoop` | A training loop that uses the closed world assumption. |
+| owa    | `poem.training.OWATrainingLoop` | A training loop that uses the open world assumption.   |
 
 ### Evaluators
 
-|    | Name      | Reference                            | Description                            |
-|----|-----------|--------------------------------------|----------------------------------------|
-|  1 | rankbased | `poem.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models. |
+| Name      | Reference                            | Description                            |
+|-----------|--------------------------------------|----------------------------------------|
+| rankbased | `poem.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models. |
 
 ### Metrics
 
-|    | Name   | Reference                       | Description                     |
-|----|--------|---------------------------------|---------------------------------|
-|  1 | metric | `poem.evaluators.MetricResults` | Results from computing metrics. |
+| Name   | Reference                       | Description                     |
+|--------|---------------------------------|---------------------------------|
+| metric | `poem.evaluators.MetricResults` | Results from computing metrics. |
 
 ## Acknowledgements
 

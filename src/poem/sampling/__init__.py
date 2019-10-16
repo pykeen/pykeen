@@ -2,12 +2,12 @@
 
 """Negative sampling.
 
-====  =========  ================================
-  ..  Name       Reference
-====  =========  ================================
-   1  basic      :class:`poem.sampling.basic`
-   2  bernoulli  :class:`poem.sampling.bernoulli`
-====  =========  ================================
+=========  ================================
+Name       Reference
+=========  ================================
+basic      :class:`poem.sampling.basic`
+bernoulli  :class:`poem.sampling.bernoulli`
+=========  ================================
 
 .. note:: This table can be re-generated with ``poem ls samplers -f rst``
 """

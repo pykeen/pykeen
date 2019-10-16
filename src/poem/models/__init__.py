@@ -2,31 +2,31 @@
 
 """Implementations of various knowledge graph embedding models.
 
-====  ===================  ========================================  ================
-  ..  Name                 Reference                                 Citation
-====  ===================  ========================================  ================
-   1  ComplEx              :class:`poem.models.ComplEx`              [trouillon2016]_
-   2  ComplExLiteralCWA    :class:`poem.models.ComplExLiteralCWA`    [agustinus2018]_
-   3  ConvE                :class:`poem.models.ConvE`                [dettmers2018]_
-   4  ConvKB               :class:`poem.models.ConvKB`               [nguyen2018]_
-   5  DistMult             :class:`poem.models.DistMult`             [yang2014]_
-   6  DistMultLiteral      :class:`poem.models.DistMultLiteral`      [agustinus2018]_
-   7  ERMLP                :class:`poem.models.ERMLP`                [dong2014]_
-   8  HolE                 :class:`poem.models.HolE`                 [nickel2016]_
-   9  KG2E                 :class:`poem.models.KG2E`                 [he2015]_
-  10  NTN                  :class:`poem.models.NTN`                  [socher2013]_
-  11  ProjE                :class:`poem.models.ProjE`                [shi2017]_
-  12  RESCAL               :class:`poem.models.RESCAL`               [nickel2011]_
-  13  RotatE               :class:`poem.models.RotatE`               [sun2019]_
-  14  SimplE               :class:`poem.models.SimplE`               [kazemi2018]_
-  15  StructuredEmbedding  :class:`poem.models.StructuredEmbedding`  [bordes2011]_
-  16  TransD               :class:`poem.models.TransD`               [ji2015]_
-  17  TransE               :class:`poem.models.TransE`               [bordes2013]_
-  18  TransH               :class:`poem.models.TransH`               [wang2014]_
-  19  TransR               :class:`poem.models.TransR`               [lin2015]_
-  20  TuckEr               :class:`poem.models.TuckEr`               [balazevic2019]_
-  21  UnstructuredModel    :class:`poem.models.UnstructuredModel`    [bordes2014]_
-====  ===================  ========================================  ================
+===================  ========================================  ================
+Name                 Reference                                 Citation
+===================  ========================================  ================
+ComplEx              :class:`poem.models.ComplEx`              [trouillon2016]_
+ComplExLiteralCWA    :class:`poem.models.ComplExLiteralCWA`    [agustinus2018]_
+ConvE                :class:`poem.models.ConvE`                [dettmers2018]_
+ConvKB               :class:`poem.models.ConvKB`               [nguyen2018]_
+DistMult             :class:`poem.models.DistMult`             [yang2014]_
+DistMultLiteral      :class:`poem.models.DistMultLiteral`      [agustinus2018]_
+ERMLP                :class:`poem.models.ERMLP`                [dong2014]_
+HolE                 :class:`poem.models.HolE`                 [nickel2016]_
+KG2E                 :class:`poem.models.KG2E`                 [he2015]_
+NTN                  :class:`poem.models.NTN`                  [socher2013]_
+ProjE                :class:`poem.models.ProjE`                [shi2017]_
+RESCAL               :class:`poem.models.RESCAL`               [nickel2011]_
+RotatE               :class:`poem.models.RotatE`               [sun2019]_
+SimplE               :class:`poem.models.SimplE`               [kazemi2018]_
+StructuredEmbedding  :class:`poem.models.StructuredEmbedding`  [bordes2011]_
+TransD               :class:`poem.models.TransD`               [ji2015]_
+TransE               :class:`poem.models.TransE`               [bordes2013]_
+TransH               :class:`poem.models.TransH`               [wang2014]_
+TransR               :class:`poem.models.TransR`               [lin2015]_
+TuckEr               :class:`poem.models.TuckEr`               [balazevic2019]_
+UnstructuredModel    :class:`poem.models.UnstructuredModel`    [bordes2014]_
+===================  ========================================  ================
 
 .. note:: This table can be re-generated with ``poem ls models -f rst``
 """

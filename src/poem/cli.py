@@ -44,10 +44,7 @@ def models(tablefmt: str):
     """List models."""
     from tabulate import tabulate
     lines = list(_get_model_lines(tablefmt=tablefmt))
-    headers = (
-        ['', 'Name', 'Reference', 'Citation'] if tablefmt in {'rst', 'github'}
-        else ['', 'Name', 'Citation']
-    )
+    headers = ['Name', 'Reference', 'Citation'] if tablefmt in {'rst', 'github'} else ['Name', 'Citation']
     click.echo(tabulate(
         lines,
         headers=headers,
@@ -56,17 +53,17 @@ def models(tablefmt: str):
 
 
 def _get_model_lines(tablefmt: str):
-    for i, (name, model) in enumerate(sorted(models_dict.items()), start=1):
+    for name, model in sorted(models_dict.items()):
         line = str(model.__doc__.splitlines()[0])
         l, r = line.find('['), line.find(']')
         if tablefmt == 'rst':
-            yield i, name, f':class:`poem.models.{name}`', line[l: r + 2]
+            yield name, f':class:`poem.models.{name}`', line[l: r + 2]
         elif tablefmt == 'github':
             author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield i, name, f'`poem.models.{name}`', f'{author.capitalize()} *et al.*, {year}'
+            yield name, f'`poem.models.{name}`', f'{author.capitalize()} *et al.*, {year}'
         else:
             author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield i, name, f'{author.capitalize()}, {year}'
+            yield name, f'{author.capitalize()}, {year}'
 
 
 @ls.command()
@@ -94,7 +91,7 @@ def datasets(tablefmt: str):
     lines = _get_lines(data_sets, tablefmt, 'datasets')
     click.echo(tabulate(
         lines,
-        headers=['', 'Name', 'Description'] if tablefmt == 'plain' else ['', 'Name', 'Reference', 'Description'],
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
         tablefmt=tablefmt,
     ))
 
@@ -107,7 +104,7 @@ def training(tablefmt: str):
     lines = _get_lines(training_dict, tablefmt, 'training')
     click.echo(tabulate(
         lines,
-        headers=['', 'Name', 'Description'] if tablefmt == 'plain' else ['', 'Name', 'Reference', 'Description'],
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
         tablefmt=tablefmt,
     ))
 
@@ -120,7 +117,7 @@ def samplers(tablefmt: str):
     lines = _get_lines(samplers_dict, tablefmt, 'sampling')
     click.echo(tabulate(
         lines,
-        headers=['', 'Name', 'Description'] if tablefmt == 'plain' else ['', 'Name', 'Reference', 'Description'],
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
         tablefmt=tablefmt,
     ))
 
@@ -133,7 +130,7 @@ def evaluators(tablefmt: str):
     lines = _get_lines(evaluators_dict, tablefmt, 'evaluators')
     click.echo(tabulate(
         lines,
-        headers=['', 'Name', 'Description'] if tablefmt == 'plain' else ['', 'Name', 'Reference', 'Description'],
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
         tablefmt=tablefmt,
     ))
 
@@ -146,15 +143,15 @@ def metrics(tablefmt: str):
     lines = _get_lines(metrics_dict, tablefmt, 'evaluators')
     click.echo(tabulate(
         lines,
-        headers=['', 'Name', 'Description'] if tablefmt == 'plain' else ['', 'Name', 'Reference', 'Description'],
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
         tablefmt=tablefmt,
     ))
 
 
 def _get_lines(d, tablefmt, submodule):
-    for i, (name, value) in enumerate(sorted(d.items()), start=1):
+    for name, value in sorted(d.items()):
         if tablefmt == 'rst':
-            yield i, name, f':class:`poem.{submodule}.{name}`'
+            yield name, f':class:`poem.{submodule}.{name}`'
         elif tablefmt == 'github':
             try:
                 ref = value.__name__
@@ -163,9 +160,9 @@ def _get_lines(d, tablefmt, submodule):
                 ref = name
                 doc = value.__class__.__doc__
 
-            yield i, name, f'`poem.{submodule}.{ref}`', doc
+            yield name, f'`poem.{submodule}.{ref}`', doc
         else:
-            yield i, name, value.__doc__.splitlines()[0]
+            yield name, value.__doc__.splitlines()[0]
 
 
 @ls.command()

@@ -2,12 +2,12 @@
 
 """Training loops for KGE models using multi-modal information.
 
-====  ======  ==========================
-  ..  Name    Reference
-====  ======  ==========================
-   1  cwa     :class:`poem.training.cwa`
-   2  owa     :class:`poem.training.owa`
-====  ======  ==========================
+======  ==========================
+Name    Reference
+======  ==========================
+cwa     :class:`poem.training.cwa`
+owa     :class:`poem.training.owa`
+======  ==========================
 
 .. note:: This table can be re-generated with ``poem ls training -f rst``
 """

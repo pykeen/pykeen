@@ -2,18 +2,18 @@
 
 """Sample datasets for use with POEM, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
-====  ========  ===============================
-  ..  Name      Reference
-====  ========  ===============================
-   1  fb15k     :class:`poem.datasets.fb15k`
-   2  fb15k237  :class:`poem.datasets.fb15k237`
-   3  kinship   :class:`poem.datasets.kinship`
-   4  nations   :class:`poem.datasets.nations`
-   5  umls      :class:`poem.datasets.umls`
-   6  wn18      :class:`poem.datasets.wn18`
-   7  wn18rr    :class:`poem.datasets.wn18rr`
-   8  yago310   :class:`poem.datasets.yago310`
-====  ========  ===============================
+========  ===============================
+Name      Reference
+========  ===============================
+fb15k     :class:`poem.datasets.fb15k`
+fb15k237  :class:`poem.datasets.fb15k237`
+kinship   :class:`poem.datasets.kinship`
+nations   :class:`poem.datasets.nations`
+umls      :class:`poem.datasets.umls`
+wn18      :class:`poem.datasets.wn18`
+wn18rr    :class:`poem.datasets.wn18rr`
+yago310   :class:`poem.datasets.yago310`
+========  ===============================
 
 .. note:: This table can be re-generated with ``poem ls datasets -f rst``
 """
