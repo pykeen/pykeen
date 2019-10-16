@@ -75,7 +75,7 @@ POEM is extensible such that:
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in POEM. These markdown tables can be regenerated with `poem ls`.
 
-### Models
+### Models (21)
 
 | Name                | Reference                         | Citation                 |
 |---------------------|-----------------------------------|--------------------------|
@@ -101,7 +101,7 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | TuckEr              | `poem.models.TuckEr`              | Balazevic *et al.*, 2019 |
 | UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014    |
 
-### Data Sets
+### Data Sets (8)
 
 | Name     | Reference                | Description                                                                                        |
 |----------|--------------------------|----------------------------------------------------------------------------------------------------|
@@ -114,20 +114,20 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | wn18rr   | `poem.datasets.wn18rr`   | The WN18-RR data set.                                                                              |
 | yago310  | `poem.datasets.yago310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
-### Training Modes
+### Training Modes (2)
 
 | Name   | Reference                       | Description                                            |
 |--------|---------------------------------|--------------------------------------------------------|
 | cwa    | `poem.training.CWATrainingLoop` | A training loop that uses the closed world assumption. |
 | owa    | `poem.training.OWATrainingLoop` | A training loop that uses the open world assumption.   |
 
-### Evaluators
+### Evaluators (1)
 
 | Name      | Reference                            | Description                            |
 |-----------|--------------------------------------|----------------------------------------|
 | rankbased | `poem.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models. |
 
-### Metrics
+### Metrics (1)
 
 | Name   | Reference                       | Description                     |
 |--------|---------------------------------|---------------------------------|

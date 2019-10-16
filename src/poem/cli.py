@@ -169,15 +169,15 @@ def _get_lines(d, tablefmt, submodule):
 @click.pass_context
 def github_readme(ctx: click.Context):
     """Generate the GitHub readme's ## Implementation section."""
-    click.echo('### Models\n')
+    click.echo(f'### Models ({len(models_dict)})\n')
     ctx.invoke(models, tablefmt='github')
-    click.echo('\n### Data Sets\n')
+    click.echo(f'\n### Data Sets ({len(data_sets)})\n')
     ctx.invoke(datasets, tablefmt='github')
-    click.echo('\n### Training Modes\n')
+    click.echo(f'\n### Training Modes ({len(training_dict)})\n')
     ctx.invoke(training, tablefmt='github')
-    click.echo('\n### Evaluators\n')
+    click.echo(f'\n### Evaluators ({len(evaluators_dict)})\n')
     ctx.invoke(evaluators, tablefmt='github')
-    click.echo('\n### Metrics\n')
+    click.echo(f'\n### Metrics ({len(metrics_dict)})\n')
     ctx.invoke(metrics, tablefmt='github')
 
 
