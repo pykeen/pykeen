@@ -19,13 +19,13 @@ class ComplExLiteralCWA(MultimodalBaseModule):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
 
     def __init__(
-            self,
-            triples_factory: TriplesNumericLiteralsFactory,
-            embedding_dim: int = 50,
-            input_dropout: float = 0.2,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
+        self,
+        triples_factory: TriplesNumericLiteralsFactory,
+        embedding_dim: int = 50,
+        input_dropout: float = 0.2,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the model."""
         if criterion is None:

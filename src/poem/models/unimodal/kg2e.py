@@ -16,11 +16,11 @@ __all__ = ['KG2E']
 
 
 def _expected_likelihood(
-        mu_e: torch.FloatTensor,
-        mu_r: torch.FloatTensor,
-        sigma_e: torch.FloatTensor,
-        sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
+    mu_e: torch.FloatTensor,
+    mu_r: torch.FloatTensor,
+    sigma_e: torch.FloatTensor,
+    sigma_r: torch.FloatTensor,
+    epsilon: float = 1.0e-10,
 ) -> torch.FloatTensor:
     """
     Compute the similarity based on expected likelihood.
@@ -49,11 +49,11 @@ def _expected_likelihood(
 
 
 def _kullback_leibler_similarity(
-        mu_e: torch.FloatTensor,
-        mu_r: torch.FloatTensor,
-        sigma_e: torch.FloatTensor,
-        sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
+    mu_e: torch.FloatTensor,
+    mu_r: torch.FloatTensor,
+    sigma_e: torch.FloatTensor,
+    sigma_r: torch.FloatTensor,
+    epsilon: float = 1.0e-10,
 ) -> torch.FloatTensor:
     """Compute the similarity based on KL divergence.
 
@@ -97,20 +97,20 @@ class KG2E(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 50,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            entity_covariances: Optional[nn.Embedding] = None,
-            relation_covariances: Optional[nn.Embedding] = None,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            dist_similarity: Optional[str] = None,
-            c_min: float = 0.05,
-            c_max: float = 5.,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        entity_covariances: Optional[nn.Embedding] = None,
+        relation_covariances: Optional[nn.Embedding] = None,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        dist_similarity: Optional[str] = None,
+        c_min: float = 0.05,
+        c_max: float = 5.,
+        init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -171,8 +171,8 @@ class KG2E(BaseModule):
         # Ensure positive definite covariances matrices and appropriate size by clamping
         if not self.forward_constraint_applied:
             for cov in (
-                    self.entity_covariances,
-                    self.relation_covariances,
+                self.entity_covariances,
+                self.relation_covariances,
             ):
                 cov_data = cov.weight.data
                 torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)

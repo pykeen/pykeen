@@ -32,20 +32,20 @@ class NTN(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 100,
-            num_slices: int = 4,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            w_relation: Optional[nn.Embedding] = None,
-            v_relation: Optional[nn.Embedding] = None,
-            b_relation: Optional[nn.Embedding] = None,
-            u_relation: Optional[nn.Embedding] = None,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            non_linearity=nn.Tanh(),
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 100,
+        num_slices: int = 4,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        w_relation: Optional[nn.Embedding] = None,
+        v_relation: Optional[nn.Embedding] = None,
+        b_relation: Optional[nn.Embedding] = None,
+        u_relation: Optional[nn.Embedding] = None,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        non_linearity=nn.Tanh(),
+        init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:

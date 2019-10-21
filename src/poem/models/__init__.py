@@ -96,7 +96,6 @@ models: Mapping[str, Type[BaseModule]] = {
     if cls not in {BaseModule, RegularizedModel, MultimodalBaseModule}
 }
 
-
 _MODELS = {
     normalize_string(model_name): model_cls
     for model_name, model_cls in models.items()

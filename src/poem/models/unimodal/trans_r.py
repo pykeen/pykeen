@@ -38,18 +38,18 @@ class TransR(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 50,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_dim: int = 30,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            relation_projections: Optional[nn.Embedding] = None,
-            scoring_fct_norm: int = 1,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_dim: int = 30,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        relation_projections: Optional[nn.Embedding] = None,
+        scoring_fct_norm: int = 1,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:

@@ -250,13 +250,13 @@ def evaluate(
 
     # Disable gradient tracking
     with optional_context_manager(
-            use_tqdm,
-            tqdm(
-                desc=f'Evaluating on {model.device}',
-                total=num_triples,
-                unit='triple(s)',
-                unit_scale=True,
-            ),
+        use_tqdm,
+        tqdm(
+            desc=f'Evaluating on {model.device}',
+            total=num_triples,
+            unit='triple(s)',
+            unit_scale=True,
+        ),
     ) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:

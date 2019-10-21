@@ -24,19 +24,19 @@ class TransH(RegularizedModel):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 50,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            normal_vector_embeddings: Optional[nn.Embedding] = None,
-            scoring_fct_norm: int = 1,
-            regularization_weight: float = 0.05,
-            epsilon: float = 0.005,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        normal_vector_embeddings: Optional[nn.Embedding] = None,
+        scoring_fct_norm: int = 1,
+        regularization_weight: float = 0.05,
+        epsilon: float = 0.005,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')

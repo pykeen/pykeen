@@ -18,7 +18,7 @@ from ...typing import OptionalLoss
 
 __all__ = ['ConvE']
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ConvE(BaseModule):
@@ -62,25 +62,25 @@ class ConvE(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            bias_term: Optional[nn.Parameter] = None,
-            input_channels: int = 1,
-            output_channels: int = 32,
-            embedding_height: int = 10,
-            embedding_width: int = 20,
-            kernel_height: int = 3,
-            kernel_width: int = 3,
-            input_dropout: float = 0.2,
-            output_dropout: float = 0.3,
-            feature_map_dropout: float = 0.2,
-            embedding_dim: int = 200,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        bias_term: Optional[nn.Parameter] = None,
+        input_channels: int = 1,
+        output_channels: int = 32,
+        embedding_height: int = 10,
+        embedding_width: int = 20,
+        kernel_height: int = 3,
+        kernel_width: int = 3,
+        input_dropout: float = 0.2,
+        output_dropout: float = 0.3,
+        feature_map_dropout: float = 0.2,
+        embedding_dim: int = 200,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -88,7 +88,7 @@ class ConvE(BaseModule):
 
         # ConvE should be trained with inverse triples
         if not triples_factory.create_inverse_triples:
-            log.warning(
+            logger.warning(
                 '\nThe ConvE model should be trained with inverse triples.\n'
                 'This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set '
                 'to true.',
@@ -191,7 +191,7 @@ class ConvE(BaseModule):
             x = F.relu(x)
         except RuntimeError as e:
             if e.args[0] == CUDNN_ERROR:
-                log.warning(
+                logger.warning(
                     '\nThis code crash might have been caused by a CUDA bug, see '
                     'https://github.com/allenai/allennlp/issues/2888, '
                     'which causes the code to crash during evaluation mode.\n'

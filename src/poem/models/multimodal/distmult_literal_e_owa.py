@@ -19,13 +19,13 @@ class DistMultLiteral(MultimodalBaseModule):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     def __init__(
-            self,
-            triples_factory: TriplesNumericLiteralsFactory,
-            embedding_dim: int = 50,
-            input_dropout: int = 0,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
+        self,
+        triples_factory: TriplesNumericLiteralsFactory,
+        embedding_dim: int = 50,
+        input_dropout: int = 0,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss()

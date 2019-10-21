@@ -32,15 +32,15 @@ class HolE(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            embedding_dim: int = 200,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        embedding_dim: int = 200,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:
@@ -79,9 +79,9 @@ class HolE(BaseModule):
 
     @staticmethod
     def interaction_function(
-            h: torch.FloatTensor,
-            r: torch.FloatTensor,
-            t: torch.FloatTensor,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Evaluate the interaction function for given embeddings.
 

@@ -26,16 +26,16 @@ class RESCAL(RegularizedModel):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 50,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            regularization_weight: float = 0.01,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        regularization_weight: float = 0.01,
+        init: bool = True,
     ) -> None:
         """Initialize the model."""
         if criterion is None:

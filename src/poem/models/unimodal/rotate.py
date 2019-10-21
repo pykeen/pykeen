@@ -32,15 +32,15 @@ class RotatE(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            embedding_dim: int = 200,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            random_seed: Optional[int] = None,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 200,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         if criterion is None:
             criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
@@ -97,9 +97,9 @@ class RotatE(BaseModule):
 
     @staticmethod
     def interaction_function(
-            h: torch.FloatTensor,
-            r: torch.FloatTensor,
-            t: torch.FloatTensor,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Evaluate the interaction function of ComplEx for given embeddings.
 

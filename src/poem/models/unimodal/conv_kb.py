@@ -29,17 +29,17 @@ class ConvKB(BaseModule):
     """
 
     def __init__(
-            self,
-            triples_factory: TriplesFactory,
-            entity_embeddings: Optional[nn.Embedding] = None,
-            relation_embeddings: Optional[nn.Embedding] = None,
-            hidden_dropout_rate: float = 0.5,
-            embedding_dim: int = 200,
-            criterion: OptionalLoss = None,
-            preferred_device: Optional[str] = None,
-            num_filters: int = 400,
-            random_seed: Optional[int] = None,
-            init: bool = True,
+        self,
+        triples_factory: TriplesFactory,
+        entity_embeddings: Optional[nn.Embedding] = None,
+        relation_embeddings: Optional[nn.Embedding] = None,
+        hidden_dropout_rate: float = 0.5,
+        embedding_dim: int = 200,
+        criterion: OptionalLoss = None,
+        preferred_device: Optional[str] = None,
+        num_filters: int = 400,
+        random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         """Initialize the model.
 
@@ -132,8 +132,10 @@ class ConvKB(BaseModule):
         #  conv.bias: (num_filters,)
         #  hr_conv_out: (batch_size, embedding_dim, num_filters)
         hr = torch.stack([h, r], dim=-1)
-        hr_conv_out = torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1) \
+        hr_conv_out = (
+            torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1)
             + self.conv.bias[None, None, :]
+        )
 
         # Convolve tail
         # Shapes:
@@ -168,8 +170,10 @@ class ConvKB(BaseModule):
         #  conv.bias: (num_filters,)
         #  rt_conv_out: (batch_size, embedding_dim, num_filters)
         rt = torch.stack([r, t], dim=-1)
-        rt_conv_out = torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1) \
+        rt_conv_out = (
+            torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1)
             + self.conv.bias[None, None, :]
+        )
 
         # Convolve tail
         # Shapes:
