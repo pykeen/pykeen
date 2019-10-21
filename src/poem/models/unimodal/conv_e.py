@@ -10,7 +10,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
-from ..base import BaseModule
+from ..base import BaseModule, CUDNN_ERROR
 from ..init import embedding_xavier_normal_
 from ...loss_functions import BCEAfterSigmoid
 from ...triples import TriplesFactory
@@ -190,9 +190,7 @@ class ConvE(BaseModule):
                 x = self.bn2(x)
             x = F.relu(x)
         except RuntimeError as e:
-            if e.args[0] == \
-                    'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear ' \
-                    'if you passed in a non-contiguous input.':
+            if e.args[0] == CUDNN_ERROR:
                 log.warning(
                     '\nThis code crash might have been caused by a CUDA bug, see '
                     'https://github.com/allenai/allennlp/issues/2888, '

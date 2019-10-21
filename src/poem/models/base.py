@@ -23,6 +23,9 @@ __all__ = [
     'RegularizedModel',
 ]
 
+#: An error that occurs becuase the input in CUDA is too big. See ConvE for an example.
+CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
+
 
 class BaseModule(nn.Module):
     """A base module for all of the KGE models."""
