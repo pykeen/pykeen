@@ -74,7 +74,7 @@ class _AbstractEvaluatorTests:
 
         self._validate_result(
             result=result,
-            data={'batch': self.batch, 'scores': self.scores}
+            data={'batch': self.batch, 'scores': self.scores},
         )
 
     def _validate_result(
@@ -120,7 +120,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         ])
         # true_score: (2, 3, 3)
         true_score = torch.tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_avg_rank = torch.tensor([3.5, 2., 1., ])
+        exp_avg_rank = torch.tensor([3.5, 2., 1.])
         exp_adj_rank = exp_avg_rank / torch.tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         avg_rank, adj_rank = _compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
         assert avg_rank.shape == (batch_size,)
@@ -132,35 +132,47 @@ class EvaluatorUtilsTests(unittest.TestCase):
         """Test the filter_corrupted_triples() function."""
         batch_size = 2
         num_entities = 4
-        all_pos_triples = torch.tensor([
-            [0, 1, 2],
-            [1, 2, 3],
-            [1, 3, 3],
-            [3, 4, 1],
-            [0, 2, 2],
-            [3, 1, 2],
-            [1, 2, 0],
-        ], dtype=torch.long)
-        batch = torch.tensor([
-            [0, 1, 2],
-            [1, 2, 3]
-        ], dtype=torch.long)
-        subject_filter_mask = torch.tensor([
-            [True, False, False, False],
-            [False, True, False, False],
-        ], dtype=torch.bool)
-        object_filter_mask = torch.tensor([
-            [False, False, True, False],
-            [False, False, False, True],
-        ], dtype=torch.bool)
-        exp_subject_filter_mask = torch.tensor([
-            [True, False, False, True],
-            [False, True, False, False],
-        ], dtype=torch.bool)
-        exp_object_filter_mask = torch.tensor([
-            [False, False, True, False],
-            [True, False, False, True],
-        ], dtype=torch.bool)
+        all_pos_triples = torch.tensor(
+            [
+                [0, 1, 2],
+                [1, 2, 3],
+                [1, 3, 3],
+                [3, 4, 1],
+                [0, 2, 2],
+                [3, 1, 2],
+                [1, 2, 0],
+            ], dtype=torch.long,
+        )
+        batch = torch.tensor(
+            [
+                [0, 1, 2],
+                [1, 2, 3],
+            ], dtype=torch.long,
+        )
+        subject_filter_mask = torch.tensor(
+            [
+                [True, False, False, False],
+                [False, True, False, False],
+            ], dtype=torch.bool,
+        )
+        object_filter_mask = torch.tensor(
+            [
+                [False, False, True, False],
+                [False, False, False, True],
+            ], dtype=torch.bool,
+        )
+        exp_subject_filter_mask = torch.tensor(
+            [
+                [True, False, False, True],
+                [False, True, False, False],
+            ], dtype=torch.bool,
+        )
+        exp_object_filter_mask = torch.tensor(
+            [
+                [False, False, True, False],
+                [True, False, False, True],
+            ], dtype=torch.bool,
+        )
         assert batch.shape == (batch_size, 3)
         assert subject_filter_mask.shape == (batch_size, num_entities)
         assert object_filter_mask.shape == (batch_size, num_entities)

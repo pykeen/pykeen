@@ -19,4 +19,4 @@ Reasons why this sampler should be implemented, e.g. interesting for your resear
 business.
 
 **Ability to help and additional context**
-Your background and ability to help with the implementation of the sampler. 
+Your background and ability to help with the implementation of the sampler.

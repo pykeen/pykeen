@@ -48,7 +48,7 @@ def apply_label_smoothing(
 def lazy_compile_random_batches(
     indices: numpy.ndarray,
     batch_size: int,
-    batch_compiler: Callable[[numpy.ndarray], X]
+    batch_compiler: Callable[[numpy.ndarray], X],
 ) -> Iterable[X]:
     """Compile training batches of given size using random shuffling.
 

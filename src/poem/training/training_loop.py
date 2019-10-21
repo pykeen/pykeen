@@ -168,7 +168,7 @@ class TrainingLoop(ABC):
             # Print loss information to console
             epochs.set_postfix({
                 'loss': self.losses_per_epochs[-1],
-                'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan')
+                'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
             })
 
         return self.losses_per_epochs

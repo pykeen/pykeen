@@ -59,10 +59,13 @@ class OWATrainingLoop(TrainingLoop):
         num_negs_per_pos: int = 1,
     ) -> torch.LongTensor:
         # TODO: Pass num_negs_per_pos to sampler to allow further optimization
-        return torch.cat([
-            self.negative_sampler.sample(positive_batch=positive_batch)
-            for _ in range(num_negs_per_pos)
-        ], dim=0)
+        return torch.cat(
+            [
+                self.negative_sampler.sample(positive_batch=positive_batch)
+                for _ in range(num_negs_per_pos)
+            ],
+            dim=0,
+        )
 
     def _create_instances(self):  # noqa: D102
         return self.triples_factory.create_owa_instances()

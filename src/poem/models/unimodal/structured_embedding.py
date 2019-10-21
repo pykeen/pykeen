@@ -73,7 +73,7 @@ class StructuredEmbedding(BaseModule):
             # Initialise left relation embeddings to unit length
             functional.normalize(
                 self.left_relation_embeddings.weight.data,
-                out=self.left_relation_embeddings.weight.data
+                out=self.left_relation_embeddings.weight.data,
             )
         if not self.right_relation_embeddings:
             self.right_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
@@ -85,7 +85,7 @@ class StructuredEmbedding(BaseModule):
             # Initialise right relation embeddings to unit length
             functional.normalize(
                 self.right_relation_embeddings.weight.data,
-                out=self.right_relation_embeddings.weight.data
+                out=self.right_relation_embeddings.weight.data,
             )
         return self
 

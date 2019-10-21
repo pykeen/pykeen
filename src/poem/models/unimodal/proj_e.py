@@ -125,7 +125,7 @@ class ProjE(BaseModule):
         # Rank against all entities
         hidden = self.inner_non_linearity(
             self.d_e[None, None, :] * h[None, :, :]
-            + (self.d_r[None, None, :] * r[:, None, :] + self.b_c[None, None, :])
+            + (self.d_r[None, None, :] * r[:, None, :] + self.b_c[None, None, :]),
         )
         scores = torch.sum(hidden * t[:, None, :], dim=-1) + self.b_p
 

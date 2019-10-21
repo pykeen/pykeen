@@ -10,13 +10,13 @@
   <a href="https://travis-ci.com/mali-git/POEM_develop">
     <img src="https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
          alt="Travis CI">
-  </a>  
-         
+  </a>
+
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
 </p>
-  
+
 <p align="center">
     <b>PyKEEN</b> (<b>P</b>ython <b>K</b>nowl<b>E</b>dge <b>E</b>mbeddi<b>N</b>gs) is a Python package designed to
     train and evaluate knowledge graph embedding models (incorporating multi-modal information). It is part of the
@@ -34,13 +34,16 @@
 
 ## Installation
 
-The development version of PyKEEN (POEM) can be downloaded and installed from 
+The development version of PyKEEN (POEM) can be downloaded and installed from
 [GitHub](https://github.com/mali-git/POEM_develop) on Python 3.7+ with:
 
 ```bash
 $ git clone https://github.com/mali-git/POEM_develop.git
 $ cd poem
 $ pip install -e .
+$ # Install pre-commit
+$ pip install pre-commit
+$ pre-commit install
 ```
 
 ## Quickstart

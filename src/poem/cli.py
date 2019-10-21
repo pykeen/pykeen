@@ -45,11 +45,13 @@ def models(tablefmt: str):
     from tabulate import tabulate
     lines = list(_get_model_lines(tablefmt=tablefmt))
     headers = ['Name', 'Reference', 'Citation'] if tablefmt in {'rst', 'github'} else ['Name', 'Citation']
-    click.echo(tabulate(
-        lines,
-        headers=headers,
-        tablefmt=tablefmt,
-    ))
+    click.echo(
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+    )
 
 
 def _get_model_lines(tablefmt: str):
@@ -89,11 +91,13 @@ def datasets(tablefmt: str):
     """List data sets."""
     from tabulate import tabulate
     lines = _get_lines(data_sets, tablefmt, 'datasets')
-    click.echo(tabulate(
-        lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-        tablefmt=tablefmt,
-    ))
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
 
 
 @ls.command()
@@ -102,11 +106,13 @@ def training(tablefmt: str):
     """List training modes."""
     from tabulate import tabulate
     lines = _get_lines(training_dict, tablefmt, 'training')
-    click.echo(tabulate(
-        lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-        tablefmt=tablefmt,
-    ))
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
 
 
 @ls.command()
@@ -115,11 +121,13 @@ def samplers(tablefmt: str):
     """List negative samplers."""
     from tabulate import tabulate
     lines = _get_lines(samplers_dict, tablefmt, 'sampling')
-    click.echo(tabulate(
-        lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-        tablefmt=tablefmt,
-    ))
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
 
 
 @ls.command()
@@ -128,11 +136,13 @@ def evaluators(tablefmt: str):
     """List evaluators."""
     from tabulate import tabulate
     lines = _get_lines(evaluators_dict, tablefmt, 'evaluators')
-    click.echo(tabulate(
-        lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-        tablefmt=tablefmt,
-    ))
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
 
 
 @ls.command()
@@ -141,11 +151,13 @@ def metrics(tablefmt: str):
     """List metrics."""
     from tabulate import tabulate
     lines = _get_lines(metrics_dict, tablefmt, 'evaluators')
-    click.echo(tabulate(
-        lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-        tablefmt=tablefmt,
-    ))
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
 
 
 def _get_lines(d, tablefmt, submodule):

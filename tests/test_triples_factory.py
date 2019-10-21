@@ -107,9 +107,9 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
         self.assertIn('likes_inverse', triples_factory.relation_to_id)
         self.assertEqual(
             triples_factory.relation_to_id['likes'] + triples_factory.num_relations / 2,
-            triples_factory.relation_to_id['likes_inverse']
+            triples_factory.relation_to_id['likes_inverse'],
         )
         self.assertEqual(
             triples_factory.relation_to_id['likes'] + triples_factory.num_relations / 2,
-            triples_factory.get_inverse_relation_id('likes')
+            triples_factory.get_inverse_relation_id('likes'),
         )

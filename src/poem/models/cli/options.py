@@ -50,7 +50,7 @@ CLI_OPTIONS = {
         type=int,
         default=50,
         show_default=True,
-        help='Embedding dimensions for entities.'
+        help='Embedding dimensions for entities.',
     ),
     'epsilon': click.option(
         '--epsilon',
@@ -63,14 +63,14 @@ CLI_OPTIONS = {
         type=click.Choice(losses),
         callback=_make_instantiation_callback(get_loss_cls),
         default='marginrankingloss',
-        show_default=True
+        show_default=True,
     ),
     'random_seed': click.option(
         '--random-seed',
         type=int,
         default=random.randint(0, 2 ** 32 - 1),
         show_default=True,
-        help='Random seed for PyTorch, NumPy, and Python.'
+        help='Random seed for PyTorch, NumPy, and Python.',
     ),
     'regularization_factor': click.option(  # ComplEx
         '--regularization-factor',

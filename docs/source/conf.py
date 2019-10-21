@@ -55,7 +55,7 @@ release = '0.0.1-dev'
 # The short X.Y version.
 parsed_version = re.match(
     '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?',
-    release
+    release,
 )
 version = parsed_version.expand('\g<major>.\g<minor>.\g<patch>')
 
@@ -169,8 +169,10 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'poem.tex', 'poem Documentation',
-     'Mehdi Ali', 'manual'),
+    (
+        master_doc, 'poem.tex', 'poem Documentation',
+        'Mehdi Ali', 'manual',
+    ),
 ]
 
 # -- Options for manual page output ------------------------------------------
@@ -178,8 +180,10 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'poem', 'poem Documentation',
-     [author], 1)
+    (
+        master_doc, 'poem', 'poem Documentation',
+        [author], 1,
+    ),
 ]
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -188,9 +192,11 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'poem', 'poem Documentation',
-     author, 'poem', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc, 'poem', 'poem Documentation',
+        author, 'poem', 'One line description of project.',
+        'Miscellaneous',
+    ),
 ]
 
 # -- Options for Epub output -------------------------------------------------

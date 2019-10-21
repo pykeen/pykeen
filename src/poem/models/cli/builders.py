@@ -50,8 +50,10 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
             else:
                 parameter = signature.parameters[name]
                 if parameter.default is None:
-                    logger.warning(f'Missing handler in {model.__name__} for {name}: '
-                                   f'type={annotation} default={parameter.default}')
+                    logger.warning(
+                        f'Missing handler in {model.__name__} for {name}: '
+                        f'type={annotation} default={parameter.default}',
+                    )
                     continue
 
                 option = click.option(f'--{name.replace("_", "-")}', type=annotation, default=parameter.default)
@@ -71,13 +73,15 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     @early_stopping_option
     @_decorate
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
-    def main(*, training_loop, optimizer, number_epochs, batch_size, learning_rate, testing, evaluator, early_stopping,
-             output, **kwargs):
+    def main(
+        *, training_loop, optimizer, number_epochs, batch_size, learning_rate, testing, evaluator, early_stopping,
+        output, **kwargs
+    ):
         """CLI for POEM."""
         click.echo(
             f'Training {model.__name__} with '
             f'{training_loop.__name__[:-len("TrainingLoop")]} using '
-            f'{optimizer.__name__} and {evaluator.__name__}'
+            f'{optimizer.__name__} and {evaluator.__name__}',
         )
         model_instance = model(**kwargs)
         training_loop_instance = training_loop(

@@ -342,7 +342,7 @@ class BaseModule(nn.Module):
         embeddings = self.entity_embeddings.weight.detach().cpu().numpy()
         names = sorted(
             self.triples_factory.entity_to_id,
-            key=self.triples_factory.entity_to_id.get
+            key=self.triples_factory.entity_to_id.get,
         )
 
         if use_tqdm:
@@ -383,7 +383,7 @@ class RegularizedModel(BaseModule):
     def compute_label_loss(
         self,
         predictions: torch.FloatTensor,
-        labels: torch.FloatTensor
+        labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         assert self.current_regularization_term is not None, \
             "Regularized models have to set 'self.current_regularization_term' in the forward pass"

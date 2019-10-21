@@ -124,10 +124,13 @@ class RotatE(BaseModule):
         r_im = r[..., 1]
 
         # Rotate (=Hadamard product in complex space).
-        rot_h = torch.stack([
-            h_re * r_re - h_im * r_im,
-            h_re * r_im + h_im * r_re,
-        ], dim=-1)
+        rot_h = torch.stack(
+            [
+                h_re * r_re - h_im * r_im,
+                h_re * r_im + h_im * r_re,
+            ],
+            dim=-1,
+        )
         scores = -torch.norm(rot_h - t, dim=(-2, -1))
 
         return scores
@@ -179,10 +182,13 @@ class RotatE(BaseModule):
 
         # Compute Hadamard product (=rotate tail by inverse relation)
         er = (t * r)
-        rot_t = torch.cat([
-            er[:, :, 0, 0] - er[:, :, 1, 1],
-            er[:, :, 0, 1] + er[:, :, 1, 0],
-        ], dim=-1)
+        rot_t = torch.cat(
+            [
+                er[:, :, 0, 0] - er[:, :, 1, 1],
+                er[:, :, 0, 1] + er[:, :, 1, 0],
+            ],
+            dim=-1,
+        )
 
         # Rank against all entities
         h = self.entity_embeddings.weight

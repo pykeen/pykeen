@@ -32,8 +32,8 @@ Steps to reproduce the behavior:
    - Tqdm: [e.g. 4.31.1]
 
 Note: To obtain the relevant package versions you can run
-``pip list | grep -Eiw 'poem|torch|numpy|Click|click-default-group|tqdm'`` in your environment shell. To obtain the 
-python version simply execute ``python --version`` in your shell. 
+``pip list | grep -Eiw 'poem|torch|numpy|Click|click-default-group|tqdm'`` in your environment shell. To obtain the
+python version simply execute ``python --version`` in your shell.
 
 **Additional information**
 [Add any other information about the problem here.]

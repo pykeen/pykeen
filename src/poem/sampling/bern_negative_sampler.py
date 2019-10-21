@@ -55,7 +55,7 @@ class BernoulliNegativeSampler(NegativeSampler):
         corrupt_entity = torch.randint(
             self.triples_factory.num_entities,
             size=(batch_size,),
-            device=positive_batch.device
+            device=positive_batch.device,
         )
 
         # Replace heads

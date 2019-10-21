@@ -146,8 +146,10 @@ def filter_scores_(
         - the relation filter for re-usage.
     """
     if filter_col not in {0, 2}:
-        raise NotImplementedError('This code has only been written for updating subject (filter_col=0) or '
-                                  f'object (filter_col=1) mask, but filter_col={filter_col} was given.')
+        raise NotImplementedError(
+            'This code has only been written for updating subject (filter_col=0) or '
+            f'object (filter_col=1) mask, but filter_col={filter_col} was given.',
+        )
 
     # Bind shape
     batch_size, num_entities = scores.shape
@@ -170,8 +172,10 @@ def filter_scores_(
     # Warn if all entities will be filtered
     # (scores != scores) yields true for all NaN instances (IEEE 754), thus allowing to count the filtered triples.
     if ((scores != scores).sum(dim=1) == num_entities).any():
-        _LOGGER.warning("User selected filtered metric computation, but all corrupted triples exists also as positive "
-                        "triples")
+        _LOGGER.warning(
+            "User selected filtered metric computation, but all corrupted triples exists also as positive "
+            "triples",
+        )
 
     return scores, relation_filter
 
@@ -252,7 +256,7 @@ def evaluate(
                 total=num_triples,
                 unit='triple(s)',
                 unit_scale=True,
-            )
+            ),
     ) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:

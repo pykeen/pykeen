@@ -10,5 +10,5 @@ include config/config.ini
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib .DS_Store *.gpickle
 
-exclude .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml tox.ini
+exclude .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml tox.ini .pre-commit-config.yaml
 include LICENSE AUTHORS.md README.md

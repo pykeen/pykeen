@@ -14,7 +14,7 @@ following guidelines:
 
 To report errors in the software follow the steps for [bug reports](#bug-report). In case you would like to
 request a useful feature or add-on for this software you should follow the steps for
-[feature requests](#feature-request). 
+[feature requests](#feature-request).
 
 
 ### Bug report
@@ -26,7 +26,7 @@ and provide the therein requested information.
 In case you don't have a GitHub account, you can use [this template](./ISSUE_TEMPLATE/bug_report.md)
 and send it via e-mail to the [project team.](./project_team.md)
 
-    
+
 ### Feature request
 
 We track feature requests for this software as [GitHub Issues](https://guides.github.com/features/issues/).
@@ -39,7 +39,7 @@ and send it via e-mail to the [project team.](./project_team.md)
 
 ## Pull request
 
-Requests for direct code changes are handled as 
+Requests for direct code changes are handled as
 [GitHub Pull Requests](https://help.github.com/articles/about-pull-requests/) and can be
 [submitted here](https://github.com/mali-git/POEM_develop/compare).
 
@@ -55,7 +55,7 @@ When submitting pull requests, we encourage you to comply with these points:
 
 ## Support
 
-In case you just want to ask a question or need support for this software, you can reach out to the project team 
+In case you just want to ask a question or need support for this software, you can reach out to the project team
 via e-mail to the [project team.](./project_team.md)
 
 

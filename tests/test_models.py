@@ -230,7 +230,7 @@ Exception
 Traceback
 =========
 {''.join(traceback.format_tb(result.exc_info[2]))}
-            '''
+            ''',
         )
 
 

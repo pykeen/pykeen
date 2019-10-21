@@ -128,13 +128,15 @@ def _map_triples_elements_to_ids(
     if (num_no_subject > 0) or (num_no_relation > 0) or (num_no_object > 0):
         logger.warning(
             "You're trying to map triples with entities and/or relations that are not in the training set."
-            "These triples will be excluded from the mapping")
+            "These triples will be excluded from the mapping",
+        )
         non_mappable_triples = (subject_filter | relation_filter | object_filter)
         subject_column = subject_column[~non_mappable_triples, None]
         relation_column = relation_column[~non_mappable_triples, None]
         object_column = object_column[~non_mappable_triples, None]
         logger.warning(
-            f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out")
+            f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out",
+        )
 
     triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
 

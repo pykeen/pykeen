@@ -18,7 +18,7 @@ Link to the issue describing the model request. The affected model request shoul
 
 <!--
 
-We must be able to understand the implementation of the new model from this description, so please provide the exact 
+We must be able to understand the implementation of the new model from this description, so please provide the exact
 papers and/or other implementations that your provided code is based upon.
 
 -->
@@ -28,8 +28,8 @@ papers and/or other implementations that your provided code is based upon.
 
 <!--
 
-What process did you follow to verify that the model produces the correct results? Did you write unit-tests that prove 
-the correct behaviour of arithmetic operations or did you replicate the results provided in papers and/or other 
+What process did you follow to verify that the model produces the correct results? Did you write unit-tests that prove
+the correct behaviour of arithmetic operations or did you replicate the results provided in papers and/or other
 implementations of this model?
 
 -->

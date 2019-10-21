@@ -71,7 +71,7 @@ class DataSet:
     def _load(self) -> None:
         self._training = TriplesFactory(
             path=self.training_path,
-            create_inverse_triples=self._create_inverse_triples
+            create_inverse_triples=self._create_inverse_triples,
         )
         self._testing = TriplesFactory(
             path=self.testing_path,

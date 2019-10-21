@@ -91,7 +91,7 @@ class ConvE(BaseModule):
             log.warning(
                 '\nThe ConvE model should be trained with inverse triples.\n'
                 'This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set '
-                'to true.'
+                'to true.',
             )
 
         super().__init__(
@@ -115,7 +115,7 @@ class ConvE(BaseModule):
         if self.input_channels * self.embedding_height * self.embedding_width != self.embedding_dim:
             raise ValueError(
                 f'Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width '
-                f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})'
+                f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})',
             )
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
@@ -196,7 +196,7 @@ class ConvE(BaseModule):
                     'https://github.com/allenai/allennlp/issues/2888, '
                     'which causes the code to crash during evaluation mode.\n'
                     'To avoid this error, the batch size has to be reduced.\n'
-                    f'The original error message: \n{e.args[0]}'
+                    f'The original error message: \n{e.args[0]}',
                 )
                 sys.exit(1)
             else:

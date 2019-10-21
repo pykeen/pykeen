@@ -18,4 +18,4 @@ of this model.
 Reasons why this model should be implemented, e.g. interesting for your research, a specific research topic or business.
 
 **Ability to help and additional context**
-Your background and ability to help with the implementation of the model. 
+Your background and ability to help with the implementation of the model.

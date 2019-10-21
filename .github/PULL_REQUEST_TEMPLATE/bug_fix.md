@@ -54,4 +54,3 @@ Example:
 - Increased the performance of method X by avoiding redundant re-calculations of the loading vectors.
 
 -->
- 
