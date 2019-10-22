@@ -10,7 +10,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = ['KG2E']
 
@@ -104,7 +104,7 @@ class KG2E(BaseModule):
         relation_embeddings: Optional[nn.Embedding] = None,
         entity_covariances: Optional[nn.Embedding] = None,
         relation_covariances: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         dist_similarity: Optional[str] = None,

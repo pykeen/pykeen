@@ -19,27 +19,6 @@ from poem.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
 )
-from poem.models import (
-    ComplEx,
-    ConvE,
-    ConvKB,
-    DistMult,
-    ERMLP,
-    HolE,
-    KG2E,
-    NTN,
-    ProjE,
-    RESCAL,
-    RotatE,
-    SimplE,
-    StructuredEmbedding,
-    TransD,
-    TransE,
-    TransH,
-    TransR,
-    TuckEr,
-    UnstructuredModel,
-)
 from poem.models.base import BaseModule, RegularizedModel
 from poem.models.cli import build_cli_from_cls
 from poem.models.multimodal import MultimodalBaseModule
@@ -201,11 +180,11 @@ class _ModelTestCase:
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if self.model_cls is ConvKB:
+        if self.model_cls is poem.models.ConvKB:
             self.skipTest('ConvKB takes too long')
-        if self.model_cls is ConvE:
+        if self.model_cls is poem.models.ConvE:
             self.skipTest('ConvE needs more work in the magical CLI')
-        if self.model_cls is HolE:
+        if self.model_cls is poem.models.HolE:
             self.skipTest('Might not pass HolE due to missing MKL support')
         runner = CliRunner()
         cli = build_cli_from_cls(self.model_cls)
@@ -246,13 +225,13 @@ class _DistanceModelTestCase(_ModelTestCase):
 class TestComplex(_ModelTestCase, unittest.TestCase):
     """Test the ComplEx model."""
 
-    model_cls = ComplEx
+    model_cls = poem.models.ComplEx
 
 
 class TestConvE(_ModelTestCase, unittest.TestCase):
     """Test the ConvE model."""
 
-    model_cls = ConvE
+    model_cls = poem.models.ConvE
     embedding_dim = 200
     create_inverse_triples = True
 
@@ -260,7 +239,7 @@ class TestConvE(_ModelTestCase, unittest.TestCase):
 class TestConvKB(_ModelTestCase, unittest.TestCase):
     """Test the ConvKB model."""
 
-    model_cls = ConvKB
+    model_cls = poem.models.ConvKB
     model_kwargs = {
         'num_filters': 32,
     }
@@ -269,13 +248,13 @@ class TestConvKB(_ModelTestCase, unittest.TestCase):
 class TestDistMult(_ModelTestCase, unittest.TestCase):
     """Test the DistMult model."""
 
-    model_cls = DistMult
+    model_cls = poem.models.DistMult
 
 
 class TestERMLP(_ModelTestCase, unittest.TestCase):
     """Test the ERMLP model."""
 
-    model_cls = ERMLP
+    model_cls = poem.models.ERMLP
     model_kwargs = {
         'hidden_dim': 32,
     }
@@ -284,13 +263,13 @@ class TestERMLP(_ModelTestCase, unittest.TestCase):
 class TestHolE(_ModelTestCase, unittest.TestCase):
     """Test the HolE model."""
 
-    model_cls = HolE
+    model_cls = poem.models.HolE
 
 
 class TestCaseKG2EWithKL(_ModelTestCase, unittest.TestCase):
     """Test the KG2E model with KL similarity."""
 
-    model_cls = KG2E
+    model_cls = poem.models.KG2E
     model_kwargs = {
         'dist_similarity': 'KL',
     }
@@ -299,7 +278,7 @@ class TestCaseKG2EWithKL(_ModelTestCase, unittest.TestCase):
 class TestCaseKG2EWithEL(_ModelTestCase, unittest.TestCase):
     """Test the KG2E model with EL similarity."""
 
-    model_cls = KG2E
+    model_cls = poem.models.KG2E
     model_kwargs = {
         'dist_similarity': 'EL',
     }
@@ -308,67 +287,67 @@ class TestCaseKG2EWithEL(_ModelTestCase, unittest.TestCase):
 class TestNTN(_ModelTestCase, unittest.TestCase):
     """Test the NTN model."""
 
-    model_cls = NTN
+    model_cls = poem.models.NTN
 
 
 class TestProjE(_ModelTestCase, unittest.TestCase):
     """Test the ProjE model."""
 
-    model_cls = ProjE
+    model_cls = poem.models.ProjE
 
 
 class TestRESCAL(_ModelTestCase, unittest.TestCase):
     """Test the RESCAL model."""
 
-    model_cls = RESCAL
+    model_cls = poem.models.RESCAL
 
 
 class TestRotatE(_ModelTestCase, unittest.TestCase):
     """Test the RotatE model."""
 
-    model_cls = RotatE
+    model_cls = poem.models.RotatE
 
 
 class TestSimplE(_ModelTestCase, unittest.TestCase):
     """Test the SimplE model."""
 
-    model_cls = SimplE
+    model_cls = poem.models.SimplE
 
 
 class TestSE(_ModelTestCase, unittest.TestCase):
     """Test the Structured Embedding model."""
 
-    model_cls = StructuredEmbedding
+    model_cls = poem.models.StructuredEmbedding
 
 
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransD model."""
 
-    model_cls = TransD
+    model_cls = poem.models.TransD
 
 
 class TestTransE(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransE model."""
 
-    model_cls = TransE
+    model_cls = poem.models.TransE
 
 
 class TestTransH(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransH model."""
 
-    model_cls = TransH
+    model_cls = poem.models.TransH
 
 
 class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransR model."""
 
-    model_cls = TransR
+    model_cls = poem.models.TransR
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
     """Test the TuckEr model."""
 
-    model_cls = TuckEr
+    model_cls = poem.models.TuckEr
     model_kwargs = {
         'relation_dim': 4,
     }
@@ -377,7 +356,7 @@ class TestTuckEr(_ModelTestCase, unittest.TestCase):
 class TestUM(_DistanceModelTestCase, unittest.TestCase):
     """Test the Unstructured Model."""
 
-    model_cls = UnstructuredModel
+    model_cls = poem.models.UnstructuredModel
 
 
 class TestTesting(unittest.TestCase):
@@ -391,7 +370,8 @@ class TestTesting(unittest.TestCase):
         model_names = {
             cls.__name__
             for cls in BaseModule.__subclasses__() + RegularizedModel.__subclasses__()
-        } - SKIP_MODULES
+        }
+        model_names -= SKIP_MODULES
 
         tested_model_names = {
             value.model_cls.__name__
@@ -402,7 +382,8 @@ class TestTesting(unittest.TestCase):
                 and not name.startswith('_')
                 and not issubclass(value.model_cls, MultimodalBaseModule)
             )
-        } - SKIP_MODULES
+        }
+        tested_model_names -= SKIP_MODULES
 
         self.assertEqual(model_names, tested_model_names, msg='Some models have not been tested')
 

@@ -12,7 +12,7 @@ from ..base import BaseModule
 from ..init import embedding_xavier_normal_
 from ...loss_functions import BCEAfterSigmoid
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = ['TuckEr']
 
@@ -46,7 +46,7 @@ class TuckEr(BaseModule):
         relation_dim: Optional[int] = None,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,

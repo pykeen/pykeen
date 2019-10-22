@@ -11,7 +11,7 @@ from ..base import RegularizedModel
 from ..init import embedding_xavier_normal_
 from ...loss_functions import SoftplusLoss
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 from ...utils import l2_regularization
 
 
@@ -23,7 +23,7 @@ class ComplEx(RegularizedModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         entity_embeddings: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         relation_embeddings: Optional[nn.Embedding] = None,

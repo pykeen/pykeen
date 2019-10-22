@@ -11,7 +11,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = [
     'HolE',
@@ -37,7 +37,7 @@ class HolE(BaseModule):
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         embedding_dim: int = 200,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,

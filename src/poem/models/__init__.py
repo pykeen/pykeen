@@ -6,7 +6,7 @@
 Name                 Reference                                 Citation
 ===================  ========================================  ================
 ComplEx              :class:`poem.models.ComplEx`              [trouillon2016]_
-ComplExLiteralCWA    :class:`poem.models.ComplExLiteralCWA`    [agustinus2018]_
+ComplExLiteral       :class:`poem.models.ComplExLiteral`       [agustinus2018]_
 ConvE                :class:`poem.models.ConvE`                [dettmers2018]_
 ConvKB               :class:`poem.models.ConvKB`               [nguyen2018]_
 DistMult             :class:`poem.models.DistMult`             [yang2014]_
@@ -35,7 +35,7 @@ import itertools as itt
 from typing import Mapping, Type, Union
 
 from .base import BaseModule, RegularizedModel
-from .multimodal import ComplExLiteralCWA, DistMultLiteral, MultimodalBaseModule
+from .multimodal import ComplExLiteral, DistMultLiteral, MultimodalBaseModule
 from .unimodal import (
     ComplEx,
     ConvE,
@@ -61,7 +61,7 @@ from ..utils import get_cls, normalize_string
 
 __all__ = [
     'ComplEx',
-    'ComplExLiteralCWA',
+    'ComplExLiteral',
     'ConvE',
     'ConvKB',
     'DistMult',

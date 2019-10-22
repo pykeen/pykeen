@@ -83,7 +83,7 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | Name                | Reference                         | Citation                 |
 |---------------------|-----------------------------------|--------------------------|
 | ComplEx             | `poem.models.ComplEx`             | Trouillon *et al.*, 2016 |
-| ComplExLiteralCWA   | `poem.models.ComplExLiteralCWA`   | Agustinus *et al.*, 2018 |
+| ComplExLiteralCWA   | `poem.models.ComplExLiteral`      | Agustinus *et al.*, 2018 |
 | ConvE               | `poem.models.ConvE`               | Dettmers *et al.*, 2018  |
 | ConvKB              | `poem.models.ConvKB`              | Nguyen *et al.*, 2018    |
 | DistMult            | `poem.models.DistMult`            | Yang *et al.*, 2014      |

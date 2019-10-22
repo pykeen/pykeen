@@ -10,7 +10,7 @@ from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 from ...utils import slice_triples
 
 
@@ -23,7 +23,7 @@ class DistMultLiteral(MultimodalBaseModule):
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
         input_dropout: int = 0,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
     ) -> None:

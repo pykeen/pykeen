@@ -10,7 +10,7 @@ from torch.nn import functional
 
 from ..base import RegularizedModel
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 
 class TransH(RegularizedModel):
@@ -33,7 +33,7 @@ class TransH(RegularizedModel):
         scoring_fct_norm: int = 1,
         regularization_weight: float = 0.05,
         epsilon: float = 0.005,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,

@@ -10,7 +10,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 from ...utils import slice_triples
 
 __all__ = ['SimplE']
@@ -35,7 +35,7 @@ class SimplE(BaseModule):
         tail_entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         inverse_relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,

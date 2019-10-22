@@ -9,7 +9,7 @@ from torch import nn
 
 from ..base import RegularizedModel
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 from ...utils import l2_regularization
 
 __all__ = ['RESCAL']
@@ -31,7 +31,7 @@ class RESCAL(RegularizedModel):
         embedding_dim: int = 50,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularization_weight: float = 0.01,

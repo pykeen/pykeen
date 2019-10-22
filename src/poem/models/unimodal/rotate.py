@@ -13,7 +13,7 @@ from torch.nn import functional
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = [
     'RotatE',
@@ -37,7 +37,7 @@ class RotatE(BaseModule):
         embedding_dim: int = 200,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,

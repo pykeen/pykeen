@@ -11,7 +11,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = [
     'ConvKB',
@@ -35,7 +35,7 @@ class ConvKB(BaseModule):
         relation_embeddings: Optional[nn.Embedding] = None,
         hidden_dropout_rate: float = 0.5,
         embedding_dim: int = 200,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,

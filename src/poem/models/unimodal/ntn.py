@@ -9,7 +9,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = ['NTN']
 
@@ -41,7 +41,7 @@ class NTN(BaseModule):
         v_relation: Optional[nn.Embedding] = None,
         b_relation: Optional[nn.Embedding] = None,
         u_relation: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         non_linearity=nn.Tanh(),

@@ -14,7 +14,7 @@ from ..base import BaseModule, CUDNN_ERROR
 from ..init import embedding_xavier_normal_
 from ...loss_functions import BCEAfterSigmoid
 from ...triples import TriplesFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 
 __all__ = ['ConvE']
 
@@ -77,7 +77,7 @@ class ConvE(BaseModule):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,

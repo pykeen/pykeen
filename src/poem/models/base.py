@@ -14,7 +14,7 @@ from torch import nn
 from tqdm import tqdm
 
 from ..triples import TriplesFactory
-from ..typing import OptionalLoss
+from ..typing import Loss
 from ..utils import resolve_device
 from ..version import get_version
 
@@ -41,7 +41,7 @@ class BaseModule(nn.Module):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         entity_embeddings: Optional[nn.Embedding] = None,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,

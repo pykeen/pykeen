@@ -2,7 +2,7 @@
 
 """Type hints for POEM."""
 
-from typing import Mapping, Optional
+from typing import Mapping
 
 import numpy as np
 import torch
@@ -12,7 +12,6 @@ __all__ = [
     'LabeledTriples',
     'MappedTriples',
     'Loss',
-    'OptionalLoss',
     'EntityMapping',
     'RelationMapping',
 ]
@@ -20,6 +19,5 @@ __all__ = [
 LabeledTriples = np.ndarray
 MappedTriples = torch.LongTensor
 Loss = nn.modules.loss._Loss
-OptionalLoss = Optional[Loss]
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]

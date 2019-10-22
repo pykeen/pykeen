@@ -10,12 +10,12 @@ from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import OptionalLoss
+from ...typing import Loss
 from ...utils import slice_doubles
 
 
 # TODO: Check entire build of the model
-class ComplExLiteralCWA(MultimodalBaseModule):
+class ComplExLiteral(MultimodalBaseModule):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
 
     def __init__(
@@ -23,7 +23,7 @@ class ComplExLiteralCWA(MultimodalBaseModule):
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
         input_dropout: float = 0.2,
-        criterion: OptionalLoss = None,
+        criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
     ) -> None:
