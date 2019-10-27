@@ -347,7 +347,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
     """Test the TuckEr model."""
 
-    model_cls = poem.models.TuckEr
+    model_cls = poem.models.TuckER
     model_kwargs = {
         'relation_dim': 4,
     }

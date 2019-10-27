@@ -24,7 +24,7 @@ TransD               :class:`poem.models.TransD`               [ji2015]_
 TransE               :class:`poem.models.TransE`               [bordes2013]_
 TransH               :class:`poem.models.TransH`               [wang2014]_
 TransR               :class:`poem.models.TransR`               [lin2015]_
-TuckEr               :class:`poem.models.TuckEr`               [balazevic2019]_
+TuckER               :class:`poem.models.TuckER`               [balazevic2019]_
 UnstructuredModel    :class:`poem.models.UnstructuredModel`    [bordes2014]_
 ===================  ========================================  ================
 
@@ -54,7 +54,7 @@ from .unimodal import (
     TransE,
     TransH,
     TransR,
-    TuckEr,
+    TuckER,
     UnstructuredModel,
 )
 from ..utils import get_cls, normalize_string
@@ -79,7 +79,7 @@ __all__ = [
     'TransE',
     'TransH',
     'TransR',
-    'TuckEr',
+    'TuckER',
     'UnstructuredModel',
     'models',
     'get_model_cls',

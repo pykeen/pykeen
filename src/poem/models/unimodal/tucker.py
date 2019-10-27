@@ -14,7 +14,7 @@ from ...loss_functions import BCEAfterSigmoid
 from ...triples import TriplesFactory
 from ...typing import Loss
 
-__all__ = ['TuckEr']
+__all__ = ['TuckER']
 
 
 def _apply_bn_to_tensor(
@@ -28,7 +28,7 @@ def _apply_bn_to_tensor(
     return tensor
 
 
-class TuckEr(BaseModule):
+class TuckER(BaseModule):
     """An implementation of TuckEr from [balazevic2019]_.
 
     This model uses the Tucker tensor factorization.
@@ -50,9 +50,9 @@ class TuckEr(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
-        dropout0: float = 0.3,
-        dropout1: float = 0.4,
-        dropout2: float = 0.5,
+        dropout_0: float = 0.3,
+        dropout_1: float = 0.4,
+        dropout_2: float = 0.5,
     ) -> None:
         """Initialize the model.
 
@@ -86,12 +86,12 @@ class TuckEr(BaseModule):
         self.core_tensor = nn.Parameter(torch.empty(self.embedding_dim, self.relation_dim, self.embedding_dim))
 
         # Dropout
-        self.input_dropout = nn.Dropout(dropout0)
-        self.hidden_dropout1 = nn.Dropout(dropout1)
-        self.hidden_dropout2 = nn.Dropout(dropout2)
+        self.input_dropout = nn.Dropout(dropout_0)
+        self.hidden_dropout_1 = nn.Dropout(dropout_1)
+        self.hidden_dropout_2 = nn.Dropout(dropout_2)
 
-        self.bn0 = nn.BatchNorm1d(self.embedding_dim)
-        self.bn1 = nn.BatchNorm1d(self.embedding_dim)
+        self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
+        self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
 
         if init:
             self.init_empty_weights_()
@@ -141,20 +141,20 @@ class TuckEr(BaseModule):
         d_r = self.relation_dim
 
         # Compute h_n = DO(BN(h))
-        h_n = _apply_bn_to_tensor(batch_norm=self.bn0, tensor=h)
+        h_n = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
         h_n = self.input_dropout(h_n)
 
         # Compute wr = DO(W x_2 r)
         w = w.view(1, d_e, d_r, d_e)
         r = r.view(-1, 1, 1, d_r)
         wr = r @ w
-        wr = self.hidden_dropout1(wr)
+        wr = self.hidden_dropout_1(wr)
 
         # compute whr = DO(BN(h_n x_1 wr))
         wr = wr.view(-1, d_e, d_e)
         whr = (h_n @ wr)
-        whr = _apply_bn_to_tensor(batch_norm=self.bn1, tensor=whr)
-        whr = self.hidden_dropout2(whr)
+        whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
+        whr = self.hidden_dropout_2(whr)
 
         # Compute whr x_3 t
         scores = torch.sum(whr * t, dim=-1)

@@ -65,7 +65,7 @@ from .trans_d import TransD
 from .trans_e import TransE
 from .trans_h import TransH
 from .trans_r import TransR
-from .tucker import TuckEr
+from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
@@ -86,6 +86,6 @@ __all__ = [
     'TransE',
     'TransH',
     'TransR',
-    'TuckEr',
+    'TuckER',
     'UnstructuredModel',
 ]

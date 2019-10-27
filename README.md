@@ -101,7 +101,7 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | TransE              | `poem.models.TransE`              | Bordes *et al.*, 2013    |
 | TransH              | `poem.models.TransH`              | Wang *et al.*, 2014      |
 | TransR              | `poem.models.TransR`              | Lin *et al.*, 2015       |
-| TuckEr              | `poem.models.TuckEr`              | Balazevic *et al.*, 2019 |
+| TuckER              | `poem.models.TuckER`              | Balazevic *et al.*, 2019 |
 | UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014    |
 
 ### Data Sets (8)
