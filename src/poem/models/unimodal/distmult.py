@@ -28,6 +28,7 @@ class DistMult(BaseModule):
     .. seealso::
 
        - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
+
     """
 
     def __init__(
