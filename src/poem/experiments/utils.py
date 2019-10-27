@@ -2,8 +2,6 @@
 
 """Utilities for reproducing experiments."""
 
-from __future__ import annotations
-
 import json
 import logging
 from dataclasses import dataclass
@@ -46,7 +44,7 @@ class PipelineResultSet:
     pipeline_results: List[PipelineResult]
 
     @classmethod
-    def from_path(cls, path: str, replicates: int = 10) -> PipelineResultSet:
+    def from_path(cls, path: str, replicates: int = 10) -> 'PipelineResultSet':
         """Run the same pipeline several times."""
         return cls([
             pipeline_from_path(path)
