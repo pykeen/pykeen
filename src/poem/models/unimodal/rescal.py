@@ -25,6 +25,11 @@ class RESCAL(RegularizedModel):
        - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        regularization_weight=dict(type=float, low=0.001, high=0.1, scale='log'),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -38,9 +43,6 @@ class RESCAL(RegularizedModel):
         init: bool = True,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             regularization_weight=regularization_weight,
             triples_factory=triples_factory,

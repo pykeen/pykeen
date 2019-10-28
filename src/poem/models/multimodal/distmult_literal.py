@@ -18,18 +18,22 @@ from ...utils import slice_triples
 class DistMultLiteral(MultimodalBaseModule):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        input_dropout=dict(type=float, low=0, high=1.0),
+    )
+
+    criterion_default_kwargs = dict(margin=0.0)
+
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
-        input_dropout: int = 0,
+        input_dropout: float = 0.0,
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss()
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

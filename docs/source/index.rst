@@ -22,6 +22,7 @@ POEM
    reference/loss_functions
    reference/evaluation
    reference/sampling
+   reference/hpo
 
 .. toctree::
    :caption: Appendix

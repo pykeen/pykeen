@@ -28,6 +28,21 @@ class TransD(BaseModule):
        - OpenKE `implementation of TransD <https://github.com/thunlp/OpenKE/blob/master/models/TransD.py>`_
     """
 
+    hpo_default = dict(
+        embedding_dim={
+            'type': int,
+            'low': 20,
+            'high': 300,
+            'q': 50,
+        },
+        relation_dim={
+            'type': int,
+            'low': 20,
+            'high': 300,
+            'q': 50,
+        },
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -42,9 +57,6 @@ class TransD(BaseModule):
         random_seed: Optional[int] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

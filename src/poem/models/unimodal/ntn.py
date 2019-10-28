@@ -31,6 +31,11 @@ class NTN(BaseModule):
        - Keras: `<https://github.com/dapurv5/keras-neural-tensor-layer (Keras)>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        num_slices=dict(type=int, low=2, high=4),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -44,14 +49,14 @@ class NTN(BaseModule):
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        non_linearity=nn.Tanh(),
+        non_linearity: Optional[nn.Module] = None,
         init: bool = True,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
+        if non_linearity is None:
+            non_linearity = nn.Tanh()
 
-        super(NTN, self).__init__(
+        super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,

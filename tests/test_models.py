@@ -212,6 +212,15 @@ Traceback
             ''',
         )
 
+    def test_has_hpo_defaults(self):
+        """Test that there are defaults for HPO."""
+        try:
+            d = self.model_cls.hpo_default
+        except AttributeError:
+            self.fail(msg=f'{self.model_cls.__name__} is missing hpo_default class attribute')
+        else:
+            self.assertIsInstance(d, dict)
+
 
 class _DistanceModelTestCase(_ModelTestCase):
     """A test case for distance-based models."""

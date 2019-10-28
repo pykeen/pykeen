@@ -2,7 +2,7 @@
 
 """Custom loss functions."""
 
-from typing import List, Mapping, Type, Union
+from typing import Any, List, Mapping, Type, Union
 
 import torch
 from torch import nn
@@ -64,6 +64,15 @@ _LOSSES_LIST: List[Type[Loss]] = [
 losses: Mapping[str, Type[Loss]] = {
     normalize_string(criterion.__name__): criterion
     for criterion in _LOSSES_LIST
+}
+
+losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
+    MarginRankingLoss: dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    ),
+    BCELoss: {},
+    SoftplusLoss: {},
+    BCEAfterSigmoid: {},
 }
 
 

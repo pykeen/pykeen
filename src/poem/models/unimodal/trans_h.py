@@ -23,6 +23,13 @@ class TransH(RegularizedModel):
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        regularization_weight=dict(type=float, low=0.001, high=1., scale='log'),
+        epsilon=dict(type=float, low=0.05, high=1.5, scale='log'),
+        scoring_fct_norm=dict(type=int, low=1, high=2),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -32,14 +39,12 @@ class TransH(RegularizedModel):
         normal_vector_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
         regularization_weight: float = 0.05,
-        epsilon: float = 0.005,
+        epsilon: float = 0.5,
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
         super().__init__(
             regularization_weight=regularization_weight,
             triples_factory=triples_factory,

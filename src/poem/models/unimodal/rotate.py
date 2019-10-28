@@ -31,6 +31,10 @@ class RotatE(BaseModule):
          <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=125, high=1000, q=100),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -42,9 +46,6 @@ class RotatE(BaseModule):
         random_seed: Optional[int] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             criterion=criterion,

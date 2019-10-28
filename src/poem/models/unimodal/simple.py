@@ -27,6 +27,10 @@ class SimplE(BaseModule):
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -40,9 +44,6 @@ class SimplE(BaseModule):
         random_seed: Optional[int] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

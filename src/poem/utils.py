@@ -129,9 +129,9 @@ def get_cls(
 _OPTIMIZER_LIST = [
     Adam,
     SGD,
-    AdamW,
     Adagrad,
     Adadelta,
+    AdamW,
     Adamax,
 ]
 optimizers = {

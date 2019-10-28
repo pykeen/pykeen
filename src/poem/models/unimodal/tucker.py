@@ -39,6 +39,17 @@ class TuckER(BaseModule):
        - pykg2vec implementation of TuckEr  <https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py>
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        relation_dim=dict(type=int, low=30, high=200, q=25),
+        dropout_0=dict(type=float, low=0.1, high=0.4),
+        dropout_1=dict(type=float, low=0.1, high=0.5),
+        dropout_2=dict(type=float, low=0.1, high=0.6),
+    )
+
+    criterion_default = BCEAfterSigmoid
+    criterion_default_kwargs = {}
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -63,9 +74,6 @@ class TuckER(BaseModule):
         where h,r,t are the head, relation, and tail embedding, W is the core tensor, x_i denotes the tensor
         product along the i-th mode, BN denotes batch normalization, and DO dropout.
         """
-        if criterion is None:
-            criterion = BCEAfterSigmoid()
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

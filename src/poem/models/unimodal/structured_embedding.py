@@ -26,6 +26,11 @@ class StructuredEmbedding(BaseModule):
     This model projects different matrices for each relation head and tail entity.
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        scoring_fct_norm=dict(type=int, low=1, high=2),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -38,9 +43,6 @@ class StructuredEmbedding(BaseModule):
         random_seed: Optional[int] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

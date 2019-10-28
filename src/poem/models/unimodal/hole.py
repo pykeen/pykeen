@@ -31,6 +31,10 @@ class HolE(BaseModule):
        - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -43,9 +47,6 @@ class HolE(BaseModule):
         init: bool = True,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             criterion=criterion,

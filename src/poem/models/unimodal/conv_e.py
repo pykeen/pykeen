@@ -4,7 +4,7 @@
 
 import logging
 import sys
-from typing import Optional
+from typing import Optional, Type
 
 import torch
 from torch import nn
@@ -61,6 +61,20 @@ class ConvE(BaseModule):
     >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
     """
 
+    hpo_default = dict(
+        input_channels=dict(type=int, low=1, high=3),
+        output_channels=dict(type=int, low=16, high=64),
+        embedding_height=dict(type=int, low=5, high=15),
+        embedding_width=dict(type=int, low=15, high=25),
+        kernel_height=dict(type=int, low=2, high=4),
+        kernel_width=dict(type=int, low=2, high=4),
+        input_dropout=dict(type=float, low=0.0, high=1.0),
+        output_dropout=dict(type=float, low=0.0, high=1.0),
+        feature_map_dropout=dict(type=float, low=0.0, high=1.0),
+    )
+    criterion_default: Type[Loss] = BCEAfterSigmoid
+    criterion_default_kwargs = {}
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -83,9 +97,6 @@ class ConvE(BaseModule):
         init: bool = True,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = BCEAfterSigmoid()
-
         # ConvE should be trained with inverse triples
         if not triples_factory.create_inverse_triples:
             logger.warning(

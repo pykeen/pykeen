@@ -25,6 +25,13 @@ class ProjE(BaseModule):
        - Official Implementation: <https://github.com/nddsg/ProjE>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    )
+
+    criterion_default = nn.BCEWithLogitsLoss
+    criterion_default_kwargs = dict(reduction='mean')
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -37,9 +44,6 @@ class ProjE(BaseModule):
         inner_non_linearity: Optional[nn.Module] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.BCEWithLogitsLoss(reduction='mean')
-
         if inner_non_linearity is None:
             inner_non_linearity = nn.Tanh()
 

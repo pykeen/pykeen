@@ -1,17 +1,18 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with TransE as described by Bordes et al., 2013"
+    "title": "Learn FB15K Data Set with TransR as described by Li et al., 2015"
   },
   "pipeline": {
     "data_set": "fb15k",
-    "model": "TransE",
+    "model": "TransR",
     "model_kwargs": {
       "embedding_dim": 50,
-      "scoring_fct_norm": 1
+      "relation_dim": 50,
+      "scoring_fct_norm": 2
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
-      "lr": 0.01
+      "lr": 0.001
     },
     "criterion": "MarginRankingLoss",
     "criterion_kwargs": {
@@ -24,9 +25,9 @@
     },
     "training_loop": "OWA",
     "training_kwargs": {
-      "num_epochs": 1000,
-      "batch_size": 32,
-      "negative_sampler_cls": "BasicNegativeSampler"
+      "num_epochs": 500,
+      "batch_size": 4800,
+      "negative_sampler_cls": "BernoulliNegativeSampler"
     }
   }
 }

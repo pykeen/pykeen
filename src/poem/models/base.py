@@ -5,7 +5,7 @@
 import random
 from abc import abstractmethod
 from collections import defaultdict
-from typing import ClassVar, Dict, Iterable, Optional, Set, Union
+from typing import Any, ClassVar, Dict, Iterable, Mapping, Optional, Set, Type, Union
 
 import click
 import numpy as np
@@ -36,6 +36,12 @@ class BaseModule(nn.Module):
     #: The command line interface for this model
     cli: ClassVar[click.Command]
 
+    #: Defaults for hyperparameter optimization
+    hpo_default: ClassVar[Mapping[str, Any]]
+
+    criterion_default: Type[Loss] = nn.MarginRankingLoss
+    criterion_default_kwargs = dict(margin=1.0, reduction='mean')
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -62,7 +68,7 @@ class BaseModule(nn.Module):
 
         # Loss
         if criterion is None:
-            self.criterion = nn.MarginRankingLoss()
+            self.criterion = self.criterion_default(**self.criterion_default_kwargs)
         else:
             self.criterion = criterion
 

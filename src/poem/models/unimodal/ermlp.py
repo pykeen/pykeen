@@ -21,6 +21,10 @@ class ERMLP(BaseModule):
     This model uses a neural network-based approach.
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -34,9 +38,6 @@ class ERMLP(BaseModule):
         init: bool = True,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         if hidden_dim is None:
             hidden_dim = embedding_dim
 

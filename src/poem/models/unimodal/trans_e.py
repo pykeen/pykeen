@@ -29,6 +29,11 @@ class TransE(BaseModule):
        - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        scoring_fct_norm=dict(type=int, low=1, high=2)
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -41,9 +46,6 @@ class TransE(BaseModule):
         random_seed: Optional[int] = None,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

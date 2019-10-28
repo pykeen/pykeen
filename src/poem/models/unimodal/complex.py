@@ -18,6 +18,14 @@ from ...utils import l2_regularization
 class ComplEx(RegularizedModel):
     """An implementation of ComplEx [trouillon2016]_."""
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        regularization_weight=dict(type=float, low=0.0, high=0.1, scale='log'),
+    )
+
+    criterion_default = SoftplusLoss
+    criterion_default_kwargs = dict(reduction='mean')
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -49,9 +57,6 @@ class ComplEx(RegularizedModel):
         :param regularization_weight: float
             A weight for the regularization term's contribution relative to the loss value.
         """
-        if criterion is None:
-            criterion = SoftplusLoss(reduction='mean')
-
         super().__init__(
             regularization_weight=regularization_weight,
             triples_factory=triples_factory,

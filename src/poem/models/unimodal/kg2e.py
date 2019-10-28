@@ -96,6 +96,12 @@ class KG2E(BaseModule):
     Expected Likelihood).
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
+        c_max=dict(type=float, low=1.0, high=10.0),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -112,9 +118,6 @@ class KG2E(BaseModule):
         c_max: float = 5.,
         init: bool = True,
     ) -> None:
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

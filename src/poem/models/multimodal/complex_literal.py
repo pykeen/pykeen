@@ -18,6 +18,18 @@ from ...utils import slice_doubles
 class ComplExLiteral(MultimodalBaseModule):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        input_dropout={
+            'type': float,
+            'low': 0.1,
+            'high': 0.3,
+        },
+    )
+
+    criterion_default = nn.BCELoss
+    criterion_default_kwargs = {}
+
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
@@ -28,9 +40,6 @@ class ComplExLiteral(MultimodalBaseModule):
         random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = nn.BCELoss()
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

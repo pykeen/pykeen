@@ -31,6 +31,10 @@ class DistMult(BaseModule):
 
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -43,9 +47,6 @@ class DistMult(BaseModule):
         init: bool = True,
     ) -> None:
         """Initialize the model."""
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

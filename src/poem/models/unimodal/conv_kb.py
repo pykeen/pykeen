@@ -28,6 +28,12 @@ class ConvKB(BaseModule):
        - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
     """
 
+    hpo_default = dict(
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        hidden_dropout_rate=dict(type=float, low=0.1, high=0.9),
+        num_filters=dict(type=int, low=300, high=500, q=50),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -45,9 +51,6 @@ class ConvKB(BaseModule):
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
-        if criterion is None:
-            criterion = nn.MarginRankingLoss(margin=1., reduction='mean')
-
         super().__init__(
             triples_factory=triples_factory,
             criterion=criterion,
