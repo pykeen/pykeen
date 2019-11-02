@@ -2,9 +2,9 @@
 
 """Implementations of various knowledge graph embedding models.
 
-===================  ========================================  ================
+===================  ========================================  ==================
 Name                 Reference                                 Citation
-===================  ========================================  ================
+===================  ========================================  ==================
 ComplEx              :class:`poem.models.ComplEx`              [trouillon2016]_
 ComplExLiteral       :class:`poem.models.ComplExLiteral`       [agustinus2018]_
 ConvE                :class:`poem.models.ConvE`                [dettmers2018]_
@@ -12,6 +12,7 @@ ConvKB               :class:`poem.models.ConvKB`               [nguyen2018]_
 DistMult             :class:`poem.models.DistMult`             [yang2014]_
 DistMultLiteral      :class:`poem.models.DistMultLiteral`      [agustinus2018]_
 ERMLP                :class:`poem.models.ERMLP`                [dong2014]_
+ERMLPE               :class:`poem.models.ERMLPE`               [sharifzadeh2019]_
 HolE                 :class:`poem.models.HolE`                 [nickel2016]_
 KG2E                 :class:`poem.models.KG2E`                 [he2015]_
 NTN                  :class:`poem.models.NTN`                  [socher2013]_
@@ -26,7 +27,7 @@ TransH               :class:`poem.models.TransH`               [wang2014]_
 TransR               :class:`poem.models.TransR`               [lin2015]_
 TuckER               :class:`poem.models.TuckER`               [balazevic2019]_
 UnstructuredModel    :class:`poem.models.UnstructuredModel`    [bordes2014]_
-===================  ========================================  ================
+===================  ========================================  ==================
 
 .. note:: This table can be re-generated with ``poem ls models -f rst``
 """
@@ -42,6 +43,7 @@ from .unimodal import (
     ConvKB,
     DistMult,
     ERMLP,
+    ERMLPE,
     HolE,
     KG2E,
     NTN,
@@ -67,6 +69,7 @@ __all__ = [
     'DistMult',
     'DistMultLiteral',
     'ERMLP',
+    'ERMLPE',
     'HolE',
     'KG2E',
     'NTN',

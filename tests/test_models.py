@@ -269,6 +269,12 @@ class TestERMLP(_ModelTestCase, unittest.TestCase):
     }
 
 
+class TestERMLPE(_ModelTestCase, unittest.TestCase):
+    """Test the extended ERMLP model."""
+
+    model_cls = poem.models.ERMLPE
+
+
 class TestHolE(_ModelTestCase, unittest.TestCase):
     """Test the HolE model."""
 

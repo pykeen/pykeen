@@ -33,6 +33,7 @@
                 <http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf>`_. ICML. Vol. 11.
 .. [nickel2016] Nickel, M. *et al.* (2016) `Holographic Embeddings of Knowledge Graphs
                 <https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828>`_. AAAI 2016.
+.. [sharifzadeh2019] Sharifzadeh *et al.* (2019) Extension of ERMLP in POEM.
 .. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion
              <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
 .. [sun2019] Sun, Z., *et al.* (2019) `RotatE: Knowledge Graph Embeddings by relational rotation in complex space
@@ -53,6 +54,7 @@ from .conv_e import ConvE
 from .conv_kb import ConvKB
 from .distmult import DistMult
 from .ermlp import ERMLP
+from .ermlpe import ERMLPE
 from .hole import HolE
 from .kg2e import KG2E
 from .ntn import NTN
@@ -74,6 +76,7 @@ __all__ = [
     'ConvKB',
     'DistMult',
     'ERMLP',
+    'ERMLPE',
     'HolE',
     'KG2E',
     'NTN',

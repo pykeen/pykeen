@@ -78,31 +78,32 @@ POEM is extensible such that:
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in POEM. These markdown tables can be regenerated with `poem ls`.
 
-### Models (21)
+### Models (22)
 
-| Name                | Reference                         | Citation                 |
-|---------------------|-----------------------------------|--------------------------|
-| ComplEx             | `poem.models.ComplEx`             | Trouillon *et al.*, 2016 |
-| ComplExLiteralCWA   | `poem.models.ComplExLiteral`      | Agustinus *et al.*, 2018 |
-| ConvE               | `poem.models.ConvE`               | Dettmers *et al.*, 2018  |
-| ConvKB              | `poem.models.ConvKB`              | Nguyen *et al.*, 2018    |
-| DistMult            | `poem.models.DistMult`            | Yang *et al.*, 2014      |
-| DistMultLiteral     | `poem.models.DistMultLiteral`     | Agustinus *et al.*, 2018 |
-| ERMLP               | `poem.models.ERMLP`               | Dong *et al.*, 2014      |
-| HolE                | `poem.models.HolE`                | Nickel *et al.*, 2016    |
-| KG2E                | `poem.models.KG2E`                | He *et al.*, 2015        |
-| NTN                 | `poem.models.NTN`                 | Socher *et al.*, 2013    |
-| ProjE               | `poem.models.ProjE`               | Shi *et al.*, 2017       |
-| RESCAL              | `poem.models.RESCAL`              | Nickel *et al.*, 2011    |
-| RotatE              | `poem.models.RotatE`              | Sun *et al.*, 2019       |
-| SimplE              | `poem.models.SimplE`              | Kazemi *et al.*, 2018    |
-| StructuredEmbedding | `poem.models.StructuredEmbedding` | Bordes *et al.*, 2011    |
-| TransD              | `poem.models.TransD`              | Ji *et al.*, 2015        |
-| TransE              | `poem.models.TransE`              | Bordes *et al.*, 2013    |
-| TransH              | `poem.models.TransH`              | Wang *et al.*, 2014      |
-| TransR              | `poem.models.TransR`              | Lin *et al.*, 2015       |
-| TuckER              | `poem.models.TuckER`              | Balazevic *et al.*, 2019 |
-| UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014    |
+| Name                | Reference                         | Citation                   |
+|---------------------|-----------------------------------|----------------------------|
+| ComplEx             | `poem.models.ComplEx`             | Trouillon *et al.*, 2016   |
+| ComplExLiteral      | `poem.models.ComplExLiteral`      | Agustinus *et al.*, 2018   |
+| ConvE               | `poem.models.ConvE`               | Dettmers *et al.*, 2018    |
+| ConvKB              | `poem.models.ConvKB`              | Nguyen *et al.*, 2018      |
+| DistMult            | `poem.models.DistMult`            | Yang *et al.*, 2014        |
+| DistMultLiteral     | `poem.models.DistMultLiteral`     | Agustinus *et al.*, 2018   |
+| ERMLP               | `poem.models.ERMLP`               | Dong *et al.*, 2014        |
+| ERMLPE              | `poem.models.ERMLPE`              | Sharifzadeh *et al.*, 2019 |
+| HolE                | `poem.models.HolE`                | Nickel *et al.*, 2016      |
+| KG2E                | `poem.models.KG2E`                | He *et al.*, 2015          |
+| NTN                 | `poem.models.NTN`                 | Socher *et al.*, 2013      |
+| ProjE               | `poem.models.ProjE`               | Shi *et al.*, 2017         |
+| RESCAL              | `poem.models.RESCAL`              | Nickel *et al.*, 2011      |
+| RotatE              | `poem.models.RotatE`              | Sun *et al.*, 2019         |
+| SimplE              | `poem.models.SimplE`              | Kazemi *et al.*, 2018      |
+| StructuredEmbedding | `poem.models.StructuredEmbedding` | Bordes *et al.*, 2011      |
+| TransD              | `poem.models.TransD`              | Ji *et al.*, 2015          |
+| TransE              | `poem.models.TransE`              | Bordes *et al.*, 2013      |
+| TransH              | `poem.models.TransH`              | Wang *et al.*, 2014        |
+| TransR              | `poem.models.TransR`              | Lin *et al.*, 2015         |
+| TuckER              | `poem.models.TuckER`              | Balazevic *et al.*, 2019   |
+| UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014      |
 
 ### Data Sets (8)
 
