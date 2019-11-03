@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with TransD as described by Ji et al., 2015"
+  },
+  "pipeline": {
+    "data_set": "wn18",
+    "model": "TransD",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "relation_dim": 50,
+      "scoring_fct_norm": 2
+    },
+    "optimizer": "Adam",
+    "criterion": "MarginRankingLoss",
+    "criterion_kwargs": {
+      "margin": 1
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 200,
+      "negative_sampler_cls": "BernoulliNegativeSampler"
+    }
+  }
+}

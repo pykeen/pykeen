@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with ComplEx as described by Trouillon et al., 2016"
+  },
+  "pipeline": {
+    "data_set": "wn18",
+    "model": "ComplEx",
+    "model_kwargs": {
+      "embedding_dim": 150,
+      "regularization_weight": 0.03
+    },
+    "optimizer": "AdaGrad",
+    "optimizer_kwargs": {
+      "lr": 0.5
+    },
+    "criterion": "SoftplusLoss",
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 4831,
+      "negative_sampler_cls": "BasicNegativeSampler",
+      "num_negs_per_pos": 1
+    }
+  }
+}
+

@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with DistMult as described by Yang et al., 2014",
+    "comments": "For each positive triple, DistMult create two negatives where subject and object are corrupted"
+  },
+  "pipeline": {
+    "data_set": "wn18",
+    "model": "DistMult",
+    "model_kwargs": {
+      "embedding_dim": 100,
+      "regularization_weight": 0.0001
+    },
+    "optimizer": "Adagrad",
+    "optimizer_kwargs": {
+      "lr": 0.1
+    },
+    "criterion": "MarginRankingLoss",
+    "criterion_kwargs": {
+      "margin": 1
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 300,
+      "batch_size": 48310,
+      "negative_sampler_cls": "BasicNegativeSampler",
+      "num_negs_per_pos": 2
+    }
+  }
+}

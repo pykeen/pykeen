@@ -1,21 +1,19 @@
 {
   "metadata": {
-    "title": "Learn WordNet Data Set with TransE as described by Bordes et al., 2013"
+    "title": "Learn WN18 Data Set with KG2E as described by He et al., 2015"
   },
   "pipeline": {
     "data_set": "wn18",
-    "model": "TransE",
+    "model": "KG2E",
     "model_kwargs": {
-      "embedding_dim": 20,
-      "scoring_fct_norm": 2
+      "embedding_dim": 50,
+      "c_min": 0.03,
+      "c_max": 3.0
     },
     "optimizer": "SGD",
-    "optimizer_kwargs": {
-      "lr": 0.01
-    },
     "criterion": "MarginRankingLoss",
     "criterion_kwargs": {
-      "margin": 2
+      "margin": 4.0
     },
     "early_stopping": true,
     "early_stopping_kwargs": {
@@ -24,7 +22,9 @@
     },
     "training_loop": "OWA",
     "training_kwargs": {
-      "num_epochs": 1000
+      "num_epochs": 500,
+      "batch_size": 20,
+      "negative_sampler_cls": "BernoulliNegativeSampler"
     }
   }
 }

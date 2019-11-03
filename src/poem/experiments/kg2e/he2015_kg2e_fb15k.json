@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "title": "Learn FB15K Data Set with KG2E as described by He et al., 2015"
+  },
+  "pipeline": {
+    "data_set": "fb15k",
+    "model": "KG2E",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "c_min": 0.05,
+      "c_max": 5.0
+    },
+    "optimizer": "SGD",
+    "criterion": "MarginRankingLoss",
+    "criterion_kwargs": {
+      "margin": 1.0
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 2480,
+      "negative_sampler_cls": "BernoulliNegativeSampler"
+    }
+  }
+}

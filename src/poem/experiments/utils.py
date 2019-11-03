@@ -7,9 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, List, Mapping, Optional
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 
 from ..pipeline import PipelineResult, pipeline
 
@@ -64,6 +62,9 @@ class PipelineResultSet:
 
     def plot_losses(self, sns_kwargs: Optional[Mapping[str, Any]] = None):
         """Plot the several losses."""
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
         df = self.get_loss_df()
         sns.set()
         if self.pipeline_results[0].title is not None:

@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with RotatE as described by Sun et al., 2019",
+    "comments": "Could not find initial learning rate; could not find number of epochs"
+  },
+  "pipeline": {
+    "data_set": "wn18",
+    "model": "RotatE",
+    "model_kwargs": {
+      "embedding_dim": 500
+    },
+    "optimizer": "Adam",
+    "criterion": "NegativeSamplingSelfAdversarialLoss",
+    "criterion_kwargs": {
+      "adversarial_temperature": 0.5,
+      "margin": 12
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 512,
+      "negative_sampler_cls": "BasicNegativeSampler",
+      "num_negs_per_pos": 1024
+    }
+  }
+}
+

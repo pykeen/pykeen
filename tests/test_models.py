@@ -13,6 +13,7 @@ from click.testing import CliRunner, Result
 from torch.optim import SGD
 from torch.optim.adagrad import Adagrad
 
+import poem.experiments
 import poem.models
 from poem.datasets.kinship import TRAIN_PATH as KINSHIP_TRAIN_PATH
 from poem.datasets.nations import (
@@ -435,3 +436,28 @@ class TestTesting(unittest.TestCase):
 
         for name in model_names:
             self.assertIn(f':class:`poem.models.{name}`', poem.models.__doc__, msg=f'Forgot to document {name}')
+
+    def test_models_have_experiments(self):
+        """Test that each model has an experiment folder in :mod:`poem.experiments`."""
+        experiments_path = os.path.abspath(os.path.dirname(poem.experiments.__file__))
+        experiment_blacklist = {
+            'DistMultLiteral',  # FIXME
+            'ComplExLiteral',  # FIXME
+            'UnstructuredModel',
+            'StructuredEmbedding',
+            'RESCAL',
+            'NTN',
+            'ERMLP',
+            'ConvE',  # FIXME
+            'ProjE',  # FIXME
+            'ERMLPE',  # FIXME
+        }
+        model_names = set(poem.models.__all__) - SKIP_MODULES - experiment_blacklist
+        missing = {
+            model
+            for model in model_names
+            if not os.path.exists(os.path.join(experiments_path, model.lower()))
+        }
+        if missing:
+            _s = '\n'.join(f'- [ ] {model.lower()}' for model in sorted(missing))
+            self.fail(f'Missing experimental configuration directories for the following models:\n{_s}')

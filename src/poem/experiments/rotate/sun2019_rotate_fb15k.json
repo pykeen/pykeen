@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "title": "Learn FB15K Data Set with RotatE as described by Sun et al., 2019",
+    "comments": "Could not find initial learning rate; could not find number of epochs"
+  },
+  "pipeline": {
+    "data_set": "fb15k",
+    "model": "RotatE",
+    "model_kwargs": {
+      "embedding_dim": 1000
+    },
+    "optimizer": "Adam",
+    "criterion": "NegativeSamplingSelfAdversarialLoss",
+    "criterion_kwargs": {
+      "adversarial_temperature": 1.0,
+      "margin": 24
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 2048,
+      "negative_sampler_cls": "BasicNegativeSampler",
+      "num_negs_per_pos": 128
+    }
+  }
+}
+

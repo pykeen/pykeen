@@ -34,11 +34,11 @@ def run_example_experiment(replicates: Optional[int] = None):
 
 def run_bordes2013_transe_wn18() -> PipelineResult:
     """Train TransE on WordNet as described in [bordes2013]_."""
-    path = os.path.join(HERE, 'bordes2013', 'bordes2013_transe_wn18.json')
+    path = os.path.join(HERE, 'trans_e', 'bordes2013_transe_wn18.json')
     return pipeline_from_path(path)
 
 
 def run_bordes2013_transe_fb15k() -> PipelineResult:
     """Train TransE on FB15K as described in [bordes2013]_."""
-    path = os.path.join(HERE, 'bordes2013', 'bordes2013_transe_fb15k.json')
+    path = os.path.join(HERE, 'trans_e', 'bordes2013_transe_fb15k.json')
     return pipeline_from_path(path)

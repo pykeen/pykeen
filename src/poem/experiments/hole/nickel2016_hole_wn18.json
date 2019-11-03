@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with HolE as described by Nickel et al., 2016",
+    "comments": "Based on https://github.com/mnick/holographic-embeddings/blob/master/run_hole_wn18.sh, however it is not sure whether this is the correct setting"
+  },
+  "pipeline": {
+    "data_set": "wn18",
+    "model": "HolE",
+    "model_kwargs": {
+      "embedding_dim": 150
+    },
+    "optimizer": "AdaGrad",
+    "optimizer_kwargs": {
+      "lr": 0.1
+    },
+    "criterion": "MarginRankingLoss",
+    "criterion_kwargs": {
+      "margin": 0.2
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 4831,
+      "negative_sampler_cls": "BasicNegativeSampler",
+      "num_negs_per_pos": 1
+    }
+  }
+}

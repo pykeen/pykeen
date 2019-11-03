@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "title": "Learn WN18RR Data Set with ConvKB as described by Nguyen et al., 2018"
+  },
+  "pipeline": {
+    "data_set": "wn18rr",
+    "model": "ConvKB",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "num_filters": 500,
+      "regularization_weight": 0.001
+    },
+    "optimizer": "Adam",
+    "optimizer_kwargs": {
+      "lr": 0.0001
+    },
+    "criterion": "SoftplusLoss",
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 200,
+      "batch_size": 256,
+      "negative_sampler_cls": "BernoulliNegativeSampler",
+      "num_negs_per_pos": 1
+    }
+  }
+}

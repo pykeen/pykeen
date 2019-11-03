@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with SimplE as described by Kazemi et al., 2018",
+    "comments": "No label smoothing has been used for FB15k. Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs."
+
+  },
+  "pipeline": {
+    "data_set": "wn18",
+    "model": "SimplE",
+    "model_kwargs": {
+      "embedding_dim": 200,
+      "regularization_weight": 0.03
+    },
+    "optimizer": "Adagrad",
+    "optimizer_kwargs": {
+      "lr": 0.1
+    },
+    "criterion": "SoftplusLoss",
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "metric": "mean_rank",
+      "frequency": 50
+    },
+    "training_loop": "OWA",
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 4831,
+      "negative_sampler_cls": "BasicNegativeSampler",
+      "num_negs_per_pos": 1
+    }
+  }
+}
