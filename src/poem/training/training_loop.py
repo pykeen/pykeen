@@ -52,6 +52,8 @@ class TrainingLoop(ABC):
 
         if self.model.is_mr_loss:
             self._loss_helper = self._mr_loss_helper
+        elif self.model.is_self_adversiarial_neg_sampling_loss:
+            self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
         else:
             self._loss_helper = self._label_loss_helper
 
@@ -94,7 +96,7 @@ class TrainingLoop(ABC):
         """
         # Sanity check
         if self.model.is_mr_loss and label_smoothing > 0.:
-            raise ValueError('Margin Ranking Loss cannot be used together with label smoothing.')
+            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
 
         # Ensure the model is on the correct device
         self.model: BaseModule = self.model.to(self.device)
@@ -196,6 +198,14 @@ class TrainingLoop(ABC):
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
         label_smoothing: float,
+    ) -> torch.FloatTensor:
+        raise NotImplementedError
+
+    def _self_adversarial_negative_sampling_loss_helper(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        _label_smoothing=None,
     ) -> torch.FloatTensor:
         raise NotImplementedError
 

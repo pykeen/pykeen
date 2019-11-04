@@ -14,9 +14,15 @@ from .utils import get_cls, normalize_string
 __all__ = [
     'BCEAfterSigmoid',
     'SoftplusLoss',
+    'NegativeSamplingSelfAdversarialLoss',
     'losses',
     'get_loss_cls',
 ]
+
+_REDUCTION_METHODS = dict(
+    mean=torch.mean,
+    sum=torch.sum,
+)
 
 
 class SoftplusLoss(nn.Module):
@@ -25,10 +31,7 @@ class SoftplusLoss(nn.Module):
     def __init__(self, reduction: str = 'mean') -> None:
         super().__init__()
         self.softplus = torch.nn.Softplus(beta=1, threshold=20)
-        if reduction == 'mean':
-            self._reduction_method = torch.mean
-        else:
-            self._reduction_method = torch.sum
+        self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def forward(
         self,
@@ -54,11 +57,44 @@ class BCEAfterSigmoid(nn.Module):
         return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
 
 
+class NegativeSamplingSelfAdversarialLoss(nn.Module):
+    """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
+
+    def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean') -> None:
+        super().__init__()
+        self.adversarial_temperature = adversarial_temperature
+        self.margin = margin
+        self._reduction_method = _REDUCTION_METHODS[reduction]
+
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Calculate the loss for the given scores.
+
+        .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
+        """
+        neg_score_weights = functional.softmax(neg_scores * self.adversarial_temperature, dim=-1).detach()
+        neg_distances = -neg_scores
+        weighted_neg_scores = neg_score_weights * functional.logsigmoid(neg_distances - self.margin)
+        neg_loss = self._reduction_method(weighted_neg_scores)
+        pos_distances = -pos_scores
+        pos_loss = self._reduction_method(functional.logsigmoid(self.margin - pos_distances))
+        loss = -pos_loss - neg_loss
+
+        if self._reduction_method is torch.mean:
+            loss = loss / 2.
+
+        return loss
+
+
 _LOSSES_LIST: List[Type[Loss]] = [
     MarginRankingLoss,
     BCELoss,
     SoftplusLoss,
     BCEAfterSigmoid,
+    NegativeSamplingSelfAdversarialLoss,
 ]
 
 losses: Mapping[str, Type[Loss]] = {
@@ -73,6 +109,7 @@ losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
     BCELoss: {},
     SoftplusLoss: {},
     BCEAfterSigmoid: {},
+    NegativeSamplingSelfAdversarialLoss: {},
 }
 
 

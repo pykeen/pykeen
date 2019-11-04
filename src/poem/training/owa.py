@@ -117,6 +117,18 @@ class OWATrainingLoop(TrainingLoop):
             negative_scores=negative_scores,
         )
 
+    def _self_adversarial_negative_sampling_loss_helper(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        _label_smoothing=None,
+    ) -> torch.FloatTensor:
+        """Compute self adversarial negative sampling loss."""
+        return self.model.compute_self_adversarial_negative_sampling_loss(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+        )
+
     def _label_loss_helper(
         self,
         positive_scores: torch.FloatTensor,

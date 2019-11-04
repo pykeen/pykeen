@@ -13,6 +13,7 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
+from ..loss_functions import NegativeSamplingSelfAdversarialLoss
 from ..triples import TriplesFactory
 from ..typing import Loss
 from ..utils import resolve_device
@@ -74,6 +75,8 @@ class BaseModule(nn.Module):
 
         # TODO: Check loss functions that require 1 and -1 as label but only
         self.is_mr_loss = isinstance(self.criterion, nn.MarginRankingLoss)
+
+        self.is_self_adversiarial_neg_sampling_loss = isinstance(self.criterion, NegativeSamplingSelfAdversarialLoss)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
@@ -239,11 +242,13 @@ class BaseModule(nn.Module):
         :return: torch.Tensor, dtype: float, scalar
             The margin ranking loss value.
         """
-        assert self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin ranking losses. ' \
-                                'Please use the compute_label_loss method instead.'
+        if not self.is_mr_loss:
+            raise RuntimeError(
+                'The chosen criterion does not allow the calculation of margin ranking'
+                ' losses. Please use the compute_loss method instead.'
+            )
         y = torch.ones_like(negative_scores, device=self.device)
-        loss = self.criterion(positive_scores, negative_scores, y)
-        return loss
+        return self.criterion(positive_scores, negative_scores, y)
 
     def compute_label_loss(
         self,
@@ -253,17 +258,57 @@ class BaseModule(nn.Module):
         """Compute the classification loss.
 
         :param predictions: shape: s
-            The predicted scores.
+            The tensor containing predictions.
         :param labels: shape: s
-            The target values.
+            The tensor containing labels.
 
         :return: torch.Tensor, dtype: float, scalar
             The label loss value.
         """
-        assert not self.is_mr_loss, 'The chosen criterion does not allow the calculation of margin label losses. ' \
-                                    'Please use the compute_mr_loss method instead.'
-        loss = self.criterion(predictions, labels)
-        return loss
+        return self._compute_loss(tensor_1=predictions, tensor_2=labels)
+
+    def compute_self_adversarial_negative_sampling_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor
+    ) -> torch.FloatTensor:
+        """Compute self adversarial negative sampling loss.
+
+        :param positive_scores: shape: s
+            The tensor containing the positive scores.
+        :param negative_scores: shape: s
+            Tensor containing the negative scores.
+        :return: torch.Tensor, dtype: float, scalar
+            The loss value.
+        """
+        if not self.is_self_adversiarial_neg_sampling_loss:
+            raise RuntimeError(
+                'The chosen criterion does not allow the calculation of self adversarial negative sampling'
+                ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.'
+            )
+        return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
+
+    def _compute_loss(
+        self,
+        tensor_1: torch.FloatTensor,
+        tensor_2: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the loss for functions requiring two separate tensors as input.
+
+        :param tensor_1: shape: s
+            The tensor containing predictions or positive scores.
+        :param tensor_2: shape: s
+            The tensor containing target values or the negative scores.
+
+        :return: torch.Tensor, dtype: float, scalar
+            The label loss value.
+        """
+        if self.is_mr_loss:
+            raise RuntimeError(
+                'The chosen criterion does not allow the calculation of margin label'
+                ' losses. Please use the compute_mr_loss method instead.'
+            )
+        return self.criterion(tensor_1, tensor_2)
 
     @abstractmethod
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:
@@ -386,16 +431,51 @@ class RegularizedModel(BaseModule):
         self.regularization_weight = regularization_weight
         self.current_regularization_term = None
 
+    @property
+    def _regularization_delta(self):
+        return self.regularization_weight * self.current_regularization_term
+
+    def _compute_loss(
+        self,
+        tensor_1: torch.FloatTensor,
+        tensor_2: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        assert self.current_regularization_term is not None, \
+            "Regularized models have to set 'self.current_regularization_term' in the forward pass"
+        return super()._compute_loss(tensor_1, tensor_2) + self._regularization_delta
+
     def compute_label_loss(
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        assert self.current_regularization_term is not None, \
-            "Regularized models have to set 'self.current_regularization_term' in the forward pass"
-        loss = super().compute_label_loss(predictions=predictions, labels=labels)
-        loss += self.regularization_weight * self.current_regularization_term
-        return loss
+    ) -> torch.FloatTensor:
+        """Compute the classification loss.
+
+        :param predictions: shape: s
+            The tensor containing predictions.
+        :param labels: shape: s
+            The tensor containing labels.
+
+        :return: torch.Tensor, dtype: float, scalar
+            The label loss value.
+        """
+        return self._compute_loss(tensor_1=predictions, tensor_2=labels)
+
+    def compute_self_adversarial_negative_sampling_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor
+    ) -> torch.FloatTensor:
+        """Compute self adversarial negative sampling loss.
+
+        :param positive_scores: shape: s
+            The tensor containing the positive scores.
+        :param negative_scores: shape: s
+            Tensor containing the negative scores.
+        :return: torch.Tensor, dtype: float, scalar
+            The loss value.
+        """
+        return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
 
     def compute_mr_loss(
         self,
@@ -404,6 +484,4 @@ class RegularizedModel(BaseModule):
     ) -> torch.FloatTensor:  # noqa: D102
         assert self.current_regularization_term is not None, \
             "Regularized models have to set 'self.current_regularization_term' in the forward pass"
-        loss = super().compute_mr_loss(positive_scores=positive_scores, negative_scores=negative_scores)
-        loss += self.regularization_weight * self.current_regularization_term
-        return loss
+        return super().compute_mr_loss(positive_scores, negative_scores) + self._regularization_delta

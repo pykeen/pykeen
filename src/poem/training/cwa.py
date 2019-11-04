@@ -56,12 +56,10 @@ class CWATrainingLoop(TrainingLoop):
                 num_classes=self.model.num_entities,
             )
 
-        loss = self.model.compute_label_loss(
-            predictions=predictions,
-            labels=labels,
+        return self.model._compute_loss(
+            tensor_1=predictions,
+            tensor_2=labels,
         )
-
-        return loss
 
     def _mr_loss_helper(
         self,
@@ -82,6 +80,22 @@ class CWATrainingLoop(TrainingLoop):
         positive_scores = predictions[labels == 1][repeat_true_labels]
 
         return self.model.compute_mr_loss(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+        )
+
+    def _self_adversarial_negative_sampling_loss_helper(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        _label_smoothing=None,
+    ) -> torch.FloatTensor:
+        """Compute self adversarial negative sampling loss."""
+        # Split positive and negative scores
+        positive_scores = predictions[labels == 1]
+        labels_negative = predictions[labels == 0]
+        negative_scores = predictions[labels_negative]
+        return self.model.compute_self_adversarial_negative_sampling_loss(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
         )
