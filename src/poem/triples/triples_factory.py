@@ -150,14 +150,8 @@ def _map_triples_elements_to_ids(
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    #: The integer indexes for each entity
-    all_entities: torch.LongTensor
-
     #: The mapping from entities' labels to their indexes
     entity_to_id: EntityMapping
-
-    #: The integer indexes for each relation
-    all_relations: torch.LongTensor
 
     #: The mapping from relations' labels to their indexes
     relation_to_id: RelationMapping
@@ -214,10 +208,6 @@ class TriplesFactory:
         if relation_to_id is None:
             relation_to_id = _create_relation_mapping(triples=self.triples)
         self.relation_to_id = relation_to_id
-
-        # Store entity and relation IDs
-        self.all_entities = torch.arange(self.num_entities)
-        self.all_relations = torch.arange(self.num_relations)
 
         # Map triples of labels to triples of IDs.
         self.mapped_triples = _map_triples_elements_to_ids(
