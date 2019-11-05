@@ -12,6 +12,7 @@ from tqdm import tqdm, trange
 
 from .early_stopping import EarlyStopper
 from ..models.base import BaseModule
+from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 
 __all__ = [
@@ -72,6 +73,7 @@ class TrainingLoop(ABC):
         num_epochs: int = 1,
         batch_size: int = 128,
         label_smoothing: float = 0.0,
+        sampler: Optional[str] = None,
         continue_training: bool = False,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         early_stopper: Optional[EarlyStopper] = None,
@@ -84,6 +86,8 @@ class TrainingLoop(ABC):
             The batch size to use for mini-batch training.
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
+        :param sampler: (None or 'schlichtkrull')
+            The type of sampler to use. At the moment OWA in R-GCN is the only user of schlichtkrull sampling.
         :param continue_training:
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param tqdm_kwargs:
@@ -118,11 +122,19 @@ class TrainingLoop(ABC):
         # Create training instances
         self.training_instances = self._create_instances()
 
-        # Create data loader for training
+        # Create Sampler
+        if sampler == 'schlichtkrull':
+            sampler = GraphSampler(self.triples_factory)
+            shuffle = False
+        else:
+            sampler = None
+            shuffle = True
+
         train_data_loader = DataLoader(
+            sampler=sampler,
             dataset=self.training_instances,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=shuffle,
         )
 
         # Bind

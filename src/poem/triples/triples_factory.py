@@ -232,6 +232,11 @@ class TriplesFactory:
         """The number of unique relations."""
         return len(self.relation_to_id)
 
+    @property
+    def num_triples(self) -> int:  # noqa: D401
+        """The number of triples."""
+        return self.mapped_triples.shape[0]
+
     def get_inverse_relation_id(self, relation: str) -> int:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:

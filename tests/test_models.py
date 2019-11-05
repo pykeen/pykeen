@@ -43,6 +43,7 @@ class _ModelTestCase:
     batch_size: int = 16
     embedding_dim: int = 8
     create_inverse_triples: bool = False
+    sampler = 'default'
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
@@ -97,7 +98,7 @@ class _ModelTestCase:
 
     def test_forward_owa(self) -> None:
         """Test the model's ``forward_owa()`` function."""
-        batch = torch.zeros(self.batch_size, 3, dtype=torch.long, device=self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
         try:
             scores = self.model.forward_owa(batch)
         except RuntimeError as e:
@@ -110,7 +111,7 @@ class _ModelTestCase:
 
     def test_forward_cwa(self) -> None:
         """Test the model's ``forward_cwa()`` function."""
-        batch = torch.zeros(self.batch_size, 2, dtype=torch.long, device=self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
         try:
             scores = self.model.forward_cwa(batch)
         except NotImplementedError:
@@ -125,7 +126,7 @@ class _ModelTestCase:
 
     def test_forward_inverse_cwa(self) -> None:
         """Test the model's ``forward_inverse_cwa()`` function."""
-        batch = torch.zeros(self.batch_size, 2, dtype=torch.long, device=self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
         try:
             scores = self.model.forward_inverse_cwa(batch)
         except NotImplementedError:
@@ -144,7 +145,7 @@ class _ModelTestCase:
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
-        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128)
+        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128, sampler=self.sampler)
         self.assertIsInstance(losses, list)
 
     def test_train_cwa(self) -> None:
@@ -153,12 +154,12 @@ class _ModelTestCase:
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
-        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128)
+        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128, sampler='default')
         self.assertIsInstance(losses, list)
 
-    def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size):
+    def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
-            losses = loop.train(num_epochs=5, batch_size=128)
+            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler)
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -168,11 +169,11 @@ class _ModelTestCase:
             return losses
 
     def test_cli_training_nations(self):
-        """Test rnuning the pipeline on almost all models with only training data."""
+        """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', NATIONS_TRAIN_PATH])
 
     def test_cli_training_kinship(self):
-        """Test rnuning the pipeline on almost all models with only training data."""
+        """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', KINSHIP_TRAIN_PATH])
 
     def test_cli_training_nations_testing(self):
@@ -183,6 +184,9 @@ class _ModelTestCase:
         """Test running the pipeline on all models."""
         if self.model_cls is poem.models.ConvKB:
             self.skipTest('ConvKB takes too long')
+        if self.model_cls is poem.models.RGCN:
+            self.skipTest('R-GCN takes too long')
+            # TODO: Once post_parameter_update is available, implement enrichment precomputation and remove this point.
         if self.model_cls is poem.models.ConvE:
             self.skipTest('ConvE needs more work in the magical CLI')
         if self.model_cls is poem.models.HolE:
@@ -316,6 +320,25 @@ class TestRESCAL(_ModelTestCase, unittest.TestCase):
     """Test the RESCAL model."""
 
     model_cls = poem.models.RESCAL
+
+
+class TestRGCN(_ModelTestCase, unittest.TestCase):
+    """Test the R-GCN model."""
+
+    model_cls = poem.models.RGCN
+    sampler = 'schlichtkrull'
+
+
+class TestRGCNBlock(_ModelTestCase, unittest.TestCase):
+    """Test the R-GCN model with block decomposition."""
+
+    model_cls = poem.models.RGCN
+    sampler = 'schlichtkrull'
+    model_kwargs = {
+        'decomposition': 'block',
+        'num_bases_or_blocks': 4,
+        'message_normalization': 'symmetric',
+    }
 
 
 class TestRotatE(_ModelTestCase, unittest.TestCase):

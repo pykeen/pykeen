@@ -7,6 +7,7 @@ from typing import Optional
 
 import click
 
+from .. import get_model_cls
 from ...evaluation import evaluators, get_evaluator_cls
 from ...loss_functions import get_loss_cls, losses
 from ...training import get_training_loop_cls, training_loops
@@ -109,6 +110,12 @@ CLI_OPTIONS = {
         default=0.2,
         show_default=True,
     ),
+    'inner_model': click.option(
+        '--inner-model',
+        callback=_make_callback(get_model_cls),
+        default='distmult',
+        show_default=True,
+    )
 }
 optimizer_option = click.option(
     '-o', '--optimizer',

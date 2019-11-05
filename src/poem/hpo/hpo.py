@@ -336,6 +336,11 @@ def suggest_kwargs(
                 _kwargs[name] = trial.suggest_loguniform(name=name, low=low, high=high)
             else:
                 _kwargs[name] = trial.suggest_uniform(name=name, low=low, high=high)
+        elif dtype == 'categorical':
+            choices = info['choices']
+            _kwargs[name] = trial.suggest_categorical(name=name, choices=choices)
+        elif dtype is bool:
+            _kwargs[name] = trial.suggest_categorical(name=name, choices=[True, False])
         else:
             logger.warning(f'Unhandled parameter {name} ({dtype})')
 

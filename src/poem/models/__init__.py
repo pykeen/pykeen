@@ -18,6 +18,7 @@ KG2E                 :class:`poem.models.KG2E`                 [he2015]_
 NTN                  :class:`poem.models.NTN`                  [socher2013]_
 ProjE                :class:`poem.models.ProjE`                [shi2017]_
 RESCAL               :class:`poem.models.RESCAL`               [nickel2011]_
+R-GCN                :class:`poem.models.RGCN`                 [schlichtkrull2018]_
 RotatE               :class:`poem.models.RotatE`               [sun2019]_
 SimplE               :class:`poem.models.SimplE`               [kazemi2018]_
 StructuredEmbedding  :class:`poem.models.StructuredEmbedding`  [bordes2011]_
@@ -49,6 +50,7 @@ from .unimodal import (
     NTN,
     ProjE,
     RESCAL,
+    RGCN,
     RotatE,
     SimplE,
     StructuredEmbedding,
@@ -75,6 +77,7 @@ __all__ = [
     'NTN',
     'ProjE',
     'RESCAL',
+    'RGCN',
     'RotatE',
     'SimplE',
     'StructuredEmbedding',

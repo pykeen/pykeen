@@ -52,6 +52,7 @@ class BaseModule(nn.Module):
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
+        init: bool = True,
     ) -> None:
         """Initialize the module."""
         super().__init__()

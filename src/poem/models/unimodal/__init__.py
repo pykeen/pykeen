@@ -33,6 +33,8 @@
                 <http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf>`_. ICML. Vol. 11.
 .. [nickel2016] Nickel, M. *et al.* (2016) `Holographic Embeddings of Knowledge Graphs
                 <https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828>`_. AAAI 2016.
+.. [schlichtkrull2018] Schlichtkrull, M., *et al.* (2018) `Modeling relational data with graph convolutional networks
+                       <https://arxiv.org/pdf/1703.06103>`_. ESWC'18.
 .. [sharifzadeh2019] Sharifzadeh *et al.* (2019) Extension of ERMLP in POEM.
 .. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion
              <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
@@ -60,6 +62,7 @@ from .kg2e import KG2E
 from .ntn import NTN
 from .proj_e import ProjE
 from .rescal import RESCAL
+from .rgcn import RGCN
 from .rotate import RotatE
 from .simple import SimplE
 from .structured_embedding import StructuredEmbedding
@@ -82,6 +85,7 @@ __all__ = [
     'NTN',
     'ProjE',
     'RESCAL',
+    'RGCN',
     'RotatE',
     'SimplE',
     'StructuredEmbedding',
