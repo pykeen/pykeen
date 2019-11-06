@@ -93,8 +93,8 @@ class CWATrainingLoop(TrainingLoop):
         """Compute self adversarial negative sampling loss."""
         # Split positive and negative scores
         positive_scores = predictions[labels == 1]
-        labels_negative = predictions[labels == 0]
-        negative_scores = predictions[labels_negative]
+        negative_scores = predictions[labels == 0]
+
         return self.model.compute_self_adversarial_negative_sampling_loss(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
