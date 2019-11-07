@@ -106,6 +106,17 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | TuckER              | `poem.models.TuckER`              | Balazevic *et al.*, 2019     |
 | UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014        |
 
+### Losses (6)
+
+| Name                            | Reference                                                 | Description                                                                                                                                  |
+|---------------------------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| bce                             | `torch.nn.BCELoss`                                        | Creates a criterion that measures the Binary Cross Entropy between the target and the output:                                                |
+| bceaftersigmoid                 | `poem.loss_functions.BCEAfterSigmoidLoss`                 | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.                                                       |
+| marginranking                   | `torch.nn.MarginRankingLoss`                              | Creates a criterion that measures the loss given inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,                                 |
+| mse                             | `torch.nn.MSELoss`                                        | Creates a criterion that measures the mean squared error (squared L2 norm) between each element in the input :math:`x` and target :math:`y`. |
+| negativesamplingselfadversarial | `poem.loss_functions.NegativeSamplingSelfAdversarialLoss` | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
+| softplus                        | `poem.loss_functions.SoftplusLoss`                        | A loss function for the softplus.                                                                                                            |
+
 ### Data Sets (8)
 
 | Name     | Reference                | Description                                                                                        |
@@ -126,17 +137,31 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | cwa    | `poem.training.CWATrainingLoop` | A training loop that uses the closed world assumption. |
 | owa    | `poem.training.OWATrainingLoop` | A training loop that uses the open world assumption.   |
 
+### Optimizers (6)
+
+| Name     | Reference              | Description                                                             |
+|----------|------------------------|-------------------------------------------------------------------------|
+| adadelta | `torch.optim.Adadelta` | Implements Adadelta algorithm.                                          |
+| adagrad  | `torch.optim.Adagrad`  | Implements Adagrad algorithm.                                           |
+| adam     | `torch.optim.Adam`     | Implements Adam algorithm.                                              |
+| adamax   | `torch.optim.Adamax`   | Implements Adamax algorithm (a variant of Adam based on infinity norm). |
+| adamw    | `torch.optim.AdamW`    | Implements AdamW algorithm.                                             |
+| sgd      | `torch.optim.SGD`      | Implements stochastic gradient descent (optionally with momentum).      |
+
 ### Evaluators (1)
 
 | Name      | Reference                            | Description                            |
 |-----------|--------------------------------------|----------------------------------------|
 | rankbased | `poem.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models. |
 
-### Metrics (1)
+### Metrics (4)
 
-| Name   | Reference                       | Description                     |
-|--------|---------------------------------|---------------------------------|
-| metric | `poem.evaluators.MetricResults` | Results from computing metrics. |
+| Metric               | Description                                                                                     | Evaluator   | Reference                                |
+|----------------------|-------------------------------------------------------------------------------------------------|-------------|------------------------------------------|
+| Mean Rank            | The mean over all ranks: mean_i r_i                                                             | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Mean Reciprocal Rank | The mean over all reciprocal ranks: mean_i (1/r_i)                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1))                       | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 
 ## Acknowledgements
 

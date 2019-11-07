@@ -12,7 +12,7 @@ from torch.nn import functional as F  # noqa: N812
 
 from ..base import BaseModule, CUDNN_ERROR
 from ..init import embedding_xavier_normal_
-from ...loss_functions import BCEAfterSigmoid
+from ...loss_functions import BCEAfterSigmoidLoss
 from ...triples import TriplesFactory
 from ...typing import Loss
 
@@ -72,7 +72,7 @@ class ConvE(BaseModule):
         output_dropout=dict(type=float, low=0.0, high=1.0),
         feature_map_dropout=dict(type=float, low=0.0, high=1.0),
     )
-    criterion_default: Type[Loss] = BCEAfterSigmoid
+    criterion_default: Type[Loss] = BCEAfterSigmoidLoss
     criterion_default_kwargs = {}
 
     def __init__(

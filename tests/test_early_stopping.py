@@ -64,7 +64,6 @@ class MockEvaluator(Evaluator):
             mean_rank=None,
             mean_reciprocal_rank=None,
             adjusted_mean_rank=None,
-            adjusted_mean_reciprocal_rank=None,
             hits_at_k={
                 10: next(self.losses_iter),
             },

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Negative sampling algorithm based on the work of Wang *et al.*."""
+"""Negative sampling algorithm based on the work of [wang2014]_."""
 
 import torch
 

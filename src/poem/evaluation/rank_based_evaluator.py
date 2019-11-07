@@ -3,7 +3,7 @@
 """Implementation of ranked based evaluator."""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -71,19 +71,18 @@ class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
     #: The mean over all ranks: mean_i r_i
-    mean_rank: float
+    mean_rank: float = field(metadata=dict(doc='The mean over all ranks: mean_i r_i'))
 
     #: The mean over all reciprocal ranks: mean_i (1/r_i)
-    mean_reciprocal_rank: float
+    mean_reciprocal_rank: float = field(metadata=dict(doc='The mean over all reciprocal ranks: mean_i (1/r_i)'))
 
     #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1))
-    adjusted_mean_rank: float
-
-    #: The mean over all reciprocal chance-adjusted ranks: mean_i ((num_entities+1)/(2r_i))
-    adjusted_mean_reciprocal_rank: float
+    adjusted_mean_rank: float = field(
+        metadata=dict(doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1))'))
 
     #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k
-    hits_at_k: Dict[int, float]
+    hits_at_k: Dict[int, float] = field(metadata=dict(
+        doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k'))
 
 
 class RankBasedEvaluator(Evaluator):
@@ -141,12 +140,10 @@ class RankBasedEvaluator(Evaluator):
 
         adj_ranks = np.asarray(self.adj_ranks, dtype=np.float64)
         amr = np.mean(adj_ranks)
-        amrr = np.mean(np.reciprocal(adj_ranks))
 
         return RankBasedMetricResults(
             mean_rank=mr,
             mean_reciprocal_rank=mrr,
             hits_at_k=hits_at_k,
             adjusted_mean_rank=amr,
-            adjusted_mean_reciprocal_rank=amrr,
         )

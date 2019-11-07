@@ -2,23 +2,23 @@
 
 """Training loops for KGE models using multi-modal information.
 
-======  ==========================
+======  ======================================
 Name    Reference
-======  ==========================
-cwa     :class:`poem.training.cwa`
-owa     :class:`poem.training.owa`
-======  ==========================
+======  ======================================
+cwa     :class:`poem.training.CWATrainingLoop`
+owa     :class:`poem.training.OWATrainingLoop`
+======  ======================================
 
 .. note:: This table can be re-generated with ``poem ls training -f rst``
 """
 
-from typing import Type, Union
+from typing import Mapping, Set, Type, Union
 
 from .cwa import CWATrainingLoop  # noqa: F401
 from .early_stopping import EarlyStopper  # noqa: F401
 from .owa import OWATrainingLoop  # noqa: F401
 from .training_loop import TrainingLoop  # noqa: F401
-from ..utils import get_cls
+from ..utils import get_cls, normalize_string
 
 __all__ = [
     'TrainingLoop',
@@ -29,10 +29,16 @@ __all__ = [
     'get_training_loop_cls',
 ]
 
+_TRAINING_LOOP_SUFFIX = 'TrainingLoop'
+_TRAINING_LOOPS: Set[Type[TrainingLoop]] = {
+    CWATrainingLoop,
+    OWATrainingLoop,
+}
+
 #: A mapping of training loops' names to their implementations
-training_loops = {
-    'owa': OWATrainingLoop,
-    'cwa': CWATrainingLoop,
+training_loops: Mapping[str, Type[TrainingLoop]] = {
+    normalize_string(cls.__name__, suffix=_TRAINING_LOOP_SUFFIX): cls
+    for cls in _TRAINING_LOOPS
 }
 
 
@@ -43,4 +49,5 @@ def get_training_loop_cls(query: Union[None, str, Type[TrainingLoop]]) -> Type[T
         base=TrainingLoop,
         lookup_dict=training_loops,
         default=OWATrainingLoop,
+        suffix=_TRAINING_LOOP_SUFFIX,
     )

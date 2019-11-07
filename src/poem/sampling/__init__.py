@@ -2,22 +2,22 @@
 
 """Negative sampling.
 
-=========  ================================
+=========  ===============================================
 Name       Reference
-=========  ================================
-basic      :class:`poem.sampling.basic`
-bernoulli  :class:`poem.sampling.bernoulli`
-=========  ================================
+=========  ===============================================
+basic      :class:`poem.sampling.BasicNegativeSampler`
+bernoulli  :class:`poem.sampling.BernoulliNegativeSampler`
+=========  ===============================================
 
 .. note:: This table can be re-generated with ``poem ls samplers -f rst``
 """
 
-from typing import Type, Union
+from typing import Mapping, Set, Type, Union
 
 from .basic_negative_sampler import BasicNegativeSampler
-from .bern_negative_sampler import BernoulliNegativeSampler
+from .bernoulli_negative_sampler import BernoulliNegativeSampler
 from .negative_sampler import NegativeSampler
-from ..utils import get_cls
+from ..utils import get_cls, normalize_string
 
 __all__ = [
     'NegativeSampler',
@@ -27,10 +27,16 @@ __all__ = [
     'get_negative_sampler_cls',
 ]
 
+_NEGATIVE_SAMPLER_SUFFIX = 'NegativeSampler'
+_NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = {
+    BasicNegativeSampler,
+    BernoulliNegativeSampler,
+}
+
 #: A mapping of negative samplers' names to their implementations
-negative_samplers = {
-    'basic': BasicNegativeSampler,
-    'bernoulli': BernoulliNegativeSampler,
+negative_samplers: Mapping[str, Type[NegativeSampler]] = {
+    normalize_string(cls.__name__, suffix=_NEGATIVE_SAMPLER_SUFFIX): cls
+    for cls in _NEGATIVE_SAMPLERS
 }
 
 
@@ -41,4 +47,5 @@ def get_negative_sampler_cls(query: Union[None, str, Type[NegativeSampler]]) -> 
         base=NegativeSampler,
         lookup_dict=negative_samplers,
         default=BasicNegativeSampler,
+        suffix=_NEGATIVE_SAMPLER_SUFFIX,
     )

@@ -10,7 +10,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
-from ...loss_functions import BCEAfterSigmoid
+from ...loss_functions import BCEAfterSigmoidLoss
 from ...triples import TriplesFactory
 from ...typing import Loss
 
@@ -49,7 +49,7 @@ class ERMLPE(BaseModule):
         hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
     )
 
-    criterion_default: Type[Loss] = BCEAfterSigmoid
+    criterion_default: Type[Loss] = BCEAfterSigmoidLoss
     criterion_default_kwargs = {}
 
     def __init__(

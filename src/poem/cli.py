@@ -15,15 +15,19 @@ later, but that will cause problems - the code will get executed twice:
 
 import click
 from click_default_group import DefaultGroup
+from tabulate import tabulate
 
 from .datasets import data_sets
-from .evaluation import evaluators as evaluators_dict, metrics as metrics_dict
+from .evaluation import evaluators as evaluators_dict, get_metric_list, metrics as metrics_dict
 from .hpo.cli import optimize
+from .loss_functions import losses as losses_dict
 from .models import models as models_dict
 from .models.base import BaseModule
 from .models.cli import build_cli_from_cls
+from .optimizers import optimizers as optimizers_dict
 from .sampling import negative_samplers as samplers_dict
 from .training import training_loops as training_dict
+from .utils import get_until_first_blank
 
 
 @click.group()
@@ -43,7 +47,6 @@ def ls():
 @tablefmt_option
 def models(tablefmt: str):
     """List models."""
-    from tabulate import tabulate
     lines = list(_get_model_lines(tablefmt=tablefmt))
     headers = ['Name', 'Reference', 'Citation'] if tablefmt in {'rst', 'github'} else ['Name', 'Citation']
     click.echo(
@@ -60,13 +63,13 @@ def _get_model_lines(tablefmt: str):
         line = str(model.__doc__.splitlines()[0])
         l, r = line.find('['), line.find(']')
         if tablefmt == 'rst':
-            yield name, f':class:`poem.models.{name}`', line[l: r + 2]
+            yield model.__name__, f':class:`poem.models.{model.__name__}`', line[l: r + 2]
         elif tablefmt == 'github':
             author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield name, f'`poem.models.{name}`', f'{author.capitalize()} *et al.*, {year}'
+            yield model.__name__, f'`poem.models.{model.__name__}`', f'{author.capitalize()} *et al.*, {year}'
         else:
             author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield name, f'{author.capitalize()}, {year}'
+            yield model.__name__, f'{author.capitalize()}, {year}'
 
 
 @ls.command()
@@ -90,7 +93,6 @@ def parameters():
 @tablefmt_option
 def datasets(tablefmt: str):
     """List data sets."""
-    from tabulate import tabulate
     lines = _get_lines(data_sets, tablefmt, 'datasets')
     click.echo(
         tabulate(
@@ -105,7 +107,6 @@ def datasets(tablefmt: str):
 @tablefmt_option
 def training(tablefmt: str):
     """List training modes."""
-    from tabulate import tabulate
     lines = _get_lines(training_dict, tablefmt, 'training')
     click.echo(
         tabulate(
@@ -120,7 +121,6 @@ def training(tablefmt: str):
 @tablefmt_option
 def samplers(tablefmt: str):
     """List negative samplers."""
-    from tabulate import tabulate
     lines = _get_lines(samplers_dict, tablefmt, 'sampling')
     click.echo(
         tabulate(
@@ -135,7 +135,6 @@ def samplers(tablefmt: str):
 @tablefmt_option
 def evaluators(tablefmt: str):
     """List evaluators."""
-    from tabulate import tabulate
     lines = _get_lines(evaluators_dict, tablefmt, 'evaluators')
     click.echo(
         tabulate(
@@ -148,23 +147,84 @@ def evaluators(tablefmt: str):
 
 @ls.command()
 @tablefmt_option
-def metrics(tablefmt: str):
-    """List metrics."""
-    from tabulate import tabulate
-    lines = _get_lines(metrics_dict, tablefmt, 'evaluators')
+def losses(tablefmt: str):
+    """List losses."""
+    lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'poem.loss_functions')
     click.echo(
         tabulate(
             lines,
-            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+            headers=['Name', 'Reference', 'Description'],
             tablefmt=tablefmt,
         ),
     )
 
 
+@ls.command()
+@tablefmt_option
+def optimizers(tablefmt: str):
+    """List optimizers."""
+    lines = _get_lines_alternative(tablefmt, optimizers_dict, 'torch.optim', 'poem.optimizers')
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
+
+
+def _get_lines_alternative(tablefmt, d, torch_prefix, poem_prefix):
+    for name, submodule in sorted(d.items()):
+        if submodule.__module__.startswith('torch'):
+            path = f'{torch_prefix}.{submodule.__qualname__}'
+        else:  # from poem
+            path = f'{poem_prefix}.{submodule.__qualname__}'
+
+        if tablefmt == 'rst':
+            yield name, f':class:`{path}`'
+        elif tablefmt == 'github':
+            doc = submodule.__doc__
+            yield name, f'`{path}`', get_until_first_blank(doc)
+        else:
+            doc = submodule.__doc__
+            yield name, path, get_until_first_blank(doc)
+
+
+@ls.command()
+@tablefmt_option
+def metrics(tablefmt: str):
+    """List metrics."""
+    click.echo(
+        tabulate(
+            _get_metrics_lines(tablefmt),
+            headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
+            tablefmt=tablefmt,
+        ),
+    )
+
+
+def _get_metrics_lines(tablefmt: str):
+    if tablefmt == 'rst':
+        for name, value in metrics_dict.items():
+            yield name, f':class:`poem.evaluation.{value.__name__}`'
+    else:
+        for field, name, value in get_metric_list():
+            if tablefmt == 'github':
+                yield (
+                    field.name.replace('_', ' ').title(), field.metadata['doc'],
+                    name, f'`poem.evaluation.{value.__name__}`',
+                )
+            else:
+                yield field.name, field.metadata['doc'], name, f'poem.evaluation.{value.__name__}',
+
+
 def _get_lines(d, tablefmt, submodule):
     for name, value in sorted(d.items()):
         if tablefmt == 'rst':
-            yield name, f':class:`poem.{submodule}.{name}`'
+            if isinstance(value, type):
+                yield name, f':class:`poem.{submodule}.{value.__name__}`'
+            else:
+                yield name, f':class:`poem.{submodule}.{name}`'
         elif tablefmt == 'github':
             try:
                 ref = value.__name__
@@ -184,13 +244,17 @@ def github_readme(ctx: click.Context):
     """Generate the GitHub readme's ## Implementation section."""
     click.echo(f'### Models ({len(models_dict)})\n')
     ctx.invoke(models, tablefmt='github')
+    click.echo(f'\n### Losses ({len(losses_dict)})\n')
+    ctx.invoke(losses, tablefmt='github')
     click.echo(f'\n### Data Sets ({len(data_sets)})\n')
     ctx.invoke(datasets, tablefmt='github')
     click.echo(f'\n### Training Modes ({len(training_dict)})\n')
     ctx.invoke(training, tablefmt='github')
+    click.echo(f'\n### Optimizers ({len(optimizers_dict)})\n')
+    ctx.invoke(optimizers, tablefmt='github')
     click.echo(f'\n### Evaluators ({len(evaluators_dict)})\n')
     ctx.invoke(evaluators, tablefmt='github')
-    click.echo(f'\n### Metrics ({len(metrics_dict)})\n')
+    click.echo(f'\n### Metrics ({len(get_metric_list())})\n')
     ctx.invoke(metrics, tablefmt='github')
 
 

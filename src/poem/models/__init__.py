@@ -34,7 +34,7 @@ UnstructuredModel    :class:`poem.models.UnstructuredModel`    [bordes2014]_
 """
 
 import itertools as itt
-from typing import Mapping, Type, Union
+from typing import Mapping, Set, Type, Union
 
 from .base import BaseModule, RegularizedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, MultimodalBaseModule
@@ -91,9 +91,8 @@ __all__ = [
     'get_model_cls',
 ]
 
-#: A mapping of models' names to their implementations
-models: Mapping[str, Type[BaseModule]] = {
-    cls.__name__: cls
+_MODELS: Set[Type[BaseModule]] = {
+    cls
     for cls in itt.chain(
         BaseModule.__subclasses__(),
         RegularizedModel.__subclasses__(),
@@ -102,9 +101,10 @@ models: Mapping[str, Type[BaseModule]] = {
     if cls not in {BaseModule, RegularizedModel, MultimodalBaseModule}
 }
 
-_MODELS = {
-    normalize_string(model_name): model_cls
-    for model_name, model_cls in models.items()
+#: A mapping of models' names to their implementations
+models: Mapping[str, Type[BaseModule]] = {
+    normalize_string(cls.__name__): cls
+    for cls in _MODELS
 }
 
 
@@ -113,5 +113,5 @@ def get_model_cls(query: Union[str, Type[BaseModule]]) -> Type[BaseModule]:
     return get_cls(
         query,
         base=BaseModule,
-        lookup_dict=_MODELS,
+        lookup_dict=models,
     )

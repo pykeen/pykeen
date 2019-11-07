@@ -7,12 +7,6 @@ from typing import Iterable, List, Mapping, Optional, Type, TypeVar, Union
 
 import numpy
 import torch
-from torch.optim import Adam, SGD
-from torch.optim.adadelta import Adadelta
-from torch.optim.adagrad import Adagrad
-from torch.optim.adamax import Adamax
-from torch.optim.adamw import AdamW
-from torch.optim.optimizer import Optimizer
 
 __all__ = [
     'l2_regularization',
@@ -23,8 +17,7 @@ __all__ = [
     'split_list_in_batches',
     'normalize_string',
     'get_cls',
-    'optimizers',
-    'get_optimizer_cls',
+    'get_until_first_blank',
 ]
 
 logger = logging.getLogger(__name__)
@@ -98,9 +91,12 @@ def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable
     )
 
 
-def normalize_string(s: str) -> str:
+def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     """Normalize a string for lookup."""
-    return s.lower().replace('-', '').replace('_', '')
+    s = s.lower().replace('-', '').replace('_', '')
+    if suffix is not None and s.endswith(suffix.lower()):
+        return s[:-len(suffix)]
+    return s
 
 
 def get_cls(
@@ -108,6 +104,7 @@ def get_cls(
     base: Type[X],
     lookup_dict: Mapping[str, Type[X]],
     default: Optional[Type[X]] = None,
+    suffix: Optional[str] = None,
 ) -> Type[X]:
     """Get a class by string, default, or implementation."""
     if query is None:
@@ -118,7 +115,7 @@ def get_cls(
         raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
     elif isinstance(query, str):
         try:
-            return lookup_dict[normalize_string(query)]
+            return lookup_dict[normalize_string(query, suffix=suffix)]
         except KeyError:
             raise ValueError(f'Invalid {base.__name__} name: {query}')
     elif issubclass(query, base):
@@ -126,25 +123,15 @@ def get_cls(
     raise TypeError(f'Not subclass of {base.__name__}: {query}')
 
 
-_OPTIMIZER_LIST = [
-    Adam,
-    SGD,
-    Adagrad,
-    Adadelta,
-    AdamW,
-    Adamax,
-]
-optimizers = {
-    normalize_string(optimizer.__name__): optimizer
-    for optimizer in _OPTIMIZER_LIST
-}
-
-
-def get_optimizer_cls(query: Union[None, str, Type[Optimizer]]) -> Type[Optimizer]:
-    """Get the optimizer class."""
-    return get_cls(
-        query,
-        base=Optimizer,
-        lookup_dict=optimizers,
-        default=Adagrad,
-    )
+def get_until_first_blank(s: str) -> str:
+    """Recapitulate all lines in the string until the first blank line."""
+    lines = list(s.splitlines())
+    try:
+        m, _ = min(enumerate(lines), key=lambda line: line == '')
+    except ValueError:
+        return s
+    else:
+        return ' '.join(
+            line.lstrip()
+            for line in lines[:m + 2]
+        )

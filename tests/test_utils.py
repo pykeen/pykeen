@@ -7,7 +7,7 @@ import unittest
 import numpy
 import torch
 
-from poem.utils import l2_regularization
+from poem.utils import get_until_first_blank, l2_regularization
 
 
 class L2RegularizationTest(unittest.TestCase):
@@ -33,3 +33,23 @@ class L2RegularizationTest(unittest.TestCase):
             exp_reg += numpy.prod(t.shape) * (i + 1) ** 2
         reg = l2_regularization(*ts)
         self.assertAlmostEqual(float(reg), exp_reg)
+
+
+class TestGetUntilFirstBlank(unittest.TestCase):
+    """Test get_until_first_blank()."""
+
+    def test_get_until_first_blank_trivial(self):
+        """Test the trivial string."""
+        s = ''
+        r = get_until_first_blank(s)
+        self.assertEqual('', r)
+
+    def test_regular(self):
+        """Test a regulat case."""
+        s = """Broken
+        line.
+
+        Now I continue.
+        """
+        r = get_until_first_blank(s)
+        self.assertEqual("Broken line.", r)

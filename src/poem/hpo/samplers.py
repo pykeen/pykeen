@@ -2,20 +2,28 @@
 
 """A wrapper for looking up samplers from :mod:`optuna`."""
 
-from typing import Type, Union
+# TODO update docs with table and CLI wtih generator
+
+from typing import Mapping, Set, Type, Union
 
 from optuna.samplers import BaseSampler, RandomSampler, TPESampler
 
-from ..utils import get_cls
+from ..utils import get_cls, normalize_string
 
 __all__ = [
     'samplers',
     'get_sampler_cls',
 ]
 
-samplers = {
-    'random': RandomSampler,
-    'tpe': TPESampler,
+_SAMPLER_SUFFIX = 'Sampler'
+_SAMPLERS: Set[Type[BaseSampler]] = {
+    RandomSampler,
+    TPESampler
+}
+
+samplers: Mapping[str, Type[BaseSampler]] = {
+    normalize_string(cls.__name__, suffix=_SAMPLER_SUFFIX): cls
+    for cls in _SAMPLERS
 }
 
 
@@ -26,4 +34,5 @@ def get_sampler_cls(query: Union[None, str, Type[BaseSampler]]) -> Type[BaseSamp
         base=BaseSampler,
         lookup_dict=samplers,
         default=TPESampler,
+        suffix=_SAMPLER_SUFFIX,
     )

@@ -10,9 +10,10 @@ import click
 from .. import get_model_cls
 from ...evaluation import evaluators, get_evaluator_cls
 from ...loss_functions import get_loss_cls, losses
+from ...optimizers import get_optimizer_cls, optimizers
 from ...training import get_training_loop_cls, training_loops
 from ...triples import TriplesFactory
-from ...utils import get_optimizer_cls, optimizers, resolve_device
+from ...utils import resolve_device
 
 
 def _make_callback(f):
@@ -63,7 +64,7 @@ CLI_OPTIONS = {
         '--criterion',
         type=click.Choice(losses),
         callback=_make_instantiation_callback(get_loss_cls),
-        default='marginrankingloss',
+        default='marginranking',
         show_default=True,
     ),
     'random_seed': click.option(

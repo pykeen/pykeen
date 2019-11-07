@@ -1,21 +1,36 @@
 # -*- coding: utf-8 -*-
 
-"""Custom loss functions."""
+"""Loss functions implemented in POEM and additionally imported from :class:`torch`.
 
-from typing import Any, List, Mapping, Type, Union
+===============================  ================================================================
+Name                             Reference
+===============================  ================================================================
+bce                              :class:`torch.nn.BCELoss`
+bceaftersigmoid                  :class:`poem.loss_functions.BCEAfterSigmoidLoss`
+marginranking                    :class:`torch.nn.MarginRankingLoss`
+mse                              :class:`torch.nn.MSELoss`
+negativesamplingselfadversarial  :class:`poem.loss_functions.NegativeSamplingSelfAdversarialLoss`
+softplus                         :class:`poem.loss_functions.SoftplusLoss`
+===============================  ================================================================
+
+.. note:: This table can be re-generated with ``poem ls losses -f rst``
+"""
+
+from typing import Any, Mapping, Set, Type, Union
 
 import torch
 from torch import nn
-from torch.nn import BCELoss, MarginRankingLoss, functional
+from torch.nn import BCELoss, MSELoss, MarginRankingLoss, functional
 
 from .typing import Loss
 from .utils import get_cls, normalize_string
 
 __all__ = [
-    'BCEAfterSigmoid',
+    'BCEAfterSigmoidLoss',
     'SoftplusLoss',
     'NegativeSamplingSelfAdversarialLoss',
     'losses',
+    'losses_hpo_defaults',
     'get_loss_cls',
 ]
 
@@ -44,7 +59,7 @@ class SoftplusLoss(nn.Module):
         return loss
 
 
-class BCEAfterSigmoid(nn.Module):
+class BCEAfterSigmoidLoss(nn.Module):
     """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
 
     def forward(
@@ -89,28 +104,37 @@ class NegativeSamplingSelfAdversarialLoss(nn.Module):
         return loss
 
 
-_LOSSES_LIST: List[Type[Loss]] = [
+_LOSS_SUFFIX = 'Loss'
+_LOSSES: Set[Type[Loss]] = {
     MarginRankingLoss,
     BCELoss,
     SoftplusLoss,
-    BCEAfterSigmoid,
+    BCEAfterSigmoidLoss,
+    MSELoss,
     NegativeSamplingSelfAdversarialLoss,
-]
+}
+# To add *all* losses implemented in Torch, uncomment:
+# _LOSSES.update({
+#     criterion
+#     for criterion in Loss.__subclasses__() + WeightedLoss.__subclasses__()
+#     if not criterion.__name__.startswith('_')
+# })
+
 
 losses: Mapping[str, Type[Loss]] = {
-    normalize_string(criterion.__name__): criterion
-    for criterion in _LOSSES_LIST
+    normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
+    for cls in _LOSSES
 }
 
 losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
     MarginRankingLoss: dict(
         margin=dict(type=int, low=0, high=3, q=1),
     ),
-    BCELoss: {},
-    SoftplusLoss: {},
-    BCEAfterSigmoid: {},
-    NegativeSamplingSelfAdversarialLoss: {},
 }
+# Add empty dictionaries as defaults for all remaining criteria
+for criterion in _LOSSES:
+    if criterion not in losses_hpo_defaults:
+        losses_hpo_defaults[criterion] = {}
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
@@ -120,4 +144,5 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
         base=nn.Module,
         lookup_dict=losses,
         default=MarginRankingLoss,
+        suffix=_LOSS_SUFFIX,
     )

@@ -175,11 +175,11 @@ from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .loss_functions import get_loss_cls
 from .models import get_model_cls
 from .models.base import BaseModule
+from .optimizers import get_optimizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .typing import Loss
-from .utils import get_optimizer_cls
 
 __all__ = [
     'PipelineResult',
