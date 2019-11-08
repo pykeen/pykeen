@@ -44,10 +44,9 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Copy positive batch for corruption. Do not detach, as no gradients should flow into the indices.
         negative_batch = positive_batch.clone()
 
-        device = positive_batch.device
         # Decide whether to corrupt head or tail
         head_corruption_probability = self.corrupt_head_probability[positive_batch[:, 1]]
-        head_mask = torch.rand(batch_size, device=device) < head_corruption_probability.to(device=device)
+        head_mask = torch.rand(batch_size, device=positive_batch.device) < head_corruption_probability
 
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask
