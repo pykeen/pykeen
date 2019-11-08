@@ -14,6 +14,7 @@ from .early_stopping import EarlyStopper
 from ..models.base import BaseModule
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
+from ..utils import ResultTracker
 
 __all__ = [
     'TrainingLoop',
@@ -77,6 +78,7 @@ class TrainingLoop(ABC):
         continue_training: bool = False,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         early_stopper: Optional[EarlyStopper] = None,
+        result_tracker: Optional[ResultTracker] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -95,9 +97,15 @@ class TrainingLoop(ABC):
         :param early_stopper:
             An instance of :class:`poem.training.EarlyStopper` with settings for checking
             if training should stop early
+        :param result_tracker:
+            The result tracker.
         :return:
             A pair of the KGE model and the losses per epoch.
         """
+        # Create dummy result tracker
+        if result_tracker is None:
+            result_tracker = ResultTracker()
+
         # Sanity check
         if self.model.is_mr_loss and label_smoothing > 0.:
             raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
@@ -170,7 +178,9 @@ class TrainingLoop(ABC):
                 self.model.forward_constraint_applied = False
 
             # Track epoch loss
-            self.losses_per_epochs.append(current_epoch_loss / num_training_instances)
+            epoch_loss = current_epoch_loss / num_training_instances
+            self.losses_per_epochs.append(epoch_loss)
+            result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
             if (
                 early_stopper is not None

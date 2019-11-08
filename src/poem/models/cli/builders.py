@@ -12,11 +12,10 @@ import click
 from torch import nn
 
 from .options import (
-    CLI_OPTIONS, batch_size_option, early_stopping_option, evaluator_option, learning_rate_option, number_epochs_option,
-    optimizer_option, testing_option, training_loop_option,
+    CLI_OPTIONS, batch_size_option, early_stopping_option, evaluator_option, learning_rate_option, mlflow_uri_option,
+    number_epochs_option, optimizer_option, testing_option, title_option, training_loop_option, training_option,
 )
 from ..base import BaseModule
-from ...training import EarlyStopper
 
 __all__ = [
     'build_cli_from_cls',
@@ -25,6 +24,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
+_SKIP_ARGS = {'init', 'return', 'triples_factory'}
 _SKIP_ANNOTATIONS = {Optional[nn.Embedding], Optional[nn.Parameter], Optional[nn.Module]}
 
 
@@ -38,7 +38,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     def _decorate(command: click.Command) -> click.Command:
         signature = inspect.signature(model.__init__)
         for name, annotation in model.__init__.__annotations__.items():
-            if name in {'init', 'return'} or annotation in _SKIP_ANNOTATIONS:
+            if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
 
             if name in CLI_OPTIONS:
@@ -63,19 +63,22 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
         return command
 
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
+    @training_option
+    @testing_option
     @optimizer_option
     @training_loop_option
     @number_epochs_option
     @batch_size_option
     @learning_rate_option
-    @testing_option
     @evaluator_option
     @early_stopping_option
+    @mlflow_uri_option
+    @title_option
     @_decorate
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
-        *, training_loop, optimizer, number_epochs, batch_size, learning_rate, testing, evaluator, early_stopping,
-        output, **kwargs
+        *, training_loop, optimizer, number_epochs, batch_size, learning_rate, evaluator, early_stopping,
+        output, mlflow_tracking_uri, title, training_triples_factory, testing_triples_factory, **model_kwargs,
     ):
         """CLI for POEM."""
         click.echo(
@@ -83,32 +86,31 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
             f'{training_loop.__name__[:-len("TrainingLoop")]} using '
             f'{optimizer.__name__} and {evaluator.__name__}',
         )
-        model_instance = model(**kwargs)
-        training_loop_instance = training_loop(
-            model=model_instance,
-            optimizer=optimizer(
-                params=model_instance.get_grad_params(),
+        from ...pipeline import pipeline
+
+        pipeline_result = pipeline(
+            model=model,
+            model_kwargs=model_kwargs,
+            training_triples_factory=training_triples_factory,
+            testing_triples_factory=testing_triples_factory or training_triples_factory,
+            optimizer=optimizer,
+            optimizer_kwargs=dict(
                 lr=learning_rate,
             ),
-        )
-        evaluator_instance = evaluator()
-
-        training_loop_instance.train(
-            num_epochs=number_epochs,
-            batch_size=batch_size,
-            early_stopper=EarlyStopper(
-                model=model_instance,
-                evaluator=evaluator_instance,
-                evaluation_triples_factory=early_stopping,
-            ) if early_stopping else None,
-        )
-
-        result = evaluator_instance.evaluate(
-            model=model_instance,
-            mapped_triples=testing and testing.mapped_triples,
+            training_loop=training_loop,
+            evaluator=evaluator,
+            training_kwargs=dict(
+                num_epochs=number_epochs,
+                batch_size=batch_size,
+            ),
+            early_stopping=early_stopping,
+            mlflow_tracking_uri=mlflow_tracking_uri,
+            metadata=dict(
+                title=title,
+            ),
         )
 
-        json.dump(result.to_dict(), output, indent=2)
+        json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
         click.echo('')
         return sys.exit(0)
 

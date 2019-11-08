@@ -165,7 +165,7 @@ the default data sets are also provided as subclasses of :class:`poem.triples.Tr
 """
 
 from dataclasses import dataclass, field
-from typing import Any, List, Mapping, Optional, Type, Union
+from typing import Any, Dict, List, Mapping, Optional, Type, Union
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -180,6 +180,7 @@ from .sampling import NegativeSampler, get_negative_sampler_cls
 from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .typing import Loss
+from .utils import MLFlowResultTracker, ResultTracker, get_optimizer_cls
 
 __all__ = [
     'PipelineResult',
@@ -233,23 +234,25 @@ class PipelineResult:
 def pipeline(  # noqa: C901
     model: Union[str, Type[BaseModule]],
     *,
+    model_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer: Union[None, str, Type[Optimizer]] = None,
+    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     criterion: Union[None, str, Type[Loss]] = None,
+    criterion_kwargs: Optional[Mapping[str, Any]] = None,
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
     data_set: Union[None, str, DataSet] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
-    evaluator: Union[None, str, Type[Evaluator]] = None,
-    early_stopping: bool = False,
-    model_kwargs: Optional[Mapping[str, Any]] = None,
-    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
-    criterion_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
+    early_stopping: bool = False,
     early_stopping_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    mlflow_tracking_uri: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -281,7 +284,24 @@ def pipeline(  # noqa: C901
     :param evaluator_kwargs: Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs: Keyword arguments to pass to the evaluator's evaluate
      function on call
+    :param mlflow_tracking_uri:
+        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
+    :param metadata: A JSON dictionary to store with the experiment
     """
+    # Create result store
+    if mlflow_tracking_uri is not None:
+        result_tracker = MLFlowResultTracker(tracking_uri=mlflow_tracking_uri)
+    else:
+        result_tracker = ResultTracker()
+
+    if not metadata:
+        metadata = {}
+    title = metadata.get('title')
+
+    # Start tracking
+    result_tracker.start_run(run_name=title)
+
+    result_tracker.log_params({'dataset': data_set})
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_data_set(
         data_set=data_set,
         training_triples_factory=training_triples_factory,
@@ -297,6 +317,9 @@ def pipeline(  # noqa: C901
         _criterion = criterion_cls(**(criterion_kwargs or {}))
         model_kwargs.setdefault('criterion', _criterion)
 
+    # Log model parameters
+    result_tracker.log_params(model_kwargs, prefix='model')
+
     model = get_model_cls(model)
     model_instance: BaseModule = model(
         triples_factory=training_triples_factory,
@@ -309,6 +332,8 @@ def pipeline(  # noqa: C901
     if optimizer_kwargs is None:
         optimizer_kwargs = {}
 
+    # Log optimizer parameters
+    result_tracker.log_params({'class': optimizer, 'kwargs': optimizer_kwargs}, prefix='optimizer')
     optimizer_instance = optimizer(
         params=model_instance.get_grad_params(),
         **optimizer_kwargs,
@@ -344,6 +369,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             evaluator=evaluator_instance,
             evaluation_triples_factory=validation_triples_factory,
+            result_tracker=result_tracker,
             **early_stopping_kwargs,
         )
     else:
@@ -356,7 +382,7 @@ def pipeline(  # noqa: C901
     training_kwargs.setdefault('early_stopper', early_stopper)
 
     # Train like Cristiano Ronaldo
-    losses = training_loop_instance.train(**training_kwargs)
+    losses = training_loop_instance.train(**training_kwargs, result_tracker=result_tracker)
 
     # Evaluate
     metric_results: MetricResults = evaluator_instance.evaluate(
@@ -364,10 +390,16 @@ def pipeline(  # noqa: C901
         mapped_triples=testing_triples_factory.mapped_triples,
         **(evaluation_kwargs or {}),
     )
+    result_tracker.log_metrics(
+        metrics=metric_results.to_dict(),
+        step=training_kwargs.get('num_epochs'),
+    )
+    result_tracker.end_run()
 
     return PipelineResult(
         model=model_instance,
         training_loop=training_loop_instance,
         losses=losses,
         metric_results=metric_results,
+        metadata=metadata,
     )

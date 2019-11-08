@@ -19,20 +19,28 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def pipeline_from_path(path: str) -> PipelineResult:
+def pipeline_from_path(
+    path: str,
+    mlflow_tracking_uri: Optional[str] = None,
+) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
     :param path: The path to an experiment JSON file
+    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     with open(path) as file:
         config = json.load(file)
+
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
     if title is not None:
         logger.info(f'Running: {title}')
-    result = pipeline(**pipeline_kwargs)
-    result.metadata = metadata
-    return result
+
+    return pipeline(
+        mlflow_tracking_uri=mlflow_tracking_uri,
+        metadata=metadata,
+        **pipeline_kwargs,
+    )
 
 
 @dataclass

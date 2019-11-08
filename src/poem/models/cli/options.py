@@ -36,12 +36,6 @@ def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFact
 
 
 CLI_OPTIONS = {
-    'triples_factory': click.option(
-        '-t', '--triples-factory',
-        callback=triples_factory_callback,
-        required=True,
-        help='Path to training data',
-    ),
     'preferred_device': click.option(
         '--preferred-device',
         callback=_make_callback(resolve_device),
@@ -156,8 +150,14 @@ learning_rate_option = click.option(
     default=0.001,
     show_default=True,
 )
+training_option = click.option(
+    '-t', '--training-triples-factory',
+    callback=triples_factory_callback,
+    required=True,
+    help='Path to training data',
+)
 testing_option = click.option(
-    '-q', '--testing',
+    '-q', '--testing-triples-factory',
     callback=triples_factory_callback,
     help='Path to testing data. If not supplied, then evaluation occurs on training data.',
 )
@@ -165,4 +165,12 @@ early_stopping_option = click.option(
     '-s', '--early-stopping',
     callback=triples_factory_callback,
     help='Path to evaluation data for early stopping.',
+)
+mlflow_uri_option = click.option(
+    '--mlflow-tracking-uri',
+    help='MLFlow tracking URI',
+)
+title_option = click.option(
+    '--title',
+    help='Title of this experiment',
 )

@@ -23,10 +23,10 @@
       "frequency": 50
     },
     "training_loop": "OWA",
+    "negative_sampler": "basic",
     "training_kwargs": {
       "num_epochs": 1000,
-      "batch_size": 32,
-      "negative_sampler_cls": "BasicNegativeSampler"
+      "batch_size": 32
     }
   }
 }

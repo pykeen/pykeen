@@ -7,7 +7,7 @@ import unittest
 import numpy
 import torch
 
-from poem.utils import get_until_first_blank, l2_regularization
+from poem.utils import flatten_dictionary, get_until_first_blank, l2_regularization
 
 
 class L2RegularizationTest(unittest.TestCase):
@@ -33,6 +33,30 @@ class L2RegularizationTest(unittest.TestCase):
             exp_reg += numpy.prod(t.shape) * (i + 1) ** 2
         reg = l2_regularization(*ts)
         self.assertAlmostEqual(float(reg), exp_reg)
+
+
+class FlattenDictionaryTest(unittest.TestCase):
+    """Test flatten_dictionary."""
+
+    def test_flatten_dictionary(self):
+        """Test if the output of flatten_dictionary is correct."""
+        nested_dictionary = {
+            'a': {
+                'b': {
+                    'c': 1,
+                    'd': 2
+                },
+                'e': 3,
+            }
+        }
+        expected_output = {
+            'a.b.c': 1,
+            'a.b.d': 2,
+            'a.e': 3,
+        }
+        observed_output = flatten_dictionary(nested_dictionary)
+        assert not any(isinstance(o, dict) for o in expected_output.values())
+        assert expected_output == observed_output
 
 
 class TestGetUntilFirstBlank(unittest.TestCase):

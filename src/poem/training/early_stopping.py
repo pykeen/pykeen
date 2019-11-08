@@ -5,13 +5,14 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 import numpy
 
 from ..evaluation import Evaluator, MetricResults
 from ..models import BaseModule
 from ..triples import TriplesFactory
+from ..utils import ResultTracker
 
 __all__ = [
     'smaller_than_any_buffer_element',
@@ -91,6 +92,8 @@ class EarlyStopper:
     larger_is_better: bool = True
     #: The criterion. Set in the constructor based on larger_is_better
     improvement_criterion: Callable[[numpy.ndarray, float, float], bool] = None
+    #: The result tracker
+    result_tracker: Optional[ResultTracker] = None
 
     def __post_init__(self):
         """Run after initialization and check the metric is valid."""
@@ -103,6 +106,10 @@ class EarlyStopper:
             self.improvement_criterion = smaller_than_any_buffer_element
 
         self.buffer = numpy.empty(shape=(self.patience,))
+
+        # Dummy result tracker
+        if self.result_tracker is None:
+            self.result_tracker = ResultTracker()
 
     def _get_result(self, metric_results: MetricResults) -> float:
         result = getattr(metric_results, self.metric)
@@ -117,6 +124,11 @@ class EarlyStopper:
             model=self.model,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
             use_tqdm=False,
+        )
+        self.result_tracker.log_metrics(
+            metrics=metric_results.to_json(),
+            step=self.number_evaluations,
+            prefix='validation',
         )
         result = self._get_result(metric_results)
 
