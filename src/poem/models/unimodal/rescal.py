@@ -8,11 +8,13 @@ import torch
 from torch import nn
 
 from ..base import RegularizedModel
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 from ...utils import l2_regularization
 
-__all__ = ['RESCAL']
+__all__ = [
+    'RESCAL',
+]
 
 
 class RESCAL(RegularizedModel):

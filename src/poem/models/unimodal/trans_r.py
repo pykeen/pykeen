@@ -11,10 +11,12 @@ from torch.nn import functional
 
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 
-__all__ = ['TransR']
+__all__ = [
+    'TransR',
+]
 
 
 class TransR(BaseModule):

@@ -13,12 +13,11 @@ from optuna.storages import BaseStorage
 
 from .samplers import get_sampler_cls
 from ..datasets import DataSet
-from ..loss_functions import get_loss_cls, losses_hpo_defaults
+from ..losses import Loss, get_loss_cls, losses_hpo_defaults
 from ..models import get_model_cls
 from ..models.base import BaseModule
 from ..pipeline import pipeline
 from ..training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
-from ..typing import Loss
 
 __all__ = [
     'make_study',

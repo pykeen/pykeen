@@ -12,8 +12,9 @@ from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
 from ..base import BaseModule
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import InteractionFunction, Loss
+from ...typing import InteractionFunction
 
 __all__ = [
     'RGCN',

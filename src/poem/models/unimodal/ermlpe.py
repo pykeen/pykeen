@@ -2,7 +2,6 @@
 
 """An implementation of the extension to ERMLP."""
 
-import logging
 from typing import Optional, Type
 
 import torch
@@ -10,13 +9,12 @@ from torch import nn
 
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
-from ...loss_functions import BCEAfterSigmoidLoss
+from ...losses import BCEAfterSigmoidLoss, Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 
-__all__ = ['ERMLPE']
-
-log = logging.getLogger(__name__)
+__all__ = [
+    'ERMLPE',
+]
 
 
 class ERMLPE(BaseModule):

@@ -19,7 +19,7 @@ POEM
    reference/datasets
    reference/triples
    reference/training
-   reference/loss_functions
+   reference/losses
    reference/evaluation
    reference/sampling
    reference/hpo

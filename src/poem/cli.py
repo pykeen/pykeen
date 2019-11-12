@@ -20,7 +20,7 @@ from tabulate import tabulate
 from .datasets import data_sets
 from .evaluation import evaluators as evaluators_dict, get_metric_list, metrics as metrics_dict
 from .hpo.cli import optimize
-from .loss_functions import losses as losses_dict
+from .losses import losses as losses_dict
 from .models import models as models_dict
 from .models.base import BaseModule
 from .models.cli import build_cli_from_cls

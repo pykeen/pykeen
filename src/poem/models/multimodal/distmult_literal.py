@@ -9,8 +9,8 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from .base_module import MultimodalBaseModule
+from ...losses import Loss
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import Loss
 from ...utils import slice_triples
 
 

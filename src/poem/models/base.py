@@ -13,9 +13,8 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
-from ..loss_functions import NegativeSamplingSelfAdversarialLoss
+from ..losses import Loss, NegativeSamplingSelfAdversarialLoss
 from ..triples import TriplesFactory
-from ..typing import Loss
 from ..utils import resolve_device
 from ..version import get_version
 

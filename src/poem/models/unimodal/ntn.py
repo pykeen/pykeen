@@ -8,10 +8,12 @@ import torch
 from torch import nn
 
 from ..base import BaseModule
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 
-__all__ = ['NTN']
+__all__ = [
+    'NTN',
+]
 
 
 class NTN(BaseModule):

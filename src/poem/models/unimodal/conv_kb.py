@@ -10,8 +10,8 @@ import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 
 __all__ = [
     'ConvKB',

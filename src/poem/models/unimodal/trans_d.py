@@ -10,8 +10,8 @@ from torch import nn
 
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 
 __all__ = [
     'TransD',

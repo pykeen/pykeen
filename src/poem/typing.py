@@ -6,12 +6,10 @@ from typing import Callable, Mapping
 
 import numpy as np
 import torch
-from torch import nn
 
 __all__ = [
     'LabeledTriples',
     'MappedTriples',
-    'Loss',
     'EntityMapping',
     'RelationMapping',
     'InteractionFunction',
@@ -19,7 +17,6 @@ __all__ = [
 
 LabeledTriples = np.ndarray
 MappedTriples = torch.LongTensor
-Loss = nn.modules.loss._Loss
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]
 

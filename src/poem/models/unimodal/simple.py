@@ -9,11 +9,13 @@ import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
 from ...utils import slice_triples
 
-__all__ = ['SimplE']
+__all__ = [
+    'SimplE',
+]
 
 
 class SimplE(BaseModule):

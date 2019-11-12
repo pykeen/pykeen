@@ -1,4 +1,4 @@
 Loss Functions
 ==============
-.. automodule:: poem.loss_functions
+.. automodule:: poem.losses
    :members:

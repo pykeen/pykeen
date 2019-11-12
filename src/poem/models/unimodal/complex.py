@@ -9,10 +9,13 @@ import torch.nn as nn
 
 from ..base import RegularizedModel
 from ..init import embedding_xavier_normal_
-from ...loss_functions import SoftplusLoss
+from ...losses import Loss, SoftplusLoss
 from ...triples import TriplesFactory
-from ...typing import Loss
 from ...utils import l2_regularization
+
+__all__ = [
+    'ComplEx',
+]
 
 
 class ComplEx(RegularizedModel):

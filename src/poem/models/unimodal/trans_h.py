@@ -9,8 +9,12 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import RegularizedModel
+from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import Loss
+
+__all__ = [
+    'TransH',
+]
 
 
 class TransH(RegularizedModel):

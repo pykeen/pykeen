@@ -6,7 +6,7 @@ import unittest
 
 import torch
 
-from poem.loss_functions import NegativeSamplingSelfAdversarialLoss
+from poem.losses import NegativeSamplingSelfAdversarialLoss
 from poem.pipeline import PipelineResult, pipeline
 
 
