@@ -320,7 +320,7 @@ class RGCN(BaseModule):
         # Edge dropout: drop the same edges on all layers (only in training mode)
         if self.training and self.edge_dropout is not None:
             # Get random dropout mask
-            edge_keep_mask = torch.rand(self.sources.shape[0]) > self.edge_dropout
+            edge_keep_mask = torch.rand(self.sources.shape[0], device=x.device) > self.edge_dropout
 
             # Apply to edges
             sources = sources[edge_keep_mask]
@@ -329,7 +329,7 @@ class RGCN(BaseModule):
 
         # Different dropout for self-loops (only in training mode)
         if self.training and self.self_loop_dropout is not None:
-            node_keep_mask = torch.rand(self.num_entities) > self.self_loop_dropout
+            node_keep_mask = torch.rand(self.num_entities, device=x.device) > self.self_loop_dropout
         else:
             node_keep_mask = None
 
@@ -348,8 +348,6 @@ class RGCN(BaseModule):
             edge_mask = None
 
         for i in range(self.num_layers):
-            w = self._get_relation_weights(i)
-
             # Initialize embeddings in the next layer for all nodes
             new_x = torch.zeros_like(x)
 
@@ -376,8 +374,11 @@ class RGCN(BaseModule):
                 # Select source node embeddings
                 x_s = x[sources_r]
 
-                # Compute message
-                m_r = x_s @ w[r]
+                # get relation weights
+                w = self._get_relation_weights(i_layer=i, r=r)
+
+                # Compute message (b x d) * (d x d) = (b x d)
+                m_r = x_s @ w
 
                 # Normalize messages by relation-specific in-degree
                 if self.message_normalization == 'nonsymmetric':
@@ -399,7 +400,7 @@ class RGCN(BaseModule):
                 new_x.index_add_(dim=0, index=targets_r, source=m_r)
 
             # Self-loop
-            self_w = w[self.num_relations]
+            self_w = self._get_relation_weights(i_layer=i, r=self.num_relations)
             if node_keep_mask is None:
                 new_x += new_x @ self_w
             else:
@@ -424,26 +425,28 @@ class RGCN(BaseModule):
 
         return x
 
-    def _get_relation_weights(self, i_layer):
+    def _get_relation_weights(self, i_layer: int, r: int) -> torch.FloatTensor:
         if self.decomposition == 'block':
-            # Allocate output array
-            w = torch.zeros(self.num_relations + 1, self.embedding_dim, self.embedding_dim)
+            # allocate weight
+            w = torch.zeros(self.embedding_dim, self.embedding_dim, device=self.device)
 
-            # Fill in blocks
-            # self.bases.shape (num_relations, num_blocks, embedding_dim/num_blocks, embedding_dim/num_blocks)
-            block_size = self.embedding_dim // self.num_bases
+            # Get blocks
             this_layer_blocks = self.bases[i_layer]
+
+            # self.bases[i_layer].shape (num_relations, num_blocks, embedding_dim/num_blocks, embedding_dim/num_blocks)
+            # note: embedding_dim is guaranteed to be divisible by num_bases in the constructor
+            block_size = self.embedding_dim // self.num_bases
             for b, start in enumerate(range(0, self.embedding_dim, block_size)):
                 stop = start + block_size
-                w[:, start:stop, start:stop] = this_layer_blocks[:, b, :, :]
+                w[start:stop, start:stop] = this_layer_blocks[r, b, :, :]
 
         elif self.decomposition == 'basis':
-            # The current basis weights, shape: (num_relations, num_bases)
-            att = self.att[i_layer]
+            # The current basis weights, shape: (num_bases)
+            att = self.att[i_layer][r, :]
             # the current bases, shape: (num_bases, embedding_dim, embedding_dim)
             b = self.bases[i_layer]
-            # compute the current relation weights, shape: (num_relations, embedding_dim, embedding_dim)
-            w = torch.einsum('rb,bij->rij', att, b)
+            # compute the current relation weights, shape: (embedding_dim, embedding_dim)
+            w = torch.sum(att[:, None, None] * b, dim=0)
 
         else:
             raise AssertionError(f'Unknown decomposition: {self.decomposition}')
