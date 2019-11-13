@@ -32,18 +32,35 @@ SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel', 'MockM
 class _ModelTestCase:
     """A test case for quickly defining common tests for KGE models."""
 
+    #: The class of the model to test
     model_cls: ClassVar[Type[BaseModule]]
+
+    #: Additional arguments passed to the model's constructor method
     model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
-    batch_size: int
-    embedding_dim: int
+    #: The triples factory instance
     factory: TriplesFactory
+
+    #: The model instance
     model: BaseModule
 
-    batch_size: int = 16
-    embedding_dim: int = 8
+    #: The batch size for use for forward_* tests
+    batch_size: int = 20
+
+    #: The embedding dimensionality
+    embedding_dim: int = 3
+
+    #: Whether to create inverse triples (needed e.g. by ConvE)
     create_inverse_triples: bool = False
+
+    #: The sampler to use for OWA (different e.g. for R-GCN)
     sampler = 'default'
+
+    #: The batch size for use when testing training procedures
+    train_batch_size = 400
+
+    #: The number of epochs to train the model
+    train_num_epochs = 2
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
@@ -51,7 +68,6 @@ class _ModelTestCase:
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
-            # init=True,
             **(self.model_kwargs or {})
         ).to_device_()
 
@@ -111,7 +127,11 @@ class _ModelTestCase:
 
     def test_forward_cwa(self) -> None:
         """Test the model's ``forward_cwa()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, :2].to(self.model.device)
+        # assert batch comprises (subject, relation) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch[:, 0] < self.factory.num_entities).all()
+        assert (batch[:, 1] < self.factory.num_relations).all()
         try:
             scores = self.model.forward_cwa(batch)
         except NotImplementedError:
@@ -126,7 +146,11 @@ class _ModelTestCase:
 
     def test_forward_inverse_cwa(self) -> None:
         """Test the model's ``forward_inverse_cwa()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.model.device)
+        # assert batch comprises (relation, object) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch[:, 0] < self.factory.num_relations).all()
+        assert (batch[:, 1] < self.factory.num_entities).all()
         try:
             scores = self.model.forward_inverse_cwa(batch)
         except NotImplementedError:
@@ -145,7 +169,12 @@ class _ModelTestCase:
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
-        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128, sampler=self.sampler)
+        losses = self._safe_train_loop(
+            loop,
+            num_epochs=self.train_num_epochs,
+            batch_size=self.train_batch_size,
+            sampler=self.sampler,
+        )
         self.assertIsInstance(losses, list)
 
     def test_train_cwa(self) -> None:
@@ -154,7 +183,12 @@ class _ModelTestCase:
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
-        losses = self._safe_train_loop(loop, num_epochs=5, batch_size=128, sampler='default')
+        losses = self._safe_train_loop(
+            loop,
+            num_epochs=self.train_num_epochs,
+            batch_size=self.train_batch_size,
+            sampler='default',
+        )
         self.assertIsInstance(losses, list)
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
@@ -168,31 +202,41 @@ class _ModelTestCase:
         else:
             return losses
 
+    @property
+    def cli_extras(self):
+        kwargs = self.model_kwargs or {}
+        extras = []
+        for k, v in kwargs.items():
+            extras.append('--' + k.replace('_', '-'))
+            extras.append(str(v))
+        extras += [
+            '--number-epochs', self.train_num_epochs,
+            '--embedding-dim', self.embedding_dim,
+            '--batch-size', self.train_batch_size
+        ]
+        extras = [str(e) for e in extras]
+        return extras
+
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH])
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self.cli_extras)
 
     def test_cli_training_kinship(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', KINSHIP_TRAIN_PATH])
+        self._help_test_cli(['-t', KINSHIP_TRAIN_PATH] + self.cli_extras)
 
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH])
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self.cli_extras)
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if self.model_cls is poem.models.ConvKB:
-            self.skipTest('ConvKB takes too long')
         if self.model_cls is poem.models.RGCN:
             self.skipTest('R-GCN takes too long')
             # TODO: Once post_parameter_update is available, implement enrichment precomputation and remove this point.
-        if self.model_cls is poem.models.ConvE:
-            self.skipTest('ConvE needs more work in the magical CLI')
-        if self.model_cls is poem.models.HolE:
-            self.skipTest('Might not pass HolE due to missing MKL support')
         runner = CliRunner()
         cli = build_cli_from_cls(self.model_cls)
+        # TODO: Catch HolE MKL error?
         result: Result = runner.invoke(cli, args)
 
         self.assertEqual(
@@ -246,8 +290,13 @@ class TestConvE(_ModelTestCase, unittest.TestCase):
     """Test the ConvE model."""
 
     model_cls = poem.models.ConvE
-    embedding_dim = 200
+    embedding_dim = 12
     create_inverse_triples = True
+    model_kwargs = {
+        'output_channels': 2,
+        'embedding_height': 3,
+        'embedding_width': 4,
+    }
 
 
 class TestConvKB(_ModelTestCase, unittest.TestCase):
@@ -255,7 +304,7 @@ class TestConvKB(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.ConvKB
     model_kwargs = {
-        'num_filters': 32,
+        'num_filters': 2,
     }
 
 
@@ -270,7 +319,7 @@ class TestERMLP(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.ERMLP
     model_kwargs = {
-        'hidden_dim': 32,
+        'hidden_dim': 4,
     }
 
 
@@ -278,6 +327,9 @@ class TestERMLPE(_ModelTestCase, unittest.TestCase):
     """Test the extended ERMLP model."""
 
     model_cls = poem.models.ERMLPE
+    model_kwargs = {
+        'hidden_dim': 4,
+    }
 
 
 class TestHolE(_ModelTestCase, unittest.TestCase):
@@ -308,6 +360,9 @@ class TestNTN(_ModelTestCase, unittest.TestCase):
     """Test the NTN model."""
 
     model_cls = poem.models.NTN
+    model_kwargs = {
+        'num_slices': 2,
+    }
 
 
 class TestProjE(_ModelTestCase, unittest.TestCase):
@@ -334,9 +389,10 @@ class TestRGCNBlock(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.RGCN
     sampler = 'schlichtkrull'
+    embedding_dim = 6
     model_kwargs = {
         'decomposition': 'block',
-        'num_bases_or_blocks': 4,
+        'num_bases_or_blocks': 3,
         'message_normalization': 'symmetric',
     }
 
@@ -363,6 +419,9 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransD model."""
 
     model_cls = poem.models.TransD
+    model_kwargs = {
+        'relation_dim': 4,
+    }
 
 
 class TestTransE(_DistanceModelTestCase, unittest.TestCase):
@@ -381,6 +440,9 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransR model."""
 
     model_cls = poem.models.TransR
+    model_kwargs = {
+        'relation_dim': 4,
+    }
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
