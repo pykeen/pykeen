@@ -312,9 +312,9 @@ def evaluate(
                     filter_col=0,
                 )
 
-                # Evaluate metrics on these *filtered* object scores
+                # Evaluate metrics on these *filtered* subject scores
                 for filtered_evaluator in filtered_evaluators:
-                    filtered_evaluator.process_object_scores_(
+                    filtered_evaluator.process_subject_scores_(
                         batch=batch,
                         scores=filtered_scores_of_corrupted_subjects_batch,
                     )
