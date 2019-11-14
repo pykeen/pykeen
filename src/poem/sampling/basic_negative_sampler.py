@@ -16,18 +16,29 @@ class BasicNegativeSampler(NegativeSampler):
 
     def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
         """Generate negative samples from the positive batch."""
-        # Bind batch size
-        batch_size = positive_batch.shape[0]
+        if self.num_negs_per_pos > 1:
+            positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
+
+        # Bind number of negatives to sample
+        num_negs = positive_batch.shape[0]
 
         # Equally corrupt subject and object
-        split_idx = batch_size // 2
+        split_idx = num_negs // 2
 
-        # Copy positive batch for corruption. Do not detach, as no gradients should flow into the indices.
-        negative_batch = positive_batch.detach().clone()
+        # Copy positive batch for corruption.
+        # Do not detach, as no gradients should flow into the indices.
+        negative_batch = positive_batch.clone()
 
-        # Corrupt subjects
-        negative_batch[:split_idx, 0] = torch.randint(high=self.num_entities, size=(split_idx,))
+        # Sample random entities as replacement
+        negative_entities = torch.randint(high=self.num_entities - 1, size=(num_negs,), device=positive_batch.device)
+
+        # Replace heads – To make sure we don't replace the head by the original value
+        # we shift all values greater or equal than the original value by one up
+        # for that reason we choose the random value from [0, num_entities -1]
+        filter_same_head = (negative_entities[:split_idx] >= positive_batch[:split_idx, 0])
+        negative_batch[:split_idx, 0] = negative_entities[:split_idx] + filter_same_head.long()
         # Corrupt objects
-        negative_batch[split_idx:, 2] = torch.randint(high=self.num_entities, size=(batch_size - split_idx,))
+        filter_same_tail = (negative_entities[split_idx:] >= positive_batch[split_idx:, 2])
+        negative_batch[split_idx:, 2] = negative_entities[split_idx:] + filter_same_tail.long()
 
         return negative_batch

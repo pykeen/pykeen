@@ -244,6 +244,7 @@ def pipeline(  # noqa: C901
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
+    negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     early_stopping: bool = False,
     early_stopping_kwargs: Optional[Mapping[str, Any]] = None,
@@ -275,6 +276,7 @@ def pipeline(  # noqa: C901
     :param evaluator: The name of the evaluator or an evaluator class. Defaults to
      :class:`poem.evaluation.RankBasedEvaluator`.
     :param early_stopping: Whether to use early stopping. Defaults to false.
+    :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
     :param model_kwargs: Keyword arguments to pass to the model class on instantiation
     :param optimizer_kwargs: Keyword arguments to pass to the optimizer on instantiation
     :param training_kwargs: Keyword arguments to pass to the training loop's train
@@ -347,10 +349,11 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with CWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
-        training_loop_instance: TrainingLoop = training_loop(
+        training_loop_instance: TrainingLoop = OWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
             negative_sampler_cls=negative_sampler,
+            negative_sampler_kwargs=negative_sampler_kwargs,
         )
 
     evaluator = get_evaluator_cls(evaluator)

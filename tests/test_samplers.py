@@ -45,9 +45,14 @@ class _NegativeSamplingTestCase:
         """Set up the test case with a triples factory and model."""
         self.batch_size = 16
         self.seed = 42
+        self.num_negs_per_pos = 10
         self.triples_factory = NationsTrainingTriplesFactory()
         self.owa_instances = self.triples_factory.create_owa_instances()
         self.negative_sampler = self.negative_sampling_cls(triples_factory=self.triples_factory)
+        self.scaling_negative_sampler = self.negative_sampling_cls(
+            triples_factory=self.triples_factory,
+            num_negs_per_pos=self.num_negs_per_pos,
+        )
         random = numpy.random.RandomState(seed=self.seed)
         batch_indices = random.randint(low=0, high=self.owa_instances.num_instances, size=(self.batch_size,))
         self.positive_batch = torch.tensor(self.owa_instances.mapped_triples[batch_indices], dtype=torch.long)
@@ -68,8 +73,16 @@ class _NegativeSamplingTestCase:
         # check bounds: objects
         assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
 
-        # Assert arrays not equal
-        assert not (negative_batch != self.positive_batch).all()
+        # Check that all elements got corrupted
+        assert (negative_batch != self.positive_batch).any(dim=1).all()
+
+        # Generate scaled negative sample
+        scaled_negative_batch = self.scaling_negative_sampler.sample(
+            positive_batch=self.positive_batch
+        )
+
+        assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
+        assert scaled_negative_batch.shape[1] == self.positive_batch.shape[1]
 
 
 class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):

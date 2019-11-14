@@ -2,7 +2,7 @@
 
 """Training KGE models based on the OWA."""
 
-from typing import Optional, Type
+from typing import Any, Mapping, Optional, Type
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -28,14 +28,14 @@ class OWATrainingLoop(TrainingLoop):
         model: BaseModule,
         optimizer: Optional[Optimizer] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
-        num_negs_per_pos: int = 1,
+        negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize the training loop.
 
         :param model: The model to train
         :param optimizer: The optimizer to use while training the model
         :param negative_sampler_cls: The class of the negative sampler
-        :param num_negs_per_pos: The number of negative triples to generate
+        :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
          for every positive one
         """
         super().__init__(
@@ -48,24 +48,16 @@ class OWATrainingLoop(TrainingLoop):
 
         self.negative_sampler = negative_sampler_cls(
             triples_factory=self.triples_factory,
+            **(negative_sampler_kwargs or {}),
         )
 
-        # TODO: Make this part of the negative sampler?
-        self.num_negs_per_pos = num_negs_per_pos
+    @property
+    def num_negs_per_pos(self):
+        """Return number of negatives per positive from the sampler.
 
-    def _create_negative_samples(
-        self,
-        positive_batch: torch.LongTensor,
-        num_negs_per_pos: int = 1,
-    ) -> torch.LongTensor:
-        # TODO: Pass num_negs_per_pos to sampler to allow further optimization
-        return torch.cat(
-            [
-                self.negative_sampler.sample(positive_batch=positive_batch)
-                for _ in range(num_negs_per_pos)
-            ],
-            dim=0,
-        )
+        Property for API compatibility
+        """
+        return self.negative_sampler.num_negs_per_pos
 
     def _create_instances(self):  # noqa: D102
         return self.triples_factory.create_owa_instances()
@@ -79,16 +71,13 @@ class OWATrainingLoop(TrainingLoop):
         positive_batch = batch.to(device=self.device)
 
         # Create negative samples
-        neg_samples = self._create_negative_samples(
-            positive_batch=positive_batch,
-            num_negs_per_pos=self.num_negs_per_pos,
-        )
+        neg_samples = self.negative_sampler.sample(positive_batch=positive_batch)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
         negative_batch = neg_samples.to(self.device)
 
-        # Make it negative batch broadcastable (required for self.num_negs_per_pos > 1).
+        # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
         negative_batch = negative_batch.view(-1, 3)
 
         # Compute negative and positive scores
