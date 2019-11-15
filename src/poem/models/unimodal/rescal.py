@@ -2,22 +2,22 @@
 
 """Implementation of RESCAL."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import nn
 
-from ..base import RegularizedModel
+from ..base import BaseModule
 from ...losses import Loss
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import l2_regularization
 
 __all__ = [
     'RESCAL',
 ]
 
 
-class RESCAL(RegularizedModel):
+class RESCAL(BaseModule):
     """An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -41,18 +41,23 @@ class RESCAL(RegularizedModel):
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        regularization_weight: float = 0.01,
         init: bool = True,
+        regularizer: Union[None, str, Regularizer] = 'nickel2011',
     ) -> None:
         """Initialize the model."""
+        if regularizer == 'nickel2011':
+            # According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py a normalized weight of
+            # 10 is used.
+            regularizer = LpRegularizer(weight=10, p=2., normalize=True)
+
         super().__init__(
-            regularization_weight=regularization_weight,
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         self.relation_embeddings = relation_embeddings
@@ -82,11 +87,11 @@ class RESCAL(RegularizedModel):
         # shape: (b, d)
         t = self.entity_embeddings(batch[:, 2]).view(-1, self.embedding_dim, 1)
 
-        # Update regularization term
-        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
-
         # Compute scores
         scores = h @ r @ t
+
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         return scores[:, :, 0]
 
@@ -95,11 +100,11 @@ class RESCAL(RegularizedModel):
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
 
-        # Update regularization term
-        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
-
         # Compute scores
         scores = h @ r @ t
+
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         return scores[:, 0, :]
 
@@ -110,10 +115,10 @@ class RESCAL(RegularizedModel):
         r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim, 1)
 
-        # Update regularization term
-        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
-
         # Compute scores
         scores = h @ r @ t
+
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         return scores[:, :, 0]

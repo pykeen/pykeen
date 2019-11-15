@@ -2,23 +2,23 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
 
-from ..base import RegularizedModel
+from ..base import BaseModule
 from ..init import embedding_xavier_normal_
 from ...losses import Loss, SoftplusLoss
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import l2_regularization
 
 __all__ = [
     'ComplEx',
 ]
 
 
-class ComplEx(RegularizedModel):
+class ComplEx(BaseModule):
     """An implementation of ComplEx [trouillon2016]_."""
 
     hpo_default = dict(
@@ -38,8 +38,8 @@ class ComplEx(RegularizedModel):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        regularization_weight: float = 0.01,
         init: bool = True,
+        regularizer: Union[None, str, Regularizer] = 'troullion2016',
     ) -> None:
         """Initialize the module.
 
@@ -57,17 +57,21 @@ class ComplEx(RegularizedModel):
             An optional random seed to set before the initialization of weights.
         :param relation_embeddings: nn.Embedding (optional)
             Relation embeddings initialization.
-        :param regularization_weight: float
-            A weight for the regularization term's contribution relative to the loss value.
+        :param regularizer: BaseRegularizer
+            The regularizer to use.
         """
+        if regularizer == 'troullion2016':
+            # In the paper, they use weight of 0.01, and normalize the regularization term by the number of elements
+            regularizer = LpRegularizer(weight=0.01, p=2., normalize=True)
+
         super().__init__(
-            regularization_weight=regularization_weight,
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
             entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         # Store the real embedding size
@@ -136,11 +140,11 @@ class ComplEx(RegularizedModel):
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
         t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
-        # Update regularization term
-        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
-
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
+
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         return scores
 
@@ -150,11 +154,11 @@ class ComplEx(RegularizedModel):
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
         t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
-        # Update regularization term
-        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
-
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
+
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         return scores
 
@@ -164,10 +168,10 @@ class ComplEx(RegularizedModel):
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
         t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
-        # Update regularization term
-        self.current_regularization_term = l2_regularization(h, r, t, normalize=True)
-
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
+
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         return scores

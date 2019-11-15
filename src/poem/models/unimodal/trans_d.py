@@ -11,6 +11,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -56,6 +57,7 @@ class TransD(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -64,6 +66,7 @@ class TransD(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.relation_embedding_dim = relation_dim
         # The dimensions affected by h_bot

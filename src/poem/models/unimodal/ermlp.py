@@ -10,6 +10,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -38,6 +39,7 @@ class ERMLP(BaseModule):
         random_seed: Optional[int] = None,
         hidden_dim: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         if hidden_dim is None:
@@ -50,6 +52,7 @@ class ERMLP(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         self.hidden_dim = hidden_dim
@@ -97,6 +100,9 @@ class ERMLP(BaseModule):
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2])
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
         # Concatenate them
         x_s = torch.cat([h, r, t], dim=-1)
 
@@ -108,6 +114,9 @@ class ERMLP(BaseModule):
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings.weight
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
 
         # First layer can be unrolled
         layers = self.mlp.children()
@@ -131,6 +140,9 @@ class ERMLP(BaseModule):
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 1])
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
 
         # First layer can be unrolled
         layers = self.mlp.children()

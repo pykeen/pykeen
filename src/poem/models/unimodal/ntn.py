@@ -9,6 +9,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -53,6 +54,7 @@ class NTN(BaseModule):
         random_seed: Optional[int] = None,
         non_linearity: Optional[nn.Module] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         if non_linearity is None:
@@ -65,6 +67,7 @@ class NTN(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         self.num_slices = num_slices

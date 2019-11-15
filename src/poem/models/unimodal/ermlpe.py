@@ -10,6 +10,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -63,6 +64,7 @@ class ERMLPE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -71,6 +73,7 @@ class ERMLPE(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.hidden_dim = hidden_dim
         self.input_dropout = input_dropout
@@ -116,6 +119,9 @@ class ERMLPE(BaseModule):
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(batch[:, 2])
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
         # Concatenate them
         x_s = torch.cat([h, r], dim=-1)
         x_s = self.input_dropout(x_s)
@@ -135,6 +141,9 @@ class ERMLPE(BaseModule):
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(1, 0)
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
         # Concatenate them
         x_s = torch.cat([h, r], dim=-1)
         x_s = self.input_dropout(x_s)
@@ -151,6 +160,9 @@ class ERMLPE(BaseModule):
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim)
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
 
         batch_size = t.shape[0]
 

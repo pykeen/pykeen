@@ -13,6 +13,7 @@ from torch.nn import functional
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -42,6 +43,7 @@ class StructuredEmbedding(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -49,6 +51,7 @@ class StructuredEmbedding(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         # Embeddings
@@ -97,15 +100,14 @@ class StructuredEmbedding(BaseModule):
         self.right_relation_embeddings = None
         return self
 
-    def _apply_forward_constraints_if_necessary(self) -> None:
-        if not self.forward_constraint_applied:
-            # Normalise embeddings of entities
-            functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
-            self.forward_constraint_applied = True
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # Make sure to call super first
+        super().post_parameter_update()
+
+        # Normalise embeddings of entities
+        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim, 1)
         rel_h = self.left_relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
@@ -120,8 +122,6 @@ class StructuredEmbedding(BaseModule):
         return scores
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim, 1)
         rel_h = self.left_relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
@@ -137,8 +137,6 @@ class StructuredEmbedding(BaseModule):
         return scores
 
     def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
         rel_h = self.left_relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)

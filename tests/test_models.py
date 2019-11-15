@@ -20,13 +20,13 @@ from poem.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
 )
-from poem.models.base import BaseModule, RegularizedModel
+from poem.models.base import BaseModule
 from poem.models.cli import build_cli_from_cls
 from poem.models.multimodal import MultimodalBaseModule
 from poem.training import CWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
 
-SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'RegularizedModel', 'MockModel', 'models', 'get_model_cls'}
+SKIP_MODULES = {'BaseModule', 'MultimodalBaseModule', 'MockModel', 'models', 'get_model_cls'}
 
 
 class _ModelTestCase:
@@ -270,6 +270,17 @@ Traceback
         else:
             self.assertIsInstance(d, dict)
 
+    def test_post_parameter_update(self):
+        """Test whether post_parameter_update resets the regularization term."""
+        # set regularizer term
+        self.model.regularizer.regularization_term = None
+
+        # call post_parameter_update
+        self.model.post_parameter_update()
+
+        # assert that the regularization term has been reset
+        assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float)
+
 
 class _DistanceModelTestCase(_ModelTestCase):
     """A test case for distance-based models."""
@@ -470,7 +481,7 @@ class TestTesting(unittest.TestCase):
         """
         model_names = {
             cls.__name__
-            for cls in BaseModule.__subclasses__() + RegularizedModel.__subclasses__()
+            for cls in BaseModule.__subclasses__()
         }
         model_names -= SKIP_MODULES
 

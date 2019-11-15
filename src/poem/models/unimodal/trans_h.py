@@ -2,14 +2,15 @@
 
 """An implementation of TransH."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import nn
 from torch.nn import functional
 
-from ..base import RegularizedModel
+from ..base import BaseModule
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -17,7 +18,32 @@ __all__ = [
 ]
 
 
-class TransH(RegularizedModel):
+class TransHRegularizer(Regularizer):
+    """Regularizer for TransH's soft constraints."""
+
+    def __init__(self, weight: float, epsilon: float):
+        super().__init__(weight=weight, normalize=False)
+        self.epsilon = epsilon
+
+    def _regularize_one_tensor(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        raise NotImplementedError('TransH regularizer is order-sensitive!')
+
+    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
+        if len(tensors) != 4:
+            raise KeyError('Expects exactly four tensors')
+
+        h, t, w_r, d_r = tensors
+
+        # Entity soft constraint
+        self.regularization_term += torch.sum(functional.relu(torch.norm(h, dim=-1)) ** 2 - 1.0)
+        self.regularization_term += torch.sum(functional.relu(torch.norm(t, dim=-1)) ** 2 - 1.0)
+
+        # Orthogonality soft constraint
+        d_r_n = functional.normalize(d_r, dim=-1)
+        self.regularization_term += torch.sum(functional.relu(torch.sum((w_r * d_r_n) ** 2, dim=-1) - self.epsilon))
+
+
+class TransH(BaseModule):
     """An implementation of TransH [wang2014]_.
 
     This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
@@ -42,23 +68,25 @@ class TransH(RegularizedModel):
         relation_embeddings: Optional[nn.Embedding] = None,
         normal_vector_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
-        regularization_weight: float = 0.05,
         epsilon: float = 0.5,
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Union[None, str, Regularizer] = 'wang2014'
     ) -> None:
+        if regularizer == 'wang2014':
+            regularizer = TransHRegularizer(weight=0.05, epsilon=epsilon)
+
         super().__init__(
-            regularization_weight=regularization_weight,
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
-        self.epsilon = nn.Parameter(torch.tensor([epsilon], device=self.device), requires_grad=False)
 
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
@@ -83,28 +111,17 @@ class TransH(RegularizedModel):
         self.normal_vector_embeddings = None
         return self
 
-    def _apply_forward_constraints_if_necessary(self) -> None:
-        if not self.forward_constraint_applied:
-            # Normalise the normal vectors by their l2 norms
-            functional.normalize(
-                self.normal_vector_embeddings.weight.data,
-                out=self.normal_vector_embeddings.weight.data,
-            )
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # Make sure to call super first
+        super().post_parameter_update()
 
-            self.forward_constraint_applied = True
-
-    def _compute_regularization_term(self) -> torch.FloatTensor:
-        w_r = self.normal_vector_embeddings.weight
-        d_r = self.relation_embeddings.weight
-        d_r_n = functional.normalize(d_r, dim=-1)
-        ortho_constraint = torch.sum(functional.relu(torch.sum((w_r * d_r_n) ** 2, dim=-1) - self.epsilon))
-        entity_constraint = torch.sum(functional.relu(torch.norm(self.entity_embeddings.weight, dim=-1) ** 2 - 1.0))
-        return ortho_constraint + entity_constraint
+        # Normalise the normal vectors by their l2 norms
+        functional.normalize(
+            self.normal_vector_embeddings.weight.data,
+            out=self.normal_vector_embeddings.weight.data,
+        )
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Guarantee forward constraints
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         d_r = self.relation_embeddings(batch[:, 1])
@@ -116,14 +133,11 @@ class TransH(RegularizedModel):
         pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
 
         # Regularization term
-        self.current_regularization_term = self._compute_regularization_term()
+        self.regularize_if_necessary(h, t, w_r, d_r)
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Guarantee forward constraints
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         d_r = self.relation_embeddings(batch[:, 1])
@@ -135,14 +149,11 @@ class TransH(RegularizedModel):
         pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
 
         # Regularization term
-        self.current_regularization_term = self._compute_regularization_term()
+        self.regularize_if_necessary(h, t, w_r, d_r)
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
     def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Guarantee forward constraints
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings.weight
         rel_id = batch[:, 0]
@@ -155,6 +166,6 @@ class TransH(RegularizedModel):
         pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
 
         # Regularization term
-        self.current_regularization_term = self._compute_regularization_term()
+        self.regularize_if_necessary(h, t, w_r, d_r)
 
         return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)

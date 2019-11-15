@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import Optional, Type
+from typing import Optional, Type, Union
 
 import click
 from torch import nn
@@ -16,6 +16,7 @@ from .options import (
     number_epochs_option, optimizer_option, testing_option, title_option, training_loop_option, training_option,
 )
 from ..base import BaseModule
+from ...regularizers import Regularizer
 
 __all__ = [
     'build_cli_from_cls',
@@ -41,7 +42,17 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
 
-            if name in CLI_OPTIONS:
+            if annotation == Union[None, str, Regularizer]:  # a model that has preset regularization
+                parameter = signature.parameters[name]
+                option = click.option(
+                    '--regularizer',
+                    type=str,
+                    default=parameter.default,
+                    show_default=True,
+                    help=f'The name of the regularizer preset for {model.__name__}',
+                )
+
+            elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
             elif annotation in {Optional[int], Optional[str]}:
@@ -58,7 +69,11 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
 
                 option = click.option(f'--{name.replace("_", "-")}', type=annotation, default=parameter.default)
 
-            command = option(command)
+            try:
+                command = option(command)
+            except AttributeError:
+                logger.warning(f'Unable to handle parameter in {model.__name__}: {name}')
+                continue
 
         return command
 

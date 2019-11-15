@@ -11,6 +11,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -36,6 +37,7 @@ class UnstructuredModel(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -44,6 +46,7 @@ class UnstructuredModel(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.scoring_fct_norm = scoring_fct_norm
         if init:

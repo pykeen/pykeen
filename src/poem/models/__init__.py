@@ -36,7 +36,7 @@ UnstructuredModel    :class:`poem.models.UnstructuredModel`    [bordes2014]_
 import itertools as itt
 from typing import Mapping, Set, Type, Union
 
-from .base import BaseModule, RegularizedModel
+from .base import BaseModule
 from .multimodal import ComplExLiteral, DistMultLiteral, MultimodalBaseModule
 from .unimodal import (
     ComplEx,
@@ -95,10 +95,9 @@ _MODELS: Set[Type[BaseModule]] = {
     cls
     for cls in itt.chain(
         BaseModule.__subclasses__(),
-        RegularizedModel.__subclasses__(),
         MultimodalBaseModule.__subclasses__(),
     )
-    if cls not in {BaseModule, RegularizedModel, MultimodalBaseModule}
+    if cls not in {BaseModule, MultimodalBaseModule}
 }
 
 #: A mapping of models' names to their implementations

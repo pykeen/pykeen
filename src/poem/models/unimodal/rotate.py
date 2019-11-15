@@ -13,6 +13,7 @@ from torch.nn import functional
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -27,7 +28,7 @@ class RotatE(BaseModule):
 
     .. seealso::
 
-       - Author's `implementation of RotatE
+       - Authors' `implementation of RotatE
          <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
     """
 
@@ -45,6 +46,7 @@ class RotatE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -53,6 +55,7 @@ class RotatE(BaseModule):
             entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.real_embedding_dim = embedding_dim
 
@@ -79,22 +82,29 @@ class RotatE(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def _apply_forward_constraints_if_necessary(self) -> None:
-        """Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+    def post_parameter_update(self) -> None:  # noqa: D102
+        r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 
         Absolute value of complex number
-        |a+ib| = sqrt(a**2 + b**2)
+
+        .. math::
+
+            |a + ib| = \sqrt{a^2 + b^2}
 
         L2 norm of complex vector:
-        ||x||**2 = sum i=1..d |x_i|**2
-                 = sum i=1..d (x_i.re**2 + x_i.im**2)
-                 = (sum i=1..d x_i.re**2) + (sum i=1..d x_i.im**2)
-                 = ||x.re||**2 + ||x.im||**2
-                 = || [x.re; x.im] ||**2
+
+        .. math::
+            \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                     = \sum_{i=1}^d (x_i.re^2 + x_i.im^2)
+                     = (\sum_{i=1}^d x_i.re^2) + (\sum_{i=1}^d x_i.im^2)
+                     = \|x.re\|^2 + \|x.im\|^2
+                     = \| [x.re; x.im] \|^2
         """
-        if not self.forward_constraint_applied:
-            functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-            self.forward_constraint_applied = True
+        # Make sure to call super first
+        super().post_parameter_update()
+
+        # Normalize relation embeddings
+        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
     @staticmethod
     def interaction_function(
@@ -137,9 +147,6 @@ class RotatE(BaseModule):
         return scores
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Apply forward constraints if necessary
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
@@ -148,12 +155,12 @@ class RotatE(BaseModule):
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, t)
+
         return scores
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Apply forward constraints if necessary
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
@@ -164,12 +171,12 @@ class RotatE(BaseModule):
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, t)
+
         return scores
 
     def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Apply forward constraints if necessary
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
         r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
@@ -196,5 +203,8 @@ class RotatE(BaseModule):
 
         # use negative distance to tail as score
         scores = -torch.norm(h[None, :, :] - rot_t[:, None, :], dim=-1)
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, t)
 
         return scores

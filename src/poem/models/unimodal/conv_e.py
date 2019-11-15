@@ -13,6 +13,7 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import BaseModule, CUDNN_ERROR
 from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -96,6 +97,7 @@ class ConvE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
@@ -113,6 +115,7 @@ class ConvE(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         # Embeddings
@@ -230,6 +233,9 @@ class ConvE(BaseModule):
         )
         t = self.entity_embeddings(batch[:, 2])
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
         x = self._convolve_entity_relation(h, r)
 
         # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
@@ -259,6 +265,9 @@ class ConvE(BaseModule):
         )
         t = self.entity_embeddings.weight.transpose(1, 0)
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
         x = self._convolve_entity_relation(h, r)
 
         x = x @ t
@@ -277,6 +286,9 @@ class ConvE(BaseModule):
             self.embedding_width,
         )
         t = self.entity_embeddings(batch[:, 1])
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
 
         '''
         Every head has to be convolved with every relation in the batch. Hence we repeat the

@@ -11,6 +11,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -45,6 +46,7 @@ class HolE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -54,6 +56,7 @@ class HolE(BaseModule):
             entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         self.relation_embeddings = relation_embeddings
@@ -117,6 +120,9 @@ class HolE(BaseModule):
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings(batch[:, 2])
 
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
         scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores
@@ -125,6 +131,9 @@ class HolE(BaseModule):
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
         t = self.entity_embeddings.weight
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
 
         # TODO: Explicitly exploit symmetry and set onesided=True
         h_fft = torch.rfft(h, signal_ndim=1, onesided=False)
@@ -148,6 +157,9 @@ class HolE(BaseModule):
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(batch[:, 0])
         t = self.entity_embeddings(batch[:, 1])
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
 
         # TODO: Explicitly exploit symmetry and set onesided=True
         h_fft = torch.rfft(h, signal_ndim=1, onesided=False)

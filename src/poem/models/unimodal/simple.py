@@ -2,7 +2,7 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 import torch.autograd
@@ -10,12 +10,15 @@ from torch import nn
 
 from ..base import BaseModule
 from ...losses import Loss
+from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...utils import slice_triples
 
 __all__ = [
     'SimplE',
 ]
+
+TROULLION_REFERENCE = 'troullion2016'
 
 
 class SimplE(BaseModule):
@@ -45,7 +48,13 @@ class SimplE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Union[None, str, Regularizer] = TROULLION_REFERENCE,
     ) -> None:
+        if regularizer == TROULLION_REFERENCE:
+            # In the paper, they use weight of 0.1, and do not normalize the regularization term by the number of
+            # elements, which is 200.
+            regularizer = PowerSumRegularizer(weight=20, p=2., normalize=True)
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -53,6 +62,7 @@ class SimplE(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.relation_embeddings = relation_embeddings
         self.tail_entity_embeddings = tail_entity_embeddings

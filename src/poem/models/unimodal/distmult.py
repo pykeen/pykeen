@@ -2,7 +2,7 @@
 
 """Implementation of DistMult."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 import torch.autograd
@@ -12,6 +12,7 @@ from torch.nn import functional
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -47,8 +48,15 @@ class DistMult(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Union[None, str, Regularizer] = 'yang2014',
     ) -> None:
         """Initialize the model."""
+        if regularizer == 'yang2014':
+            # In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
+            # Thus, when we use normalized regularization weight, the normalization factor is 10*100 = 1,000, which is
+            # why the weight has to be increased by a factor of 1,000 to have the same configuration as in the paper.
+            regularizer = LpRegularizer(weight=1.0, p=2., normalize=True)
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -56,6 +64,7 @@ class DistMult(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.relation_embeddings = relation_embeddings
 
@@ -80,11 +89,12 @@ class DistMult(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def _apply_forward_constraints_if_necessary(self) -> None:
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # Make sure to call super first
+        super().post_parameter_update()
+
         # Normalize embeddings of entities
-        if not self.forward_constraint_applied:
-            functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
-            self.forward_constraint_applied = True
+        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
     @staticmethod
     def interaction_function(
@@ -108,14 +118,11 @@ class DistMult(BaseModule):
         :return: shape: (...)
             The scores.
         """
-        # ComplEx space bilinear product (equivalent to HolE)
+        # Bilinear product
         # *: Elementwise multiplication
         return torch.sum(h * r * t, dim=-1)
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Normalize embeddings
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0])
         r = self.relation_embeddings(batch[:, 1])
@@ -124,12 +131,12 @@ class DistMult(BaseModule):
         # Compute score
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
+        # Only regularize relation embeddings
+        self.regularize_if_necessary(r)
+
         return scores
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Normalize embeddings
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
@@ -138,12 +145,12 @@ class DistMult(BaseModule):
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)
 
+        # Only regularize relation embeddings
+        self.regularize_if_necessary(r)
+
         return scores
 
     def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Normalize embeddings
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
@@ -151,5 +158,8 @@ class DistMult(BaseModule):
 
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)
+
+        # Only regularize relation embeddings
+        self.regularize_if_necessary(r)
 
         return scores

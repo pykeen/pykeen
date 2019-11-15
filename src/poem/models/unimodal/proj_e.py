@@ -12,6 +12,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -45,6 +46,7 @@ class ProjE(BaseModule):
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         if inner_non_linearity is None:
             inner_non_linearity = nn.Tanh()
@@ -56,6 +58,7 @@ class ProjE(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.relation_embeddings = relation_embeddings
         self.inner_non_linearity = inner_non_linearity

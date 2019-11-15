@@ -10,6 +10,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -119,6 +120,7 @@ class KG2E(BaseModule):
         c_min: float = 0.05,
         c_max: float = 5.,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -127,6 +129,7 @@ class KG2E(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         # Similarity function used for distributions
@@ -172,21 +175,19 @@ class KG2E(BaseModule):
         self.relation_covariances = None
         return self
 
-    def _apply_forward_constraints_if_necessary(self) -> None:
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # Make sure to call super first
+        super().post_parameter_update()
+
         # Ensure positive definite covariances matrices and appropriate size by clamping
-        if not self.forward_constraint_applied:
-            for cov in (
-                self.entity_covariances,
-                self.relation_covariances,
-            ):
-                cov_data = cov.weight.data
-                torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
-            self.forward_constraint_applied = True
+        for cov in (
+            self.entity_covariances,
+            self.relation_covariances,
+        ):
+            cov_data = cov.weight.data
+            torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Normalize embeddings
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         mu_h = self.entity_embeddings(batch[:, 0])
         mu_r = self.relation_embeddings(batch[:, 1])
@@ -211,9 +212,6 @@ class KG2E(BaseModule):
         return scores
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Normalize embeddings
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         mu_h = self.entity_embeddings(batch[:, 0])
         mu_r = self.relation_embeddings(batch[:, 1])
@@ -237,9 +235,6 @@ class KG2E(BaseModule):
         return scores
 
     def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Normalize embeddings
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         mu_h = self.entity_embeddings.weight
         mu_r = self.relation_embeddings(batch[:, 0])

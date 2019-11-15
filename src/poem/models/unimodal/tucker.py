@@ -11,6 +11,7 @@ from torch import nn
 from ..base import BaseModule
 from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -65,6 +66,7 @@ class TuckER(BaseModule):
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model.
 
@@ -82,6 +84,7 @@ class TuckER(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         if relation_dim is None:

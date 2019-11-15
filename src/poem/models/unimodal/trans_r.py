@@ -12,6 +12,7 @@ from torch.nn import functional
 from ..base import BaseModule
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -58,6 +59,7 @@ class TransR(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -67,6 +69,7 @@ class TransR(BaseModule):
             criterion=criterion,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
         self.relation_embedding_dim = relation_dim
         self.scoring_fct_norm = scoring_fct_norm
@@ -97,16 +100,14 @@ class TransR(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def _apply_forward_constraints_if_necessary(self) -> None:
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # Make sure to call super first
+        super().post_parameter_update()
+
         # Normalize embeddings of entities
-        if not self.forward_constraint_applied:
-            functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
-            self.forward_constraint_applied = True
+        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Guarantee forward constraints
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1])
@@ -121,9 +122,6 @@ class TransR(BaseModule):
         return score
 
     def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Guarantee forward constraints
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.relation_embedding_dim)
@@ -138,9 +136,6 @@ class TransR(BaseModule):
         return score
 
     def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Guarantee forward constraints
-        self._apply_forward_constraints_if_necessary()
-
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
         r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.relation_embedding_dim)

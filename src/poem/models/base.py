@@ -14,13 +14,13 @@ from torch import nn
 from tqdm import tqdm
 
 from ..losses import Loss, NegativeSamplingSelfAdversarialLoss
+from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..utils import resolve_device
 from ..version import get_version
 
 __all__ = [
     'BaseModule',
-    'RegularizedModel',
 ]
 
 #: An error that occurs becuase the input in CUDA is too big. See ConvE for an example.
@@ -42,6 +42,9 @@ class BaseModule(nn.Module):
     criterion_default: Type[Loss] = nn.MarginRankingLoss
     criterion_default_kwargs = dict(margin=1.0, reduction='mean')
 
+    #: The regularizer
+    regularizer: Regularizer
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -51,6 +54,7 @@ class BaseModule(nn.Module):
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
         init: bool = True,
     ) -> None:
         """Initialize the module."""
@@ -76,6 +80,11 @@ class BaseModule(nn.Module):
         # TODO: Check loss functions that require 1 and -1 as label but only
         self.is_mr_loss = isinstance(self.criterion, nn.MarginRankingLoss)
 
+        # Regularizer
+        if regularizer is None:
+            regularizer = NoRegularizer()
+        self.regularizer = regularizer
+
         self.is_self_adversiarial_neg_sampling_loss = isinstance(self.criterion, NegativeSamplingSelfAdversarialLoss)
 
         # The triples factory facilitates access to the dataset.
@@ -86,9 +95,6 @@ class BaseModule(nn.Module):
 
         # The embeddings are first initiated when calling the fit function
         self.entity_embeddings = entity_embeddings
-
-        # Marker to check whether the forward constraints of a models has been applied before starting loss calculation
-        self.forward_constraint_applied = False
 
         '''
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
@@ -227,6 +233,14 @@ class BaseModule(nn.Module):
             scores = torch.sigmoid(scores)
         return scores
 
+    def post_parameter_update(self) -> None:
+        """Has to be called after each parameter update."""
+        self.regularizer.reset()
+
+    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
+        """Update the regularizer's term given some tensors, if regularization is requested."""
+        self.regularizer.update(*tensors)
+
     def compute_mr_loss(
         self,
         positive_scores: torch.FloatTensor,
@@ -248,7 +262,7 @@ class BaseModule(nn.Module):
                 ' losses. Please use the compute_loss method instead.'
             )
         y = torch.ones_like(negative_scores, device=self.device)
-        return self.criterion(positive_scores, negative_scores, y)
+        return self.criterion(positive_scores, negative_scores, y) + self.regularizer.term
 
     def compute_label_loss(
         self,
@@ -308,7 +322,7 @@ class BaseModule(nn.Module):
                 'The chosen criterion does not allow the calculation of margin label'
                 ' losses. Please use the compute_mr_loss method instead.'
             )
-        return self.criterion(tensor_1, tensor_2)
+        return self.criterion(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
     def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:
@@ -408,80 +422,3 @@ class BaseModule(nn.Module):
         session.add(collection)
         session.commit()
         return collection
-
-
-class RegularizedModel(BaseModule):
-    """Adds regularization to the BaseModule.
-
-    The class modifies the loss method by adding a weighted regularization term. The computation of the regularization
-    term is left to the subclass that usually computes such in every forward pass.
-    """
-
-    #: Current regularization term
-    #: Except for initialization to None, all management is left to the subclass.
-    current_regularization_term: Optional[torch.FloatTensor]
-
-    def __init__(
-        self,
-        *args,
-        regularization_weight: float,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.regularization_weight = regularization_weight
-        self.current_regularization_term = None
-
-    @property
-    def _regularization_delta(self):
-        return self.regularization_weight * self.current_regularization_term
-
-    def _compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        assert self.current_regularization_term is not None, \
-            "Regularized models have to set 'self.current_regularization_term' in the forward pass"
-        return super()._compute_loss(tensor_1, tensor_2) + self._regularization_delta
-
-    def compute_label_loss(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the classification loss.
-
-        :param predictions: shape: s
-            The tensor containing predictions.
-        :param labels: shape: s
-            The tensor containing labels.
-
-        :return: torch.Tensor, dtype: float, scalar
-            The label loss value.
-        """
-        return self._compute_loss(tensor_1=predictions, tensor_2=labels)
-
-    def compute_self_adversarial_negative_sampling_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss.
-
-        :param positive_scores: shape: s
-            The tensor containing the positive scores.
-        :param negative_scores: shape: s
-            Tensor containing the negative scores.
-        :return: torch.Tensor, dtype: float, scalar
-            The loss value.
-        """
-        return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
-
-    def compute_mr_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        assert self.current_regularization_term is not None, \
-            "Regularized models have to set 'self.current_regularization_term' in the forward pass"
-        return super().compute_mr_loss(positive_scores, negative_scores) + self._regularization_delta

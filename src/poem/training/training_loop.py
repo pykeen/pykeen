@@ -173,9 +173,10 @@ class TrainingLoop(ABC):
                 loss.backward()
                 current_epoch_loss += loss.item()
                 self.optimizer.step()
+
                 # After changing applying the gradients to the embeddings, the model is notified that the forward
                 # constraints are no longer applied
-                self.model.forward_constraint_applied = False
+                self.model.post_parameter_update()
 
             # Track epoch loss
             epoch_loss = current_epoch_loss / num_training_instances
