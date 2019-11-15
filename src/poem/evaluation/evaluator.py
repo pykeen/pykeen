@@ -53,19 +53,26 @@ class Evaluator(ABC):
     def __init__(
         self,
         filtered: bool = False,
+        requires_positive_mask: bool = False,
     ):
         self.filtered = filtered
+        self.requires_positive_mask = requires_positive_mask
 
     @abstractmethod
     def process_object_scores_(
         self,
         batch: MappedTriples,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """Process a batch of triples with their computed object scores for all entities.
 
         :param batch: shape: (batch_size, 3)
+        :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
+        :param dense_positive_mask: shape: (batch_size, num_entities)
+            An optional boolean tensor indicating other true entities.
         """
         raise NotImplementedError
 
@@ -73,12 +80,17 @@ class Evaluator(ABC):
     def process_subject_scores_(
         self,
         batch: MappedTriples,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """Process a batch of triples with their computed subject scores for all entities.
 
         :param batch: shape: (batch_size, 3)
+        :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
+        :param dense_positive_mask: shape: (batch_size, num_entities)
+            An optional boolean tensor indicating other true entities.
         """
         raise NotImplementedError
 
@@ -109,31 +121,23 @@ class Evaluator(ABC):
         )
 
 
-def filter_scores_(
+def create_sparse_positive_filter_(
     batch: MappedTriples,
-    scores: torch.FloatTensor,
     all_pos_triples: torch.LongTensor,
     relation_filter: torch.BoolTensor = None,
     filter_col: int = 0,
-) -> Tuple[torch.FloatTensor, torch.BoolTensor]:
-    """Filter scores.
+) -> Tuple[torch.LongTensor, torch.BoolTensor]:
+    """Compute indices of all positives.
 
     For simplicity, only the subject-side is described, i.e. filter_col=0. The object-side is processed alike.
 
-    For each (s, p, o) triple in the batch, the triple scores for (s', p, o) are set to -infinity if the positive triple
-    (s',p,o) exists in all positive triples. Thereby, subjects other than the current subject that are already contained
-    in the all_pos_triples tensor as true are not considered and thus, do not penalise the rank of the currently
-    considered subject.
+    For each (s, p, o) triple in the batch, the entity IDs s' are computed such that (s',p,o) exists in all positive
+    triples.
 
     :param batch: shape: (batch_size, 3)
         A batch of triples.
-    :param scores: shape: (batch_size, num_entities)
-        The scores for all corrupted triples (including the currently considered true triple). Are modified *in-place*.
     :param all_pos_triples: shape: (num_positive_triples, 3)
         All positive triples to base the filtering on.
-    :param all_entities: shape: (num_entities,) (optional)
-        A tensor containing all entity IDs. Should equal torch.arange(num_entities), and may be passed to avoid numerous
-        re-constructions of the same tensor.
     :param relation_filter: shape: (batch_size, num_positive_triples)
         A boolean mask R[i, j] which is True iff the j-th positive triple contains the same relation as the i-th triple
         in the batch.
@@ -142,17 +146,15 @@ def filter_scores_(
         corresponds to filtering object-based.
 
     :return:
-        - A reference to the scores, which have been updated in-place.
+        - positives, shape: (2, m)
+            The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
     """
     if filter_col not in {0, 2}:
         raise NotImplementedError(
             'This code has only been written for updating subject (filter_col=0) or '
-            f'object (filter_col=1) mask, but filter_col={filter_col} was given.',
+            f'object (filter_col=2) mask, but filter_col={filter_col} was given.',
         )
-
-    # Bind shape
-    batch_size, num_entities = scores.shape
 
     if relation_filter is None:
         relations = batch[:, 1:2]
@@ -166,6 +168,44 @@ def filter_scores_(
     filter_batch = (entity_filter_test & relation_filter).nonzero()
     filter_batch[:, 1] = all_pos_triples[:, filter_col:filter_col + 1].view(1, -1)[:, filter_batch[:, 1]]
 
+    return filter_batch, relation_filter
+
+
+def create_dense_positive_mask_(
+    zero_tensor: torch.FloatTensor,
+    filter_batch: torch.LongTensor,
+) -> torch.FloatTensor:
+    """Construct dense positive mask.
+
+    :param zero_tensor: shape: (batch_size, num_entities)
+        A tensor of zeros of suitable shape.
+    :param filter_batch: shape: (m, 2)
+        The indices of all positives in format (batch_index, entity_id)
+    :return:
+        The dense positive mask with x[b, i] = 1 iff (b, i) in filter_batch.
+    """
+    zero_tensor[filter_batch[:, 0], filter_batch[:, 1]] = 1
+
+    return zero_tensor
+
+
+def filter_scores_(
+    scores: torch.FloatTensor,
+    filter_batch: torch.LongTensor,
+) -> torch.FloatTensor:
+    """Filter scores by setting true scores to NaN.
+
+    :param scores: shape: (batch_size, num_entities)
+        The scores for all corrupted triples (including the currently considered true triple). Are modified *in-place*.
+    :param filter_batch: (m, 2)
+        The indices of all positives.
+
+    :return:
+        A reference to the scores, which have been updated in-place.
+    """
+    # Bind shape
+    batch_size, num_entities = scores.shape
+
     # Set all filtered triples to NaN to ensure their exclusion in subsequent calculations
     scores[filter_batch[:, 0], filter_batch[:, 1]] = float('nan')
 
@@ -177,7 +217,7 @@ def filter_scores_(
             "triples",
         )
 
-    return scores, relation_filter
+    return scores
 
 
 def evaluate(
@@ -232,8 +272,12 @@ def evaluate(
     # Check whether we need to be prepared for filtering
     filtering_necessary = len(filtered_evaluators) > 0
 
+    # Check whether an evaluator needs access to the masks
+    # This can only be an unfiltered evaluator.
+    positive_masks_required = any(e.requires_positive_mask for e in unfiltered_evaluators)
+
     # Prepare for result filtering
-    if filtering_necessary:
+    if (filtering_necessary or positive_masks_required):
         all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
@@ -250,13 +294,13 @@ def evaluate(
 
     # Disable gradient tracking
     with optional_context_manager(
-        use_tqdm,
-        tqdm(
-            desc=f'Evaluating on {model.device}',
-            total=num_triples,
-            unit='triple(s)',
-            unit_scale=True,
-        ),
+            use_tqdm,
+            tqdm(
+                desc=f'Evaluating on {model.device}',
+                total=num_triples,
+                unit='triple(s)',
+                unit_scale=True,
+            ),
     ) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:
@@ -264,58 +308,116 @@ def evaluate(
 
             # Predict object scores once
             scores_of_corrupted_objects_batch = model.predict_scores_all_objects(batch[:, 0:2])
+            scores_of_true_objects_batch = scores_of_corrupted_objects_batch[
+                torch.arange(0, batch.shape[0]),
+                batch[:, 2],
+            ]
 
-            # Evaluate metrics on these *unfiltered* object scores
-            for unfiltered_evaluator in unfiltered_evaluators:
-                unfiltered_evaluator.process_object_scores_(
-                    batch=batch,
-                    scores=scores_of_corrupted_objects_batch,
-                )
-
-            # Filter
-            if filtering_necessary:
+            # Create positive filter for all corrupted objects
+            if filtering_necessary or positive_masks_required:
                 assert all_pos_triples is not None
-                filtered_scores_of_corrupted_objects_batch, relation_filter = filter_scores_(
+                positive_filter_objects, relation_filter = create_sparse_positive_filter_(
                     batch=batch,
-                    scores=scores_of_corrupted_objects_batch,
                     all_pos_triples=all_pos_triples,
                     relation_filter=None,
                     filter_col=2,
                 )
 
+            # Create a positive mask with the size of the scores from the positive objects filter
+            if positive_masks_required:
+                positive_mask_objects = create_dense_positive_mask_(
+                    zero_tensor=torch.zeros_like(scores_of_corrupted_objects_batch),
+                    filter_batch=positive_filter_objects,
+                )
+            else:
+                positive_mask_objects = None
+
+            # Evaluate metrics on these *unfiltered* object scores
+            for unfiltered_evaluator in unfiltered_evaluators:
+                unfiltered_evaluator.process_object_scores_(
+                    batch=batch,
+                    true_scores=scores_of_true_objects_batch[:, None],
+                    scores=scores_of_corrupted_objects_batch,
+                    dense_positive_mask=positive_mask_objects,
+                )
+
+            # Filter
+            if filtering_necessary:
+                filtered_scores_of_corrupted_objects_batch = filter_scores_(
+                    scores=scores_of_corrupted_objects_batch,
+                    filter_batch=positive_filter_objects,
+                )
+
+                # The scores for the true triples have to be rewritten to the scores tensor
+                scores_of_corrupted_objects_batch[
+                    torch.arange(0, batch.shape[0]),
+                    batch[:, 2],
+                ] = scores_of_true_objects_batch
+
                 # Evaluate metrics on these *filtered* object scores
                 for filtered_evaluator in filtered_evaluators:
                     filtered_evaluator.process_object_scores_(
                         batch=batch,
+                        true_scores=scores_of_true_objects_batch[:, None],
                         scores=filtered_scores_of_corrupted_objects_batch,
                     )
 
             # Predict subject scores once
             scores_of_corrupted_subjects_batch = model.predict_scores_all_subjects(batch[:, 1:3])
+            scores_of_true_subjects_batch = scores_of_corrupted_subjects_batch[
+                torch.arange(0, batch.shape[0]),
+                batch[:, 0],
+            ]
+
+            # Create positive filter for all corrupted subjects
+            if filtering_necessary or positive_masks_required:
+                assert all_pos_triples is not None
+                assert relation_filter is not None
+                positive_filter_subjects, _ = create_sparse_positive_filter_(
+                    batch=batch,
+                    all_pos_triples=all_pos_triples,
+                    relation_filter=relation_filter,
+                    filter_col=0,
+                )
+
+            # Create a positive mask with the size of the scores from the positive subjects filter
+            if positive_masks_required:
+                positive_mask_subjects = create_dense_positive_mask_(
+                    zero_tensor=torch.zeros_like(scores_of_corrupted_subjects_batch),
+                    filter_batch=positive_filter_subjects,
+                )
+            else:
+                positive_mask_subjects = None
 
             # Evaluate metrics on these subject scores
             for evaluator in unfiltered_evaluators:
                 evaluator.process_subject_scores_(
                     batch=batch,
+                    true_scores=scores_of_true_subjects_batch[:, None],
                     scores=scores_of_corrupted_subjects_batch,
+                    dense_positive_mask=positive_mask_subjects,
                 )
 
             # Filter
             if filtering_necessary:
                 assert all_pos_triples is not None
                 assert relation_filter is not None
-                filtered_scores_of_corrupted_subjects_batch, _ = filter_scores_(
-                    batch=batch,
+                filtered_scores_of_corrupted_subjects_batch = filter_scores_(
                     scores=scores_of_corrupted_subjects_batch,
-                    all_pos_triples=all_pos_triples,
-                    relation_filter=relation_filter,
-                    filter_col=0,
+                    filter_batch=positive_filter_subjects
                 )
 
-                # Evaluate metrics on these *filtered* subject scores
+                # The scores for the true triples have to be rewritten to the scores tensor
+                scores_of_corrupted_subjects_batch[
+                    torch.arange(0, batch.shape[0]),
+                    batch[:, 0],
+                ] = scores_of_true_subjects_batch
+
+                # Evaluate metrics on these *filtered* object scores
                 for filtered_evaluator in filtered_evaluators:
                     filtered_evaluator.process_subject_scores_(
                         batch=batch,
+                        true_scores=scores_of_true_subjects_batch[:, None],
                         scores=filtered_scores_of_corrupted_subjects_batch,
                     )
 

@@ -14,6 +14,7 @@ from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
 
 __all__ = [
+    'compute_rank_from_scores',
     'RankBasedEvaluator',
     'RankBasedMetricResults',
 ]
@@ -21,7 +22,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _compute_rank_from_scores(
+def compute_rank_from_scores(
     true_score: torch.FloatTensor,
     all_scores: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
@@ -100,35 +101,35 @@ class RankBasedEvaluator(Evaluator):
 
     def _update_ranks_(
         self,
-        true_indices: torch.LongTensor,
+        true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
     ) -> None:
         """Shared code for updating the stored ranks for object/subject scores.
 
-        :param true_indices: shape: (batch_size,)
+        :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
         """
-        batch_size = true_indices.shape[0]
-        score_of_positive_batch = (all_scores[torch.arange(0, batch_size), true_indices.flatten()]).view(-1, 1)
-        rank, adj_rank = _compute_rank_from_scores(true_score=score_of_positive_batch, all_scores=all_scores)
+        rank, adj_rank = compute_rank_from_scores(true_score=true_scores, all_scores=all_scores)
         self.ranks.extend(rank.detach().cpu().numpy())
         self.adj_ranks.extend(adj_rank.detach().cpu().numpy())
 
     def process_object_scores_(
         self,
         batch: MappedTriples,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:  # noqa: D102
-        true_indices = batch[:, 2]
-        self._update_ranks_(true_indices=true_indices, all_scores=scores)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores)
 
     def process_subject_scores_(
         self,
         batch: MappedTriples,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:  # noqa: D102
-        true_indices = batch[:, 0]
-        self._update_ranks_(true_indices=true_indices, all_scores=scores)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         ranks = np.asarray(self.ranks, dtype=np.float64)

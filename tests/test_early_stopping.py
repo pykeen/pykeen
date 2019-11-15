@@ -3,7 +3,7 @@
 """Tests of early stopping."""
 
 import unittest
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 import numpy
 import torch
@@ -48,14 +48,18 @@ class MockEvaluator(Evaluator):
     def process_object_scores_(
         self,
         batch: MappedTriples,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:  # noqa: D102
         pass
 
     def process_subject_scores_(
         self,
         batch: MappedTriples,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:  # noqa: D102
         pass
 
