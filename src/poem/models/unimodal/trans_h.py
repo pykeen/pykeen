@@ -12,6 +12,7 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import resolve_device
 
 __all__ = [
     'TransH',
@@ -76,7 +77,11 @@ class TransH(BaseModule):
         regularizer: Union[None, str, Regularizer] = 'wang2014'
     ) -> None:
         if regularizer == 'wang2014':
-            regularizer = TransHRegularizer(weight=0.05, epsilon=epsilon)
+            regularizer = TransHRegularizer(
+                device=resolve_device(preferred_device),
+                weight=0.05,
+                epsilon=epsilon,
+            )
 
         super().__init__(
             triples_factory=triples_factory,

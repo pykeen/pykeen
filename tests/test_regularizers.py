@@ -13,6 +13,7 @@ from poem.models import RESCAL
 from poem.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer
 from poem.triples import TriplesFactory
 from poem.typing import MappedTriples
+from poem.utils import resolve_device
 
 
 class _RegularizerTestCase:
@@ -35,9 +36,10 @@ class _RegularizerTestCase:
         """Set up the test case with a triples factory and model."""
         self.batch_size = 16
         self.triples_factory = NationsTrainingTriplesFactory()
-        if self.regularizer_kwargs is None:
-            self.regularizer_kwargs = {}
-        self.regularizer = self.regularizer_cls(**self.regularizer_kwargs)
+        self.regularizer = self.regularizer_cls(
+            device=resolve_device(),
+            **(self.regularizer_kwargs or {}),
+        )
         self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :]
 
     def test_model(self) -> None:
@@ -147,8 +149,8 @@ class CombinedRegularizerTest(_RegularizerTestCase, unittest.TestCase):
     regularizer_cls = CombinedRegularizer
     regularizer_kwargs = {
         'regularizers': [
-            LpRegularizer(weight=0.1, p=1),
-            LpRegularizer(weight=0.7, p=2),
+            LpRegularizer(weight=0.1, p=1, device=resolve_device()),
+            LpRegularizer(weight=0.7, p=2, device=resolve_device()),
         ]
     }
 

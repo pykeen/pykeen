@@ -14,6 +14,7 @@ from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...utils import resolve_device
 
 __all__ = [
     'DistMult',
@@ -55,7 +56,12 @@ class DistMult(BaseModule):
             # In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
             # Thus, when we use normalized regularization weight, the normalization factor is 10*100 = 1,000, which is
             # why the weight has to be increased by a factor of 1,000 to have the same configuration as in the paper.
-            regularizer = LpRegularizer(weight=1.0, p=2., normalize=True)
+            regularizer = LpRegularizer(
+                device=resolve_device(preferred_device),
+                weight=1.0,
+                p=2.0,
+                normalize=True,
+            )
 
         super().__init__(
             triples_factory=triples_factory,

@@ -30,18 +30,8 @@ class TransD(BaseModule):
     """
 
     hpo_default = dict(
-        embedding_dim={
-            'type': int,
-            'low': 20,
-            'high': 300,
-            'q': 50,
-        },
-        relation_dim={
-            'type': int,
-            'low': 20,
-            'high': 300,
-            'q': 50,
-        },
+        embedding_dim=dict(type=int, low=20, high=300, q=50),
+        relation_dim=dict(type=int, low=20, high=300, q=50),
     )
 
     def __init__(

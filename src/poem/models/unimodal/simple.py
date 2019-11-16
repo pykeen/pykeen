@@ -12,7 +12,7 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import slice_triples
+from ...utils import resolve_device, slice_triples
 
 __all__ = [
     'SimplE',
@@ -53,7 +53,12 @@ class SimplE(BaseModule):
         if regularizer == TROULLION_REFERENCE:
             # In the paper, they use weight of 0.1, and do not normalize the regularization term by the number of
             # elements, which is 200.
-            regularizer = PowerSumRegularizer(weight=20, p=2., normalize=True)
+            regularizer = PowerSumRegularizer(
+                device=resolve_device(preferred_device),
+                weight=20,
+                p=2.0,
+                normalize=True,
+            )
 
         super().__init__(
             triples_factory=triples_factory,
