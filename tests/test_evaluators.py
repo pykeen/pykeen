@@ -16,6 +16,7 @@ from poem.evaluation.rank_based_evaluator import compute_rank_from_scores
 from poem.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from poem.models import BaseModule, TransE
 from poem.triples import TriplesFactory
+from poem.typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
@@ -367,3 +368,91 @@ class EvaluatorUtilsTests(unittest.TestCase):
         # Assert correct filtering
         assert (old_object_scores[~exp_object_filter_mask] == filtered_object_scores[~exp_object_filter_mask]).all()
         assert not torch.isfinite(filtered_object_scores[exp_object_filter_mask]).any()
+
+
+class DummyEvaluator(Evaluator):
+    """A dummy evaluator for testing the structure of the evaluation function."""
+
+    def __init__(self, *, counter: int, filtered: bool) -> None:
+        super().__init__(filtered=filtered)
+        self.counter = counter
+
+    def process_object_scores_(
+        self,
+        batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
+    ) -> None:  # noqa: D102
+        self.counter += 1
+
+    def process_subject_scores_(
+        self,
+        batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.BoolTensor] = None,
+    ) -> None:  # noqa: D102
+        self.counter -= 1
+
+    def finalize(self) -> MetricResults:  # noqa: D102
+        return RankBasedMetricResults(
+            mean_rank=self.counter,
+            mean_reciprocal_rank=None,
+            adjusted_mean_rank=None,
+            hits_at_k=dict(),
+        )
+
+    def __repr__(self):  # noqa: D105
+        return f'{self.__class__.__name__}(losses={self.losses})'
+
+
+class DummyModel(BaseModule):
+    """A dummy model returning fake scores."""
+
+    def __init__(self, triples_factory: TriplesFactory):
+        super().__init__(triples_factory=triples_factory)
+        num_entities = self.num_entities
+        self.scores = torch.arange(num_entities, dtype=torch.float)
+
+    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
+        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
+        batch_size = batch.shape[0]
+        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
+        assert batch_scores.shape == (batch_size, self.num_entities)
+        return batch_scores
+
+    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=batch)
+
+    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=batch)
+
+    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=batch)
+
+    def init_empty_weights_(self) -> BaseModule:  # noqa: D102
+        raise NotImplementedError('Not needed for unittest')
+
+    def clear_weights_(self) -> BaseModule:  # noqa: D102
+        raise NotImplementedError('Not needed for unittest')
+
+
+class TestEvaluationStructure(unittest.TestCase):
+    """Tests for testing the correct structure of the evaluation procedure."""
+
+    def setUp(self):
+        """Prepare for testing the evaluation structure."""
+        self.counter = 1337
+        self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
+        self.triples_factory = NationsTrainingTriplesFactory()
+        self.model = DummyModel(triples_factory=self.triples_factory)
+
+    def test_evaluation_structure(self):
+        """Test if the evaluator has a balanced call of subject and object processors."""
+        eval_results = self.evaluator.evaluate(
+            model=self.model,
+            mapped_triples=self.triples_factory.mapped_triples,
+            batch_size=1,
+        )
+        assert eval_results.mean_rank == self.counter, 'Should end at the same value as it started'
