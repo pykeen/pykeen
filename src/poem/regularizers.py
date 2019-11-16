@@ -77,12 +77,6 @@ class Regularizer(nn.Module):
         """Set the Torch device to use."""
         self.device = resolve_device(device=device)
 
-    def to_device_(self) -> 'BaseModule':
-        """Transfer model to device."""
-        self.to(self.device)
-        torch.cuda.empty_cache()
-        return self
-
 
 class NoRegularizer(Regularizer):
     """A regularizer which does not perform any regularization.
