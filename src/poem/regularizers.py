@@ -3,12 +3,10 @@
 """Regularization."""
 
 from abc import abstractmethod
-from typing import Iterable, Optional, Union
+from typing import Iterable
 
 import torch
 from torch import nn
-
-from poem.utils import resolve_device
 
 __all__ = [
     'Regularizer',
@@ -34,14 +32,12 @@ class Regularizer(nn.Module):
 
     def __init__(
         self,
+        device: torch.device,
         weight: float = 1.0,
         normalize: bool = False,
-        preferred_device: Optional[str] = None,
-
     ):
         super().__init__()
-        # Initialize the device
-        self._set_device(preferred_device)
+        self.device = device
         self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
         self.weight = torch.as_tensor(weight, device=self.device)
         self.normalize = normalize
@@ -73,10 +69,6 @@ class Regularizer(nn.Module):
         """Return the weighted regularization term."""
         return self.regularization_term * self.weight
 
-    def _set_device(self, device: Union[None, str, torch.device] = None) -> None:
-        """Set the Torch device to use."""
-        self.device = resolve_device(device=device)
-
 
 class NoRegularizer(Regularizer):
     """A regularizer which does not perform any regularization.
@@ -84,9 +76,9 @@ class NoRegularizer(Regularizer):
     Used to simplify code.
     """
 
-    def __init__(self, preferred_device: Optional[str] = None):
+    def __init__(self, device: torch.device):
         """Initialize NoRegularizer."""
-        super().__init__(preferred_device=preferred_device)
+        super().__init__(device=device)
 
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
@@ -102,11 +94,11 @@ class LpRegularizer(Regularizer):
 
     def __init__(
         self,
+        device: torch.device,
         weight: float = 1.0,
         p: float = 2., normalize: bool = False,
-        preferred_device: Optional[str] = None
     ):
-        super().__init__(weight=weight, normalize=normalize, preferred_device=preferred_device)
+        super().__init__(weight=weight, normalize=normalize, device=device)
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -121,11 +113,12 @@ class PowerSumRegularizer(Regularizer):
 
     def __init__(
         self,
+        device: torch.device,
         weight: float = 1.0,
         p: float = 2.,
         normalize: bool = False,
-        preferred_device: Optional[str] = None):
-        super().__init__(weight=weight, normalize=normalize, preferred_device=preferred_device)
+    ):
+        super().__init__(weight=weight, normalize=normalize, device=device)
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -138,10 +131,10 @@ class CombinedRegularizer(Regularizer):
     def __init__(
         self,
         regularizers: Iterable[Regularizer],
-        total_weight: float = 1.0,
-        preferred_device: Optional[str] = None
+        device: torch.device,
+        total_weight: float = 1.0
     ):
-        super().__init__(weight=total_weight, preferred_device=preferred_device)
+        super().__init__(weight=total_weight, device=device)
         self.regularizers = list(regularizers)
         self.normalization_factor = torch.tensor(1. / sum(r.weight for r in regularizers))
 
