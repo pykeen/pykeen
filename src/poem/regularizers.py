@@ -76,10 +76,6 @@ class NoRegularizer(Regularizer):
     Used to simplify code.
     """
 
-    def __init__(self, device: torch.device):
-        """Initialize NoRegularizer."""
-        super().__init__(device=device)
-
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
