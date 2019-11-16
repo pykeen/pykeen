@@ -12,6 +12,7 @@ from ..init import embedding_xavier_normal_
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...utils import resolve_device
 
 __all__ = [
     'ComplEx',
@@ -62,7 +63,12 @@ class ComplEx(BaseModule):
         """
         if regularizer == 'troullion2016':
             # In the paper, they use weight of 0.01, and normalize the regularization term by the number of elements
-            regularizer = LpRegularizer(weight=0.01, p=2., normalize=True)
+            regularizer = LpRegularizer(
+                device=resolve_device(preferred_device),
+                weight=0.01,
+                p=2.0,
+                normalize=True,
+            )
 
         super().__init__(
             triples_factory=triples_factory,

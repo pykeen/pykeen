@@ -11,6 +11,8 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...utils import resolve_device
+
 
 __all__ = [
     'RESCAL',
@@ -48,7 +50,12 @@ class RESCAL(BaseModule):
         if regularizer == 'nickel2011':
             # According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py a normalized weight of
             # 10 is used.
-            regularizer = LpRegularizer(weight=10, p=2., normalize=True)
+            regularizer = LpRegularizer(
+                device=resolve_device(preferred_device),
+                weight=10,
+                p=2.,
+                normalize=True,
+            )
 
         super().__init__(
             triples_factory=triples_factory,
