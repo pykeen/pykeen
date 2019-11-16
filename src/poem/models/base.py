@@ -82,7 +82,7 @@ class BaseModule(nn.Module):
 
         # Regularizer
         if regularizer is None:
-            regularizer = NoRegularizer()
+            regularizer = NoRegularizer(preferred_device=preferred_device)
         self.regularizer = regularizer
 
         self.is_self_adversiarial_neg_sampling_loss = isinstance(self.criterion, NegativeSamplingSelfAdversarialLoss)
