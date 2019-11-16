@@ -129,7 +129,7 @@ class CombinedRegularizer(Regularizer):
         self,
         regularizers: Iterable[Regularizer],
         device: torch.device,
-        total_weight: float = 1.0
+        total_weight: float = 1.0,
     ):
         super().__init__(weight=total_weight, device=device)
         self.regularizers = list(regularizers)
