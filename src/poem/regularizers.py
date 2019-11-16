@@ -1,4 +1,4 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
 
 """Regularization."""
 
@@ -92,7 +92,8 @@ class LpRegularizer(Regularizer):
         self,
         device: torch.device,
         weight: float = 1.0,
-        p: float = 2., normalize: bool = False,
+        p: float = 2.,
+        normalize: bool = False,
     ):
         super().__init__(weight=weight, normalize=normalize, device=device)
         self.p = p
