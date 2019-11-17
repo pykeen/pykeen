@@ -47,6 +47,7 @@ class SoftplusLoss(nn.Module):
 
     def __init__(self, reduction: str = 'mean') -> None:
         super().__init__()
+        self.reduction = reduction
         self.softplus = torch.nn.Softplus(beta=1, threshold=20)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
@@ -64,6 +65,10 @@ class SoftplusLoss(nn.Module):
 class BCEAfterSigmoidLoss(nn.Module):
     """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
 
+    def __init__(self, reduction: str = 'mean'):
+        super().__init__()
+        self.reduction = reduction
+
     def forward(
         self,
         logits: torch.FloatTensor,
@@ -79,6 +84,7 @@ class NegativeSamplingSelfAdversarialLoss(nn.Module):
 
     def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean') -> None:
         super().__init__()
+        self.reduction = reduction
         self.adversarial_temperature = adversarial_temperature
         self.margin = margin
         self._reduction_method = _REDUCTION_METHODS[reduction]

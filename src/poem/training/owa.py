@@ -65,10 +65,12 @@ class OWATrainingLoop(TrainingLoop):
     def _process_batch(
         self,
         batch: MappedTriples,
+        start: int,
+        stop: int,
         label_smoothing: float = 0.0,
     ) -> torch.FloatTensor:  # noqa: D102
         # Send positive batch to device
-        positive_batch = batch.to(device=self.device)
+        positive_batch = batch[start:stop].to(device=self.device)
 
         # Create negative samples
         neg_samples = self.negative_sampler.sample(positive_batch=positive_batch)

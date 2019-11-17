@@ -24,14 +24,16 @@ class CWATrainingLoop(TrainingLoop):
     def _process_batch(
         self,
         batch: Tuple[torch.LongTensor, torch.FloatTensor],
+        start: int,
+        stop: int,
         label_smoothing: float = 0.0,
     ) -> torch.FloatTensor:  # noqa: D102
         # Split batch components
         batch_pairs, batch_labels_full = batch
 
         # Send batch to device
-        batch_pairs = batch_pairs.to(device=self.device)
-        batch_labels_full = batch_labels_full.to(device=self.device)
+        batch_pairs = batch_pairs[start:stop].to(device=self.device)
+        batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
         predictions = self.model.forward_cwa(batch=batch_pairs)
 

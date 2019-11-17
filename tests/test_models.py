@@ -286,7 +286,7 @@ Traceback
         self.model.post_parameter_update()
 
         # assert that the regularization term has been reset
-        assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float)
+        assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float, device=self.model.device)
 
 
 class _DistanceModelTestCase(_ModelTestCase):

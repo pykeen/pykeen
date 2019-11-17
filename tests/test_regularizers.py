@@ -31,16 +31,19 @@ class _RegularizerTestCase:
     regularizer: Regularizer
     #: A positive batch
     positive_batch: MappedTriples
+    #: The device
+    device: torch.device
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
         self.batch_size = 16
         self.triples_factory = NationsTrainingTriplesFactory()
+        self.device = resolve_device()
         self.regularizer = self.regularizer_cls(
-            device=resolve_device(),
+            device=self.device,
             **(self.regularizer_kwargs or {}),
         )
-        self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :]
+        self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :].to(device=self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
@@ -48,7 +51,7 @@ class _RegularizerTestCase:
         model = RESCAL(
             triples_factory=self.triples_factory,
             regularizer=self.regularizer,
-        )
+        ).to(self.device)
 
         # Check if regularizer is stored correctly.
         self.assertEqual(model.regularizer, self.regularizer)
@@ -72,8 +75,8 @@ class _RegularizerTestCase:
     def test_update(self) -> None:
         """Test method `update`."""
         # Generate random tensors
-        a = torch.rand(self.batch_size, 10)
-        b = torch.rand(self.batch_size, 20)
+        a = torch.rand(self.batch_size, 10, device=self.device)
+        b = torch.rand(self.batch_size, 20, device=self.device)
 
         # Call update
         self.regularizer.update(a, b)
@@ -84,11 +87,11 @@ class _RegularizerTestCase:
         # compute expected term
         exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
         if self.regularizer.normalize:
-            exp_penalties /= torch.tensor([x.numel() for x in (a, b)])
+            exp_penalties /= torch.tensor([x.numel() for x in (a, b)], device=self.device)
         expected_term = torch.sum(exp_penalties).view(1) * self.regularizer.weight
         assert expected_term.shape == (1,)
 
-        assert self.regularizer.term == expected_term
+        self.assertAlmostEqual(self.regularizer.term.item(), expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""

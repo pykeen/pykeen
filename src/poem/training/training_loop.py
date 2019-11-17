@@ -79,6 +79,7 @@ class TrainingLoop(ABC):
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         early_stopper: Optional[EarlyStopper] = None,
         result_tracker: Optional[ResultTracker] = None,
+        sub_batch_size: Optional[int] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -99,12 +100,18 @@ class TrainingLoop(ABC):
             if training should stop early
         :param result_tracker:
             The result tracker.
+        :param sub_batch_size:
+            If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :return:
             A pair of the KGE model and the losses per epoch.
         """
         # Create dummy result tracker
         if result_tracker is None:
             result_tracker = ResultTracker()
+
+        # by default do not split batches in sub-batches
+        if sub_batch_size is None:
+            sub_batch_size = batch_size
 
         # Sanity check
         if self.model.is_mr_loss and label_smoothing > 0.:
@@ -165,13 +172,27 @@ class TrainingLoop(ABC):
             # Batching
             batches = tqdm(train_data_loader, desc=f'Training batches', leave=False, unit='batch')
             for batch in batches:
-                loss = self._process_batch(batch=batch, label_smoothing=label_smoothing)
-
                 # Recall that torch *accumulates* gradients. Before passing in a
                 # new instance, you need to zero out the gradients from the old instance
                 self.optimizer.zero_grad()
-                loss.backward()
-                current_epoch_loss += loss.item()
+
+                # accumulate gradients for whole batch
+                for start in range(0, batch_size, sub_batch_size):
+                    stop = max(start + sub_batch_size, batch_size)
+
+                    # forward pass
+                    loss = self._process_batch(batch=batch, start=start, stop=stop, label_smoothing=label_smoothing)
+
+                    # correction for loss reduction
+                    if self.model.criterion.reduction == 'mean':
+                        this_sub_batch_size = stop - start
+                        loss *= (this_sub_batch_size / batch_size)
+
+                    # backward pass
+                    loss.backward()
+                    current_epoch_loss += loss.item()
+
+                # update parameters according to optimizer
                 self.optimizer.step()
 
                 # After changing applying the gradients to the embeddings, the model is notified that the forward
@@ -204,7 +225,7 @@ class TrainingLoop(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _process_batch(self, batch: Any, label_smoothing: float = 0.0) -> torch.FloatTensor:
+    def _process_batch(self, batch: Any, start: int, stop: int, label_smoothing: float = 0.0) -> torch.FloatTensor:
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 

@@ -22,8 +22,8 @@ __all__ = [
 class TransHRegularizer(Regularizer):
     """Regularizer for TransH's soft constraints."""
 
-    def __init__(self, weight: float, epsilon: float):
-        super().__init__(weight=weight, normalize=False)
+    def __init__(self, device: torch.device, weight: float, epsilon: float):
+        super().__init__(device=device, weight=weight, normalize=False)
         self.epsilon = epsilon
 
     def _regularize_one_tensor(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -74,7 +74,7 @@ class TransH(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
-        regularizer: Union[None, str, Regularizer] = 'wang2014'
+        regularizer: Union[None, str, Regularizer] = 'wang2014',
     ) -> None:
         if regularizer == 'wang2014':
             regularizer = TransHRegularizer(
