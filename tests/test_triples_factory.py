@@ -49,10 +49,10 @@ numeric_triples = np.array(
 class NumericLiteralsUtilsTests(unittest.TestCase):
     """Class for testing utils for processing numeric literals.tsv."""
 
-    def test_create_cwa_instances(self):
-        """Test creating CWA instances."""
+    def test_create_lcwa_instances(self):
+        """Test creating LCWA instances."""
         factory = TriplesNumericLiteralsFactory(triples=triples, numeric_triples=numeric_triples)
-        instances = factory.create_cwa_instances()
+        instances = factory.create_lcwa_instances()
 
         id_peter = factory.entity_to_id['peter']
         id_age = instances.literals_to_id['/lit/hasAge']

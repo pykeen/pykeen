@@ -94,11 +94,11 @@ class ERMLP(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -109,10 +109,10 @@ class ERMLP(BaseModule):
         # Compute scores
         return self.mlp(x_s)
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
+        h = self.entity_embeddings(hr_batch[:, 0])
+        r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
 
         # Embedding Regularization
@@ -135,11 +135,11 @@ class ERMLP(BaseModule):
         scores = scores.view(-1, self.num_entities)
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1])
+        r = self.relation_embeddings(rt_batch[:, 0])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

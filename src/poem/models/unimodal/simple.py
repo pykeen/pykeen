@@ -95,9 +95,9 @@ class SimplE(BaseModule):
         self.inverse_relation_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Split triple in head, relation, tail
-        h_ind, r_ind, t_ind = slice_triples(batch)
+        h_ind, r_ind, t_ind = slice_triples(hrt_batch)
 
         # Lookup embeddings
         hh = self.entity_embeddings(h_ind)
@@ -119,9 +119,9 @@ class SimplE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_ind = batch[:, 0]
-        r_ind = batch[:, 1]
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_ind = hr_batch[:, 0]
+        r_ind = hr_batch[:, 1]
 
         # Lookup embeddings
         hh = self.entity_embeddings(h_ind)
@@ -140,9 +140,9 @@ class SimplE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        r_ind = batch[:, 0]
-        t_ind = batch[:, 1]
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        r_ind = rt_batch[:, 0]
+        t_ind = rt_batch[:, 1]
 
         # Lookup embeddings
         hh = self.entity_embeddings.weight

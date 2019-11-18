@@ -187,14 +187,14 @@ class KG2E(BaseModule):
             cov_data = cov.weight.data
             torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        mu_h = self.entity_embeddings(batch[:, 0])
-        mu_r = self.relation_embeddings(batch[:, 1])
-        mu_t = self.entity_embeddings(batch[:, 2])
-        sigma_h = self.entity_covariances(batch[:, 0])
-        sigma_r = self.relation_covariances(batch[:, 1])
-        sigma_t = self.entity_covariances(batch[:, 2])
+        mu_h = self.entity_embeddings(hrt_batch[:, 0])
+        mu_r = self.relation_embeddings(hrt_batch[:, 1])
+        mu_t = self.entity_embeddings(hrt_batch[:, 2])
+        sigma_h = self.entity_covariances(hrt_batch[:, 0])
+        sigma_r = self.relation_covariances(hrt_batch[:, 1])
+        sigma_t = self.entity_covariances(hrt_batch[:, 2])
 
         # Compute entity distribution
         mu_e = mu_h - mu_t
@@ -211,13 +211,13 @@ class KG2E(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        mu_h = self.entity_embeddings(batch[:, 0])
-        mu_r = self.relation_embeddings(batch[:, 1])
+        mu_h = self.entity_embeddings(hr_batch[:, 0])
+        mu_r = self.relation_embeddings(hr_batch[:, 1])
         mu_t = self.entity_embeddings.weight
-        sigma_h = self.entity_covariances(batch[:, 0])
-        sigma_r = self.relation_covariances(batch[:, 1])
+        sigma_h = self.entity_covariances(hr_batch[:, 0])
+        sigma_r = self.relation_covariances(hr_batch[:, 1])
         sigma_t = self.entity_covariances.weight
 
         # Compute entity distribution
@@ -234,14 +234,14 @@ class KG2E(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         mu_h = self.entity_embeddings.weight
-        mu_r = self.relation_embeddings(batch[:, 0])
-        mu_t = self.entity_embeddings(batch[:, 1])
+        mu_r = self.relation_embeddings(rt_batch[:, 0])
+        mu_t = self.entity_embeddings(rt_batch[:, 1])
         sigma_h = self.entity_covariances.weight
-        sigma_r = self.relation_covariances(batch[:, 0])
-        sigma_t = self.entity_covariances(batch[:, 1])
+        sigma_r = self.relation_covariances(rt_batch[:, 0])
+        sigma_t = self.entity_covariances(rt_batch[:, 1])
 
         # Compute entity distribution
         mu_e = mu_h[None, :, :] - mu_t[:, None, :]

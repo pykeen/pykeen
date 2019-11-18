@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Training KGE models based on the CWA."""
+"""Training KGE models based on the LCWA."""
 
 from typing import Tuple
 
@@ -11,15 +11,15 @@ from .utils import apply_label_smoothing
 from ..triples import Instances
 
 __all__ = [
-    'CWATrainingLoop',
+    'LCWATrainingLoop',
 ]
 
 
-class CWATrainingLoop(TrainingLoop):
-    """A training loop that uses the closed world assumption."""
+class LCWATrainingLoop(TrainingLoop):
+    """A training loop that uses the local closed world assumption."""
 
     def _create_instances(self) -> Instances:  # noqa: D102
-        return self.triples_factory.create_cwa_instances()
+        return self.triples_factory.create_lcwa_instances()
 
     def _process_batch(
         self,
@@ -35,7 +35,7 @@ class CWATrainingLoop(TrainingLoop):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        predictions = self.model.forward_cwa(batch=batch_pairs)
+        predictions = self.model.score_t(hr_batch=batch_pairs)
 
         loss = self._loss_helper(
             predictions,

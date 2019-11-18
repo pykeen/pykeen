@@ -2,6 +2,7 @@
 
 """Base module for all KGE models."""
 
+import logging
 import random
 from abc import abstractmethod
 from collections import defaultdict
@@ -22,6 +23,8 @@ from ..version import get_version
 __all__ = [
     'BaseModule',
 ]
+
+logger = logging.getLogger(__name__)
 
 #: An error that occurs becuase the input in CUDA is too big. See ConvE for an example.
 CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
@@ -145,12 +148,12 @@ class BaseModule(nn.Module):
     def predict_scores(self, triples: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
-        This method takes subject, relation and object of each triple and calculates the corresponding score.
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
 
         Additionally, the model is set to evaluation mode.
 
         :param triples: torch.Tensor, shape: (number of triples, 3), dtype: long
-            The indices of (subject, relation, object) triples.
+            The indices of (head, relation, tail) triples.
 
         :return: torch.Tensor, shape: (number of triples, 1), dtype: float
             The score for each triple.
@@ -158,58 +161,79 @@ class BaseModule(nn.Module):
         # Enforce evaluation mode
         self.eval()
 
-        scores = self.forward_owa(triples)
+        scores = self.score_hrt(triples)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
 
-    def predict_scores_all_objects(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass using right side (object) prediction for obtaining scores of all possible objects.
+    def predict_scores_all_tails(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
-        This method calculates the score for all possible objects for each (subject, relation) pair.
+        This method calculates the score for all possible tails for each (head, relation) pair.
 
         Additionally, the model is set to evaluation mode.
 
-        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
-            The indices of (subject, relation) pairs.
+        :param hr_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
-            For each s-p pair, the scores for all possible objects.
+            For each h-r pair, the scores for all possible tails.
         """
         # Enforce evaluation mode
         self.eval()
 
-        scores = self.forward_cwa(batch)
+        scores = self.score_t(hr_batch)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
 
-    def predict_scores_all_subjects(
-        self,
-        batch: torch.LongTensor,
-    ) -> torch.FloatTensor:
-        """Forward pass using left side (subject) prediction for obtaining scores of all possible subjects.
+    def predict_scores_all_relations(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
-        This method calculates the score for all possible subjects for each (relation, object) pair.
+        This method calculates the score for all possible relations for each (head, tail) pair.
 
         Additionally, the model is set to evaluation mode.
 
-        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
-            The indices of (relation, object) pairs.
+        :param ht_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+
+        :return: torch.Tensor, shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        # Enforce evaluation mode
+        self.eval()
+
+        scores = self.score_r(ht_batch)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
+        return scores
+
+    def predict_scores_all_heads(
+        self,
+        rt_batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
+
+        This method calculates the score for all possible heads for each (relation, tail) pair.
+
+        Additionally, the model is set to evaluation mode.
+
+        :param rt_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
-            For each p-o pair, the scores for all possible subjects.
+            For each r-t pair, the scores for all possible heads.
         """
         # Enforce evaluation mode
         self.eval()
 
         '''
-        In case the model was trained using inverse triples, the scoring of all subjects is not handled by calculating
-        the scores for all subjects based on a (relation, object) pair, but instead all possible objects are calculated
-        for a (object, inverse_relation) pair.
+        In case the model was trained using inverse triples, the scoring of all heads is not handled by calculating
+        the scores for all heads based on a (relation, tail) pair, but instead all possible tails are calculated
+        for a (tail, inverse_relation) pair.
         '''
         if not self.triples_factory.create_inverse_triples:
-            scores = self.forward_inverse_cwa(batch)
+            scores = self.score_h(rt_batch)
             if self.predict_with_sigmoid:
                 scores = torch.sigmoid(scores)
             return scores
@@ -224,11 +248,11 @@ class BaseModule(nn.Module):
         '''
         # The number of relations stored in the triples factory includes the number of inverse relations
         num_relations = self.triples_factory.num_relations // 2
-        batch[:, 0] = batch[:, 0] + num_relations
+        rt_batch[:, 0] = rt_batch[:, 0] + num_relations
 
-        # The forward cwa function requires (entity, relation) pairs instead of (relation, entity)
-        batch = batch.flip(1)
-        scores = self.forward_cwa(batch)
+        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
+        rt_batch = rt_batch.flip(1)
+        scores = self.score_t(rt_batch)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -325,13 +349,13 @@ class BaseModule(nn.Module):
         return self.criterion(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass for training with the OWA.
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass.
 
-        This method takes subject, relation and object of each triple and calculates the corresponding score.
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
 
-        :param batch: torch.Tensor, shape: (batch_size, 3), dtype: long
-            The indices of (subject, relation, object) triples.
+        :param hrt_batch: torch.Tensor, shape: (batch_size, 3), dtype: long
+            The indices of (head, relation, tail) triples.
 
         :return: torch.Tensor, shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -339,32 +363,64 @@ class BaseModule(nn.Module):
         raise NotImplementedError
 
     @abstractmethod
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass using right side (object) prediction for training with the CWA.
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
 
-        This method calculates the score for all possible objects for each (subject, relation) pair.
+        This method calculates the score for all possible tails for each (head, relation) pair.
 
-        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
-            The indices of (subject, relation) pairs.
+        :param hr_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
-            For each s-p pair, the scores for all possible objects.
+            For each h-r pair, the scores for all possible tails.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass using left side (subject) prediction for training with the CWA.
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
 
-        This method calculates the score for all possible subjects for each (relation, object) pair.
+        This method calculates the score for all possible heads for each (relation, tail) pair.
 
-        :param batch: torch.Tensor, shape: (batch_size, 2), dtype: long
-            The indices of (relation, object) pairs.
+        :param rt_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
-            For each p-o pair, the scores for all possible subjects.
+            For each r-t pair, the scores for all possible heads.
         """
         raise NotImplementedError
+
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+
+        :return: torch.Tensor, shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        logger.warning(
+            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
+            'score_r function. This might cause the calculations to take longer than necessary.'
+        )
+        # Extend the ht_batch to the number of relations such that each (h, t) pair can be combined with
+        # all possible relations
+        extended_ht_batch = ht_batch.repeat_interleave(self.num_relations, dim=0)
+        # Create a tensor of all relations
+        relation_ids = list(self.triples_factory.relation_to_id.values())
+        r = torch.tensor(relation_ids, dtype=torch.long, device=self.device)[:, None]
+        # Extend all relations to the number of (h, t) pairs such that each relation can be
+        # combined with every (h, t) pair
+        extended_r = r.repeat_interleave(ht_batch.shape[0], dim=0)
+        # Fuse the extended (h, t) pairs with all relations to a new (h, r, t) triple tensor.
+        hrt_batch = torch.cat([extended_ht_batch[:, 0:1], extended_r, extended_ht_batch[:, 1:2]], dim=-1)
+        # Calculate the scores for each (h, r, t) triple using the generic interaction function
+        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
+        # Reshape the scores to match the pre-defined output shape of the score_r function.
+        scores = expanded_scores.view(ht_batch.shape[0], -1)
+        return scores
 
     @abstractmethod
     def init_empty_weights_(self) -> 'BaseModule':

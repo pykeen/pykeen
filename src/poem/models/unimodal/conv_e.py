@@ -53,8 +53,8 @@ class ConvE(BaseModule):
     >>> # Step 3: Configure the loop
     >>> from torch.optim import Adam
     >>> optimizer = Adam(params=model.get_grad_params())
-    >>> from poem.training import CWATrainingLoop
-    >>> training_loop = CWATrainingLoop(model=model, optimizer=optimizer)
+    >>> from poem.training import LCWATrainingLoop
+    >>> training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
     >>> # Step 4: Train
     >>> losses = training_loop.train(num_epochs=5, batch_size=256)
     >>> # Step 5: Evaluate the model
@@ -218,20 +218,20 @@ class ConvE(BaseModule):
                 raise e
         return x
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0]).view(
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        r = self.relation_embeddings(batch[:, 1]).view(
+        r = self.relation_embeddings(hrt_batch[:, 1]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings(batch[:, 2])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -245,19 +245,19 @@ class ConvE(BaseModule):
         In ConvE the bias term add the end is added for each tail item. In the OWA assumption we only have one tail item
         for each head and relation. Accordingly the relevant bias for each tail item and triple has to be looked up.
         """
-        x += self.bias_term[batch[:, 2, None]]
+        x += self.bias_term[hrt_batch[:, 2, None]]
         # The application of the sigmoid during training is automatically handled by the default criterion.
 
         return x
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0]).view(
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        r = self.relation_embeddings(batch[:, 1]).view(
+        r = self.relation_embeddings(hr_batch[:, 1]).view(
             -1,
             self.input_channels,
             self.embedding_height,
@@ -276,27 +276,27 @@ class ConvE(BaseModule):
 
         return x
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        batch_size = batch.shape[0]
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        rt_batch_size = rt_batch.shape[0]
         h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0]).view(
+        r = self.relation_embeddings(rt_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings(batch[:, 1])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
         '''
-        Every head has to be convolved with every relation in the batch. Hence we repeat the
-        relation _num_entities_ times and the head _batch_size_ times.
+        Every head has to be convolved with every relation in the rt_batch. Hence we repeat the
+        relation _num_entities_ times and the head _rt_batch_size_ times.
         '''
         r = r.repeat(h.shape[0], 1, 1, 1)
         # Code to repeat each item successively instead of the entire tensor
-        h = h.unsqueeze(1).repeat(1, batch_size, 1).view(
+        h = h.unsqueeze(1).repeat(1, rt_batch_size, 1).view(
             -1,
             self.input_channels,
             self.embedding_height,
@@ -307,16 +307,16 @@ class ConvE(BaseModule):
 
         '''
         For efficient computation, each convolved [h, r] pair has only to be multiplied with the corresponding t
-        embedding found in the batch with [r, t] pairs.
+        embedding found in the rt_batch with [r, t] pairs.
         '''
-        x = (x.view(self.num_entities, batch_size, self.embedding_dim) * t[None, :, :]).sum(2).transpose(1, 0)
+        x = (x.view(self.num_entities, rt_batch_size, self.embedding_dim) * t[None, :, :]).sum(2).transpose(1, 0)
 
         """
-        In ConvE the bias term at the end is added for each tail item. In the inverse CWA function, each row holds
+        In ConvE the bias term at the end is added for each tail item. In the score_h function, each row holds
         the same tail for many different heads, meaning that these items have to be looked up for each tail of each row
         and only then can be added correctly.
         """
-        x += self.bias_term[batch[:, 1, None]]
+        x += self.bias_term[rt_batch[:, 1, None]]
         # The application of the sigmoid during training is automatically handled by the default criterion.
 
         return x

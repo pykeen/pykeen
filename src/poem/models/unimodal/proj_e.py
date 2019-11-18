@@ -101,11 +101,11 @@ class ProjE(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Compute score
         hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
@@ -113,10 +113,10 @@ class ProjE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
+        h = self.entity_embeddings(hr_batch[:, 0])
+        r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
 
         # Rank against all entities
@@ -125,11 +125,11 @@ class ProjE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1])
+        r = self.relation_embeddings(rt_batch[:, 0])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Rank against all entities
         hidden = self.inner_non_linearity(

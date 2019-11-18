@@ -4,7 +4,7 @@ Training
    :members:
    :inherited-members:
 
-.. autoclass:: poem.training.CWATrainingLoop
+.. autoclass:: poem.training.LCWATrainingLoop
    :members:
    :inherited-members:
 

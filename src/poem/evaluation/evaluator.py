@@ -45,7 +45,7 @@ class MetricResults:
 class Evaluator(ABC):
     """An abstract evaluator for KGE models.
 
-    The evaluator encapsulates the computation of evaluation metrics based on subject and object scores. To this end, it
+    The evaluator encapsulates the computation of evaluation metrics based on head and tail scores. To this end, it
     offers two methods to process a batch of triples together with the scores produced by some model. It maintains
     intermediate results in its state, and offers a method to obtain the final results once finished.
     """
@@ -59,16 +59,16 @@ class Evaluator(ABC):
         self.requires_positive_mask = requires_positive_mask
 
     @abstractmethod
-    def process_object_scores_(
+    def process_tail_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:
-        """Process a batch of triples with their computed object scores for all entities.
+        """Process a batch of triples with their computed tail scores for all entities.
 
-        :param batch: shape: (batch_size, 3)
+        :param hrt_batch: shape: (batch_size, 3)
         :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
         :param dense_positive_mask: shape: (batch_size, num_entities)
@@ -77,16 +77,16 @@ class Evaluator(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def process_subject_scores_(
+    def process_head_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:
-        """Process a batch of triples with their computed subject scores for all entities.
+        """Process a batch of triples with their computed head scores for all entities.
 
-        :param batch: shape: (batch_size, 3)
+        :param hrt_batch: shape: (batch_size, 3)
         :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
         :param dense_positive_mask: shape: (batch_size, num_entities)
@@ -122,19 +122,19 @@ class Evaluator(ABC):
 
 
 def create_sparse_positive_filter_(
-    batch: MappedTriples,
+    hrt_batch: MappedTriples,
     all_pos_triples: torch.LongTensor,
     relation_filter: torch.BoolTensor = None,
     filter_col: int = 0,
 ) -> Tuple[torch.LongTensor, torch.BoolTensor]:
     """Compute indices of all positives.
 
-    For simplicity, only the subject-side is described, i.e. filter_col=0. The object-side is processed alike.
+    For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
 
-    For each (s, p, o) triple in the batch, the entity IDs s' are computed such that (s',p,o) exists in all positive
-    triples.
+    For each (h, r, t) triple in the batch, the entity identifiers are computed such that (h', r, t) exists in all
+    positive triples.
 
-    :param batch: shape: (batch_size, 3)
+    :param hrt_batch: shape: (batch_size, 3)
         A batch of triples.
     :param all_pos_triples: shape: (num_positive_triples, 3)
         All positive triples to base the filtering on.
@@ -142,8 +142,8 @@ def create_sparse_positive_filter_(
         A boolean mask R[i, j] which is True iff the j-th positive triple contains the same relation as the i-th triple
         in the batch.
     :param filter_col:
-        The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering subject-based and 2
-        corresponds to filtering object-based.
+        The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based and 2
+        corresponds to filtering tail-based.
 
     :return:
         - positives, shape: (2, m)
@@ -152,17 +152,17 @@ def create_sparse_positive_filter_(
     """
     if filter_col not in {0, 2}:
         raise NotImplementedError(
-            'This code has only been written for updating subject (filter_col=0) or '
-            f'object (filter_col=2) mask, but filter_col={filter_col} was given.',
+            'This code has only been written for updating head (filter_col=0) or '
+            f'tail (filter_col=2) mask, but filter_col={filter_col} was given.',
         )
 
     if relation_filter is None:
-        relations = batch[:, 1:2]
+        relations = hrt_batch[:, 1:2]
         relation_filter = (all_pos_triples[:, 1:2]).view(1, -1) == relations
 
     # Split batch
     other_col = 2 - filter_col
-    entities = batch[:, other_col:other_col + 1]
+    entities = hrt_batch[:, other_col:other_col + 1]
 
     entity_filter_test = (all_pos_triples[:, other_col:other_col + 1]).view(1, -1) == entities
     filter_batch = (entity_filter_test & relation_filter).nonzero()
@@ -231,7 +231,7 @@ def evaluate(
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
-    The model is used to predict scores for all objects and all subjects for each triple. Subsequently, each abstract
+    The model is used to predict scores for all tails and all heads for each triple. Subsequently, each abstract
     evaluator is applied to the scores, also receiving the batch itself (e.g. to compute entity-specific metrics).
     Thereby, the (potentially) expensive score computation against all entities is done only once. The metric evaluators
     are expected to maintain their own internal buffers. They are returned after running the evaluation, and should
@@ -306,119 +306,119 @@ def evaluate(
         for batch in batches:
             batch_size = batch.shape[0]
 
-            # Predict object scores once
-            scores_of_corrupted_objects_batch = model.predict_scores_all_objects(batch[:, 0:2])
-            scores_of_true_objects_batch = scores_of_corrupted_objects_batch[
+            # Predict tail scores once
+            scores_of_corrupted_tails_batch = model.predict_scores_all_tails(batch[:, 0:2])
+            scores_of_true_tails_batch = scores_of_corrupted_tails_batch[
                 torch.arange(0, batch.shape[0]),
                 batch[:, 2],
             ]
 
-            # Create positive filter for all corrupted objects
+            # Create positive filter for all corrupted tails
             if filtering_necessary or positive_masks_required:
                 assert all_pos_triples is not None
-                positive_filter_objects, relation_filter = create_sparse_positive_filter_(
-                    batch=batch,
+                positive_filter_tails, relation_filter = create_sparse_positive_filter_(
+                    hrt_batch=batch,
                     all_pos_triples=all_pos_triples,
                     relation_filter=None,
                     filter_col=2,
                 )
 
-            # Create a positive mask with the size of the scores from the positive objects filter
+            # Create a positive mask with the size of the scores from the positive tails filter
             if positive_masks_required:
-                positive_mask_objects = create_dense_positive_mask_(
-                    zero_tensor=torch.zeros_like(scores_of_corrupted_objects_batch),
-                    filter_batch=positive_filter_objects,
+                positive_mask_tails = create_dense_positive_mask_(
+                    zero_tensor=torch.zeros_like(scores_of_corrupted_tails_batch),
+                    filter_batch=positive_filter_tails,
                 )
             else:
-                positive_mask_objects = None
+                positive_mask_tails = None
 
-            # Evaluate metrics on these *unfiltered* object scores
+            # Evaluate metrics on these *unfiltered* tail scores
             for unfiltered_evaluator in unfiltered_evaluators:
-                unfiltered_evaluator.process_object_scores_(
-                    batch=batch,
-                    true_scores=scores_of_true_objects_batch[:, None],
-                    scores=scores_of_corrupted_objects_batch,
-                    dense_positive_mask=positive_mask_objects,
+                unfiltered_evaluator.process_tail_scores_(
+                    hrt_batch=batch,
+                    true_scores=scores_of_true_tails_batch[:, None],
+                    scores=scores_of_corrupted_tails_batch,
+                    dense_positive_mask=positive_mask_tails,
                 )
 
             # Filter
             if filtering_necessary:
-                filtered_scores_of_corrupted_objects_batch = filter_scores_(
-                    scores=scores_of_corrupted_objects_batch,
-                    filter_batch=positive_filter_objects,
+                filtered_scores_of_corrupted_tails_batch = filter_scores_(
+                    scores=scores_of_corrupted_tails_batch,
+                    filter_batch=positive_filter_tails,
                 )
 
                 # The scores for the true triples have to be rewritten to the scores tensor
-                scores_of_corrupted_objects_batch[
+                scores_of_corrupted_tails_batch[
                     torch.arange(0, batch.shape[0]),
                     batch[:, 2],
-                ] = scores_of_true_objects_batch
+                ] = scores_of_true_tails_batch
 
-                # Evaluate metrics on these *filtered* object scores
+                # Evaluate metrics on these *filtered* tail scores
                 for filtered_evaluator in filtered_evaluators:
-                    filtered_evaluator.process_object_scores_(
-                        batch=batch,
-                        true_scores=scores_of_true_objects_batch[:, None],
-                        scores=filtered_scores_of_corrupted_objects_batch,
+                    filtered_evaluator.process_tail_scores_(
+                        hrt_batch=batch,
+                        true_scores=scores_of_true_tails_batch[:, None],
+                        scores=filtered_scores_of_corrupted_tails_batch,
                     )
 
-            # Predict subject scores once
-            scores_of_corrupted_subjects_batch = model.predict_scores_all_subjects(batch[:, 1:3])
-            scores_of_true_subjects_batch = scores_of_corrupted_subjects_batch[
+            # Predict head scores once
+            scores_of_corrupted_heads_batch = model.predict_scores_all_heads(batch[:, 1:3])
+            scores_of_true_heads_batch = scores_of_corrupted_heads_batch[
                 torch.arange(0, batch.shape[0]),
                 batch[:, 0],
             ]
 
-            # Create positive filter for all corrupted subjects
+            # Create positive filter for all corrupted heads
             if filtering_necessary or positive_masks_required:
                 assert all_pos_triples is not None
                 assert relation_filter is not None
-                positive_filter_subjects, _ = create_sparse_positive_filter_(
-                    batch=batch,
+                positive_filter_heads, _ = create_sparse_positive_filter_(
+                    hrt_batch=batch,
                     all_pos_triples=all_pos_triples,
                     relation_filter=relation_filter,
                     filter_col=0,
                 )
 
-            # Create a positive mask with the size of the scores from the positive subjects filter
+            # Create a positive mask with the size of the scores from the positive heads filter
             if positive_masks_required:
-                positive_mask_subjects = create_dense_positive_mask_(
-                    zero_tensor=torch.zeros_like(scores_of_corrupted_subjects_batch),
-                    filter_batch=positive_filter_subjects,
+                positive_mask_heads = create_dense_positive_mask_(
+                    zero_tensor=torch.zeros_like(scores_of_corrupted_heads_batch),
+                    filter_batch=positive_filter_heads,
                 )
             else:
-                positive_mask_subjects = None
+                positive_mask_heads = None
 
-            # Evaluate metrics on these subject scores
+            # Evaluate metrics on these head scores
             for evaluator in unfiltered_evaluators:
-                evaluator.process_subject_scores_(
-                    batch=batch,
-                    true_scores=scores_of_true_subjects_batch[:, None],
-                    scores=scores_of_corrupted_subjects_batch,
-                    dense_positive_mask=positive_mask_subjects,
+                evaluator.process_head_scores_(
+                    hrt_batch=batch,
+                    true_scores=scores_of_true_heads_batch[:, None],
+                    scores=scores_of_corrupted_heads_batch,
+                    dense_positive_mask=positive_mask_heads,
                 )
 
             # Filter
             if filtering_necessary:
                 assert all_pos_triples is not None
                 assert relation_filter is not None
-                filtered_scores_of_corrupted_subjects_batch = filter_scores_(
-                    scores=scores_of_corrupted_subjects_batch,
-                    filter_batch=positive_filter_subjects
+                filtered_scores_of_corrupted_heads_batch = filter_scores_(
+                    scores=scores_of_corrupted_heads_batch,
+                    filter_batch=positive_filter_heads
                 )
 
                 # The scores for the true triples have to be rewritten to the scores tensor
-                scores_of_corrupted_subjects_batch[
+                scores_of_corrupted_heads_batch[
                     torch.arange(0, batch.shape[0]),
                     batch[:, 0],
-                ] = scores_of_true_subjects_batch
+                ] = scores_of_true_heads_batch
 
-                # Evaluate metrics on these *filtered* object scores
+                # Evaluate metrics on these *filtered* tail scores
                 for filtered_evaluator in filtered_evaluators:
-                    filtered_evaluator.process_subject_scores_(
-                        batch=batch,
-                        true_scores=scores_of_true_subjects_batch[:, None],
-                        scores=filtered_scores_of_corrupted_subjects_batch,
+                    filtered_evaluator.process_head_scores_(
+                        hrt_batch=batch,
+                        true_scores=scores_of_true_heads_batch[:, None],
+                        scores=filtered_scores_of_corrupted_heads_batch,
                     )
 
             if use_tqdm:

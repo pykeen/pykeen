@@ -25,7 +25,7 @@
       "metric": "mean_rank",
       "frequency": 50
     },
-    "training_loop": "CWA",
+    "training_loop": "LCWA",
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 128,

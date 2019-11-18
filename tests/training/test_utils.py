@@ -10,7 +10,7 @@ import torch
 
 from poem.models import TransE
 from poem.models.base import BaseModule
-from poem.training.cwa import CWATrainingLoop
+from poem.training.lcwa import LCWATrainingLoop
 from poem.training.utils import apply_label_smoothing, lazy_compile_random_batches
 from poem.triples import TriplesFactory
 
@@ -45,8 +45,8 @@ class LossTensorTest(unittest.TestCase):
             [0., 1., 1., 1., 0.],
         ])
 
-    def test_cwa_margin_ranking_loss_helper(self):
-        """Test if output is correct for the CWA training loop use case."""
+    def test_lcwa_margin_ranking_loss_helper(self):
+        """Test if output is correct for the LCWA training loop use case."""
         factory = TriplesFactory(triples=self.triples)
 
         criterion = torch.nn.MarginRankingLoss(
@@ -61,7 +61,7 @@ class LossTensorTest(unittest.TestCase):
             criterion=criterion,
         )
 
-        loop = CWATrainingLoop(model=model)
+        loop = LCWATrainingLoop(model=model)
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(14, loss)
 
@@ -77,7 +77,7 @@ class LossTensorTest(unittest.TestCase):
             criterion=criterion,
         )
 
-        loop = CWATrainingLoop(model=model)
+        loop = LCWATrainingLoop(model=model)
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(1, loss)
 
@@ -90,8 +90,8 @@ class LabelSmoothingTest(unittest.TestCase):
     epsilon: float = 0.1
     relative_tolerance: float = 1.e-4  # larger tolerance for float32
 
-    def test_cwa_label_smoothing(self):
-        """Test if output is correct for the CWA training loop use case."""
+    def test_lcwa_label_smoothing(self):
+        """Test if output is correct for the LCWA training loop use case."""
         # Create dummy dense labels
         labels = torch.zeros(self.batch_size, self.num_entities)
         for i in range(self.batch_size):

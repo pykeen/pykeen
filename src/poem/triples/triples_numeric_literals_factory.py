@@ -7,7 +7,7 @@ from typing import Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 
-from .instances import MultimodalCWAInstances, MultimodalOWAInstances
+from .instances import MultimodalLCWAInstances, MultimodalOWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples
@@ -111,19 +111,19 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def create_cwa_instances(self) -> MultimodalCWAInstances:
-        """Create multi-modal CWA instances for this factory's triples."""
-        cwa_instances = super().create_cwa_instances()
+    def create_lcwa_instances(self) -> MultimodalLCWAInstances:
+        """Create multi-modal LCWA instances for this factory's triples."""
+        lcwa_instances = super().create_lcwa_instances()
 
         if self.numeric_literals is None:
             self._create_numeric_literals()
 
-        return MultimodalCWAInstances(
-            mapped_triples=cwa_instances.mapped_triples,
-            entity_to_id=cwa_instances.entity_to_id,
-            relation_to_id=cwa_instances.relation_to_id,
-            assumption=cwa_instances.assumption,
+        return MultimodalLCWAInstances(
+            mapped_triples=lcwa_instances.mapped_triples,
+            entity_to_id=lcwa_instances.entity_to_id,
+            relation_to_id=lcwa_instances.relation_to_id,
+            assumption=lcwa_instances.assumption,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
-            labels=cwa_instances.labels,
+            labels=lcwa_instances.labels,
         )

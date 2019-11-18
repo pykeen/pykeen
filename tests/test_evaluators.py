@@ -59,13 +59,13 @@ class _AbstractEvaluatorTests:
         inverse: bool = False,
     ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
         # Get batch
-        batch = self.factory.mapped_triples[:self.batch_size]
+        hrt_batch = self.factory.mapped_triples[:self.batch_size]
 
         # Compute scores
         if inverse:
-            scores = self.model.forward_inverse_cwa(batch=batch[:, 1:])
+            scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
         else:
-            scores = self.model.forward_cwa(batch=batch[:, :2])
+            scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
 
         # Compute mask only if required
         if self.evaluator.requires_positive_mask:
@@ -78,7 +78,7 @@ class _AbstractEvaluatorTests:
             stop_col = start_col + 2
 
             # shape: (batch_size, num_triples)
-            triple_mask = (triples[None, :, start_col:stop_col] == batch[:, None, start_col:stop_col]).all(dim=-1)
+            triple_mask = (triples[None, :, start_col:stop_col] == hrt_batch[:, None, start_col:stop_col]).all(dim=-1)
             batch_indices, triple_indices = triple_mask.nonzero(as_tuple=True)
             entity_indices = triples[triple_indices, sel_col]
 
@@ -88,25 +88,25 @@ class _AbstractEvaluatorTests:
         else:
             mask = None
 
-        return batch, scores, mask
+        return hrt_batch, scores, mask
 
-    def test_process_object_scores_(self) -> None:
-        """Test the evaluator's ``process_object_scores_()`` function."""
-        batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, 2]][:, None]
-        self.evaluator.process_object_scores_(
-            batch=batch,
+    def test_process_tail_scores_(self) -> None:
+        """Test the evaluator's ``process_tail_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+        self.evaluator.process_tail_scores_(
+            hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
 
-    def test_process_subject_scores_(self) -> None:
-        """Test the evaluator's ``process_subject_scores_()`` function."""
-        batch, scores, mask = self._get_input(inverse=True)
-        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, 0]][:, None]
-        self.evaluator.process_subject_scores_(
-            batch=batch,
+    def test_process_head_scores_(self) -> None:
+        """Test the evaluator's ``process_head_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input(inverse=True)
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -114,10 +114,10 @@ class _AbstractEvaluatorTests:
 
     def test_finalize(self) -> None:
         # Process one batch
-        batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, 2]][:, None]
-        self.evaluator.process_object_scores_(
-            batch=batch,
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+        self.evaluator.process_tail_scores_(
+            hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -128,7 +128,7 @@ class _AbstractEvaluatorTests:
 
         self._validate_result(
             result=result,
-            data={'batch': batch, 'scores': scores, 'mask': mask}
+            data={'batch': hrt_batch, 'scores': scores, 'mask': mask}
         )
 
     def _validate_result(
@@ -184,8 +184,8 @@ class _SklearnEvaluatorTests(_AbstractEvaluatorTests):
         # filtering
         uniq = dict()
         batch = data['batch'].detach().numpy()
-        for i, (s, p) in enumerate(batch[:, :2]):
-            uniq[int(s), int(p)] = i
+        for i, (h, r) in enumerate(batch[:, :2]):
+            uniq[int(h), int(r)] = i
         indices = sorted(uniq.values())
         mask = mask[indices]
         scores = scores[indices]
@@ -236,9 +236,9 @@ class EvaluatorUtilsTests(unittest.TestCase):
         all_triples = factory.mapped_triples
         batch = all_triples[:batch_size, :]
 
-        # subject based filter
+        # head based filter
         sparse_positives, relation_filter = create_sparse_positive_filter_(
-            batch=batch,
+            hrt_batch=batch,
             all_pos_triples=all_triples,
             relation_filter=None,
             filter_col=0
@@ -297,77 +297,77 @@ class EvaluatorUtilsTests(unittest.TestCase):
                 [1, 2, 3],
             ], dtype=torch.long,
         )
-        subject_filter_mask = torch.tensor(
+        head_filter_mask = torch.tensor(
             [
                 [True, False, False, False],
                 [False, True, False, False],
             ], dtype=torch.bool,
         )
-        object_filter_mask = torch.tensor(
+        tail_filter_mask = torch.tensor(
             [
                 [False, False, True, False],
                 [False, False, False, True],
             ], dtype=torch.bool,
         )
-        exp_subject_filter_mask = torch.tensor(
+        exp_head_filter_mask = torch.tensor(
             [
                 [True, False, False, True],
                 [False, True, False, False],
             ], dtype=torch.bool,
         )
-        exp_object_filter_mask = torch.tensor(
+        exp_tail_filter_mask = torch.tensor(
             [
                 [False, False, True, False],
                 [True, False, False, True],
             ], dtype=torch.bool,
         )
         assert batch.shape == (batch_size, 3)
-        assert subject_filter_mask.shape == (batch_size, num_entities)
-        assert object_filter_mask.shape == (batch_size, num_entities)
+        assert head_filter_mask.shape == (batch_size, num_entities)
+        assert tail_filter_mask.shape == (batch_size, num_entities)
 
-        # Test subject scores
-        subject_scores = torch.randn(batch_size, num_entities)
-        old_subject_scores = subject_scores.detach().clone()
-        positive_filter_subjects, relation_filter = create_sparse_positive_filter_(
-            batch=batch,
+        # Test head scores
+        head_scores = torch.randn(batch_size, num_entities)
+        old_head_scores = head_scores.detach().clone()
+        positive_filter_heads, relation_filter = create_sparse_positive_filter_(
+            hrt_batch=batch,
             all_pos_triples=all_pos_triples,
             relation_filter=None,
             filter_col=0,
         )
-        filtered_subject_scores = filter_scores_(
-            scores=subject_scores,
-            filter_batch=positive_filter_subjects,
+        filtered_head_scores = filter_scores_(
+            scores=head_scores,
+            filter_batch=positive_filter_heads,
         )
         # Assert in-place modification
-        mask = torch.isfinite(subject_scores)
-        assert (subject_scores[mask] == filtered_subject_scores[mask]).all()
-        assert not torch.isfinite(filtered_subject_scores[~mask]).any()
+        mask = torch.isfinite(head_scores)
+        assert (head_scores[mask] == filtered_head_scores[mask]).all()
+        assert not torch.isfinite(filtered_head_scores[~mask]).any()
 
         # Assert correct filtering
-        assert (old_subject_scores[~exp_subject_filter_mask] == filtered_subject_scores[~exp_subject_filter_mask]).all()
-        assert not torch.isfinite(filtered_subject_scores[exp_subject_filter_mask]).any()
+        assert (old_head_scores[~exp_head_filter_mask] == filtered_head_scores[~exp_head_filter_mask]).all()
+        assert not torch.isfinite(filtered_head_scores[exp_head_filter_mask]).any()
 
-        # Test object scores
-        object_scores = torch.randn(batch_size, num_entities)
-        old_object_scores = object_scores.detach().clone()
-        positive_filter_objects, _ = create_sparse_positive_filter_(
-            batch=batch,
+        # Test tail scores
+        tail_scores = torch.randn(batch_size, num_entities)
+        old_tail_scores = tail_scores.detach().clone()
+        positive_filter_tails, _ = create_sparse_positive_filter_(
+            hrt_batch=batch,
             all_pos_triples=all_pos_triples,
             relation_filter=relation_filter,
             filter_col=2,
         )
-        filtered_object_scores = filter_scores_(
-            scores=object_scores,
-            filter_batch=positive_filter_objects,
+        filtered_tail_scores = filter_scores_(
+            scores=tail_scores,
+            filter_batch=positive_filter_tails,
         )
         # Assert in-place modification
-        mask = torch.isfinite(object_scores)
-        assert (object_scores[mask] == filtered_object_scores[mask]).all()
-        assert not torch.isfinite(filtered_object_scores[~mask]).any()
+        mask = torch.isfinite(tail_scores)
+        assert (tail_scores[mask] == filtered_tail_scores[mask]).all()
+        assert not torch.isfinite(filtered_tail_scores[~mask]).any()
 
         # Assert correct filtering
-        assert (old_object_scores[~exp_object_filter_mask] == filtered_object_scores[~exp_object_filter_mask]).all()
-        assert not torch.isfinite(filtered_object_scores[exp_object_filter_mask]).any()
+        assert (old_tail_scores[~exp_tail_filter_mask] == filtered_tail_scores[~exp_tail_filter_mask]).all()
+        assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
 
 
 class DummyEvaluator(Evaluator):
@@ -377,18 +377,18 @@ class DummyEvaluator(Evaluator):
         super().__init__(filtered=filtered)
         self.counter = counter
 
-    def process_object_scores_(
+    def process_tail_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:  # noqa: D102
         self.counter += 1
 
-    def process_subject_scores_(
+    def process_head_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
@@ -422,14 +422,14 @@ class DummyModel(BaseModule):
         assert batch_scores.shape == (batch_size, self.num_entities)
         return batch_scores
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=hrt_batch)
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=batch)
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=hr_batch)
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=batch)
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=rt_batch)
 
     def init_empty_weights_(self) -> BaseModule:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
@@ -449,7 +449,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.model = DummyModel(triples_factory=self.triples_factory)
 
     def test_evaluation_structure(self):
-        """Test if the evaluator has a balanced call of subject and object processors."""
+        """Test if the evaluator has a balanced call of head and tail processors."""
         eval_results = self.evaluator.evaluate(
             model=self.model,
             mapped_triples=self.triples_factory.mapped_triples,

@@ -62,20 +62,20 @@ class UnstructuredModel(BaseModule):
         self.entity_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 2])
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm, keepdim=True) ** 2
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
 
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2

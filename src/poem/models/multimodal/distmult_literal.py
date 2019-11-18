@@ -108,9 +108,9 @@ class DistMultLiteral(MultimodalBaseModule):
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
-    def forward_cwa(self, batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
-        heads, relations, tails = slice_triples(batch)
+    def score_t(self, hr_batch: torch.Tensor) -> torch.Tensor:
+        """Forward pass using right side (tail) prediction for training with the LCWA."""
+        heads, relations, tails = slice_triples(hr_batch)
         head_embs, relation_embs, tail_embs = self._get_triple_embeddings(
             heads=heads,
             relations=relations,

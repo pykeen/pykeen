@@ -173,21 +173,21 @@ class TuckER(BaseModule):
 
         return scores
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2]).unsqueeze(1)
+        h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(1)
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(1)
 
         # Compute scores
         scores = self._scoring_function(h=h, r=r, t=t)
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(batch[:, 1])
+        h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(1)
+        r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight.unsqueeze(0)
 
         # Compute scores
@@ -195,11 +195,11 @@ class TuckER(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight.unsqueeze(0)
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1]).unsqueeze(1)
+        r = self.relation_embeddings(rt_batch[:, 0])
+        t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(1)
 
         # Compute scores
         scores = self._scoring_function(h=h, r=r, t=t)

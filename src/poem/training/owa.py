@@ -83,8 +83,8 @@ class OWATrainingLoop(TrainingLoop):
         negative_batch = negative_batch.view(-1, 3)
 
         # Compute negative and positive scores
-        positive_scores = self.model.forward_owa(positive_batch)
-        negative_scores = self.model.forward_owa(negative_batch)
+        positive_scores = self.model.score_hrt(positive_batch)
+        negative_scores = self.model.score_hrt(negative_batch)
 
         loss = self._loss_helper(
             positive_scores,
@@ -141,7 +141,7 @@ class OWATrainingLoop(TrainingLoop):
             )
 
         # Normalize the loss to have the average loss per positive triple
-        # This allows comparability of OWA and CWA losses
+        # This allows comparability of OWA and LCWA losses
         return self.model.compute_label_loss(
             predictions=predictions,
             labels=labels,

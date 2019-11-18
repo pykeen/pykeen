@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from .instances import CWAInstances, OWAInstances
+from .instances import LCWAInstances, OWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import slice_triples
@@ -24,9 +24,9 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _create_multi_label_objects_instance(mapped_triples: MappedTriples) -> Dict[Tuple[int, int], List[int]]:
-    """Create for each (s,r) pair the multi object label."""
-    logger.debug('Creating multi label objects instance')
+def _create_multi_label_tails_instance(mapped_triples: MappedTriples) -> Dict[Tuple[int, int], List[int]]:
+    """Create for each (h,r) pair the multi tail label."""
+    logger.debug('Creating multi label tails instance')
 
     '''
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
@@ -34,16 +34,16 @@ def _create_multi_label_objects_instance(mapped_triples: MappedTriples) -> Dict[
     '''
     mapped_triples = mapped_triples.cpu().detach().numpy()
 
-    s_r_to_multi_objects_new = _create_multi_label_instances(
+    s_p_to_multi_tails_new = _create_multi_label_instances(
         mapped_triples,
         element_1_index=0,
         element_2_index=1,
         label_index=2,
     )
 
-    logger.debug('Created multi label objects instance')
+    logger.debug('Created multi label tails instance')
 
-    return s_r_to_multi_objects_new
+    return s_p_to_multi_tails_new
 
 
 def _create_multi_label_instances(
@@ -78,9 +78,9 @@ def _create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     :param triples: shape: (n, 3), dtype: str
     """
     # Split triples
-    subjects, objects = triples[:, 0], triples[:, 2]
+    heads, tails = triples[:, 0], triples[:, 2]
     # Sorting ensures consistent results when the triples are permuted
-    entity_labels = sorted(set(subjects).union(objects))
+    entity_labels = sorted(set(heads).union(tails))
     # Create mapping
     return {
         str(label): i
@@ -113,32 +113,32 @@ def _map_triples_elements_to_ids(
     heads, relations, tails = slice_triples(triples)
 
     # When triples that don't exist are trying to be mapped, they get the id "-1"
-    subject_column = np.vectorize(entity_to_id.get)(heads, [-1])
+    head_column = np.vectorize(entity_to_id.get)(heads, [-1])
     relation_column = np.vectorize(relation_to_id.get)(relations, [-1])
-    object_column = np.vectorize(entity_to_id.get)(tails, [-1])
+    tail_column = np.vectorize(entity_to_id.get)(tails, [-1])
 
     # Filter all non-existent triples
-    subject_filter = subject_column < 0
+    head_filter = head_column < 0
     relation_filter = relation_column < 0
-    object_filter = object_column < 0
-    num_no_subject = subject_filter.sum()
+    tail_filter = tail_column < 0
+    num_no_head = head_filter.sum()
     num_no_relation = relation_filter.sum()
-    num_no_object = object_filter.sum()
+    num_no_tail = tail_filter.sum()
 
-    if (num_no_subject > 0) or (num_no_relation > 0) or (num_no_object > 0):
+    if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0):
         logger.warning(
             "You're trying to map triples with entities and/or relations that are not in the training set."
             "These triples will be excluded from the mapping",
         )
-        non_mappable_triples = (subject_filter | relation_filter | object_filter)
-        subject_column = subject_column[~non_mappable_triples, None]
+        non_mappable_triples = (head_filter | relation_filter | tail_filter)
+        head_column = head_column[~non_mappable_triples, None]
         relation_column = relation_column[~non_mappable_triples, None]
-        object_column = object_column[~non_mappable_triples, None]
+        tail_column = tail_column[~non_mappable_triples, None]
         logger.warning(
             f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out",
         )
 
-    triples_of_ids = np.concatenate([subject_column, relation_column, object_column], axis=1)
+    triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.long)
     # Note: Unique changes the order of the triples
@@ -156,12 +156,12 @@ class TriplesFactory:
     #: The mapping from relations' labels to their indexes
     relation_to_id: RelationMapping
 
-    #: A three-column matrix where each row are the subject label,
-    #: relation label, then object label
+    #: A three-column matrix where each row are the head label,
+    #: relation label, then tail label
     triples: LabeledTriples
 
-    #: A three-column matrix where each row are the subject identifier,
-    #: relation identifier, then object identifier
+    #: A three-column matrix where each row are the head identifier,
+    #: relation identifier, then tail identifier
     mapped_triples: MappedTriples
 
     def __init__(
@@ -268,16 +268,16 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
         )
 
-    def create_cwa_instances(self) -> CWAInstances:
-        """Create CWA instances for this factory's triples."""
-        s_r_to_multi_objects = _create_multi_label_objects_instance(
+    def create_lcwa_instances(self) -> LCWAInstances:
+        """Create LCWA instances for this factory's triples."""
+        s_p_to_multi_tails = _create_multi_label_tails_instance(
             mapped_triples=self.mapped_triples,
         )
-        sr, multi_o = zip(*s_r_to_multi_objects.items())
-        mapped_triples: torch.LongTensor = torch.tensor(sr, dtype=torch.long)
+        sp, multi_o = zip(*s_p_to_multi_tails.items())
+        mapped_triples: torch.LongTensor = torch.tensor(sp, dtype=torch.long)
         labels = np.array(multi_o)
 
-        return CWAInstances(
+        return LCWAInstances(
             mapped_triples=mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

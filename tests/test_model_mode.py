@@ -32,27 +32,27 @@ class TestBaseModel(unittest.TestCase):
         # check for finite values by default
         assert torch.all(torch.isfinite(scores)).item()
 
-    def test_predict_scores_all_subjects(self) -> None:
-        """Test ``BaseModule.predict_scores_all_subjects``."""
+    def test_predict_scores_all_heads(self) -> None:
+        """Test ``BaseModule.predict_scores_all_heads``."""
         batch = torch.zeros(self.batch_size, 2, dtype=torch.long, device=self.model.device)
 
         # Set into training mode to check if it is correctly set to evaluation mode.
         self.model.train()
 
-        scores = self.model.predict_scores_all_subjects(batch)
+        scores = self.model.predict_scores_all_heads(batch)
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(scores)
 
         assert not self.model.training
 
-    def test_predict_scores_all_objects(self) -> None:
-        """Test ``BaseModule.predict_scores_all_objects``."""
+    def test_predict_scores_all_tails(self) -> None:
+        """Test ``BaseModule.predict_scores_all_tails``."""
         batch = torch.zeros(self.batch_size, 2, dtype=torch.long, device=self.model.device)
 
         # Set into training mode to check if it is correctly set to evaluation mode.
         self.model.train()
 
-        scores = self.model.predict_scores_all_objects(batch)
+        scores = self.model.predict_scores_all_tails(batch)
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(scores)
 

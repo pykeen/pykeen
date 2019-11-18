@@ -85,14 +85,14 @@ class RESCAL(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, 1, self.embedding_dim)
         # shape: (b, d, d)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         # shape: (b, d)
-        t = self.entity_embeddings(batch[:, 2]).view(-1, self.embedding_dim, 1)
+        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
 
         # Compute scores
         scores = h @ r @ t
@@ -102,9 +102,9 @@ class RESCAL(BaseModule):
 
         return scores[:, :, 0]
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
 
         # Compute scores
@@ -115,12 +115,12 @@ class RESCAL(BaseModule):
 
         return scores[:, 0, :]
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        """Forward pass using left side (subject) prediction for training with the CWA."""
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        """Forward pass using left side (head) prediction."""
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, self.num_entities, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim, 1)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
 
         # Compute scores
         scores = h @ r @ t

@@ -24,7 +24,7 @@ executed with one of the previous examples.
     from torch.optim import Adam
     optimizer = Adam(params=model.get_grad_params())
 
-    # Pick a training assumption (OWA or CWA)
+    # Pick a training assumption (OWA or LCWA)
     from poem.training import OWATrainingLoop
     training_loop = OWATrainingLoop(model=model, optimizer=optimizer)
 

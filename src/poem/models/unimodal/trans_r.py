@@ -107,12 +107,12 @@ class TransR(BaseModule):
         # Normalize embeddings of entities
         functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2]).view(-1, 1, self.embedding_dim)
-        m_r = self.relation_projections(batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, 1, self.embedding_dim)
+        m_r = self.relation_projections(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         # Project entities
         h_bot = torch.renorm(h @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, self.relation_embedding_dim)
@@ -121,12 +121,12 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1, keepdim=True) ** 2
         return score
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.relation_embedding_dim)
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.relation_embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        m_r = self.relation_projections(batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         # Project entities
         h_bot = torch.renorm(h @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, 1, self.relation_embedding_dim)
@@ -135,12 +135,12 @@ class TransR(BaseModule):
         score = -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
         return score
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.relation_embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
-        m_r = self.relation_projections(batch[:, 0]).view(-1, self.embedding_dim, self.relation_embedding_dim)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.relation_embedding_dim)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
+        m_r = self.relation_projections(rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         # Project entities
         h_bot = torch.renorm(h @ m_r, p=2, dim=-1, maxnorm=1.).view(-1, self.num_entities, self.relation_embedding_dim)

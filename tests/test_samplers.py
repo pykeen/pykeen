@@ -64,13 +64,13 @@ class _NegativeSamplingTestCase:
         # check shape
         assert negative_batch.shape == self.positive_batch.shape
 
-        # check bounds: subjects
+        # check bounds: heads
         assert _array_check_bounds(negative_batch[:, 0], low=0, high=self.triples_factory.num_entities)
 
         # check bounds: relations
         assert _array_check_bounds(negative_batch[:, 1], low=0, high=self.triples_factory.num_relations)
 
-        # check bounds: objects
+        # check bounds: tails
         assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
 
         # Check that all elements got corrupted
@@ -125,11 +125,11 @@ class GraphSamplerTest(unittest.TestCase):
             # check connected components
             # super inefficient
             components = [{int(e)} for e in torch.cat([triples_batch[:, i] for i in (0, 2)]).unique()]
-            for s, _, o in triples_batch:
-                s, o = int(s), int(o)
+            for h, _, t in triples_batch:
+                h, t = int(h), int(t)
 
-                s_comp_ind = [i for i, c in enumerate(components) if s in c][0]
-                o_comp_ind = [i for i, c in enumerate(components) if o in c][0]
+                s_comp_ind = [i for i, c in enumerate(components) if h in c][0]
+                o_comp_ind = [i for i, c in enumerate(components) if t in c][0]
 
                 # join
                 if s_comp_ind != o_comp_ind:

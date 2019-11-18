@@ -113,11 +113,11 @@ class ERMLPE(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -136,9 +136,9 @@ class ERMLPE(BaseModule):
 
         return x
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim)
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim)
         t = self.entity_embeddings.weight.transpose(1, 0)
 
         # Embedding Regularization
@@ -156,20 +156,20 @@ class ERMLPE(BaseModule):
 
         return x
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        batch_size = t.shape[0]
+        rt_batch_size = t.shape[0]
 
-        # Extend each batch of "r" with shape [batch_size, dim] to [batch_size, dim * num_entities]
+        # Extend each rt_batch of "r" with shape [rt_batch_size, dim] to [rt_batch_size, dim * num_entities]
         r = torch.repeat_interleave(r, self.num_entities, dim=1).view(-1, self.embedding_dim)
-        # Extend each h with shape [num_entities, dim] to [batch_size * num_entities, dim]
-        h = torch.repeat_interleave(h, batch_size, dim=0)
+        # Extend each h with shape [num_entities, dim] to [rt_batch_size * num_entities, dim]
+        h = torch.repeat_interleave(h, rt_batch_size, dim=0)
 
         # Concatenate them
         x_s = torch.cat([h, r], dim=-1)
@@ -178,7 +178,7 @@ class ERMLPE(BaseModule):
         # Predict t embedding
         x_t = self.mlp(x_s)
 
-        x = x_t.view(batch_size, self.num_entities, self.embedding_dim) @ t.unsqueeze(dim=2)
+        x = x_t.view(rt_batch_size, self.num_entities, self.embedding_dim) @ t.unsqueeze(dim=2)
         x = x.squeeze(dim=-1)
         # The application of the sigmoid during training is automatically handled by the default criterion.
 

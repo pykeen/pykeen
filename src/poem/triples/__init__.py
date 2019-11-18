@@ -3,18 +3,18 @@
 """Classes for creating and storing training data from triples."""
 
 from .instances import (
-    CWAInstances, Instances, MultimodalCWAInstances, MultimodalInstances, MultimodalOWAInstances, OWAInstances,
+    Instances, LCWAInstances, MultimodalInstances, MultimodalLCWAInstances, MultimodalOWAInstances, OWAInstances,
 )
 from .triples_factory import TriplesFactory
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
     'Instances',
-    'OWAInstances',
-    'CWAInstances',
+    'LCWAInstances',
     'MultimodalInstances',
     'MultimodalOWAInstances',
-    'MultimodalCWAInstances',
+    'MultimodalLCWAInstances',
+    'OWAInstances',
     'TriplesFactory',
     'TriplesNumericLiteralsFactory',
 ]

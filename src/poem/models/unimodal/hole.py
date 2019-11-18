@@ -22,7 +22,7 @@ __all__ = [
 class HolE(BaseModule):
     """An implementation of HolE [nickel2016]_.
 
-     This model uses circular correlation to compose subject and object embeddings to afterwards compute the inner
+     This model uses circular correlation to compose head and tail embeddings to afterwards compute the inner
      product with a relation embedding.
 
     .. seealso::
@@ -115,10 +115,10 @@ class HolE(BaseModule):
         scores = torch.sum(r * composite, dim=-1, keepdim=True)
         return scores
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -127,9 +127,9 @@ class HolE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0])
+        r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
 
         # Embedding Regularization
@@ -153,10 +153,10 @@ class HolE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1])
+        r = self.relation_embeddings(rt_batch[:, 0])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

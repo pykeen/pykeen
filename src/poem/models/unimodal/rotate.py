@@ -146,11 +146,11 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -160,10 +160,10 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Rank against all entities
         t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
@@ -176,10 +176,10 @@ class RotatE(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
-        r = self.relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
 
         # r expresses a rotation in complex plane.
         # The inverse rotation is expressed by the complex conjugate of r.

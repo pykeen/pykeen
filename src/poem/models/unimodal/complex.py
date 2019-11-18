@@ -140,11 +140,11 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, embedding_dim, 2)
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(batch[:, 2]).view(-1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -154,10 +154,10 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # view as (batch_size, num_entities, embedding_dim, 2)
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # view as (hr_batch_size, num_entities, embedding_dim, 2)
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
         t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
@@ -168,11 +168,11 @@ class ComplEx(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # view as (batch_size, num_entities, embedding_dim, 2)
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # view as (rt_batch_size, num_entities, embedding_dim, 2)
         h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)

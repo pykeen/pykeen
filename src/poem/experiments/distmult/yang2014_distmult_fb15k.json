@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Learn FB15K Data Set with DistMult as described by Yang et al., 2014",
-    "comments": "For each positive triple, DistMult create two negatives where subject and object are corrupted"
+    "comments": "For each positive triple, DistMult create two negatives where head and tail are corrupted"
   },
   "pipeline": {
     "data_set": "fb15k",

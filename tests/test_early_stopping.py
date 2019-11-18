@@ -45,18 +45,18 @@ class MockEvaluator(Evaluator):
         self.losses = tuple(losses)
         self.losses_iter = iter(self.losses)
 
-    def process_object_scores_(
+    def process_tail_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
     ) -> None:  # noqa: D102
         pass
 
-    def process_subject_scores_(
+    def process_head_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
@@ -92,14 +92,14 @@ class MockModel(BaseModule):
         assert batch_scores.shape == (batch_size, self.num_entities)
         return batch_scores
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=hrt_batch)
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=batch)
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=hr_batch)
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=batch)
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._generate_fake_scores(batch=rt_batch)
 
     def init_empty_weights_(self) -> BaseModule:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')

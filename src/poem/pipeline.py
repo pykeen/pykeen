@@ -49,14 +49,14 @@ given as a string:
 ...     training_loop='OWA',
 ... )
 
-Alternatively, the closed world assumption (CWA) can be given with ``'CWA'``. No additional configuration
+Alternatively, the local closed world assumption (LCWA) can be given with ``'LCWA'``. No additional configuration
 is necessary, but it's worth reading up on the differences between these assumptions.
 
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
 ...     data_set='Nations',
-...     training_loop='CWA',
+...     training_loop='LCWA',
 ... )
 
 One of these differences is that the OWA relies on *negative sampling*. The type of negative sampling
@@ -85,7 +85,7 @@ of the negative sampler could be used as in:
 
 .. warning ::
 
-   The ``negative_sampler`` keyword argument should not be used if the CWA is being used.
+   The ``negative_sampler`` keyword argument should not be used if the LCWA is being used.
    In general, all other options are available under either assumption.
 
 The type of evaluation perfomed can be specified with the ``evaluator`` keyword. By default,
@@ -268,7 +268,7 @@ def pipeline(  # noqa: C901
      dataset was not specified
     :param validation_triples_factory: A triples factory with validation instances if a
      a dataset was not specified
-    :param training_loop: The name of the training loop's assumption (``'owa'`` or ``'cwa'``)
+    :param training_loop: The name of the training loop's assumption (``'owa'`` or ``'lcwa'``)
      or the training loop class. Defaults to :class:`poem.training.OWATrainingLoop`.
     :param negative_sampler: The name of the negative sampler (``'basic'`` or ``'bernoulli'``)
      or the negative sampler class. Only allowed when training with OWA. Defaults to
@@ -346,7 +346,7 @@ def pipeline(  # noqa: C901
             optimizer=optimizer_instance,
         )
     elif training_loop is not OWATrainingLoop:
-        raise ValueError('Can not specify negative sampler with CWA')
+        raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
         training_loop_instance: TrainingLoop = OWATrainingLoop(

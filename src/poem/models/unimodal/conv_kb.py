@@ -104,10 +104,10 @@ class ConvKB(BaseModule):
         self.relation_embeddings = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -127,9 +127,9 @@ class ConvKB(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0])
+        r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
 
         # Embedding Regularization
@@ -139,10 +139,10 @@ class ConvKB(BaseModule):
 
         # Convolve head and relation
         # Shapes:
-        #  hr: (batch_size, embedding_dim, 2)
+        #  hr: (hr_batch_size, embedding_dim, 2)
         #  conv.weight: (num_filters, 1, 1, 3)
         #  conv.bias: (num_filters,)
-        #  hr_conv_out: (batch_size, embedding_dim, num_filters)
+        #  hr_conv_out: (hr_batch_size, embedding_dim, num_filters)
         hr = torch.stack([h, r], dim=-1)
         hr_conv_out = (
             torch.sum(hr[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, :2], dim=-1)
@@ -168,10 +168,10 @@ class ConvKB(BaseModule):
 
         return scores.view(-1, self.num_entities)
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings.weight
-        r = self.relation_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 1])
+        r = self.relation_embeddings(rt_batch[:, 0])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -180,10 +180,10 @@ class ConvKB(BaseModule):
 
         # Convolve head and relation
         # Shapes:
-        #  rt: (batch_size, embedding_dim, 2)
+        #  rt: (rt_batch_size, embedding_dim, 2)
         #  conv.weight: (num_filters, 1, 1, 3)
         #  conv.bias: (num_filters,)
-        #  rt_conv_out: (batch_size, embedding_dim, num_filters)
+        #  rt_conv_out: (rt_batch_size, embedding_dim, num_filters)
         rt = torch.stack([r, t], dim=-1)
         rt_conv_out = (
             torch.sum(rt[:, :, None, :] * self.conv.weight[None, None, :, 0, 0, 1:], dim=-1)

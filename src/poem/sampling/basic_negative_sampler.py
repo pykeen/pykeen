@@ -22,7 +22,7 @@ class BasicNegativeSampler(NegativeSampler):
         # Bind number of negatives to sample
         num_negs = positive_batch.shape[0]
 
-        # Equally corrupt subject and object
+        # Equally corrupt head and tail
         split_idx = num_negs // 2
 
         # Copy positive batch for corruption.
@@ -37,7 +37,7 @@ class BasicNegativeSampler(NegativeSampler):
         # for that reason we choose the random value from [0, num_entities -1]
         filter_same_head = (negative_entities[:split_idx] >= positive_batch[:split_idx, 0])
         negative_batch[:split_idx, 0] = negative_entities[:split_idx] + filter_same_head.long()
-        # Corrupt objects
+        # Corrupt tails
         filter_same_tail = (negative_entities[split_idx:] >= positive_batch[split_idx:, 2])
         negative_batch[split_idx:, 2] = negative_entities[split_idx:] + filter_same_tail.long()
 

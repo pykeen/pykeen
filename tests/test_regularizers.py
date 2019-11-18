@@ -57,7 +57,7 @@ class _RegularizerTestCase:
         self.assertEqual(model.regularizer, self.regularizer)
 
         # Forward pass (should update regularizer)
-        model.forward_owa(batch=self.positive_batch)
+        model.score_hrt(hrt_batch=self.positive_batch)
 
         # Call post_parameter_update (should reset regularizer)
         model.post_parameter_update()

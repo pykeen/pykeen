@@ -128,11 +128,11 @@ class DistMult(BaseModule):
         # *: Elementwise multiplication
         return torch.sum(h * r * t, dim=-1)
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        r = self.relation_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Compute score
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -142,10 +142,10 @@ class DistMult(BaseModule):
 
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
 
         # Rank against all entities
@@ -156,11 +156,11 @@ class DistMult(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
 
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)

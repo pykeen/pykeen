@@ -126,12 +126,12 @@ class TransH(BaseModule):
             out=self.normal_vector_embeddings.weight.data,
         )
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        d_r = self.relation_embeddings(batch[:, 1])
-        w_r = self.normal_vector_embeddings(batch[:, 1])
-        t = self.entity_embeddings(batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        d_r = self.relation_embeddings(hrt_batch[:, 1])
+        w_r = self.normal_vector_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -142,11 +142,11 @@ class TransH(BaseModule):
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        d_r = self.relation_embeddings(batch[:, 1])
-        w_r = self.normal_vector_embeddings(batch[:, 1])
+        h = self.entity_embeddings(hr_batch[:, 0])
+        d_r = self.relation_embeddings(hr_batch[:, 1])
+        w_r = self.normal_vector_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
 
         # Project to hyperplane
@@ -158,13 +158,13 @@ class TransH(BaseModule):
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight
-        rel_id = batch[:, 0]
+        rel_id = rt_batch[:, 0]
         d_r = self.relation_embeddings(rel_id)
         w_r = self.normal_vector_embeddings(rel_id)
-        t = self.entity_embeddings(batch[:, 1])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Project to hyperplane
         ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]

@@ -107,12 +107,12 @@ class StructuredEmbedding(BaseModule):
         # Normalise embeddings of entities
         functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 2]).view(-1, self.embedding_dim, 1)
+        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.embedding_dim, 1)
+        rel_h = self.left_relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
 
         # Project entities
         proj_h = rel_h @ h
@@ -121,11 +121,11 @@ class StructuredEmbedding(BaseModule):
         scores = -torch.norm(proj_h - proj_t, dim=1, p=self.scoring_fct_norm)
         return scores
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(batch[:, 0]).view(-1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim, self.embedding_dim)
+        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, self.embedding_dim, 1)
+        rel_h = self.left_relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
 
         # Project entities
@@ -136,12 +136,12 @@ class StructuredEmbedding(BaseModule):
 
         return scores
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(batch[:, 1]).view(-1, self.embedding_dim, 1)
+        rel_h = self.left_relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
 
         # Project entities
         proj_h = rel_h @ h

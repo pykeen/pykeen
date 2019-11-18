@@ -15,10 +15,10 @@ from ..typing import EntityMapping, MappedTriples, RelationMapping
 __all__ = [
     'Instances',
     'OWAInstances',
-    'CWAInstances',
+    'LCWAInstances',
     'MultimodalInstances',
     'MultimodalOWAInstances',
-    'MultimodalCWAInstances',
+    'MultimodalLCWAInstances',
 ]
 
 
@@ -55,11 +55,11 @@ class OWAInstances(Instances):
 
 
 @dataclass
-class CWAInstances(Instances):
-    """Triples and mappings to their indices for CWA."""
+class LCWAInstances(Instances):
+    """Triples and mappings to their indices for LCWA."""
 
     labels: np.ndarray
-    assumption: Assumption = Assumption.closed
+    assumption: Assumption = Assumption.local_closed
 
     def __getitem__(self, item):  # noqa: D105
         # Create dense target
@@ -82,5 +82,5 @@ class MultimodalOWAInstances(OWAInstances, MultimodalInstances):
 
 
 @dataclass
-class MultimodalCWAInstances(CWAInstances, MultimodalInstances):
-    """Triples and mappings to their indices as well as multimodal data for CWA."""
+class MultimodalLCWAInstances(LCWAInstances, MultimodalInstances):
+    """Triples and mappings to their indices as well as multimodal data for LCWA."""

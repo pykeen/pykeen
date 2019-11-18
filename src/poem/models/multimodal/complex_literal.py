@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the ComplexLiteral model based on the closed world assumption (CWA)."""
+"""Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA)."""
 
 from typing import Optional
 
@@ -16,7 +16,7 @@ from ...utils import slice_doubles
 
 # TODO: Check entire build of the model
 class ComplExLiteral(MultimodalBaseModule):
-    """An implementation of ComplexLiteral from [agustinus2018]_ based on the closed world assumption (CWA)."""
+    """An implementation of ComplexLiteral from [agustinus2018]_ based on the local closed world assumption (LCWA)."""
 
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
@@ -91,8 +91,8 @@ class ComplExLiteral(MultimodalBaseModule):
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
 
-    def forward_cwa(self, doubles: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (object) prediction for training with the CWA."""
+    def score_t(self, doubles: torch.Tensor) -> torch.Tensor:
+        """Forward pass using right side (tail) prediction for training with the LCWA."""
         batch_heads, batch_relations = slice_doubles(doubles)
 
         heads_embedded_real = self.inp_drop(self.entity_embs_real(batch_heads)).view(-1, self.embedding_dim)

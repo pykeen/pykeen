@@ -23,7 +23,7 @@ from poem.datasets.nations import (
 from poem.models.base import BaseModule
 from poem.models.cli import build_cli_from_cls
 from poem.models.multimodal import MultimodalBaseModule
-from poem.training import CWATrainingLoop, OWATrainingLoop, TrainingLoop
+from poem.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
 
 SKIP_MODULES = {
@@ -119,11 +119,11 @@ class _ModelTestCase:
         # check for finite values by default
         assert torch.all(torch.isfinite(scores)).item()
 
-    def test_forward_owa(self) -> None:
-        """Test the model's ``forward_owa()`` function."""
+    def test_score_hrt(self) -> None:
+        """Test the model's ``score_hrt()`` function."""
         batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
         try:
-            scores = self.model.forward_owa(batch)
+            scores = self.model.score_hrt(batch)
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -132,17 +132,17 @@ class _ModelTestCase:
         assert scores.shape == (self.batch_size, 1)
         self._check_scores(batch, scores)
 
-    def test_forward_cwa(self) -> None:
-        """Test the model's ``forward_cwa()`` function."""
+    def test_score_t(self) -> None:
+        """Test the model's ``score_t()`` function."""
         batch = self.factory.mapped_triples[:self.batch_size, :2].to(self.model.device)
-        # assert batch comprises (subject, relation) pairs
+        # assert batch comprises (head, relation) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_relations).all()
         try:
-            scores = self.model.forward_cwa(batch)
+            scores = self.model.score_t(batch)
         except NotImplementedError:
-            self.fail(msg='Forward CWA not yet implemented')
+            self.fail(msg='Score_o not yet implemented')
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -151,17 +151,17 @@ class _ModelTestCase:
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(batch, scores)
 
-    def test_forward_inverse_cwa(self) -> None:
-        """Test the model's ``forward_inverse_cwa()`` function."""
+    def test_score_h(self) -> None:
+        """Test the model's ``score_h()`` function."""
         batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.model.device)
-        # assert batch comprises (relation, object) pairs
+        # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_relations).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores = self.model.forward_inverse_cwa(batch)
+            scores = self.model.score_h(batch)
         except NotImplementedError:
-            self.fail(msg='Forward Inverse CWA not yet implemented')
+            self.fail(msg='Score_s not yet implemented')
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -184,9 +184,9 @@ class _ModelTestCase:
         )
         self.assertIsInstance(losses, list)
 
-    def test_train_cwa(self) -> None:
-        """Test that CWA training does not fail."""
-        loop = CWATrainingLoop(
+    def test_train_lcwa(self) -> None:
+        """Test that LCWA training does not fail."""
+        loop = LCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )

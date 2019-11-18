@@ -20,7 +20,7 @@ def load_triples(path: Union[str, TextIO], delimiter='\t') -> LabeledTriples:
     return np.loadtxt(
         fname=path,
         dtype=str,
-        comments='@Comment@ Subject Predicate Object',
+        comments='@Comment@ Head Relation Tail',
         delimiter=delimiter,
     )
 
@@ -28,8 +28,8 @@ def load_triples(path: Union[str, TextIO], delimiter='\t') -> LabeledTriples:
 class Assumption(enum.Enum):
     """The assumption made by the model."""
 
-    #: Closed-world assumption (CWA)
-    closed = 'closed'
+    #: Local closed-world assumption (LCWA)
+    local_closed = 'local-closed'
 
     #: Open world assumption (OWA)
     open = 'open'

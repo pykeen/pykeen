@@ -109,13 +109,13 @@ class NTN(BaseModule):
         self.u_relation = None
         return self
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get entity embeddings
-        h = self.entity_embeddings(batch[:, 0])
-        t = self.entity_embeddings(batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Get relation embeddings
-        r = batch[:, 1]
+        r = hrt_batch[:, 1]
         w_r = self.w_relation(r).view(-1, self.num_slices, self.embedding_dim, self.embedding_dim)
         v_r = self.v_relation(r).view(-1, self.num_slices, 2 * self.embedding_dim)
         b_r = self.b_relation(r).view(-1, self.num_slices)
@@ -135,18 +135,18 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1, keepdim=True)
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # General dimension usage: (b, n, s, ...)
-        # b: batch_size
+        # b: hr_batch_size
         # n: num_entities
         # s: slices
 
         # Get entity embeddings
-        h = self.entity_embeddings(batch[:, 0])
+        h = self.entity_embeddings(hr_batch[:, 0])
         t = self.entity_embeddings.weight
 
         # Get relation embeddings
-        r = batch[:, 1]
+        r = hr_batch[:, 1]
         w_r = self.w_relation(r).view(-1, 1, self.num_slices, self.embedding_dim, self.embedding_dim)
         v_r = self.v_relation(r).view(-1, 1, self.num_slices, 2 * self.embedding_dim)
         b_r = self.b_relation(r).view(-1, 1, self.num_slices)
@@ -171,18 +171,18 @@ class NTN(BaseModule):
 
         return torch.sum(u_r * hidden, dim=-1)
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # General dimension usage: (b, n, s, ...)
-        # b: batch_size
+        # b: rt_batch_size
         # n: num_entities
         # s: slices
 
         # Get entity embeddings
         h = self.entity_embeddings.weight
-        t = self.entity_embeddings(batch[:, 1])
+        t = self.entity_embeddings(rt_batch[:, 1])
 
         # Get relation embeddings
-        r = batch[:, 0]
+        r = rt_batch[:, 0]
         w_r = self.w_relation(r).view(-1, 1, self.num_slices, self.embedding_dim, self.embedding_dim)
         v_r = self.v_relation(r).view(-1, 1, self.num_slices, 2 * self.embedding_dim)
         b_r = self.b_relation(r).view(-1, 1, self.num_slices)

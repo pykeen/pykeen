@@ -70,7 +70,7 @@ class SklearnEvaluator(Evaluator):
         keys: torch.LongTensor,
         scores: torch.FloatTensor,
         positive_mask: torch.BoolTensor,
-        subject_side: bool,
+        head_side: bool,
     ) -> None:
         # Transfer to cpu and convert to numpy
         scores = scores.detach().cpu().numpy()
@@ -79,14 +79,14 @@ class SklearnEvaluator(Evaluator):
 
         # Ensure that each key gets counted only once
         for i in range(keys.shape[0]):
-            # include subject_side flag into key to differentiate between (s, p) and (p, o)
-            key = (subject_side,) + tuple(map(int, keys[i]))
+            # include head_side flag into key to differentiate between (h, r) and (r, t)
+            key = (head_side,) + tuple(map(int, keys[i]))
             self.all_scores[key] = scores[i]
             self.all_positives[key] = positive_mask[i]
 
-    def process_object_scores_(
+    def process_tail_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
@@ -94,11 +94,11 @@ class SklearnEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError('Sklearn evaluators need the positive mask!')
 
-        self._process_scores(keys=batch[:, :2], scores=scores, positive_mask=dense_positive_mask, subject_side=False)
+        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, head_side=False)
 
-    def process_subject_scores_(
+    def process_head_scores_(
         self,
-        batch: MappedTriples,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.BoolTensor] = None,
@@ -106,7 +106,7 @@ class SklearnEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError('Sklearn evaluators need the positive mask!')
 
-        self._process_scores(keys=batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, subject_side=True)
+        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, head_side=True)
 
     def finalize(self) -> SklearnMetricResults:  # noqa: D102
         # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and

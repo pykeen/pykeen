@@ -205,10 +205,10 @@ class RGCN(BaseModule):
         self.sparse_messages_owa = sparse_messages_owa
 
         # Save graph using buffers, such that the tensors are moved together with the model
-        s, p, o = self.triples_factory.mapped_triples.t()
-        self.register_buffer('sources', s)
-        self.register_buffer('targets', o)
-        self.register_buffer('edge_types', p)
+        h, r, t = self.triples_factory.mapped_triples.t()
+        self.register_buffer('sources', h)
+        self.register_buffer('targets', t)
+        self.register_buffer('edge_types', r)
 
         # Weights
         self.bases = None
@@ -453,34 +453,34 @@ class RGCN(BaseModule):
 
         return w
 
-    def forward_owa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich only required embeddings
-        x = self._enrich_embeddings(batch=batch if self.sparse_messages_owa else None)
+        x = self._enrich_embeddings(batch=hrt_batch if self.sparse_messages_owa else None)
 
         # Get embeddings
-        h = x[batch[:, 0]]
-        r = self._relation_embeddings(batch[:, 1])
-        t = x[batch[:, 2]]
+        h = x[hrt_batch[:, 0]]
+        r = self._relation_embeddings(hrt_batch[:, 1])
+        t = x[hrt_batch[:, 2]]
 
         return self._interaction_function(h=h, r=r, t=t).view(-1, 1)
 
-    def forward_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # TODO: In evaluation mode, we do not need to enrich the embeddings for every call
         x = self._enrich_embeddings()
 
         # Get embeddings
-        h = x[batch[:, 0]].view(-1, 1, self.embedding_dim)
-        r = self._relation_embeddings(batch[:, 1]).view(-1, 1, self.embedding_dim)
+        h = x[hr_batch[:, 0]].view(-1, 1, self.embedding_dim)
+        r = self._relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
         t = x.view(1, -1, self.embedding_dim)
 
         return self._interaction_function(h=h, r=r, t=t)
 
-    def forward_inverse_cwa(self, batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         x = self._enrich_embeddings()
 
         # Get embeddings
         h = x.view(1, -1, self.embedding_dim)
-        r = self._relation_embeddings(batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = x[batch[:, 1]].view(-1, 1, self.embedding_dim)
+        r = self._relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        t = x[rt_batch[:, 1]].view(-1, 1, self.embedding_dim)
 
         return self._interaction_function(h=h, r=r, t=t)

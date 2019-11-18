@@ -99,7 +99,7 @@ CLI_OPTIONS = {
         default=-1,
         show_default=True,
     ),
-    'input_dropout': click.option(  # ComplexCWA, ComplexLiteralCWA
+    'input_dropout': click.option(
         '--input-dropout',
         type=float,
         default=0.2,

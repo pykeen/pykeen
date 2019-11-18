@@ -2,20 +2,20 @@
 
 """Training loops for KGE models using multi-modal information.
 
-======  ======================================
+======  =======================================
 Name    Reference
-======  ======================================
-cwa     :class:`poem.training.CWATrainingLoop`
+======  =======================================
+lcwa    :class:`poem.training.LCWATrainingLoop`
 owa     :class:`poem.training.OWATrainingLoop`
-======  ======================================
+======  =======================================
 
 .. note:: This table can be re-generated with ``poem ls training -f rst``
 """
 
 from typing import Mapping, Set, Type, Union
 
-from .cwa import CWATrainingLoop  # noqa: F401
 from .early_stopping import EarlyStopper  # noqa: F401
+from .lcwa import LCWATrainingLoop  # noqa: F401
 from .owa import OWATrainingLoop  # noqa: F401
 from .training_loop import TrainingLoop  # noqa: F401
 from ..utils import get_cls, normalize_string
@@ -23,7 +23,7 @@ from ..utils import get_cls, normalize_string
 __all__ = [
     'TrainingLoop',
     'OWATrainingLoop',
-    'CWATrainingLoop',
+    'LCWATrainingLoop',
     'EarlyStopper',
     'training_loops',
     'get_training_loop_cls',
@@ -31,7 +31,7 @@ __all__ = [
 
 _TRAINING_LOOP_SUFFIX = 'TrainingLoop'
 _TRAINING_LOOPS: Set[Type[TrainingLoop]] = {
-    CWATrainingLoop,
+    LCWATrainingLoop,
     OWATrainingLoop,
 }
 
