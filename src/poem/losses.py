@@ -2,16 +2,16 @@
 
 """Loss functions implemented in POEM and additionally imported from :class:`torch`.
 
-===============================  ================================================================
+===============================  ========================================================
 Name                             Reference
-===============================  ================================================================
+===============================  ========================================================
 bce                              :class:`torch.nn.BCELoss`
-bceaftersigmoid                  :class:`poem.loss_functions.BCEAfterSigmoidLoss`
+bceaftersigmoid                  :class:`poem.losses.BCEAfterSigmoidLoss`
 marginranking                    :class:`torch.nn.MarginRankingLoss`
 mse                              :class:`torch.nn.MSELoss`
-negativesamplingselfadversarial  :class:`poem.loss_functions.NegativeSamplingSelfAdversarialLoss`
-softplus                         :class:`poem.loss_functions.SoftplusLoss`
-===============================  ================================================================
+negativesamplingselfadversarial  :class:`poem.losses.NegativeSamplingSelfAdversarialLoss`
+softplus                         :class:`poem.losses.SoftplusLoss`
+===============================  ========================================================
 
 .. note:: This table can be re-generated with ``poem ls losses -f rst``
 """

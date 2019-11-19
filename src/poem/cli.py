@@ -149,7 +149,7 @@ def evaluators(tablefmt: str):
 @tablefmt_option
 def losses(tablefmt: str):
     """List losses."""
-    lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'poem.loss_functions')
+    lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'poem.losses')
     click.echo(
         tabulate(
             lines,

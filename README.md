@@ -108,14 +108,14 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 
 ### Losses (6)
 
-| Name                            | Reference                                                 | Description                                                                                                                                  |
-|---------------------------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| bce                             | `torch.nn.BCELoss`                                        | Creates a criterion that measures the Binary Cross Entropy between the target and the output:                                                |
-| bceaftersigmoid                 | `poem.loss_functions.BCEAfterSigmoidLoss`                 | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.                                                       |
-| marginranking                   | `torch.nn.MarginRankingLoss`                              | Creates a criterion that measures the loss given inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,                                 |
-| mse                             | `torch.nn.MSELoss`                                        | Creates a criterion that measures the mean squared error (squared L2 norm) between each element in the input :math:`x` and target :math:`y`. |
-| negativesamplingselfadversarial | `poem.loss_functions.NegativeSamplingSelfAdversarialLoss` | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
-| softplus                        | `poem.loss_functions.SoftplusLoss`                        | A loss function for the softplus.                                                                                                            |
+| Name                            | Reference                                         | Description                                                                                                                                  |
+|---------------------------------|---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| bce                             | `torch.nn.BCELoss`                                | Creates a criterion that measures the Binary Cross Entropy between the target and the output:                                                |
+| bceaftersigmoid                 | `poem.losses.BCEAfterSigmoidLoss`                 | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.                                                       |
+| marginranking                   | `torch.nn.MarginRankingLoss`                      | Creates a criterion that measures the loss given inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,                                 |
+| mse                             | `torch.nn.MSELoss`                                | Creates a criterion that measures the mean squared error (squared L2 norm) between each element in the input :math:`x` and target :math:`y`. |
+| negativesamplingselfadversarial | `poem.losses.NegativeSamplingSelfAdversarialLoss` | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
+| softplus                        | `poem.losses.SoftplusLoss`                        | A loss function for the softplus.                                                                                                            |
 
 ### Data Sets (8)
 
