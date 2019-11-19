@@ -33,6 +33,7 @@ SKIP_MODULES = {
     'MockModel',
     'models',
     'get_model_cls',
+    'SimpleInteractionModel',
 }
 
 

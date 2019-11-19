@@ -3,13 +3,16 @@
 """Test that models are set in the right mode when they're training."""
 
 import unittest
+from dataclasses import dataclass
 
 import torch
+from torch import nn
 
 from poem.datasets.nations import NationsTrainingTriplesFactory
 from poem.models import TransE
 from poem.models.base import BaseModule
 from poem.triples import TriplesFactory
+from poem.utils import resolve_device
 
 
 class TestBaseModel(unittest.TestCase):
@@ -70,3 +73,125 @@ class TestBaseModel(unittest.TestCase):
         self._check_scores(scores)
 
         assert not self.model.training
+
+
+class TestBaseModelScoringFunctions(unittest.TestCase):
+    """Tests for testing the correctness of the base model fall back scoring functions."""
+
+    def setUp(self):
+        """Prepare for testing the scoring functions."""
+        self.generator = torch.random.manual_seed(seed=42)
+        self.triples_factory = MinimalTriplesFactory
+        self.device = resolve_device()
+        self.model = SimpleInteractionModel(triples_factory=self.triples_factory).to(self.device)
+
+    def test_alignment_of_score_t_fall_back(self) -> None:
+        """Test if ``BaseModule.score_t`` aligns with ``BaseModule.score_hrt``."""
+        hr_batch = torch.tensor(
+            [
+                [0, 0],
+                [1, 0],
+            ],
+            dtype=torch.long,
+            device=self.device,
+        )
+        hrt_batch = torch.tensor(
+            [
+                [0, 0, 0],
+                [0, 0, 1],
+                [1, 0, 0],
+                [1, 0, 1],
+            ],
+            dtype=torch.long,
+            device=self.device,
+        )
+        scores_t_function = self.model.score_t(hr_batch=hr_batch).flatten()
+        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
+        assert all(scores_t_function == scores_hrt_function)
+
+    def test_alignment_of_score_h_fall_back(self) -> None:
+        """Test if ``BaseModule.score_h`` aligns with ``BaseModule.score_hrt``."""
+        rt_batch = torch.tensor(
+            [
+                [0, 0],
+                [1, 0],
+            ],
+            dtype=torch.long,
+            device=self.device,
+        )
+        hrt_batch = torch.tensor(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [0, 1, 0],
+                [1, 1, 0],
+            ],
+            dtype=torch.long,
+            device=self.device,
+        )
+        scores_h_function = self.model.score_h(rt_batch=rt_batch).flatten()
+        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
+        assert all(scores_h_function == scores_hrt_function)
+
+    def test_alignment_of_score_r_fall_back(self) -> None:
+        """Test if ``BaseModule.score_r`` aligns with ``BaseModule.score_hrt``."""
+        ht_batch = torch.tensor(
+            [
+                [0, 0],
+                [1, 0],
+            ],
+            dtype=torch.long,
+            device=self.device,
+        )
+        hrt_batch = torch.tensor(
+            [
+                [0, 0, 0],
+                [0, 1, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+            ],
+            dtype=torch.long,
+            device=self.device,
+        )
+        scores_r_function = self.model.score_r(ht_batch=ht_batch).flatten()
+        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
+        assert all(scores_r_function == scores_hrt_function)
+
+
+class SimpleInteractionModel(BaseModule):
+    """A model with a simple interaction function for testing the base model."""
+
+    def __init__(self, triples_factory: TriplesFactory):
+        super().__init__(triples_factory=triples_factory)
+        self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # Get embeddings
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
+
+        return torch.sum(h + r + t, dim=1)
+
+    def init_empty_weights_(self) -> BaseModule:  # noqa: D102
+        raise NotImplementedError('Not needed for unittest')
+
+    def clear_weights_(self) -> BaseModule:  # noqa: D102
+        raise NotImplementedError('Not needed for unittest')
+
+
+@dataclass
+class MinimalTriplesFactory:
+    """A triples factory with minial attributes to allow the model to initiate."""
+
+    relation_to_id = {
+        "0": 0,
+        "1": 1,
+    }
+    entity_to_id = {
+        "0": 0,
+        "1": 1,
+    }
+    num_entities = 2
+    num_relations = 2
