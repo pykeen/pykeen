@@ -71,19 +71,25 @@ def compute_rank_from_scores(
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    #: The mean over all ranks: mean_i r_i
-    mean_rank: float = field(metadata=dict(doc='The mean over all ranks: mean_i r_i'))
+    #: The mean over all ranks: mean_i r_i. Lower is better.
+    mean_rank: float = field(metadata=dict(doc='The mean over all ranks: mean_i r_i. Lower is better.'))
 
-    #: The mean over all reciprocal ranks: mean_i (1/r_i)
-    mean_reciprocal_rank: float = field(metadata=dict(doc='The mean over all reciprocal ranks: mean_i (1/r_i)'))
+    #: The mean over all reciprocal ranks: mean_i (1/r_i). Lower is better.
+    mean_reciprocal_rank: float = field(metadata=dict(
+        doc='The mean over all reciprocal ranks: mean_i (1/r_i). Lower is better.',
+    ))
 
-    #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1))
-    adjusted_mean_rank: float = field(
-        metadata=dict(doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1))'))
+    #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.
+    adjusted_mean_rank: float = field(metadata=dict(
+        doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.',
+    ))
 
-    #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k
+    #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.
+    #: Higher is better.
     hits_at_k: Dict[int, float] = field(metadata=dict(
-        doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k'))
+        doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.'
+            ' Higher is better.',
+    ))
 
 
 class RankBasedEvaluator(Evaluator):

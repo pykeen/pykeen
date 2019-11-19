@@ -132,10 +132,10 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 
 ### Training Modes (2)
 
-| Name   | Reference                        | Description                                            |
-|--------|----------------------------------|--------------------------------------------------------|
-| lcwa   | `poem.training.LCWATrainingLoop` | A training loop that uses the closed world assumption. |
-| owa    | `poem.training.OWATrainingLoop`  | A training loop that uses the open world assumption.   |
+| Name   | Reference                        | Description                                                  |
+|--------|----------------------------------|--------------------------------------------------------------|
+| lcwa   | `poem.training.LCWATrainingLoop` | A training loop that uses the local closed world assumption. |
+| owa    | `poem.training.OWATrainingLoop`  | A training loop that uses the open world assumption.         |
 
 ### Optimizers (6)
 
@@ -156,12 +156,12 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 
 ### Metrics (4)
 
-| Metric               | Description                                                                                     | Evaluator   | Reference                                |
-|----------------------|-------------------------------------------------------------------------------------------------|-------------|------------------------------------------|
-| Mean Rank            | The mean over all ranks: mean_i r_i                                                             | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Mean Reciprocal Rank | The mean over all reciprocal ranks: mean_i (1/r_i)                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1))                       | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Metric               | Description                                                                                                        | Evaluator   | Reference                                |
+|----------------------|--------------------------------------------------------------------------------------------------------------------|-------------|------------------------------------------|
+| Mean Rank            | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Mean Reciprocal Rank | The mean over all reciprocal ranks: mean_i (1/r_i). Lower is better.                                               | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 
 ## Acknowledgements
 
