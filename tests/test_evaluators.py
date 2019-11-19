@@ -211,6 +211,10 @@ class APSEvaluatorTests(_SklearnEvaluatorTests, unittest.TestCase):
 class EvaluatorUtilsTests(unittest.TestCase):
     """Test the utility functions used by evaluators."""
 
+    def setUp(self) -> None:
+        """Set up the test case with a fixed random seed."""
+        self.generator = torch.random.manual_seed(seed=42)
+
     def test_compute_rank_from_scores(self):
         """Test the _compute_rank_from_scores() function."""
         batch_size = 3
@@ -263,7 +267,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         filter_batch = torch.empty(num_positives, 2, dtype=torch.long)
         for i in range(num_positives):
             filter_batch[i, 0] = i % batch_size
-        filter_batch[:, 1] = torch.randperm(num_positives)
+        filter_batch[:, 1] = torch.randperm(num_positives, generator=self.generator)
         dense_mask = create_dense_positive_mask_(zero_tensor=zero_tensor, filter_batch=filter_batch)
 
         # check in-place
@@ -326,7 +330,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert tail_filter_mask.shape == (batch_size, num_entities)
 
         # Test head scores
-        head_scores = torch.randn(batch_size, num_entities)
+        head_scores = torch.randn(batch_size, num_entities, generator=self.generator)
         old_head_scores = head_scores.detach().clone()
         positive_filter_heads, relation_filter = create_sparse_positive_filter_(
             hrt_batch=batch,
@@ -348,7 +352,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert not torch.isfinite(filtered_head_scores[exp_head_filter_mask]).any()
 
         # Test tail scores
-        tail_scores = torch.randn(batch_size, num_entities)
+        tail_scores = torch.randn(batch_size, num_entities, generator=self.generator)
         old_tail_scores = tail_scores.detach().clone()
         positive_filter_tails, _ = create_sparse_positive_filter_(
             hrt_batch=batch,

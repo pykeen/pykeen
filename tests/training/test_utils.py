@@ -90,12 +90,16 @@ class LabelSmoothingTest(unittest.TestCase):
     epsilon: float = 0.1
     relative_tolerance: float = 1.e-4  # larger tolerance for float32
 
+    def setUp(self) -> None:
+        """Set up the test case with a fixed random seed."""
+        self.random = np.random.RandomState(seed=42)
+
     def test_lcwa_label_smoothing(self):
         """Test if output is correct for the LCWA training loop use case."""
         # Create dummy dense labels
         labels = torch.zeros(self.batch_size, self.num_entities)
         for i in range(self.batch_size):
-            labels[i, np.random.randint(self.num_entities)] = 1.0
+            labels[i, self.random.randint(self.num_entities)] = 1.0
         # Check if labels form a probability distribution
         np.testing.assert_allclose(torch.sum(labels, dim=1).numpy(), 1.0)
 
@@ -126,13 +130,17 @@ class BatchCompilationTest(unittest.TestCase):
     num_samples: int = 256 + batch_size // 2  # to check whether the method works for incomplete batches
     num_entities: int = 10
 
+    def setUp(self) -> None:
+        """Set up the test case with a fixed random seed."""
+        self.random = np.random.RandomState(seed=42)
+
     def test_lazy_compile_random_batches(self):
         """Test method lazy_compile_random_batches."""
         indices = np.arange(self.num_samples)
-        input_array = np.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.long)
+        input_array = self.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.long)
         targets = []
         for i in range(self.num_samples):
-            targets.append(list(set(np.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.long))))
+            targets.append(list(set(self.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.long))))
         target_array = np.asarray(targets)
 
         def _batch_compiler(batch_indices):

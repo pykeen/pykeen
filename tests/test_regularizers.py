@@ -36,6 +36,7 @@ class _RegularizerTestCase:
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
+        self.generator = torch.random.manual_seed(seed=42)
         self.batch_size = 16
         self.triples_factory = NationsTrainingTriplesFactory()
         self.device = resolve_device()
@@ -75,8 +76,8 @@ class _RegularizerTestCase:
     def test_update(self) -> None:
         """Test method `update`."""
         # Generate random tensors
-        a = torch.rand(self.batch_size, 10, device=self.device)
-        b = torch.rand(self.batch_size, 20, device=self.device)
+        a = torch.rand(self.batch_size, 10, device=self.device, generator=self.generator)
+        b = torch.rand(self.batch_size, 20, device=self.device, generator=self.generator)
 
         # Call update
         self.regularizer.update(a, b)
@@ -96,7 +97,7 @@ class _RegularizerTestCase:
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
         # Generate random tensor
-        x = torch.rand(self.batch_size, 10)
+        x = torch.rand(self.batch_size, 10, generator=self.generator)
 
         # calculate penalty
         penalty = self.regularizer.forward(x=x)
