@@ -178,7 +178,7 @@ class TrainingLoop(ABC):
 
                 # accumulate gradients for whole batch
                 for start in range(0, batch_size, sub_batch_size):
-                    stop = max(start + sub_batch_size, batch_size)
+                    stop = min(start + sub_batch_size, batch_size)
 
                     # forward pass
                     loss = self._process_batch(batch=batch, start=start, stop=stop, label_smoothing=label_smoothing)
