@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Mapping, Optional
 
 import torch
+from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
@@ -29,6 +30,11 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
         if key != 'params'
     }
     return optimizer_kwargs
+
+
+def _no_support_for_sub_batching(module: nn.Module) -> bool:
+    """Check if module supports sub-batching out of the box."""
+    return isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d, nn.SyncBatchNorm))
 
 
 class TrainingLoop(ABC):
@@ -112,6 +118,11 @@ class TrainingLoop(ABC):
         # by default do not split batches in sub-batches
         if sub_batch_size is None:
             sub_batch_size = batch_size
+        else:
+            # TODO: Batchnorm + sub-batching
+            not_supported = list(filter(_no_support_for_sub_batching, self.model.modules()))
+            if len(not_supported) > 0:
+                raise NotImplementedError(f'Model does not support sub-batching: {self.model} due to {not_supported}.')
 
         # Sanity check
         if self.model.is_mr_loss and label_smoothing > 0.:

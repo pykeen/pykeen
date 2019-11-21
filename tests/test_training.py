@@ -8,7 +8,7 @@ import torch
 from torch import optim
 
 from poem.datasets import NationsTrainingTriplesFactory
-from poem.models import BaseModule, TransE
+from poem.models import BaseModule, ConvE, TransE
 from poem.training import OWATrainingLoop
 from poem.typing import MappedTriples
 
@@ -42,7 +42,18 @@ class TrainingLoopTests(unittest.TestCase):
         self.triples_factory = NationsTrainingTriplesFactory()
         self.model = TransE(triples_factory=self.triples_factory)
 
-    def test_subbatching(self):
+    def test_sub_batching(self):
         """Test if sub-batching works as expected."""
         training_loop = DummyTrainingLoop(model=self.model, sub_batch_size=self.sub_batch_size)
         training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
+
+    def test_sub_batching_support(self):
+        """Test if sub-batching works as expected."""
+        model = ConvE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+
+        def _try_train():
+            """Call train method."""
+            training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
+
+        self.assertRaises(NotImplementedError, _try_train)
