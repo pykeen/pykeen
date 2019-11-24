@@ -239,9 +239,6 @@ class _ModelTestCase:
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if self.model_cls is poem.models.RGCN:
-            self.skipTest('R-GCN takes too long')
-            # TODO: Once post_parameter_update is available, implement enrichment precomputation and remove this point.
         runner = CliRunner()
         cli = build_cli_from_cls(self.model_cls)
         # TODO: Catch HolE MKL error?

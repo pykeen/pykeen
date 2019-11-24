@@ -68,6 +68,7 @@ class GraphSampler(Sampler):
             raise ValueError("num_samples should be a positive integer "
                              "value, but got num_samples={}".format(num_samples))
         self.num_samples = num_samples
+        self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
 
         # preprocessing
         self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(triples_factory=triples_factory)
@@ -128,4 +129,4 @@ class GraphSampler(Sampler):
         return iter(chosen_edges)
 
     def __len__(self):  # noqa: D105
-        return self.num_samples
+        return self.num_batches_per_epoch

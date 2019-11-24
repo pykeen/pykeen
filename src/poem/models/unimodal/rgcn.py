@@ -128,6 +128,7 @@ class RGCN(BaseModule):
         self_loop_dropout: float = 0.2,
         message_normalization: str = 'nonsymmetric',
         decomposition: str = 'basis',
+        buffer_messages: bool = True,
     ):
         if base_model_cls is None:
             base_model_cls = DistMult
@@ -181,6 +182,10 @@ class RGCN(BaseModule):
 
         self.num_bases = num_bases_or_blocks
 
+        # buffering of messages
+        self.buffer_messages = buffer_messages
+        self.enriched_embeddings = None
+
         # TODO: Better use a enum for that?
         allowed_normalizations = {None, 'symmetric', 'nonsymmetric'}
         if message_normalization not in allowed_normalizations:
@@ -220,6 +225,12 @@ class RGCN(BaseModule):
         # Initialize weights if requested
         if init:
             self.init_empty_weights_()
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        super().post_parameter_update()
+
+        # invalidate enriched embeddings
+        self.enriched_embeddings = None
 
     def init_empty_weights_(self):  # noqa: D102
         self.base_model = self.base_model.init_empty_weights_()
@@ -310,6 +321,10 @@ class RGCN(BaseModule):
         :return: shape: (num_entities, embedding_dim)
             The updated entity embeddings
         """
+        # use buffered messages if applicable
+        if batch is None and self.enriched_embeddings is not None:
+            return self.enriched_embeddings
+
         # Bind fields
         # shape: (num_entities, embedding_dim)
         x = self._entity_embeddings.weight
@@ -423,6 +438,9 @@ class RGCN(BaseModule):
 
             x = new_x
 
+        if batch is None and self.buffer_messages:
+            self.enriched_embeddings = x
+
         return x
 
     def _get_relation_weights(self, i_layer: int, r: int) -> torch.FloatTensor:
@@ -465,7 +483,6 @@ class RGCN(BaseModule):
         return self._interaction_function(h=h, r=r, t=t).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # TODO: In evaluation mode, we do not need to enrich the embeddings for every call
         x = self._enrich_embeddings()
 
         # Get embeddings

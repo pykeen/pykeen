@@ -150,7 +150,7 @@ class TrainingLoop(ABC):
 
         # Create Sampler
         if sampler == 'schlichtkrull':
-            sampler = GraphSampler(self.triples_factory)
+            sampler = GraphSampler(self.triples_factory, num_samples=sub_batch_size)
             shuffle = False
         else:
             sampler = None
