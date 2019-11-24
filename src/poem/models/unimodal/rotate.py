@@ -62,8 +62,8 @@ class RotatE(BaseModule):
         # Embeddings
         self.relation_embeddings = relation_embeddings
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:

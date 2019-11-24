@@ -60,8 +60,8 @@ class StructuredEmbedding(BaseModule):
         self.left_relation_embeddings = left_relation_embeddings
         self.right_relation_embeddings = right_relation_embeddings
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         init_bound = 6 / np.sqrt(self.embedding_dim)

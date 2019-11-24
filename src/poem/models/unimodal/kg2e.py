@@ -150,8 +150,8 @@ class KG2E(BaseModule):
         self.entity_covariances = entity_covariances
         self.relation_covariances = relation_covariances
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         # means are restricted to max norm of 1

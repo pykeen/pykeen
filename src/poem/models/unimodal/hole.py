@@ -61,8 +61,8 @@ class HolE(BaseModule):
 
         self.relation_embeddings = relation_embeddings
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27

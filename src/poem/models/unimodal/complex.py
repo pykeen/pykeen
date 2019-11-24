@@ -86,9 +86,8 @@ class ComplEx(BaseModule):
         # The embeddings are first initialized when calling the get_grad_params function
         self.relation_embeddings = relation_embeddings
 
-        # Initialize embeddings
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         # Initialize entity embeddings

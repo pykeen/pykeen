@@ -56,12 +56,13 @@ class TransE(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            init=init,
         )
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:

@@ -222,9 +222,8 @@ class RGCN(BaseModule):
         self.batch_norms = None
         self.activations = None
 
-        # Initialize weights if requested
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()

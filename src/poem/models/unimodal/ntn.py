@@ -78,8 +78,8 @@ class NTN(BaseModule):
         self.u_relation = u_relation
         self.non_linearity = non_linearity
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         # Initialize entity embeddings

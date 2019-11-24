@@ -156,8 +156,8 @@ class ConvE(BaseModule):
             * (self.embedding_width - kernel_width + 1)
         self.fc = torch.nn.Linear(num_in_features, self.embedding_dim)
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:

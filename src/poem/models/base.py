@@ -105,6 +105,14 @@ class BaseModule(nn.Module):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
+        self.init = init
+
+    def _init_weights_on_device(self):  # noqa: D401
+        """A hook called after initialization."""
+        if self.init:
+            self.init_empty_weights_()
+        self.to_device_()
+
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass while keeping track of hyper-parameters."""
         super().__init_subclass__(**kwargs)

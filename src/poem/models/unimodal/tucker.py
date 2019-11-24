@@ -105,8 +105,8 @@ class TuckER(BaseModule):
         self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
         self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
 
-        if init:
-            self.init_empty_weights_()
+        # Finalize initialization
+        self._init_weights_on_device()
 
     def init_empty_weights_(self):  # noqa: D102
         if self.entity_embeddings is None:
