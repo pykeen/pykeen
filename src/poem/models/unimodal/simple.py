@@ -2,7 +2,7 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 import torch.autograd
@@ -12,13 +12,11 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import resolve_device, slice_triples
+from ...utils import slice_triples
 
 __all__ = [
     'SimplE',
 ]
-
-TROULLION_REFERENCE = 'troullion2016'
 
 
 class SimplE(BaseModule):
@@ -36,6 +34,17 @@ class SimplE(BaseModule):
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
 
+    #: The regularizer used by [trouillon2016]_ for SimplE
+    #: In the paper, they use weight of 0.1, and do not normalize the
+    #: regularization term by the number of elements, which is 200.
+    regularizer_default = PowerSumRegularizer
+    #: The power sum settings used by [trouillon2016]_ for SimplE
+    regularizer_default_kwargs = dict(
+        weight=20,
+        p=2.0,
+        normalize=True,
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -48,18 +57,8 @@ class SimplE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
-        regularizer: Union[None, str, Regularizer] = TROULLION_REFERENCE,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
-        if regularizer == TROULLION_REFERENCE:
-            # In the paper, they use weight of 0.1, and do not normalize the regularization term by the number of
-            # elements, which is 200.
-            regularizer = PowerSumRegularizer(
-                device=resolve_device(preferred_device),
-                weight=20,
-                p=2.0,
-                normalize=True,
-            )
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

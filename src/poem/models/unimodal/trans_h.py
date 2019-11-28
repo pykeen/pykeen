@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch import nn
@@ -12,7 +12,6 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import resolve_device
 
 __all__ = [
     'TransH',
@@ -22,7 +21,12 @@ __all__ = [
 class TransHRegularizer(Regularizer):
     """Regularizer for TransH's soft constraints."""
 
-    def __init__(self, device: torch.device, weight: float, epsilon: float):
+    def __init__(
+        self,
+        device: torch.device,
+        weight: float,
+        epsilon: float,
+    ):
         super().__init__(device=device, weight=weight, normalize=False)
         self.epsilon = epsilon
 
@@ -61,6 +65,14 @@ class TransH(BaseModule):
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
 
+    #: The custom regularizer used by [wang2014]_ for TransH
+    regularizer_default = TransHRegularizer
+    #: The settings used by [wang2014]_ for TransH
+    regularizer_default_kwargs = dict(
+        weight=0.05,
+        epsilon=0.5,
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -69,20 +81,12 @@ class TransH(BaseModule):
         relation_embeddings: Optional[nn.Embedding] = None,
         normal_vector_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
-        epsilon: float = 0.5,
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
-        regularizer: Union[None, str, Regularizer] = 'wang2014',
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
-        if regularizer == 'wang2014':
-            regularizer = TransHRegularizer(
-                device=resolve_device(preferred_device),
-                weight=0.05,
-                epsilon=epsilon,
-            )
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

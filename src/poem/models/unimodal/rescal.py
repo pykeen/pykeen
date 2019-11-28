@@ -2,7 +2,7 @@
 
 """Implementation of RESCAL."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch import nn
@@ -11,8 +11,6 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import resolve_device
-
 
 __all__ = [
     'RESCAL',
@@ -34,6 +32,17 @@ class RESCAL(BaseModule):
         regularization_weight=dict(type=float, low=0.001, high=0.1, scale='log'),
     )
 
+    #: The regularizer used by [nickel2011]_ for for RESCAL
+    #: According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py
+    #: a normalized weight of 10 is used.
+    regularizer_default = LpRegularizer
+    #: The LP settings used by [nickel2011]_ for for RESCAL
+    regularizer_default_kwargs = dict(
+        weight=10,
+        p=2.,
+        normalize=True,
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -44,19 +53,9 @@ class RESCAL(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
-        regularizer: Union[None, str, Regularizer] = 'nickel2011',
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        if regularizer == 'nickel2011':
-            # According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py a normalized weight of
-            # 10 is used.
-            regularizer = LpRegularizer(
-                device=resolve_device(preferred_device),
-                weight=10,
-                p=2.,
-                normalize=True,
-            )
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

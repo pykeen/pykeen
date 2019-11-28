@@ -12,11 +12,13 @@ import click
 from torch import nn
 
 from .options import (
-    CLI_OPTIONS, batch_size_option, early_stopping_option, evaluator_option, learning_rate_option, mlflow_uri_option,
-    number_epochs_option, optimizer_option, testing_option, title_option, training_loop_option, training_option,
+    CLI_OPTIONS, batch_size_option, device_option, early_stopping_option, evaluator_option, learning_rate_option,
+    mlflow_uri_option, number_epochs_option, optimizer_option, testing_option, title_option, training_loop_option,
+    training_option,
 )
 from ..base import BaseModule
-from ...regularizers import Regularizer
+from ...regularizers import Regularizer, _REGULARIZER_SUFFIX, regularizers
+from ...utils import normalize_string
 
 __all__ = [
     'build_cli_from_cls',
@@ -25,7 +27,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
-_SKIP_ARGS = {'init', 'return', 'triples_factory'}
+_SKIP_ARGS = {'init', 'return', 'triples_factory', 'preferred_device', 'regularizer'}
 _SKIP_ANNOTATIONS = {Optional[nn.Embedding], Optional[nn.Parameter], Optional[nn.Module]}
 
 
@@ -35,9 +37,9 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     Allows users to specify all of the (hyper)parameters to the
     model via command line options using :class:`click.Option`.
     """
+    signature = inspect.signature(model.__init__)
 
-    def _decorate(command: click.Command) -> click.Command:
-        signature = inspect.signature(model.__init__)
+    def _decorate_model_kwargs(command: click.Command) -> click.Command:
         for name, annotation in model.__init__.__annotations__.items():
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
@@ -77,10 +79,19 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
 
         return command
 
+    regularizer_option = click.option(
+        '--regularizer',
+        type=click.Choice(regularizers),
+        help=f'The name of the regularizer. Defaults to'
+             f' {normalize_string(model.regularizer_default.__name__, suffix=_REGULARIZER_SUFFIX)}',
+    )
+
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
+    @device_option
     @training_option
     @testing_option
     @optimizer_option
+    @regularizer_option
     @training_loop_option
     @number_epochs_option
     @batch_size_option
@@ -89,11 +100,12 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     @early_stopping_option
     @mlflow_uri_option
     @title_option
-    @_decorate
+    @_decorate_model_kwargs
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
-        *, training_loop, optimizer, number_epochs, batch_size, learning_rate, evaluator, early_stopping,
-        output, mlflow_tracking_uri, title, training_triples_factory, testing_triples_factory, **model_kwargs,
+        *, device, training_loop, optimizer, regularizer, number_epochs, batch_size, learning_rate, evaluator,
+        early_stopping, output, mlflow_tracking_uri, title, training_triples_factory, testing_triples_factory,
+        **model_kwargs,
     ):
         """CLI for POEM."""
         click.echo(
@@ -104,8 +116,10 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
         from ...pipeline import pipeline
 
         pipeline_result = pipeline(
+            device=device,
             model=model,
             model_kwargs=model_kwargs,
+            regularizer=regularizer,
             training_triples_factory=training_triples_factory,
             testing_triples_factory=testing_triples_factory or training_triples_factory,
             optimizer=optimizer,

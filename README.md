@@ -106,6 +106,15 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | TuckER              | `poem.models.TuckER`              | Balazevic *et al.*, 2019     |
 | UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014        |
 
+### Regularizers (4)
+
+| Name     | Reference                               | Description                                              |
+|----------|-----------------------------------------|----------------------------------------------------------|
+| combined | `poem.regularizers.CombinedRegularizer` | A linear combination of regularizers.                    |
+| lp       | `poem.regularizers.LpRegularizer`       | A simple L_p norm based regularizer.                     |
+| no       | `poem.regularizers.NoRegularizer`       | A regularizer which does not perform any regularization. |
+| powersum | `poem.regularizers.PowerSumRegularizer` | A simple x^p based regularizer.                          |
+
 ### Losses (6)
 
 | Name                            | Reference                                         | Description                                                                                                                                  |

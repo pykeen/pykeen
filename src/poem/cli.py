@@ -25,6 +25,7 @@ from .models import models as models_dict
 from .models.base import BaseModule
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizers as optimizers_dict
+from .regularizers import regularizers as regularizers_dict
 from .sampling import negative_samplers as samplers_dict
 from .training import training_loops as training_dict
 from .utils import get_until_first_blank
@@ -173,6 +174,20 @@ def optimizers(tablefmt: str):
     )
 
 
+@ls.command()
+@tablefmt_option
+def regularizers(tablefmt: str):
+    """List regularizers."""
+    lines = _get_lines(regularizers_dict, tablefmt, 'regularizers')
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Reference', 'Description'],
+            tablefmt=tablefmt,
+        ),
+    )
+
+
 def _get_lines_alternative(tablefmt, d, torch_prefix, poem_prefix):
     for name, submodule in sorted(d.items()):
         if submodule.__module__.startswith('torch'):
@@ -244,6 +259,8 @@ def github_readme(ctx: click.Context):
     """Generate the GitHub readme's ## Implementation section."""
     click.echo(f'### Models ({len(models_dict)})\n')
     ctx.invoke(models, tablefmt='github')
+    click.echo(f'\n### Regularizers ({len(regularizers_dict)})\n')
+    ctx.invoke(regularizers, tablefmt='github')
     click.echo(f'\n### Losses ({len(losses_dict)})\n')
     ctx.invoke(losses, tablefmt='github')
     click.echo(f'\n### Data Sets ({len(data_sets)})\n')

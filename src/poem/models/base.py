@@ -8,7 +8,6 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Dict, Iterable, Mapping, Optional, Set, Type, Union
 
-import click
 import numpy as np
 import torch
 from torch import nn
@@ -36,16 +35,14 @@ class BaseModule(nn.Module):
     #: A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
-    #: The command line interface for this model
-    cli: ClassVar[click.Command]
-
     #: Defaults for hyperparameter optimization
     hpo_default: ClassVar[Mapping[str, Any]]
 
-    criterion_default: Type[Loss] = nn.MarginRankingLoss
-    criterion_default_kwargs = dict(margin=1.0, reduction='mean')
+    criterion_default: ClassVar[Type[Loss]] = nn.MarginRankingLoss
+    criterion_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
 
-    #: The regularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
+    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     regularizer: Regularizer
 
     def __init__(
@@ -85,7 +82,10 @@ class BaseModule(nn.Module):
 
         # Regularizer
         if regularizer is None:
-            regularizer = NoRegularizer(device=self.device)
+            regularizer = self.regularizer_default(
+                device=self.device,
+                **(self.regularizer_default_kwargs or {}),
+            )
         self.regularizer = regularizer
 
         self.is_self_adversiarial_neg_sampling_loss = isinstance(self.criterion, NegativeSamplingSelfAdversarialLoss)
@@ -120,7 +120,7 @@ class BaseModule(nn.Module):
         # Keep track of the hyper-parameters that are used across all
         # subclasses of BaseModule
         for k, v in cls.__init__.__annotations__.items():
-            if k not in {'return', 'triples_factory'}:
+            if k not in BaseModule.__init__.__annotations__:
                 BaseModule._hyperparameter_usage[k].add(cls.__name__)
 
     @property

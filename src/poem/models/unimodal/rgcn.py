@@ -4,7 +4,7 @@
 
 import logging
 from os import path
-from typing import Any, Dict, Optional, Type
+from typing import Any, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -121,7 +121,7 @@ class RGCN(BaseModule):
         use_bias: bool = True,
         use_batch_norm: bool = False,
         activation_cls: Optional[Type[nn.Module]] = None,
-        activation_kwargs: Optional[Dict[str, Any]] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
         base_model_cls: Optional[Type[BaseModule]] = None,
         sparse_messages_owa: bool = True,
         edge_dropout: float = 0.4,

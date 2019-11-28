@@ -36,11 +36,6 @@ def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFact
 
 
 CLI_OPTIONS = {
-    'preferred_device': click.option(
-        '--preferred-device',
-        callback=_make_callback(resolve_device),
-        help='Can either be gpu/cuda or cuda:<ID>. Defaults to cuda, if available.',
-    ),
     'embedding_dim': click.option(
         '--embedding-dim',
         type=int,
@@ -112,6 +107,12 @@ CLI_OPTIONS = {
         show_default=True,
     )
 }
+
+device_option = click.option(
+    '--device',
+    callback=_make_callback(resolve_device),
+    help='Can either be gpu/cuda or cuda:<ID>. Defaults to cuda, if available.',
+)
 optimizer_option = click.option(
     '-o', '--optimizer',
     type=click.Choice(list(optimizers)),

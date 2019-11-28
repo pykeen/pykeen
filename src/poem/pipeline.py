@@ -176,10 +176,11 @@ from .losses import Loss, get_loss_cls
 from .models import get_model_cls
 from .models.base import BaseModule
 from .optimizers import get_optimizer_cls
+from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import MLFlowResultTracker, ResultTracker
+from .utils import MLFlowResultTracker, ResultTracker, resolve_device
 
 __all__ = [
     'PipelineResult',
@@ -253,6 +254,9 @@ def pipeline(  # noqa: C901
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     mlflow_tracking_uri: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    regularizer: Union[None, str, Type[Regularizer]] = None,
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+    device: Union[None, str, torch.device] = None,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -302,6 +306,8 @@ def pipeline(  # noqa: C901
     # Start tracking
     result_tracker.start_run(run_name=title)
 
+    device = resolve_device(device)
+
     result_tracker.log_params({'dataset': data_set})
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_data_set(
         data_set=data_set,
@@ -312,6 +318,16 @@ def pipeline(  # noqa: C901
 
     if model_kwargs is None:
         model_kwargs = {}
+    model_kwargs.update(preferred_device=device)
+
+    if regularizer is not None and 'regularizer' in model_kwargs:
+        raise ValueError('Can not specify regularizer in kwargs and model_kwargs')
+    elif regularizer is not None:
+        regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
+        model_kwargs['regularizer'] = regularizer_cls(
+            device=device,
+            **(regularizer_kwargs or {}),
+        )
 
     if criterion is not None:
         criterion_cls = get_loss_cls(criterion)

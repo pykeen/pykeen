@@ -2,7 +2,7 @@
 
 """Implementation of DistMult."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 import torch.autograd
@@ -14,7 +14,6 @@ from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import resolve_device
 
 __all__ = [
     'DistMult',
@@ -39,6 +38,18 @@ class DistMult(BaseModule):
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
 
+    #: The regularizer used by [yang2014]_ for DistMult
+    #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
+    #: Thus, when we use normalized regularization weight, the normalization factor is 10*100 = 1,000, which is
+    #: why the weight has to be increased by a factor of 1,000 to have the same configuration as in the paper.
+    regularizer_default = LpRegularizer
+    #: The LP settings used by [yang2014]_ for DistMult
+    regularizer_default_kwargs = dict(
+        weight=1.0,
+        p=2.0,
+        normalize=True,
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -49,20 +60,9 @@ class DistMult(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         init: bool = True,
-        regularizer: Union[None, str, Regularizer] = 'yang2014',
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        if regularizer == 'yang2014':
-            # In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
-            # Thus, when we use normalized regularization weight, the normalization factor is 10*100 = 1,000, which is
-            # why the weight has to be increased by a factor of 1,000 to have the same configuration as in the paper.
-            regularizer = LpRegularizer(
-                device=resolve_device(preferred_device),
-                weight=1.0,
-                p=2.0,
-                normalize=True,
-            )
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

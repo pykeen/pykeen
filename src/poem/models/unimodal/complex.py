@@ -2,7 +2,7 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -30,6 +30,15 @@ class ComplEx(BaseModule):
     criterion_default = SoftplusLoss
     criterion_default_kwargs = dict(reduction='mean')
 
+    #: The regularizer used by [trouillon2016]_ for ComplEx.
+    regularizer_default = LpRegularizer
+    #: The LP settings used by [trouillon2016]_ for ComplEx.
+    regularizer_default_kwargs = dict(
+        weight=0.01,
+        p=2.0,
+        normalize=True,
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -40,7 +49,7 @@ class ComplEx(BaseModule):
         random_seed: Optional[int] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         init: bool = True,
-        regularizer: Union[None, str, Regularizer] = 'troullion2016',
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the module.
 

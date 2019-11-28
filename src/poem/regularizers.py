@@ -1,12 +1,26 @@
 # -*- coding: utf-8 -*-
 
-"""Regularization."""
+"""Regularization.
+
+========  ==============================================
+Name      Reference
+========  ==============================================
+combined  :class:`poem.regularizers.CombinedRegularizer`
+lp        :class:`poem.regularizers.LpRegularizer`
+no        :class:`poem.regularizers.NoRegularizer`
+powersum  :class:`poem.regularizers.PowerSumRegularizer`
+========  ==============================================
+
+.. note:: This table can be re-generated with ``poem ls regularizers -f rst``
+"""
 
 from abc import abstractmethod
-from typing import Iterable
+from typing import Collection, Iterable, Mapping, Type, Union
 
 import torch
 from torch import nn
+
+from .utils import get_cls, normalize_string
 
 __all__ = [
     'Regularizer',
@@ -14,6 +28,8 @@ __all__ = [
     'NoRegularizer',
     'CombinedRegularizer',
     'PowerSumRegularizer',
+    'regularizers',
+    'get_regularizer_cls',
 ]
 
 
@@ -137,3 +153,28 @@ class CombinedRegularizer(Regularizer):
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
+
+
+_REGULARIZER_SUFFIX = 'Regularizer'
+_REGULARIZERS: Collection[Type[Regularizer]] = {
+    NoRegularizer,
+    LpRegularizer,
+    PowerSumRegularizer,
+    CombinedRegularizer,
+}
+
+regularizers: Mapping[str, Type[Regularizer]] = {
+    normalize_string(_regularizer.__name__, suffix=_REGULARIZER_SUFFIX): _regularizer
+    for _regularizer in _REGULARIZERS
+}
+
+
+def get_regularizer_cls(query: Union[None, str, Type[Regularizer]]) -> Type[Regularizer]:
+    """Get the regularizer class."""
+    return get_cls(
+        query,
+        base=Regularizer,
+        lookup_dict=regularizers,
+        default=NoRegularizer,
+        suffix=_REGULARIZER_SUFFIX,
+    )
