@@ -9,8 +9,8 @@ from typing import Callable, List, Optional
 
 import numpy
 
-from ..evaluation import Evaluator, MetricResults
-from ..models import BaseModule
+from ..evaluation import Evaluator
+from ..models.base import BaseModule
 from ..triples import TriplesFactory
 from ..utils import ResultTracker
 
@@ -111,12 +111,6 @@ class EarlyStopper:
         if self.result_tracker is None:
             self.result_tracker = ResultTracker()
 
-    def _get_result(self, metric_results: MetricResults) -> float:
-        result = getattr(metric_results, self.metric)
-        if self.metric == 'hits_at_k':
-            result = result[10]
-        return result
-
     def should_stop(self) -> bool:
         """Validate on validation set and check for termination condition."""
         # Evaluate
@@ -130,7 +124,7 @@ class EarlyStopper:
             step=self.number_evaluations,
             prefix='validation',
         )
-        result = self._get_result(metric_results)
+        result = metric_results.get_metric(self.metric)
 
         # Only check if enough values are already collected
         if self.number_evaluations >= self.patience:

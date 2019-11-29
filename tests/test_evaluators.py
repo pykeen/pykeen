@@ -59,7 +59,7 @@ class _AbstractEvaluatorTests:
         inverse: bool = False,
     ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
         # Get batch
-        hrt_batch = self.factory.mapped_triples[:self.batch_size]
+        hrt_batch = self.factory.mapped_triples[:self.batch_size].to(self.model.device)
 
         # Compute scores
         if inverse:
@@ -153,10 +153,13 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, RankBasedMetricResults)
 
         # Check value ranges
-        assert 1 <= result.mean_rank <= self.factory.num_entities
-        assert 0 < result.mean_reciprocal_rank <= 1
-        for k, v in result.hits_at_k.items():
-            assert 0 <= v <= 1
+        for mr in result.mean_rank.values():
+            assert 1 <= mr <= self.factory.num_entities
+        for mrr in result.mean_reciprocal_rank.values():
+            assert 0 < mrr <= 1
+        for k, hits_at_k in result.hits_at_k.items():
+            for h in hits_at_k.values():
+                assert 0 <= h <= 1
 
         # TODO: Validate with data?
 
@@ -225,12 +228,26 @@ class EvaluatorUtilsTests(unittest.TestCase):
         ])
         # true_score: (2, 3, 3)
         true_score = torch.tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_avg_rank = torch.tensor([3.5, 2., 1.])
+        exp_best_rank = torch.tensor([3., 2., 1.])
+        exp_worst_rank = torch.tensor([4., 2., 1.])
+        exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
         exp_adj_rank = exp_avg_rank / torch.tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
-        avg_rank, adj_rank = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
+        ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
+
+        best_rank = ranks.get('best')
+        assert best_rank.shape == (batch_size,)
+        assert (best_rank == exp_best_rank).all()
+
+        worst_rank = ranks.get('worst')
+        assert worst_rank.shape == (batch_size,)
+        assert (worst_rank == exp_worst_rank).all()
+
+        avg_rank = ranks.get('avg')
         assert avg_rank.shape == (batch_size,)
-        assert adj_rank.shape == (batch_size,)
         assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
+
+        adj_rank = ranks.get('adj')
+        assert adj_rank.shape == (batch_size,)
         assert (adj_rank == exp_adj_rank).all(), (adj_rank, exp_adj_rank)
 
     def test_create_sparse_positive_filter_(self):

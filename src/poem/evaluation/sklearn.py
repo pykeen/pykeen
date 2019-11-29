@@ -26,6 +26,11 @@ class SklearnMetricResults(MetricResults):
     #: The score over all triples
     score: float
 
+    def get_metric(self, name: str) -> float:  # noqa: D102
+        if name != self.name:
+            raise ValueError(f'Invalid metric: {name}. Should be {self.name}.')
+        return self.score
+
 
 SKLEARN_METRICS = {
     normalize_string(f.__name__): f

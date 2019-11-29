@@ -11,6 +11,7 @@ from torch.optim import Adam
 
 from poem.datasets.nations import NationsTrainingTriplesFactory, NationsValidationTriplesFactory
 from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from poem.evaluation.rank_based_evaluator import RANK_AVERAGE
 from poem.models import TransE
 from poem.models.base import BaseModule
 from poem.training import EarlyStopper, OWATrainingLoop
@@ -69,7 +70,9 @@ class MockEvaluator(Evaluator):
             mean_reciprocal_rank=None,
             adjusted_mean_rank=None,
             hits_at_k={
-                10: next(self.losses_iter),
+                RANK_AVERAGE: {
+                    10: next(self.losses_iter),
+                },
             },
         )
 

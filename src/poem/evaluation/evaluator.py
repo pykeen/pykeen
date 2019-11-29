@@ -41,6 +41,10 @@ def optional_context_manager(condition, context_manager):
 class MetricResults:
     """Results from computing metrics."""
 
+    def get_metric(self, name: str) -> float:
+        """Get the given metric from the results."""
+        raise NotImplementedError
+
 
 class Evaluator(ABC):
     """An abstract evaluator for KGE models.
