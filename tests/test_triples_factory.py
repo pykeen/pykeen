@@ -28,9 +28,9 @@ instance_mapped_triples = np.array(
 
 instance_labels = np.array(
     [
-        [1],
-        [0, 4],
-        [3],
+        np.array([1]),
+        np.array([0, 4]),
+        np.array([3]),
     ],
 )
 
@@ -83,7 +83,7 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
 
         # Check if multilabels are working correctly
         self.assertTrue((instance_mapped_triples == instances.mapped_triples.cpu().detach().numpy()).all())
-        self.assertTrue((instance_labels == instances.labels).all())
+        self.assertTrue(all(all(instance_labels[i] == instances.labels[i]) for i in range(len(instance_labels))))
 
     def test_triples(self):
         """Test properties of the triples factory."""
