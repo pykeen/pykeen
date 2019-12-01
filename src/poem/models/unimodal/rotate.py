@@ -71,9 +71,12 @@ class RotatE(BaseModule):
             embedding_xavier_uniform_(self.entity_embeddings)
 
         if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
             # phases randomly between 0 and 2 pi
-            nn.init.uniform_(self.relation_embeddings.weight, a=0, b=2.0 * np.pi)
+            phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim)
+            relations = torch.stack([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
+            assert torch.allclose(torch.norm(relations, p=2, dim=-1), torch.ones(1, 1))
+            relations = relations.view(self.num_relations, self.embedding_dim)
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim, _weight=relations)
 
         return self
 
@@ -178,31 +181,21 @@ class RotatE(BaseModule):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim // 2, 2, 1)
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim // 2, 1, 2)
+        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # r expresses a rotation in complex plane.
         # The inverse rotation is expressed by the complex conjugate of r.
         # The score is computed as the distance of the relation-rotated head to the tail.
         # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
         # |h * r - t| = |h - conj(r) * t|
-        r[:, :, 0, 1] *= -1
-
-        # Compute Hadamard product (=rotate tail by inverse relation)
-        er = (t * r)
-        rot_t = torch.cat(
-            [
-                er[:, :, 0, 0] - er[:, :, 1, 1],
-                er[:, :, 0, 1] + er[:, :, 1, 0],
-            ],
-            dim=-1,
-        )
+        r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
 
         # Rank against all entities
-        h = self.entity_embeddings.weight
+        h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
 
-        # use negative distance to tail as score
-        scores = -torch.norm(h[None, :, :] - rot_t[:, None, :], dim=-1)
+        # Compute scores
+        scores = self.interaction_function(h=t, r=r_inv, t=h)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, t)

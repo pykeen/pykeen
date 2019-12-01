@@ -20,11 +20,13 @@ from poem.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
 )
-from poem.models.base import BaseModule
+from poem.models.base import BaseModule, _extend_batch
 from poem.models.cli import build_cli_from_cls
 from poem.models.multimodal import MultimodalBaseModule
+from poem.models.unimodal.trans_d import _project_entity
 from poem.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
+from poem.utils import clamp_norm
 
 SKIP_MODULES = {
     'BaseModule',
@@ -72,6 +74,7 @@ class _ModelTestCase:
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
+        self.generator = torch.random.manual_seed(seed=42)
         self.factory = NationsTrainingTriplesFactory(create_inverse_triples=self.create_inverse_triples)
         self.model = self.model_cls(
             self.factory,
@@ -286,6 +289,69 @@ Traceback
         # assert that the regularization term has been reset
         assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float, device=self.model.device)
 
+    def test_score_h_with_score_hrt_equality(self) -> None:
+        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.model.device)
+        self.model.eval()
+        # assert batch comprises (relation, tail) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch[:, 0] < self.factory.num_relations).all()
+        assert (batch[:, 1] < self.factory.num_entities).all()
+        try:
+            scores_h = self.model.score_h(batch)
+            scores_hrt = super(self.model.__class__, self.model).score_h(batch)
+        except NotImplementedError:
+            self.fail(msg='Score_h not yet implemented')
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
+
+        assert torch.allclose(scores_h, scores_hrt, atol=1e-06)
+
+    def test_score_r_with_score_hrt_equality(self) -> None:
+        """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
+        batch = self.factory.mapped_triples[:self.batch_size, [0, 2]].to(self.model.device)
+        self.model.eval()
+        # assert batch comprises (relation, tail) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch[:, 0] < self.factory.num_relations).all()
+        assert (batch[:, 1] < self.factory.num_entities).all()
+        try:
+            scores_r = self.model.score_r(batch)
+            scores_hrt = super(self.model.__class__, self.model).score_r(batch)
+        except NotImplementedError:
+            self.fail(msg='Score_h not yet implemented')
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
+
+        assert torch.allclose(scores_r, scores_hrt, atol=1e-06)
+
+    def test_score_t_with_score_hrt_equality(self) -> None:
+        """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
+        batch = self.factory.mapped_triples[:self.batch_size, :-1].to(self.model.device)
+        self.model.eval()
+        # assert batch comprises (relation, tail) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch[:, 0] < self.factory.num_relations).all()
+        assert (batch[:, 1] < self.factory.num_entities).all()
+        try:
+            scores_t = self.model.score_t(batch)
+            scores_hrt = super(self.model.__class__, self.model).score_t(batch)
+        except NotImplementedError:
+            self.fail(msg='Score_h not yet implemented')
+        except RuntimeError as e:
+            if str(e) == 'fft: ATen not compiled with MKL support':
+                self.skipTest(str(e))
+            else:
+                raise e
+
+        assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
+
 
 class _DistanceModelTestCase(_ModelTestCase):
     """A test case for distance-based models."""
@@ -439,6 +505,128 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         'relation_dim': 4,
     }
 
+    def test_score_hrt(self):
+        """Test interaction function of TransD."""
+        # entity embeddings
+        weights = torch.tensor([[2., 2.], [4., 4.]])
+        entity_embds = torch.nn.Embedding(2, 2)
+        entity_embds.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embds
+
+        proj_weights = torch.tensor([[3., 3.], [2., 2.]])
+        entity_proj_embds = torch.nn.Embedding(2, 2)
+        entity_proj_embds.weight.data.copy_(proj_weights)
+        self.model.entity_projections = entity_proj_embds
+
+        # relation embeddings
+        rel_weights = torch.tensor([[4.], [4.]])
+        rel_embds = torch.nn.Embedding(2, 1)
+        rel_embds.weight.data.copy_(rel_weights)
+        self.model.relation_embeddings = rel_embds
+
+        rel_proj_weights = torch.tensor([[5.], [3.]])
+        rel_proj_embds = torch.nn.Embedding(2, 1)
+        rel_proj_embds.weight.data.copy_(rel_proj_weights)
+        self.model.relation_projections = rel_proj_embds
+
+        # Compute Scores
+        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
+        scores = self.model.score_hrt(hrt_batch=batch)
+        self.assertEqual(scores.shape[0], 2)
+        self.assertEqual(scores.shape[1], 1)
+        first_score = scores[0].item()
+        second_score = scores[1].item()
+        self.assertAlmostEqual(first_score, -16, delta=0.01)
+
+        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
+        scores = self.model.score_hrt(hrt_batch=batch)
+        self.assertEqual(scores.shape[0], 2)
+        self.assertEqual(scores.shape[1], 1)
+        first_score = scores[0].item()
+        second_score = scores[1].item()
+        self.assertAlmostEqual(first_score, -16, delta=0.01)
+        # self.assertAlmostEqual(second_score, -16, delta=0.01)
+
+        # Use different dimension for relation embedding: relation_dim > entity_dim
+        # relation embeddings
+        rel_weights = torch.tensor([[3., 3., 3.], [3., 3., 3.]])
+        rel_embds = torch.nn.Embedding(2, 3)
+        rel_embds.weight.data.copy_(rel_weights)
+        self.model.relation_embeddings = rel_embds
+
+        rel_proj_weights = torch.tensor([[4., 4., 4.], [4., 4., 4.]])
+        rel_proj_embds = torch.nn.Embedding(2, 3)
+        rel_proj_embds.weight.data.copy_(rel_proj_weights)
+        self.model.relation_projections = rel_proj_embds
+
+        # Compute Scores
+        batch = torch.tensor([[0, 0, 0]])
+        scores = self.model.score_hrt(hrt_batch=batch)
+        self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+
+        batch = torch.tensor([[0, 0, 0], [0, 0, 0]])
+        scores = self.model.score_hrt(hrt_batch=batch)
+        self.assertEqual(scores.shape[0], 2)
+        self.assertEqual(scores.shape[1], 1)
+        first_score = scores[0].item()
+        second_score = scores[1].item()
+        self.assertAlmostEqual(first_score, -27, delta=0.01)
+        self.assertAlmostEqual(second_score, -27, delta=0.01)
+
+        # Use different dimension for relation embedding: relation_dim < entity_dim
+        # entity embeddings
+        weights = torch.tensor([[1., 1., 1.], [1., 1., 1.]])
+        entity_embds = torch.nn.Embedding(2, 3)
+        entity_embds.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embds
+
+        proj_weights = torch.tensor([[2., 2., 2.], [2., 2., 2.]])
+        entity_proj_embds = torch.nn.Embedding(2, 3)
+        entity_proj_embds.weight.data.copy_(proj_weights)
+        self.model.entity_projections = entity_proj_embds
+
+        # relation embeddings
+        rel_weights = torch.tensor([[3., 3.], [3., 3.]])
+        rel_embds = torch.nn.Embedding(2, 2)
+        rel_embds.weight.data.copy_(rel_weights)
+        self.model.relation_embeddings = rel_embds
+
+        rel_proj_weights = torch.tensor([[4., 4.], [4., 4.]])
+        rel_proj_embds = torch.nn.Embedding(2, 2)
+        rel_proj_embds.weight.data.copy_(rel_proj_weights)
+        self.model.relation_projections = rel_proj_embds
+
+        # Compute Scores
+        batch = torch.tensor([[0, 0, 0], [0, 0, 0]])
+        scores = self.model.score_hrt(hrt_batch=batch)
+        self.assertEqual(scores.shape[0], 2)
+        self.assertEqual(scores.shape[1], 1)
+        first_score = scores[0].item()
+        second_score = scores[1].item()
+        self.assertAlmostEqual(first_score, -18, delta=0.01)
+        self.assertAlmostEqual(second_score, -18, delta=0.01)
+
+    def test_project_entity(self):
+        """Test _project_entity."""
+        # random entity embeddings & projections
+        e = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
+        e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
+        e_p = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
+
+        # random relation embeddings & projections
+        r = torch.rand(self.batch_size, 1, self.model.relation_embedding_dim, generator=self.generator)
+        r = clamp_norm(r, maxnorm=1, p=2, dim=-1)
+        r_p = torch.rand(self.batch_size, 1, self.model.relation_embedding_dim, generator=self.generator)
+
+        # project
+        e_bot = _project_entity(e=e, e_p=e_p, r=r, r_p=r_p)
+
+        # check shape:
+        assert e_bot.shape == (self.batch_size, self.model.num_entities, self.model.relation_embedding_dim)
+
+        # check normalization
+        assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
+
 
 class TestTransE(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransE model."""
@@ -459,6 +647,36 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     model_kwargs = {
         'relation_dim': 4,
     }
+
+    def test_score_hrt(self):
+        """Test interaction function of TransR."""
+        # entity embeddings
+        weights = torch.tensor([[2., 2.], [3., 3.]])
+        entity_embds = torch.nn.Embedding(2, 2)
+        entity_embds.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embds
+        self.model.embedding_dim = 2
+
+        # relation embeddings
+        rel_weights = torch.tensor([[4., 4], [5., 5.]])
+        rel_embds = torch.nn.Embedding(2, 2)
+        rel_embds.weight.data.copy_(rel_weights)
+        self.model.relation_embeddings = rel_embds
+        self.model.relation_embedding_dim = 2
+
+        rel_proj_weights = torch.tensor([[5., 5., 6., 6.], [7., 7., 8., 8.]])
+        rel_proj_embds = torch.nn.Embedding(2, 4)
+        rel_proj_embds.weight.data.copy_(rel_proj_weights)
+        self.model.relation_projections = rel_proj_embds
+
+        # Compute Scores
+        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
+        scores = self.model.score_hrt(hrt_batch=batch)
+        self.assertEqual(scores.shape[0], 2)
+        self.assertEqual(scores.shape[1], 1)
+        first_score = scores[0].item()
+        # second_score = scores[1].item()
+        self.assertAlmostEqual(first_score, -32, delta=0.01)
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
@@ -562,3 +780,29 @@ class TestTesting(unittest.TestCase):
         if missing:
             _s = '\n'.join(f'- [ ] {model.lower()}' for model in sorted(missing))
             self.fail(f'Missing experimental configuration directories for the following models:\n{_s}')
+
+
+def test_extend_batch():
+    """Test `_extend_batch()`."""
+    batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
+    all_ids = [2 * i for i in range(5)]
+
+    batch_size = batch.shape[0]
+    num_choices = len(all_ids)
+
+    for dim in range(3):
+        h_ext_batch = _extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+
+        # check shape
+        assert h_ext_batch.shape == (batch_size * num_choices, 3)
+
+        # check content
+        actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
+        exp_content = set()
+        for i in all_ids:
+            for b in batch:
+                c = list(map(int, b))
+                c.insert(dim, i)
+                exp_content.add(tuple(c))
+
+        assert actual_content == exp_content

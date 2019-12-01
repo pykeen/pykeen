@@ -8,8 +8,10 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, 
 import mlflow
 import numpy
 import torch
+from torch import nn
 
 __all__ = [
+    'clamp_norm',
     'l2_regularization',
     'resolve_device',
     'slice_triples',
@@ -22,6 +24,7 @@ __all__ = [
     'flatten_dictionary',
     'ResultTracker',
     'MLFlowResultTracker',
+    'get_embedding_in_canonical_shape',
 ]
 
 logger = logging.getLogger(__name__)
@@ -204,3 +207,49 @@ class MLFlowResultTracker(ResultTracker):
 
     def end_run(self) -> None:  # noqa: D102
         mlflow.end_run()
+
+
+def get_embedding_in_canonical_shape(
+    embedding: nn.Embedding,
+    ind: Optional[torch.LongTensor],
+) -> torch.FloatTensor:
+    """Get embedding in canonical shape.
+
+    :param embedding: The embedding.
+    :param ind: The indices. If None, return all embeddings.
+
+    :return: shape: (batch_size, num_embeddings, d)
+    """
+    if ind is None:
+        e = embedding.weight.unsqueeze(dim=0)
+    else:
+        e = embedding(ind).unsqueeze(dim=1)
+    return e
+
+
+def clamp_norm(
+    x: torch.Tensor,
+    maxnorm: float,
+    p: Union[str, int] = 'fro',
+    dim: Union[None, int, Iterable[int]] = None,
+    eps: float = 1.0e-08,
+) -> torch.Tensor:
+    """Ensure that a tensor's norm does not exceeds some threshold.
+
+    :param x:
+        The vector.
+    :param maxnorm:
+        The maximum norm (>0).
+    :param p:
+        The norm type.
+    :param dim:
+        The dimension(s).
+    :param eps:
+        A small value to avoid division by zero.
+
+    :return:
+        A vector with |x| <= max_norm.
+    """
+    norm = x.norm(p=p, dim=dim, keepdim=True)
+    mask = (norm < maxnorm).type_as(x)
+    return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)

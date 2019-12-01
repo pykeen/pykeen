@@ -6,8 +6,15 @@ import unittest
 
 import numpy
 import torch
+from torch import nn
 
-from poem.utils import flatten_dictionary, get_until_first_blank, l2_regularization
+from poem.utils import (
+    clamp_norm,
+    flatten_dictionary,
+    get_embedding_in_canonical_shape,
+    get_until_first_blank,
+    l2_regularization,
+)
 
 
 class L2RegularizationTest(unittest.TestCase):
@@ -77,3 +84,77 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         """
         r = get_until_first_blank(s)
         self.assertEqual("Broken line.", r)
+
+
+class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
+    """Test get_embedding_in_canonical_shape()."""
+
+    #: The number of embeddings
+    num_embeddings: int = 3
+
+    #: The embedding dimension
+    embedding_dim: int = 2
+
+    def setUp(self) -> None:
+        """Initialize embedding."""
+        self.embedding = nn.Embedding(num_embeddings=self.num_embeddings, embedding_dim=self.embedding_dim)
+        self.generator = torch.manual_seed(42)
+        self.embedding.weight.data = torch.rand(self.num_embeddings, self.embedding_dim, generator=self.generator)
+
+    def test_no_indices(self):
+        """Test getting all embeddings."""
+        emb = get_embedding_in_canonical_shape(embedding=self.embedding, ind=None)
+
+        # check shape
+        assert emb.shape == (1, self.num_embeddings, self.embedding_dim)
+
+        # check values
+        exp = self.embedding.weight.view(1, self.num_embeddings, self.embedding_dim)
+        assert torch.allclose(emb, exp)
+
+    def _test_with_indices(self, ind: torch.Tensor) -> None:
+        """Help tests with indices."""
+        emb = get_embedding_in_canonical_shape(embedding=self.embedding, ind=ind)
+
+        # check shape
+        num_ind = ind.shape[0]
+        assert emb.shape == (num_ind, 1, self.embedding_dim)
+
+        # check values
+        exp = torch.stack([self.embedding(i) for i in ind], dim=0).view(num_ind, 1, self.embedding_dim)
+        assert torch.allclose(emb, exp)
+
+    def test_with_consecutive_indices(self):
+        """Test to retrieve all embeddings with consecutive indices."""
+        ind = torch.arange(self.num_embeddings, dtype=torch.long)
+        self._test_with_indices(ind=ind)
+
+    def test_with_indices_with_duplicates(self):
+        """Test to retrieve embeddings at random positions with duplicate indices."""
+        ind = torch.randint(
+            self.num_embeddings,
+            size=(2 * self.num_embeddings,),
+            dtype=torch.long,
+            generator=self.generator,
+        )
+        self._test_with_indices(ind=ind)
+
+
+def test_clamp_norm():
+    """Test  clamp_norm() ."""
+    max_norm = 1.0
+    gen = torch.manual_seed(42)
+    eps = 1.0e-06
+    for p in [1, 2, float('inf')]:
+        for _ in range(10):
+            x = torch.rand(10, 20, 30, generator=gen)
+            for dim in range(x.ndimension()):
+                x_c = clamp_norm(x, maxnorm=max_norm, p=p, dim=dim)
+
+                # check maximum norm constraint
+                assert (x_c.norm(p=p, dim=dim) <= max_norm + eps).all()
+
+                # unchanged values for small norms
+                norm = x.norm(p=p, dim=dim)
+                mask = torch.stack([(norm < max_norm)] * x.shape[dim], dim=dim)
+                assert (x_c[mask] == x[mask]).all()

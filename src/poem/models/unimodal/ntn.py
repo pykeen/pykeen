@@ -11,6 +11,7 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'NTN',
@@ -45,10 +46,11 @@ class NTN(BaseModule):
         embedding_dim: int = 100,
         num_slices: int = 4,
         entity_embeddings: Optional[nn.Embedding] = None,
-        w_relation: Optional[nn.Embedding] = None,
-        v_relation: Optional[nn.Embedding] = None,
-        b_relation: Optional[nn.Embedding] = None,
-        u_relation: Optional[nn.Embedding] = None,
+        w: Optional[nn.Embedding] = None,
+        vh: Optional[nn.Embedding] = None,
+        vt: Optional[nn.Embedding] = None,
+        b: Optional[nn.Embedding] = None,
+        u: Optional[nn.Embedding] = None,
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -72,10 +74,11 @@ class NTN(BaseModule):
 
         self.num_slices = num_slices
 
-        self.w_relation = w_relation
-        self.v_relation = v_relation
-        self.b_relation = b_relation
-        self.u_relation = u_relation
+        self.w = w
+        self.vh = vh
+        self.vt = vt
+        self.b = b
+        self.u = u
         self.non_linearity = non_linearity
 
         # Finalize initialization
@@ -87,122 +90,121 @@ class NTN(BaseModule):
             self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         # bi-linear tensor layer
         # W_R: (d, d, k); store as (k, d, d)
-        if self.w_relation is None:
-            self.w_relation = nn.Embedding(self.num_relations, self.embedding_dim ** 2 * self.num_slices)
+        if self.w is None:
+            init_w = torch.randn(self.num_relations, self.num_slices, self.embedding_dim, self.embedding_dim)
+            self.w = nn.Parameter(init_w, requires_grad=True)
         # V_R: (k, 2d)
-        if self.v_relation is None:
-            self.v_relation = nn.Embedding(self.num_relations, 2 * self.embedding_dim * self.num_slices)
+        if self.vh is None:
+            init_vh = torch.randn(self.num_relations, self.num_slices, self.embedding_dim)
+            self.vh = nn.Parameter(init_vh, requires_grad=True)
+        if self.vt is None:
+            init_vt = torch.randn(self.num_relations, self.num_slices, self.embedding_dim)
+            self.vt = nn.Parameter(init_vt, requires_grad=True)
         # b_R: (k,)
-        if self.b_relation is None:
-            self.b_relation = nn.Embedding(self.num_relations, self.num_slices)
+        if self.b is None:
+            init_b = torch.randn(self.num_relations, self.num_slices)
+            self.b = nn.Parameter(init_b, requires_grad=True)
         # u_R: (k,)
-        if self.u_relation is None:
-            self.u_relation = nn.Embedding(self.num_relations, self.num_slices)
+        if self.u is None:
+            init_u = torch.randn(self.num_relations, self.num_slices)
+            self.u = nn.Parameter(init_u, requires_grad=True)
 
         return self
 
     def clear_weights_(self):  # noqa: D102
         self.entity_embeddings = None
-        self.w_relation = None
-        self.v_relation = None
-        self.b_relation = None
-        self.u_relation = None
+        self.w = None
+        self.vh = None
+        self.b = None
+        self.u = None
         return self
 
+    def _score(
+        self,
+        h_ind: Optional[torch.LongTensor] = None,
+        r_ind: Optional[torch.LongTensor] = None,
+        t_ind: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """
+        Compute scores for NTN.
+
+        :param h_ind: shape: (batch_size,)
+        :param r_ind: shape: (batch_size,)
+        :param t_ind: shape: (batch_size,)
+
+        :return: shape: (batch_size, num_entities)
+        """
+        assert r_ind is not None
+
+        #: shape: (batch_size, num_entities, d)
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+
+        #: Prepare h: (b, e, d) -> (b, e, 1, 1, d)
+        h_for_w = h.unsqueeze(dim=-2).unsqueeze(dim=-2)
+
+        #: Prepare t: (b, e, d) -> (b, e, 1, d, 1)
+        t_for_w = t.unsqueeze(dim=-2).unsqueeze(dim=-1)
+
+        #: Prepare w: (R, k, d, d) -> (b, k, d, d) -> (b, 1, k, d, d)
+        w_r = self.w.index_select(dim=0, index=r_ind).unsqueeze(dim=1)
+
+        # h.T @ W @ t, shape: (b, e, k, 1, 1)
+        hwt = (h_for_w @ w_r @ t_for_w)
+
+        #: reduce (b, e, k, 1, 1) -> (b, e, k)
+        hwt = hwt.squeeze(dim=-1).squeeze(dim=-1)
+
+        #: Prepare vh: (R, k, d) -> (b, k, d) -> (b, 1, k, d)
+        vh_r = self.vh.index_select(dim=0, index=r_ind).unsqueeze(dim=1)
+
+        #: Prepare h: (b, e, d) -> (b, e, d, 1)
+        h_for_v = h.unsqueeze(dim=-1)
+
+        # V_h @ h, shape: (b, e, k, 1)
+        vhh = vh_r @ h_for_v
+
+        #: reduce (b, e, k, 1) -> (b, e, k)
+        vhh = vhh.squeeze(dim=-1)
+
+        #: Prepare vt: (R, k, d) -> (b, k, d) -> (b, 1, k, d)
+        vt_r = self.vt.index_select(dim=0, index=r_ind).unsqueeze(dim=1)
+
+        #: Prepare t: (b, e, d) -> (b, e, d, 1)
+        t_for_v = t.unsqueeze(dim=-1)
+
+        # V_t @ t, shape: (b, e, k, 1)
+        vtt = vt_r @ t_for_v
+
+        #: reduce (b, e, k, 1) -> (b, e, k)
+        vtt = vtt.squeeze(dim=-1)
+
+        #: Prepare b: (R, k) -> (b, k) -> (b, 1, k)
+        b = self.b.index_select(dim=0, index=r_ind).unsqueeze(dim=1)
+
+        # a = f(h.T @ W @ t + Vh @ h + Vt @ t + b), shape: (b, e, k)
+        pre_act = hwt + vhh + vtt + b
+        act = self.non_linearity(pre_act)
+
+        # prepare u: (R, k) -> (b, k) -> (b, 1, k, 1)
+        u = self.u.index_select(dim=0, index=r_ind).unsqueeze(dim=1).unsqueeze(dim=-1)
+
+        # prepare act: (b, e, k) -> (b, e, 1, k)
+        act = act.unsqueeze(dim=-2)
+
+        # compute score, shape: (b, e, 1, 1)
+        score = act @ u
+
+        # reduce
+        score = score.squeeze(dim=-1).squeeze(dim=-1)
+
+        return score
+
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get entity embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-
-        # Get relation embeddings
-        r = hrt_batch[:, 1]
-        w_r = self.w_relation(r).view(-1, self.num_slices, self.embedding_dim, self.embedding_dim)
-        v_r = self.v_relation(r).view(-1, self.num_slices, 2 * self.embedding_dim)
-        b_r = self.b_relation(r).view(-1, self.num_slices)
-        u_r = self.b_relation(r).view(-1, self.num_slices)
-
-        # Apply scoring function
-        # h.T . W_R^[1:k] . t
-        h_for_w = h.view(-1, 1, 1, self.embedding_dim)
-        t_for_w = t.view(-1, 1, self.embedding_dim, 1)
-        h_w_t = (h_for_w @ w_r @ t_for_w).view(-1, self.num_slices)
-
-        # V_R . [h; t]
-        ht_for_v = torch.cat([h, t]).view(-1, 2 * self.embedding_dim, 1)
-        v_h_t = (v_r @ ht_for_v).view(-1, self.num_slices)
-
-        hidden = self.non_linearity(h_w_t + v_h_t + b_r)
-
-        return torch.sum(u_r * hidden, dim=-1, keepdim=True)
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2])
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # General dimension usage: (b, n, s, ...)
-        # b: hr_batch_size
-        # n: num_entities
-        # s: slices
-
-        # Get entity embeddings
-        h = self.entity_embeddings(hr_batch[:, 0])
-        t = self.entity_embeddings.weight
-
-        # Get relation embeddings
-        r = hr_batch[:, 1]
-        w_r = self.w_relation(r).view(-1, 1, self.num_slices, self.embedding_dim, self.embedding_dim)
-        v_r = self.v_relation(r).view(-1, 1, self.num_slices, 2 * self.embedding_dim)
-        b_r = self.b_relation(r).view(-1, 1, self.num_slices)
-        u_r = self.b_relation(r).view(-1, 1, self.num_slices)
-
-        # Apply scoring function
-        # h.T . W_R^[1:k] . t
-        h_for_w = h.view(-1, 1, 1, 1, self.embedding_dim)
-        t_for_w = t.view(1, -1, 1, self.embedding_dim, 1)
-        h_w_t = (h_for_w @ w_r @ t_for_w).view(-1, self.num_entities, self.num_slices)
-
-        # V_R . [h; t]
-        h_for_v_r = h.view(-1, 1, self.embedding_dim, 1)
-        t_for_v_r = t.view(1, -1, self.embedding_dim, 1)
-        v_r_for_h = v_r[:, :, :, :self.embedding_dim]
-        v_r_for_t = v_r[:, :, :, self.embedding_dim:]
-        v_h = (v_r_for_h @ h_for_v_r).view(-1, 1, self.num_slices)
-        v_t = (v_r_for_t @ t_for_v_r).view(-1, self.num_entities, self.num_slices)
-        # v_h_t = v_h + v_t
-
-        hidden = self.non_linearity((h_w_t + v_h + b_r) + v_t)
-
-        return torch.sum(u_r * hidden, dim=-1)
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1])
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # General dimension usage: (b, n, s, ...)
-        # b: rt_batch_size
-        # n: num_entities
-        # s: slices
-
-        # Get entity embeddings
-        h = self.entity_embeddings.weight
-        t = self.entity_embeddings(rt_batch[:, 1])
-
-        # Get relation embeddings
-        r = rt_batch[:, 0]
-        w_r = self.w_relation(r).view(-1, 1, self.num_slices, self.embedding_dim, self.embedding_dim)
-        v_r = self.v_relation(r).view(-1, 1, self.num_slices, 2 * self.embedding_dim)
-        b_r = self.b_relation(r).view(-1, 1, self.num_slices)
-        u_r = self.b_relation(r).view(-1, 1, self.num_slices)
-
-        # Apply scoring function
-        # h.T . W_R^[1:k] . t
-        h_for_w = h.view(1, -1, 1, 1, self.embedding_dim)
-        t_for_w = t.view(-1, 1, 1, self.embedding_dim, 1)
-        h_w_t = (h_for_w @ w_r @ t_for_w).view(-1, self.num_entities, self.num_slices)
-
-        # V_R . [h; t]
-        h_for_v_r = h.view(1, -1, self.embedding_dim, 1)
-        t_for_v_r = t.view(-1, 1, self.embedding_dim, 1)
-        v_r_for_h = v_r[:, :, :, :self.embedding_dim]
-        v_r_for_t = v_r[:, :, :, self.embedding_dim:]
-        v_h = (v_r_for_h @ h_for_v_r).view(-1, self.num_entities, self.num_slices)
-        v_t = (v_r_for_t @ t_for_v_r).view(-1, 1, self.num_slices)
-        # v_h_t = v_h + v_t
-
-        hidden = self.non_linearity((h_w_t + v_h + b_r) + v_t)
-
-        return torch.sum(u_r * hidden, dim=-1)
+        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])

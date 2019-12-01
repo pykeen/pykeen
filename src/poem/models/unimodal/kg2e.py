@@ -12,6 +12,7 @@ from ..base import BaseModule
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import clamp_norm, get_embedding_in_canonical_shape
 
 __all__ = [
     'KG2E',
@@ -81,7 +82,7 @@ def _kullback_leibler_similarity(
     mu = mu_r - mu_e
     a = torch.sum(sigma_e * sigma_r_inv, dim=-1)
     b = torch.sum(sigma_r_inv * mu ** 2, dim=-1)
-    c = -torch.log(torch.norm(sigma_e, dim=-1) / torch.clamp_min(torch.norm(sigma_r, dim=-1), min=epsilon))
+    c = -torch.log(sigma_e.norm(p=2, dim=-1) / sigma_r.norm(p=2, dim=-1).clamp_min(min=epsilon))
     return a + b + c
 
 
@@ -156,9 +157,9 @@ class KG2E(BaseModule):
     def init_empty_weights_(self):  # noqa: D102
         # means are restricted to max norm of 1
         if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim, max_norm=1)
+            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
         # covariance constraints are applied at _apply_forward_constraints_if_necessary
         if self.entity_covariances is None:
@@ -179,6 +180,15 @@ class KG2E(BaseModule):
         # Make sure to call super first
         super().post_parameter_update()
 
+        # Normalize entity embeddings
+        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
+        self.relation_embeddings.weight.data = clamp_norm(
+            x=self.relation_embeddings.weight.data,
+            maxnorm=1.,
+            p=2,
+            dim=-1,
+        )
+
         # Ensure positive definite covariances matrices and appropriate size by clamping
         for cov in (
             self.entity_covariances,
@@ -187,72 +197,40 @@ class KG2E(BaseModule):
             cov_data = cov.weight.data
             torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def _score(
+        self,
+        h_ind: Optional[torch.LongTensor] = None,
+        r_ind: Optional[torch.LongTensor] = None,
+        t_ind: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """
+        Compute scores for NTN.
+
+        :param h_ind: shape: (batch_size,)
+        :param r_ind: shape: (batch_size,)
+        :param t_ind: shape: (batch_size,)
+
+        :return: shape: (batch_size, num_entities)
+        """
         # Get embeddings
-        mu_h = self.entity_embeddings(hrt_batch[:, 0])
-        mu_r = self.relation_embeddings(hrt_batch[:, 1])
-        mu_t = self.entity_embeddings(hrt_batch[:, 2])
-        sigma_h = self.entity_covariances(hrt_batch[:, 0])
-        sigma_r = self.relation_covariances(hrt_batch[:, 1])
-        sigma_t = self.entity_covariances(hrt_batch[:, 2])
+        mu_h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        mu_r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        mu_t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+
+        sigma_h = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=h_ind)
+        sigma_r = get_embedding_in_canonical_shape(embedding=self.relation_covariances, ind=r_ind)
+        sigma_t = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=t_ind)
 
         # Compute entity distribution
         mu_e = mu_h - mu_t
         sigma_e = sigma_h + sigma_t
+        return self.similarity(mu_e=mu_e, mu_r=mu_r, sigma_e=sigma_e, sigma_r=sigma_r)
 
-        # Compute score
-        scores = self.similarity(
-            mu_e=mu_e,
-            mu_r=mu_r,
-            sigma_e=sigma_e,
-            sigma_r=sigma_r,
-        )
-        scores = scores.view(-1, 1)
-
-        return scores
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        mu_h = self.entity_embeddings(hr_batch[:, 0])
-        mu_r = self.relation_embeddings(hr_batch[:, 1])
-        mu_t = self.entity_embeddings.weight
-        sigma_h = self.entity_covariances(hr_batch[:, 0])
-        sigma_r = self.relation_covariances(hr_batch[:, 1])
-        sigma_t = self.entity_covariances.weight
-
-        # Compute entity distribution
-        mu_e = mu_h[:, None, :] - mu_t[None, :, :]
-        sigma_e = sigma_h[:, None, :] + sigma_t[None, :, :]
-
-        # Rank against all entities
-        scores = self.similarity(
-            mu_e=mu_e,
-            mu_r=mu_r[:, None, :],
-            sigma_e=sigma_e,
-            sigma_r=sigma_r[:, None, :],
-        )
-
-        return scores
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1])
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        mu_h = self.entity_embeddings.weight
-        mu_r = self.relation_embeddings(rt_batch[:, 0])
-        mu_t = self.entity_embeddings(rt_batch[:, 1])
-        sigma_h = self.entity_covariances.weight
-        sigma_r = self.relation_covariances(rt_batch[:, 0])
-        sigma_t = self.entity_covariances(rt_batch[:, 1])
-
-        # Compute entity distribution
-        mu_e = mu_h[None, :, :] - mu_t[:, None, :]
-        sigma_e = sigma_h[None, :, :] + sigma_t[:, None, :]
-
-        # Rank against all entities
-        scores = self.similarity(
-            mu_e=mu_e,
-            mu_r=mu_r[:, None, :],
-            sigma_e=sigma_e,
-            sigma_r=sigma_r[:, None, :],
-        )
-
-        return scores
+        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])

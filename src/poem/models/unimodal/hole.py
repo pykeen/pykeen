@@ -13,6 +13,7 @@ from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import clamp_norm
 
 __all__ = [
     'HolE',
@@ -64,10 +65,17 @@ class HolE(BaseModule):
         # Finalize initialization
         self._init_weights_on_device()
 
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # Make sure to call super first
+        super().post_parameter_update()
+
+        # Normalize entity embeddings
+        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
+
     def init_empty_weights_(self):  # noqa: D102
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim, max_norm=1)
+            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
             embedding_xavier_uniform_(self.entity_embeddings)
 
         if self.relation_embeddings is None:
@@ -91,34 +99,50 @@ class HolE(BaseModule):
 
         The embeddings have to be in a broadcastable shape.
 
-        :param h: shape: (..., e, 2)
-            Head embeddings. Last dimension corresponds to (real, imag).
-        :param r: shape: (..., e, 2)
-            Relation embeddings. Last dimension corresponds to (real, imag).
-        :param t: shape: (..., e, 2)
-            Tail embeddings. Last dimension corresponds to (real, imag).
+        :param h: shape: (batch_size, num_entities, d)
+            Head embeddings.
+        :param r: shape: (batch_size, num_entities, d)
+            Relation embeddings.
+        :param t: shape: (batch_size, num_entities, d)
+            Tail embeddings.
 
-        :return: shape: (...)
+        :return: shape: (batch_size, num_entities)
             The scores.
         """
         # Circular correlation of entity embeddings
-        # TODO: Explicitly exploit symmetry and set onesided=True
-        a_fft = torch.rfft(h, signal_ndim=1, onesided=False)
-        b_fft = torch.rfft(t, signal_ndim=1, onesided=False)
-        # complex conjugate
-        a_fft[:, :, 1] *= -1
+        a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
+        b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
+
+        # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
+        a_fft[:, :, :, 1] *= -1
+
         # Hadamard product in frequency domain
         p_fft = a_fft * b_fft
-        # inverse real FFT
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=h.shape[1:])
+
+        # inverse real FFT, shape: (batch_size, num_entities, d)
+        composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+
         # inner product with relation embedding
-        scores = torch.sum(r * composite, dim=-1, keepdim=True)
+        scores = torch.sum(r * composite, dim=-1, keepdim=False)
+
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(hrt_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(dim=1)
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
+        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
+
+        return scores
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(hr_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings.weight.unsqueeze(dim=0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -127,54 +151,14 @@ class HolE(BaseModule):
 
         return scores
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0])
-        r = self.relation_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # TODO: Explicitly exploit symmetry and set onesided=True
-        h_fft = torch.rfft(h, signal_ndim=1, onesided=False)
-        t_fft = torch.rfft(t, signal_ndim=1, onesided=False)
-
-        # complex conjugate
-        h_fft[:, :, 1] *= -1
-
-        # Hadamard product in frequency domain
-        p_fft = h_fft[:, None, :, :] * t_fft[None, :, :, :]
-
-        # inverse real FFT
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=(self.embedding_dim,))
-
-        # inner product with relation embedding
-        scores = torch.sum(r[:, None, :] * composite, dim=-1)
-
-        return scores
-
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0])
-        t = self.entity_embeddings(rt_batch[:, 1])
+        h = self.entity_embeddings.weight.unsqueeze(dim=0)
+        r = self.relation_embeddings(rt_batch[:, 0]).unsqueeze(dim=1)
+        t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        # TODO: Explicitly exploit symmetry and set onesided=True
-        h_fft = torch.rfft(h, signal_ndim=1, onesided=False)
-        t_fft = torch.rfft(t, signal_ndim=1, onesided=False)
-
-        # complex conjugate
-        h_fft[:, :, 1] *= -1
-
-        # Hadamard product in frequency domain
-        p_fft = h_fft[None, :, :, :] * t_fft[:, None, :, :]
-
-        # inverse real FFT
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=False, signal_sizes=(self.embedding_dim,))
-
-        # inner product with relation embedding
-        scores = torch.sum(r[:, None, :] * composite, dim=-1)
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         return scores

@@ -167,9 +167,13 @@ class ERMLPE(BaseModule):
         rt_batch_size = t.shape[0]
 
         # Extend each rt_batch of "r" with shape [rt_batch_size, dim] to [rt_batch_size, dim * num_entities]
-        r = torch.repeat_interleave(r, self.num_entities, dim=1).view(-1, self.embedding_dim)
+        r = torch.repeat_interleave(r, self.num_entities, dim=0)
         # Extend each h with shape [num_entities, dim] to [rt_batch_size * num_entities, dim]
-        h = torch.repeat_interleave(h, rt_batch_size, dim=0)
+        # h = torch.repeat_interleave(h, rt_batch_size, dim=0)
+        h = h.repeat(rt_batch_size, 1)
+
+        # Extend t
+        t = t.repeat_interleave(self.num_entities, dim=0)
 
         # Concatenate them
         x_s = torch.cat([h, r], dim=-1)
@@ -178,8 +182,10 @@ class ERMLPE(BaseModule):
         # Predict t embedding
         x_t = self.mlp(x_s)
 
-        x = x_t.view(rt_batch_size, self.num_entities, self.embedding_dim) @ t.unsqueeze(dim=2)
-        x = x.squeeze(dim=-1)
+        # For efficient calculation, each of the calculated [h, r] rows has only to be multiplied with one t row
+        x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
+        # The results have to be realigned with the expected output of the score_h function
+        x = x.view(rt_batch_size, self.num_entities)
         # The application of the sigmoid during training is automatically handled by the default criterion.
 
         return x
