@@ -39,7 +39,16 @@ def compute_rank_from_scores(
         The score of the true triple.
     :param all_scores: torch.Tensor, shape: (batch_size, num_entities)
         The scores of all corrupted triples (including the true triple).
-    :return: a tuple (rank, adjusted_rank) where
+    :return: a dictionary
+        {
+            'best': best_rank,
+            'worst': worst_rank,
+            'avg': avg_rank,
+            'adj': adj_rank,
+        }
+
+        where
+
         best_rank: shape: (batch_size,)
             The best rank is the rank when assuming all options with an equal score are placed behind the current
             test triple.
@@ -49,7 +58,7 @@ def compute_rank_from_scores(
         avg_rank:
             The average rank is the average of the best and worst rank, and hence the expected rank over all
             permutations of the elements with the same score as the currently considered option.
-        adjusted_rank: shape: (batch_size,)
+        adj_rank: shape: (batch_size,)
             The adjusted rank normalises the average rank by the expected rank a random scoring would
             achieve, which is (#number_of_options + 1)/2
     """
@@ -167,7 +176,7 @@ class RankBasedEvaluator(Evaluator):
             all_scores=all_scores,
         )
         for k, v in batch_ranks.items():
-            self.ranks[k].append(v.detach().cpu().numpy())
+            self.ranks[k].extend(v.detach().cpu().tolist())
 
     def process_tail_scores_(
         self,

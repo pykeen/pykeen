@@ -154,11 +154,14 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
 
         # Check value ranges
         for mr in result.mean_rank.values():
+            assert isinstance(mr, float)
             assert 1 <= mr <= self.factory.num_entities
         for mrr in result.mean_reciprocal_rank.values():
+            assert isinstance(mrr, float)
             assert 0 < mrr <= 1
         for k, hits_at_k in result.hits_at_k.items():
             for h in hits_at_k.values():
+                assert isinstance(h, float)
                 assert 0 <= h <= 1
 
         # TODO: Validate with data?
