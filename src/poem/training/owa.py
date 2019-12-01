@@ -11,6 +11,7 @@ from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..models.base import BaseModule
 from ..sampling import BasicNegativeSampler, NegativeSampler
+from ..triples import OWAInstances
 from ..typing import MappedTriples
 
 __all__ = [
@@ -52,15 +53,19 @@ class OWATrainingLoop(TrainingLoop):
         )
 
     @property
-    def num_negs_per_pos(self):
+    def num_negs_per_pos(self) -> int:
         """Return number of negatives per positive from the sampler.
 
         Property for API compatibility
         """
         return self.negative_sampler.num_negs_per_pos
 
-    def _create_instances(self):  # noqa: D102
+    def _create_instances(self) -> OWAInstances:  # noqa: D102
         return self.triples_factory.create_owa_instances()
+
+    @staticmethod
+    def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
+        return batch.shape[0]
 
     def _process_batch(
         self,

@@ -8,7 +8,8 @@ import torch
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
-from ..triples import Instances
+from ..triples import LCWAInstances
+from ..typing import MappedTriples
 
 __all__ = [
     'LCWATrainingLoop',
@@ -18,12 +19,16 @@ __all__ = [
 class LCWATrainingLoop(TrainingLoop):
     """A training loop that uses the local closed world assumption."""
 
-    def _create_instances(self) -> Instances:  # noqa: D102
+    def _create_instances(self) -> LCWAInstances:  # noqa: D102
         return self.triples_factory.create_lcwa_instances()
+
+    @staticmethod
+    def _get_batch_size(batch: Tuple[MappedTriples, torch.FloatTensor]) -> int:  # noqa: D102
+        return batch[0].shape[0]
 
     def _process_batch(
         self,
-        batch: Tuple[torch.LongTensor, torch.FloatTensor],
+        batch: Tuple[MappedTriples, torch.FloatTensor],
         start: int,
         stop: int,
         label_smoothing: float = 0.0,

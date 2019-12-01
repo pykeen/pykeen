@@ -3,7 +3,7 @@
 """Training loops for KGE models using multi-modal information."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Tuple, Union
 
 import torch
 from torch import nn
@@ -15,11 +15,17 @@ from .early_stopping import EarlyStopper
 from ..models.base import BaseModule
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
+from ..typing import MappedTriples
 from ..utils import ResultTracker
 
 __all__ = [
     'TrainingLoop',
+    'NonFiniteLossError',
 ]
+
+
+class NonFiniteLossError(RuntimeError):
+    """An exception raised for non-finite loss values."""
 
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
@@ -187,17 +193,24 @@ class TrainingLoop(ABC):
                 # new instance, you need to zero out the gradients from the old instance
                 self.optimizer.zero_grad()
 
+                # Get batch size of current batch (last batch may be incomplete)
+                current_batch_size = self._get_batch_size(batch)
+
                 # accumulate gradients for whole batch
-                for start in range(0, batch_size, sub_batch_size):
-                    stop = min(start + sub_batch_size, batch_size)
+                for start in range(0, current_batch_size, sub_batch_size):
+                    stop = min(start + sub_batch_size, current_batch_size)
 
                     # forward pass
                     loss = self._process_batch(batch=batch, start=start, stop=stop, label_smoothing=label_smoothing)
 
+                    # raise error when non-finite loss occurs (NaN, +/-inf)
+                    if not torch.isfinite(loss):
+                        raise NonFiniteLossError
+
                     # correction for loss reduction
                     if self.model.criterion.reduction == 'mean':
                         this_sub_batch_size = stop - start
-                        loss *= (this_sub_batch_size / batch_size)
+                        loss *= (this_sub_batch_size / current_batch_size)
 
                     # backward pass
                     loss.backward()
@@ -229,6 +242,12 @@ class TrainingLoop(ABC):
             })
 
         return self.losses_per_epochs
+
+    @staticmethod
+    @abstractmethod
+    def _get_batch_size(batch: Union[MappedTriples, Tuple[MappedTriples, torch.FloatTensor]]) -> int:
+        """Get the batch size from a (sub-) batch."""
+        raise NotImplementedError
 
     @abstractmethod
     def _create_instances(self) -> Instances:

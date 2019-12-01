@@ -152,6 +152,7 @@ class RGCN(BaseModule):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            init=init,
         )
 
         if self.triples_factory.create_inverse_triples:
