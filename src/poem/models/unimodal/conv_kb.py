@@ -60,6 +60,7 @@ class ConvKB(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            init=init,
         )
 
         self.num_filters = num_filters
