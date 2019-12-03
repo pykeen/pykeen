@@ -70,7 +70,7 @@ class TransH(BaseModule):
     #: The settings used by [wang2014]_ for TransH
     regularizer_default_kwargs = dict(
         weight=0.05,
-        epsilon=0.00001,
+        epsilon=0.5,
     )
 
     def __init__(
