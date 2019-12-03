@@ -95,7 +95,6 @@ class TransH(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            init=init
         )
 
         self.scoring_fct_norm = scoring_fct_norm
