@@ -87,7 +87,6 @@ class ComplEx(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            init=init,
         )
 
         # Store the real embedding size

@@ -56,7 +56,6 @@ class TransE(BaseModule):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            init=init,
         )
         self.scoring_fct_norm = scoring_fct_norm
         self.relation_embeddings = relation_embeddings

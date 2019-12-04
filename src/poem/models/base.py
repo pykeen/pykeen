@@ -90,7 +90,6 @@ class BaseModule(nn.Module):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        init: bool = True,
     ) -> None:
         """Initialize the module."""
         super().__init__()
@@ -140,12 +139,9 @@ class BaseModule(nn.Module):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-        self.init = init
-
     def _init_weights_on_device(self):  # noqa: D401
         """A hook called after initialization."""
-        if self.init:
-            self.init_empty_weights_()
+        self.init_empty_weights_()
         self.to_device_()
 
     def __init_subclass__(cls, **kwargs):

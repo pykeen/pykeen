@@ -115,7 +115,6 @@ class RGCN(BaseModule):
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        init: bool = True,
         num_bases_or_blocks: int = 5,
         num_layers: int = 2,
         use_bias: bool = True,
@@ -141,7 +140,7 @@ class RGCN(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
-            init=False,
+            random_seed=random_seed,
         )
 
         super().__init__(
@@ -152,7 +151,6 @@ class RGCN(BaseModule):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            init=init,
         )
 
         if self.triples_factory.create_inverse_triples:
