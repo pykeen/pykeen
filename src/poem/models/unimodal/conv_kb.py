@@ -11,7 +11,7 @@ from torch import nn
 
 from ..base import BaseModule
 from ...losses import Loss
-from ...regularizers import Regularizer
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -33,6 +33,15 @@ class ConvKB(BaseModule):
         embedding_dim=dict(type=int, low=50, high=300, q=50),
         hidden_dropout_rate=dict(type=float, low=0.1, high=0.9),
         num_filters=dict(type=int, low=300, high=500, q=50),
+    )
+
+    #: The regularizer used by [nguyen2018]_ for ConvKB.
+    regularizer_default = LpRegularizer
+    #: The LP settings used by [nguyen2018]_ for ConvKB.
+    regularizer_default_kwargs = dict(
+        weight=0.001 / 2,
+        p=2.0,
+        normalize=True,
     )
 
     def __init__(
