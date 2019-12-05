@@ -186,7 +186,6 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         return scores
