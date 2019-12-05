@@ -78,6 +78,7 @@ class _ModelTestCase:
         self.factory = NationsTrainingTriplesFactory(create_inverse_triples=self.create_inverse_triples)
         self.model = self.model_cls(
             self.factory,
+            random_seed=42,
             embedding_dim=self.embedding_dim,
             **(self.model_kwargs or {})
         ).to_device_()

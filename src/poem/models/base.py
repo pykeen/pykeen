@@ -97,10 +97,11 @@ class BaseModule(nn.Module):
         # Initialize the device
         self._set_device(preferred_device)
 
-        self.random_seed = random_seed
-
         # Random seeds have to set before the embeddings are initialized
-        if self.random_seed is not None:
+        self.random_seed = random_seed
+        if self.random_seed is None:
+            logger.warning('No random seed is specified. This may lead to non-reproducible results.')
+        else:
             np.random.seed(seed=self.random_seed)
             torch.manual_seed(seed=self.random_seed)
             random.seed(self.random_seed)
