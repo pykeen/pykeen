@@ -144,8 +144,10 @@ def get_until_first_blank(s: str) -> str:
         )
 
 
-def flatten_dictionary(dictionary: Dict[str, Any], prefix: str = '', sep='.') -> Dict[str, Any]:
+def flatten_dictionary(dictionary: Dict[str, Any], prefix: Optional[str] = None, sep='.') -> Dict[str, Any]:
     """Flattens a nested dictionary."""
+    if prefix is None:
+        prefix = ''
     result = {}
     for k, v in dictionary.items():
         if isinstance(v, dict):
