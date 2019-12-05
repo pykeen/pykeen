@@ -40,12 +40,12 @@ class DistMult(BaseModule):
 
     #: The regularizer used by [yang2014]_ for DistMult
     #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
-    #: Thus, when we use normalized regularization weight, the normalization factor is 10*100 = 1,000, which is
-    #: why the weight has to be increased by a factor of 1,000 to have the same configuration as in the paper.
+    #: Thus, when we use normalized regularization weight, the normalization factor is 10*sqrt(100) = 100, which is
+    #: why the weight has to be increased by a factor of 100 to have the same configuration as in the paper.
     regularizer_default = LpRegularizer
     #: The LP settings used by [yang2014]_ for DistMult
     regularizer_default_kwargs = dict(
-        weight=1.0,
+        weight=0.1,
         p=2.0,
         normalize=True,
     )

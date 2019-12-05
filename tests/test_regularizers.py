@@ -87,8 +87,6 @@ class _RegularizerTestCase:
 
         # compute expected term
         exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
-        if self.regularizer.normalize:
-            exp_penalties /= torch.tensor([x.numel() for x in (a, b)], device=self.device)
         expected_term = torch.sum(exp_penalties).view(1) * self.regularizer.weight
         assert expected_term.shape == (1,)
 
@@ -132,7 +130,20 @@ class _LpRegularizerTest(_RegularizerTestCase):
     regularizer_cls = LpRegularizer
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return torch.norm(x, p=self.regularizer.p)
+        kwargs = self.regularizer_kwargs
+        if kwargs is None:
+            kwargs = {}
+        p = kwargs.get('p', self.regularizer.p)
+        value = x.norm(p=p, dim=-1).mean()
+        if kwargs.get('normalize', False):
+            dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+            if p == 2:
+                value = value / dim.sqrt()
+            elif p == 1:
+                value = value / dim
+            else:
+                raise NotImplementedError
+        return value
 
 
 class L1RegularizerTest(_LpRegularizerTest, unittest.TestCase):
@@ -169,4 +180,11 @@ class PowerSumRegularizerTest(_RegularizerTestCase, unittest.TestCase):
     regularizer_cls = PowerSumRegularizer
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return x.pow(self.regularizer.p).sum()
+        kwargs = self.regularizer_kwargs
+        if kwargs is None:
+            kwargs = {}
+        p = kwargs.get('p', self.regularizer.p)
+        value = x.pow(p).sum(dim=-1).mean()
+        if kwargs.get('normalize', False):
+            value = value / x.shape[-1]
+        return value

@@ -27,10 +27,10 @@ class TransHRegularizer(Regularizer):
         weight: float,
         epsilon: float,
     ):
-        super().__init__(device=device, weight=weight, normalize=False)
+        super().__init__(device=device, weight=weight)
         self.epsilon = epsilon
 
-    def _regularize_one_tensor(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         raise NotImplementedError('TransH regularizer is order-sensitive!')
 
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102

@@ -15,7 +15,7 @@ powersum  :class:`poem.regularizers.PowerSumRegularizer`
 """
 
 from abc import abstractmethod
-from typing import Collection, Iterable, Mapping, Type, Union
+from typing import Collection, Iterable, Mapping, Optional, Type, Union
 
 import torch
 from torch import nn
@@ -42,21 +42,15 @@ class Regularizer(nn.Module):
     #: The current regularization term (a scalar)
     regularization_term: torch.FloatTensor
 
-    #: Whether to normalize the regularization term of individual tensors by the number of elements
-    #: This allows dimensionality-independent weight tuning.
-    normalize: bool
-
     def __init__(
         self,
         device: torch.device,
         weight: float = 1.0,
-        normalize: bool = False,
     ):
         super().__init__()
         self.device = device
         self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
         self.weight = torch.as_tensor(weight, device=self.device)
-        self.normalize = normalize
 
     def reset(self) -> None:
         """Reset the regularization term to zero."""
@@ -69,16 +63,7 @@ class Regularizer(nn.Module):
 
     def update(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularization term based on passed tensors."""
-        for x in tensors:
-            # compute regularization term for a specific tensor
-            one_tensor_term = self.forward(x=x)
-
-            # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
-            if self.normalize:
-                one_tensor_term = one_tensor_term / x.numel()
-
-            # Update regularization term
-            self.regularization_term += one_tensor_term
+        self.regularization_term = self.regularization_term + sum(self.forward(x=x) for x in tensors)
 
     @property
     def term(self) -> torch.FloatTensor:
@@ -104,18 +89,39 @@ class NoRegularizer(Regularizer):
 class LpRegularizer(Regularizer):
     """A simple L_p norm based regularizer."""
 
+    #: The dimension along which to compute the vector-based regularization terms.
+    dim: Optional[int]
+
+    #: Whether to normalize the regularization term by the dimension of the vectors.
+    #: This allows dimensionality-independent weight tuning.
+    normalize: bool
+
     def __init__(
         self,
         device: torch.device,
         weight: float = 1.0,
-        p: float = 2.,
+        dim: Optional[int] = -1,
         normalize: bool = False,
+        p: float = 2.,
     ):
-        super().__init__(weight=weight, normalize=normalize, device=device)
+        super().__init__(device=device, weight=weight)
+        self.dim = dim
+        self.normalize = normalize
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return torch.norm(x, p=self.p)
+        value = x.norm(p=self.p, dim=self.dim).mean()
+        if not self.normalize:
+            return value
+        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+        if self.p == 1:
+            # expected value of |x|_1 = d*E[x_i] for x_i i.i.d.
+            return value / dim
+        if self.p == 2:
+            # expected value of |x|_2 when x_i are normally distributed
+            # cf. https://arxiv.org/pdf/1012.0621.pdf chapter 3.1
+            return value / dim.sqrt()
+        raise NotImplementedError(f'Lp regularization not implemented for p={self.p}')
 
 
 class PowerSumRegularizer(Regularizer):
@@ -128,18 +134,25 @@ class PowerSumRegularizer(Regularizer):
         self,
         device: torch.device,
         weight: float = 1.0,
-        p: float = 2.,
+        dim: Optional[int] = -1,
         normalize: bool = False,
+        p: float = 2.,
     ):
-        super().__init__(weight=weight, normalize=normalize, device=device)
+        super().__init__(device=device, weight=weight)
+        self.dim = dim
+        self.normalize = normalize
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return torch.sum(torch.abs(x) ** self.p)
+        value = x.abs().pow(self.p).sum(dim=self.dim).mean()
+        if not self.normalize:
+            return value
+        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+        return value / dim
 
 
 class CombinedRegularizer(Regularizer):
-    """A linear combination of regularizers."""
+    """A convex combination of regularizers."""
 
     def __init__(
         self,
@@ -149,7 +162,14 @@ class CombinedRegularizer(Regularizer):
     ):
         super().__init__(weight=total_weight, device=device)
         self.regularizers = list(regularizers)
-        self.normalization_factor = torch.reciprocal(torch.as_tensor(sum(r.weight for r in regularizers)))
+        for r in self.regularizers:
+            if isinstance(r, NoRegularizer):
+                raise TypeError('Can not combine a no-op regularizer')
+        self.normalization_factor = torch.reciprocal(torch.as_tensor(sum(r.weight for r in self.regularizers)))
+
+    @property
+    def normalize(self):  # noqa: D102
+        return any(r.normalize for r in self.regularizers)
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
