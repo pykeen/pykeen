@@ -55,7 +55,7 @@ class _NegativeSamplingTestCase:
         )
         random = numpy.random.RandomState(seed=self.seed)
         batch_indices = random.randint(low=0, high=self.owa_instances.num_instances, size=(self.batch_size,))
-        self.positive_batch = torch.tensor(self.owa_instances.mapped_triples[batch_indices], dtype=torch.long)
+        self.positive_batch = self.owa_instances.mapped_triples[batch_indices]
 
     def test_sample(self) -> None:
         # Generate negative sample

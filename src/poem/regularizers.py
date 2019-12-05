@@ -149,7 +149,7 @@ class CombinedRegularizer(Regularizer):
     ):
         super().__init__(weight=total_weight, device=device)
         self.regularizers = list(regularizers)
-        self.normalization_factor = torch.tensor(1. / sum(r.weight for r in regularizers))
+        self.normalization_factor = torch.reciprocal(torch.as_tensor(sum(r.weight for r in regularizers)))
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)

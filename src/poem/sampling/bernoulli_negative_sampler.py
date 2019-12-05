@@ -27,7 +27,7 @@ class BernoulliNegativeSampler(NegativeSampler):
             num_negs_per_pos=num_negs_per_pos,
         )
         # Preprocessing: Compute corruption probabilities
-        triples = torch.tensor(self.triples_factory.mapped_triples)
+        triples = self.triples_factory.mapped_triples
         head_rel_uniq, tail_count = torch.unique(triples[:, :2], return_counts=True, dim=0)
         rel_tail_uniq, head_count = torch.unique(triples[:, 1:], return_counts=True, dim=0)
 
