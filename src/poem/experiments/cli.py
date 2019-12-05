@@ -2,12 +2,20 @@
 
 """Run landmark experiments."""
 
-import json
+import os
+import shutil
+import sys
+import time
 
 import click
 
-from poem.experiments import run_bordes2013_transe_fb15k, run_example_experiment
-from poem.pipeline import PipelineResult
+from poem.pipeline import pipeline_from_path
+
+__all__ = [
+    'main',
+]
+
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 @click.group()
@@ -15,18 +23,58 @@ def main():
     """Run landmark experiments."""
 
 
-@main.command()
-def example():
-    """Run an example experiment."""
-    result: PipelineResult = run_example_experiment()
-    click.echo(json.dumps(result.metric_results.to_dict(), indent=2))
+_directory_option = click.option(
+    '-d', '--directory',
+    type=click.Path(dir_okay=True, exists=True, file_okay=False),
+    default=os.getcwd(),
+)
 
 
 @main.command()
-def bordes2013():
-    """Run the bordes2013 experiment."""
-    result: PipelineResult = run_bordes2013_transe_fb15k()
-    click.echo(json.dumps(result.metric_results.to_dict(), indent=2))
+@click.argument('model')
+@click.argument('reference')
+@click.argument('dataset')
+@_directory_option
+def reproduce(model: str, reference: str, dataset: str, directory: str):
+    """Reproduce a pre-defined experiment included in PyKEEN.
+
+    Example: python -m poem.experiments reproduce tucker balazevic2019 fb15k
+    """
+    file_name = f'{reference}_{model}_{dataset}'
+    path = os.path.join(HERE, model, f'{file_name}.json')
+    _help_reproduce(directory=directory, path=path, file_name=file_name)
+
+
+@main.command()
+@click.argument('path')
+@_directory_option
+def run(path: str, directory: str):
+    """Run a single experiment."""
+    _help_reproduce(directory=directory, path=path)
+
+
+def _help_reproduce(*, directory, path, file_name=None) -> None:
+    """Help run the configuration at a given path.
+
+    :param directory: Output directory
+    :param path: Path to configuration JSON file
+    :param file_name: Name of JSON file (optional)
+    """
+    if not os.path.exists(path):
+        click.secho(f'Could not find configuration at {path}', fg='red')
+        return sys.exit(1)
+    click.echo(f'Running configuration at {path}')
+    pipeline_result = pipeline_from_path(path)
+
+    # Create directory in which all experimental artifacts are saved
+    if file_name is not None:
+        output_directory = os.path.join(directory, time.strftime(f"%Y-%m-%d-%H-%M-%S_{file_name}"))
+    else:
+        output_directory = os.path.join(directory, time.strftime("%Y-%m-%d-%H-%M-%S"))
+    os.makedirs(output_directory, exist_ok=True)
+
+    pipeline_result.save_to_directory(output_directory)
+    shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
 
 
 if __name__ == '__main__':

@@ -11,20 +11,27 @@
       "c_max": 3.0
     },
     "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.01
+    },
     "criterion": "MarginRankingLoss",
     "criterion_kwargs": {
       "margin": 4.0
     },
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
     "training_kwargs": {
       "num_epochs": 500,
-      "batch_size": 20,
-      "negative_sampler_cls": "BernoulliNegativeSampler"
+      "batch_size": 20
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

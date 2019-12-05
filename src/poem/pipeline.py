@@ -164,9 +164,13 @@ the default data sets are also provided as subclasses of :class:`poem.triples.Tr
 ... )
 """
 
+import json
+import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Type, Union
 
+import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
@@ -184,8 +188,12 @@ from .utils import MLFlowResultTracker, ResultTracker, resolve_device
 
 __all__ = [
     'PipelineResult',
+    'PipelineResultSet',
+    'pipeline_from_path',
     'pipeline',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -229,6 +237,84 @@ class PipelineResult:
         The model contains within it the triples factory that was used for training.
         """
         torch.save(self.model, path)
+
+    def save_to_directory(self, directory: str) -> None:
+        """Save all artifacts in the given directory."""
+        with open(os.path.join(directory, 'losses.json'), 'w') as file:
+            json.dump(self.losses, file, indent=2)
+        with open(os.path.join(directory, 'metric_results.json'), 'w') as file:
+            json.dump(self.metric_results.to_dict(), file, indent=2)
+        with open(os.path.join(directory, 'configuration.json'), 'w') as file:
+            json.dump(self._get_configuration(), file, indent=2)
+        with open(os.path.join(directory, 'metadata.json'), 'w') as file:
+            json.dump(self.metadata, file, indent=2)
+        self.save_model(os.path.join(directory, 'trained_model.pkl'))
+
+    def _get_configuration(self) -> Mapping[str, Any]:
+        """Get all of the configuration out of the model and training loop."""
+        # FIXME
+        return {}
+
+
+@dataclass
+class PipelineResultSet:
+    """A set of results."""
+
+    pipeline_results: List[PipelineResult]
+
+    @classmethod
+    def from_path(cls, path: str, replicates: int = 10) -> 'PipelineResultSet':
+        """Run the same pipeline several times."""
+        return cls([
+            pipeline_from_path(path)
+            for _ in range(replicates)
+        ])
+
+    def get_loss_df(self) -> pd.DataFrame:
+        """Get the losses as a dataframe."""
+        return pd.DataFrame(
+            [
+                (replicate, epoch, loss)
+                for replicate, result in enumerate(self.pipeline_results, start=1)
+                for epoch, loss in enumerate(result.losses, start=1)
+            ],
+            columns=['Replicate', 'Epoch', 'Loss'],
+        )
+
+    def plot_losses(self, sns_kwargs: Optional[Mapping[str, Any]] = None):
+        """Plot the several losses."""
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        df = self.get_loss_df()
+        sns.set()
+        if self.pipeline_results[0].title is not None:
+            plt.title(self.pipeline_results[0].title)
+        return sns.lineplot(data=df, x='Epoch', y='Loss', **(sns_kwargs or {}))
+
+
+def pipeline_from_path(
+    path: str,
+    mlflow_tracking_uri: Optional[str] = None,
+) -> PipelineResult:
+    """Run the pipeline with configuration in a JSON file at the given path.
+
+    :param path: The path to an experiment JSON file
+    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
+    """
+    with open(path) as file:
+        config = json.load(file)
+
+    metadata, pipeline_kwargs = config['metadata'], config['pipeline']
+    title = metadata.get('title')
+    if title is not None:
+        logger.info(f'Running: {title}')
+
+    return pipeline(
+        mlflow_tracking_uri=mlflow_tracking_uri,
+        metadata=metadata,
+        **pipeline_kwargs,
+    )
 
 
 def pipeline(  # noqa: C901

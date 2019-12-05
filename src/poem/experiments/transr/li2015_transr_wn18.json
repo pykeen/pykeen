@@ -18,16 +18,20 @@
     "criterion_kwargs": {
       "margin": 4
     },
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
     "training_kwargs": {
       "num_epochs": 500,
-      "batch_size": 1440,
-      "negative_sampler_cls": "BernoulliNegativeSampler"
+      "batch_size": 1440
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

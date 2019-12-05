@@ -1,6 +1,7 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with TransE as described by Bordes et al., 2013"
+    "title": "Learn FB15K Data Set with TransE as described by Bordes et al., 2013",
+    "comments": "Batch_size is not mentioned in the paper. We found out that this value works."
   },
   "pipeline": {
     "data_set": "fb15k",
@@ -17,16 +18,20 @@
     "criterion_kwargs": {
       "margin": 1
     },
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
     "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
     "training_kwargs": {
       "num_epochs": 1000,
       "batch_size": 32
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 128
     }
   }
 }

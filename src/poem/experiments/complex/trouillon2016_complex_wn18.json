@@ -1,30 +1,39 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with ComplEx as described by Trouillon et al., 2016"
+    "title": "Learn WN18 Data Set with ComplEx as described by Trouillon et al., 2016",
+    "comments": "In the paper it is not mentioned that they compute the mean of the vector norms as done in the published code base."
   },
   "pipeline": {
     "data_set": "wn18",
     "model": "ComplEx",
     "model_kwargs": {
-      "embedding_dim": 150,
-      "regularization_weight": 0.03
+      "embedding_dim": 150
+    },
+    "regularizer": "Lp",
+    "regularizer_kwargs": {
+      "weight": 0.03,
+      "p": 2.0,
+      "normalize": false
     },
     "optimizer": "AdaGrad",
     "optimizer_kwargs": {
       "lr": 0.5
     },
     "criterion": "SoftplusLoss",
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
-    "training_kwargs": {
-      "num_epochs": 1000,
-      "batch_size": 4831,
-      "negative_sampler_cls": "BasicNegativeSampler",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 10,
+      "batch_size": 4831
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

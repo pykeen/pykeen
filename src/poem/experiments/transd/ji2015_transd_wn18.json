@@ -7,24 +7,27 @@
     "model": "TransD",
     "model_kwargs": {
       "embedding_dim": 50,
-      "relation_dim": 50,
-      "scoring_fct_norm": 2
+      "relation_dim": 50
     },
-    "optimizer": "Adam",
+    "optimizer": "Adadelta",
     "criterion": "MarginRankingLoss",
     "criterion_kwargs": {
       "margin": 1
     },
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
     "training_kwargs": {
       "num_epochs": 1000,
-      "batch_size": 200,
-      "negative_sampler_cls": "BernoulliNegativeSampler"
+      "batch_size": 200
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

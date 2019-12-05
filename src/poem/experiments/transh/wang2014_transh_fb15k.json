@@ -7,8 +7,13 @@
     "model": "TransH",
     "model_kwargs": {
       "embedding_dim": 100,
-      "regularization_weight": 1.0,
       "scoring_fct_norm": 2
+    },
+    "regularizer": "TransH",
+    "regularizer_kwargs": {
+      "weight": 1.0,
+      "epsilon": 0.00001,
+      "normalize": true
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
@@ -18,16 +23,20 @@
     "criterion_kwargs": {
       "margin": 1
     },
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
     "training_kwargs": {
       "num_epochs": 500,
-      "batch_size": 4800,
-      "negative_sampler_cls": "BernoulliNegativeSampler"
+      "batch_size": 4800
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

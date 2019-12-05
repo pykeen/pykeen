@@ -2,7 +2,6 @@
   "metadata": {
     "title": "Learn FB15k Data Set with R-GCN as described by Schlichtkrull et al., 2018",
     "comments": ""
-
   },
   "pipeline": {
     "data_set": "fb15k",
@@ -17,17 +16,21 @@
       "lr": 0.1
     },
     "criterion": "SoftplusLoss",
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
-    "training_kwargs": {
-      "num_epochs": 6000,
-      "batch_size": 30000,
-      "negative_sampler_cls": "BasicNegativeSampler",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
       "num_negs_per_pos": 10
+    },
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 30000,
+      "sub_batch_size": 800
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

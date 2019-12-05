@@ -1,8 +1,7 @@
 {
   "metadata": {
     "title": "Learn WN18 Data Set with TuckER as described by Balazevic et al., 2019",
-    "comments": "No label smoothing has been used for FB15k. Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs.In the code 500 was the default value for all datasets, that's we assume that this is the number of epochs."
-
+    "comments": "Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs.In the code 500 was the default value for all datasets, that's we assume that this is the number of epochs."
   },
   "pipeline": {
     "data_set": "wn18",
@@ -10,26 +9,27 @@
     "model_kwargs": {
       "embedding_dim": 200,
       "relation_dim": 30,
-      "dropout0": 0.2,
-      "dropout1": 0.1,
-      "dropout2": 0.2
+      "dropout_0": 0.2,
+      "dropout_1": 0.1,
+      "dropout_2": 0.2
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
       "lr": 0.005,
       "weight_decay": 0.995
     },
-    "criterion": "BCELoss",
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
+    "criterion": "BCEAfterSigmoid",
     "training_loop": "LCWA",
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 128,
       "label_smoothing": 0.1
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }

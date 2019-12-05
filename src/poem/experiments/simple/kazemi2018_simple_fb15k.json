@@ -1,32 +1,39 @@
 {
   "metadata": {
     "title": "Learn FB15k Data Set with SimplE as described by Kazemi et al., 2018",
-    "comments": ""
-
+    "comments": "They make use of inverse relations. Normalization argument of regularizer is set to false."
   },
   "pipeline": {
     "data_set": "fb15k",
     "model": "SimplE",
     "model_kwargs": {
-      "embedding_dim": 200,
-      "regularization_weight": 0.1
+      "embedding_dim": 200
+    },
+    "regularizer": "PowerSum",
+    "regularizer_kwargs": {
+      "weight": 0.1,
+      "p": 2.0,
+      "normalize": false
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
       "lr": 0.05
     },
     "criterion": "SoftplusLoss",
-    "early_stopping": true,
-    "early_stopping_kwargs": {
-      "metric": "mean_rank",
-      "frequency": 50
-    },
     "training_loop": "OWA",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 10
+    },
     "training_kwargs": {
       "num_epochs": 1000,
-      "batch_size": 4831,
-      "negative_sampler_cls": "BasicNegativeSampler",
-      "num_negs_per_pos": 10
+      "batch_size": 4831
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
     }
   }
 }
