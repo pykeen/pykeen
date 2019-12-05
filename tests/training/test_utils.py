@@ -139,7 +139,7 @@ class BatchCompilationTest(unittest.TestCase):
         indices = np.arange(self.num_samples)
         input_array = self.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.long)
         targets = []
-        for i in range(self.num_samples):
+        for _ in range(self.num_samples):
             targets.append(list(set(self.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.long))))
         target_array = np.asarray(targets)
 

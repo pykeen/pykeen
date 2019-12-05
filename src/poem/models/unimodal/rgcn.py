@@ -38,7 +38,7 @@ def _get_neighborhood(
     node_mask[start_nodes] = True
 
     # Compute k-neighbourhood
-    for i in range(k):
+    for _ in range(k):
         # if the target node needs an embeddings, so does the source node
         node_mask[sources] |= node_mask[targets]
 

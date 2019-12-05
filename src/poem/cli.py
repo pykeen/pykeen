@@ -60,7 +60,7 @@ def models(tablefmt: str):
 
 
 def _get_model_lines(tablefmt: str):
-    for name, model in sorted(models_dict.items()):
+    for _, model in sorted(models_dict.items()):
         line = str(model.__doc__.splitlines()[0])
         l, r = line.find('['), line.find(']')
         if tablefmt == 'rst':

@@ -151,7 +151,7 @@ class BaseModule(nn.Module):
 
         # Keep track of the hyper-parameters that are used across all
         # subclasses of BaseModule
-        for k, v in cls.__init__.__annotations__.items():
+        for k in cls.__init__.__annotations__.keys():
             if k not in BaseModule.__init__.__annotations__:
                 BaseModule._hyperparameter_usage[k].add(cls.__name__)
 

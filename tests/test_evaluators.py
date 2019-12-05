@@ -159,7 +159,7 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         for mrr in result.mean_reciprocal_rank.values():
             assert isinstance(mrr, float)
             assert 0 < mrr <= 1
-        for k, hits_at_k in result.hits_at_k.items():
+        for hits_at_k in result.hits_at_k.values():
             for h in hits_at_k.values():
                 assert isinstance(h, float)
                 assert 0 <= h <= 1

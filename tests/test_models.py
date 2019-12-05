@@ -730,7 +730,7 @@ class TestTesting(unittest.TestCase):
         models_path = os.path.abspath(os.path.dirname(poem.models.__file__))
 
         model_names = set()
-        for directory, subdirectories, filenames in os.walk(models_path):
+        for directory, _, filenames in os.walk(models_path):
             for filename in filenames:
                 if not filename.endswith('.py'):
                     continue

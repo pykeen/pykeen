@@ -145,7 +145,7 @@ class TestEarlyStopping(unittest.TestCase):
 
     def test_result_processing(self):
         """Test that the mock evaluation of the early stopper always gives the right loss."""
-        for stop, loss in enumerate(self.mock_losses, start=1):
+        for stop in range(1, 1 + len(self.mock_losses)):
             # Step early stopper
             should_stop = self.early_stopper.should_stop()
 

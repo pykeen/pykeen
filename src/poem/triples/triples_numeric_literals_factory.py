@@ -33,7 +33,7 @@ def create_matrix_of_literals(
     num_literals = np.zeros([len(entity_to_id), len(data_rel_to_id)], dtype=np.float32)
 
     # TODO vectorize code
-    for i, (h, r, lit) in enumerate(numeric_triples):
+    for h, r, lit in numeric_triples:
         try:
             # row define entity, and column the literal. Set the corresponding literal for the entity
             num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
