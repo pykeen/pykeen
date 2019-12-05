@@ -303,7 +303,8 @@ class BaseModule(nn.Module):
 
     def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
-        self.regularizer.update(*tensors)
+        if self.training:
+            self.regularizer.update(*tensors)
 
     def compute_mr_loss(
         self,
