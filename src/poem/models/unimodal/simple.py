@@ -116,6 +116,9 @@ class SimplE(BaseModule):
         # Note: In the code in their repository, the score is clamped to [-20, 20].
         #       That is not mentioned in the paper, so it is omitted here.
 
+        # Regularization
+        self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
+
         return scores
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
@@ -136,6 +139,9 @@ class SimplE(BaseModule):
 
         # Final score is average
         scores = 0.5 * (score + inverse_score)
+
+        # Regularization
+        self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
 
         return scores
 
@@ -160,5 +166,8 @@ class SimplE(BaseModule):
 
         # Note: In the code in their repository, the score is clamped to [-20, 20].
         #       That is not mentioned in the paper, so it is omitted here.
+
+        # Regularization
+        self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
 
         return scores
