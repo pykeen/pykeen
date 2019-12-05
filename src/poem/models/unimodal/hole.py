@@ -133,7 +133,8 @@ class HolE(BaseModule):
         t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(dim=1)
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
@@ -145,7 +146,8 @@ class HolE(BaseModule):
         t = self.entity_embeddings.weight.unsqueeze(dim=0)
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         scores = self.interaction_function(h=h, r=r, t=t)
 
@@ -157,7 +159,8 @@ class HolE(BaseModule):
         t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(dim=1)
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         scores = self.interaction_function(h=h, r=r, t=t)
 

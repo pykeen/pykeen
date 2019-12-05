@@ -119,7 +119,8 @@ class ConvKB(BaseModule):
         t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         # Stack to convolution input
         conv_inp = torch.stack([h, r, t], dim=-1).view(-1, 1, self.embedding_dim, 3)
