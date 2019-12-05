@@ -138,7 +138,8 @@ class DistMult(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
         # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
+        if self.training:
+            self.regularize_if_necessary(r)
 
         return scores
 
@@ -152,7 +153,8 @@ class DistMult(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
+        if self.training:
+            self.regularize_if_necessary(r)
 
         return scores
 
@@ -166,6 +168,7 @@ class DistMult(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
+        if self.training:
+            self.regularize_if_necessary(r)
 
         return scores

@@ -97,7 +97,8 @@ class RESCAL(BaseModule):
         scores = h @ r @ t
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         return scores[:, :, 0]
 
@@ -110,7 +111,8 @@ class RESCAL(BaseModule):
         scores = h @ r @ t
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         return scores[:, 0, :]
 
@@ -125,6 +127,7 @@ class RESCAL(BaseModule):
         scores = h @ r @ t
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         return scores[:, :, 0]

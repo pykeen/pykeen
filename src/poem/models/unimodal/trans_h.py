@@ -142,7 +142,8 @@ class TransH(BaseModule):
         pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
 
         # Regularization term
-        self.regularize_if_necessary(h, t, w_r, d_r)
+        if self.training:
+            self.regularize_if_necessary(h, t, w_r, d_r)
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
@@ -158,7 +159,8 @@ class TransH(BaseModule):
         pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
 
         # Regularization term
-        self.regularize_if_necessary(h, t, w_r, d_r)
+        if self.training:
+            self.regularize_if_necessary(h, t, w_r, d_r)
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
@@ -175,6 +177,7 @@ class TransH(BaseModule):
         pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
 
         # Regularization term
-        self.regularize_if_necessary(h, t, w_r, d_r)
+        if self.training:
+            self.regularize_if_necessary(h, t, w_r, d_r)
 
         return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)

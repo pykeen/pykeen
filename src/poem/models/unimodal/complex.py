@@ -158,7 +158,8 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         return scores
 
@@ -172,7 +173,8 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         return scores
 
@@ -186,6 +188,7 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        if self.training:
+            self.regularize_if_necessary(h, r, t)
 
         return scores
