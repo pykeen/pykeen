@@ -101,8 +101,7 @@ class ERMLP(BaseModule):
         t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         # Concatenate them
         x_s = torch.cat([h, r, t], dim=-1)
@@ -117,8 +116,7 @@ class ERMLP(BaseModule):
         t = self.entity_embeddings.weight
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         # First layer can be unrolled
         layers = self.mlp.children()
@@ -144,8 +142,7 @@ class ERMLP(BaseModule):
         t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         # First layer can be unrolled
         layers = self.mlp.children()

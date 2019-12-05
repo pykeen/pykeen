@@ -234,8 +234,7 @@ class ConvE(BaseModule):
         t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         x = self._convolve_entity_relation(h, r)
 
@@ -267,8 +266,7 @@ class ConvE(BaseModule):
         t = self.entity_embeddings.weight.transpose(1, 0)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         x = self._convolve_entity_relation(h, r)
 
@@ -290,8 +288,7 @@ class ConvE(BaseModule):
         t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         '''
         Every head has to be convolved with every relation in the rt_batch. Hence we repeat the

@@ -146,8 +146,7 @@ class HolE(BaseModule):
         t = self.entity_embeddings.weight.unsqueeze(dim=0)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         scores = self.interaction_function(h=h, r=r, t=t)
 

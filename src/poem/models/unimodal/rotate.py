@@ -159,8 +159,7 @@ class RotatE(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, t)
+        self.regularize_if_necessary(h, t)
 
         return scores
 
@@ -176,8 +175,7 @@ class RotatE(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, t)
+        self.regularize_if_necessary(h, t)
 
         return scores
 
@@ -200,7 +198,6 @@ class RotatE(BaseModule):
         scores = self.interaction_function(h=t, r=r_inv, t=h)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, t)
+        self.regularize_if_necessary(h, t)
 
         return scores

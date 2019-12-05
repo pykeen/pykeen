@@ -120,8 +120,7 @@ class ERMLPE(BaseModule):
         t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         # Concatenate them
         x_s = torch.cat([h, r], dim=-1)
