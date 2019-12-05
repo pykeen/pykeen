@@ -11,11 +11,8 @@ from typing import Optional, Type, Union
 import click
 from torch import nn
 
-from .options import (
-    CLI_OPTIONS, batch_size_option, device_option, early_stopping_option, evaluator_option, learning_rate_option,
-    mlflow_uri_option, number_epochs_option, optimizer_option, testing_option, title_option, training_loop_option,
-    training_option,
-)
+from . import options
+from .options import CLI_OPTIONS
 from ..base import BaseModule
 from ...regularizers import Regularizer, _REGULARIZER_SUFFIX, regularizers
 from ...utils import normalize_string
@@ -87,24 +84,39 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     )
 
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
-    @device_option
-    @training_option
-    @testing_option
-    @optimizer_option
+    @options.device_option
+    @options.training_option
+    @options.testing_option
+    @options.optimizer_option
     @regularizer_option
-    @training_loop_option
-    @number_epochs_option
-    @batch_size_option
-    @learning_rate_option
-    @evaluator_option
-    @early_stopping_option
-    @mlflow_uri_option
-    @title_option
+    @options.training_loop_option
+    @options.number_epochs_option
+    @options.batch_size_option
+    @options.learning_rate_option
+    @options.evaluator_option
+    @options.early_stopping_option
+    @options.mlflow_uri_option
+    @options.title_option
+    @options.num_workers_option
     @_decorate_model_kwargs
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
-        *, device, training_loop, optimizer, regularizer, number_epochs, batch_size, learning_rate, evaluator,
-        early_stopping, output, mlflow_tracking_uri, title, training_triples_factory, testing_triples_factory,
+        *,
+        device,
+        training_loop,
+        optimizer,
+        regularizer,
+        number_epochs,
+        batch_size,
+        learning_rate,
+        evaluator,
+        early_stopping,
+        output,
+        mlflow_tracking_uri,
+        title,
+        training_triples_factory,
+        testing_triples_factory,
+        num_workers,
         **model_kwargs,
     ):
         """CLI for POEM."""
@@ -131,6 +143,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
             training_kwargs=dict(
                 num_epochs=number_epochs,
                 batch_size=batch_size,
+                num_workers=num_workers,
             ),
             early_stopping=early_stopping,
             mlflow_tracking_uri=mlflow_tracking_uri,

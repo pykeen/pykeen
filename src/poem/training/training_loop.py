@@ -92,6 +92,7 @@ class TrainingLoop(ABC):
         early_stopper: Optional[EarlyStopper] = None,
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
+        num_workers: Optional[int] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -114,6 +115,9 @@ class TrainingLoop(ABC):
             The result tracker.
         :param sub_batch_size:
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
+        :param num_workers:
+            The number of child CPU workers used for loading data. If None, data are loaded in the main process.
+
         :return:
             A pair of the KGE model and the losses per epoch.
         """
@@ -162,11 +166,15 @@ class TrainingLoop(ABC):
             sampler = None
             shuffle = True
 
+        if num_workers is None:
+            num_workers = 0
+
         train_data_loader = DataLoader(
             sampler=sampler,
             dataset=self.training_instances,
             batch_size=batch_size,
             shuffle=shuffle,
+            num_workers=num_workers,
         )
 
         # Bind

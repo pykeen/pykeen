@@ -175,3 +175,9 @@ title_option = click.option(
     '--title',
     help='Title of this experiment',
 )
+num_workers_option = click.option(
+    '--num-workers',
+    type=int,
+    help='The number of child CPU worker processes used for preparing batches during training. If not specified,'
+         ' batches are prepared in the main process.',
+)
