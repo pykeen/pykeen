@@ -172,6 +172,18 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 | Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 
+## Reproduction
+
+POEM includes a set of curated experimental settings for reproducing past landmark
+experiments. They can be accessed and run like:
+
+```bash
+python -m poem.experiments reproduce tucker balazevic2019 fb15k
+```
+
+Where the three arguments are the model name, the reference, and the data set. The
+output directory can be optionally set with `-d`.
+
 ## Acknowledgements
 
 ### Supporters
