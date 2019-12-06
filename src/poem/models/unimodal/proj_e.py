@@ -45,7 +45,6 @@ class ProjE(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
-        init: bool = True,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         if inner_non_linearity is None:

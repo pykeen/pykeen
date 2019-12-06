@@ -55,7 +55,6 @@ class NTN(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         non_linearity: Optional[nn.Module] = None,
-        init: bool = True,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""

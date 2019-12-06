@@ -120,7 +120,6 @@ class KG2E(BaseModule):
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,
         c_max: float = 5.,
-        init: bool = True,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(

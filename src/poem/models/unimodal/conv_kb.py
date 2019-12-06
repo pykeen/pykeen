@@ -55,7 +55,6 @@ class ConvKB(BaseModule):
         preferred_device: Optional[str] = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
-        init: bool = True,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model.

@@ -62,7 +62,6 @@ class TuckER(BaseModule):
         criterion: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        init: bool = True,
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
