@@ -185,6 +185,7 @@ from .sampling import NegativeSampler, get_negative_sampler_cls
 from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import MLFlowResultTracker, ResultTracker, resolve_device
+from .version import get_git_hash, get_version
 
 __all__ = [
     'PipelineResult',
@@ -214,6 +215,12 @@ class PipelineResult:
 
     #: Any additional metadata as a dictionary
     metadata: Optional[Mapping[str, Any]] = field(default_factory=dict)
+
+    #: The version of PyKEEN used to create these results
+    version: str = field(default_factory=get_version)
+
+    #: The git hash of PyKEEN used to create these results
+    git_hash: str = field(default_factory=get_git_hash)
 
     @property
     def title(self) -> Optional[str]:  # noqa:D401
