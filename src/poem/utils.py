@@ -3,7 +3,7 @@
 """Utilities for POEM."""
 
 import logging
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import mlflow
 import numpy
@@ -144,16 +144,29 @@ def get_until_first_blank(s: str) -> str:
         )
 
 
-def flatten_dictionary(dictionary: Dict[str, Any], prefix: str = '', sep='.') -> Dict[str, Any]:
-    """Flattens a nested dictionary."""
+def flatten_dictionary(
+    dictionary: Dict[str, Any],
+    prefix: Optional[str] = None,
+    sep: str = '.',
+) -> Dict[str, Any]:
+    """Flatten a nested dictionary."""
+    real_prefix = tuple() if prefix is None else (prefix,)
+    partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
+    return {sep.join(k): v for k, v in partial_result.items()}
+
+
+def _flatten_dictionary(
+    dictionary: Dict[str, Any],
+    prefix: Tuple[str, ...],
+) -> Dict[Tuple[str, ...], Any]:
+    """Help flatten a nested dictionary."""
     result = {}
     for k, v in dictionary.items():
+        new_prefix = prefix + (k,)
         if isinstance(v, dict):
-            new_prefix = prefix + k + sep
-            result.update(flatten_dictionary(dictionary=v, prefix=new_prefix))
+            result.update(_flatten_dictionary(dictionary=v, prefix=new_prefix))
         else:
-            new_k = prefix + k
-            result[new_k] = v
+            result[new_prefix] = v
     return result
 
 

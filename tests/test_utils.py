@@ -62,6 +62,28 @@ class FlattenDictionaryTest(unittest.TestCase):
             'a.e': 3,
         }
         observed_output = flatten_dictionary(nested_dictionary)
+        self._compare(observed_output, expected_output)
+
+    def test_flatten_dictionary_prefix(self):
+        """Test if the output of flatten_dictionary is correct."""
+        nested_dictionary = {
+            'a': {
+                'b': {
+                    'c': 1,
+                    'd': 2
+                },
+                'e': 3,
+            }
+        }
+        expected_output = {
+            'Test.a.b.c': 1,
+            'Test.a.b.d': 2,
+            'Test.a.e': 3,
+        }
+        observed_output = flatten_dictionary(nested_dictionary, prefix='Test')
+        self._compare(observed_output, expected_output)
+
+    def _compare(self, observed_output, expected_output):
         assert not any(isinstance(o, dict) for o in expected_output.values())
         assert expected_output == observed_output
 
