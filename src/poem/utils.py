@@ -144,15 +144,22 @@ def get_until_first_blank(s: str) -> str:
         )
 
 
-def flatten_dictionary(dictionary: Dict[str, Any], prefix: Optional[str] = None, sep='.') -> Dict[str, Any]:
-    """Flattens a nested dictionary."""
+def flatten_dictionary(
+    dictionary: Dict[str, Any],
+    prefix: Optional[str] = None,
+    sep: str = '.',
+) -> Dict[str, Any]:
+    """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
     return {sep.join(k): v for k, v in partial_result.items()}
 
 
-def _flatten_dictionary(dictionary: Dict[str, Any], prefix: Tuple[str, ...] = tuple()) -> Dict[Tuple[str, ...], Any]:
-    """Utility method for flattening a nested dictionary."""
+def _flatten_dictionary(
+    dictionary: Dict[str, Any],
+    prefix: Tuple[str, ...],
+) -> Dict[Tuple[str, ...], Any]:
+    """Help flatten a nested dictionary."""
     result = {}
     for k, v in dictionary.items():
         new_prefix = prefix + (k,)
