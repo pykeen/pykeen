@@ -142,8 +142,7 @@ class ERMLPE(BaseModule):
         t = self.entity_embeddings.weight.transpose(1, 0)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         # Concatenate them
         x_s = torch.cat([h, r], dim=-1)
@@ -163,8 +162,7 @@ class ERMLPE(BaseModule):
         t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim)
 
         # Embedding Regularization
-        if self.training:
-            self.regularize_if_necessary(h, r, t)
+        self.regularize_if_necessary(h, r, t)
 
         rt_batch_size = t.shape[0]
 
