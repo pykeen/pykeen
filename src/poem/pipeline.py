@@ -255,7 +255,17 @@ class PipelineResult:
             json.dump(self._get_configuration(), file, indent=2)
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
             json.dump(self.metadata, file, indent=2)
+        with open(os.path.join(directory, 'environment.json'), 'w') as file:
+            json.dump(self._get_environment(), file, indent=2)
         self.save_model(os.path.join(directory, 'trained_model.pkl'))
+
+    def _get_environment(self):
+        return dict(
+            pykeen=dict(
+                version=self.version,
+                git_hash=self.git_hash,
+            ),
+        )
 
     def _get_configuration(self) -> Mapping[str, Any]:
         """Get all of the configuration out of the model and training loop."""
