@@ -48,7 +48,6 @@ class ComplEx(BaseModule):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        init: bool = True,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the module.

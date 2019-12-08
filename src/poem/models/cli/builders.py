@@ -24,8 +24,17 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
-_SKIP_ARGS = {'init', 'return', 'triples_factory', 'preferred_device', 'regularizer'}
-_SKIP_ANNOTATIONS = {Optional[nn.Embedding], Optional[nn.Parameter], Optional[nn.Module]}
+_SKIP_ARGS = {
+    'return',
+    'triples_factory',
+    'preferred_device',
+    'regularizer',
+}
+_SKIP_ANNOTATIONS = {
+    Optional[nn.Embedding],
+    Optional[nn.Parameter],
+    Optional[nn.Module],
+}
 
 
 def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202

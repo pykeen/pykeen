@@ -78,7 +78,7 @@ def parameters():
     """List hyper-parameter usage."""
     click.echo('Names of __init__() parameters in all classes:')
 
-    base_parameters = set(BaseModule.__init__.__annotations__) | {'init'}
+    base_parameters = set(BaseModule.__init__.__annotations__)
     _hyperparemeter_usage = sorted(
         (k, v)
         for k, v in BaseModule._hyperparameter_usage.items()
