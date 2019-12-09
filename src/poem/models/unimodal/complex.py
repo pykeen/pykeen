@@ -152,14 +152,14 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings(hrt_batch[:, 0])
         r = self.relation_embeddings(hrt_batch[:, 1])
         t = self.entity_embeddings(hrt_batch[:, 2])
-        new_shape = (-1, self.real_embedding_dim, 2)
+        reg_shape = (-1, self.real_embedding_dim, 2)
 
         # Compute scores
-        scores = self.interaction_function(h=h.view(new_shape), r=r.view(new_shape), t=t.view(new_shape)).view(-1, 1)
+        scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(reg_shape)).view(-1, 1)
 
         # Regularization
-        new_shape = (-1, self.embedding_dim)
-        self.regularize_if_necessary(h.view(new_shape), r.view(new_shape), t.view(new_shape))
+        reg_shape = (-1, self.embedding_dim)
+        self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(reg_shape))
 
         return scores
 
@@ -168,16 +168,16 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings(hr_batch[:, 0])
         r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
-        new_shape = (-1, self.real_embedding_dim, 2)
+        reg_shape = (-1, self.real_embedding_dim, 2)
         new_shape_tails = (1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
-        scores = self.interaction_function(h=h.view(new_shape), r=r.view(new_shape), t=t.view(new_shape_tails))
+        scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(new_shape_tails))
 
         # Regularization
-        new_shape = (-1, self.embedding_dim)
+        reg_shape = (-1, self.embedding_dim)
         new_shape_tails = (1, -1, self.embedding_dim)
-        self.regularize_if_necessary(h.view(new_shape), r.view(new_shape), t.view(new_shape_tails))
+        self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(new_shape_tails))
 
         return scores
 
@@ -186,15 +186,15 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(rt_batch[:, 0])
         t = self.entity_embeddings(rt_batch[:, 1])
-        new_shape = (-1, self.real_embedding_dim, 2)
+        reg_shape = (-1, self.real_embedding_dim, 2)
         new_shape_heads = (1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
-        scores = self.interaction_function(h=h.view(new_shape_heads), r=r.view(new_shape), t=t.view(new_shape))
+        scores = self.interaction_function(h=h.view(new_shape_heads), r=r.view(reg_shape), t=t.view(reg_shape))
 
         # Regularization
-        new_shape = (-1, self.embedding_dim)
+        reg_shape = (-1, self.embedding_dim)
         new_shape_heads = (1, -1, self.embedding_dim)
-        self.regularize_if_necessary(h.view(new_shape_heads), r.view(new_shape), t.view(new_shape))
+        self.regularize_if_necessary(h.view(new_shape_heads), r.view(reg_shape), t.view(reg_shape))
 
         return scores
