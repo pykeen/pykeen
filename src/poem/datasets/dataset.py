@@ -144,7 +144,7 @@ class RemoteDataSet(DataSet):
         relative_validation_path: str,
         cache_root: Optional[str] = None,
     ):
-        """Constructor.
+        """Initialize dataset.
 
         :param url:
             The url where to download the dataset from.
