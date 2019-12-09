@@ -7,8 +7,13 @@
     "data_set": "fb15k",
     "model": "DistMult",
     "model_kwargs": {
-      "embedding_dim": 100,
-      "regularization_weight": 0.0001
+      "embedding_dim": 100
+    },
+    "regularizer": "Lp",
+    "regularizer_kwargs": {
+      "weight": 0.0001,
+      "p": 2.0,
+      "normalize": false
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
