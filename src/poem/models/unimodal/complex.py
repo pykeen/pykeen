@@ -152,13 +152,13 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings(hrt_batch[:, 0])
         r = self.relation_embeddings(hrt_batch[:, 1])
         t = self.entity_embeddings(hrt_batch[:, 2])
-        reg_shape = (-1, 1, self.real_embedding_dim, 2)
+        reg_shape = (-1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(reg_shape)).view(-1, 1)
 
         # Regularization
-        reg_shape = (-1, 1, self.embedding_dim)
+        reg_shape = (-1, self.embedding_dim)
         self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(reg_shape))
 
         return scores
