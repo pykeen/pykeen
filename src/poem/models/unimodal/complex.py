@@ -149,42 +149,52 @@ class ComplEx(BaseModule):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (batch_size, embedding_dim, 2)
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
+        reg_shape = (-1, self.real_embedding_dim, 2)
 
         # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
+        scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(reg_shape)).view(-1, 1)
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        reg_shape = (-1, self.embedding_dim)
+        self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(reg_shape))
 
         return scores
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (hr_batch_size, num_entities, embedding_dim, 2)
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(hr_batch[:, 0])
+        r = self.relation_embeddings(hr_batch[:, 1])
+        t = self.entity_embeddings.weight
+        reg_shape = (-1, 1, self.real_embedding_dim, 2)
+        new_shape_tails = (1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
+        scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(new_shape_tails))
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        reg_shape = (-1, 1, self.embedding_dim)
+        new_shape_tails = (1, -1, self.embedding_dim)
+        self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(new_shape_tails))
 
         return scores
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # view as (rt_batch_size, num_entities, embedding_dim, 2)
-        h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings.weight
+        r = self.relation_embeddings(rt_batch[:, 0])
+        t = self.entity_embeddings(rt_batch[:, 1])
+        reg_shape = (-1, 1, self.real_embedding_dim, 2)
+        new_shape_heads = (1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
+        scores = self.interaction_function(h=h.view(new_shape_heads), r=r.view(reg_shape), t=t.view(reg_shape))
 
         # Regularization
-        self.regularize_if_necessary(h, r, t)
+        reg_shape = (-1, 1, self.embedding_dim)
+        new_shape_heads = (1, -1, self.embedding_dim)
+        self.regularize_if_necessary(h.view(new_shape_heads), r.view(reg_shape), t.view(reg_shape))
 
         return scores
