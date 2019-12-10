@@ -158,7 +158,7 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(reg_shape)).view(-1, 1)
 
         # Regularization
-        reg_shape = (-1, self.embedding_dim)
+        reg_shape = (-1, 1, self.embedding_dim)
         self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(reg_shape))
 
         return scores
@@ -175,7 +175,7 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(new_shape_tails))
 
         # Regularization
-        reg_shape = (-1, self.embedding_dim)
+        reg_shape = (-1, 1, self.embedding_dim)
         new_shape_tails = (1, -1, self.embedding_dim)
         self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(new_shape_tails))
 
@@ -193,7 +193,7 @@ class ComplEx(BaseModule):
         scores = self.interaction_function(h=h.view(new_shape_heads), r=r.view(reg_shape), t=t.view(reg_shape))
 
         # Regularization
-        reg_shape = (-1, self.embedding_dim)
+        reg_shape = (-1, 1, self.embedding_dim)
         new_shape_heads = (1, -1, self.embedding_dim)
         self.regularize_if_necessary(h.view(new_shape_heads), r.view(reg_shape), t.view(reg_shape))
 
