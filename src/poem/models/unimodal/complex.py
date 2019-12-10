@@ -152,7 +152,7 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings(hrt_batch[:, 0])
         r = self.relation_embeddings(hrt_batch[:, 1])
         t = self.entity_embeddings(hrt_batch[:, 2])
-        reg_shape = (-1, self.real_embedding_dim, 2)
+        reg_shape = (-1, 1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(reg_shape)).view(-1, 1)
@@ -168,7 +168,7 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings(hr_batch[:, 0])
         r = self.relation_embeddings(hr_batch[:, 1])
         t = self.entity_embeddings.weight
-        reg_shape = (-1, self.real_embedding_dim, 2)
+        reg_shape = (-1, 1, self.real_embedding_dim, 2)
         new_shape_tails = (1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
@@ -186,7 +186,7 @@ class ComplEx(BaseModule):
         h = self.entity_embeddings.weight
         r = self.relation_embeddings(rt_batch[:, 0])
         t = self.entity_embeddings(rt_batch[:, 1])
-        reg_shape = (-1, self.real_embedding_dim, 2)
+        reg_shape = (-1, 1, self.real_embedding_dim, 2)
         new_shape_heads = (1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
