@@ -10,42 +10,12 @@ from torch.nn import functional
 
 from ..base import BaseModule
 from ...losses import Loss
-from ...regularizers import Regularizer
+from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 
 __all__ = [
     'TransH',
 ]
-
-
-class TransHRegularizer(Regularizer):
-    """Regularizer for TransH's soft constraints."""
-
-    def __init__(
-        self,
-        device: torch.device,
-        weight: float,
-        epsilon: float,
-    ):
-        super().__init__(device=device, weight=weight)
-        self.epsilon = epsilon
-
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        raise NotImplementedError('TransH regularizer is order-sensitive!')
-
-    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
-        if len(tensors) != 4:
-            raise KeyError('Expects exactly four tensors')
-
-        h, t, w_r, d_r = tensors
-
-        # Entity soft constraint
-        self.regularization_term += torch.sum(functional.relu(torch.norm(h, dim=-1)) ** 2 - 1.0)
-        self.regularization_term += torch.sum(functional.relu(torch.norm(t, dim=-1)) ** 2 - 1.0)
-
-        # Orthogonality soft constraint
-        d_r_n = functional.normalize(d_r, dim=-1)
-        self.regularization_term += torch.sum(functional.relu(torch.sum((w_r * d_r_n) ** 2, dim=-1) - self.epsilon))
 
 
 class TransH(BaseModule):
