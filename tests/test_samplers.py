@@ -90,11 +90,36 @@ class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
 
     negative_sampling_cls = BasicNegativeSampler
 
+    def test_sample_basic(self):
+        """Test if relations and half of heads and tails are not corrupted."""
+        # Generate negative samples
+        negative_batch = self.negative_sampler.sample(positive_batch=self.positive_batch)
+
+        # test that the relations were not changed
+        assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
+
+        # Test that half of the subjects and half of the objects are corrupted
+        half_size = self.positive_batch.shape[0] // 2
+        num_subj_corrupted = (self.positive_batch[:, 0] != negative_batch[:, 0]).sum()
+        num_obj_corrupted = (self.positive_batch[:, 2] != negative_batch[:, 2]).sum()
+        assert num_obj_corrupted - 1 <= num_subj_corrupted
+        assert num_subj_corrupted - 1 <= num_obj_corrupted
+        assert num_subj_corrupted - 1 <= self.positive_batch.shape[0]
+        assert half_size - 1 <= num_subj_corrupted
+
 
 class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
     """Test the Bernoulli negative sampler."""
 
     negative_sampling_cls = BernoulliNegativeSampler
+
+    def test_sample_bern(self):
+        """Test if relations are not corrupted."""
+        # Generate negative sample for additional tests
+        negative_batch = self.negative_sampler.sample(positive_batch=self.positive_batch)
+
+        # test that the relations were not changed
+        assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
 
 
 class GraphSamplerTest(unittest.TestCase):
