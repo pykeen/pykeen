@@ -18,7 +18,7 @@ yago310   :class:`poem.datasets.yago310`
 .. note:: This table can be re-generated with ``poem ls datasets -f rst``
 """
 
-from typing import Mapping, Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Set, Tuple, Type, Union
 
 from .dataset import DataSet
 from .freebase import FB15k, FB15k237, fb15k, fb15k237
@@ -36,7 +36,7 @@ from ..utils import normalize_string
 
 __all__ = [
     'DataSet',
-    'data_sets',
+    'datasets',
     'kinship',
     'Kinship',
     'KinshipTrainingTriplesFactory',
@@ -62,47 +62,52 @@ __all__ = [
     'wn18rr',
     'YAGO310',
     'yago310',
-    'get_data_set',
+    'get_dataset',
 ]
 
-#: A mapping of data sets' names to their instances
-data_sets: Mapping[str, DataSet] = dict(
-    nations=nations,
-    kinship=kinship,
-    umls=umls,
-    fb15k=fb15k,
-    fb15k237=fb15k237,
-    wn18=wn18,
-    wn18rr=wn18rr,
-    yago310=yago310,
-)
+_DATASETS: Set[Type[DataSet]] = {
+    Nations,
+    Kinship,
+    Umls,
+    FB15k,
+    FB15k237,
+    WN18,
+    WN18RR,
+    YAGO310,
+}
+
+#: A mapping of data sets' names to their classes
+datasets: Mapping[str, Type[DataSet]] = {
+    normalize_string(cls.__name__): cls
+    for cls in _DATASETS
+}
 
 
-def get_data_set(
-    data_set: Union[None, str, DataSet] = None,
+def get_dataset(
+    dataset: Union[None, str, Type[DataSet]] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
+    triples_factory_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
-    """Get the data set."""
-    if data_set is not None:
+    """Get the dataset."""
+    if dataset is not None:
         if any(f is not None for f in (training_triples_factory, testing_triples_factory, validation_triples_factory)):
             raise ValueError('Can not specify both dataset and any triples factory.')
 
-        if isinstance(data_set, str):
+        if isinstance(dataset, str):
             try:
-                data_set = data_sets[normalize_string(data_set)]
+                dataset: Type[DataSet] = datasets[normalize_string(dataset)]
             except KeyError:
-                raise ValueError(f'Invalid dataset name: {data_set}')
+                raise ValueError(f'Invalid dataset name: {dataset}')
 
-        elif not isinstance(data_set, DataSet):
-            raise TypeError(f'Data set is wrong type: {type(data_set)}')
+        elif not isinstance(dataset, DataSet):
+            raise TypeError(f'Data set is wrong type: {type(dataset)}')
 
-        return (
-            data_set.training,
-            data_set.testing,
-            data_set.validation,
+        dataset_instance = dataset(
+            **(triples_factory_kwargs or {})
         )
+        return dataset_instance.factories
 
     elif testing_triples_factory is None or training_triples_factory is None:
         raise ValueError('Must specify either dataset or both training_triples_factory and testing_triples_factory.')

@@ -17,7 +17,7 @@ import click
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
-from .datasets import data_sets
+from .datasets import datasets as datasets_dict
 from .evaluation import evaluators as evaluators_dict, get_metric_list, metrics as metrics_dict
 from .hpo.cli import optimize
 from .losses import losses as losses_dict
@@ -94,7 +94,7 @@ def parameters():
 @tablefmt_option
 def datasets(tablefmt: str):
     """List data sets."""
-    lines = _get_lines(data_sets, tablefmt, 'datasets')
+    lines = _get_lines(datasets_dict, tablefmt, 'datasets')
     click.echo(
         tabulate(
             lines,
@@ -263,7 +263,7 @@ def github_readme(ctx: click.Context):
     ctx.invoke(regularizers, tablefmt='github')
     click.echo(f'\n### Losses ({len(losses_dict)})\n')
     ctx.invoke(losses, tablefmt='github')
-    click.echo(f'\n### Data Sets ({len(data_sets)})\n')
+    click.echo(f'\n### Data Sets ({len(datasets_dict)})\n')
     ctx.invoke(datasets, tablefmt='github')
     click.echo(f'\n### Training Modes ({len(training_dict)})\n')
     ctx.invoke(training, tablefmt='github')
