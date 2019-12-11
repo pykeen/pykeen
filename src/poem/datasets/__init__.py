@@ -101,7 +101,7 @@ def get_dataset(
             except KeyError:
                 raise ValueError(f'Invalid dataset name: {dataset}')
 
-        elif not isinstance(dataset, DataSet):
+        elif not isinstance(dataset, type) or not issubclass(dataset, DataSet):
             raise TypeError(f'Data set is wrong type: {type(dataset)}')
 
         dataset_instance = dataset(
