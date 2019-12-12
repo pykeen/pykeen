@@ -7,7 +7,6 @@
     "model": "TransH",
     "model_kwargs": {
       "embedding_dim": 50,
-      "regularization_weight": 0.25,
       "scoring_fct_norm": 2
     },
     "regularizer": "TransH",
