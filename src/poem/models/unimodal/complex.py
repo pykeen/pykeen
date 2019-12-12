@@ -27,8 +27,8 @@ class ComplEx(BaseModule):
         regularization_weight=dict(type=float, low=0.0, high=0.1, scale='log'),
     )
 
-    criterion_default = SoftplusLoss
-    criterion_default_kwargs = dict(reduction='mean')
+    loss_default = SoftplusLoss
+    loss_default_kwargs = dict(reduction='mean')
 
     #: The regularizer used by [trouillon2016]_ for ComplEx.
     regularizer_default = LpRegularizer
@@ -44,7 +44,7 @@ class ComplEx(BaseModule):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         entity_embeddings: Optional[nn.Embedding] = None,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
@@ -58,8 +58,8 @@ class ComplEx(BaseModule):
             The embedding dimensionality of the entity embeddings.
         :param entity_embeddings: nn.Embedding (optional)
             Initialization for the entity embeddings.
-        :param criterion: OptionalLoss (optional)
-            The loss criterion to use. Defaults to SoftplusLoss.
+        :param loss: OptionalLoss (optional)
+            The loss to use. Defaults to SoftplusLoss.
         :param preferred_device: str (optional)
             The default device where to model is located.
         :param random_seed: int (optional)
@@ -82,7 +82,7 @@ class ComplEx(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
             entity_embeddings=entity_embeddings,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,

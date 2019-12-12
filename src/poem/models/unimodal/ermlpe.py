@@ -48,8 +48,8 @@ class ERMLPE(BaseModule):
         hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
     )
 
-    criterion_default: Type[Loss] = BCEAfterSigmoidLoss
-    criterion_default_kwargs = {}
+    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default_kwargs = {}
 
     def __init__(
         self,
@@ -60,7 +60,7 @@ class ERMLPE(BaseModule):
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -69,7 +69,7 @@ class ERMLPE(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
@@ -131,7 +131,7 @@ class ERMLPE(BaseModule):
         # compare with all t's
         # For efficient calculation, each of the calculated [h, r] rows has only to be multiplied with one t row
         x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
-        # The application of the sigmoid during training is automatically handled by the default criterion.
+        # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
@@ -151,7 +151,7 @@ class ERMLPE(BaseModule):
         x_t = self.mlp(x_s)
 
         x = x_t @ t
-        # The application of the sigmoid during training is automatically handled by the default criterion.
+        # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
@@ -185,6 +185,6 @@ class ERMLPE(BaseModule):
         x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
         # The results have to be realigned with the expected output of the score_h function
         x = x.view(rt_batch_size, self.num_entities)
-        # The application of the sigmoid during training is automatically handled by the default criterion.
+        # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x

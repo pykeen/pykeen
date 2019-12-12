@@ -73,8 +73,8 @@ class BaseModule(nn.Module):
     #: Defaults for hyperparameter optimization
     hpo_default: ClassVar[Mapping[str, Any]]
 
-    criterion_default: ClassVar[Type[Loss]] = nn.MarginRankingLoss
-    criterion_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
+    loss_default: ClassVar[Type[Loss]] = nn.MarginRankingLoss
+    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
 
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
@@ -85,7 +85,7 @@ class BaseModule(nn.Module):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         entity_embeddings: Optional[nn.Embedding] = None,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -107,13 +107,13 @@ class BaseModule(nn.Module):
             random.seed(self.random_seed)
 
         # Loss
-        if criterion is None:
-            self.criterion = self.criterion_default(**self.criterion_default_kwargs)
+        if loss is None:
+            self.loss = self.loss_default(**self.loss_default_kwargs)
         else:
-            self.criterion = criterion
+            self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(self.criterion, nn.MarginRankingLoss)
+        self.is_mr_loss = isinstance(self.loss, nn.MarginRankingLoss)
 
         # Regularizer
         if regularizer is None:
@@ -123,7 +123,7 @@ class BaseModule(nn.Module):
             )
         self.regularizer = regularizer
 
-        self.is_self_adversiarial_neg_sampling_loss = isinstance(self.criterion, NegativeSamplingSelfAdversarialLoss)
+        self.is_self_adversiarial_neg_sampling_loss = isinstance(self.loss, NegativeSamplingSelfAdversarialLoss)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
@@ -323,11 +323,11 @@ class BaseModule(nn.Module):
         """
         if not self.is_mr_loss:
             raise RuntimeError(
-                'The chosen criterion does not allow the calculation of margin ranking'
+                'The chosen loss does not allow the calculation of margin ranking'
                 ' losses. Please use the compute_loss method instead.'
             )
         y = torch.ones_like(negative_scores, device=self.device)
-        return self.criterion(positive_scores, negative_scores, y) + self.regularizer.term
+        return self.loss(positive_scores, negative_scores, y) + self.regularizer.term
 
     def compute_label_loss(
         self,
@@ -362,7 +362,7 @@ class BaseModule(nn.Module):
         """
         if not self.is_self_adversiarial_neg_sampling_loss:
             raise RuntimeError(
-                'The chosen criterion does not allow the calculation of self adversarial negative sampling'
+                'The chosen loss does not allow the calculation of self adversarial negative sampling'
                 ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.'
             )
         return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
@@ -384,10 +384,10 @@ class BaseModule(nn.Module):
         """
         if self.is_mr_loss:
             raise RuntimeError(
-                'The chosen criterion does not allow the calculation of margin label'
+                'The chosen loss does not allow the calculation of margin label'
                 ' losses. Please use the compute_mr_loss method instead.'
             )
-        return self.criterion(tensor_1, tensor_2) + self.regularizer.term
+        return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:

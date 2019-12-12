@@ -27,15 +27,15 @@ class ComplExLiteral(MultimodalBaseModule):
         },
     )
 
-    criterion_default = nn.BCELoss
-    criterion_default_kwargs = {}
+    loss_default = nn.BCELoss
+    loss_default_kwargs = {}
 
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
         input_dropout: float = 0.2,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
     ) -> None:
@@ -43,7 +43,7 @@ class ComplExLiteral(MultimodalBaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )

@@ -49,8 +49,8 @@ class TuckER(BaseModule):
         dropout_2=dict(type=float, low=0.1, high=0.6),
     )
 
-    criterion_default = BCEAfterSigmoidLoss
-    criterion_default_kwargs = {}
+    loss_default = BCEAfterSigmoidLoss
+    loss_default_kwargs = {}
 
     def __init__(
         self,
@@ -59,7 +59,7 @@ class TuckER(BaseModule):
         relation_dim: Optional[int] = None,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         dropout_0: float = 0.3,
@@ -80,7 +80,7 @@ class TuckER(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,

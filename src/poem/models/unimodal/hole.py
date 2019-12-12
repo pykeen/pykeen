@@ -43,7 +43,7 @@ class HolE(BaseModule):
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         embedding_dim: int = 200,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -51,7 +51,7 @@ class HolE(BaseModule):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            criterion=criterion,
+            loss=loss,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,

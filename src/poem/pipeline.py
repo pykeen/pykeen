@@ -340,8 +340,8 @@ def pipeline(  # noqa: C901
     model_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer: Union[None, str, Type[Optimizer]] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
-    criterion: Union[None, str, Type[Loss]] = None,
-    criterion_kwargs: Optional[Mapping[str, Any]] = None,
+    loss: Union[None, str, Type[Loss]] = None,
+    loss_kwargs: Optional[Mapping[str, Any]] = None,
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
     data_set: Union[None, str, DataSet] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
@@ -434,10 +434,10 @@ def pipeline(  # noqa: C901
             **(regularizer_kwargs or {}),
         )
 
-    if criterion is not None:
-        criterion_cls = get_loss_cls(criterion)
-        _criterion = criterion_cls(**(criterion_kwargs or {}))
-        model_kwargs.setdefault('criterion', _criterion)
+    if loss is not None:
+        loss_cls = get_loss_cls(loss)
+        _loss = loss_cls(**(loss_kwargs or {}))
+        model_kwargs.setdefault('loss', _loss)
 
     # Log model parameters
     result_tracker.log_params(model_kwargs, prefix='model')

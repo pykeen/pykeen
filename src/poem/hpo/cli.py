@@ -15,7 +15,7 @@ from .samplers import samplers
 @click.command()
 @click.argument('model')
 @click.option('-d', '--data-set', help="What data set to use", required=True)
-@click.option('-c', '--criterion')
+@click.option('-l', '--loss')
 @click.option('--sampler', help="Which sampler should be used?", type=click.Choice(list(samplers)), default='tpe')
 @click.option('--storage', help="Where to output trials dataframe")
 @click.option('--n-trials', type=int, help="Number of trials to run")
@@ -24,7 +24,7 @@ from .samplers import samplers
 def optimize(
     model: str,
     data_set: str,
-    criterion: Optional[str],
+    loss: Optional[str],
     sampler: Optional[str],
     storage: Optional[str],
     n_trials: Optional[int],
@@ -41,7 +41,7 @@ def optimize(
 
     study = make_study(
         model=model,
-        criterion=criterion,
+        loss=loss,
         data_set=data_set,
         n_trials=n_trials,
         timeout=timeout,

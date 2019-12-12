@@ -58,7 +58,7 @@ class LossTensorTest(unittest.TestCase):
             factory,
             embedding_dim=8,
             preferred_device='cpu',
-            criterion=criterion,
+            loss=criterion,
         )
 
         loop = LCWATrainingLoop(model=model)
@@ -74,7 +74,7 @@ class LossTensorTest(unittest.TestCase):
             factory,
             embedding_dim=8,
             preferred_device='cpu',
-            criterion=criterion,
+            loss=criterion,
         )
 
         loop = LCWATrainingLoop(model=model)

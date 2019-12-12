@@ -23,21 +23,21 @@ class DistMultLiteral(MultimodalBaseModule):
         input_dropout=dict(type=float, low=0, high=1.0),
     )
 
-    criterion_default_kwargs = dict(margin=0.0)
+    loss_default_kwargs = dict(margin=0.0)
 
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
         input_dropout: float = 0.0,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
@@ -134,8 +134,8 @@ class DistMultLiteral(MultimodalBaseModule):
         """Compute the mean ranking loss for the positive and negative scores."""
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
-        assert self.compute_mr_loss, 'The chosen criterion does not allow the calculation of Margin Ranking losses. ' \
+        assert self.compute_mr_loss, 'The chosen loss does not allow the calculation of Margin Ranking losses. ' \
                                      'Please use the compute_label_loss method instead'
         y = torch.ones_like(negative_scores, device=self.device) * -1
-        loss = self.criterion(positive_scores, negative_scores, y)
+        loss = self.loss(positive_scores, negative_scores, y)
         return loss

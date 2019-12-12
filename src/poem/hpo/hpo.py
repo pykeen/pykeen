@@ -42,9 +42,9 @@ def make_study(
     load_if_exists: bool = False,
     model_kwargs: Optional[Mapping[str, Any]] = None,
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
-    criterion: Union[None, str, Type[Loss]] = None,
-    criterion_kwargs: Optional[Mapping[str, Any]] = None,
-    criterion_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    loss: Union[None, str, Type[Loss]] = None,
+    loss_kwargs: Optional[Mapping[str, Any]] = None,
+    loss_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
     pipeline_kwargs: Optional[Mapping[str, Any]] = None,
     n_trials: Optional[int] = None,
@@ -114,7 +114,7 @@ def make_study(
     ...    n_trials=30,
     ... )
 
-    While each model has its own default criteria, specify (explicitly) the criteria with:
+    While each model has its own default loss, specify (explicitly) the loss with:
 
     >>> from poem.hpo import make_study
     >>> study = make_study(
@@ -122,12 +122,12 @@ def make_study(
     ...    model_kwargs_ranges=dict(
     ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
     ...    ),
-    ...    criterion='MarginRankingLoss',
+    ...    loss='MarginRankingLoss',
     ...    data_set='nations',
     ...    n_trials=30,
     ... )
 
-    Each criterion has its own default hyperparameter optimization ranges, but new ones can
+    Each loss has its own default hyperparameter optimization ranges, but new ones can
     be set with:
 
     >>> from poem.hpo import make_study
@@ -136,8 +136,8 @@ def make_study(
     ...    model_kwargs_ranges=dict(
     ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
     ...    ),
-    ...    criterion='MarginRankingLoss',
-    ...    criterion_kwargs_ranges=dict(
+    ...    loss='MarginRankingLoss',
+    ...    loss_kwargs_ranges=dict(
     ...        margin=dict(type=float, low=1.0, high=2.0),
     ...    ),
     ...    data_set='nations',
@@ -206,8 +206,8 @@ def make_study(
     model: Type[BaseModule] = get_model_cls(model)
     study.set_user_attr('model', model.__name__)
 
-    criterion: Type[Loss] = model.criterion_default if criterion is None else get_loss_cls(criterion)
-    study.set_user_attr('criterion', criterion.__name__)
+    loss: Type[Loss] = model.loss_default if loss is None else get_loss_cls(loss)
+    study.set_user_attr('loss', loss.__name__)
 
     training_loop: Type[TrainingLoop] = get_training_loop_cls(training_loop)
     study.set_user_attr('assumption', training_loop.__name__[:3])
@@ -218,9 +218,9 @@ def make_study(
         model=model,
         model_kwargs=model_kwargs,
         model_kwargs_ranges=model_kwargs_ranges,
-        criterion=criterion,
-        criterion_kwargs=criterion_kwargs,
-        criterion_kwargs_ranges=criterion_kwargs_ranges,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        loss_kwargs_ranges=loss_kwargs_ranges,
         data_set=data_set,
         training_loop=training_loop,
         metric=metric,
@@ -240,14 +240,14 @@ def make_study(
 
 def make_objective(
     model: Type[BaseModule],
-    criterion: Type[Loss],
+    loss: Type[Loss],
     training_loop: Type[TrainingLoop],
     data_set: Union[None, str, DataSet],
     metric: str,
     model_kwargs: Optional[Mapping[str, Any]] = None,
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
-    criterion_kwargs: Optional[Mapping[str, Any]] = None,
-    criterion_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    loss_kwargs: Optional[Mapping[str, Any]] = None,
+    loss_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     pipeline_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Objective:  # noqa: D202
     """Make an objective function for the given model."""
@@ -264,18 +264,18 @@ def make_objective(
             kwargs=model_kwargs,
         )
 
-        if criterion not in losses_hpo_defaults:
-            logging.warning('criterion has no default ranges')
-            _criterion_kwargs_ranges = {}
+        if loss not in losses_hpo_defaults:
+            logging.warning('loss has no default ranges')
+            _loss_kwargs_ranges = {}
         else:
-            _criterion_kwargs_ranges = losses_hpo_defaults[criterion]
-        if criterion_kwargs_ranges is not None:
-            _criterion_kwargs_ranges.update(criterion_kwargs_ranges)
+            _loss_kwargs_ranges = losses_hpo_defaults[loss]
+        if loss_kwargs_ranges is not None:
+            _loss_kwargs_ranges.update(loss_kwargs_ranges)
 
-        _criterion_kwargs = suggest_kwargs(
+        _loss_kwargs = suggest_kwargs(
             trial=trial,
-            kwargs_ranges=_criterion_kwargs_ranges,
-            kwargs=criterion_kwargs,
+            kwargs_ranges=_loss_kwargs_ranges,
+            kwargs=loss_kwargs,
         )
 
         if training_loop is OWATrainingLoop:
@@ -286,8 +286,8 @@ def make_objective(
         result = pipeline(
             model=model,
             model_kwargs=_model_kwargs,
-            criterion=criterion,
-            criterion_kwargs=_criterion_kwargs,
+            loss=loss,
+            loss_kwargs=_loss_kwargs,
             data_set=data_set,
             training_loop=training_loop,
             **(pipeline_kwargs or {}),

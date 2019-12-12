@@ -14,8 +14,8 @@
     "optimizer_kwargs": {
       "lr": 0.001
     },
-    "criterion": "MarginRankingLoss",
-    "criterion_kwargs": {
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
       "margin": 4
     },
     "training_loop": "OWA",

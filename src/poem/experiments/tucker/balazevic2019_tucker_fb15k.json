@@ -18,7 +18,7 @@
       "lr": 0.003,
       "weight_decay": 0.99
     },
-    "criterion": "BCEAfterSigmoid",
+    "loss": "BCEAfterSigmoid",
     "training_loop": "LCWA",
     "training_kwargs": {
       "num_epochs": 500,

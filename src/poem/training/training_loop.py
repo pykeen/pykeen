@@ -216,7 +216,7 @@ class TrainingLoop(ABC):
                         raise NonFiniteLossError
 
                     # correction for loss reduction
-                    if self.model.criterion.reduction == 'mean':
+                    if self.model.loss.reduction == 'mean':
                         this_sub_batch_size = stop - start
                         loss *= (this_sub_batch_size / current_batch_size)
 

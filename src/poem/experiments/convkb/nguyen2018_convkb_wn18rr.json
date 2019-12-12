@@ -14,7 +14,7 @@
     "optimizer_kwargs": {
       "lr": 0.0001
     },
-    "criterion": "SoftplusLoss",
+    "loss": "SoftplusLoss",
     "training_loop": "OWA",
     "negative_sampler": "bernoulli",
     "negative_sampler_kwargs": {
