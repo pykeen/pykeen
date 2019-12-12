@@ -9,10 +9,10 @@ import torch.autograd
 from torch import nn
 
 from ..base import BaseModule
-from ...losses import Loss
+from ...losses import Loss, SoftplusLoss
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import slice_triples
+from ...utils import get_embedding_in_canonical_shape, slice_triples
 
 __all__ = [
     'SimplE',
@@ -33,6 +33,9 @@ class SimplE(BaseModule):
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
+
+    criterion_default = SoftplusLoss
+    criterion_default_kwargs = {}
 
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
@@ -93,18 +96,22 @@ class SimplE(BaseModule):
         self.inverse_relation_embeddings = None
         return self
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Split triple in head, relation, tail
-        h_ind, r_ind, t_ind = slice_triples(hrt_batch)
+    @staticmethod
+    def interaction_function(
+        hh: torch.FloatTensor,
+        ht: torch.FloatTensor,
+        r: torch.FloatTensor,
+        r_inv: torch.FloatTensor,
+        th: torch.FloatTensor,
+        tt: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function of SimplE for given embeddings.
 
-        # Lookup embeddings
-        hh = self.entity_embeddings(h_ind)
-        ht = self.entity_embeddings(t_ind)
-        th = self.tail_entity_embeddings(h_ind)
-        tt = self.tail_entity_embeddings(t_ind)
-        r = self.relation_embeddings(r_ind)
-        r_inv = self.inverse_relation_embeddings(r_ind)
+        The embeddings have to be in a broadcastable shape.
 
+        :return:
+            The scores.
+        """
         # Compute CP scores for triple, and inverse triple
         score = torch.sum(hh * r * tt, dim=-1)
         inverse_score = torch.sum(ht * r_inv * th, dim=-1)
@@ -115,58 +122,31 @@ class SimplE(BaseModule):
         # Note: In the code in their repository, the score is clamped to [-20, 20].
         #       That is not mentioned in the paper, so it is omitted here.
 
+        return scores
+
+    def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
+        # Lookup embeddings
+        hh = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        ht = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        r_inv = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
+        th = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
+        tt = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
+
+        # compute scores
+        scores = self.interaction_function(hh=hh, ht=ht, th=th, tt=tt, r=r, r_inv=r_inv)
+
         # Regularization
         self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
 
         return scores
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_ind, r_ind, t_ind = slice_triples(hrt_batch)
+        return self._score(h_ind=h_ind, r_ind=r_ind, t_ind=t_ind).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_ind = hr_batch[:, 0]
-        r_ind = hr_batch[:, 1]
-
-        # Lookup embeddings
-        hh = self.entity_embeddings(h_ind)
-        th = self.tail_entity_embeddings(h_ind)
-        r = self.relation_embeddings(r_ind)
-        r_inv = self.inverse_relation_embeddings(r_ind)
-        ht = self.entity_embeddings.weight
-        tt = self.tail_entity_embeddings.weight
-
-        # Compute CP scores for triple, and inverse triple
-        score = torch.sum(hh[:, None, :] * r[:, None, :] * tt[None, :, :], dim=-1)
-        inverse_score = torch.sum(ht[None, :, :] * r_inv[:, None, :] * th[:, None, :], dim=-1)
-
-        # Final score is average
-        scores = 0.5 * (score + inverse_score)
-
-        # Regularization
-        self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
-
-        return scores
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        r_ind = rt_batch[:, 0]
-        t_ind = rt_batch[:, 1]
-
-        # Lookup embeddings
-        hh = self.entity_embeddings.weight
-        ht = self.entity_embeddings(t_ind)
-        th = self.tail_entity_embeddings.weight
-        tt = self.tail_entity_embeddings(t_ind)
-        r = self.relation_embeddings(r_ind)
-        r_inv = self.inverse_relation_embeddings(r_ind)
-
-        # Compute CP scores for triple, and inverse triple
-        score = torch.sum(hh[None, :, :] * r[:, None, :] * tt[:, None, :], dim=-1)
-        inverse_score = torch.sum(ht[:, None, :] * r_inv[:, None, :] * th[None, :, :], dim=-1)
-
-        # Final score is average
-        scores = 0.5 * (score + inverse_score)
-
-        # Note: In the code in their repository, the score is clamped to [-20, 20].
-        #       That is not mentioned in the paper, so it is omitted here.
-
-        # Regularization
-        self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
-
-        return scores
+        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
