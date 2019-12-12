@@ -113,6 +113,11 @@ class DataSet:
         return self._validation
 
     @property
+    def factories(self) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
+        """Return all three factories."""
+        return self.training, self.testing, self.validation
+
+    @property
     def entity_to_id(self):  # noqa: D401
         """Mapping of entity labels to IDs."""
         return self.training.entity_to_id
@@ -143,6 +148,8 @@ class RemoteDataSet(DataSet):
         relative_testing_path: str,
         relative_validation_path: str,
         cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
     ):
         """Initialize dataset.
 
@@ -166,6 +173,8 @@ class RemoteDataSet(DataSet):
             training_path=training_path,
             testing_path=testing_path,
             validation_path=validation_path,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
         )
 
     def _get_paths(self) -> Tuple[str, str, str]:  # noqa: D401

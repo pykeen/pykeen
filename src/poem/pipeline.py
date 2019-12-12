@@ -174,7 +174,7 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .datasets import DataSet, get_data_set
+from .datasets import DataSet, get_dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, get_loss_cls
 from .models import get_model_cls
@@ -335,8 +335,8 @@ def pipeline_from_path(
 
 
 def pipeline(  # noqa: C901
-    model: Union[str, Type[BaseModule]],
     *,
+    model: Union[str, Type[BaseModule]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer: Union[None, str, Type[Optimizer]] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -347,6 +347,7 @@ def pipeline(  # noqa: C901
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
+    triples_factory_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
@@ -412,11 +413,12 @@ def pipeline(  # noqa: C901
     device = resolve_device(device)
 
     result_tracker.log_params({'dataset': data_set})
-    training_triples_factory, testing_triples_factory, validation_triples_factory = get_data_set(
-        data_set=data_set,
+    training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
+        dataset=data_set,
         training_triples_factory=training_triples_factory,
         testing_triples_factory=testing_triples_factory,
         validation_triples_factory=validation_triples_factory,
+        triples_factory_kwargs=triples_factory_kwargs,
     )
 
     if model_kwargs is None:
