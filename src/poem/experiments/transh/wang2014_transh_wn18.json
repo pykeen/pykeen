@@ -13,8 +13,7 @@
     "regularizer": "TransH",
     "regularizer_kwargs": {
       "weight": 0.25,
-      "epsilon": 0.00001,
-      "normalize": true
+      "epsilon": 0.00001
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
