@@ -10,8 +10,8 @@
       "relation_dim": 50
     },
     "optimizer": "Adadelta",
-    "criterion": "MarginRankingLoss",
-    "criterion_kwargs": {
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
       "margin": 1
     },
     "training_loop": "OWA",

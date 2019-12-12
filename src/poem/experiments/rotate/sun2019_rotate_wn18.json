@@ -10,8 +10,8 @@
       "embedding_dim": 500
     },
     "optimizer": "Adam",
-    "criterion": "NegativeSamplingSelfAdversarialLoss",
-    "criterion_kwargs": {
+    "loss": "NegativeSamplingSelfAdversarialLoss",
+    "loss_kwargs": {
       "adversarial_temperature": 0.5,
       "margin": 12
     },
