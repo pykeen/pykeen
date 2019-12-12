@@ -1,14 +1,20 @@
 {
   "metadata": {
-    "title": "Learn FB15k-237 Data Set with ConvKB as described by Nguyen et al., 2018"
+    "title": "Learn FB15k-237 Data Set with ConvKB as described by Nguyen et al., 2018",
+    "comments": "regularization weight is set to 0.0005, because in the paper the regularization term is multiplied with (regularization weight)/2"
   },
   "pipeline": {
     "data_set": "fb15k237",
     "model": "ConvKB",
     "model_kwargs": {
       "embedding_dim": 100,
-      "num_filters": 50,
-      "regularization_weight": 0.001
+      "num_filters": 50
+    },
+    "regularizer": "PowerSum",
+    "regularizer_kwargs": {
+      "weight":  0.0005,
+      "p": 2.0,
+      "normalize": false
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
