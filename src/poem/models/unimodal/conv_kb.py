@@ -51,7 +51,7 @@ class ConvKB(BaseModule):
         relation_embeddings: Optional[nn.Embedding] = None,
         hidden_dropout_rate: float = 0.5,
         embedding_dim: int = 200,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
@@ -63,7 +63,7 @@ class ConvKB(BaseModule):
         """
         super().__init__(
             triples_factory=triples_factory,
-            criterion=criterion,
+            loss=loss,
             embedding_dim=embedding_dim,
             preferred_device=preferred_device,
             random_seed=random_seed,

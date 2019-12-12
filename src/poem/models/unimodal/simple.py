@@ -34,8 +34,8 @@ class SimplE(BaseModule):
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
 
-    criterion_default = SoftplusLoss
-    criterion_default_kwargs = {}
+    loss_default = SoftplusLoss
+    loss_default_kwargs = {}
 
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
@@ -56,7 +56,7 @@ class SimplE(BaseModule):
         tail_entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         inverse_relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -65,7 +65,7 @@ class SimplE(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,

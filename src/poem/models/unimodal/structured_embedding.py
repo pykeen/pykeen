@@ -39,7 +39,7 @@ class StructuredEmbedding(BaseModule):
         left_relation_embeddings: Optional[nn.Embedding] = None,
         right_relation_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -47,7 +47,7 @@ class StructuredEmbedding(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,

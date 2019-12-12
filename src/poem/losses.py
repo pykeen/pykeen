@@ -123,9 +123,9 @@ _LOSSES: Set[Type[Loss]] = {
 }
 # To add *all* losses implemented in Torch, uncomment:
 # _LOSSES.update({
-#     criterion
-#     for criterion in Loss.__subclasses__() + WeightedLoss.__subclasses__()
-#     if not criterion.__name__.startswith('_')
+#     loss
+#     for loss in Loss.__subclasses__() + WeightedLoss.__subclasses__()
+#     if not loss.__name__.startswith('_')
 # })
 
 
@@ -139,10 +139,10 @@ losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
         margin=dict(type=int, low=0, high=3, q=1),
     ),
 }
-# Add empty dictionaries as defaults for all remaining criteria
-for criterion in _LOSSES:
-    if criterion not in losses_hpo_defaults:
-        losses_hpo_defaults[criterion] = {}
+# Add empty dictionaries as defaults for all remaining losses
+for cls in _LOSSES:
+    if cls not in losses_hpo_defaults:
+        losses_hpo_defaults[cls] = {}
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:

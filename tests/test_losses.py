@@ -51,10 +51,10 @@ class TestCustomLossFunctions(unittest.TestCase):
         pipeline_results = pipeline(
             model='RotatE',
             data_set='nations',
-            criterion=criterion_cls,
-            criterion_kwargs=criterion_kwargs,
+            loss=criterion_cls,
+            loss_kwargs=criterion_kwargs,
         )
         self.assertIsInstance(pipeline_results, PipelineResult)
-        self.assertIsInstance(pipeline_results.model.criterion, criterion_cls)
-        self.assertEqual(pipeline_results.model.criterion.margin, 1.)
-        self.assertEqual(pipeline_results.model.criterion.adversarial_temperature, 1.)
+        self.assertIsInstance(pipeline_results.model.loss, criterion_cls)
+        self.assertEqual(pipeline_results.model.loss.margin, 1.)
+        self.assertEqual(pipeline_results.model.loss.adversarial_temperature, 1.)

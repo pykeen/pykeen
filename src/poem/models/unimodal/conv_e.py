@@ -74,8 +74,8 @@ class ConvE(BaseModule):
         output_dropout=dict(type=float, low=0.0, high=1.0),
         feature_map_dropout=dict(type=float, low=0.0, high=1.0),
     )
-    criterion_default: Type[Loss] = BCEAfterSigmoidLoss
-    criterion_default_kwargs = {}
+    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default_kwargs = {}
 
     def __init__(
         self,
@@ -93,7 +93,7 @@ class ConvE(BaseModule):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -111,7 +111,7 @@ class ConvE(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
@@ -245,7 +245,7 @@ class ConvE(BaseModule):
         for each head and relation. Accordingly the relevant bias for each tail item and triple has to be looked up.
         """
         x += self.bias_term[hrt_batch[:, 2, None]]
-        # The application of the sigmoid during training is automatically handled by the default criterion.
+        # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
@@ -271,7 +271,7 @@ class ConvE(BaseModule):
 
         x = x @ t
         x += self.bias_term.expand_as(x)
-        # The application of the sigmoid during training is automatically handled by the default criterion.
+        # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
@@ -316,6 +316,6 @@ class ConvE(BaseModule):
         and only then can be added correctly.
         """
         x += self.bias_term[rt_batch[:, 1, None]]
-        # The application of the sigmoid during training is automatically handled by the default criterion.
+        # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x

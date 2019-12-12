@@ -42,14 +42,14 @@ class RotatE(BaseModule):
         embedding_dim: int = 200,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            criterion=criterion,
+            loss=loss,
             embedding_dim=2 * embedding_dim,  # for complex numbers
             entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,

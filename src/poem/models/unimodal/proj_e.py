@@ -32,8 +32,8 @@ class ProjE(BaseModule):
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
 
-    criterion_default = nn.BCEWithLogitsLoss
-    criterion_default_kwargs = dict(reduction='mean')
+    loss_default = nn.BCEWithLogitsLoss
+    loss_default_kwargs = dict(reduction='mean')
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class ProjE(BaseModule):
         embedding_dim: int = 50,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        criterion: Optional[Loss] = None,
+        loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
@@ -54,7 +54,7 @@ class ProjE(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
-            criterion=criterion,
+            loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
