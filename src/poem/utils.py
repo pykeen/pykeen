@@ -266,3 +266,32 @@ def clamp_norm(
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+
+
+def all_in_bounds(
+    x: torch.Tensor,
+    low: Optional[float] = None,
+    high: Optional[float] = None,
+    a_tol: float = 0.,
+) -> bool:
+    """Check if tensor values respect lower and upper bound.
+
+    :param x:
+        The tensor.
+    :param low:
+        The lower bound.
+    :param high:
+        The upper bound.
+    :param a_tol:
+        Absolute tolerance.
+
+    """
+    # lower bound
+    if low is not None and (x < low - a_tol).any():
+        return False
+
+    # upper bound
+    if high is not None and (x > high + a_tol).any():
+        return False
+
+    return True

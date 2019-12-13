@@ -106,7 +106,9 @@ class RotatE(BaseModule):
         super().post_parameter_update()
 
         # Normalize relation embeddings
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
+        rel = self.relation_embeddings.weight.data.view(self.num_relations, self.real_embedding_dim, 2)
+        rel = functional.normalize(rel, p=2, dim=-1)
+        self.relation_embeddings.weight.data = rel.view(self.num_relations, self.embedding_dim)
 
     @staticmethod
     def interaction_function(
@@ -158,7 +160,7 @@ class RotatE(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, t)
+        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
 
         return scores
 
@@ -174,7 +176,7 @@ class RotatE(BaseModule):
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, t)
+        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
 
         return scores
 
@@ -197,6 +199,6 @@ class RotatE(BaseModule):
         scores = self.interaction_function(h=t, r=r_inv, t=h)
 
         # Embedding Regularization
-        self.regularize_if_necessary(h, t)
+        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
 
         return scores

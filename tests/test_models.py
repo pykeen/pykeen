@@ -10,6 +10,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from click.testing import CliRunner, Result
+from torch import optim
 from torch.optim import SGD
 from torch.optim.adagrad import Adagrad
 
@@ -26,7 +27,7 @@ from poem.models.multimodal import MultimodalBaseModule
 from poem.models.unimodal.trans_d import _project_entity
 from poem.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
-from poem.utils import clamp_norm
+from poem.utils import all_in_bounds, clamp_norm
 
 SKIP_MODULES = {
     'BaseModule',
@@ -37,6 +38,8 @@ SKIP_MODULES = {
     'get_model_cls',
     'SimpleInteractionModel',
 }
+
+_EPSILON = 1.0e-07
 
 
 class _ModelTestCase:
@@ -281,7 +284,7 @@ Traceback
         else:
             self.assertIsInstance(d, dict)
 
-    def test_post_parameter_update(self):
+    def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
         # set regularizer term
         self.model.regularizer.regularization_term = None
@@ -291,6 +294,25 @@ Traceback
 
         # assert that the regularization term has been reset
         assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float, device=self.model.device)
+
+    def test_post_parameter_update(self):
+        """Test whether post_parameter_update correctly enforces model constraints."""
+        # do one optimization step
+        opt = optim.SGD(params=self.model.parameters(), lr=1.)
+        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
+        scores = self.model.score_hrt(hrt_batch=batch)
+        fake_loss = scores.mean()
+        fake_loss.backward()
+        opt.step()
+
+        # call post_parameter_update
+        self.model.post_parameter_update()
+
+        # check model constraints
+        self._check_constraints()
+
+    def _check_constraints(self):
+        """Check model constraints."""
 
     def test_score_h_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
@@ -398,6 +420,14 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.DistMult
 
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Entity embeddings have to have unit L2 norm.
+        """
+        entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
 
 class TestERMLP(_ModelTestCase, unittest.TestCase):
     """Test the ERMLP model."""
@@ -422,20 +452,42 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.HolE
 
+    def _check_constraints(self):
+        """Check model constraints.
 
-class TestCaseKG2EWithKL(_ModelTestCase, unittest.TestCase):
-    """Test the KG2E model with KL similarity."""
+        Entity embeddings have to have at most unit L2 norm.
+        """
+        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1.)
+
+
+class _TestKG2E(_ModelTestCase):
+    """General tests for the KG2E model."""
 
     model_cls = poem.models.KG2E
+
+    def _check_constraints(self):
+        """Check model constraints.
+
+        * Entity and relation embeddings have to have at most unit L2 norm.
+        * Covariances have to have values between c_min and c_max
+        """
+        for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
+            assert all_in_bounds(embedding.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        for cov in (self.model.entity_covariances, self.model.relation_covariances):
+            assert all_in_bounds(cov.weight, low=self.model.c_min, high=self.model.c_max)
+
+
+class TestKG2EWithKL(_TestKG2E, unittest.TestCase):
+    """Test the KG2E model with KL similarity."""
+
     model_kwargs = {
         'dist_similarity': 'KL',
     }
 
 
-class TestCaseKG2EWithEL(_ModelTestCase, unittest.TestCase):
+class TestKG2EWithEL(_TestKG2E, unittest.TestCase):
     """Test the KG2E model with EL similarity."""
 
-    model_cls = poem.models.KG2E
     model_kwargs = {
         'dist_similarity': 'EL',
     }
@@ -462,18 +514,31 @@ class TestRESCAL(_ModelTestCase, unittest.TestCase):
     model_cls = poem.models.RESCAL
 
 
-class TestRGCN(_ModelTestCase, unittest.TestCase):
+class _TestRGCN(_ModelTestCase):
     """Test the R-GCN model."""
 
     model_cls = poem.models.RGCN
     sampler = 'schlichtkrull'
 
+    def _check_constraints(self):
+        """Check model constraints.
 
-class TestRGCNBlock(_ModelTestCase, unittest.TestCase):
+        Enriched embeddings have to be reset.
+        """
+        assert self.model.enriched_embeddings is None
+
+
+class TestRGCNBasis(_TestRGCN, unittest.TestCase):
+    """Test the R-GCN model."""
+
+    model_kwargs = {
+        'decomposition': 'basis',
+    }
+
+
+class TestRGCNBlock(_TestRGCN, unittest.TestCase):
     """Test the R-GCN model with block decomposition."""
 
-    model_cls = poem.models.RGCN
-    sampler = 'schlichtkrull'
     embedding_dim = 6
     model_kwargs = {
         'decomposition': 'block',
@@ -487,6 +552,14 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.RotatE
 
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
+        """
+        relation_abs = self.model.relation_embeddings.weight.view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
+        assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
+
 
 class TestSimplE(_ModelTestCase, unittest.TestCase):
     """Test the SimplE model."""
@@ -499,6 +572,14 @@ class TestSE(_ModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.StructuredEmbedding
 
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Entity embeddings have to have unit L2 norm.
+        """
+        norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        assert torch.allclose(norms, torch.ones_like(norms))
+
 
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransD model."""
@@ -507,6 +588,14 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
     model_kwargs = {
         'relation_dim': 4,
     }
+
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Entity and relation embeddings have to have at most unit L2 norm.
+        """
+        for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
+            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
     def test_score_hrt(self):
         """Test interaction function of TransD."""
@@ -636,11 +725,27 @@ class TestTransE(_DistanceModelTestCase, unittest.TestCase):
 
     model_cls = poem.models.TransE
 
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Entity embeddings have to have unit L2 norm.
+        """
+        entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
 
 class TestTransH(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransH model."""
 
     model_cls = poem.models.TransH
+
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Entity embeddings have to have unit L2 norm.
+        """
+        entity_norms = self.model.normal_vector_embeddings.weight.norm(p=2, dim=-1)
+        assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
 class TestTransR(_DistanceModelTestCase, unittest.TestCase):
@@ -680,6 +785,14 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         first_score = scores[0].item()
         # second_score = scores[1].item()
         self.assertAlmostEqual(first_score, -32, delta=0.01)
+
+    def _check_constraints(self):
+        """Check model constraints.
+
+        Entity and relation embeddings have to have at most unit L2 norm.
+        """
+        for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
+            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1.)
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
