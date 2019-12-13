@@ -4,7 +4,7 @@
     "comments": "For each positive triple, DistMult creates two negatives where head and tail are corrupted"
   },
   "pipeline": {
-    "data_set": "fb15k",
+    "dataset": "fb15k",
     "model": "DistMult",
     "model_kwargs": {
       "embedding_dim": 100

@@ -4,7 +4,7 @@
     "comments": " We use same setting as for WN18 (based on https://github.com/mnick/holographic-embeddings/blob/master/run_hole_wn18.sh, however it is not sure whether this is the correct setting) since we couln't find the setting for FB15k."
   },
   "pipeline": {
-    "data_set": "fb15k",
+    "dataset": "fb15k",
     "model": "HolE",
     "model_kwargs": {
       "embedding_dim": 150

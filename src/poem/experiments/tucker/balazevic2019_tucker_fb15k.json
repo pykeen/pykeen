@@ -4,7 +4,7 @@
     "comments": "No label smoothing has been used for FB15k. Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs. In the code 500 was the default value for all datasets, that's why we assume that this is the number of epochs."
   },
   "pipeline": {
-    "data_set": "fb15k",
+    "dataset": "fb15k",
     "model": "TuckER",
     "model_kwargs": {
       "embedding_dim": 200,

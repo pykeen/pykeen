@@ -9,7 +9,7 @@ TransE model on the Nations dataset.
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ... )
 
 The results are returned in a :class:`poem.pipeline.PipelineResult` instance, which has
@@ -23,7 +23,7 @@ could be used as in:
 >>> from poem.models import TransE
 >>> result = pipeline(
 ...     model=TransE,
-...     data_set='Nations',
+...     dataset='Nations',
 ... )
 
 In this example, the data set was given as a string. A list of available data sets can be found in
@@ -35,7 +35,7 @@ used as in:
 >>> from poem.datasets import nations
 >>> result = pipeline(
 ...     model=TransE,
-...     data_set=nations,
+...     dataset=nations,
 ... )
 
 In each of the previous three examples, the training assumption, optimizer, and evaluation scheme
@@ -45,7 +45,7 @@ given as a string:
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     training_loop='OWA',
 ... )
 
@@ -55,7 +55,7 @@ is necessary, but it's worth reading up on the differences between these assumpt
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     training_loop='LCWA',
 ... )
 
@@ -65,7 +65,7 @@ can be given as in:
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     training_loop='OWA',
 ...     negative_sampler='basic',
 ... )
@@ -78,7 +78,7 @@ of the negative sampler could be used as in:
 >>> from poem.sampling import BasicNegativeSampler
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     training_loop='OWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
@@ -94,7 +94,7 @@ rank-based evaluation is used. It can be given explictly as in:
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     evaluator='RankBasedEvaluator',
 ... )
 
@@ -106,7 +106,7 @@ of the evaluator could be used as in:
 >>> from poem.evaluation import RankBasedEvaluator
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     evaluator=RankBasedEvaluator,
 ... )
 
@@ -116,7 +116,7 @@ argument as in:
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     early_stopping=True,
 ... )
 
@@ -129,7 +129,7 @@ the other parameters used by :func:`poem.pipeline.pipeline`.
 >>> from poem.pipeline import pipeline
 >>> pipeline_result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ...     model_kwargs=dict(
 ...         scoring_fct_norm=2,
 ...     ),
@@ -343,7 +343,7 @@ def pipeline(  # noqa: C901
     loss: Union[None, str, Type[Loss]] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
-    data_set: Union[None, str, DataSet] = None,
+    dataset: Union[None, str, DataSet] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
@@ -367,7 +367,7 @@ def pipeline(  # noqa: C901
     :param model: The name of the model or the model class
     :param optimizer: The name of the optimizer or the optimizer class.
      Defaults to :class:`torch.optim.Adagrad`.
-    :param data_set: The name of the dataset (a key from :data:`poem.datasets.datasets`)
+    :param dataset: The name of the dataset (a key from :data:`poem.datasets.datasets`)
      or the :class:`poem.datasets.DataSet` instance. Alternatively, the ``training_triples_factory`` and
      ``testing_triples_factory`` can be specified.
     :param training_triples_factory: A triples factory with training instances if a
@@ -412,9 +412,9 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params({'dataset': data_set})
+    result_tracker.log_params({'dataset': dataset})
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
-        dataset=data_set,
+        dataset=dataset,
         training_triples_factory=training_triples_factory,
         testing_triples_factory=testing_triples_factory,
         validation_triples_factory=validation_triples_factory,

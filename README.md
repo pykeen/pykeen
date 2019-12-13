@@ -60,7 +60,7 @@ and evaluates with rank-based evaluation.
 from poem.pipeline import pipeline
 result = pipeline(
     model='TransE',
-    data_set='nations',
+    dataset='nations',
 )
 ```
 
@@ -106,14 +106,15 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | TuckER              | `poem.models.TuckER`              | Balazevic *et al.*, 2019     |
 | UnstructuredModel   | `poem.models.UnstructuredModel`   | Bordes *et al.*, 2014        |
 
-### Regularizers (4)
+### Regularizers (5)
 
 | Name     | Reference                               | Description                                              |
 |----------|-----------------------------------------|----------------------------------------------------------|
-| combined | `poem.regularizers.CombinedRegularizer` | A linear combination of regularizers.                    |
+| combined | `poem.regularizers.CombinedRegularizer` | A convex combination of regularizers.                    |
 | lp       | `poem.regularizers.LpRegularizer`       | A simple L_p norm based regularizer.                     |
 | no       | `poem.regularizers.NoRegularizer`       | A regularizer which does not perform any regularization. |
 | powersum | `poem.regularizers.PowerSumRegularizer` | A simple x^p based regularizer.                          |
+| transh   | `poem.regularizers.TransHRegularizer`   | Regularizer for TransH's soft constraints.               |
 
 ### Losses (6)
 
@@ -126,18 +127,18 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | negativesamplingselfadversarial | `poem.losses.NegativeSamplingSelfAdversarialLoss` | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
 | softplus                        | `poem.losses.SoftplusLoss`                        | A loss function for the softplus.                                                                                                            |
 
-### Data Sets (8)
+### Datasets (8)
 
 | Name     | Reference                | Description                                                                                        |
 |----------|--------------------------|----------------------------------------------------------------------------------------------------|
-| fb15k    | `poem.datasets.fb15k`    | The FB15k data set.                                                                                |
-| fb15k237 | `poem.datasets.fb15k237` | The FB15k-237 data set.                                                                            |
-| kinship  | `poem.datasets.kinship`  | The Kinship data set.                                                                              |
-| nations  | `poem.datasets.nations`  | The Nations data set.                                                                              |
-| umls     | `poem.datasets.umls`     | The UMLS data set.                                                                                 |
-| wn18     | `poem.datasets.wn18`     | The WN18 data set.                                                                                 |
-| wn18rr   | `poem.datasets.wn18rr`   | The WN18-RR data set.                                                                              |
-| yago310  | `poem.datasets.yago310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| fb15k    | `poem.datasets.FB15k`    | The FB15k data set.                                                                                |
+| fb15k237 | `poem.datasets.FB15k237` | The FB15k-237 data set.                                                                            |
+| kinship  | `poem.datasets.Kinship`  | The Kinship data set.                                                                              |
+| nations  | `poem.datasets.Nations`  | The Nations data set.                                                                              |
+| umls     | `poem.datasets.Umls`     | The UMLS data set.                                                                                 |
+| wn18     | `poem.datasets.WN18`     | The WN18 data set.                                                                                 |
+| wn18rr   | `poem.datasets.WN18RR`   | The WN18-RR data set.                                                                              |
+| yago310  | `poem.datasets.YAGO310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Training Modes (2)
 
@@ -168,9 +169,9 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | Metric               | Description                                                                                                        | Evaluator   | Reference                                |
 |----------------------|--------------------------------------------------------------------------------------------------------------------|-------------|------------------------------------------|
 | Mean Rank            | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Mean Reciprocal Rank | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Mean Reciprocal Rank | The mean over all reciprocal ranks: mean_i (1/r_i). Lower is better.                                               | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 | Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 
 ## Reproduction
 

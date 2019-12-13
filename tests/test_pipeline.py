@@ -17,7 +17,7 @@ class TestPipeline(unittest.TestCase):
         """Test the pipeline on TransE and nations."""
         pipeline_result = pipeline(
             model='TransE',
-            data_set='nations',
+            dataset='nations',
         )
         self.assertIsInstance(pipeline_result, PipelineResult)
         self.assertIsInstance(pipeline_result.model, BaseModule)
@@ -27,7 +27,7 @@ class TestPipeline(unittest.TestCase):
         """Test a pipeline that uses a regularizer."""
         pipeline_result = pipeline(
             model=TransE,
-            data_set='nations',
+            dataset='nations',
             regularizer='powersum',
         )
         self.assertIsInstance(pipeline_result, PipelineResult)

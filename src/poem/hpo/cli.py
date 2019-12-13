@@ -23,7 +23,7 @@ from .samplers import samplers
 @click.option('-o', '--output', type=click.File('w'), help="Where to output trials dataframe")
 def optimize(
     model: str,
-    data_set: str,
+    dataset: str,
     loss: Optional[str],
     sampler: Optional[str],
     storage: Optional[str],
@@ -41,8 +41,8 @@ def optimize(
 
     study = make_study(
         model=model,
+        dataset=dataset,
         loss=loss,
-        data_set=data_set,
         n_trials=n_trials,
         timeout=timeout,
         storage=storage,

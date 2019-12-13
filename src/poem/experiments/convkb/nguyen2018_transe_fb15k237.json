@@ -4,7 +4,7 @@
     "comments": "TransE was used to initialize the emebddigns. Could not find batch size and number of epochs."
   },
   "pipeline": {
-    "data_set": "fb15k237",
+    "dataset": "fb15k237",
     "model": "TransE",
     "model_kwargs": {
       "embedding_dim": 100,

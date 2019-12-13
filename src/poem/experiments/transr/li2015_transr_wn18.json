@@ -3,7 +3,7 @@
     "title": "Learn WN18 Data Set with TransR as described by Li et al., 2015"
   },
   "pipeline": {
-    "data_set": "wn18",
+    "dataset": "wn18",
     "model": "TransR",
     "model_kwargs": {
       "embedding_dim": 50,

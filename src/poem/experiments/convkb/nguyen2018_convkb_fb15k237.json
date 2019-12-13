@@ -4,7 +4,7 @@
     "comments": "regularization weight is set to 0.0005, because in the paper the regularization term is multiplied with (regularization weight)/2"
   },
   "pipeline": {
-    "data_set": "fb15k237",
+    "dataset": "fb15k237",
     "model": "ConvKB",
     "model_kwargs": {
       "embedding_dim": 100,

@@ -31,7 +31,7 @@ Objective = Callable[[Trial], float]
 
 def make_study(
     model: Union[str, Type[BaseModule]],
-    data_set: Union[None, str, DataSet],
+    dataset: Union[None, str, DataSet],
     *,
     storage: Union[None, str, BaseStorage] = None,
     sampler: Union[None, str, Type[BaseSampler]] = None,
@@ -55,7 +55,7 @@ def make_study(
     """Train a model on the given dataset.
 
     :param model: Either an implemented model from :mod:`poem.models` or a list of them.
-    :param data_set: A data set to be passed to :func:`poem.pipeline.pipeline`
+    :param dataset: A data set to be passed to :func:`poem.pipeline.pipeline`
     :param model_kwargs: Keyword arguments to be passed to the model (that shouldn't be optimized)
     :param model_kwargs_ranges: Ranges for hyperparameters to override the defaults
     :param pipeline_kwargs: Default keyword arguments to be passed to the :func:`poem.pipeline.pipeline` (that
@@ -76,7 +76,7 @@ def make_study(
     >>> from poem.hpo import make_study
     >>> study = make_study(
     ...    model='TransE',  # can also be the model itself
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ... )
     >>> best_model = study.best_trial.user_attrs['model']
@@ -86,7 +86,7 @@ def make_study(
     >>> from poem.hpo import make_study
     >>> study = make_study(
     ...    model='TransE',
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    timeout=60,  # this parameter is measured in seconds
     ... )
 
@@ -98,7 +98,7 @@ def make_study(
     ...    model_kwargs=dict(
     ...        embedding_dim=200,
     ...    ),
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ... )
 
@@ -110,7 +110,7 @@ def make_study(
     ...    model_kwargs_ranges=dict(
     ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
     ...    ),
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ... )
 
@@ -122,8 +122,8 @@ def make_study(
     ...    model_kwargs_ranges=dict(
     ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
     ...    ),
+    ...    dataset='nations',
     ...    loss='MarginRankingLoss',
-    ...    data_set='nations',
     ...    n_trials=30,
     ... )
 
@@ -140,7 +140,7 @@ def make_study(
     ...    loss_kwargs_ranges=dict(
     ...        margin=dict(type=float, low=1.0, high=2.0),
     ...    ),
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ... )
 
@@ -155,7 +155,7 @@ def make_study(
     >>> from optuna.samplers import RandomSampler
     >>> study = make_study(
     ...    model='TransE',
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ...    sampler=RandomSampler,
     ... )
@@ -167,7 +167,7 @@ def make_study(
     >>> from optuna.samplers import RandomSampler
     >>> study = make_study(
     ...    model='TransE',
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ...    sampler='random',
     ... )
@@ -181,7 +181,7 @@ def make_study(
     >>> from optuna.samplers import RandomSampler
     >>> study = make_study(
     ...    model='TransE',
-    ...    data_set='nations',
+    ...    dataset='nations',
     ...    n_trials=30,
     ...    sampler='tpe',
     ...    sampler_kwars=dict(prior_weight=1.1),
@@ -212,16 +212,16 @@ def make_study(
     training_loop: Type[TrainingLoop] = get_training_loop_cls(training_loop)
     study.set_user_attr('assumption', training_loop.__name__[:3])
 
-    study.set_user_attr('data_set', data_set)
+    study.set_user_attr('dataset', dataset)
 
     objective = make_objective(
         model=model,
         model_kwargs=model_kwargs,
         model_kwargs_ranges=model_kwargs_ranges,
+        dataset=dataset,
         loss=loss,
         loss_kwargs=loss_kwargs,
         loss_kwargs_ranges=loss_kwargs_ranges,
-        data_set=data_set,
         training_loop=training_loop,
         metric=metric,
         pipeline_kwargs=pipeline_kwargs,
@@ -242,7 +242,7 @@ def make_objective(
     model: Type[BaseModule],
     loss: Type[Loss],
     training_loop: Type[TrainingLoop],
-    data_set: Union[None, str, DataSet],
+    dataset: Union[None, str, DataSet],
     metric: str,
     model_kwargs: Optional[Mapping[str, Any]] = None,
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
@@ -286,9 +286,9 @@ def make_objective(
         result = pipeline(
             model=model,
             model_kwargs=_model_kwargs,
+            dataset=dataset,
             loss=loss,
             loss_kwargs=_loss_kwargs,
-            data_set=data_set,
             training_loop=training_loop,
             **(pipeline_kwargs or {}),
         )

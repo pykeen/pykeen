@@ -46,15 +46,15 @@ class TestCustomLossFunctions(unittest.TestCase):
 
     def test_pipeline(self):
         """Test the pipeline on RotatE with negative sampling self adversarial loss and nations."""
-        criterion_cls = NegativeSamplingSelfAdversarialLoss
-        criterion_kwargs = {"margin": 1., "adversarial_temperature": 1.}
+        loss = NegativeSamplingSelfAdversarialLoss
+        loss_kwargs = {"margin": 1., "adversarial_temperature": 1.}
         pipeline_results = pipeline(
             model='RotatE',
-            data_set='nations',
-            loss=criterion_cls,
-            loss_kwargs=criterion_kwargs,
+            dataset='nations',
+            loss=loss,
+            loss_kwargs=loss_kwargs,
         )
         self.assertIsInstance(pipeline_results, PipelineResult)
-        self.assertIsInstance(pipeline_results.model.loss, criterion_cls)
+        self.assertIsInstance(pipeline_results.model.loss, loss)
         self.assertEqual(pipeline_results.model.loss.margin, 1.)
         self.assertEqual(pipeline_results.model.loss.adversarial_temperature, 1.)

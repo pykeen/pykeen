@@ -4,7 +4,7 @@
     "commenrs": "TransE was used to initialize the emebddings. Could not find batch size and number of epochs."
   },
   "pipeline": {
-    "data_set": "wn18rr",
+    "dataset": "wn18rr",
     "model": "TransE",
     "model_kwargs": {
       "embedding_dim": 50

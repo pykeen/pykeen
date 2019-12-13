@@ -4,7 +4,7 @@
     "comments": "In the paper it is not mentioned that they compute the mean of the vector norms as done in the published code base."
   },
   "pipeline": {
-    "data_set": "wn18",
+    "dataset": "wn18",
     "model": "ComplEx",
     "model_kwargs": {
       "embedding_dim": 150
@@ -37,4 +37,3 @@
     }
   }
 }
-

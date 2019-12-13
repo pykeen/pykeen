@@ -3,7 +3,7 @@
     "title": "Learn WN18 Data Set with KG2E as described by He et al., 2015"
   },
   "pipeline": {
-    "data_set": "wn18",
+    "dataset": "wn18",
     "model": "KG2E",
     "model_kwargs": {
       "embedding_dim": 50,

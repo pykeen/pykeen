@@ -49,7 +49,7 @@ class LossTensorTest(unittest.TestCase):
         """Test if output is correct for the LCWA training loop use case."""
         factory = TriplesFactory(triples=self.triples)
 
-        criterion = torch.nn.MarginRankingLoss(
+        loss_cls = torch.nn.MarginRankingLoss(
             margin=0,
             reduction='sum',
         )
@@ -58,14 +58,14 @@ class LossTensorTest(unittest.TestCase):
             factory,
             embedding_dim=8,
             preferred_device='cpu',
-            loss=criterion,
+            loss=loss_cls,
         )
 
         loop = LCWATrainingLoop(model=model)
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(14, loss)
 
-        criterion = torch.nn.MarginRankingLoss(
+        loss_cls = torch.nn.MarginRankingLoss(
             margin=0,
             reduction='mean',
         )
@@ -74,7 +74,7 @@ class LossTensorTest(unittest.TestCase):
             factory,
             embedding_dim=8,
             preferred_device='cpu',
-            loss=criterion,
+            loss=loss_cls,
         )
 
         loop = LCWATrainingLoop(model=model)

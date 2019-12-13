@@ -4,7 +4,7 @@
     "comments": "Could not find initial learning rate; could not find number of epochs"
   },
   "pipeline": {
-    "data_set": "fb15k",
+    "dataset": "fb15k",
     "model": "RotatE",
     "model_kwargs": {
       "embedding_dim": 1000
@@ -33,4 +33,3 @@
     }
   }
 }
-

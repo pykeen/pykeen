@@ -4,7 +4,7 @@
     "comments": "They make use of inverse relations. Normalization argument of regularizer is set to false."
   },
   "pipeline": {
-    "data_set": "wn18",
+    "dataset": "wn18",
     "model": "SimplE",
     "model_kwargs": {
       "embedding_dim": 200

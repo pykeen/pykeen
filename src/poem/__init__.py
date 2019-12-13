@@ -15,7 +15,7 @@ by referring to them by name. By default, the training loop uses the open world 
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
-...     data_set='Nations',
+...     dataset='Nations',
 ... )
 
 The results are returned in a :class:`poem.pipeline.PipelineResult` instance, which has

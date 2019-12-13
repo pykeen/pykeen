@@ -3,7 +3,7 @@
     "title": "Learn WN18 Data Set with TransH as described by Wang et al., 2014"
   },
   "pipeline": {
-    "data_set": "wn18",
+    "dataset": "wn18",
     "model": "TransH",
     "model_kwargs": {
       "embedding_dim": 50,

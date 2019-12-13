@@ -14,7 +14,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         """Test simply making a study."""
         study = make_study(
             model='TransE',
-            data_set='nations',
+            dataset='nations',
             n_trials=2,
         )
         df = study.trials_dataframe()
@@ -29,7 +29,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         study = make_study(
             model='TransE',
             model_kwargs=dict(embedding_dim=target_embedding_dim),
-            data_set='nations',
+            dataset='nations',
             n_trials=2,
         )
         df = study.trials_dataframe()
@@ -42,8 +42,8 @@ class TestHyperparameterOptimization(unittest.TestCase):
         """Test making a study that has a specified loss hyperparameter."""
         study = make_study(
             model='TransE',
+            dataset='nations',
             loss_kwargs=dict(margin=1.0),
-            data_set='nations',
             n_trials=2,
         )
         df = study.trials_dataframe()
@@ -58,9 +58,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
         study = make_study(
             model='TransE',
             model_kwargs=dict(embedding_dim=target_embedding_dim),
+            dataset='nations',
             loss='MarginRankingLoss',
             loss_kwargs=dict(margin=1.0),
-            data_set='nations',
             n_trials=2,
         )
         df = study.trials_dataframe()
@@ -79,7 +79,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             loss_kwargs_ranges=dict(
                 margin=dict(type=int, low=1, high=2),
             ),
-            data_set='nations',
+            dataset='nations',
             n_trials=2,
         )
         df = study.trials_dataframe()

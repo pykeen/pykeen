@@ -93,7 +93,7 @@ def parameters():
 @ls.command()
 @tablefmt_option
 def datasets(tablefmt: str):
-    """List data sets."""
+    """List datasets."""
     lines = _get_lines(datasets_dict, tablefmt, 'datasets')
     click.echo(
         tabulate(
@@ -263,7 +263,7 @@ def github_readme(ctx: click.Context):
     ctx.invoke(regularizers, tablefmt='github')
     click.echo(f'\n### Losses ({len(losses_dict)})\n')
     ctx.invoke(losses, tablefmt='github')
-    click.echo(f'\n### Data Sets ({len(datasets_dict)})\n')
+    click.echo(f'\n### Datasets ({len(datasets_dict)})\n')
     ctx.invoke(datasets, tablefmt='github')
     click.echo(f'\n### Training Modes ({len(training_dict)})\n')
     ctx.invoke(training, tablefmt='github')
