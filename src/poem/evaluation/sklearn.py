@@ -8,7 +8,13 @@ from typing import Optional, Union
 import numpy
 import torch
 from dataclasses_json import dataclass_json
-from sklearn.metrics import ranking
+from sklearn.metrics import (
+    average_precision_score,
+    coverage_error,
+    label_ranking_average_precision_score,
+    label_ranking_loss,
+    roc_auc_score,
+)
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples, SklearnMetric
@@ -35,11 +41,11 @@ class SklearnMetricResults(MetricResults):
 SKLEARN_METRICS = {
     normalize_string(f.__name__): f
     for f in (
-        ranking.roc_auc_score,
-        ranking.average_precision_score,
-        ranking.coverage_error,
-        ranking.label_ranking_average_precision_score,
-        ranking.label_ranking_loss,
+        roc_auc_score,
+        average_precision_score,
+        coverage_error,
+        label_ranking_average_precision_score,
+        label_ranking_loss,
     )
 }
 
@@ -47,7 +53,7 @@ SKLEARN_METRICS = {
 def _get_sklearn_metric(metric: Union[None, str, SklearnMetric]) -> SklearnMetric:
     """Look up a metric by name if a string is given, pass through a metric, or default to AUC-ROC."""
     if metric is None:
-        metric = ranking.roc_auc_score
+        metric = roc_auc_score
     elif isinstance(metric, str):
         metric = SKLEARN_METRICS.get(normalize_string(metric))
         if metric is None:
