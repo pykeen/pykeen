@@ -57,6 +57,9 @@ class SoftplusLoss(nn.Module):
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores and labels."""
+        assert 0. <= labels.min() and labels.max() <= 1.
+        # scale labels from [0, 1] to [-1, 1]
+        labels = 2 * labels - 1
         loss = self.softplus((-1) * labels * scores)
         loss = self._reduction_method(loss)
         return loss
