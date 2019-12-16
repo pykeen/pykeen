@@ -138,9 +138,8 @@ class TransR(BaseModule):
             The scores.
         """
         # project to relation specific subspace, shape: (b, e, d_r)
-        h_bot = (h.unsqueeze(dim=-2) @ m_r).squeeze(dim=-2)
-        t_bot = (t.unsqueeze(dim=-2) @ m_r).squeeze(dim=-2)
-
+        h_bot = h @ m_r
+        t_bot = t @ m_r
         # ensure constraints
         h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
         t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
@@ -153,7 +152,7 @@ class TransR(BaseModule):
         h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(hrt_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(dim=1)
-        m_r = self.relation_projections(hrt_batch[:, 1]).view(-1, 1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
 
@@ -162,7 +161,7 @@ class TransR(BaseModule):
         h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(hr_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings.weight.unsqueeze(dim=0)
-        m_r = self.relation_projections(hr_batch[:, 1]).view(-1, 1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
 
@@ -171,6 +170,6 @@ class TransR(BaseModule):
         h = self.entity_embeddings.weight.unsqueeze(dim=0)
         r = self.relation_embeddings(rt_batch[:, 0]).unsqueeze(dim=1)
         t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(dim=1)
-        m_r = self.relation_projections(rt_batch[:, 0]).view(-1, 1, self.embedding_dim, self.relation_embedding_dim)
+        m_r = self.relation_projections(rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_embedding_dim)
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)

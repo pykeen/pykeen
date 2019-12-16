@@ -8,7 +8,7 @@
     "model_kwargs": {
       "embedding_dim": 50,
       "relation_dim": 50,
-      "scoring_fct_norm": 2
+      "scoring_fct_norm": 1
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
