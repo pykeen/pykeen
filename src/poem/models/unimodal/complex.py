@@ -23,7 +23,8 @@ class ComplEx(BaseModule):
     """An implementation of ComplEx [trouillon2016]_."""
 
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50)
+        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        regularization_weight=dict(type=float, low=0.0, high=0.1, scale='log'),
     )
 
     loss_default = SoftplusLoss
