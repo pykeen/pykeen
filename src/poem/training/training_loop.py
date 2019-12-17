@@ -16,7 +16,7 @@ from ..models.base import BaseModule
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import ResultTracker
+from ..utils import ResultTracker, normalize_string
 
 __all__ = [
     'TrainingLoop',
@@ -49,6 +49,11 @@ class TrainingLoop(ABC):
     training_instances: Optional[Instances]
     losses_per_epochs: List[float]
 
+    hpo_default = dict(
+        num_epochs=dict(type=int, low=100, high=1000, q=100),
+        batch_size=dict(type=int, low=32, high=4000, q=100),
+    )
+
     def __init__(
         self,
         model: BaseModule,
@@ -70,6 +75,11 @@ class TrainingLoop(ABC):
             self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
         else:
             self._loss_helper = self._label_loss_helper
+
+    @classmethod
+    def get_normalized_name(cls) -> str:
+        """Get the normalized name of the training loop."""
+        return normalize_string(cls.__name__, suffix=TrainingLoop.__name__)
 
     @property
     def triples_factory(self) -> TriplesFactory:  # noqa: D401

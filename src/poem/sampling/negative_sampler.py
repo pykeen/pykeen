@@ -3,11 +3,12 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 
 from ..triples import TriplesFactory
+from ..utils import normalize_string
 
 __all__ = [
     'NegativeSampler',
@@ -16,6 +17,8 @@ __all__ = [
 
 class NegativeSampler(ABC):
     """A negative sampler."""
+
+    hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]
 
     def __init__(
         self,
@@ -29,6 +32,11 @@ class NegativeSampler(ABC):
         """
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
+
+    @classmethod
+    def get_normalized_name(cls) -> str:
+        """Get the normalized name of the negative sampler."""
+        return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
     @property
     def num_entities(self) -> int:  # noqa: D401

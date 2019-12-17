@@ -148,6 +148,17 @@ class RankBasedMetricResults(MetricResults):
 
         raise ValueError(f'Invalid metric name: {name}')
 
+    def to_flat_dict(self):  # noqa: D102
+        r = {
+            'avg.adjusted_mean_rank': self.adjusted_mean_rank,
+        }
+        for rank_type in RANK_TYPES:
+            r[f'{rank_type}.mean_rank'] = self.mean_rank[rank_type]
+            r[f'{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[rank_type]
+            for k, v in self.hits_at_k[rank_type].items():
+                r[f'{rank_type}.hits_at_{k}'] = v
+        return r
+
 
 class RankBasedEvaluator(Evaluator):
     """A rank-based evaluator for KGE models."""

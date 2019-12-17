@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "title": "HPO Over Nations for TransE",
+    "comments": "This uses the FB15K settings from Bordes2013 with extra HPO ranges given"
+  },
+  "pipeline": {
+    "dataset": "nations",
+    "model": "TransE",
+    "model_kwargs": {
+      "scoring_fct_norm": 1
+    },
+    "model_kwargs_ranges": {
+      "embedding_dim": {
+        "type": "int",
+        "low": 5,
+        "high": 15
+      }
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+    },
+    "optimizer_kwargs_ranges": {
+      "lr": {
+        "type": "float",
+        "low": 0.001,
+        "high": 0.1,
+        "scale": "log"
+      }
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+    },
+    "loss_kwargs_ranges": {
+      "margin": {
+        "type": "float",
+        "low": 0.5,
+        "high": 1.5,
+        "q": 0.1
+      }
+    },
+    "training_loop": "OWA",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "batch_size": 32
+    },
+    "training_kwargs_ranges": {
+      "num_epochs": {
+        "type": "int",
+        "low": 40,
+        "high": 100,
+        "q": 10
+      }
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 128
+    }
+  },
+  "optuna": {
+    "n_trials": 10,
+    "timeout": 30,
+    "metric": "hits@10",
+    "direction": "maximize",
+    "sampler": "TPE"
+  }
+}

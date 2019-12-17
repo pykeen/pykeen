@@ -2,7 +2,7 @@
 
 """Run landmark experiments."""
 
-from .cli import main
+from .cli import experiment
 
 if __name__ == '__main__':
-    main()
+    experiment()

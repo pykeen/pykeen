@@ -17,6 +17,10 @@ __all__ = [
 class BernoulliNegativeSampler(NegativeSampler):
     """An implementation of the bernoulli negative sampling approach proposed by [wang2014]_."""
 
+    hpo_default = dict(
+        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
+    )
+
     def __init__(
         self,
         triples_factory: TriplesFactory,

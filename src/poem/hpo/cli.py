@@ -2,25 +2,25 @@
 
 """A command line interface for hyper-parameter optimization in POEM."""
 
-import json
 import sys
-from typing import Optional, TextIO
+from typing import Optional
 
 import click
 
-from .hpo import make_study
+from .hpo import hpo_pipeline
 from .samplers import samplers
 
 
 @click.command()
 @click.argument('model')
-@click.option('-d', '--data-set', help="What data set to use", required=True)
+@click.argument('dataset')
 @click.option('-l', '--loss')
-@click.option('--sampler', help="Which sampler should be used?", type=click.Choice(list(samplers)), default='tpe')
+@click.option('--sampler', help="Which sampler should be used?", type=click.Choice(list(samplers)), default='tpe',
+              show_default=True)
 @click.option('--storage', help="Where to output trials dataframe")
 @click.option('--n-trials', type=int, help="Number of trials to run")
 @click.option('--timeout', type=int, help="Number of trials to run")
-@click.option('-o', '--output', type=click.File('w'), help="Where to output trials dataframe")
+@click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), help="Where to output results")
 def optimize(
     model: str,
     dataset: str,
@@ -29,7 +29,7 @@ def optimize(
     storage: Optional[str],
     n_trials: Optional[int],
     timeout: Optional[int],
-    output: Optional[TextIO],
+    output: str,
 ):
     """Optimize hyper-parameters for a KGE model.
 
@@ -39,7 +39,7 @@ def optimize(
         click.secho('Must specify either --n-trials or --timeout', fg='red')
         sys.exit(1)
 
-    study = make_study(
+    hpo_pipeline_result = hpo_pipeline(
         model=model,
         dataset=dataset,
         loss=loss,
@@ -48,17 +48,7 @@ def optimize(
         storage=storage,
         sampler=sampler,
     )
-    click.echo(json.dumps(
-        {
-            'value': study.best_value,
-            'params': study.best_params,
-        },
-        indent=2,
-    ))
-
-    if output is not None:
-        df = study.trials_dataframe()
-        df.to_csv(output, sep='\t', index=False)
+    hpo_pipeline_result.dump_to_directory(output)
 
 
 if __name__ == '__main__':

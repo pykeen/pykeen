@@ -2,9 +2,10 @@
 
 """Hyper-parameter optimiziation in POEM."""
 
-from .hpo import make_objective, make_study  # noqa: F401
+from .hpo import HpoPipelineResult, hpo_pipeline, hpo_pipeline_from_path  # noqa: F401
 
 __all__ = [
-    'make_study',
-    'make_objective',
+    'HpoPipelineResult',
+    'hpo_pipeline_from_path',
+    'hpo_pipeline',
 ]

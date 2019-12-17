@@ -173,6 +173,13 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 | Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 
+### HPO Samplers (2)
+
+| Name   | Reference                       | Description                                                     |
+|--------|---------------------------------|-----------------------------------------------------------------|
+| random | `optuna.samplers.RandomSampler` | Sampler using random sampling.                                  |
+| tpe    | `optuna.samplers.TPESampler`    | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
+
 ## Reproduction
 
 POEM includes a set of curated experimental settings for reproducing past landmark

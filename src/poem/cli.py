@@ -19,7 +19,9 @@ from tabulate import tabulate
 
 from .datasets import datasets as datasets_dict
 from .evaluation import evaluators as evaluators_dict, get_metric_list, metrics as metrics_dict
+from .experiments.cli import experiment
 from .hpo.cli import optimize
+from .hpo.samplers import samplers as hpo_samplers_dict
 from .losses import losses as losses_dict
 from .models import models as models_dict
 from .models.base import BaseModule
@@ -190,7 +192,10 @@ def regularizers(tablefmt: str):
 
 def _get_lines_alternative(tablefmt, d, torch_prefix, poem_prefix):
     for name, submodule in sorted(d.items()):
-        if submodule.__module__.startswith('torch'):
+        if any(
+            submodule.__module__.startswith(_prefix)
+            for _prefix in ('torch', 'optuna')
+        ):
             path = f'{torch_prefix}.{submodule.__qualname__}'
         else:  # from poem
             path = f'{poem_prefix}.{submodule.__qualname__}'
@@ -213,6 +218,20 @@ def metrics(tablefmt: str):
         tabulate(
             _get_metrics_lines(tablefmt),
             headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
+            tablefmt=tablefmt,
+        ),
+    )
+
+
+@ls.command()
+@tablefmt_option
+def hpo_samplers(tablefmt: str):
+    """List HPO samplers."""
+    lines = _get_lines_alternative(tablefmt, hpo_samplers_dict, 'optuna.samplers', 'poem.hpo.samplers')
+    click.echo(
+        tabulate(
+            lines,
+            headers=['Name', 'Reference', 'Description'],
             tablefmt=tablefmt,
         ),
     )
@@ -273,6 +292,8 @@ def github_readme(ctx: click.Context):
     ctx.invoke(evaluators, tablefmt='github')
     click.echo(f'\n### Metrics ({len(get_metric_list())})\n')
     ctx.invoke(metrics, tablefmt='github')
+    click.echo(f'\n### HPO Samplers ({len(hpo_samplers_dict)})\n')
+    ctx.invoke(hpo_samplers, tablefmt='github')
 
 
 @main.group()
@@ -286,6 +307,7 @@ for cls in models_dict.values():
 
 # Add HPO command
 main.add_command(optimize)
+main.add_command(experiment)
 
 if __name__ == '__main__':
     main()

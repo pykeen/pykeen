@@ -14,6 +14,10 @@ __all__ = [
 class BasicNegativeSampler(NegativeSampler):
     """A basic negative sampler."""
 
+    hpo_default = dict(
+        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
+    )
+
     def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
         """Generate negative samples from the positive batch."""
         if self.num_negs_per_pos > 1:

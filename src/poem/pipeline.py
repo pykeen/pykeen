@@ -336,31 +336,41 @@ def pipeline_from_path(
 
 def pipeline(  # noqa: C901
     *,
-    model: Union[str, Type[BaseModule]],
-    model_kwargs: Optional[Mapping[str, Any]] = None,
-    optimizer: Union[None, str, Type[Optimizer]] = None,
-    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
-    loss: Union[None, str, Type[Loss]] = None,
-    loss_kwargs: Optional[Mapping[str, Any]] = None,
-    training_loop: Union[None, str, Type[TrainingLoop]] = None,
+    # 1. Dataset
     dataset: Union[None, str, DataSet] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
-    triples_factory_kwargs: Optional[Mapping[str, Any]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    # 2. Model
+    model: Union[str, Type[BaseModule]],
+    model_kwargs: Optional[Mapping[str, Any]] = None,
+    # 3. Loss
+    loss: Union[None, str, Type[Loss]] = None,
+    loss_kwargs: Optional[Mapping[str, Any]] = None,
+    # 4. Regularizer
+    regularizer: Union[None, str, Type[Regularizer]] = None,
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+    # 5. Optimizer
+    optimizer: Union[None, str, Type[Optimizer]] = None,
+    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    # 6. Training Loop
+    training_loop: Union[None, str, Type[TrainingLoop]] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
+    # 7. Training (ronaldo style)
     training_kwargs: Optional[Mapping[str, Any]] = None,
     early_stopping: bool = False,
     early_stopping_kwargs: Optional[Mapping[str, Any]] = None,
+    # 8. Evaluation
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    # Misc
     mlflow_tracking_uri: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
-    regularizer: Union[None, str, Type[Regularizer]] = None,
-    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
+    use_testing_data: bool = True,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -415,10 +425,10 @@ def pipeline(  # noqa: C901
     result_tracker.log_params({'dataset': dataset})
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
         dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
         training_triples_factory=training_triples_factory,
         testing_triples_factory=testing_triples_factory,
         validation_triples_factory=validation_triples_factory,
-        triples_factory_kwargs=triples_factory_kwargs,
     )
 
     if model_kwargs is None:
@@ -507,10 +517,15 @@ def pipeline(  # noqa: C901
     # Train like Cristiano Ronaldo
     losses = training_loop_instance.train(**training_kwargs, result_tracker=result_tracker)
 
+    if use_testing_data:
+        mapped_triples = testing_triples_factory.mapped_triples
+    else:
+        mapped_triples = validation_triples_factory.mapped_triples
+
     # Evaluate
     metric_results: MetricResults = evaluator_instance.evaluate(
         model=model_instance,
-        mapped_triples=testing_triples_factory.mapped_triples,
+        mapped_triples=mapped_triples,
         **(evaluation_kwargs or {}),
     )
     result_tracker.log_metrics(

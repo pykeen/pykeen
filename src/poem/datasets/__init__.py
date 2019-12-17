@@ -84,11 +84,12 @@ datasets: Mapping[str, Type[DataSet]] = {
 
 
 def get_dataset(
+    *,
     dataset: Union[None, str, Type[DataSet]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
-    triples_factory_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
     """Get the dataset."""
     if dataset is not None:
@@ -105,7 +106,7 @@ def get_dataset(
             raise TypeError(f'Data set is wrong type: {type(dataset)}')
 
         dataset_instance = dataset(
-            **(triples_factory_kwargs or {})
+            **(dataset_kwargs or {})
         )
         return dataset_instance.factories
 

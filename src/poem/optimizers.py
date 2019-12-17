@@ -16,34 +16,65 @@ sgd       :class:`torch.optim.SGD`
 .. note:: This table can be re-generated with ``poem ls optimizers -f rst``
 """
 
-from typing import Mapping, Set, Type, Union
+from typing import Any, Mapping, Set, Type, Union
 
-from torch.optim import Adam, SGD
 from torch.optim.adadelta import Adadelta
 from torch.optim.adagrad import Adagrad
+from torch.optim.adam import Adam
 from torch.optim.adamax import Adamax
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
+from torch.optim.sgd import SGD
 
 from .utils import get_cls, normalize_string
 
 __all__ = [
+    'Optimizer',
     'optimizers',
+    'optimizers_hpo_defaults',
     'get_optimizer_cls',
 ]
 
 _OPTIMIZER_LIST: Set[Type[Optimizer]] = {
-    Adam,
-    SGD,
-    Adagrad,
     Adadelta,
-    AdamW,
+    Adagrad,
+    Adam,
     Adamax,
+    AdamW,
+    SGD,
 }
 
 optimizers: Mapping[str, Type[Optimizer]] = {
     normalize_string(optimizer.__name__): optimizer
     for optimizer in _OPTIMIZER_LIST
+}
+
+optimizers_hpo_defaults: Mapping[Type[Optimizer], Mapping[str, Any]] = {
+    Adadelta: dict(
+        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
+    ),
+    Adagrad: dict(
+        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        lr_decay=dict(type=float, low=0.001, high=0.1, scale='log'),
+        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
+    ),
+    Adam: dict(
+        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
+    ),
+    Adamax: dict(
+        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
+    ),
+    AdamW: dict(
+        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
+    ),
+    SGD: dict(
+        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
+    ),
 }
 
 

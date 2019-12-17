@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 
-"""A wrapper for looking up samplers from :mod:`optuna`."""
+"""A wrapper for looking up samplers from :mod:`optuna`.
+
+======  ======================================
+Name    Reference
+======  ======================================
+random  :class:`optuna.samplers.RandomSampler`
+tpe     :class:`optuna.samplers.TPESampler`
+======  ======================================
+
+.. note:: This table can be re-generated with ``poem ls hpo-samplers -f rst``
+"""
 
 # TODO update docs with table and CLI wtih generator
 

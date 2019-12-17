@@ -7,7 +7,7 @@ import timeit
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Collection, List, Optional, Tuple, Union
+from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
 
 import torch
 from dataclasses_json import dataclass_json
@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from ..models.base import BaseModule
 from ..typing import MappedTriples
-from ..utils import split_list_in_batches_iter
+from ..utils import normalize_string, split_list_in_batches_iter
 
 __all__ = [
     'Evaluator',
@@ -45,6 +45,10 @@ class MetricResults:
         """Get the given metric from the results."""
         raise NotImplementedError
 
+    def to_flat_dict(self) -> Mapping[str, Any]:
+        """Get the results as a flattened dictionary."""
+        return self.to_dict()
+
 
 class Evaluator(ABC):
     """An abstract evaluator for KGE models.
@@ -61,6 +65,11 @@ class Evaluator(ABC):
     ):
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
+
+    @classmethod
+    def get_normalized_name(cls) -> str:
+        """Get the normalized name of the evaluator."""
+        return normalize_string(cls.__name__, suffix=Evaluator.__name__)
 
     @abstractmethod
     def process_tail_scores_(
@@ -298,13 +307,13 @@ def evaluate(
 
     # Disable gradient tracking
     with optional_context_manager(
-            use_tqdm,
-            tqdm(
-                desc=f'Evaluating on {model.device}',
-                total=num_triples,
-                unit='triple(s)',
-                unit_scale=True,
-            ),
+        use_tqdm,
+        tqdm(
+            desc=f'Evaluating on {model.device}',
+            total=num_triples,
+            unit='triple(s)',
+            unit_scale=True,
+        ),
     ) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:

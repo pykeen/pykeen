@@ -15,7 +15,7 @@ powersum  :class:`poem.regularizers.PowerSumRegularizer`
 """
 
 from abc import abstractmethod
-from typing import Collection, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
 
 import torch
 from torch import nn
@@ -34,6 +34,8 @@ __all__ = [
     'get_regularizer_cls',
 ]
 
+_REGULARIZER_SUFFIX = 'Regularizer'
+
 
 class Regularizer(nn.Module):
     """A base class for all regularizers."""
@@ -44,6 +46,9 @@ class Regularizer(nn.Module):
     #: The current regularization term (a scalar)
     regularization_term: torch.FloatTensor
 
+    #: Defaults for hyperparameter optimization
+    hpo_default: ClassVar[Mapping[str, Any]]
+
     def __init__(
         self,
         device: torch.device,
@@ -53,6 +58,11 @@ class Regularizer(nn.Module):
         self.device = device
         self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
         self.weight = torch.as_tensor(weight, device=self.device)
+
+    @classmethod
+    def get_normalized_name(cls) -> str:
+        """Get the normalized name of the regularizer class."""
+        return normalize_string(cls.__name__, suffix=_REGULARIZER_SUFFIX)
 
     def reset(self) -> None:
         """Reset the regularization term to zero."""
@@ -79,6 +89,8 @@ class NoRegularizer(Regularizer):
     Used to simplify code.
     """
 
+    hpo_default = {}
+
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
@@ -97,6 +109,10 @@ class LpRegularizer(Regularizer):
     #: Whether to normalize the regularization term by the dimension of the vectors.
     #: This allows dimensionality-independent weight tuning.
     normalize: bool
+
+    hpo_default = dict(
+        weight=dict(type=float, low=0.01, high=1.0, scale='log'),
+    )
 
     def __init__(
         self,
@@ -132,6 +148,10 @@ class PowerSumRegularizer(Regularizer):
     Has some nice properties, cf. e.g. https://github.com/pytorch/pytorch/issues/28119.
     """
 
+    hpo_default = dict(
+        weight=dict(type=float, low=0.01, high=1.0, scale='log'),
+    )
+
     def __init__(
         self,
         device: torch.device,
@@ -156,11 +176,15 @@ class PowerSumRegularizer(Regularizer):
 class TransHRegularizer(Regularizer):
     """Regularizer for TransH's soft constraints."""
 
+    hpo_default = dict(
+        weight=dict(type=float, low=0.01, high=1.0, scale='log'),
+    )
+
     def __init__(
         self,
         device: torch.device,
-        weight: float,
-        epsilon: float,
+        weight: float = 0.05,
+        epsilon: float = 1e-5,
     ):
         super().__init__(device=device, weight=weight)
         self.epsilon = epsilon
@@ -207,7 +231,6 @@ class CombinedRegularizer(Regularizer):
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
-_REGULARIZER_SUFFIX = 'Regularizer'
 _REGULARIZERS: Collection[Type[Regularizer]] = {
     NoRegularizer,
     LpRegularizer,
@@ -217,8 +240,8 @@ _REGULARIZERS: Collection[Type[Regularizer]] = {
 }
 
 regularizers: Mapping[str, Type[Regularizer]] = {
-    normalize_string(_regularizer.__name__, suffix=_REGULARIZER_SUFFIX): _regularizer
-    for _regularizer in _REGULARIZERS
+    cls.get_normalized_name(): cls
+    for cls in _REGULARIZERS
 }
 
 
