@@ -144,6 +144,7 @@ class BaseModule(nn.Module):
         """A hook called after initialization."""
         self.init_empty_weights_()
         self.to_device_()
+        self.post_parameter_update()
 
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass while keeping track of hyper-parameters."""

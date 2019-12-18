@@ -792,7 +792,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1.)
+            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):

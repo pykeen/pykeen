@@ -2,6 +2,7 @@
 
 """Implementation of KG2E."""
 
+import math
 from typing import Optional
 
 import torch
@@ -18,6 +19,8 @@ __all__ = [
     'KG2E',
 ]
 
+_LOG_2_PI = math.log(2. * math.pi)
+
 
 def _expected_likelihood(
     mu_e: torch.FloatTensor,
@@ -26,8 +29,20 @@ def _expected_likelihood(
     sigma_r: torch.FloatTensor,
     epsilon: float = 1.0e-10,
 ) -> torch.FloatTensor:
-    """
+    r"""
     Compute the similarity based on expected likelihood.
+
+    .. math::
+
+        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
+        = \frac{1}{2} \left(
+            (\mu_e - \mu_r)^T(\Sigma_e + \Sigma_r)^{-1}(\mu_e - \mu_r)
+            + \log \det (\Sigma_e + \Sigma_r) + d \log (2 \pi)
+        \right)
+        = \frac{1}{2} \left(
+            \mu^T\Sigma^{-1}\mu
+            + \log \det \Sigma + d \log (2 \pi)
+        \right)
 
     :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the first Gaussian.
@@ -43,13 +58,18 @@ def _expected_likelihood(
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The similarity.
     """
+    d = sigma_e.shape[-1]
     sigma = sigma_r + sigma_e
+    mu = mu_e - mu_r
+
+    #: a = \mu^T\Sigma^{-1}\mu
     safe_sigma = torch.clamp_min(sigma, min=epsilon)
     sigma_inv = torch.reciprocal(safe_sigma)
-    mu = mu_r - mu_e
     a = torch.sum(sigma_inv * mu ** 2, dim=-1)
-    b = torch.log(torch.norm(safe_sigma, dim=-1))
-    return a + b
+
+    #: b = \log \det \Sigma
+    b = safe_sigma.log().sum(dim=-1)
+    return a + b + d * _LOG_2_PI
 
 
 def _kullback_leibler_similarity(
@@ -59,9 +79,21 @@ def _kullback_leibler_similarity(
     sigma_r: torch.FloatTensor,
     epsilon: float = 1.0e-10,
 ) -> torch.FloatTensor:
-    """Compute the similarity based on KL divergence.
+    r"""Compute the similarity based on KL divergence.
 
     This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
+
+    .. math::
+
+        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
+        = \frac{1}{2} \left(
+            tr(\Sigma_r^{-1}\Sigma_e)
+            + (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
+            - \log \frac{det(\Sigma_e)}{det(\Sigma_r)} - k_e
+        \right)
+
+    Note: The sign of the function has been flipped as opposed to the description in the paper, as the
+          Kullback Leibler divergence is large if the distributions are dissimilar.
 
     :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
         The mean of the first Gaussian.
@@ -77,13 +109,21 @@ def _kullback_leibler_similarity(
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The similarity.
     """
+    d = mu_e.shape[-1]
     safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
     sigma_r_inv = torch.reciprocal(safe_sigma_r)
-    mu = mu_r - mu_e
+
+    #: a = tr(\Sigma_r^{-1}\Sigma_e)
     a = torch.sum(sigma_e * sigma_r_inv, dim=-1)
+
+    #: b = (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
+    mu = mu_r - mu_e
     b = torch.sum(sigma_r_inv * mu ** 2, dim=-1)
-    c = -torch.log(sigma_e.norm(p=2, dim=-1) / sigma_r.norm(p=2, dim=-1).clamp_min(min=epsilon))
-    return a + b + c
+
+    #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
+    # = sum log (sigma_e)_i - sum log (sigma_r)_i
+    c = sigma_e.clamp_min(min=epsilon).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
+    return -0.5 * (a + b - c - d)
 
 
 class KG2E(BaseModule):
@@ -99,6 +139,11 @@ class KG2E(BaseModule):
     For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div,
     Expected Likelihood).
     """
+
+    DISTRIBUTION_SIMILARITIES = {
+        'EL': _expected_likelihood,
+        'KL': _kullback_leibler_similarity,
+    }
 
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
@@ -133,13 +178,11 @@ class KG2E(BaseModule):
         )
 
         # Similarity function used for distributions
-        if dist_similarity is None or dist_similarity == 'KL':
-            dist_similarity = _kullback_leibler_similarity
-        elif dist_similarity == 'EL':
-            dist_similarity = _expected_likelihood
-        else:
-            raise KeyError(f'Unknown distribution similarity: {dist_similarity}')
-        self.similarity = dist_similarity
+        if dist_similarity is None:
+            dist_similarity = 'KL'
+        if dist_similarity not in self.DISTRIBUTION_SIMILARITIES:
+            raise ValueError(f'Unknown distribution similarity: "{dist_similarity}".')
+        self.similarity = self.DISTRIBUTION_SIMILARITIES[dist_similarity]
 
         # element-wise covariance bounds
         self.c_min = c_min
