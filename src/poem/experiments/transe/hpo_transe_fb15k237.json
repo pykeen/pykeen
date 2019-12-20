@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "HPO Over Nations for TransE"
+    "title": "HPO Over FB15k237 for TransE"
   },
   "pipeline": {
     "dataset": "fb15k237",
