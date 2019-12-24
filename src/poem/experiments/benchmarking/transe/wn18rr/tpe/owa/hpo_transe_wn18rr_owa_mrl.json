@@ -1,10 +1,10 @@
 {
   "metadata": {
-    "title": "HPO Over Nations for TransE"
+    "title": "HPO Over WN18RR for TransE"
   },
   "ablation": {
     "datasets": [
-      "nations"
+      "wn18rr"
     ],
     "models": [
       "TransE"
@@ -16,15 +16,14 @@
       "TransE": {
         "embedding_dim": {
           "type": "int",
-          "low": 10,
-          "high": 30,
-          "q": 10
+          "low": 50,
+          "high": 500,
+          "q": 100
         }
       }
     },
     "training_loops": [
-      "owa",
-      "lcwa"
+      "owa"
     ],
     "optimizers": [
       "adam",
@@ -32,8 +31,12 @@
     ],
     "optimizer_kwargs": {
       "TransE": {
-        "adam": {},
-        "adadelta": {}
+        "adam": {
+          "weight_decay": 0.0
+        },
+        "adadelta": {
+          "weight_decay": 0.0
+        }
       }
     },
     "optimizer_kwargs_ranges": {
@@ -57,13 +60,11 @@
       }
     },
     "loss_functions": [
-      "MarginRankingLoss",
-      "BCEAfterSigmoidLoss"
+      "MarginRankingLoss"
     ],
     "loss_kwargs": {
       "TransE": {
-        "MarginRankingLoss": {},
-        "BCEAfterSigmoidLoss": {}
+        "MarginRankingLoss": {}
       }
     },
     "loss_kwargs_ranges": {
@@ -72,36 +73,23 @@
           "margin": {
             "type": "float",
             "low": 0.5,
-            "high": 1.5,
-            "q": 0.1
+            "high": 10,
+            "q": 1.0
           }
-        },
-        "BCEAfterSigmoidLoss": {}
+        }
       }
     },
     "regularizers": [
-      "NoRegularizer",
-      "PowerSumRegularizer"
+      "NoRegularizer"
     ],
     "regularizer_kwargs": {
       "TransE": {
-        "NoRegularizer": {},
-        "PowerSumRegularizer": {
-          "p": 2.0
-        }
+        "NoRegularizer": {}
       }
     },
     "regularizer_kwargs_ranges": {
       "TransE": {
-        "NoRegularizer": {},
-        "PowerSumRegularizer": {
-          "weight": {
-            "type": "float",
-            "low": 0.01,
-            "high": 1.0,
-            "scale": "log"
-          }
-        }
+        "NoRegularizer": {}
       }
     },
     "negative_sampler": "BasicNegativeSampler",
@@ -116,27 +104,27 @@
           "num_negs_per_pos": {
             "type": "int",
             "low": 1,
-            "high": 100,
-            "q": 10
+            "high": 50,
+            "q": 5
           }
         }
       }
     },
     "create_inverse_triples": [
-      true,
-      false
+      false,
+      true
     ],
     "evaluator": "RankBasedEvaluator",
     "evaluator_kwargs": {
       "filtered": true
     },
     "evaluation_kwargs": {
-      "batch_size": 16
+      "batch_size": 32
     },
     "training_kwargs": {
       "TransE": {
-        "owa": {},
-        "lcwa": {
+        "owa": {
+          "batch_size": 256,
           "label_smoothing": 0.0
         }
       }
@@ -146,40 +134,26 @@
         "owa": {
           "num_epochs": {
             "type": "int",
-            "low": 5,
-            "high": 10,
+            "low": 500,
+            "high": 1000,
             "q": 100
-          },
-          "batch_size": {
-            "type": "int",
-            "low": 128,
-            "high": 512,
-            "q": 100
-          }
-        },
-        "lcwa": {
-          "num_epochs": {
-            "type": "int",
-            "low": 5,
-            "high": 10,
-            "q": 100
-          },
-          "batch_size": {
-            "type": "int",
-            "low": 128,
-            "high": 200,
-            "q": 10
           }
         }
       }
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "frequency": 50,
+      "patience": 2
     }
   },
   "optuna": {
-    "n_trials": 2,
-    "timeout": 10,
+    "n_trials": 100,
+    "timeout": 86400,
     "metric": "hits@10",
     "direction": "maximize",
-    "sampler": "TPE"
+    "sampler": "TPE",
+    "pruner": "nop"
   }
 }
 

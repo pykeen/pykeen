@@ -1,20 +1,26 @@
 {
   "metadata": {
-    "title": "HPO Over Nations for HolE"
+    "title": "HPO Over Nations for TransD"
   },
   "ablation": {
     "datasets": [
       "nations"
     ],
     "models": [
-      "HolE"
+      "TransD"
     ],
     "model_kwargs": {
-      "HolE": {}
+      "TransD": {}
     },
     "model_kwargs_ranges": {
-      "HolE": {
+      "TransD": {
         "embedding_dim": {
+          "type": "int",
+          "low": 10,
+          "high": 30,
+          "q": 10
+        },
+        "relation_dim": {
           "type": "int",
           "low": 10,
           "high": 30,
@@ -31,13 +37,13 @@
       "adadelta"
     ],
     "optimizer_kwargs": {
-      "HolE": {
+      "TransD": {
         "adam": {},
         "adadelta": {}
       }
     },
     "optimizer_kwargs_ranges": {
-      "HolE": {
+      "TransD": {
         "adam": {
           "lr": {
             "type": "float",
@@ -61,13 +67,13 @@
       "BCEAfterSigmoidLoss"
     ],
     "loss_kwargs": {
-      "HolE": {
+      "TransD": {
         "MarginRankingLoss": {},
         "BCEAfterSigmoidLoss": {}
       }
     },
     "loss_kwargs_ranges": {
-      "HolE": {
+      "TransD": {
         "MarginRankingLoss": {
           "margin": {
             "type": "float",
@@ -84,7 +90,7 @@
       "PowerSumRegularizer"
     ],
     "regularizer_kwargs": {
-      "HolE": {
+      "TransD": {
         "NoRegularizer": {},
         "PowerSumRegularizer": {
           "p": 2.0
@@ -92,7 +98,7 @@
       }
     },
     "regularizer_kwargs_ranges": {
-      "HolE": {
+      "TransD": {
         "NoRegularizer": {},
         "PowerSumRegularizer": {
           "weight": {
@@ -106,12 +112,12 @@
     },
     "negative_sampler": "BasicNegativeSampler",
     "negative_sampler_kwargs": {
-      "HolE": {
+      "TransD": {
         "BasicNegativeSampler": {}
       }
     },
     "negative_sampler_kwargs_ranges": {
-      "HolE": {
+      "TransD": {
         "BasicNegativeSampler": {
           "num_negs_per_pos": {
             "type": "int",
@@ -134,7 +140,7 @@
       "batch_size": 16
     },
     "training_kwargs": {
-      "HolE": {
+      "TransD": {
         "owa": {},
         "lcwa": {
           "label_smoothing": 0.0
@@ -142,7 +148,7 @@
       }
     },
     "training_kwargs_ranges": {
-      "HolE": {
+      "TransD": {
         "owa": {
           "num_epochs": {
             "type": "int",
@@ -172,6 +178,11 @@
           }
         }
       }
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "frequency": 50,
+      "patience": 2
     }
   },
   "optuna": {
@@ -179,7 +190,8 @@
     "timeout": 10,
     "metric": "hits@10",
     "direction": "maximize",
-    "sampler": "TPE"
+    "sampler": "TPE",
+    "pruner": "nop"
   }
 }
 
