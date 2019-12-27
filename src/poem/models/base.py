@@ -287,13 +287,16 @@ class BaseModule(nn.Module):
         the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
         of the _inverse relation_ is 103.
         '''
+        rt_batch_cloned = rt_batch.clone()
+        rt_batch_cloned.to(device=rt_batch.device)
+
         # The number of relations stored in the triples factory includes the number of inverse relations
         num_relations = self.triples_factory.num_relations // 2
-        rt_batch[:, 0] = rt_batch[:, 0] + num_relations
+        rt_batch_cloned[:, 0] = rt_batch_cloned[:, 0] + num_relations
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
-        rt_batch = rt_batch.flip(1)
-        scores = self.score_t(rt_batch)
+        rt_batch_cloned = rt_batch_cloned.flip(1)
+        scores = self.score_t(rt_batch_cloned)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
