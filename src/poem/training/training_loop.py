@@ -234,6 +234,9 @@ class TrainingLoop(ABC):
                     loss.backward()
                     current_epoch_loss += loss.item()
 
+                    # reset the regularizer to free the computational graph
+                    self.model.regularizer.reset()
+
                 # update parameters according to optimizer
                 self.optimizer.step()
 
