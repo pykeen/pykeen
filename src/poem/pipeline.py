@@ -503,12 +503,19 @@ def pipeline(  # noqa: C901
         **(evaluator_kwargs or {}),
     )
 
+    if evaluation_kwargs is None:
+        evaluation_kwargs = {}
+
     # Early stopping
     if early_stopping:
         if early_stopping_kwargs is None:
             early_stopping_kwargs = {}
         if validation_triples_factory is None:
             raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
+        # Load the evaluation batch size for the early stopper, if it has been set
+        _evaluation_batch_size = evaluation_kwargs.get('batch_size')
+        if _evaluation_batch_size is not None:
+            early_stopping_kwargs.setdefault('evaluation_batch_size', _evaluation_batch_size)
         early_stopper = EarlyStopper(
             model=model_instance,
             evaluator=evaluator_instance,
@@ -537,7 +544,7 @@ def pipeline(  # noqa: C901
     metric_results: MetricResults = evaluator_instance.evaluate(
         model=model_instance,
         mapped_triples=mapped_triples,
-        **(evaluation_kwargs or {}),
+        **evaluation_kwargs,
     )
     result_tracker.log_metrics(
         metrics=metric_results.to_dict(),

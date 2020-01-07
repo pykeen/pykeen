@@ -116,7 +116,7 @@ class Evaluator(ABC):
         self,
         model: BaseModule,
         mapped_triples: Optional[MappedTriples] = None,
-        batch_size: int = 1,
+        batch_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
     ) -> MetricResults:
@@ -237,7 +237,7 @@ def evaluate(
     model: BaseModule,
     mapped_triples: MappedTriples,
     evaluators: Union[Evaluator, Collection[Evaluator]],
-    batch_size: int = 1,
+    batch_size: Optional[int] = None,
     device: Optional[torch.device] = None,
     squeeze: bool = True,
     use_tqdm: bool = True,
@@ -257,7 +257,7 @@ def evaluate(
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
     :param batch_size: >0
-        A positive integer used as batch size. Generally chosen as large as possible.
+        A positive integer used as batch size. Generally chosen as large as possible. Defaults to 1 if None.
     :param device:
         The device on which the evaluation shall be run. If None is given, use the model's device.
     :param squeeze:
@@ -300,6 +300,8 @@ def evaluate(
     mapped_triples = mapped_triples.to(device=device)
 
     # Prepare batches
+    if batch_size is None:
+        batch_size = 1
     batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
 
     # Show progressbar

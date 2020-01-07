@@ -73,6 +73,8 @@ class EarlyStopper:
     evaluator: Evaluator
     #: The triples to use for evaluation
     evaluation_triples_factory: TriplesFactory
+    #: The evaluation batch size to use
+    evaluation_batch_size: Optional[int] = None
     #: The number of epochs after which the model is evaluated on validation set
     frequency: int = 10
     #: The number of iterations (one iteration can correspond to various epochs)
@@ -118,6 +120,7 @@ class EarlyStopper:
             model=self.model,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
             use_tqdm=False,
+            batch_size=self.evaluation_batch_size,
         )
         self.result_tracker.log_metrics(
             metrics=metric_results.to_json(),
