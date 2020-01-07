@@ -1,6 +1,7 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with TransD as described by Ji et al., 2015"
+    "title": "Learn FB15K Data Set with TransD as described by Ji et al., 2015",
+    "comments": "We assumed the learning rate for Adadelta as the default from PyTorch since it was not explicitly stated in the original paper"
   },
   "pipeline": {
     "dataset": "fb15k",
@@ -10,8 +11,12 @@
       "relation_dim": 50
     },
     "optimizer": "Adadelta",
+    "optimizer_kwargs": {
+      "lr": 1.0
+    },
     "loss": "MarginRankingLoss",
     "loss_kwargs": {
+      "reduction": "mean",
       "margin": 1
     },
     "training_loop": "OWA",

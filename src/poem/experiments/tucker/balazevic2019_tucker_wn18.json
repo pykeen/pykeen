@@ -19,6 +19,9 @@
       "weight_decay": 0.995
     },
     "loss": "BCEAfterSigmoid",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
     "training_loop": "LCWA",
     "training_kwargs": {
       "num_epochs": 500,

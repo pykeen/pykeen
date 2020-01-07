@@ -8,7 +8,8 @@
     "model": "ConvKB",
     "model_kwargs": {
       "embedding_dim": 50,
-      "num_filters": 500
+      "num_filters": 500,
+      "hidden_dropout_rate": 0.0
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {
@@ -21,6 +22,9 @@
       "lr": 0.0001
     },
     "loss": "SoftplusLoss",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
     "training_loop": "OWA",
     "negative_sampler": "bernoulli",
     "negative_sampler_kwargs": {

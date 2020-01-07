@@ -12,7 +12,7 @@
     "regularizer": "TransH",
     "regularizer_kwargs": {
       "weight": 0.25,
-      "epsilon": 0.00001
+      "epsilon": 1e-05
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
@@ -20,6 +20,7 @@
     },
     "loss": "MarginRankingLoss",
     "loss_kwargs": {
+      "reduction": "mean",
       "margin": 1
     },
     "training_loop": "OWA",

@@ -7,7 +7,8 @@
     "dataset": "wn18rr",
     "model": "TransE",
     "model_kwargs": {
-      "embedding_dim": 50
+      "embedding_dim": 50,
+      "scoring_fct_norm": 1
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
@@ -15,6 +16,7 @@
     },
     "loss": "MarginRankingLoss",
     "loss_kwargs": {
+      "reduction": "mean",
       "margin": 5
     },
     "training_loop": "OWA",

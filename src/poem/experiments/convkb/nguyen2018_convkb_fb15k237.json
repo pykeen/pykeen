@@ -8,19 +8,23 @@
     "model": "ConvKB",
     "model_kwargs": {
       "embedding_dim": 100,
-      "num_filters": 50
+      "num_filters": 50,
+      "hidden_dropout_rate": 0.0
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {
-      "weight":  0.0005,
+      "weight": 0.0005,
       "p": 2.0,
       "normalize": false
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
-      "lr": 0.000005
+      "lr": 5e-06
     },
     "loss": "SoftplusLoss",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
     "training_loop": "OWA",
     "negative_sampler": "bernoulli",
     "negative_sampler_kwargs": {

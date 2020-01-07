@@ -16,6 +16,7 @@
     },
     "loss": "MarginRankingLoss",
     "loss_kwargs": {
+      "reduction": "mean",
       "margin": 1
     },
     "training_loop": "OWA",

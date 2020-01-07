@@ -14,7 +14,7 @@
         "low": 5,
         "high": 15
       },
-       "relation_dim": {
+      "relation_dim": {
         "type": "int",
         "low": 5,
         "high": 15
@@ -25,13 +25,13 @@
         "high": 0.3,
         "scale": "log"
       },
-       "dropout_1": {
+      "dropout_1": {
         "type": "float",
         "low": 0.01,
         "high": 0.3,
         "scale": "log"
       },
-       "dropout_2": {
+      "dropout_2": {
         "type": "float",
         "low": 0.01,
         "high": 0.3,
