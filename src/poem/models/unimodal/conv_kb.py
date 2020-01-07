@@ -49,7 +49,7 @@ class ConvKB(BaseModule):
         triples_factory: TriplesFactory,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
-        hidden_dropout_rate: float = 0.5,
+        hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
