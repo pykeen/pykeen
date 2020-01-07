@@ -1,0 +1,154 @@
+{
+  "metadata": {
+    "title": "HPO Over WN18RR for ComplEx"
+  },
+  "ablation": {
+    "datasets": [
+      "wn18rr"
+    ],
+    "models": [
+      "ComplEx"
+    ],
+    "model_kwargs": {
+      "ComplEx": {}
+    },
+    "model_kwargs_ranges": {
+      "ComplEx": {
+        "embedding_dim": {
+          "type": "int",
+          "low": 50,
+          "high": 200,
+          "q": 50
+        }
+      }
+    },
+    "training_loops": [
+      "lcwa"
+    ],
+    "optimizers": [
+      "adam",
+      "adadelta"
+    ],
+    "optimizer_kwargs": {
+      "ComplEx": {
+        "adam": {
+          "weight_decay": 0.0
+        },
+        "adadelta": {
+          "weight_decay": 0.0
+        }
+      }
+    },
+    "optimizer_kwargs_ranges": {
+      "ComplEx": {
+        "adam": {
+          "lr": {
+            "type": "float",
+            "low": 0.001,
+            "high": 0.1,
+            "scale": "log"
+          }
+        },
+        "adadelta": {
+          "lr": {
+            "type": "float",
+            "low": 0.001,
+            "high": 0.1,
+            "scale": "log"
+          }
+        }
+      }
+    },
+    "loss_functions": [
+      "BCEAfterSigmoidLoss",
+      "SoftplusLoss"
+    ],
+    "loss_kwargs": {
+      "ComplEx": {
+        "BCEAfterSigmoidLoss": {},
+        "SoftplusLoss": {}
+      }
+    },
+    "loss_kwargs_ranges": {
+      "ComplEx": {
+        "BCEAfterSigmoidLoss": {},
+        "SoftplusLoss": {}
+      }
+    },
+    "regularizers": [
+      "PowerSum"
+    ],
+    "regularizer_kwargs": {
+      "ComplEx": {
+        "PowerSum": {
+          "p": 2.0,
+          "dim": 0,
+          "normalize": false
+        }
+      }
+    },
+    "regularizer_kwargs_ranges": {
+      "ComplEx": {
+        "PowerSumRegularizer": {
+          "weight": {
+            "type": "float",
+            "low": 0.0001,
+            "high": 0.1,
+            "scale": "log"
+          }
+        }
+      }
+    },
+    "create_inverse_triples": [
+      true,
+      false
+    ],
+    "evaluator": "RankBasedEvaluator",
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "evaluation_kwargs": {
+      "batch_size": 16
+    },
+    "training_kwargs": {
+      "ComplEx": {
+        "lcwa": {
+          "batch_size": 256
+        }
+      }
+    },
+    "training_kwargs_ranges": {
+      "ComplEx": {
+        "lcwa": {
+          "num_epochs": {
+            "type": "int",
+            "low": 500,
+            "high": 1000,
+            "q": 100
+          },
+          "label_smoothing": {
+            "type": "float",
+            "low": 0.001,
+            "high": 1.0,
+            "scale": "log"
+          }
+        }
+      }
+    },
+    "early_stopping": true,
+    "early_stopping_kwargs": {
+      "frequency": 50,
+      "patience": 2,
+      "delta": 0.002
+    }
+  },
+  "optuna": {
+    "n_trials": 100,
+    "timeout": 86400,
+    "metric": "hits@10",
+    "direction": "maximize",
+    "sampler": "TPE",
+    "pruner": "nop"
+  }
+}
+
