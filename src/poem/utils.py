@@ -3,10 +3,12 @@
 """Utilities for POEM."""
 
 import logging
+import random
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import mlflow
 import numpy
+import numpy as np
 import torch
 from torch import nn
 
@@ -25,6 +27,8 @@ __all__ = [
     'ResultTracker',
     'MLFlowResultTracker',
     'get_embedding_in_canonical_shape',
+    'set_random_seed',
+    'NoRandomSeedNecessary',
 ]
 
 logger = logging.getLogger(__name__)
@@ -266,6 +270,19 @@ def clamp_norm(
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+
+
+def set_random_seed(seed: int):
+    """Set the random seed on numpy, torch, and python."""
+    return (
+        np.random.seed(seed=seed),
+        torch.manual_seed(seed=seed),
+        random.seed(seed),
+    )
+
+
+class NoRandomSeedNecessary:
+    """Used in pipeline when random seed is set automatically."""
 
 
 def all_in_bounds(

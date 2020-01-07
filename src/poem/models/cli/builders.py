@@ -107,6 +107,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     @options.mlflow_uri_option
     @options.title_option
     @options.num_workers_option
+    @options.random_seed_option
     @_decorate_model_kwargs
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
@@ -126,6 +127,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
         training_triples_factory,
         testing_triples_factory,
         num_workers,
+        random_seed,
         **model_kwargs,
     ):
         """CLI for POEM."""
@@ -159,6 +161,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
             metadata=dict(
                 title=title,
             ),
+            random_seed=random_seed,
         )
 
         json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)

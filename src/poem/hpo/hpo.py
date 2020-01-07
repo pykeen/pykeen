@@ -168,6 +168,8 @@ class Objective:
             **(self.pipeline_kwargs or {}),
         )
 
+        trial.set_user_attr('random_seed', result.random_seed)
+
         for k, v in result.metric_results.to_flat_dict().items():
             trial.set_user_attr(k, v)
 

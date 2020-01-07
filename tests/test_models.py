@@ -27,7 +27,8 @@ from poem.models.multimodal import MultimodalBaseModule
 from poem.models.unimodal.trans_d import _project_entity
 from poem.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
-from poem.utils import all_in_bounds, clamp_norm
+from poem.utils import all_in_bounds, clamp_norm, set_random_seed
+
 
 SKIP_MODULES = {
     'BaseModule',
@@ -75,13 +76,16 @@ class _ModelTestCase:
     #: The number of epochs to train the model
     train_num_epochs = 2
 
+    #: A random number generator from torch
+    generator: torch.Generator
+
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
-        self.generator = torch.random.manual_seed(seed=42)
+        _, self.generator, _ = set_random_seed(42)
+
         self.factory = NationsTrainingTriplesFactory(create_inverse_triples=self.create_inverse_triples)
         self.model = self.model_cls(
             self.factory,
-            random_seed=42,
             embedding_dim=self.embedding_dim,
             **(self.model_kwargs or {})
         ).to_device_()

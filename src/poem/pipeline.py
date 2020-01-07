@@ -167,6 +167,7 @@ the default data sets are also provided as subclasses of :class:`poem.triples.Tr
 import json
 import logging
 import os
+import random
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Type, Union
 
@@ -184,7 +185,7 @@ from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import MLFlowResultTracker, ResultTracker, resolve_device
+from .utils import MLFlowResultTracker, NoRandomSeedNecessary, ResultTracker, resolve_device, set_random_seed
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -200,6 +201,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PipelineResult:
     """A dataclass containing the results of running :func:`poem.pipeline.pipeline`."""
+
+    #: The random seed used at the beginning of the pipeline
+    random_seed: int
 
     #: The model trained by the pipeline
     model: BaseModule
@@ -370,6 +374,7 @@ def pipeline(  # noqa: C901
     mlflow_tracking_uri: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
+    random_seed: Optional[int] = None,
     use_testing_data: bool = True,
 ) -> PipelineResult:
     """Train and evaluate a model.
@@ -407,6 +412,11 @@ def pipeline(  # noqa: C901
         The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
     :param metadata: A JSON dictionary to store with the experiment
     """
+    if random_seed is None:
+        random_seed = random.randint(0, 2 ** 32 - 1)
+        logger.warning(f'No random seed is specified. Setting to {random_seed}.')
+    set_random_seed(random_seed)
+
     # Create result store
     if mlflow_tracking_uri is not None:
         result_tracker = MLFlowResultTracker(tracking_uri=mlflow_tracking_uri)
@@ -434,6 +444,7 @@ def pipeline(  # noqa: C901
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs.update(preferred_device=device)
+    model_kwargs.setdefault('random_seed', NoRandomSeedNecessary)
 
     if regularizer is not None and 'regularizer' in model_kwargs:
         raise ValueError('Can not specify regularizer in kwargs and model_kwargs')
@@ -535,6 +546,7 @@ def pipeline(  # noqa: C901
     result_tracker.end_run()
 
     return PipelineResult(
+        random_seed=random_seed,
         model=model_instance,
         training_loop=training_loop_instance,
         losses=losses,

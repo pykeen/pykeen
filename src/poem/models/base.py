@@ -3,12 +3,10 @@
 """Base module for all KGE models."""
 
 import logging
-import random
 from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
-import numpy as np
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -17,7 +15,7 @@ from ..losses import Loss, NegativeSamplingSelfAdversarialLoss
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import resolve_device
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 from ..version import get_version
 
 __all__ = [
@@ -98,13 +96,10 @@ class BaseModule(nn.Module):
         self._set_device(preferred_device)
 
         # Random seeds have to set before the embeddings are initialized
-        self.random_seed = random_seed
-        if self.random_seed is None:
+        if random_seed is None:
             logger.warning('No random seed is specified. This may lead to non-reproducible results.')
-        else:
-            np.random.seed(seed=self.random_seed)
-            torch.manual_seed(seed=self.random_seed)
-            random.seed(self.random_seed)
+        elif random_seed is not NoRandomSeedNecessary:
+            set_random_seed(random_seed)
 
         # Loss
         if loss is None:

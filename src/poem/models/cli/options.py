@@ -56,13 +56,6 @@ CLI_OPTIONS = {
         default=normalize_string(MarginRankingLoss.__name__, suffix=_LOSS_SUFFIX),
         show_default=True,
     ),
-    'random_seed': click.option(
-        '--random-seed',
-        type=int,
-        default=random.randint(0, 2 ** 32 - 1),
-        show_default=True,
-        help='Random seed for PyTorch, NumPy, and Python.',
-    ),
     'regularization_factor': click.option(  # ComplEx
         '--regularization-factor',
         type=float,
@@ -180,4 +173,11 @@ num_workers_option = click.option(
     type=int,
     help='The number of child CPU worker processes used for preparing batches during training. If not specified,'
          ' batches are prepared in the main process.',
+)
+random_seed_option = click.option(
+    '--random-seed',
+    type=int,
+    default=random.randint(0, 2 ** 32 - 1),
+    show_default=True,
+    help='Random seed for PyTorch, NumPy, and Python.',
 )
