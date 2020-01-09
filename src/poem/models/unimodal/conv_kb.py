@@ -117,8 +117,10 @@ class ConvKB(BaseModule):
         r = self.relation_embeddings(hrt_batch[:, 1])
         t = self.entity_embeddings(hrt_batch[:, 2])
 
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
+        # Output layer regularization
+        # In the paper only the weights of the output layer are used for regularization
+        # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
+        self.regularize_if_necessary(self.linear.weight, self.linear.bias)
 
         # Stack to convolution input
         conv_inp = torch.stack([h, r, t], dim=-1).view(-1, 1, self.embedding_dim, 3)
