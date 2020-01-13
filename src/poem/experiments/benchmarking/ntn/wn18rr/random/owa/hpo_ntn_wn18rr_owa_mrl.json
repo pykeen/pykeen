@@ -121,13 +121,12 @@
       "filtered": true
     },
     "evaluation_kwargs": {
-      "batch_size": 32
+      "batch_size": 1
     },
     "training_kwargs": {
       "NTN": {
         "owa": {
           "batch_size": 256,
-          "sub_batch_size": 128,
           "label_smoothing": 0.0
         }
       }

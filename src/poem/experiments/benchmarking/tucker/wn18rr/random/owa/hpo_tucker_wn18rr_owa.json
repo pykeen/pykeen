@@ -38,7 +38,7 @@
           "high": 0.5,
           "q": 0.1
         },
-         "dropout_2": {
+        "dropout_2": {
           "type": "float",
           "low": 0.1,
           "high": 0.5,

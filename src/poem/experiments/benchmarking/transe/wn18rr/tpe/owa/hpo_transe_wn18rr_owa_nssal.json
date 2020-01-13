@@ -152,7 +152,6 @@
       "frequency": 50,
       "patience": 2,
       "delta": 0.002
-      "patience": 2
     }
   },
   "optuna": {

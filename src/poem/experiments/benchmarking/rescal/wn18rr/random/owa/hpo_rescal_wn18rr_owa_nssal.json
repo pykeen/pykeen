@@ -136,7 +136,7 @@
       "filtered": true
     },
     "evaluation_kwargs": {
-      "batch_size": 32
+      "batch_size": 1
     },
     "training_kwargs": {
       "RESCAL": {
