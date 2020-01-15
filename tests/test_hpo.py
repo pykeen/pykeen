@@ -18,7 +18,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             training_kwargs=dict(num_epochs=5),
             n_trials=2,
         )
-        df = hpo_pipeline_result.study.trials_dataframe()
+        df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is optimized
         self.assertIn(('params', 'model.embedding_dim'), df.columns)
         # Check a loss param is optimized
@@ -35,7 +35,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             training_kwargs=dict(num_epochs=5),
             n_trials=2,
         )
-        df = hpo_pipeline_result.study.trials_dataframe()
+        df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is NOT optimized
         self.assertNotIn(('params', 'model.embedding_dim'), df.columns)
         # Check a loss param is optimized
@@ -50,7 +50,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             training_kwargs=dict(num_epochs=5),
             n_trials=2,
         )
-        df = hpo_pipeline_result.study.trials_dataframe()
+        df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is optimized
         self.assertIn(('params', 'model.embedding_dim'), df.columns)
         # Check a loss param is NOT optimized
@@ -68,7 +68,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             training_kwargs=dict(num_epochs=5),
             n_trials=2,
         )
-        df = hpo_pipeline_result.study.trials_dataframe()
+        df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is NOT optimized
         self.assertNotIn(('params', 'model.embedding_dim'), df.columns)
         # Check a loss param is NOT optimized
@@ -88,7 +88,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             training_kwargs=dict(num_epochs=5),
             n_trials=2,
         )
-        df = hpo_pipeline_result.study.trials_dataframe()
+        df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         self.assertIn(('params', 'model.embedding_dim'), df.columns)
         self.assertTrue(df[('params', 'model.embedding_dim')].isin({60., 70., 80.}).all())
 
