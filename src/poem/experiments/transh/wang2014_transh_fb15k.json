@@ -11,6 +11,7 @@
     },
     "regularizer": "TransH",
     "regularizer_kwargs": {
+      "apply_only_once": true,
       "weight": 1.0,
       "epsilon": 1e-05
     },

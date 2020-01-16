@@ -13,6 +13,7 @@
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {
+      "apply_only_once": true,
       "weight": 0.0005,
       "p": 2.0,
       "normalize": false

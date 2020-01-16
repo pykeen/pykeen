@@ -46,6 +46,9 @@ class Regularizer(nn.Module):
     #: The current regularization term (a scalar)
     regularization_term: torch.FloatTensor
 
+    #: Should the regularization only be applied once? This was used for ConvKB and defaults to False.
+    apply_only_once: bool
+
     #: Defaults for hyperparameter optimization
     hpo_default: ClassVar[Mapping[str, Any]]
 
@@ -53,11 +56,13 @@ class Regularizer(nn.Module):
         self,
         device: torch.device,
         weight: float = 1.0,
+        apply_only_once: bool = False,
     ):
         super().__init__()
         self.device = device
-        self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
         self.weight = torch.as_tensor(weight, device=self.device)
+        self.apply_only_once = apply_only_once
+        self.reset()
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -67,6 +72,7 @@ class Regularizer(nn.Module):
     def reset(self) -> None:
         """Reset the regularization term to zero."""
         self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
+        self.updated = False
 
     @abstractmethod
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
@@ -75,7 +81,10 @@ class Regularizer(nn.Module):
 
     def update(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularization term based on passed tensors."""
+        if self.apply_only_once and self.updated:
+            return
         self.regularization_term = self.regularization_term + sum(self.forward(x=x) for x in tensors)
+        self.updated = True
 
     @property
     def term(self) -> torch.FloatTensor:
@@ -121,8 +130,9 @@ class LpRegularizer(Regularizer):
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.,
+        apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight)
+        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -159,8 +169,9 @@ class PowerSumRegularizer(Regularizer):
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.,
+        apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight)
+        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -185,8 +196,9 @@ class TransHRegularizer(Regularizer):
         device: torch.device,
         weight: float = 0.05,
         epsilon: float = 1e-5,
+        apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight)
+        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -215,8 +227,9 @@ class CombinedRegularizer(Regularizer):
         regularizers: Iterable[Regularizer],
         device: torch.device,
         total_weight: float = 1.0,
+        apply_only_once: bool = False,
     ):
-        super().__init__(weight=total_weight, device=device)
+        super().__init__(weight=total_weight, device=device, apply_only_once=apply_only_once)
         self.regularizers = list(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):

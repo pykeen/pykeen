@@ -42,6 +42,7 @@ class ConvKB(BaseModule):
         weight=0.001 / 2,
         p=2.0,
         normalize=True,
+        apply_only_once=True,
     )
 
     def __init__(
@@ -118,7 +119,7 @@ class ConvKB(BaseModule):
         t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Output layer regularization
-        # In the paper only the weights of the output layer are used for regularization
+        # In the code base only the weights of the output layer are used for regularization
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
         self.regularize_if_necessary(self.linear.weight, self.linear.bias)
 

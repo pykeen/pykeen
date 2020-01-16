@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Dict, Optional, Type
 import torch
 
 from poem.datasets import NationsTrainingTriplesFactory
-from poem.models import RESCAL
+from poem.models import ConvKB, RESCAL
 from poem.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer
 from poem.triples import TriplesFactory
 from poem.typing import MappedTriples
@@ -188,3 +188,48 @@ class PowerSumRegularizerTest(_RegularizerTestCase, unittest.TestCase):
         if kwargs.get('normalize', False):
             value = value / x.shape[-1]
         return value
+
+
+class TestOnlyUpdateOnce(unittest.TestCase):
+    """Tests for when the regularizer should only update once."""
+
+    generator: torch.Generator
+    device: torch.device
+
+    def setUp(self) -> None:
+        """Set up the test case."""
+        self.generator = torch.random.manual_seed(seed=42)
+        self.device = resolve_device()
+
+    def test_lp(self):
+        """Test when the Lp regularizer only updates once, like for ConvKB."""
+        self.assertIn('apply_only_once', ConvKB.regularizer_default_kwargs)
+        self.assertTrue(ConvKB.regularizer_default_kwargs['apply_only_once'])
+        regularizer = LpRegularizer(
+            device=self.device,
+            **ConvKB.regularizer_default_kwargs,
+        )
+        self._help_test_regularizer(regularizer)
+
+    def _help_test_regularizer(self, regularizer: Regularizer):
+        self.assertFalse(regularizer.updated)
+        self.assertEqual(torch.zeros(1, dtype=torch.float, device=self.device), regularizer.regularization_term)
+
+        # After first update, should change the term
+        a = torch.rand(10, 10, device=self.device, generator=self.generator)
+        b = torch.rand(10, 10, device=self.device, generator=self.generator)
+        regularizer.update(a, b)
+        self.assertTrue(regularizer.updated)
+        self.assertNotEqual(torch.zeros(1, dtype=torch.float, device=self.device), regularizer.regularization_term)
+        term = regularizer.regularization_term.clone()
+
+        # After second update, no change should happen
+        c = torch.rand(10, 10, device=self.device, generator=self.generator)
+        d = torch.rand(10, 10, device=self.device, generator=self.generator)
+        regularizer.update(c, d)
+        self.assertTrue(regularizer.updated)
+        self.assertEqual(term, regularizer.regularization_term)
+
+        regularizer.reset()
+        self.assertFalse(regularizer.updated)
+        self.assertEqual(torch.zeros(1, dtype=torch.float, device=self.device), regularizer.regularization_term)

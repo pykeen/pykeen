@@ -11,6 +11,7 @@
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {
+      "apply_only_once": false,
       "weight": 0.1,
       "p": 2.0,
       "normalize": false

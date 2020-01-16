@@ -11,6 +11,7 @@
     },
     "regularizer": "Lp",
     "regularizer_kwargs": {
+      "apply_only_once": false,
       "weight": 0.0001,
       "p": 2.0,
       "normalize": false
