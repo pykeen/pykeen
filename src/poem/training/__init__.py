@@ -14,7 +14,6 @@ owa     :class:`poem.training.OWATrainingLoop`
 
 from typing import Mapping, Set, Type, Union
 
-from .early_stopping import EarlyStopper  # noqa: F401
 from .lcwa import LCWATrainingLoop  # noqa: F401
 from .owa import OWATrainingLoop  # noqa: F401
 from .training_loop import NonFiniteLossError, TrainingLoop  # noqa: F401
@@ -24,7 +23,6 @@ __all__ = [
     'TrainingLoop',
     'OWATrainingLoop',
     'LCWATrainingLoop',
-    'EarlyStopper',
     'NonFiniteLossError',
     'training_loops',
     'get_training_loop_cls',

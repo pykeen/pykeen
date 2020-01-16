@@ -11,6 +11,7 @@ from .. import get_model_cls
 from ...evaluation import evaluators, get_evaluator_cls
 from ...losses import MarginRankingLoss, _LOSS_SUFFIX, get_loss_cls, losses
 from ...optimizers import get_optimizer_cls, optimizers
+from ...stoppers import get_stopper_cls, stoppers
 from ...training import get_training_loop_cls, training_loops
 from ...triples import TriplesFactory
 from ...utils import normalize_string, resolve_device
@@ -126,6 +127,14 @@ training_loop_option = click.option(
     default='owa',
     show_default=True,
 )
+stopper_option = click.option(
+    '--stopper',
+    type=click.Choice(list(stoppers)),
+    callback=_make_callback(get_stopper_cls),
+    default='nop',
+    show_default=True,
+)
+
 number_epochs_option = click.option(
     '-n', '--number-epochs',
     type=int,
@@ -155,10 +164,10 @@ testing_option = click.option(
     callback=triples_factory_callback,
     help='Path to testing data. If not supplied, then evaluation occurs on training data.',
 )
-early_stopping_option = click.option(
-    '-s', '--early-stopping',
+valiadation_option = click.option(
+    '--validation-triples-factory',
     callback=triples_factory_callback,
-    help='Path to evaluation data for early stopping.',
+    help='Path to validation data. Must be supplied for early stopping',
 )
 mlflow_uri_option = click.option(
     '--mlflow-tracking-uri',

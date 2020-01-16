@@ -11,8 +11,8 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 
-from .early_stopping import EarlyStopper
 from ..models.base import BaseModule
+from ..stoppers import Stopper
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
@@ -99,7 +99,7 @@ class TrainingLoop(ABC):
         sampler: Optional[str] = None,
         continue_training: bool = False,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
-        early_stopper: Optional[EarlyStopper] = None,
+        stopper: Optional[Stopper] = None,
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
@@ -118,8 +118,8 @@ class TrainingLoop(ABC):
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
-        :param early_stopper:
-            An instance of :class:`poem.training.EarlyStopper` with settings for checking
+        :param stopper:
+            An instance of :class:`poem.stopper.EarlyStopper` with settings for checking
             if training should stop early
         :param result_tracker:
             The result tracker.
@@ -249,11 +249,7 @@ class TrainingLoop(ABC):
             self.losses_per_epochs.append(epoch_loss)
             result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
-            if (
-                early_stopper is not None
-                and 0 == ((epoch - 1) % early_stopper.frequency)  # only check with given frequency
-                and early_stopper.should_stop()
-            ):
+            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop():
                 return self.losses_per_epochs
 
             # Print loss information to console

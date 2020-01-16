@@ -19,6 +19,7 @@ POEM
    reference/datasets
    reference/triples
    reference/training
+   reference/stoppers
    reference/losses
    reference/evaluation
    reference/sampling

@@ -110,14 +110,14 @@ of the evaluator could be used as in:
 ...     evaluator=RankBasedEvaluator,
 ... )
 
-POEM implements early stopping, which can be turned on with the ``early_stopping`` keyword
+POEM implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
 >>> from poem.pipeline import pipeline
 >>> result = pipeline(
 ...     model='TransE',
 ...     dataset='Nations',
-...     early_stopping=True,
+...     stopper='early',
 ... )
 
 Deeper Configuration
@@ -183,7 +183,8 @@ from .models.base import BaseModule
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
-from .training import EarlyStopper, OWATrainingLoop, TrainingLoop, get_training_loop_cls
+from .stoppers import Stopper, get_stopper_cls
+from .training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import MLFlowResultTracker, NoRandomSeedNecessary, ResultTracker, resolve_device, set_random_seed
 from .version import get_git_hash, get_version
@@ -364,8 +365,8 @@ def pipeline(  # noqa: C901
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
     training_kwargs: Optional[Mapping[str, Any]] = None,
-    early_stopping: bool = False,
-    early_stopping_kwargs: Optional[Mapping[str, Any]] = None,
+    stopper: Union[None, str, Type[Stopper]] = None,
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # 8. Evaluation
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
@@ -398,13 +399,13 @@ def pipeline(  # noqa: C901
      :class:`poem.sampling.BasicNegativeSampler`.
     :param evaluator: The name of the evaluator or an evaluator class. Defaults to
      :class:`poem.evaluation.RankBasedEvaluator`.
-    :param early_stopping: Whether to use early stopping. Defaults to false.
+    :param stopper: What kind of stopping to use. Default to no stopping, can be set to 'early'.
+    :param stopper_kwargs: Keyword arguments to pass to the stopper upon instantiation.
     :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
     :param model_kwargs: Keyword arguments to pass to the model class on instantiation
     :param optimizer_kwargs: Keyword arguments to pass to the optimizer on instantiation
     :param training_kwargs: Keyword arguments to pass to the training loop's train
      function on call
-    :param early_stopping_kwargs: Keyword arguments to pass to the EarlyStopper upon instantiation.
     :param evaluator_kwargs: Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs: Keyword arguments to pass to the evaluator's evaluate
      function on call
@@ -506,34 +507,41 @@ def pipeline(  # noqa: C901
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
 
-    # Early stopping
-    if early_stopping:
-        if early_stopping_kwargs is None:
-            early_stopping_kwargs = {}
-        if validation_triples_factory is None:
-            raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
-        # Load the evaluation batch size for the early stopper, if it has been set
-        _evaluation_batch_size = evaluation_kwargs.get('batch_size')
-        if _evaluation_batch_size is not None:
-            early_stopping_kwargs.setdefault('evaluation_batch_size', _evaluation_batch_size)
-        early_stopper = EarlyStopper(
-            model=model_instance,
-            evaluator=evaluator_instance,
-            evaluation_triples_factory=validation_triples_factory,
-            result_tracker=result_tracker,
-            **early_stopping_kwargs,
-        )
-    else:
-        early_stopper = None
-
     if training_kwargs is None:
         training_kwargs = {}
+
+    # Stopping
+    if 'stopper' in training_kwargs and stopper is not None:
+        raise ValueError('Specified stopper in training_kwargs and as stopper')
+    if 'stopper' in training_kwargs:
+        stopper = training_kwargs.pop('stopper')
+    if stopper_kwargs is None:
+        stopper_kwargs = {}
+
+    # Load the evaluation batch size for the stopper, if it has been set
+    _evaluation_batch_size = evaluation_kwargs.get('batch_size')
+    if _evaluation_batch_size is not None:
+        stopper_kwargs.setdefault('evaluation_batch_size', _evaluation_batch_size)
+
+    # By default there's a stopper that does nothing interesting
+    stopper_cls: Type[Stopper] = get_stopper_cls(stopper)
+    stopper: Stopper = stopper_cls(
+        model=model_instance,
+        evaluator=evaluator_instance,
+        evaluation_triples_factory=validation_triples_factory,
+        result_tracker=result_tracker,
+        **stopper_kwargs,
+    )
+
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
-    training_kwargs.setdefault('early_stopper', early_stopper)
 
     # Train like Cristiano Ronaldo
-    losses = training_loop_instance.train(**training_kwargs, result_tracker=result_tracker)
+    losses = training_loop_instance.train(
+        stopper=stopper,
+        result_tracker=result_tracker,
+        **training_kwargs,
+    )
 
     if use_testing_data:
         mapped_triples = testing_triples_factory.mapped_triples

@@ -96,6 +96,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     @options.device_option
     @options.training_option
     @options.testing_option
+    @options.valiadation_option
     @options.optimizer_option
     @regularizer_option
     @options.training_loop_option
@@ -103,7 +104,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
     @options.batch_size_option
     @options.learning_rate_option
     @options.evaluator_option
-    @options.early_stopping_option
+    @options.stopper_option
     @options.mlflow_uri_option
     @options.title_option
     @options.num_workers_option
@@ -120,12 +121,13 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
         batch_size,
         learning_rate,
         evaluator,
-        early_stopping,
+        stopper,
         output,
         mlflow_tracking_uri,
         title,
         training_triples_factory,
         testing_triples_factory,
+        validation_triples_factory,
         num_workers,
         random_seed,
         **model_kwargs,
@@ -145,6 +147,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
             regularizer=regularizer,
             training_triples_factory=training_triples_factory,
             testing_triples_factory=testing_triples_factory or training_triples_factory,
+            validation_triples_factory=validation_triples_factory,
             optimizer=optimizer,
             optimizer_kwargs=dict(
                 lr=learning_rate,
@@ -156,7 +159,7 @@ def build_cli_from_cls(model: Type[BaseModule]) -> click.Command:  # noqa: D202
                 batch_size=batch_size,
                 num_workers=num_workers,
             ),
-            early_stopping=early_stopping,
+            stopper=stopper,
             mlflow_tracking_uri=mlflow_tracking_uri,
             metadata=dict(
                 title=title,

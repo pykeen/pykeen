@@ -9,9 +9,7 @@ from typing import Callable, List, Optional
 
 import numpy
 
-from ..evaluation import Evaluator
-from ..models.base import BaseModule
-from ..triples import TriplesFactory
+from .stopper import Stopper
 from ..utils import ResultTracker
 
 __all__ = [
@@ -60,20 +58,13 @@ def larger_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: 
 
 
 @dataclass
-class EarlyStopper:
+class EarlyStopper(Stopper):
     """A harness for early stopping.
 
     If you want to change the validation criteria, inherit from this
     class and override ``EarlyStopper._validate()``.
     """
 
-    #: The model
-    model: BaseModule
-    #: The evaluator
-    evaluator: Evaluator
-    #: The triples to use for evaluation
-    evaluation_triples_factory: TriplesFactory
-    #: The evaluation batch size to use
     evaluation_batch_size: Optional[int] = None
     #: The number of epochs after which the model is evaluated on validation set
     frequency: int = 10
@@ -102,6 +93,9 @@ class EarlyStopper:
         # TODO: Fix this
         # if all(f.name != self.metric for f in dataclasses.fields(self.evaluator.__class__)):
         #     raise ValueError(f'Invalid metric name: {self.metric}')
+        if self.evaluation_triples_factory is None:
+            raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
+
         if self.larger_is_better:
             self.improvement_criterion = larger_than_any_buffer_element
         else:
@@ -113,8 +107,10 @@ class EarlyStopper:
         if self.result_tracker is None:
             self.result_tracker = ResultTracker()
 
-    def should_stop(self) -> bool:
-        """Validate on validation set and check for termination condition."""
+    def should_evaluate(self, epoch: int) -> bool:  # noqa: D102
+        return 0 == ((epoch - 1) % self.frequency)
+
+    def should_stop(self) -> bool:  # noqa: D102
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,

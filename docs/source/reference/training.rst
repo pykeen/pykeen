@@ -8,5 +8,3 @@ Training
    :members:
    :inherited-members:
 
-.. autoclass:: poem.training.EarlyStopper
-   :members:

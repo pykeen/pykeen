@@ -14,8 +14,8 @@ from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBa
 from poem.evaluation.rank_based_evaluator import RANK_AVERAGE
 from poem.models import TransE
 from poem.models.base import BaseModule
-from poem.training import EarlyStopper, OWATrainingLoop
-from poem.training.early_stopping import larger_than_any_buffer_element, smaller_than_any_buffer_element
+from poem.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
+from poem.training import OWATrainingLoop
 from poem.triples import TriplesFactory
 from poem.typing import MappedTriples
 
@@ -127,7 +127,7 @@ class TestEarlyStopping(unittest.TestCase):
         """Prepare for testing the early stopper."""
         self.mock_evaluator = MockEvaluator(self.mock_losses)
         self.model = MockModel(triples_factory=NationsTrainingTriplesFactory())
-        self.early_stopper = EarlyStopper(
+        self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
             evaluation_triples_factory=NationsValidationTriplesFactory(),
@@ -139,29 +139,29 @@ class TestEarlyStopping(unittest.TestCase):
     def test_initialization(self):
         """Test warm-up phase."""
         for it in range(self.patience):
-            should_stop = self.early_stopper.should_stop()
-            assert self.early_stopper.number_evaluations == it + 1
+            should_stop = self.stopper.should_stop()
+            assert self.stopper.number_evaluations == it + 1
             assert not should_stop
 
     def test_result_processing(self):
         """Test that the mock evaluation of the early stopper always gives the right loss."""
         for stop in range(1, 1 + len(self.mock_losses)):
             # Step early stopper
-            should_stop = self.early_stopper.should_stop()
+            should_stop = self.stopper.should_stop()
 
             if not should_stop:
                 # check storing of results
-                assert self.early_stopper.results == self.mock_losses[:stop]
+                assert self.stopper.results == self.mock_losses[:stop]
 
                 # check ring buffer
                 if stop >= self.patience:
-                    assert set(self.early_stopper.buffer) == set(self.mock_losses[stop - self.patience:stop])
+                    assert set(self.stopper.buffer) == set(self.mock_losses[stop - self.patience:stop])
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
         for _ in range(self.stop_constant):
-            self.assertFalse(self.early_stopper.should_stop())
-        self.assertTrue(self.early_stopper.should_stop())
+            self.assertFalse(self.stopper.should_stop())
+        self.assertTrue(self.stopper.should_stop())
 
 
 class TestDeltaEarlyStopping(TestEarlyStopping):
@@ -200,7 +200,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         """Tests early stopping."""
         model: BaseModule = TransE(triples_factory=NationsTrainingTriplesFactory())
         evaluator = RankBasedEvaluator()
-        early_stopper = EarlyStopper(
+        stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
             evaluation_triples_factory=NationsValidationTriplesFactory(),
@@ -215,7 +215,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         losses = training_loop.train(
             num_epochs=self.max_num_epochs,
             batch_size=self.batch_size,
-            early_stopper=early_stopper,
+            stopper=stopper,
         )
-        assert len(early_stopper.results) == len(losses) // early_stopper.frequency
+        assert len(stopper.results) == len(losses) // stopper.frequency
         self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')
