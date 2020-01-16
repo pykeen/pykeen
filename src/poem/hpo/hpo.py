@@ -13,6 +13,7 @@ from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
+from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
 from ..datasets import DataSet
 from ..evaluation import Evaluator, get_evaluator_cls
@@ -285,7 +286,8 @@ def hpo_pipeline(
     storage: Union[None, str, BaseStorage] = None,
     sampler: Union[None, str, Type[BaseSampler]] = None,
     sampler_kwargs: Optional[Mapping[str, Any]] = None,
-    pruner: Optional[BasePruner] = None,
+    pruner: Union[None, str, Type[BasePruner]] = None,
+    pruner_kwargs: Optional[Mapping[str, Any]] = None,
     study_name: Optional[str] = None,
     direction: Optional[str] = None,
     load_if_exists: bool = False,
@@ -435,6 +437,7 @@ def hpo_pipeline(
 
     """
     sampler_cls = get_sampler_cls(sampler)
+    pruner_cls = get_pruner_cls(pruner)
 
     if direction is None:
         direction = 'minimize'
@@ -442,7 +445,7 @@ def hpo_pipeline(
     study = create_study(
         storage=storage,
         sampler=sampler_cls(**(sampler_kwargs or {})),
-        pruner=pruner,
+        pruner=pruner_cls(**(pruner_kwargs or {})),
         study_name=study_name,
         direction=direction,
         load_if_exists=load_if_exists,
