@@ -99,6 +99,16 @@ class TransH(BaseModule):
             out=self.normal_vector_embeddings.weight.data,
         )
 
+    def regularize_if_necessary(self) -> None:
+        """Update the regularizer's term given some tensors, if regularization is requested."""
+        # As described in [wang2014], all entities and relations are used to compute the regularization term
+        # which enforces the defined soft constraints.
+        super().regularize_if_necessary(
+            self.entity_embeddings.weight,
+            self.normal_vector_embeddings.weight,
+            self.relation_embeddings.weight,
+        )
+
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(hrt_batch[:, 0])
@@ -111,7 +121,7 @@ class TransH(BaseModule):
         pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
 
         # Regularization term
-        self.regularize_if_necessary(h, t, w_r, d_r)
+        self.regularize_if_necessary()
 
         return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
 
@@ -127,7 +137,7 @@ class TransH(BaseModule):
         pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
 
         # Regularization term
-        self.regularize_if_necessary(h, t, w_r, d_r)
+        self.regularize_if_necessary()
 
         return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
 
@@ -144,6 +154,6 @@ class TransH(BaseModule):
         pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
 
         # Regularization term
-        self.regularize_if_necessary(h, t, w_r, d_r)
+        self.regularize_if_necessary()
 
         return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)

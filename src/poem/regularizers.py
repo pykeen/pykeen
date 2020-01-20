@@ -196,27 +196,31 @@ class TransHRegularizer(Regularizer):
         device: torch.device,
         weight: float = 0.05,
         epsilon: float = 1e-5,
-        apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
+        # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
+        # Therefore, apply_only_once is always set to True.
+        super().__init__(device=device, weight=weight, apply_only_once=True)
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         raise NotImplementedError('TransH regularizer is order-sensitive!')
 
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
-        if len(tensors) != 4:
-            raise KeyError('Expects exactly four tensors')
-
-        h, t, w_r, d_r = tensors
-
+        if len(tensors) != 3:
+            raise KeyError('Expects exactly three tensors')
+        if self.apply_only_once and self.updated:
+            return
+        entity_embeddings, normal_vector_embeddings, relation_embeddings = tensors
         # Entity soft constraint
-        self.regularization_term += torch.sum(functional.relu(torch.norm(h, dim=-1)) ** 2 - 1.0)
-        self.regularization_term += torch.sum(functional.relu(torch.norm(t, dim=-1)) ** 2 - 1.0)
+        self.regularization_term += torch.sum(functional.relu(torch.norm(entity_embeddings, dim=-1) ** 2 - 1.0))
 
         # Orthogonality soft constraint
-        d_r_n = functional.normalize(d_r, dim=-1)
-        self.regularization_term += torch.sum(functional.relu(torch.sum((w_r * d_r_n) ** 2, dim=-1) - self.epsilon))
+        d_r_n = functional.normalize(relation_embeddings, dim=-1)
+        self.regularization_term += torch.sum(
+            functional.relu(torch.sum((normal_vector_embeddings * d_r_n) ** 2, dim=-1) - self.epsilon)
+        )
+
+        self.updated = True
 
 
 class CombinedRegularizer(Regularizer):
