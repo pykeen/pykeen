@@ -5,6 +5,9 @@
   },
   "pipeline": {
     "dataset": "wn18",
+    "dataset_kwargs": {
+      "create_inverse_triples": true
+    },
     "model": "TuckER",
     "model_kwargs": {
       "embedding_dim": 200,
