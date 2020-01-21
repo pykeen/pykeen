@@ -29,7 +29,6 @@ class RESCAL(BaseModule):
 
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
-        regularization_weight=dict(type=float, low=0.001, high=0.1, scale='log'),
     )
 
     #: The regularizer used by [nickel2011]_ for for RESCAL

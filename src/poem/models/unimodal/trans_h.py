@@ -30,8 +30,6 @@ class TransH(BaseModule):
 
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
-        regularization_weight=dict(type=float, low=0.001, high=1., scale='log'),
-        epsilon=dict(type=float, low=0.05, high=1.5, scale='log'),
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
 
