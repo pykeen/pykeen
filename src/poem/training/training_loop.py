@@ -2,6 +2,7 @@
 
 """Training loops for KGE models using multi-modal information."""
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, List, Mapping, Optional, Tuple, Union
 
@@ -22,6 +23,8 @@ __all__ = [
     'TrainingLoop',
     'NonFiniteLossError',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class NonFiniteLossError(RuntimeError):
@@ -196,6 +199,7 @@ class TrainingLoop(ABC):
             _tqdm_kwargs.update(tqdm_kwargs)
         epochs = trange(1, 1 + num_epochs, **_tqdm_kwargs)
 
+        logger.info(f'using stopper: {stopper}')
         # Training Loop
         for epoch in epochs:
             # Enforce training mode

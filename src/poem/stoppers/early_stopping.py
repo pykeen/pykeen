@@ -5,11 +5,15 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, List
+from typing import Optional
 
 import numpy
 
 from .stopper import Stopper
+from ..evaluation import Evaluator
+from ..models.base import BaseModule
+from ..triples import TriplesFactory
 from ..utils import ResultTracker
 
 __all__ = [
@@ -65,6 +69,13 @@ class EarlyStopper(Stopper):
     class and override ``EarlyStopper._validate()``.
     """
 
+    #: The model
+    model: BaseModule = dataclasses.field(repr=False)
+    #: The evaluator
+    evaluator: Evaluator
+    #: The triples to use for evaluation
+    evaluation_triples_factory: Optional[TriplesFactory]
+    #: Size of the evaluation batches
     evaluation_batch_size: Optional[int] = None
     #: The number of epochs after which the model is evaluated on validation set
     frequency: int = 10
@@ -76,7 +87,7 @@ class EarlyStopper(Stopper):
     #: The minimum improvement between two iterations
     delta: float = 0.005
     #: The metric results from all evaluations
-    results: List[float] = dataclasses.field(default_factory=list)
+    results: List[float] = dataclasses.field(default_factory=list, repr=False)
     #: A ring buffer to store the recent results
     buffer: numpy.ndarray = dataclasses.field(init=False)
     #: A counter for the ring buffer
