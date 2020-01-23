@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Optional, Tuple, Union
+from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
 import torch
 from torch import nn
@@ -12,6 +12,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 
+from ..losses import Loss
 from ..models.base import BaseModule
 from ..stoppers import Stopper
 from ..training.schlichtkrull_sampler import GraphSampler
@@ -22,6 +23,7 @@ from ..utils import ResultTracker, normalize_string
 __all__ = [
     'TrainingLoop',
     'NonFiniteLossError',
+    'AssumptionLossMismatchError',
 ]
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,10 @@ logger = logging.getLogger(__name__)
 
 class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
+
+
+class AssumptionLossMismatchError(TypeError):
+    """An exception when an illegal loss function is used with a given training assumption."""
 
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
@@ -51,6 +57,7 @@ class TrainingLoop(ABC):
 
     training_instances: Optional[Instances]
     losses_per_epochs: List[float]
+    loss_blacklist: Optional[List[Type[Loss]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -71,6 +78,12 @@ class TrainingLoop(ABC):
         self.optimizer = optimizer
         self.training_instances = None
         self.losses_per_epochs = []
+
+        if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
+            raise AssumptionLossMismatchError(
+                f'Can not use loss {self.model.loss.__class__.__name__}'
+                f' with training assumption {self.__class__.__name__}',
+            )
 
         if self.model.is_mr_loss:
             self._loss_helper = self._mr_loss_helper

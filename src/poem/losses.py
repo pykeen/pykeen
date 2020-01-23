@@ -20,7 +20,7 @@ from typing import Any, Mapping, Set, Type, Union
 
 import torch
 from torch import nn
-from torch.nn import BCELoss, MSELoss, MarginRankingLoss, functional
+from torch.nn import BCELoss, CrossEntropyLoss, MSELoss, MarginRankingLoss, functional
 
 from .utils import get_cls, normalize_string
 
@@ -29,6 +29,7 @@ __all__ = [
     'BCEAfterSigmoidLoss',
     'SoftplusLoss',
     'NegativeSamplingSelfAdversarialLoss',
+    'CrossEntropyLoss',
     'losses',
     'losses_hpo_defaults',
     'get_loss_cls',
@@ -121,6 +122,7 @@ _LOSSES: Set[Type[Loss]] = {
     BCELoss,
     SoftplusLoss,
     BCEAfterSigmoidLoss,
+    CrossEntropyLoss,
     MSELoss,
     NegativeSamplingSelfAdversarialLoss,
 }

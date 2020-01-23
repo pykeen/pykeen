@@ -8,9 +8,11 @@ import torch
 from torch import optim
 
 from poem.datasets import NationsTrainingTriplesFactory
-from poem.models import BaseModule, ConvE, TransE
+from poem.losses import CrossEntropyLoss
+from poem.models import ConvE, TransE
+from poem.models.base import BaseModule
 from poem.training import OWATrainingLoop
-from poem.training.training_loop import NonFiniteLossError
+from poem.training.training_loop import AssumptionLossMismatchError, NonFiniteLossError
 from poem.typing import MappedTriples
 
 
@@ -92,8 +94,14 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(triples_factory=self.triples_factory)
         training_loop = NaNTrainingLoop(model=model, patience=2)
 
-        def _try_train():
-            """Call train method."""
+        with self.assertRaises(NonFiniteLossError):
             training_loop.train(num_epochs=3, batch_size=self.batch_size)
 
-        self.assertRaises(NonFiniteLossError, _try_train)
+    def test_blacklist_loss_on_owa(self):
+        """Test an allowed OWA loss."""
+        model = TransE(
+            triples_factory=self.triples_factory,
+            loss=CrossEntropyLoss(),
+        )
+        with self.assertRaises(AssumptionLossMismatchError):
+            NaNTrainingLoop(model=model, patience=2)

@@ -9,6 +9,7 @@ from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
+from ..losses import CrossEntropyLoss
 from ..models.base import BaseModule
 from ..sampling import BasicNegativeSampler, NegativeSampler
 from ..triples import OWAInstances
@@ -23,6 +24,7 @@ class OWATrainingLoop(TrainingLoop):
     """A training loop that uses the open world assumption."""
 
     negative_sampler: NegativeSampler
+    loss_blacklist = [CrossEntropyLoss]
 
     def __init__(
         self,
