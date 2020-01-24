@@ -3,8 +3,9 @@
 """Implementation of ConvE."""
 
 import logging
+import math
 import sys
-from typing import Optional, Type
+from typing import Optional, Tuple, Type
 
 import torch
 from torch import nn
@@ -21,6 +22,55 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def _calculate_missing_shape_information(
+    embedding_dim: int,
+    input_channels: Optional[int] = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+) -> Tuple[int, int, int]:
+    """
+    Automatically calculates missing dimensions for ConvE.
+
+    :param embedding_dim:
+    :param input_channels:
+    :param width:
+    :param height:
+
+    :return: (input_channels, width, height), such that
+            `embedding_dim = input_channels * width * height`
+    :raises:
+        If not factorization could be found.
+    """
+    # Store initial input for error message
+    original = (input_channels, width, height)
+
+    # All are None
+    if all(factor is None for factor in [input_channels, width, height]):
+        input_channels = 1
+        result_sqrt = math.floor(math.sqrt(embedding_dim))
+        height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
+        width = embedding_dim // height
+
+    # input_channels is None, and any of height or width is None -> set input_channels=1
+    if input_channels is None and any(remaining is None for remaining in [width, height]):
+        input_channels = 1
+
+    # input channels is not None, and one of height or width is None
+    assert len([factor for factor in [input_channels, width, height] if factor is None]) <= 1
+    if width is None:
+        width = embedding_dim // (height * input_channels)
+    if height is None:
+        height = embedding_dim // (width * input_channels)
+    if input_channels is None:
+        input_channels = embedding_dim // (width * height)
+    assert not any(factor is None for factor in [input_channels, width, height])
+
+    if input_channels * width * height != embedding_dim:
+        raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
+
+    return input_channels, width, height
 
 
 class ConvE(BaseModule):
@@ -83,10 +133,10 @@ class ConvE(BaseModule):
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         bias_term: Optional[nn.Parameter] = None,
-        input_channels: int = 1,
+        input_channels: Optional[int] = None,
         output_channels: int = 32,
-        embedding_height: int = 10,
-        embedding_width: int = 20,
+        embedding_height: Optional[int] = None,
+        embedding_width: Optional[int] = None,
         kernel_height: int = 3,
         kernel_width: int = 3,
         input_dropout: float = 0.2,
@@ -121,6 +171,21 @@ class ConvE(BaseModule):
         self.entity_embeddings = entity_embeddings
         self.relation_embeddings = relation_embeddings
         self.bias_term = bias_term
+
+        # Automatic calculation of remaining dimensions
+        logger.info(f'Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        if embedding_dim is None:
+            embedding_dim = input_channels * embedding_width * embedding_height
+
+        # Parameter need to fulfil:
+        #   input_channels * embedding_height * embedding_width = embedding_dim
+        input_channels, embedding_width, embedding_height = _calculate_missing_shape_information(
+            embedding_dim=embedding_dim,
+            input_channels=input_channels,
+            width=embedding_width,
+            height=embedding_height,
+        )
+        logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
 
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
