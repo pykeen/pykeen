@@ -135,6 +135,13 @@ class DataSet:
         """The number of relations."""
         return self.training.num_relations
 
+    def __str__(self) -> str:  # noqa: D105
+        return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
+
+    def __repr__(self) -> str:  # noqa: D105
+        return f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",' \
+               f' validation_path="{self.validation_path}")'
+
 
 class RemoteDataSet(DataSet):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
