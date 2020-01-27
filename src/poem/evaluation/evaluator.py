@@ -24,7 +24,7 @@ __all__ = [
     'evaluate',
 ]
 
-_LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -225,7 +225,7 @@ def filter_scores_(
     # Warn if all entities will be filtered
     # (scores != scores) yields true for all NaN instances (IEEE 754), thus allowing to count the filtered triples.
     if ((scores != scores).sum(dim=1) == num_entities).any():
-        _LOGGER.warning(
+        logger.warning(
             "User selected filtered metric computation, but all corrupted triples exists also as positive "
             "triples",
         )
@@ -443,7 +443,7 @@ def evaluate(
         results = [evaluator.finalize() for evaluator in evaluators]
 
     stop = timeit.default_timer()
-    _LOGGER.info("Evaluation took %.2fs seconds", stop - start)
+    logger.info("Evaluation took %.2fs seconds", stop - start)
 
     if squeeze and len(results) == 1:
         return results[0]
