@@ -125,6 +125,11 @@ class SklearnEvaluator(Evaluator):
         all_keys = list(self.all_scores.keys())
         y_score = numpy.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
         y_true = numpy.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
+
+        # Clear buffers
+        self.all_positives.clear()
+        self.all_scores.clear()
+
         return SklearnMetricResults(
             name=self.metric.__name__,
             score=self.metric(y_true, y_score),

@@ -224,6 +224,9 @@ class RankBasedEvaluator(Evaluator):
         adjusted_ranks = np.asarray(self.ranks.get(RANK_AVERAGE_ADJUSTED), dtype=np.float64)
         adjusted_mean_rank = np.mean(adjusted_ranks)
 
+        # Clear buffers
+        self.ranks.clear()
+
         return RankBasedMetricResults(
             mean_rank=mean_rank,
             mean_reciprocal_rank=mean_reciprocal_rank,
