@@ -30,6 +30,7 @@ from ..version import get_git_hash, get_version
 
 __all__ = [
     'hpo_pipeline_from_path',
+    'hpo_pipeline_from_config',
     'hpo_pipeline',
     'HpoPipelineResult',
 ]
@@ -82,6 +83,7 @@ class Objective:
 
     # Misc.
     metric: str = None
+    save_model_directory: Optional[str] = None
     pipeline_kwargs: Optional[Mapping[str, Any]] = None
 
     def __call__(self, trial: Trial) -> float:
@@ -168,6 +170,10 @@ class Objective:
             use_testing_data=False,  # use validation set during HPO!
             **(self.pipeline_kwargs or {}),
         )
+        if self.save_model_directory:
+            model_directory = os.path.join(self.save_model_directory, str(trial.number))
+            os.makedirs(model_directory, exist_ok=True)
+            result.save_to_directory(model_directory)
 
         trial.set_user_attr('random_seed', result.random_seed)
 
@@ -233,16 +239,19 @@ class HpoPipelineResult:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
 
-def hpo_pipeline_from_path(
-    path: str
-) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
     with open(path) as file:
         config = json.load(file)
+    return hpo_pipeline_from_config(config, **kwargs)
 
+
+def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipelineResult:
+    """Run the HPO pipeline using a properly formatted configuration dictionary."""
     return hpo_pipeline(
         **config['pipeline'],
         **config['optuna'],
+        **kwargs,
     )
 
 
@@ -295,6 +304,7 @@ def hpo_pipeline(
     n_trials: Optional[int] = None,
     timeout: Optional[int] = None,
     n_jobs: Optional[int] = None,
+    save_model_directory: Optional[str] = None,
 ) -> HpoPipelineResult:
     """Train a model on the given dataset.
 
@@ -530,6 +540,7 @@ def hpo_pipeline(
         evaluation_kwargs=evaluation_kwargs,
         # Optuna Misc.
         metric=metric,
+        save_model_directory=save_model_directory,
         # Pipeline Misc.
         pipeline_kwargs=pipeline_kwargs,
     )

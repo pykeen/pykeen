@@ -30,6 +30,11 @@ def _turn_on_debugging(_ctx, _param, value):
         logger.setLevel(logging.INFO)
 
 
+def _make_dir(_ctx, _param, value):
+    os.makedirs(value, exist_ok=True)
+    return value
+
+
 verbose_option = click.option(
     '-v', '--verbose',
     is_flag=True,
@@ -38,7 +43,8 @@ verbose_option = click.option(
 )
 directory_option = click.option(
     '-d', '--directory',
-    type=click.Path(dir_okay=True, exists=True, file_okay=False),
+    type=click.Path(dir_okay=True, file_okay=False),
+    callback=_make_dir,
     default=os.getcwd(),
 )
 
@@ -103,15 +109,18 @@ def _help_reproduce(*, directory, path, file_name=None) -> None:
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True))
 def optimize(path: str, directory: str):
     """Run a single HPO experiment."""
-    _run_hpo_helper(path, output_directory=directory)
+    from poem.hpo import hpo_pipeline_from_path
+    hpo_pipeline_result = hpo_pipeline_from_path(path)
+    hpo_pipeline_result.dump_to_directory(directory)
 
 
 @experiment.command()
 @click.argument('path', type=click.Path(file_okay=True, dir_okay=False, exists=True))
 @directory_option
 @click.option('--dry-run', is_flag=True)
+@click.option('--save-artifacts', is_flag=True)
 @verbose_option
-def generate_hpo_studies(path: str, directory: Optional[str], dry_run: bool) -> None:
+def ablation(path: str, directory: Optional[str], dry_run: bool, save_artifacts: bool) -> None:
     """Generate a set of HPO configurations."""
     from poem.training import _TRAINING_LOOP_SUFFIX
 
@@ -152,6 +161,13 @@ def generate_hpo_studies(path: str, directory: Optional[str], dry_run: bool) -> 
         output_directory = os.path.join(directory, experiment_name)
         os.makedirs(output_directory, exist_ok=True)
         # TODO what happens if already exists?
+
+        _experiment_optuna_config = optuna_config.copy()
+        _experiment_optuna_config['storage'] = f'sqlite:///{output_directory}/optuna_results.db'
+        if save_artifacts:
+            save_model_directory = os.path.join(output_directory, 'artifacts')
+            os.makedirs(save_model_directory, exist_ok=True)
+            _experiment_optuna_config['save_model_directory'] = save_model_directory
 
         hpo_config = dict(
             # TODO incorporate setting of random seed
@@ -210,8 +226,7 @@ def generate_hpo_studies(path: str, directory: Optional[str], dry_run: bool) -> 
         training_kwargs = ablation_config['training_kwargs'][model][training_loop]
         if training_kwargs:
             hpo_config['training_kwargs'] = training_kwargs
-        hpo_config['training_kwargs_ranges'] = ablation_config['training_kwargs_ranges'][model][
-            training_loop]
+        hpo_config['training_kwargs_ranges'] = ablation_config['training_kwargs_ranges'][model][training_loop]
 
         # Add evaluation
         hpo_config['evaluator'] = evaluator
@@ -220,23 +235,21 @@ def generate_hpo_studies(path: str, directory: Optional[str], dry_run: bool) -> 
         hpo_config['evaluation_kwargs'] = evaluation_kwargs
         logger.info(f"Evaluator: {evaluator}")
 
-        config_path = os.path.join(output_directory, 'hpo_config.json')
-        with open(config_path, 'w') as file:
-            json.dump(dict(
-                metadata=metadata,
-                pipeline=hpo_config,
-                optuna=optuna_config,
-            ), file, indent=2, ensure_ascii=True)
+        rv_config = dict(
+            type='hpo',
+            metadata=metadata,
+            pipeline=hpo_config,
+            optuna=_experiment_optuna_config,
+        )
+
+        rv_config_path = os.path.join(output_directory, 'hpo_config.json')
+        with open(rv_config_path, 'w') as file:
+            json.dump(rv_config, file, indent=2, ensure_ascii=True)
 
         if not dry_run:
-            _run_hpo_helper(config_path, output_directory=output_directory)
-
-
-def _run_hpo_helper(path: str, *, output_directory: Optional[str] = None):
-    from poem.hpo import hpo_pipeline_from_path
-
-    hpo_pipeline_result = hpo_pipeline_from_path(path)
-    hpo_pipeline_result.dump_to_directory(output_directory)
+            from poem.hpo import hpo_pipeline_from_config
+            hpo_pipeline_result = hpo_pipeline_from_config(rv_config)
+            hpo_pipeline_result.dump_to_directory(output_directory)
 
 
 if __name__ == '__main__':
