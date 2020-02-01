@@ -2,23 +2,16 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from dataclasses import dataclass
-from typing import Optional, Union
+from dataclasses import dataclass, field, fields
+from typing import Optional
 
-import numpy
+import numpy as np
 import torch
 from dataclasses_json import dataclass_json
-from sklearn.metrics import (
-    average_precision_score,
-    coverage_error,
-    label_ranking_average_precision_score,
-    label_ranking_loss,
-    roc_auc_score,
-)
+from sklearn import metrics
 
 from .evaluator import Evaluator, MetricResults
-from ..typing import MappedTriples, SklearnMetric
-from ..utils import normalize_string
+from ..typing import MappedTriples
 
 
 @dataclass_json
@@ -26,53 +19,50 @@ from ..utils import normalize_string
 class SklearnMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    #: The name of the metric
-    name: str
+    #: The area under the ROC curve
+    roc_auc_score: float = field(metadata=dict(
+        doc='The area under the ROC curve between [0.0, 1.0]. Higher is better.',
+        f=metrics.roc_auc_score,
+    ))
+    #: The area under the precision-recall curve
+    average_precision_score: float = field(metadata=dict(
+        doc='The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.',
+        f=metrics.average_precision_score,
+    ))
 
-    #: The score over all triples
-    score: float
+    #: The coverage error
+    # coverage_error: float = field(metadata=dict(
+    #     doc='The coverage error',
+    #     f=metrics.coverage_error,
+    # ))
+    #: The label ranking loss (APS)
+    # label_ranking_average_precision_score: float = field(metadata=dict(
+    #     doc='The label ranking loss (APS)',
+    #     f=metrics.label_ranking_average_precision_score,
+    # ))
+    # #: The label ranking loss
+    # label_ranking_loss: float = field(metadata=dict(
+    #     doc='The label ranking loss',
+    #     f=metrics.label_ranking_loss,
+    # ))
+
+    @classmethod
+    def from_scores(cls, y_true, y_score):
+        """Return an instance of these metrics from a given set of true and scores."""
+        return SklearnMetricResults(**{
+            f.name: f.metadata['f'](y_true, y_score)
+            for f in fields(cls)
+        })
 
     def get_metric(self, name: str) -> float:  # noqa: D102
-        if name != self.name:
-            raise ValueError(f'Invalid metric: {name}. Should be {self.name}.')
-        return self.score
-
-
-SKLEARN_METRICS = {
-    normalize_string(f.__name__): f
-    for f in (
-        roc_auc_score,
-        average_precision_score,
-        coverage_error,
-        label_ranking_average_precision_score,
-        label_ranking_loss,
-    )
-}
-
-
-def _get_sklearn_metric(metric: Union[None, str, SklearnMetric]) -> SklearnMetric:
-    """Look up a metric by name if a string is given, pass through a metric, or default to AUC-ROC."""
-    if metric is None:
-        metric = roc_auc_score
-    elif isinstance(metric, str):
-        metric = SKLEARN_METRICS.get(normalize_string(metric))
-        if metric is None:
-            raise KeyError(f'Unknown metric name: "{metric}". Known are {set(SKLEARN_METRICS.keys())}.')
-    return metric
+        return getattr(self, name)
 
 
 class SklearnEvaluator(Evaluator):
     """An evaluator that uses a Scikit-learn metric."""
 
-    #: The sklearn evaluation metric (e.g. metrics.roc_auc_score)
-    metric: SklearnMetric
-
-    def __init__(
-        self,
-        metric: Union[None, str, SklearnMetric] = None,
-    ):
+    def __init__(self):
         super().__init__(filtered=False, requires_positive_mask=True)
-        self.metric = _get_sklearn_metric(metric=metric)
         self.all_scores = {}
         self.all_positives = {}
 
@@ -123,14 +113,13 @@ class SklearnEvaluator(Evaluator):
         # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
         # masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-        y_score = numpy.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
-        y_true = numpy.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
+        # TODO how to define a cutoff on y_scores to make binary?
+        # see: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
+        y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
+        y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
         # Clear buffers
         self.all_positives.clear()
         self.all_scores.clear()
 
-        return SklearnMetricResults(
-            name=self.metric.__name__,
-            score=self.metric(y_true, y_score),
-        )
+        return SklearnMetricResults.from_scores(y_true, y_score)

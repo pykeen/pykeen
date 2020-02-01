@@ -116,12 +116,13 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | powersum | `poem.regularizers.PowerSumRegularizer` | A simple x^p based regularizer.                          |
 | transh   | `poem.regularizers.TransHRegularizer`   | Regularizer for TransH's soft constraints.               |
 
-### Losses (6)
+### Losses (7)
 
 | Name                            | Reference                                         | Description                                                                                                                                  |
 |---------------------------------|---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | bce                             | `torch.nn.BCELoss`                                | Creates a criterion that measures the Binary Cross Entropy between the target and the output:                                                |
 | bceaftersigmoid                 | `poem.losses.BCEAfterSigmoidLoss`                 | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.                                                       |
+| crossentropy                    | `torch.nn.CrossEntropyLoss`                       | This criterion combines :func:`nn.LogSoftmax` and :func:`nn.NLLLoss` in one single class.                                                    |
 | marginranking                   | `torch.nn.MarginRankingLoss`                      | Creates a criterion that measures the loss given inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,                                 |
 | mse                             | `torch.nn.MSELoss`                                | Creates a criterion that measures the mean squared error (squared L2 norm) between each element in the input :math:`x` and target :math:`y`. |
 | negativesamplingselfadversarial | `poem.losses.NegativeSamplingSelfAdversarialLoss` | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
@@ -158,20 +159,23 @@ in POEM. These markdown tables can be regenerated with `poem ls`.
 | adamw    | `torch.optim.AdamW`    | Implements AdamW algorithm.                                             |
 | sgd      | `torch.optim.SGD`      | Implements stochastic gradient descent (optionally with momentum).      |
 
-### Evaluators (1)
+### Evaluators (2)
 
-| Name      | Reference                            | Description                            |
-|-----------|--------------------------------------|----------------------------------------|
-| rankbased | `poem.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models. |
+| Name      | Reference                            | Description                                   |
+|-----------|--------------------------------------|-----------------------------------------------|
+| rankbased | `poem.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models.        |
+| sklearn   | `poem.evaluators.SklearnEvaluator`   | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (4)
+### Metrics (6)
 
-| Metric               | Description                                                                                                        | Evaluator   | Reference                                |
-|----------------------|--------------------------------------------------------------------------------------------------------------------|-------------|------------------------------------------|
-| Mean Rank            | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Mean Reciprocal Rank | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Hits At K            | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `poem.evaluation.RankBasedMetricResults` |
-| Adjusted Mean Rank   | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Metric                  | Description                                                                                                        | Evaluator   | Reference                                |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------|-------------|------------------------------------------|
+| Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `poem.evaluation.SklearnMetricResults`   |
+| Average Precision Score | The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.                                   | sklearn     | `poem.evaluation.SklearnMetricResults`   |
+| Mean Rank               | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Mean Reciprocal Rank    | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Hits At K               | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `poem.evaluation.RankBasedMetricResults` |
+| Adjusted Mean Rank      | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `poem.evaluation.RankBasedMetricResults` |
 
 ### HPO Samplers (2)
 

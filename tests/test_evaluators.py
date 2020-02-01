@@ -2,12 +2,12 @@
 
 """Test the evaluators."""
 
+import dataclasses
 import logging
 import unittest
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import torch
-from sklearn.metrics import average_precision_score, roc_auc_score
 
 from poem.datasets import NationsTrainingTriplesFactory
 from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
@@ -167,8 +167,8 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         # TODO: Validate with data?
 
 
-class _SklearnEvaluatorTests(_AbstractEvaluatorTests):
-    """unittest for the SklearnEvaluator.."""
+class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
+    """Unittest for the SklearnEvaluator."""
 
     evaluator_cls = SklearnEvaluator
 
@@ -179,9 +179,6 @@ class _SklearnEvaluatorTests(_AbstractEvaluatorTests):
     ):
         # Check for correct class
         assert isinstance(result, SklearnMetricResults)
-
-        # check for correct name
-        assert result.name == self.evaluator_kwargs['metric']
 
         # check value
         scores = data['scores'].detach().numpy()
@@ -196,22 +193,10 @@ class _SklearnEvaluatorTests(_AbstractEvaluatorTests):
         mask = mask[indices]
         scores = scores[indices]
 
-        exp_score = self.__class__.metric(mask.flat, scores.flat)
-        self.assertAlmostEqual(result.score, exp_score)
-
-
-class ROCAUCEvaluatorTests(_SklearnEvaluatorTests, unittest.TestCase):
-    """unittest for the SklearnEvaluator with roc_auc_score."""
-
-    evaluator_kwargs = {'metric': 'roc_auc_score'}
-    metric = roc_auc_score
-
-
-class APSEvaluatorTests(_SklearnEvaluatorTests, unittest.TestCase):
-    """unittest for the SklearnEvaluator with average_precision_score."""
-
-    evaluator_kwargs = {'metric': 'average_precision_score'}
-    metric = average_precision_score
+        for field in dataclasses.fields(SklearnMetricResults):
+            f = field.metadata['f']
+            exp_score = f(mask.flat, scores.flat)
+            self.assertAlmostEqual(result.get_metric(field.name), exp_score)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):

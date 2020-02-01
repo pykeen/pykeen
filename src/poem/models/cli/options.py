@@ -8,11 +8,11 @@ from typing import Optional
 import click
 
 from .. import get_model_cls
-from ...evaluation import evaluators, get_evaluator_cls
-from ...losses import MarginRankingLoss, _LOSS_SUFFIX, get_loss_cls, losses
+from ...evaluation import _EVALUATOR_SUFFIX, evaluators, get_evaluator_cls
+from ...losses import _LOSS_SUFFIX, get_loss_cls, losses
 from ...optimizers import get_optimizer_cls, optimizers
-from ...stoppers import get_stopper_cls, stoppers
-from ...training import get_training_loop_cls, training_loops
+from ...stoppers import _STOPPER_SUFFIX, get_stopper_cls, stoppers
+from ...training import _TRAINING_LOOP_SUFFIX, get_training_loop_cls, training_loops
 from ...triples import TriplesFactory
 from ...utils import normalize_string, resolve_device
 
@@ -29,6 +29,10 @@ def _make_instantiation_callback(f):
         return f(value)()
 
     return _callback
+
+
+def _get_default(f, suffix=None):
+    return normalize_string(f(None).__name__, suffix=suffix)
 
 
 def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:
@@ -54,7 +58,7 @@ CLI_OPTIONS = {
         '--loss',
         type=click.Choice(losses),
         callback=_make_instantiation_callback(get_loss_cls),
-        default=normalize_string(MarginRankingLoss.__name__, suffix=_LOSS_SUFFIX),
+        default=_get_default(get_loss_cls, suffix=_LOSS_SUFFIX),
         show_default=True,
     ),
     'regularization_factor': click.option(  # ComplEx
@@ -110,7 +114,7 @@ device_option = click.option(
 optimizer_option = click.option(
     '-o', '--optimizer',
     type=click.Choice(list(optimizers)),
-    default='sgd',
+    default=_get_default(get_optimizer_cls),
     show_default=True,
     callback=_make_callback(get_optimizer_cls),
 )
@@ -118,20 +122,21 @@ evaluator_option = click.option(
     '--evaluator',
     type=click.Choice(list(evaluators)),
     show_default=True,
+    default=_get_default(get_evaluator_cls, suffix=_EVALUATOR_SUFFIX),
     callback=_make_callback(get_evaluator_cls),
 )
 training_loop_option = click.option(
     '--training-loop',
     type=click.Choice(list(training_loops)),
     callback=_make_callback(get_training_loop_cls),
-    default='owa',
+    default=_get_default(get_training_loop_cls, suffix=_TRAINING_LOOP_SUFFIX),
     show_default=True,
 )
 stopper_option = click.option(
     '--stopper',
     type=click.Choice(list(stoppers)),
     callback=_make_callback(get_stopper_cls),
-    default='nop',
+    default=_get_default(get_stopper_cls, suffix=_STOPPER_SUFFIX),
     show_default=True,
 )
 

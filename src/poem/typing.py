@@ -13,7 +13,6 @@ __all__ = [
     'EntityMapping',
     'RelationMapping',
     'InteractionFunction',
-    'SklearnMetric',
 ]
 
 LabeledTriples = np.ndarray
@@ -22,4 +21,3 @@ EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]
 
 InteractionFunction = Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
-SklearnMetric = Callable[[np.ndarray, np.ndarray], float]
