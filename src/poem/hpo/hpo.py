@@ -21,7 +21,7 @@ from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
 from ..models import get_model_cls
 from ..models.base import BaseModule
 from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
-from ..pipeline import pipeline
+from ..pipeline import BasePipelineResult, PipelineResultSet, pipeline, pipeline_from_config
 from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
@@ -237,6 +237,23 @@ class HpoPipelineResult:
         # Output best trial as pipeline configuration file
         with open(os.path.join(output_directory, 'best_pipeline_config.json'), 'w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
+
+    def run_best_pipeline(self, replicates: Optional[int] = None) -> BasePipelineResult:
+        """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
+
+        :param replicates: The number of times to retrain the model. If left none, trains once and returns a
+         :class:`poem.pipeline.PipelineResult` object. If set to an integer, returns a
+         :class:`poem.pipeline.PipelineResultSet` object.
+        """
+        config = self._get_best_study_config()
+
+        if 'use_testing_data' in config:
+            raise ValueError('use_testing_data not be set in the configuration at at all!')
+
+        if replicates is None:
+            return pipeline_from_config(config, use_testing_data=True)
+        else:
+            return PipelineResultSet.from_config(config, replicates=replicates, use_testing_data=True)
 
 
 def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:

@@ -118,9 +118,18 @@ def optimize(path: str, directory: str):
 @click.argument('path', type=click.Path(file_okay=True, dir_okay=False, exists=True))
 @directory_option
 @click.option('--dry-run', is_flag=True)
+@click.option('--no-retrain-best', is_flag=True)
+@click.option('--best-replicates', type=int, help='Number of times to retrain the best model.')
 @click.option('--save-artifacts', is_flag=True)
 @verbose_option
-def ablation(path: str, directory: Optional[str], dry_run: bool, save_artifacts: bool) -> None:
+def ablation(
+    path: str,
+    directory: Optional[str],
+    dry_run: bool,
+    no_retrain_best: bool,
+    best_replicates: int,
+    save_artifacts: bool,
+) -> None:
     """Generate a set of HPO configurations."""
     from poem.training import _TRAINING_LOOP_SUFFIX
 
@@ -250,6 +259,13 @@ def ablation(path: str, directory: Optional[str], dry_run: bool, save_artifacts:
             from poem.hpo import hpo_pipeline_from_config
             hpo_pipeline_result = hpo_pipeline_from_config(rv_config)
             hpo_pipeline_result.dump_to_directory(output_directory)
+
+            if not no_retrain_best:
+                best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
+                os.makedirs(best_pipeline_dir, exist_ok=True)
+                click.echo(f'Re-training best pipeline and saving artifacts in {best_pipeline_dir}')
+                pipeline_result = hpo_pipeline_result.run_best_pipeline(replicates=best_replicates)
+                pipeline_result.save_to_directory(best_pipeline_dir)
 
 
 if __name__ == '__main__':

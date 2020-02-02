@@ -190,6 +190,7 @@ from .utils import MLFlowResultTracker, NoRandomSeedNecessary, ResultTracker, re
 from .version import get_git_hash, get_version
 
 __all__ = [
+    'BasePipelineResult',
     'PipelineResult',
     'PipelineResultSet',
     'pipeline_from_path',
@@ -199,8 +200,16 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+class BasePipelineResult:
+    """A superclass of results that can be saved to a directory."""
+
+    def save_to_directory(self, directory: str) -> None:
+        """Save the results to the directory."""
+        raise NotImplementedError
+
+
 @dataclass
-class PipelineResult:
+class PipelineResult(BasePipelineResult):
     """A dataclass containing the results of running :func:`poem.pipeline.pipeline`."""
 
     #: The random seed used at the beginning of the pipeline
@@ -279,16 +288,32 @@ class PipelineResult:
 
 
 @dataclass
-class PipelineResultSet:
+class PipelineResultSet(BasePipelineResult):
     """A set of results."""
 
     pipeline_results: List[PipelineResult]
 
     @classmethod
-    def from_path(cls, path: str, replicates: int = 10) -> 'PipelineResultSet':
-        """Run the same pipeline several times."""
+    def from_path(cls, path: str, replicates: int = 10, **kwargs) -> 'PipelineResultSet':
+        """Run the same pipeline several times.
+
+        :param path: The path to the JSON configuration for the experiment.
+        :param replicates: The number of replicates to run
+        """
         return cls([
-            pipeline_from_path(path)
+            pipeline_from_path(path, **kwargs)
+            for _ in range(replicates)
+        ])
+
+    @classmethod
+    def from_config(cls, config, replicates: int = 10, **kwargs) -> 'PipelineResultSet':
+        """Run the same pipeline several times.
+
+        :param config: The configuration dictionary for the experiment.
+        :param replicates: The number of replicates to run
+        """
+        return cls([
+            pipeline_from_config(config, **kwargs)
             for _ in range(replicates)
         ])
 
@@ -314,10 +339,20 @@ class PipelineResultSet:
             plt.title(self.pipeline_results[0].title)
         return sns.lineplot(data=df, x='Epoch', y='Loss', **(sns_kwargs or {}))
 
+    def save_to_directory(self, directory: str) -> None:
+        """Save the result set to the directory."""
+        for i, pipeline_result in enumerate(self.pipeline_results):
+            sd = os.path.join(directory, str(i))
+            os.makedirs(sd, exist_ok=True)
+            pipeline_result.save_to_directory(sd)
+
+        self.get_loss_df().to_csv(os.path.join(directory, 'losses.tsv'), sep='\t')
+
 
 def pipeline_from_path(
     path: str,
     mlflow_tracking_uri: Optional[str] = None,
+    **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
@@ -326,7 +361,23 @@ def pipeline_from_path(
     """
     with open(path) as file:
         config = json.load(file)
+    return pipeline_from_config(
+        config=config,
+        mlflow_tracking_uri=mlflow_tracking_uri,
+        **kwargs,
+    )
 
+
+def pipeline_from_config(
+    config: Mapping[str, Any],
+    mlflow_tracking_uri: Optional[str] = None,
+    **kwargs,
+) -> PipelineResult:
+    """Run the pipeline with a configuration dictionary.
+
+    :param config: The experiment configuration dictionary
+    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
+    """
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
     if title is not None:
@@ -336,6 +387,7 @@ def pipeline_from_path(
         mlflow_tracking_uri=mlflow_tracking_uri,
         metadata=metadata,
         **pipeline_kwargs,
+        **kwargs,
     )
 
 
