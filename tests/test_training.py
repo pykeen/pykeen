@@ -3,6 +3,7 @@
 """Test that training loops work correctly."""
 
 import unittest
+from typing import Optional
 
 import torch
 from torch import optim
@@ -29,6 +30,7 @@ class DummyTrainingLoop(OWATrainingLoop):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         assert (stop - start) <= self.sub_batch_size
 
@@ -36,7 +38,13 @@ class DummyTrainingLoop(OWATrainingLoop):
         if torch.is_tensor(batch):
             assert batch[start:stop].shape[0] > 0
 
-        return super()._process_batch(batch=batch, start=start, stop=stop, label_smoothing=label_smoothing)
+        return super()._process_batch(
+            batch=batch,
+            start=start,
+            stop=stop,
+            label_smoothing=label_smoothing,
+            slice_size=slice_size,
+        )
 
 
 class NaNTrainingLoop(OWATrainingLoop):
@@ -52,13 +60,20 @@ class NaNTrainingLoop(OWATrainingLoop):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         self.patience -= 1
         if self.patience < 0:
             return torch.as_tensor([float('nan')], device=batch.device, dtype=torch.float32)
         else:
             factor = 1.0
-        loss = super()._process_batch(batch=batch, start=start, stop=stop, label_smoothing=label_smoothing)
+        loss = super()._process_batch(
+            batch=batch,
+            start=start,
+            stop=stop,
+            label_smoothing=label_smoothing,
+            slice_size=slice_size,
+        )
         return factor * loss
 
 
@@ -74,13 +89,13 @@ class TrainingLoopTests(unittest.TestCase):
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
-        model = TransE(triples_factory=self.triples_factory)
+        model = TransE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
         training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
         training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory)
+        model = ConvE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
         training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
 
         def _try_train():
@@ -102,6 +117,7 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             loss=CrossEntropyLoss(),
+            automatic_memory_optimization=False,
         )
         with self.assertRaises(AssumptionLossMismatchError):
             NaNTrainingLoop(model=model, patience=2)

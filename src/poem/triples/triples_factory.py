@@ -24,7 +24,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _create_multi_label_tails_instance(mapped_triples: MappedTriples) -> Dict[Tuple[int, int], List[int]]:
+def _create_multi_label_tails_instance(
+    mapped_triples: MappedTriples,
+    use_tqdm: Optional[bool] = None
+) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (h,r) pair the multi tail label."""
     logger.debug('Creating multi label tails instance')
 
@@ -39,6 +42,7 @@ def _create_multi_label_tails_instance(mapped_triples: MappedTriples) -> Dict[Tu
         element_1_index=0,
         element_2_index=1,
         label_index=2,
+        use_tqdm=use_tqdm
     )
 
     logger.debug('Created multi label tails instance')
@@ -51,10 +55,13 @@ def _create_multi_label_instances(
     element_1_index: int,
     element_2_index: int,
     label_index: int,
-    use_tqdm: bool = True,
+    use_tqdm: Optional[bool] = None,
 ) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (element_1, element_2) pair the multi-label."""
     instance_to_multi_label = defaultdict(set)
+
+    if use_tqdm is None:
+        use_tqdm = True
 
     it = mapped_triples
     if use_tqdm:
@@ -268,10 +275,11 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
         )
 
-    def create_lcwa_instances(self) -> LCWAInstances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
         s_p_to_multi_tails = _create_multi_label_tails_instance(
             mapped_triples=self.mapped_triples,
+            use_tqdm=use_tqdm,
         )
         sp, multi_o = zip(*s_p_to_multi_tails.items())
         mapped_triples: torch.LongTensor = torch.tensor(sp, dtype=torch.long)

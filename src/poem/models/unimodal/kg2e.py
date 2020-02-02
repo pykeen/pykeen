@@ -155,6 +155,7 @@ class KG2E(BaseModule):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
+        automatic_memory_optimization: Optional[bool] = None,
         entity_embeddings: Optional[nn.Embedding] = None,
         relation_embeddings: Optional[nn.Embedding] = None,
         entity_covariances: Optional[nn.Embedding] = None,
@@ -170,6 +171,7 @@ class KG2E(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
             entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,

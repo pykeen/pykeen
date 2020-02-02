@@ -2,6 +2,7 @@
 
 """Training KGE models based on the OWA."""
 
+import logging
 from typing import Any, Mapping, Optional, Type
 
 import torch
@@ -18,6 +19,8 @@ from ..typing import MappedTriples
 __all__ = [
     'OWATrainingLoop',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class OWATrainingLoop(TrainingLoop):
@@ -62,7 +65,7 @@ class OWATrainingLoop(TrainingLoop):
         """
         return self.negative_sampler.num_negs_per_pos
 
-    def _create_instances(self) -> OWAInstances:  # noqa: D102
+    def _create_instances(self, use_tqdm: Optional[bool] = None) -> OWAInstances:  # noqa: D102
         return self.triples_factory.create_owa_instances()
 
     @staticmethod
@@ -75,7 +78,12 @@ class OWATrainingLoop(TrainingLoop):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # Slicing is not possible in OWA training loops
+        if slice_size is not None:
+            raise AttributeError('Slicing is not possible for OWA training loops.')
+
         # Send positive batch to device
         positive_batch = batch[start:stop].to(device=self.device)
 
@@ -153,3 +161,18 @@ class OWATrainingLoop(TrainingLoop):
             predictions=predictions,
             labels=labels,
         )
+
+    def _slice_size_search(
+        self,
+        batch_size: int,
+        sub_batch_size: int,
+        supports_sub_batching: bool,
+    ) -> None:  # noqa: D102
+        # Slicing is not possible for OWA
+        if supports_sub_batching:
+            report = "This model supports sub-batching, but it also requires slicing," \
+                     " which is not possible for owa"
+        else:
+            report = "This model doesn't support sub-batching and slicing is not possible for owa"
+        logger.warning(report)
+        raise MemoryError("The current model can't be trained on this hardware with these parameters.")

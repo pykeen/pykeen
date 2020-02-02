@@ -29,7 +29,6 @@ from poem.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from poem.triples import TriplesFactory
 from poem.utils import all_in_bounds, clamp_norm, set_random_seed
 
-
 SKIP_MODULES = {
     'BaseModule',
     'DummyModel',
@@ -497,12 +496,33 @@ class TestKG2EWithEL(_TestKG2E, unittest.TestCase):
     }
 
 
-class TestNTN(_ModelTestCase, unittest.TestCase):
+class _BaseNTNTest(_ModelTestCase, unittest.TestCase):
     """Test the NTN model."""
 
     model_cls = poem.models.NTN
+
+    def test_can_slice(self):
+        """Test that the slicing properties are calculated correctly."""
+        self.assertTrue(self.model.can_slice_h)
+        self.assertFalse(self.model.can_slice_r)
+        self.assertTrue(self.model.can_slice_t)
+
+
+class TestNTNLowMemory(_BaseNTNTest):
+    """Test the NTN model with automatic memory optimization."""
+
     model_kwargs = {
         'num_slices': 2,
+        'automatic_memory_optimization': True,
+    }
+
+
+class TestNTNHighMemory(_BaseNTNTest):
+    """Test the NTN model without automatic memory optimization."""
+
+    model_kwargs = {
+        'num_slices': 2,
+        'automatic_memory_optimization': False,
     }
 
 
@@ -571,7 +591,7 @@ class TestSimplE(_ModelTestCase, unittest.TestCase):
     model_cls = poem.models.SimplE
 
 
-class TestSE(_ModelTestCase, unittest.TestCase):
+class _BaseTestSE(_ModelTestCase, unittest.TestCase):
     """Test the Structured Embedding model."""
 
     model_cls = poem.models.StructuredEmbedding
@@ -583,6 +603,22 @@ class TestSE(_ModelTestCase, unittest.TestCase):
         """
         norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
+
+
+class TestSELowMemory(_BaseTestSE):
+    """Tests SE with low memory."""
+
+    model_kwargs = dict(
+        automatic_memory_optimization=True,
+    )
+
+
+class TestSEHighMemory(_BaseTestSE):
+    """Tests SE with low memory."""
+
+    model_kwargs = dict(
+        automatic_memory_optimization=False,
+    )
 
 
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):

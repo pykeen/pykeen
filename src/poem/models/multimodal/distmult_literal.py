@@ -29,6 +29,7 @@ class DistMultLiteral(MultimodalBaseModule):
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
+        automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.0,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -37,6 +38,7 @@ class DistMultLiteral(MultimodalBaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

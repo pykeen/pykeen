@@ -41,6 +41,7 @@ class ComplEx(BaseModule):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
+        automatic_memory_optimization: Optional[bool] = None,
         entity_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -54,6 +55,9 @@ class ComplEx(BaseModule):
             The triple factory connected to the model.
         :param embedding_dim: int
             The embedding dimensionality of the entity embeddings.
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
+            regards to the hardware at hand.
         :param entity_embeddings: nn.Embedding (optional)
             Initialization for the entity embeddings.
         :param loss: OptionalLoss (optional)
@@ -70,6 +74,7 @@ class ComplEx(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
+            automatic_memory_optimization=automatic_memory_optimization,
             entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,

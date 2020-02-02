@@ -83,8 +83,8 @@ class MockEvaluator(Evaluator):
 class MockModel(BaseModule):
     """A mock model returning fake scores."""
 
-    def __init__(self, triples_factory: TriplesFactory):
-        super().__init__(triples_factory=triples_factory)
+    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
+        super().__init__(triples_factory=triples_factory, automatic_memory_optimization=automatic_memory_optimization)
         num_entities = self.num_entities
         self.scores = torch.arange(num_entities, dtype=torch.float)
 
@@ -126,7 +126,8 @@ class TestEarlyStopping(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the early stopper."""
         self.mock_evaluator = MockEvaluator(self.mock_losses)
-        self.model = MockModel(triples_factory=NationsTrainingTriplesFactory())
+        # Set automatic_memory_optimization to false for tests
+        self.model = MockModel(triples_factory=NationsTrainingTriplesFactory(), automatic_memory_optimization=False)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
@@ -198,7 +199,8 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
 
     def test_early_stopping(self):
         """Tests early stopping."""
-        model: BaseModule = TransE(triples_factory=NationsTrainingTriplesFactory())
+        # Set automatic_memory_optimization to false during testing
+        model: BaseModule = TransE(triples_factory=NationsTrainingTriplesFactory(), automatic_memory_optimization=False)
         evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(
             model=model,

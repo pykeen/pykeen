@@ -41,7 +41,7 @@ def _calculate_missing_shape_information(
     :return: (input_channels, width, height), such that
             `embedding_dim = input_channels * width * height`
     :raises:
-        If not factorization could be found.
+        If no factorization could be found.
     """
     # Store initial input for error message
     original = (input_channels, width, height)
@@ -143,6 +143,7 @@ class ConvE(BaseModule):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
+        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -161,6 +162,7 @@ class ConvE(BaseModule):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             entity_embeddings=entity_embeddings,
+            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

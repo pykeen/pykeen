@@ -7,6 +7,7 @@ import timeit
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
+from math import ceil
 from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
 
 import torch
@@ -117,21 +118,173 @@ class Evaluator(ABC):
         model: BaseModule,
         mapped_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
     ) -> MetricResults:
         """Run :func:`poem.evaluation.evaluate` with this evaluator."""
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
+
+        if model.automatic_memory_optimization:
+            batch_size, slice_size = self.batch_and_slice(
+                model=model,
+                mapped_triples=mapped_triples,
+                batch_size=batch_size,
+                device=device,
+                use_tqdm=False,
+            )
+
         return evaluate(
             model=model,
             mapped_triples=mapped_triples,
             evaluators=self,
             batch_size=batch_size,
+            slice_size=slice_size,
             device=device,
             squeeze=True,
             use_tqdm=use_tqdm,
         )
+
+    def batch_and_slice(
+        self,
+        model: BaseModule,
+        mapped_triples: MappedTriples,
+        batch_size: int,
+        device: Optional[torch.device] = None,
+        use_tqdm: bool = False,
+    ) -> Tuple[int, Optional[int]]:
+        """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
+
+        The speed of evaluation can be greatly increased when the batch_size is increased, therefore this function
+        estimates the maximal possible batch_size for the evaluation by starting with the batch_size given as argument
+        and increasing it until the hardware runs out-of-memory(OOM). In some cases, i.e. with very large models or very
+        large datasets, even the batch_size 1 is too big for the hardware at hand. In these cases, this function will
+        check if the model at hand allows slicing (this needs to be implemented for the affected scoring functions) and,
+        if possible, will search the maximum possible slice_size that would still allow to calculate the model with the
+        given parameters on the hardware at hand.
+
+        :param model:
+            The model to evaluate.
+        :param mapped_triples:
+            The triples on which to evaluate.
+        :param batch_size:
+            The initial batch size to start with.
+        :param device:
+            The device on which the evaluation shall be run. If None is given, use the model's device.
+        :param use_tqdm:
+            Should a progress bar be displayed?
+
+        :return:
+            Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
+
+        :raises MemoryError:
+            If it is not possible to evaluate the model on the hardware at hand with the given parameters.
+        """
+        batch_size, evaluated_once = self._param_size_search(
+            key='batch_size',
+            start_value=batch_size,
+            model=model,
+            mapped_triples=mapped_triples,
+            device=device,
+            use_tqdm=use_tqdm,
+        )
+
+        if evaluated_once:  # slice_size = None
+            return batch_size, None
+
+        # We need to try slicing, if the evaluation for the batch_size search never succeeded
+        slice_size, evaluated_once = self._param_size_search(
+            key='slice_size',
+            # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
+            # must have failed to start slice_size search, we start with trying half the entities.
+            start_value=ceil(model.num_entities / 2),
+            model=model,
+            mapped_triples=mapped_triples,
+            device=device,
+            use_tqdm=use_tqdm,
+        )
+        if not evaluated_once:
+            raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+        return batch_size, slice_size
+
+    def _param_size_search(
+        self,
+        key: str,
+        start_value: int,
+        model: BaseModule,
+        mapped_triples: MappedTriples,
+        device: Optional[torch.device] = None,
+        use_tqdm: bool = False,
+    ) -> Tuple[int, bool]:
+        values_dict = {}
+        maximum_triples = mapped_triples.shape[0]
+        if key == 'batch_size':
+            if start_value is None:
+                start_value = 256
+            if start_value > maximum_triples:
+                start_value = maximum_triples
+            values_dict[key] = start_value
+            values_dict['slice_size'] = None
+        elif key == 'slice_size':
+            self._check_slicing_availability(model, batch_size=1)
+            values_dict[key] = start_value
+            values_dict['batch_size'] = 1
+        else:
+            raise AttributeError(f'The parameter {key} is unknown.')
+        reached_max = False
+        evaluated_once = False
+        logger.info(f'Starting {key} search for evaluation now...')
+        while True:
+            logger.debug(f'Trying {key}={values_dict[key]}')
+            try:
+                evaluate(
+                    **values_dict,
+                    model=model,
+                    mapped_triples=mapped_triples,
+                    evaluators=self,
+                    only_size_probing=True,
+                    device=device,
+                    squeeze=True,
+                    use_tqdm=use_tqdm,
+                )
+            except RuntimeError as e:
+                if 'CUDA out of memory.' not in e.args[0]:
+                    raise e
+                if values_dict[key] == 1:
+                    logger.debug(
+                        f"Even {key} {values_dict[key]} does not fit into your memory with these parameters."
+                    )
+                    break
+
+                logger.debug(f'The {key} {values_dict[key]} was too big, trying less now')
+                values_dict[key] //= 2
+                evaluated_once = False
+                reached_max = True
+            else:
+                if not reached_max and values_dict['batch_size'] < maximum_triples:
+                    values_dict[key] *= 2
+                elif evaluated_once:
+                    logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
+                    break
+
+                evaluated_once = True
+
+        return values_dict[key], evaluated_once
+
+    @staticmethod
+    def _check_slicing_availability(model: BaseModule, batch_size: int) -> None:
+        # Test if slicing is implemented for the required functions of this model
+        if model.triples_factory.create_inverse_triples:
+            if not model.can_slice_t:
+                raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
+                                  f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
+                                  f"this model yet.")
+        elif not model.can_slice_t or not model.can_slice_h:
+            raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
+                              f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
+                              f"model yet.")
 
 
 def create_sparse_positive_filter_(
@@ -237,7 +390,9 @@ def evaluate(
     model: BaseModule,
     mapped_triples: MappedTriples,
     evaluators: Union[Evaluator, Collection[Evaluator]],
+    only_size_probing: bool = False,
     batch_size: Optional[int] = None,
+    slice_size: Optional[int] = None,
     device: Optional[torch.device] = None,
     squeeze: bool = True,
     use_tqdm: bool = True,
@@ -256,8 +411,12 @@ def evaluate(
         The triples on which to evaluate.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
+    :param only_size_probing:
+        The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
     :param batch_size: >0
         A positive integer used as batch size. Generally chosen as large as possible. Defaults to 1 if None.
+    :param slice_size: >0
+        The divisor for the scoring function when using slicing.
     :param device:
         The device on which the evaluation shall be run. If None is given, use the model's device.
     :param squeeze:
@@ -290,7 +449,7 @@ def evaluate(
     positive_masks_required = any(e.requires_positive_mask for e in unfiltered_evaluators)
 
     # Prepare for result filtering
-    if (filtering_necessary or positive_masks_required):
+    if filtering_necessary or positive_masks_required:
         all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
@@ -307,6 +466,9 @@ def evaluate(
     # Show progressbar
     num_triples = mapped_triples.shape[0]
 
+    # Flag to check when to quit the size probing
+    evaluated_once = False
+
     # Disable gradient tracking
     with optional_context_manager(
         use_tqdm,
@@ -315,6 +477,8 @@ def evaluate(
             total=num_triples,
             unit='triple(s)',
             unit_scale=True,
+            # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
+            disable=not use_tqdm,
         ),
     ) as progress_bar, torch.no_grad():
         # batch-wise processing
@@ -322,7 +486,7 @@ def evaluate(
             batch_size = batch.shape[0]
 
             # Predict tail scores once
-            scores_of_corrupted_tails_batch = model.predict_scores_all_tails(batch[:, 0:2])
+            scores_of_corrupted_tails_batch = model.predict_scores_all_tails(batch[:, 0:2], slice_size=slice_size)
             scores_of_true_tails_batch = scores_of_corrupted_tails_batch[
                 torch.arange(0, batch.shape[0]),
                 batch[:, 2],
@@ -378,7 +542,7 @@ def evaluate(
                     )
 
             # Predict head scores once
-            scores_of_corrupted_heads_batch = model.predict_scores_all_heads(batch[:, 1:3])
+            scores_of_corrupted_heads_batch = model.predict_scores_all_heads(batch[:, 1:3], slice_size=slice_size)
             scores_of_true_heads_batch = scores_of_corrupted_heads_batch[
                 torch.arange(0, batch.shape[0]),
                 batch[:, 0],
@@ -436,6 +600,12 @@ def evaluate(
                         scores=filtered_scores_of_corrupted_heads_batch,
                     )
 
+            # If we only probe sizes we do not need more than one batch
+            if only_size_probing and evaluated_once:
+                break
+
+            evaluated_once = True
+
             if use_tqdm:
                 progress_bar.update(batch_size)
 
@@ -443,7 +613,10 @@ def evaluate(
         results = [evaluator.finalize() for evaluator in evaluators]
 
     stop = timeit.default_timer()
-    logger.info("Evaluation took %.2fs seconds", stop - start)
+    if only_size_probing:
+        logger.debug("Evaluation took %.2fs seconds", stop - start)
+    else:
+        logger.info("Evaluation took %.2fs seconds", stop - start)
 
     if squeeze and len(results) == 1:
         return results[0]

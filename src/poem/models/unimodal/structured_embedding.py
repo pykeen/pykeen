@@ -36,6 +36,7 @@ class StructuredEmbedding(BaseModule):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
+        automatic_memory_optimization: Optional[bool] = None,
         left_relation_embeddings: Optional[nn.Embedding] = None,
         right_relation_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
@@ -47,6 +48,7 @@ class StructuredEmbedding(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -120,31 +122,57 @@ class StructuredEmbedding(BaseModule):
         scores = -torch.norm(proj_h - proj_t, dim=1, p=self.scoring_fct_norm)
         return scores
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(hr_batch[:, 0]).view(-1, self.embedding_dim, 1)
         rel_h = self.left_relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
         rel_t = self.right_relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
+        t_all = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
 
-        # Project entities
-        proj_h = rel_h @ h
-        proj_t = rel_t @ t
+        if slice_size is not None:
+            proj_t_arr = []
+            # Project entities
+            proj_h = rel_h @ h
+
+            for t in torch.split(t_all, slice_size, dim=1):
+                # Project entities
+                proj_t = rel_t @ t
+                proj_t_arr.append(proj_t)
+
+            proj_t = torch.cat(proj_t_arr, dim=1)
+
+        else:
+            # Project entities
+            proj_h = rel_h @ h
+            proj_t = rel_t @ t_all
 
         scores = -torch.norm(proj_h[:, None, :, 0] - proj_t[:, :, :, 0], dim=-1, p=self.scoring_fct_norm)
 
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
+        h_all = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
         rel_h = self.left_relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)
         rel_t = self.right_relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
 
-        # Project entities
-        proj_h = rel_h @ h
-        proj_t = rel_t @ t
+        if slice_size is not None:
+            proj_h_arr = []
+
+            # Project entities
+            proj_t = rel_t @ t
+
+            for h in torch.split(h_all, slice_size, dim=1):
+                # Project entities
+                proj_h = rel_h @ h
+                proj_h_arr.append(proj_h)
+
+            proj_h = torch.cat(proj_h_arr, dim=1)
+        else:
+            # Project entities
+            proj_h = rel_h @ h_all
+            proj_t = rel_t @ t
 
         scores = -torch.norm(proj_h[:, :, :, 0] - proj_t[:, None, :, 0], dim=-1, p=self.scoring_fct_norm)
 

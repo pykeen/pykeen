@@ -419,8 +419,8 @@ class DummyEvaluator(Evaluator):
 class DummyModel(BaseModule):
     """A dummy model returning fake scores."""
 
-    def __init__(self, triples_factory: TriplesFactory):
-        super().__init__(triples_factory=triples_factory)
+    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
+        super().__init__(triples_factory=triples_factory, automatic_memory_optimization=automatic_memory_optimization)
         num_entities = self.num_entities
         self.scores = torch.arange(num_entities, dtype=torch.float)
 
@@ -455,7 +455,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
         self.triples_factory = NationsTrainingTriplesFactory()
-        self.model = DummyModel(triples_factory=self.triples_factory)
+        self.model = DummyModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""

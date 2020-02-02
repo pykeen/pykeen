@@ -44,6 +44,7 @@ class NTN(BaseModule):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 100,
+        automatic_memory_optimization: Optional[bool] = None,
         num_slices: int = 4,
         entity_embeddings: Optional[nn.Embedding] = None,
         w: Optional[nn.Embedding] = None,
@@ -64,6 +65,7 @@ class NTN(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
             entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
@@ -123,6 +125,7 @@ class NTN(BaseModule):
         h_ind: Optional[torch.LongTensor] = None,
         r_ind: Optional[torch.LongTensor] = None,
         t_ind: Optional[torch.LongTensor] = None,
+        slice_size: int = None,
     ) -> torch.FloatTensor:
         """
         Compute scores for NTN.
@@ -136,9 +139,40 @@ class NTN(BaseModule):
         assert r_ind is not None
 
         #: shape: (batch_size, num_entities, d)
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        h_all = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        t_all = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
 
+        if slice_size is None:
+            return self._interaction_function(h=h_all, t=t_all, r_ind=r_ind)
+
+        if h_all.shape[1] > t_all.shape[1]:
+            h_was_split = True
+            split_tensor = torch.split(h_all, slice_size, dim=1)
+            constant_tensor = t_all
+        else:
+            h_was_split = False
+            split_tensor = torch.split(t_all, slice_size, dim=1)
+            constant_tensor = h_all
+
+        scores_arr = []
+        for split in split_tensor:
+            if h_was_split:
+                h = split
+                t = constant_tensor
+            else:
+                h = constant_tensor
+                t = split
+            score = self._interaction_function(h=h, t=t, r_ind=r_ind)
+            scores_arr.append(score)
+
+        return torch.cat(scores_arr, dim=1)
+
+    def _interaction_function(
+        self,
+        h: torch.FloatTensor,
+        t: torch.FloatTensor,
+        r_ind: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
         #: Prepare h: (b, e, d) -> (b, e, 1, 1, d)
         h_for_w = h.unsqueeze(dim=-2).unsqueeze(dim=-2)
 
@@ -202,8 +236,8 @@ class NTN(BaseModule):
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2])
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1])
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], slice_size=slice_size)
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
+        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1], slice_size=slice_size)

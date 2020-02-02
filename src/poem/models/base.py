@@ -2,10 +2,11 @@
 
 """Base module for all KGE models."""
 
+import inspect
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import torch
 from torch import nn
@@ -26,6 +27,13 @@ logger = logging.getLogger(__name__)
 
 #: An error that occurs becuase the input in CUDA is too big. See ConvE for an example.
 CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
+
+UNSUPPORTED_FOR_SUBBATCHING = (  # must be a tuple
+    nn.BatchNorm1d,
+    nn.BatchNorm2d,
+    nn.BatchNorm3d,
+    nn.SyncBatchNorm,
+)
 
 
 def _extend_batch(
@@ -85,6 +93,7 @@ class BaseModule(nn.Module):
         entity_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -100,6 +109,9 @@ class BaseModule(nn.Module):
             logger.warning('No random seed is specified. This may lead to non-reproducible results.')
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
+
+        if automatic_memory_optimization is None:
+            automatic_memory_optimization = True
 
         # Loss
         if loss is None:
@@ -134,6 +146,38 @@ class BaseModule(nn.Module):
         also for predictions after training, but has no effect on the training.
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
+
+        # This allows to store the optimized parameters
+        self.automatic_memory_optimization = automatic_memory_optimization
+
+    @property
+    def can_slice_h(self) -> bool:
+        """Whether score_h supports slicing."""
+        return _can_slice(self.score_h)
+
+    @property
+    def can_slice_r(self) -> bool:
+        """Whether score_r supports slicing."""
+        return _can_slice(self.score_r)
+
+    @property
+    def can_slice_t(self) -> bool:
+        """Whether score_t supports slicing."""
+        return _can_slice(self.score_t)
+
+    @property
+    def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
+        """Return all modules not supporting sub-batching."""
+        return [
+            module
+            for module in self.modules()
+            if isinstance(module, UNSUPPORTED_FOR_SUBBATCHING)
+        ]
+
+    @property
+    def supports_subbatching(self) -> bool:  # noqa: D400, D401
+        """Does this model support sub-batching?"""
+        return len(self.modules_not_supporting_sub_batching) == 0
 
     def _init_weights_on_device(self):  # noqa: D401
         """A hook called after initialization."""
@@ -196,13 +240,16 @@ class BaseModule(nn.Module):
         """
         # Enforce evaluation mode
         self.eval()
-
         scores = self.score_hrt(triples)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
 
-    def predict_scores_all_tails(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+    def predict_scores_all_tails(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -211,19 +258,27 @@ class BaseModule(nn.Module):
 
         :param hr_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
         # Enforce evaluation mode
         self.eval()
-
-        scores = self.score_t(hr_batch)
+        if slice_size is None:
+            scores = self.score_t(hr_batch)
+        else:
+            scores = self.score_t(hr_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
 
-    def predict_scores_all_relations(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+    def predict_scores_all_relations(
+        self,
+        ht_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -232,14 +287,18 @@ class BaseModule(nn.Module):
 
         :param ht_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
 
         :return: torch.Tensor, shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         # Enforce evaluation mode
         self.eval()
-
-        scores = self.score_r(ht_batch)
+        if slice_size is None:
+            scores = self.score_r(ht_batch)
+        else:
+            scores = self.score_r(ht_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -247,6 +306,7 @@ class BaseModule(nn.Module):
     def predict_scores_all_heads(
         self,
         rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -256,6 +316,8 @@ class BaseModule(nn.Module):
 
         :param rt_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
 
         :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -269,7 +331,10 @@ class BaseModule(nn.Module):
         for a (tail, inverse_relation) pair.
         '''
         if not self.triples_factory.create_inverse_triples:
-            scores = self.score_h(rt_batch)
+            if slice_size is None:
+                scores = self.score_h(rt_batch)
+            else:
+                scores = self.score_h(rt_batch, slice_size=slice_size)
             if self.predict_with_sigmoid:
                 scores = torch.sigmoid(scores)
             return scores
@@ -291,7 +356,10 @@ class BaseModule(nn.Module):
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
         rt_batch_cloned = rt_batch_cloned.flip(1)
-        scores = self.score_t(rt_batch_cloned)
+        if slice_size is None:
+            scores = self.score_t(rt_batch_cloned)
+        else:
+            scores = self.score_t(rt_batch_cloned, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -527,3 +595,12 @@ class BaseModule(nn.Module):
         session.add(collection)
         session.commit()
         return collection
+
+    @property
+    def num_parameter_bytes(self) -> int:
+        """Calculate the number of bytes used for all parameters of the model."""
+        return sum(p.numel() * p.element_size() for p in self.parameters(recurse=True))
+
+
+def _can_slice(fn) -> bool:
+    return 'slice_size' in inspect.getfullargspec(fn).args

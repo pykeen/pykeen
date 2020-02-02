@@ -103,6 +103,12 @@ CLI_OPTIONS = {
         callback=_make_callback(get_model_cls),
         default='distmult',
         show_default=True,
+    ),
+    'automatic_memory_optimization': click.option(
+        '--automatic-memory-optimization',
+        type=bool,
+        default=True,
+        show_default=True,
     )
 }
 

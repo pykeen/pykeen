@@ -60,6 +60,7 @@ class ERMLPE(BaseModule):
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
+        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -68,6 +69,7 @@ class ERMLPE(BaseModule):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
             entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
