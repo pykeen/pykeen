@@ -475,7 +475,7 @@ def evaluate(
         tqdm(
             desc=f'Evaluating on {model.device}',
             total=num_triples,
-            unit='triple(s)',
+            unit='triple',
             unit_scale=True,
             # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
             disable=not use_tqdm,

@@ -217,7 +217,7 @@ class TrainingLoop(ABC):
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
         :param stopper:
-            An instance of :class:`poem.stopper.EarlyStopper` with settings for checking
+            An instance of :class:`poem.stopper.Stopper` with settings for checking
             if training should stop early
         :param result_tracker:
             The result tracker.
@@ -296,7 +296,7 @@ class TrainingLoop(ABC):
         # When size probing, we don't want progress bars
         if not only_size_probing:
             # Create progress bar
-            _tqdm_kwargs = dict(desc=f'Training on {self.device}', unit='epoch')
+            _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(1, 1 + num_epochs, **_tqdm_kwargs)
@@ -316,7 +316,7 @@ class TrainingLoop(ABC):
             # Batching
             # Only create a progress bar when not in size probing mode
             if not only_size_probing:
-                batches = tqdm(train_data_loader, desc=f'Training batches', leave=False, unit='batch')
+                batches = tqdm(train_data_loader, desc=f'Training batches on {self.device}', leave=False, unit='batch')
             else:
                 batches = train_data_loader
 
