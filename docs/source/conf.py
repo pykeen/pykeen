@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'poem'
+project = 'pykeen'
 copyright = '2019, Mehdi Ali'
 author = 'Mehdi Ali'
 
@@ -143,7 +143,7 @@ html_logo = 'logo.png'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'POEMdoc'
+htmlhelp_basename = 'PyKEENdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -170,7 +170,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (
-        master_doc, 'poem.tex', 'poem Documentation',
+        master_doc, 'pykeen.tex', 'pykeen Documentation',
         'Mehdi Ali', 'manual',
     ),
 ]
@@ -181,7 +181,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     (
-        master_doc, 'poem', 'poem Documentation',
+        master_doc, 'pykeen', 'pykeen Documentation',
         [author], 1,
     ),
 ]
@@ -193,8 +193,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (
-        master_doc, 'poem', 'poem Documentation',
-        author, 'poem', 'One line description of project.',
+        master_doc, 'pykeen', 'pykeen Documentation',
+        author, 'pykeen', 'One line description of project.',
         'Miscellaneous',
     ),
 ]

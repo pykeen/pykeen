@@ -1,6 +1,6 @@
-POEM
-====
-.. automodule:: poem
+PyKEEN
+======
+.. automodule:: pykeen
 
 .. toctree::
    :caption: Getting Started

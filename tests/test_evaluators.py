@@ -9,14 +9,14 @@ from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import torch
 
-from poem.datasets import NationsTrainingTriplesFactory
-from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from poem.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
-from poem.evaluation.rank_based_evaluator import compute_rank_from_scores
-from poem.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from poem.models import BaseModule, TransE
-from poem.triples import TriplesFactory
-from poem.typing import MappedTriples
+from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
+from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
+from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
+from pykeen.models import Model, TransE
+from pykeen.triples import TriplesFactory
+from pykeen.typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class _AbstractEvaluatorTests:
 
     # The triples factory and model
     factory: TriplesFactory
-    model: BaseModule
+    model: Model
 
     #: The evaluator to be tested
     evaluator_cls: ClassVar[Type[Evaluator]]
@@ -416,7 +416,7 @@ class DummyEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class DummyModel(BaseModule):
+class DummyModel(Model):
     """A dummy model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
@@ -440,10 +440,10 @@ class DummyModel(BaseModule):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=rt_batch)
 
-    def init_empty_weights_(self) -> BaseModule:  # noqa: D102
+    def init_empty_weights_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
-    def clear_weights_(self) -> BaseModule:  # noqa: D102
+    def clear_weights_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
 

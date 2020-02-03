@@ -9,13 +9,13 @@ from typing import Any, ClassVar, Dict, Optional, Type
 import torch
 from torch.nn import functional
 
-from poem.datasets import NationsTrainingTriplesFactory
-from poem.models import ConvKB, RESCAL, TransH
-from poem.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, \
+from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.models import ConvKB, RESCAL, TransH
+from pykeen.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, \
     TransHRegularizer
-from poem.triples import TriplesFactory
-from poem.typing import MappedTriples
-from poem.utils import resolve_device
+from pykeen.triples import TriplesFactory
+from pykeen.typing import MappedTriples
+from pykeen.utils import resolve_device
 
 
 class _RegularizerTestCase:

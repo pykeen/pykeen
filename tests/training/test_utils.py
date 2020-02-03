@@ -8,17 +8,17 @@ from typing import Type
 import numpy as np
 import torch
 
-from poem.models import TransE
-from poem.models.base import BaseModule
-from poem.training.lcwa import LCWATrainingLoop
-from poem.training.utils import apply_label_smoothing, lazy_compile_random_batches
-from poem.triples import TriplesFactory
+from pykeen.models import TransE
+from pykeen.models.base import Model
+from pykeen.training.lcwa import LCWATrainingLoop
+from pykeen.training.utils import apply_label_smoothing, lazy_compile_random_batches
+from pykeen.triples import TriplesFactory
 
 
 class LossTensorTest(unittest.TestCase):
     """Test label smoothing."""
 
-    model_cls: Type[BaseModule] = TransE
+    model_cls: Type[Model] = TransE
     embedding_dim: int = 8
 
     def setUp(self):

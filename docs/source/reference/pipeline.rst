@@ -1,6 +1,6 @@
 Pipeline
 ========
-.. autofunction:: poem.pipeline.pipeline
+.. autofunction:: pykeen.pipeline.pipeline
 
-.. autoclass:: poem.pipeline.PipelineResult
+.. autoclass:: pykeen.pipeline.PipelineResult
     :members:

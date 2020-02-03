@@ -14,25 +14,25 @@ from torch import optim
 from torch.optim import SGD
 from torch.optim.adagrad import Adagrad
 
-import poem.experiments
-import poem.models
-from poem.datasets.kinship import TRAIN_PATH as KINSHIP_TRAIN_PATH
-from poem.datasets.nations import (
+import pykeen.experiments
+import pykeen.models
+from pykeen.datasets.kinship import TRAIN_PATH as KINSHIP_TRAIN_PATH
+from pykeen.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
 )
-from poem.models.base import BaseModule, _extend_batch
-from poem.models.cli import build_cli_from_cls
-from poem.models.multimodal import MultimodalBaseModule
-from poem.models.unimodal.trans_d import _project_entity
-from poem.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
-from poem.triples import TriplesFactory
-from poem.utils import all_in_bounds, clamp_norm, set_random_seed
+from pykeen.models.base import Model, _extend_batch
+from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.multimodal import MultimodalModel
+from pykeen.models.unimodal.trans_d import _project_entity
+from pykeen.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
+from pykeen.triples import TriplesFactory
+from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
 
 SKIP_MODULES = {
-    'BaseModule',
+    Model.__name__,
     'DummyModel',
-    'MultimodalBaseModule',
+    MultimodalModel.__name__,
     'MockModel',
     'models',
     'get_model_cls',
@@ -46,7 +46,7 @@ class _ModelTestCase:
     """A test case for quickly defining common tests for KGE models."""
 
     #: The class of the model to test
-    model_cls: ClassVar[Type[BaseModule]]
+    model_cls: ClassVar[Type[Model]]
 
     #: Additional arguments passed to the model's constructor method
     model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
@@ -55,7 +55,7 @@ class _ModelTestCase:
     factory: TriplesFactory
 
     #: The model instance
-    model: BaseModule
+    model: Model
 
     #: The batch size for use for forward_* tests
     batch_size: int = 20
@@ -249,7 +249,7 @@ class _ModelTestCase:
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.model_cls, poem.models.RGCN):
+        if issubclass(self.model_cls, pykeen.models.RGCN):
             self.skipTest('There is a problem with non-reproducible unittest for R-GCN.')
         runner = CliRunner()
         cli = build_cli_from_cls(self.model_cls)
@@ -262,7 +262,7 @@ class _ModelTestCase:
             msg=f'''
 Command
 =======
-$ poem train {self.model_cls.__name__.lower()} {' '.join(args)}
+$ pykeen train {self.model_cls.__name__.lower()} {' '.join(args)}
 
 Output
 ======
@@ -393,13 +393,13 @@ class _DistanceModelTestCase(_ModelTestCase):
 class TestComplex(_ModelTestCase, unittest.TestCase):
     """Test the ComplEx model."""
 
-    model_cls = poem.models.ComplEx
+    model_cls = pykeen.models.ComplEx
 
 
 class TestConvE(_ModelTestCase, unittest.TestCase):
     """Test the ConvE model."""
 
-    model_cls = poem.models.ConvE
+    model_cls = pykeen.models.ConvE
     embedding_dim = 12
     create_inverse_triples = True
     model_kwargs = {
@@ -412,7 +412,7 @@ class TestConvE(_ModelTestCase, unittest.TestCase):
 class TestConvKB(_ModelTestCase, unittest.TestCase):
     """Test the ConvKB model."""
 
-    model_cls = poem.models.ConvKB
+    model_cls = pykeen.models.ConvKB
     model_kwargs = {
         'num_filters': 2,
     }
@@ -421,7 +421,7 @@ class TestConvKB(_ModelTestCase, unittest.TestCase):
 class TestDistMult(_ModelTestCase, unittest.TestCase):
     """Test the DistMult model."""
 
-    model_cls = poem.models.DistMult
+    model_cls = pykeen.models.DistMult
 
     def _check_constraints(self):
         """Check model constraints.
@@ -435,7 +435,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
 class TestERMLP(_ModelTestCase, unittest.TestCase):
     """Test the ERMLP model."""
 
-    model_cls = poem.models.ERMLP
+    model_cls = pykeen.models.ERMLP
     model_kwargs = {
         'hidden_dim': 4,
     }
@@ -444,7 +444,7 @@ class TestERMLP(_ModelTestCase, unittest.TestCase):
 class TestERMLPE(_ModelTestCase, unittest.TestCase):
     """Test the extended ERMLP model."""
 
-    model_cls = poem.models.ERMLPE
+    model_cls = pykeen.models.ERMLPE
     model_kwargs = {
         'hidden_dim': 4,
     }
@@ -453,7 +453,7 @@ class TestERMLPE(_ModelTestCase, unittest.TestCase):
 class TestHolE(_ModelTestCase, unittest.TestCase):
     """Test the HolE model."""
 
-    model_cls = poem.models.HolE
+    model_cls = pykeen.models.HolE
 
     def _check_constraints(self):
         """Check model constraints.
@@ -466,7 +466,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 class _TestKG2E(_ModelTestCase):
     """General tests for the KG2E model."""
 
-    model_cls = poem.models.KG2E
+    model_cls = pykeen.models.KG2E
 
     def _check_constraints(self):
         """Check model constraints.
@@ -499,7 +499,7 @@ class TestKG2EWithEL(_TestKG2E, unittest.TestCase):
 class _BaseNTNTest(_ModelTestCase, unittest.TestCase):
     """Test the NTN model."""
 
-    model_cls = poem.models.NTN
+    model_cls = pykeen.models.NTN
 
     def test_can_slice(self):
         """Test that the slicing properties are calculated correctly."""
@@ -529,19 +529,19 @@ class TestNTNHighMemory(_BaseNTNTest):
 class TestProjE(_ModelTestCase, unittest.TestCase):
     """Test the ProjE model."""
 
-    model_cls = poem.models.ProjE
+    model_cls = pykeen.models.ProjE
 
 
 class TestRESCAL(_ModelTestCase, unittest.TestCase):
     """Test the RESCAL model."""
 
-    model_cls = poem.models.RESCAL
+    model_cls = pykeen.models.RESCAL
 
 
 class _TestRGCN(_ModelTestCase):
     """Test the R-GCN model."""
 
-    model_cls = poem.models.RGCN
+    model_cls = pykeen.models.RGCN
     sampler = 'schlichtkrull'
 
     def _check_constraints(self):
@@ -574,7 +574,7 @@ class TestRGCNBlock(_TestRGCN, unittest.TestCase):
 class TestRotatE(_ModelTestCase, unittest.TestCase):
     """Test the RotatE model."""
 
-    model_cls = poem.models.RotatE
+    model_cls = pykeen.models.RotatE
 
     def _check_constraints(self):
         """Check model constraints.
@@ -588,13 +588,13 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
 class TestSimplE(_ModelTestCase, unittest.TestCase):
     """Test the SimplE model."""
 
-    model_cls = poem.models.SimplE
+    model_cls = pykeen.models.SimplE
 
 
 class _BaseTestSE(_ModelTestCase, unittest.TestCase):
     """Test the Structured Embedding model."""
 
-    model_cls = poem.models.StructuredEmbedding
+    model_cls = pykeen.models.StructuredEmbedding
 
     def _check_constraints(self):
         """Check model constraints.
@@ -624,7 +624,7 @@ class TestSEHighMemory(_BaseTestSE):
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransD model."""
 
-    model_cls = poem.models.TransD
+    model_cls = pykeen.models.TransD
     model_kwargs = {
         'relation_dim': 4,
     }
@@ -763,7 +763,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
 class TestTransE(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransE model."""
 
-    model_cls = poem.models.TransE
+    model_cls = pykeen.models.TransE
 
     def _check_constraints(self):
         """Check model constraints.
@@ -777,7 +777,7 @@ class TestTransE(_DistanceModelTestCase, unittest.TestCase):
 class TestTransH(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransH model."""
 
-    model_cls = poem.models.TransH
+    model_cls = pykeen.models.TransH
 
     def _check_constraints(self):
         """Check model constraints.
@@ -791,7 +791,7 @@ class TestTransH(_DistanceModelTestCase, unittest.TestCase):
 class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransR model."""
 
-    model_cls = poem.models.TransR
+    model_cls = pykeen.models.TransR
     model_kwargs = {
         'relation_dim': 4,
     }
@@ -838,7 +838,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
     """Test the TuckEr model."""
 
-    model_cls = poem.models.TuckER
+    model_cls = pykeen.models.TuckER
     model_kwargs = {
         'relation_dim': 4,
     }
@@ -847,7 +847,7 @@ class TestTuckEr(_ModelTestCase, unittest.TestCase):
 class TestUM(_DistanceModelTestCase, unittest.TestCase):
     """Test the Unstructured Model."""
 
-    model_cls = poem.models.UnstructuredModel
+    model_cls = pykeen.models.UnstructuredModel
 
 
 class TestTesting(unittest.TestCase):
@@ -860,7 +860,7 @@ class TestTesting(unittest.TestCase):
         """
         model_names = {
             cls.__name__
-            for cls in BaseModule.__subclasses__()
+            for cls in Model.__subclasses__()
         }
         model_names -= SKIP_MODULES
 
@@ -871,7 +871,7 @@ class TestTesting(unittest.TestCase):
                 isinstance(value, type)
                 and issubclass(value, _ModelTestCase)
                 and not name.startswith('_')
-                and not issubclass(value.model_cls, MultimodalBaseModule)
+                and not issubclass(value.model_cls, MultimodalModel)
             )
         }
         tested_model_names -= SKIP_MODULES
@@ -879,8 +879,8 @@ class TestTesting(unittest.TestCase):
         self.assertEqual(model_names, tested_model_names, msg='Some models have not been tested')
 
     def test_importing(self):
-        """Test that all models are available from :mod:`poem.models`."""
-        models_path = os.path.abspath(os.path.dirname(poem.models.__file__))
+        """Test that all models are available from :mod:`pykeen.models`."""
+        models_path = os.path.abspath(os.path.dirname(pykeen.models.__file__))
 
         model_names = set()
         for directory, _, filenames in os.walk(models_path):
@@ -893,28 +893,28 @@ class TestTesting(unittest.TestCase):
                 if relpath.endswith('__init__.py'):
                     continue
 
-                import_path = 'poem.models.' + relpath[:-len('.py')].replace(os.sep, '.')
+                import_path = 'pykeen.models.' + relpath[:-len('.py')].replace(os.sep, '.')
                 module = importlib.import_module(import_path)
 
                 for name in dir(module):
                     value = getattr(module, name)
                     if (
                         isinstance(value, type)
-                        and issubclass(value, BaseModule)
+                        and issubclass(value, Model)
                     ):
                         model_names.add(value.__name__)
 
-        star_model_names = set(poem.models.__all__) - SKIP_MODULES
+        star_model_names = set(pykeen.models.__all__) - SKIP_MODULES
         model_names -= SKIP_MODULES
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
         for name in model_names:
-            self.assertIn(f':class:`poem.models.{name}`', poem.models.__doc__, msg=f'Forgot to document {name}')
+            self.assertIn(f':class:`pykeen.models.{name}`', pykeen.models.__doc__, msg=f'Forgot to document {name}')
 
     def test_models_have_experiments(self):
-        """Test that each model has an experiment folder in :mod:`poem.experiments`."""
-        experiments_path = os.path.abspath(os.path.dirname(poem.experiments.__file__))
+        """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
+        experiments_path = os.path.abspath(os.path.dirname(pykeen.experiments.__file__))
         experiment_blacklist = {
             'DistMultLiteral',  # FIXME
             'ComplExLiteral',  # FIXME
@@ -927,7 +927,7 @@ class TestTesting(unittest.TestCase):
             'ProjE',  # FIXME
             'ERMLPE',  # FIXME
         }
-        model_names = set(poem.models.__all__) - SKIP_MODULES - experiment_blacklist
+        model_names = set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist
         missing = {
             model
             for model in model_names

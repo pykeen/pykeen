@@ -1,10 +1,10 @@
 Training
 ========
-.. autoclass:: poem.training.OWATrainingLoop
+.. autoclass:: pykeen.training.OWATrainingLoop
    :members:
    :inherited-members:
 
-.. autoclass:: poem.training.LCWATrainingLoop
+.. autoclass:: pykeen.training.LCWATrainingLoop
    :members:
    :inherited-members:
 

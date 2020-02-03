@@ -8,10 +8,10 @@ from typing import ClassVar, Type
 import numpy
 import torch
 
-from poem.datasets import NationsTrainingTriplesFactory
-from poem.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
-from poem.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
-from poem.triples import OWAInstances, TriplesFactory
+from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
+from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
+from pykeen.triples import OWAInstances, TriplesFactory
 
 
 def _array_check_bounds(

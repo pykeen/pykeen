@@ -1,4 +1,4 @@
 References
 ==========
-.. automodule:: poem.models.unimodal
-.. automodule:: poem.models.multimodal
+.. automodule:: pykeen.models.unimodal
+.. automodule:: pykeen.models.multimodal

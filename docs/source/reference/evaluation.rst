@@ -1,4 +1,4 @@
 Evaluation
 ==========
-.. automodule:: poem.evaluation
+.. automodule:: pykeen.evaluation
    :members:

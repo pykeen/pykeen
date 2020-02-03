@@ -4,7 +4,7 @@
 
 import unittest
 
-from poem.hpo import hpo_pipeline
+from pykeen.hpo import hpo_pipeline
 
 
 class TestHyperparameterOptimization(unittest.TestCase):

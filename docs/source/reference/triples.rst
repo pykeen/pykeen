@@ -1,4 +1,4 @@
 Triples
 =======
-.. automodule:: poem.triples
+.. automodule:: pykeen.triples
    :members:

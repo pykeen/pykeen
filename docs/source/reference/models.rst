@@ -1,4 +1,4 @@
 Models
 ======
-.. automodule:: poem.models
+.. automodule:: pykeen.models
     :members:

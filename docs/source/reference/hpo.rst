@@ -1,6 +1,6 @@
 Hyper-parameter Optimization
 ============================
-.. automodule:: poem.hpo
+.. automodule:: pykeen.hpo
    :members:
 
 .. seealso::

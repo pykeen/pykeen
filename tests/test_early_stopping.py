@@ -9,15 +9,15 @@ import numpy
 import torch
 from torch.optim import Adam
 
-from poem.datasets.nations import NationsTrainingTriplesFactory, NationsValidationTriplesFactory
-from poem.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from poem.evaluation.rank_based_evaluator import RANK_AVERAGE
-from poem.models import TransE
-from poem.models.base import BaseModule
-from poem.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
-from poem.training import OWATrainingLoop
-from poem.triples import TriplesFactory
-from poem.typing import MappedTriples
+from pykeen.datasets.nations import NationsTrainingTriplesFactory, NationsValidationTriplesFactory
+from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE
+from pykeen.models import TransE
+from pykeen.models.base import Model
+from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
+from pykeen.training import OWATrainingLoop
+from pykeen.triples import TriplesFactory
+from pykeen.typing import MappedTriples
 
 
 class TestImprovementChecking(unittest.TestCase):
@@ -80,7 +80,7 @@ class MockEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class MockModel(BaseModule):
+class MockModel(Model):
     """A mock model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
@@ -104,10 +104,10 @@ class MockModel(BaseModule):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=rt_batch)
 
-    def init_empty_weights_(self) -> BaseModule:  # noqa: D102
+    def init_empty_weights_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
-    def clear_weights_(self) -> BaseModule:  # noqa: D102
+    def clear_weights_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
 
@@ -200,7 +200,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
     def test_early_stopping(self):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
-        model: BaseModule = TransE(triples_factory=NationsTrainingTriplesFactory(), automatic_memory_optimization=False)
+        model: Model = TransE(triples_factory=NationsTrainingTriplesFactory(), automatic_memory_optimization=False)
         evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(
             model=model,

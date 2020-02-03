@@ -1,4 +1,4 @@
 Data Sets
 =========
-.. automodule:: poem.datasets
+.. automodule:: pykeen.datasets
    :members:

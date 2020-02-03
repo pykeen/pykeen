@@ -8,11 +8,11 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 
-from poem.datasets.nations import NationsTrainingTriplesFactory
-from poem.models import TransE
-from poem.models.base import BaseModule
-from poem.triples import TriplesFactory
-from poem.utils import resolve_device
+from pykeen.datasets.nations import NationsTrainingTriplesFactory
+from pykeen.models import TransE
+from pykeen.models.base import Model
+from pykeen.triples import TriplesFactory
+from pykeen.utils import resolve_device
 
 
 class TestBaseModel(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestBaseModel(unittest.TestCase):
     batch_size: int
     embedding_dim: int
     factory: TriplesFactory
-    model: BaseModule
+    model: Model
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""
@@ -158,7 +158,7 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         assert all(scores_r_function == scores_hrt_function)
 
 
-class SimpleInteractionModel(BaseModule):
+class SimpleInteractionModel(Model):
     """A model with a simple interaction function for testing the base model."""
 
     def __init__(self, triples_factory: TriplesFactory):
@@ -174,10 +174,10 @@ class SimpleInteractionModel(BaseModule):
 
         return torch.sum(h + r + t, dim=1)
 
-    def init_empty_weights_(self) -> BaseModule:  # noqa: D102
+    def init_empty_weights_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
-    def clear_weights_(self) -> BaseModule:  # noqa: D102
+    def clear_weights_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
 

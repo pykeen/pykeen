@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = POEM
+SPHINXPROJ    = PyKEEN
 SOURCEDIR     = source
 BUILDDIR      = build
 

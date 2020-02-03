@@ -8,7 +8,7 @@ import numpy
 import torch
 from torch import nn
 
-from poem.utils import (
+from pykeen.utils import (
     clamp_norm,
     flatten_dictionary,
     get_embedding_in_canonical_shape,

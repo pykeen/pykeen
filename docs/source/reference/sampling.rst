@@ -1,4 +1,4 @@
 Sampling
 ========
-.. automodule:: poem.sampling
+.. automodule:: pykeen.sampling
    :members:

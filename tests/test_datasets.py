@@ -9,8 +9,8 @@ from typing import Type, Union
 
 import pytest
 
-from poem.datasets import DataSet, FB15k, FB15k237, WN18, WN18RR, YAGO310, kinship, nations, umls
-from poem.triples import TriplesFactory
+from pykeen.datasets import DataSet, FB15k, FB15k237, WN18, WN18RR, YAGO310, kinship, nations, umls
+from pykeen.triples import TriplesFactory
 
 
 class _DataSetTestCase:

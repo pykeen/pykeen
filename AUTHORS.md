@@ -1,6 +1,6 @@
 # Authors
 
-## Project Team
+## PyKEEN Project Team
 
 - [Charles Tapley Hoyt](https://github.com/cthoyt)
 - [Laurent Vermue](https://github.com/lvermue)

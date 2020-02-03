@@ -23,7 +23,7 @@ Steps to reproduce the behavior:
 **Environment (please complete the following information):**
  - OS: [e.g. macOS]
  - Python version: [e.g. 3.6.8]
- - Version of this software: [e.g. 0.0.1-dev] # run ``pip list | grep -Eiw 'poem'`` in your environment shell
+ - Version of this software: [e.g. 0.0.1-dev] # run ``pip list | grep -Eiw 'pykeen'`` in your environment shell
  - Versions of required Python packages: # run pip list | grep -Eiw 'torch|numpy|Click|click-default-group|tqdm'
    - Torch: [e.g. 1.1.0]
    - Numpy: [e.g. 1.13.3]
@@ -32,7 +32,7 @@ Steps to reproduce the behavior:
    - Tqdm: [e.g. 4.31.1]
 
 Note: To obtain the relevant package versions you can run
-``pip list | grep -Eiw 'poem|torch|numpy|Click|click-default-group|tqdm'`` in your environment shell. To obtain the
+``pip list | grep -Eiw 'pykeen|torch|numpy|Click|click-default-group|tqdm'`` in your environment shell. To obtain the
 python version simply execute ``python --version`` in your shell.
 
 **Additional information**

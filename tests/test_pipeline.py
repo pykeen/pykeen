@@ -4,10 +4,10 @@
 
 import unittest
 
-from poem.models import TransE
-from poem.models.base import BaseModule
-from poem.pipeline import PipelineResult, pipeline
-from poem.regularizers import NoRegularizer, PowerSumRegularizer
+from pykeen.models import TransE
+from pykeen.models.base import Model
+from pykeen.pipeline import PipelineResult, pipeline
+from pykeen.regularizers import NoRegularizer, PowerSumRegularizer
 
 
 class TestPipeline(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestPipeline(unittest.TestCase):
             dataset='nations',
         )
         self.assertIsInstance(pipeline_result, PipelineResult)
-        self.assertIsInstance(pipeline_result.model, BaseModule)
+        self.assertIsInstance(pipeline_result.model, Model)
         self.assertIsInstance(pipeline_result.model.regularizer, NoRegularizer)
 
     def test_specify_regularizer(self):
@@ -31,5 +31,5 @@ class TestPipeline(unittest.TestCase):
             regularizer='powersum',
         )
         self.assertIsInstance(pipeline_result, PipelineResult)
-        self.assertIsInstance(pipeline_result.model, BaseModule)
+        self.assertIsInstance(pipeline_result.model, Model)
         self.assertIsInstance(pipeline_result.model.regularizer, PowerSumRegularizer)

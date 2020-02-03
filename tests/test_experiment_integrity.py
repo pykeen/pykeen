@@ -5,7 +5,7 @@
 import logging
 import unittest
 
-from poem.experiments.validate import get_configuration_errors, iterate_config_paths
+from pykeen.experiments.validate import get_configuration_errors, iterate_config_paths
 
 logger = logging.getLogger(__name__)
 

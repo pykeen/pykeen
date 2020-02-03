@@ -8,19 +8,19 @@ from typing import Optional
 import torch
 from torch import optim
 
-from poem.datasets import NationsTrainingTriplesFactory
-from poem.losses import CrossEntropyLoss
-from poem.models import ConvE, TransE
-from poem.models.base import BaseModule
-from poem.training import OWATrainingLoop
-from poem.training.training_loop import AssumptionLossMismatchError, NonFiniteLossError
-from poem.typing import MappedTriples
+from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.losses import CrossEntropyLoss
+from pykeen.models import ConvE, TransE
+from pykeen.models.base import Model
+from pykeen.training import OWATrainingLoop
+from pykeen.training.training_loop import AssumptionLossMismatchError, NonFiniteLossError
+from pykeen.typing import MappedTriples
 
 
 class DummyTrainingLoop(OWATrainingLoop):
     """A wrapper around OWATrainingLoop."""
 
-    def __init__(self, model: BaseModule, sub_batch_size: int):
+    def __init__(self, model: Model, sub_batch_size: int):
         super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
         self.sub_batch_size = sub_batch_size
 
@@ -50,7 +50,7 @@ class DummyTrainingLoop(OWATrainingLoop):
 class NaNTrainingLoop(OWATrainingLoop):
     """A wrapper around OWATrainingLoop returning NaN losses."""
 
-    def __init__(self, model: BaseModule, patience: int):
+    def __init__(self, model: Model, patience: int):
         super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
         self.patience = patience
 

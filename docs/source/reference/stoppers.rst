@@ -1,12 +1,12 @@
 Stoppers
 ========
-.. automodule:: poem.stoppers
+.. automodule:: pykeen.stoppers
 
-.. autoclass:: poem.stoppers.Stopper
+.. autoclass:: pykeen.stoppers.Stopper
    :members:
 
-.. autoclass:: poem.stoppers.NopStopper
+.. autoclass:: pykeen.stoppers.NopStopper
    :members:
 
-.. autoclass:: poem.stoppers.EarlyStopper
+.. autoclass:: pykeen.stoppers.EarlyStopper
    :members:

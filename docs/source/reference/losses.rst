@@ -1,4 +1,4 @@
 Loss Functions
 ==============
-.. automodule:: poem.losses
+.. automodule:: pykeen.losses
    :members:

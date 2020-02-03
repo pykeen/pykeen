@@ -1,6 +1,6 @@
 First Steps
 ===========
-.. automodule:: poem.pipeline
+.. automodule:: pykeen.pipeline
 
 Beyond the Pipeline
 -------------------
@@ -12,12 +12,12 @@ executed with one of the previous examples.
 .. code-block:: python
 
     # Get a training data set
-    from poem.datasets import Nations
+    from pykeen.datasets import Nations
     dataset = Nations()
     training_triples_factory = dataset.training
 
     # Pick a model
-    from poem.models import TransE
+    from pykeen.models import TransE
     model = TransE(triples_factory=training_triples_factory)
 
     # Pick an optimizer from Torch
@@ -25,14 +25,14 @@ executed with one of the previous examples.
     optimizer = Adam(params=model.get_grad_params())
 
     # Pick a training assumption (OWA or LCWA)
-    from poem.training import OWATrainingLoop
+    from pykeen.training import OWATrainingLoop
     training_loop = OWATrainingLoop(model=model, optimizer=optimizer)
 
     # Train like Cristiano Ronaldo
     training_loop.train(num_epochs=5, batch_size=256)
 
     # Pick an evaluator
-    from poem.evaluation import RankBasedEvaluator
+    from pykeen.evaluation import RankBasedEvaluator
     evaluator = RankBasedEvaluator(model)
 
     # Get triples to test

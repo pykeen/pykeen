@@ -6,8 +6,8 @@ import unittest
 
 import torch
 
-from poem.losses import NegativeSamplingSelfAdversarialLoss
-from poem.pipeline import PipelineResult, pipeline
+from pykeen.losses import NSSALoss
+from pykeen.pipeline import PipelineResult, pipeline
 
 
 class TestCustomLossFunctions(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestCustomLossFunctions(unittest.TestCase):
 
     def test_negative_sampling_self_adversarial_loss(self):
         """Test the negative sampling self adversarial loss function."""
-        loss_fct = NegativeSamplingSelfAdversarialLoss(margin=1., adversarial_temperature=1.)
+        loss_fct = NSSALoss(margin=1., adversarial_temperature=1.)
 
         pos_scores = torch.tensor([0., 0., -0.5, -0.5])
         neg_scores = torch.tensor([0., 0., -1., -1.])
@@ -46,7 +46,7 @@ class TestCustomLossFunctions(unittest.TestCase):
 
     def test_pipeline(self):
         """Test the pipeline on RotatE with negative sampling self adversarial loss and nations."""
-        loss = NegativeSamplingSelfAdversarialLoss
+        loss = NSSALoss
         loss_kwargs = {"margin": 1., "adversarial_temperature": 1.}
         pipeline_results = pipeline(
             model='RotatE',
