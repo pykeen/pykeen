@@ -191,6 +191,8 @@ class Evaluator(ABC):
         )
 
         if evaluated_once:  # slice_size = None
+            # Empty the cache to avoid an Out-Of-Memory error with the same parameters in the subsequent run.
+            torch.cuda.empty_cache()
             return batch_size, None
 
         # We need to try slicing, if the evaluation for the batch_size search never succeeded
@@ -207,6 +209,8 @@ class Evaluator(ABC):
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 
+        # Empty the cache to avoid an Out-Of-Memory error with the same parameters in the subsequent run.
+        torch.cuda.empty_cache()
         return batch_size, slice_size
 
     def _param_size_search(
