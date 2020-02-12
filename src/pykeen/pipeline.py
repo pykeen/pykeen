@@ -168,6 +168,7 @@ import json
 import logging
 import os
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Type, Union
 
@@ -227,6 +228,12 @@ class PipelineResult(BasePipelineResult):
     #: The results evaluated by the pipeline
     metric_results: MetricResults
 
+    #: How long in seconds did training take?
+    train_seconds: float
+
+    #: How long in seconds did evaluation take?
+    evaluate_seconds: float
+
     #: An early stopper
     stopper: Optional[Stopper] = None
 
@@ -262,17 +269,25 @@ class PipelineResult(BasePipelineResult):
         """
         torch.save(self.model, path)
 
+    def _get_results(self) -> Mapping[str, Any]:
+        results = dict(
+            times=dict(
+                training=self.train_seconds,
+                evaluation=self.evaluate_seconds,
+            ),
+            metrics=self.metric_results.to_dict(),
+            losses=self.losses,
+        )
+        if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
+            results['stopper'] = self.stopper.get_summary_dict()
+        return results
+
     def save_to_directory(self, directory: str) -> None:
         """Save all artifacts in the given directory."""
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
             json.dump(self.metadata, file, indent=2)
-        with open(os.path.join(directory, 'losses.json'), 'w') as file:
-            json.dump(self.losses, file, indent=2)
-        with open(os.path.join(directory, 'metric_results.json'), 'w') as file:
-            json.dump(self.metric_results.to_dict(), file, indent=2)
-        if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
-            with open(os.path.join(directory, 'early_stopping_summary.json'), 'w') as file:
-                json.dump(self.stopper.get_summary_dict(), file, indent=2)
+        with open(os.path.join(directory, 'results.json'), 'w') as file:
+            json.dump(self._get_results(), file, indent=2)
         self.save_model(os.path.join(directory, 'trained_model.pkl'))
 
 
@@ -585,11 +600,13 @@ def pipeline(  # noqa: C901
     training_kwargs.setdefault('batch_size', 256)
 
     # Train like Cristiano Ronaldo
+    training_start_time = time.time()
     losses = training_loop_instance.train(
         stopper=stopper,
         result_tracker=result_tracker,
         **training_kwargs,
     )
+    training_end_time = time.time() - training_start_time
 
     if use_testing_data:
         mapped_triples = testing_triples_factory.mapped_triples
@@ -597,11 +614,13 @@ def pipeline(  # noqa: C901
         mapped_triples = validation_triples_factory.mapped_triples
 
     # Evaluate
+    evaluate_start_time = time.time()
     metric_results: MetricResults = evaluator_instance.evaluate(
         model=model_instance,
         mapped_triples=mapped_triples,
         **evaluation_kwargs,
     )
+    evaluate_end_time = time.time() - evaluate_start_time
     result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=training_kwargs.get('num_epochs'),
@@ -616,4 +635,6 @@ def pipeline(  # noqa: C901
         stopper=stopper,
         metric_results=metric_results,
         metadata=metadata,
+        train_seconds=training_end_time,
+        evaluate_seconds=evaluate_end_time,
     )
