@@ -8,6 +8,7 @@ import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
+import pytest
 import torch
 from click.testing import CliRunner, Result
 from torch import optim
@@ -181,6 +182,7 @@ class _ModelTestCase:
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(batch, scores)
 
+    @pytest.mark.slow
     def test_train_owa(self) -> None:
         """Test that OWA training does not fail."""
         loop = OWATrainingLoop(
@@ -195,6 +197,7 @@ class _ModelTestCase:
         )
         self.assertIsInstance(losses, list)
 
+    @pytest.mark.slow
     def test_train_lcwa(self) -> None:
         """Test that LCWA training does not fail."""
         loop = LCWATrainingLoop(
@@ -235,14 +238,17 @@ class _ModelTestCase:
         extras = [str(e) for e in extras]
         return extras
 
+    @pytest.mark.slow
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self.cli_extras)
 
+    @pytest.mark.slow
     def test_cli_training_kinship(self):
         """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', KINSHIP_TRAIN_PATH] + self.cli_extras)
 
+    @pytest.mark.slow
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self.cli_extras)

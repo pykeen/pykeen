@@ -3,24 +3,29 @@ cache: pip
 dist: xenial
 language: python
 python: "3.7"
-stages:
-  - lint
-  - docs
-  - test
 jobs:
   include:
     # lint stage
-    - stage: lint
+    - name: "Check package metadata"
+      stage: lint
+      env: TOXENV=pyroma
+    - name: "Check package manifest"
       env: TOXENV=manifest
-    - env: TOXENV=flake8
-    - env: TOXENV=pyroma
+    - name: "Check code style"
+      env: TOXENV=flake8
     # docs stage
-    - stage: docs
+    - name: "Check RST documentation style"
+      stage: docs
       env: TOXENV=doc8
-    - env: TOXENV=docs
-    # test stage
-    - stage: test
+    - name: "Check sphinx build"
+      env: TOXENV=docs
+    # tests stages
+    - name: "Test fast unit tests"
+      stage: fast_tests
       env: TOXENV=py
+    - name: "Test slow unit tests"
+      stage: slow_tests
+      env: TOXENV=integration
 matrix:
   allow_failures:
     - env: TOXENV=xenon

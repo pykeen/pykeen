@@ -4,9 +4,12 @@
 
 import unittest
 
+import pytest
+
 from pykeen.hpo import hpo_pipeline
 
 
+@pytest.mark.slow
 class TestHyperparameterOptimization(unittest.TestCase):
     """Test hyperparameter optimization."""
 
