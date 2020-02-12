@@ -19,7 +19,7 @@ from tabulate import tabulate
 
 from .datasets import datasets as datasets_dict
 from .evaluation import evaluators as evaluators_dict, get_metric_list, metrics as metrics_dict
-from .experiments.cli import experiment
+from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import samplers as hpo_samplers_dict
 from .losses import losses as losses_dict
@@ -307,7 +307,7 @@ for cls in models_dict.values():
 
 # Add HPO command
 main.add_command(optimize)
-main.add_command(experiment)
+main.add_command(experiments)
 
 if __name__ == '__main__':
     main()

@@ -13,7 +13,7 @@ from uuid import uuid4
 import click
 
 __all__ = [
-    'experiment',
+    'experiments',
 ]
 
 logger = logging.getLogger(__name__)
@@ -46,11 +46,11 @@ directory_option = click.option(
 
 
 @click.group()
-def experiment():
+def experiments():
     """Run landmark experiments."""
 
 
-@experiment.command()
+@experiments.command()
 @click.argument('model')
 @click.argument('reference')
 @click.argument('dataset')
@@ -65,7 +65,7 @@ def reproduce(model: str, reference: str, dataset: str, directory: str):
     _help_reproduce(directory=directory, path=path, file_name=file_name)
 
 
-@experiment.command()
+@experiments.command()
 @click.argument('path')
 @directory_option
 def run(path: str, directory: str):
@@ -99,7 +99,7 @@ def _help_reproduce(*, directory, path, file_name=None) -> None:
     shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
 
 
-@experiment.command()
+@experiments.command()
 @click.argument('path')
 @verbose_option
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True))
@@ -110,7 +110,7 @@ def optimize(path: str, directory: str):
     hpo_pipeline_result.dump_to_directory(directory)
 
 
-@experiment.command()
+@experiments.command()
 @click.argument('path', type=click.Path(file_okay=True, dir_okay=False, exists=True))
 @directory_option
 @click.option('--dry-run', is_flag=True)
@@ -156,4 +156,4 @@ def ablation(
 
 
 if __name__ == '__main__':
-    experiment()
+    experiments()
