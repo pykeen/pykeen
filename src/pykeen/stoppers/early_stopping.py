@@ -5,8 +5,7 @@
 import dataclasses
 import logging
 from dataclasses import dataclass
-from typing import Callable, List
-from typing import Optional
+from typing import Any, Callable, List, Mapping, Optional, Union
 
 import numpy
 
@@ -20,6 +19,7 @@ __all__ = [
     'smaller_than_any_buffer_element',
     'larger_than_any_buffer_element',
     'EarlyStopper',
+    'StopperCallback',
 ]
 
 logger = logging.getLogger(__name__)
@@ -61,13 +61,12 @@ def larger_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: 
     return result > baseline
 
 
+StopperCallback = Callable[[Stopper, Union[int, float]], None]
+
+
 @dataclass
 class EarlyStopper(Stopper):
-    """A harness for early stopping.
-
-    If you want to change the validation criteria, inherit from this
-    class and override ``EarlyStopper._validate()``.
-    """
+    """A harness for early stopping."""
 
     #: The model
     model: Model = dataclasses.field(repr=False)
@@ -98,6 +97,12 @@ class EarlyStopper(Stopper):
     improvement_criterion: Callable[[numpy.ndarray, float, float], bool] = None
     #: The result tracker
     result_tracker: Optional[ResultTracker] = None
+    #: Callbacks when training gets continued
+    continue_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    #: Callbacks when training is stopped early
+    stopped_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
+    #: Did the stopper ever decide to stop?
+    stopped: bool = False
 
     def __post_init__(self):
         """Run after initialization and check the metric is valid."""
@@ -118,10 +123,17 @@ class EarlyStopper(Stopper):
         if self.result_tracker is None:
             self.result_tracker = ResultTracker()
 
-    def should_evaluate(self, epoch: int) -> bool:  # noqa: D102
+    def should_evaluate(self, epoch: int) -> bool:
+        """Decide if evaluation should be done based on the current epoch and the internal frequency."""
         return 0 == ((epoch - 1) % self.frequency)
 
-    def should_stop(self) -> bool:  # noqa: D102
+    @property
+    def number_results(self) -> int:
+        """Count the number of results stored in the early stopper."""
+        return len(self.results)
+
+    def should_stop(self) -> bool:
+        """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,
@@ -141,6 +153,9 @@ class EarlyStopper(Stopper):
             # Stop if the result did not improve more than delta for patience epochs.
             if not self.improvement_criterion(buffer=self.buffer, result=result, delta=self.delta):
                 logger.info(f'Stopping early after {self.number_evaluations} evaluations with {self.metric}={result}')
+                for stopped_callback in self.stopped_callbacks:
+                    stopped_callback(self, result)
+                self.stopped = True
                 return True
 
         # Update ring buffer
@@ -150,4 +165,18 @@ class EarlyStopper(Stopper):
         # Append to history
         self.results.append(result)
 
+        for continue_callback in self.continue_callbacks:
+            continue_callback(self, result)
         return False
+
+    def get_summary_dict(self) -> Mapping[str, Any]:
+        """Get a summary dict."""
+        return dict(
+            frequency=self.frequency,
+            patience=self.patience,
+            delta=self.delta,
+            metric=self.metric,
+            larger_is_better=self.larger_is_better,
+            results=self.results,
+            stopped=self.stopped,
+        )

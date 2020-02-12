@@ -2,12 +2,14 @@
 
 """Hyper-parameter optimiziation in PyKEEN."""
 
+import dataclasses
 import json
 import logging
 import os
-from dataclasses import dataclass, fields
-from typing import Any, Mapping, Optional, Type, Union
+from dataclasses import dataclass
+from typing import Any, Dict, Mapping, Optional, Type, Union
 
+import torch
 from optuna import Study, Trial, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
@@ -21,9 +23,10 @@ from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
 from ..models import get_model_cls
 from ..models.base import Model
 from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
-from ..pipeline import BasePipelineResult, PipelineResultSet, pipeline, pipeline_from_config
+from ..pipeline import PipelineResultSet, pipeline
 from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
+from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..utils import normalize_string
 from ..version import get_git_hash, get_version
@@ -37,57 +40,79 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+STOPPED_EPOCH_KEY = 'stopped_epoch'
+
 
 @dataclass
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    # 1. DataSet
-    dataset: Union[None, str, DataSet] = None
-    dataset_kwargs: Optional[Mapping[str, Any]] = None
+    dataset: Union[None, str, DataSet]  # 1.
+    model: Type[Model]  # 2.
+    loss: Type[Loss]  # 3.
+    regularizer: Type[Regularizer]  # 4.
+    optimizer: Type[Optimizer]  # 5.
+    training_loop: Type[TrainingLoop]  # 6.
+    evaluator: Type[Evaluator]  # 8.
 
+    # 1. Dataset
+    dataset_kwargs: Optional[Mapping[str, Any]] = None
     # 2. Model
-    model: Type[Model] = None
     model_kwargs: Optional[Mapping[str, Any]] = None
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None
-
     # 3. Loss
-    loss: Type[Loss] = None
     loss_kwargs: Optional[Mapping[str, Any]] = None
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None
-
     # 4. Regularizer
-    regularizer: Type[Regularizer] = None
     regularizer_kwargs: Optional[Mapping[str, Any]] = None
     regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
-
     # 5. Optimizer
-    optimizer: Type[Optimizer] = None
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
-
     # 6. Training Loop
-    training_loop: Type[TrainingLoop] = None
     negative_sampler: Optional[Type[NegativeSampler]] = None
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None
-
     # 7. Training
     training_kwargs: Optional[Mapping[str, Any]] = None
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None
-
+    stopper: Type[Stopper] = None
+    stopper_kwargs: Optional[Mapping[str, Any]] = None
     # 8. Evaluation
-    evaluator: Type[Evaluator] = None
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
-
     # Misc.
     metric: str = None
+    device: Union[None, str, torch.device] = None
     save_model_directory: Optional[str] = None
-    pipeline_kwargs: Optional[Mapping[str, Any]] = None
+
+    @staticmethod
+    def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
+        """Make a subclass of the EarlyStopper that reports to the trial."""
+
+        def _continue_callback(early_stopper: EarlyStopper, result: Union[float, int]) -> None:
+            last_epoch = early_stopper.number_results * early_stopper.frequency
+            trial.report(result, step=last_epoch)
+
+        def _stopped_callback(early_stopper: EarlyStopper, result: Union[float, int]) -> None:
+            current_epoch = (1 + early_stopper.number_results) * early_stopper.frequency
+            trial.set_user_attr(STOPPED_EPOCH_KEY, int(current_epoch))
+            trial.report(result)  # don't include a step because it's over
+
+        for key, callback in zip(('continue_callbacks', 'stopped_callbacks'), (_continue_callback, _stopped_callback)):
+            stopper_kwargs.setdefault(key, []).append(callback)
 
     def __call__(self, trial: Trial) -> float:
         """Suggest parameters then train the model."""
+        if self.model_kwargs is not None:
+            problems = [
+                x
+                for x in ('loss', 'regularizer', 'optimizer', 'training', 'negative_sampler', 'stopper')
+                if x in self.model_kwargs
+            ]
+            if problems:
+                raise ValueError(f'model_kwargs should not have: {problems}. {self}')
+
         # 2. Model
         _model_kwargs = _get_kwargs(
             trial=trial,
@@ -140,6 +165,10 @@ class Objective:
             kwargs_ranges=self.training_kwargs_ranges,
         )
 
+        _stopper_kwargs = dict(self.stopper_kwargs or {})
+        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
+            self._update_stopper_callbacks(_stopper_kwargs, trial)
+
         result = pipeline(
             # 1. Dataset
             dataset=self.dataset,
@@ -162,13 +191,15 @@ class Objective:
             negative_sampler_kwargs=_negative_sampler_kwargs,
             # 7. Training
             training_kwargs=_training_kwargs,
+            stopper=self.stopper,
+            stopper_kwargs=_stopper_kwargs,
             # 8. Evaluation
             evaluator=self.evaluator,
             evaluator_kwargs=self.evaluator_kwargs,
             evaluation_kwargs=self.evaluation_kwargs,
             # Misc.
             use_testing_data=False,  # use validation set during HPO!
-            **(self.pipeline_kwargs or {}),
+            device=self.device,
         )
         if self.save_model_directory:
             model_directory = os.path.join(self.save_model_directory, str(trial.number))
@@ -187,7 +218,9 @@ class Objective:
 class HpoPipelineResult:
     """A container for the results of the HPO pipeline."""
 
+    #: The :mod:`optuna` study object
     study: Study
+    #: The objective class, containing information on preset hyperparameters and those to optimize
     objective: Objective
 
     def _get_best_study_config(self):
@@ -200,14 +233,17 @@ class HpoPipelineResult:
         for k, v in self.study.user_attrs.items():
             if k.startswith('pykeen_'):
                 metadata[k[len('pykeen_'):]] = v
+            elif k in {'metric'}:
+                continue
             else:
                 pipeline_config[k] = v
 
-        for field in fields(self.objective):
-            if not field.name.endswith('_kwargs') or field.name in {'metric', 'pipeline_kwargs'}:
+        for field in dataclasses.fields(self.objective):
+            if not field.name.endswith('_kwargs') or field.name in {'metric'}:
                 continue
             field_kwargs = getattr(self.objective, field.name)
             if field_kwargs:
+                logger.debug(f'saving pre-specified field in pipeline config: {field.name}={field_kwargs}')
                 pipeline_config[field.name] = field_kwargs
 
         for k, v in self.study.best_params.items():
@@ -215,10 +251,22 @@ class HpoPipelineResult:
             sk = f'{sk}_kwargs'
             if sk not in pipeline_config:
                 pipeline_config[sk] = {}
+            logger.debug(f'saving optimized field in pipeline config: {sk}.{ssk}={v}')
             pipeline_config[sk][ssk] = v
 
-        if self.objective.pipeline_kwargs:
-            pipeline_config.update(self.objective.pipeline_kwargs)
+        for k in ('stopper', 'stopper_kwargs'):
+            if k in pipeline_config:
+                v = pipeline_config.pop(k)
+                metadata[f'_{k}_removed_comment'] = f'{k} config removed after HPO: {v}'
+
+        stopped_epoch = self.study.best_trial.user_attrs.get(STOPPED_EPOCH_KEY)
+        if stopped_epoch is not None:
+            old_num_epochs = pipeline_config['training_kwargs']['num_epochs']
+            metadata['_stopper_comment'] = (
+                f'While the original config had {old_num_epochs},'
+                f' early stopping will now switch it to {int(stopped_epoch)}'
+            )
+            pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
 
         return dict(metadata=metadata, pipeline=pipeline_config)
 
@@ -234,11 +282,13 @@ class HpoPipelineResult:
         df = self.study.trials_dataframe()
         df.to_csv(os.path.join(output_directory, 'trials.tsv'), sep='\t', index=False)
 
+        best_pipeline_directory = os.path.join(output_directory, 'best_pipeline')
+        os.makedirs(best_pipeline_directory, exist_ok=True)
         # Output best trial as pipeline configuration file
-        with open(os.path.join(output_directory, 'best_pipeline_config.json'), 'w') as file:
+        with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def run_best_pipeline(self, replicates: Optional[int] = None) -> BasePipelineResult:
+    def test_best_pipeline(self, replicates: Optional[int] = None) -> PipelineResultSet:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
         :param replicates: The number of times to retrain the model. If left none, trains once and returns a
@@ -250,10 +300,7 @@ class HpoPipelineResult:
         if 'use_testing_data' in config:
             raise ValueError('use_testing_data not be set in the configuration at at all!')
 
-        if replicates is None:
-            return pipeline_from_config(config, use_testing_data=True)
-        else:
-            return PipelineResultSet.from_config(config, replicates=replicates, use_testing_data=True)
+        return PipelineResultSet.from_config(config, replicates=replicates, use_testing_data=True)
 
 
 def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:
@@ -301,13 +348,15 @@ def hpo_pipeline(
     # 7. Training
     training_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    stopper: Union[None, str, Type[Stopper]] = None,
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # 8. Evaluation
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
     # 6. Misc
-    pipeline_kwargs: Optional[Mapping[str, Any]] = None,
+    device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
     storage: Union[None, str, BaseStorage] = None,
     sampler: Union[None, str, Type[BaseSampler]] = None,
@@ -329,8 +378,6 @@ def hpo_pipeline(
     :param model: Either an implemented model from :mod:`pykeen.models` or a list of them.
     :param model_kwargs: Keyword arguments to be passed to the model (that shouldn't be optimized)
     :param model_kwargs_ranges: Ranges for hyperparameters to override the defaults
-    :param pipeline_kwargs: Default keyword arguments to be passed to the :func:`pykeen.pipeline.pipeline` (that
-     shouldn't be optimized)
     :param metric: The metric to optimize over. Defaults to ``adjusted_mean_rank``.
     :param direction: The direction of optimization. Because the default metric is ``adjusted_mean_rank``,
      the default direction is ``minimize``.
@@ -459,7 +506,38 @@ def hpo_pipeline(
     ...    dataset='nations',
     ...    n_trials=30,
     ...    sampler='tpe',
-    ...    sampler_kwars=dict(prior_weight=1.1),
+    ...    sampler_kwargs=dict(prior_weight=1.1),
+    ... )
+
+    Early stopping can be baked directly into the :mod:`optuna` optimization.
+    This example takes a lot longer to run, so keep in the mind explicit
+    configuration is just to keep it fast.
+
+    The important keys are ``stopping='early'`` and ``stopper_kwargs``.
+    When using early stopping, the :func:`hpo_pipeline` automatically takes
+    care of adding appropriate callbacks to interface with :mod:`optuna`.
+
+    >>> from pykeen.hpo import hpo_pipeline
+    >>> from pykeen.utils import resolve_device
+    >>> device = resolve_device() # not strictly necessary but reduces logging
+    >>> hpo_pipeline_result = hpo_pipeline(
+    ...     dataset='nations',
+    ...     model='transe',
+    ...     model_kwargs=dict(embedding_dim=20, scoring_fct_norm=1),
+    ...     optimizer='SGD',
+    ...     optimizer_kwargs=dict(lr=0.01),
+    ...     loss='marginranking',
+    ...     loss_kwargs=dict(margin=1),
+    ...     training_loop='owa',
+    ...     training_kwargs=dict(num_epochs=100, batch_size=128),
+    ...     negative_sampler='basic',
+    ...     negative_sampler_kwargs=dict(num_negs_per_pos=1),
+    ...     evaluator_kwargs=dict(filtered=True),
+    ...     evaluation_kwargs=dict(batch_size=128),
+    ...     stopper='early',
+    ...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+    ...     n_trials=30,
+    ...     device=device,
     ... )
 
     """
@@ -514,6 +592,7 @@ def hpo_pipeline(
     else:
         negative_sampler: Optional[Type[NegativeSampler]] = None
     # 7. Training
+    stopper: Type[Stopper] = get_stopper_cls(stopper)
     # 8. Evaluation
     evaluator: Type[Evaluator] = get_evaluator_cls(evaluator)
     study.set_user_attr('evaluator', evaluator.get_normalized_name())
@@ -551,6 +630,8 @@ def hpo_pipeline(
         # 7. Training
         training_kwargs=training_kwargs,
         training_kwargs_ranges=training_kwargs_ranges,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
         # 8. Evaluation
         evaluator=evaluator,
         evaluator_kwargs=evaluator_kwargs,
@@ -559,7 +640,7 @@ def hpo_pipeline(
         metric=metric,
         save_model_directory=save_model_directory,
         # Pipeline Misc.
-        pipeline_kwargs=pipeline_kwargs,
+        device=device,
     )
 
     # Invoke optimization of the objective function.
@@ -614,7 +695,7 @@ def suggest_kwargs(
         if dtype in {int, 'int'}:
             q = info.get('q')
             if q is not None:
-                _kwargs[name] = int(trial.suggest_discrete_uniform(name=prefixed_name, low=low, high=high, q=q))
+                _kwargs[name] = suggest_discrete_uniform_int(trial=trial, name=prefixed_name, low=low, high=high, q=q)
             else:
                 _kwargs[name] = trial.suggest_int(name=prefixed_name, low=low, high=high)
         elif dtype in {float, 'float'}:
@@ -631,3 +712,11 @@ def suggest_kwargs(
             logger.warning(f'Unhandled data type ({dtype}) for parameter {name}')
 
     return _kwargs
+
+
+def suggest_discrete_uniform_int(trial: Trial, name, low, high, q) -> int:
+    """Suggest an integer in the given range [low, high] inclusive with step size q."""
+    if (high - low) % q:
+        logger.warning(f'bad range given: range({low}, {high}, {q}) - not divisible by q')
+    choices = list(range(low, high + 1, q))
+    return trial.suggest_categorical(name=name, choices=choices)

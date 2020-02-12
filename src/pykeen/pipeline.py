@@ -183,7 +183,7 @@ from .models.base import Model
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
-from .stoppers import Stopper, get_stopper_cls
+from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import MLFlowResultTracker, NoRandomSeedNecessary, ResultTracker, resolve_device, set_random_seed
@@ -227,6 +227,9 @@ class PipelineResult(BasePipelineResult):
     #: The results evaluated by the pipeline
     metric_results: MetricResults
 
+    #: An early stopper
+    stopper: Optional[Stopper] = None
+
     #: Any additional metadata as a dictionary
     metadata: Optional[Mapping[str, Any]] = field(default_factory=dict)
 
@@ -261,30 +264,16 @@ class PipelineResult(BasePipelineResult):
 
     def save_to_directory(self, directory: str) -> None:
         """Save all artifacts in the given directory."""
+        with open(os.path.join(directory, 'metadata.json'), 'w') as file:
+            json.dump(self.metadata, file, indent=2)
         with open(os.path.join(directory, 'losses.json'), 'w') as file:
             json.dump(self.losses, file, indent=2)
         with open(os.path.join(directory, 'metric_results.json'), 'w') as file:
             json.dump(self.metric_results.to_dict(), file, indent=2)
-        with open(os.path.join(directory, 'configuration.json'), 'w') as file:
-            json.dump(self._get_configuration(), file, indent=2)
-        with open(os.path.join(directory, 'metadata.json'), 'w') as file:
-            json.dump(self.metadata, file, indent=2)
-        with open(os.path.join(directory, 'environment.json'), 'w') as file:
-            json.dump(self._get_environment(), file, indent=2)
+        if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
+            with open(os.path.join(directory, 'early_stopping_summary.json'), 'w') as file:
+                json.dump(self.stopper.get_summary_dict(), file, indent=2)
         self.save_model(os.path.join(directory, 'trained_model.pkl'))
-
-    def _get_environment(self):
-        return dict(
-            pykeen=dict(
-                version=self.version,
-                git_hash=self.git_hash,
-            ),
-        )
-
-    def _get_configuration(self) -> Mapping[str, Any]:
-        """Get all of the configuration out of the model and training loop."""
-        # FIXME
-        return {}
 
 
 @dataclass
@@ -294,27 +283,27 @@ class PipelineResultSet(BasePipelineResult):
     pipeline_results: List[PipelineResult]
 
     @classmethod
-    def from_path(cls, path: str, replicates: int = 10, **kwargs) -> 'PipelineResultSet':
+    def from_path(cls, path: str, replicates: Optional[int] = None, **kwargs) -> 'PipelineResultSet':
         """Run the same pipeline several times.
 
         :param path: The path to the JSON configuration for the experiment.
-        :param replicates: The number of replicates to run
+        :param replicates: The number of replicates to run. If None, defaults to 10.
         """
         return cls([
             pipeline_from_path(path, **kwargs)
-            for _ in range(replicates)
+            for _ in range(replicates or 10)
         ])
 
     @classmethod
-    def from_config(cls, config, replicates: int = 10, **kwargs) -> 'PipelineResultSet':
+    def from_config(cls, config, replicates: Optional[int] = None, **kwargs) -> 'PipelineResultSet':
         """Run the same pipeline several times.
 
         :param config: The configuration dictionary for the experiment.
-        :param replicates: The number of replicates to run
+        :param replicates: The number of replicates to run. If None, defaults to 10.
         """
         return cls([
             pipeline_from_config(config, **kwargs)
-            for _ in range(replicates)
+            for _ in range(replicates or 10)
         ])
 
     def get_loss_df(self) -> pd.DataFrame:
@@ -341,12 +330,14 @@ class PipelineResultSet(BasePipelineResult):
 
     def save_to_directory(self, directory: str) -> None:
         """Save the result set to the directory."""
+        replicates_directory = os.path.join(directory, 'replicates')
         for i, pipeline_result in enumerate(self.pipeline_results):
-            sd = os.path.join(directory, str(i))
+            sd = os.path.join(replicates_directory, f'replicate-{i:05}')
             os.makedirs(sd, exist_ok=True)
             pipeline_result.save_to_directory(sd)
 
-        self.get_loss_df().to_csv(os.path.join(directory, 'losses.tsv'), sep='\t')
+        loss_df = self.get_loss_df()
+        loss_df.to_csv(os.path.join(directory, 'all_replicates_losses.tsv'), sep='\t', index=False)
 
 
 def pipeline_from_path(
@@ -499,9 +490,11 @@ def pipeline(  # noqa: C901
     model_kwargs.update(preferred_device=device)
     model_kwargs.setdefault('random_seed', NoRandomSeedNecessary)
 
-    if regularizer is not None and 'regularizer' in model_kwargs:
-        raise ValueError('Can not specify regularizer in kwargs and model_kwargs')
-    elif regularizer is not None:
+    if regularizer is not None:
+        # FIXME this should never happen.
+        if 'regularizer' in model_kwargs:
+            logger.warning(f'Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
+            del model_kwargs['regularizer']
         regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
         model_kwargs['regularizer'] = regularizer_cls(
             device=device,
@@ -509,6 +502,9 @@ def pipeline(  # noqa: C901
         )
 
     if loss is not None:
+        if 'loss' in model_kwargs:  # FIXME
+            logger.warning(f'duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
+            del model_kwargs['loss']
         loss_cls = get_loss_cls(loss)
         _loss = loss_cls(**(loss_kwargs or {}))
         model_kwargs.setdefault('loss', _loss)
@@ -617,6 +613,7 @@ def pipeline(  # noqa: C901
         model=model_instance,
         training_loop=training_loop_instance,
         losses=losses,
+        stopper=stopper,
         metric_results=metric_results,
         metadata=metadata,
     )

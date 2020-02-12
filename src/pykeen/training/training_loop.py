@@ -150,7 +150,7 @@ class TrainingLoop(ABC):
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
         :param stopper:
-            An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
+            An instance of :class:`pykeen.stopper.Stopper` with settings for checking
             if training should stop early
         :param result_tracker:
             The result tracker.

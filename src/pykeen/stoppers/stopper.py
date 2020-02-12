@@ -29,8 +29,10 @@ class Stopper(ABC):
 class NopStopper(Stopper):
     """A stopper that does nothing."""
 
-    def should_evaluate(self, epoch: int) -> bool:  # noqa: D102
+    def should_evaluate(self, epoch: int) -> bool:
+        """Return false; should never evaluate."""
         return False
 
-    def should_stop(self) -> bool:  # noqa: D102
+    def should_stop(self) -> bool:
+        """Return false; should never stop."""
         return False
