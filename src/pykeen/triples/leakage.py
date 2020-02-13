@@ -410,7 +410,7 @@ def _main():
     Run with ``python -m pykeen.triples.leakage``.
     """
     from pykeen.datasets import get_dataset
-    logging.basicConfig(format='poem: %(message)s', level=logging.INFO)
+    logging.basicConfig(format='pykeen: %(message)s', level=logging.INFO)
 
     print('Summary FB15K')
     train, test, validate = get_dataset(dataset='fb15k')
