@@ -7,7 +7,7 @@ Name             Reference
 ===============  ==========================================
 bce              :class:`torch.nn.BCELoss`
 bceaftersigmoid  :class:`pykeen.losses.BCEAfterSigmoidLoss`
-crossentropy     :class:`torch.nn.CrossEntropyLoss`
+crossentropy     :class:`pykeen.losses.CrossEntropyLoss`
 marginranking    :class:`torch.nn.MarginRankingLoss`
 mse              :class:`torch.nn.MSELoss`
 nssa             :class:`pykeen.losses.NSSALoss`
@@ -21,7 +21,7 @@ from typing import Any, Mapping, Set, Type, Union
 
 import torch
 from torch import nn
-from torch.nn import BCELoss, CrossEntropyLoss, MSELoss, MarginRankingLoss, functional
+from torch.nn import BCELoss, MSELoss, MarginRankingLoss, functional
 
 from .utils import get_cls, normalize_string
 
@@ -55,14 +55,14 @@ class SoftplusLoss(nn.Module):
 
     def forward(
         self,
-        scores: torch.FloatTensor,
+        logits: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores and labels."""
         assert 0. <= labels.min() and labels.max() <= 1.
         # scale labels from [0, 1] to [-1, 1]
         labels = 2 * labels - 1
-        loss = self.softplus((-1) * labels * scores)
+        loss = self.softplus((-1) * labels * logits)
         loss = self._reduction_method(loss)
         return loss
 
@@ -82,6 +82,29 @@ class BCEAfterSigmoidLoss(nn.Module):
     ) -> torch.FloatTensor:  # noqa: D102
         post_sigmoid = torch.sigmoid(logits)
         return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
+
+
+class CrossEntropyLoss(nn.Module):
+    """Evaluate cross entropy after softmax output."""
+
+    def __init__(self, reduction: str = 'mean'):
+        super().__init__()
+        self.reduction = reduction
+        self._reduction_method = _REDUCTION_METHODS[reduction]
+
+    def forward(
+        self,
+        logits: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # cross entropy expects a proper probability distribution -> normalize labels
+        p_true = functional.normalize(labels, p=1, dim=-1)
+        # Use numerically stable variant to compute log(softmax)
+        log_p_pred = logits.log_softmax(dim=-1)
+        # compute cross entropy: ce(b) = sum_i p_true(b, i) * log p_pred(b, i)
+        sample_wise_cross_entropy = (p_true * log_p_pred).sum(dim=-1)
+        return self._reduction_method(sample_wise_cross_entropy)
 
 
 class NSSALoss(nn.Module):

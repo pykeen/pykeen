@@ -122,7 +122,7 @@ in pykeen. These markdown tables can be regenerated with `pykeen ls`.
 |-----------------|-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | bce             | `torch.nn.BCELoss`                  | Creates a criterion that measures the Binary Cross Entropy between the target and the output:                                                |
 | bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.                                                       |
-| crossentropy    | `torch.nn.CrossEntropyLoss`         | This criterion combines :func:`nn.LogSoftmax` and :func:`nn.NLLLoss` in one single class.                                                    |
+| crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                                                                 |
 | marginranking   | `torch.nn.MarginRankingLoss`        | Creates a criterion that measures the loss given inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,                                 |
 | mse             | `torch.nn.MSELoss`                  | Creates a criterion that measures the mean squared error (squared L2 norm) between each element in the input :math:`x` and target :math:`y`. |
 | nssa            | `pykeen.losses.NSSALoss`            | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
