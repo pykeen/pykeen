@@ -14,6 +14,7 @@ from torch import nn
 
 __all__ = [
     'clamp_norm',
+    'compact_mapping',
     'l2_regularization',
     'resolve_device',
     'slice_triples',
@@ -312,3 +313,25 @@ def all_in_bounds(
         return False
 
     return True
+
+
+def compact_mapping(
+    mapping: Mapping[X, int]
+) -> Tuple[Mapping[X, int], Mapping[int, int]]:
+    """Update a mapping (key -> id) such that the IDs range from 0 to len(mappings) - 1.
+
+    :param mapping:
+        The mapping to compact.
+
+    :return: A pair (translated, translation)
+        where translated is the updated mapping, and translation a dictionary from old to new ids.
+    """
+    translation = {
+        old_id: new_id
+        for new_id, old_id in enumerate(sorted(mapping.values()))
+    }
+    translated = {
+        k: translation[v]
+        for k, v in mapping.items()
+    }
+    return translated, translation

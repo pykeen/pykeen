@@ -2,6 +2,7 @@
 
 """Unittest for for global utilities."""
 
+import string
 import unittest
 
 import numpy
@@ -10,6 +11,7 @@ from torch import nn
 
 from pykeen.utils import (
     clamp_norm,
+    compact_mapping,
     flatten_dictionary,
     get_embedding_in_canonical_shape,
     get_until_first_blank,
@@ -160,6 +162,19 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
             generator=self.generator,
         )
         self._test_with_indices(ind=ind)
+
+    def test_compact_mapping(self):
+        """Test ``compact_mapping()``."""
+        mapping = {
+            letter: 2 * i
+            for i, letter in enumerate(string.ascii_letters)
+        }
+        compacted_mapping, id_remapping = compact_mapping(mapping=mapping)
+
+        # check correct value range
+        self.assertEqual(set(compacted_mapping.values()), set(range(len(mapping))))
+        self.assertEqual(set(id_remapping.keys()), set(mapping.values()))
+        self.assertEqual(set(id_remapping.values()), set(compacted_mapping.values()))
 
 
 def test_clamp_norm():

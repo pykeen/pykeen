@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-"""Test utils for processing numeric literals."""
+"""Unit tests for triples factories."""
 
 import unittest
 
 import numpy as np
 
+from pykeen.datasets import NationsTrainingTriplesFactory
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples.triples_factory import INVERSE_SUFFIX
 
 triples = np.array(
     [
@@ -46,7 +48,54 @@ numeric_triples = np.array(
 )
 
 
-class NumericLiteralsUtilsTests(unittest.TestCase):
+class TestTriplesFactory(unittest.TestCase):
+    """Class for testing triples factories."""
+
+    def test_already_has_inverse(self):
+        """Test a runtime error is thrown if inverse triples are already present."""
+        t = [
+            ['a', 'likes', '1'],
+            ['a', 'isA', 'A'],
+            ['b', 'likes', '1'],
+            ['b', 'likes', '2'],
+            ['2', f'likes{INVERSE_SUFFIX}', 'b']
+        ]
+        t = np.array(t, dtype=np.str)
+        with self.assertRaises(RuntimeError):
+            TriplesFactory(triples=t, create_inverse_triples=True)
+
+
+class TestSplit(unittest.TestCase):
+    """Test splitting."""
+
+    triples_factory: TriplesFactory
+
+    def setUp(self) -> None:
+        """Set up the tests."""
+        self.triples_factory = NationsTrainingTriplesFactory()
+        self.assertEqual(1592, self.triples_factory.num_triples)
+
+    def test_split_naive(self):
+        """Test splitting a factory in two with a given ratio."""
+        ratio = 0.8
+        train_triples_factory, test_triples_factory = self.triples_factory.split(ratio)
+        expected_train_triples = int(self.triples_factory.num_triples * ratio)
+        self.assertEqual(expected_train_triples, train_triples_factory.num_triples)
+        self.assertEqual(self.triples_factory.num_triples - expected_train_triples, test_triples_factory.num_triples)
+
+    def test_split_multi(self):
+        """Test splitting a factory in three."""
+        ratios = r0, r1 = 0.80, 0.10
+        t0, t1, t2 = self.triples_factory.split(ratios)
+        expected_0_triples = int(self.triples_factory.num_triples * r0)
+        expected_1_triples = int(self.triples_factory.num_triples * r1)
+        expected_2_triples = self.triples_factory.num_triples - expected_0_triples - expected_1_triples
+        self.assertEqual(expected_0_triples, t0.num_triples)
+        self.assertEqual(expected_1_triples, t1.num_triples)
+        self.assertEqual(expected_2_triples, t2.num_triples)
+
+
+class TestLiterals(unittest.TestCase):
     """Class for testing utils for processing numeric literals.tsv."""
 
     def test_create_lcwa_instances(self):
@@ -95,21 +144,26 @@ class NumericLiteralsUtilsTests(unittest.TestCase):
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory(triples=triples, create_inverse_triples=True)
-        self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
-        self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
+        self.assertEqual(0, triples_factory.num_relations % 2)
+        self.assertEqual(
+            set(range(triples_factory.num_entities)),
+            set(triples_factory.entity_to_id.values()),
+            msg='wrong number entities',
+        )
+        self.assertEqual(
+            set(range(triples_factory.num_relations)),
+            set(triples_factory.relation_to_id.values()),
+            msg='wrong number relations',
+        )
 
         relations = set(triples[:, 1])
         entities = set(triples[:, 0]).union(triples[:, 2])
-        self.assertEqual(len(entities), triples_factory.num_entities)
+        self.assertEqual(len(entities), triples_factory.num_entities, msg='wrong number entities')
         self.assertEqual(2, len(relations), msg='Wrong number of relations in set')
-        self.assertEqual(2 * len(relations), triples_factory.num_relations, msg='Wrong number of relations in factory')
+        self.assertEqual(
+            2 * len(relations),
+            triples_factory.num_relations,
+            msg='Wrong number of relations in factory',
+        )
 
-        self.assertIn('likes_inverse', triples_factory.relation_to_id)
-        self.assertEqual(
-            triples_factory.relation_to_id['likes'] + triples_factory.num_relations / 2,
-            triples_factory.relation_to_id['likes_inverse'],
-        )
-        self.assertEqual(
-            triples_factory.relation_to_id['likes'] + triples_factory.num_relations / 2,
-            triples_factory.get_inverse_relation_id('likes'),
-        )
+        self.assertIn(f'likes{INVERSE_SUFFIX}', triples_factory.relation_to_id)

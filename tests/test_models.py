@@ -350,7 +350,7 @@ Traceback
         self.model.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
+        assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
             scores_r = self.model.score_r(batch)
@@ -371,8 +371,8 @@ Traceback
         self.model.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
-        assert (batch[:, 0] < self.factory.num_relations).all()
-        assert (batch[:, 1] < self.factory.num_entities).all()
+        assert (batch[:, 0] < self.factory.num_entities).all()
+        assert (batch[:, 1] < self.factory.num_relations).all()
         try:
             scores_t = self.model.score_t(batch)
             scores_hrt = super(self.model.__class__, self.model).score_t(batch)
