@@ -46,7 +46,7 @@ class SubBatchingNotSupportedError(NotImplementedError):
 
     def __str__(self):  # noqa: D105
         return f'No sub-batching support for {self.model.__class__.__name__} due to modules ' \
-               f'{self.model.modules_not_supporting_sub_batching}.'
+            f'{self.model.modules_not_supporting_sub_batching}.'
 
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
@@ -230,16 +230,18 @@ class TrainingLoop(ABC):
             A pair of the KGE model and the losses per epoch.
         """
         # Take the biggest possible training batch_size, if batch_size not set
+        batch_size_sufficient = False
         if batch_size is None:
             if self.model.automatic_memory_optimization:
-                batch_size, _ = self.batch_size_search()
+                batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
 
         # This will find necessary parameters to optimize the use of the hardware at hand
-        if not only_size_probing and self.model.automatic_memory_optimization:
+        if not only_size_probing and self.model.automatic_memory_optimization and not batch_size_sufficient:
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
+            print('Finished sub_batch_size search')
 
         # Create dummy result tracker
         if result_tracker is None:
@@ -360,8 +362,10 @@ class TrainingLoop(ABC):
                     # reset the regularizer to free the computational graph
                     self.model.regularizer.reset()
 
-                # update parameters according to optimizer
-                self.optimizer.step()
+                # when called by batch_size_search(), the parameter update should not be applied.
+                if not only_size_probing:
+                    # update parameters according to optimizer
+                    self.optimizer.step()
 
                 # After changing applying the gradients to the embeddings, the model is notified that the forward
                 # constraints are no longer applied
@@ -373,20 +377,20 @@ class TrainingLoop(ABC):
 
                 evaluated_once = True
 
-            # Track epoch loss
-            epoch_loss = current_epoch_loss / num_training_instances
-            self.losses_per_epochs.append(epoch_loss)
-            result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
-
-            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop():
-                return self.losses_per_epochs
-
             if not only_size_probing:
+                # Track epoch loss
+                epoch_loss = current_epoch_loss / num_training_instances
+                self.losses_per_epochs.append(epoch_loss)
+                result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+
                 # Print loss information to console
                 epochs.set_postfix({
                     'loss': self.losses_per_epochs[-1],
                     'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
                 })
+
+            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop():
+                return self.losses_per_epochs
 
         return self.losses_per_epochs
 
@@ -439,6 +443,7 @@ class TrainingLoop(ABC):
             try:
                 self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=None, only_size_probing=True)
             except RuntimeError as e:
+                self._free_graph_and_cache()
                 if 'CUDA out of memory.' not in e.args[0]:
                     raise e
                 if batch_size == 1:
@@ -457,6 +462,7 @@ class TrainingLoop(ABC):
                 reached_max = True
                 batch_size //= 2
             else:
+                self._free_graph_and_cache()
                 if not reached_max:
                     batch_size *= 2
                 else:
@@ -529,6 +535,7 @@ class TrainingLoop(ABC):
             logger.debug(f'Trying batch_size {batch_size} for training now.')
             self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
         except RuntimeError as e:
+            self._free_graph_and_cache()
             if 'CUDA out of memory.' not in e.args[0]:
                 raise e
             logger.debug(f'The batch_size {batch_size} was too big, sub_batching is required.')
@@ -547,13 +554,14 @@ class TrainingLoop(ABC):
                 while True:
                     logger.debug(f'Trying sub_batch_size {sub_batch_size} now.')
                     try:
-                        self.train(
+                        self._train(
                             num_epochs=1,
                             batch_size=batch_size,
                             sub_batch_size=sub_batch_size,
                             only_size_probing=True
                         )
                     except RuntimeError as e:
+                        self._free_graph_and_cache()
                         if 'CUDA out of memory.' not in e.args[0]:
                             raise e
                         if sub_batch_size == 1:
@@ -566,6 +574,8 @@ class TrainingLoop(ABC):
                         finished_search = True
                         logger.info(f'Concluded search with sub_batch_size {sub_batch_size}.')
                         break
+
+        self._free_graph_and_cache()
 
         return sub_batch_size, finished_search, supports_sub_batching
 
@@ -601,3 +611,9 @@ class TrainingLoop(ABC):
         :rtype: embeddingdb.sql.models.Collection
         """
         return self.model.to_embeddingdb(session=session, use_tqdm=use_tqdm)
+
+    def _free_graph_and_cache(self):
+        # The regularizer has to be reset to free the computational graph
+        self.model.regularizer.reset()
+        # The cache of the previous run has to be freed to allow accurate memory availability estimates
+        torch.cuda.empty_cache()

@@ -139,6 +139,7 @@ class LCWATrainingLoop(TrainingLoop):
                     only_size_probing=True,
                 )
             except RuntimeError as e:
+                self._free_graph_and_cache()
                 if 'CUDA out of memory.' not in e.args[0]:
                     raise e
                 if evaluated_once:
@@ -157,6 +158,7 @@ class LCWATrainingLoop(TrainingLoop):
                 slice_size //= 2
                 reached_max = True
             else:
+                self._free_graph_and_cache()
                 if reached_max:
                     logger.info(f'Concluded search with slice_size {slice_size}.')
                     break
