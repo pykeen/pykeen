@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Loss functions implemented in POEM and additionally imported from :class:`torch`.
+"""Loss functions implemented in PyKEEN and additionally imported from :class:`torch`.
 
 ===============  ==========================================
 Name             Reference

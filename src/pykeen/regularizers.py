@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Regularization.
+"""Regularization in PyKEEN.
 
 ========  ================================================
 Name      Reference

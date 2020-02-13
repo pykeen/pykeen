@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test the POEM pipeline function."""
+"""Test the PyKEEN pipeline function."""
 
 import unittest
 

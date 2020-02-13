@@ -110,7 +110,7 @@ of the evaluator could be used as in:
 ...     evaluator=RankBasedEvaluator,
 ... )
 
-POEM implements early stopping, which can be turned on with the ``stopper`` keyword
+PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
 >>> from pykeen.pipeline import pipeline

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with POEM, borrowed from https://github.com/ZhenfengLei/KGDatasets.
+"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
 ========  =================================
 Name      Reference

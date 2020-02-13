@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Utilities for POEM."""
+"""Utilities for PyKEEN."""
 
 import logging
 import random

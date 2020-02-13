@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""A command line interface for hyper-parameter optimization in POEM."""
+"""A command line interface for hyper-parameter optimization in PyKEEN."""
 
 import sys
 from typing import Optional

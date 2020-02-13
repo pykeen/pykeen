@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Version information for POEM."""
+"""Version information for PyKEEN."""
 
 import os
 from subprocess import CalledProcessError, check_output  # noqa: S404

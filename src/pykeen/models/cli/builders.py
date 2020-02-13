@@ -132,7 +132,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         random_seed,
         **model_kwargs,
     ):
-        """CLI for POEM."""
+        """CLI for PyKEEN."""
         click.echo(
             f'Training {model.__name__} with '
             f'{training_loop.__name__[:-len("TrainingLoop")]} using '

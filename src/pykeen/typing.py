@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Type hints for POEM."""
+"""Type hints for PyKEEN."""
 
 from typing import Callable, Mapping
 

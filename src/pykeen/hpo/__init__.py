@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Hyper-parameter optimiziation in POEM."""
+"""Hyper-parameter optimiziation in PyKEEN."""
 
 from .hpo import HpoPipelineResult, hpo_pipeline, hpo_pipeline_from_config, hpo_pipeline_from_path  # noqa: F401
 

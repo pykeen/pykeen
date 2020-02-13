@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test the POEM custom loss functions."""
+"""Test the PyKEEN custom loss functions."""
 
 import unittest
 from typing import Any, Mapping, Optional, Type

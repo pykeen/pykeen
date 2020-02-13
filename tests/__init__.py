@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-"""Tests for POEM."""
+"""Tests for PyKEEN."""

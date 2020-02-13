@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Optimizers available in POEM.
+"""Optimizers available in PyKEEN.
 
 ========  =============================
 Name      Reference

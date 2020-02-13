@@ -35,7 +35,7 @@
                 <https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828>`_. AAAI 2016.
 .. [schlichtkrull2018] Schlichtkrull, M., *et al.* (2018) `Modeling relational data with graph convolutional networks
                        <https://arxiv.org/pdf/1703.06103>`_. ESWC'18.
-.. [sharifzadeh2019] Sharifzadeh *et al.* (2019) Extension of ERMLP in POEM.
+.. [sharifzadeh2019] Sharifzadeh *et al.* (2019) Extension of ERMLP in PyKEEN.
 .. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion
              <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
 .. [sun2019] Sun, Z., *et al.* (2019) `RotatE: Knowledge Graph Embeddings by relational rotation in complex space

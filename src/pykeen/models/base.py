@@ -340,7 +340,7 @@ class Model(nn.Module):
             return scores
 
         '''
-        The POEM package handles _inverse relations_ by adding the number of relations to the index of the
+        The PyKEEN package handles _inverse relations_ by adding the number of relations to the index of the
         _native relation_.
         Example:
         The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
