@@ -103,7 +103,7 @@ class CrossEntropyLoss(nn.Module):
         # Use numerically stable variant to compute log(softmax)
         log_p_pred = logits.log_softmax(dim=-1)
         # compute cross entropy: ce(b) = sum_i p_true(b, i) * log p_pred(b, i)
-        sample_wise_cross_entropy = (p_true * log_p_pred).sum(dim=-1)
+        sample_wise_cross_entropy = -(p_true * log_p_pred).sum(dim=-1)
         return self._reduction_method(sample_wise_cross_entropy)
 
 
