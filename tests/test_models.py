@@ -4,6 +4,7 @@
 
 import importlib
 import os
+import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
@@ -222,6 +223,30 @@ class _ModelTestCase:
                 raise e
         else:
             return losses
+
+    def test_save_load_model_state(self):
+        """Test whether a saved model state can be re-loaded."""
+        original_model = self.model_cls(
+            self.factory,
+            embedding_dim=self.embedding_dim,
+            random_seed=42,
+            **(self.model_kwargs or {})
+        ).to_device_()
+
+        loaded_model = self.model_cls(
+            self.factory,
+            embedding_dim=self.embedding_dim,
+            random_seed=21,
+            **(self.model_kwargs or {})
+        ).to_device_()
+
+        assert not (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_path = os.path.join(tmpdirname, 'test.pt')
+            original_model.save_state(path=file_path)
+            loaded_model.load_state(path=file_path)
+        assert (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
 
     @property
     def cli_extras(self):

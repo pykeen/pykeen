@@ -601,6 +601,22 @@ class Model(nn.Module):
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(p.numel() * p.element_size() for p in self.parameters(recurse=True))
 
+    def save_state(self, path: str) -> None:
+        """Save the state of the model.
+
+        :param path:
+            Path of the file where to store the state in.
+        """
+        torch.save(self.state_dict(), path)
+
+    def load_state(self, path: str) -> None:
+        """Load the state of the model.
+
+        :param path:
+            Path of the file where to load the state from.
+        """
+        self.load_state_dict(torch.load(path, map_location=self.device))
+
 
 def _can_slice(fn) -> bool:
     return 'slice_size' in inspect.getfullargspec(fn).args
