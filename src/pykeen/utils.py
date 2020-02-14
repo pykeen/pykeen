@@ -16,6 +16,7 @@ __all__ = [
     'clamp_norm',
     'compact_mapping',
     'l2_regularization',
+    'raise_if_not_cuda_oom',
     'resolve_device',
     'slice_triples',
     'slice_doubles',
@@ -313,6 +314,12 @@ def all_in_bounds(
         return False
 
     return True
+
+
+def raise_if_not_cuda_oom(exception: RuntimeError) -> None:
+    """Check whether the catched RuntimeError was due to a CUDA OOM, and if not, re-raise it."""
+    if 'CUDA out of memory.' not in exception.args[0]:
+        raise exception
 
 
 def compact_mapping(

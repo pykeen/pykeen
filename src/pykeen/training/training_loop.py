@@ -17,7 +17,7 @@ from ..stoppers import Stopper
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import ResultTracker, normalize_string
+from ..utils import ResultTracker, normalize_string, raise_if_not_cuda_oom
 
 __all__ = [
     'TrainingLoop',
@@ -46,7 +46,7 @@ class SubBatchingNotSupportedError(NotImplementedError):
 
     def __str__(self):  # noqa: D105
         return f'No sub-batching support for {self.model.__class__.__name__} due to modules ' \
-            f'{self.model.modules_not_supporting_sub_batching}.'
+               f'{self.model.modules_not_supporting_sub_batching}.'
 
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
@@ -150,7 +150,7 @@ class TrainingLoop(ABC):
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
         :param stopper:
-            An instance of :class:`pykeen.stopper.Stopper` with settings for checking
+            An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
         :param result_tracker:
             The result tracker.
@@ -241,7 +241,6 @@ class TrainingLoop(ABC):
         if not only_size_probing and self.model.automatic_memory_optimization and not batch_size_sufficient:
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
-            print('Finished sub_batch_size search')
 
         # Create dummy result tracker
         if result_tracker is None:
@@ -419,7 +418,7 @@ class TrainingLoop(ABC):
 
     def batch_size_search(
         self,
-        batch_size: int = 8192,
+        batch_size: Optional[int] = None,
     ) -> Tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
 
@@ -429,27 +428,30 @@ class TrainingLoop(ABC):
         value will be False.
 
         :param batch_size:
-            The batch size to start the search with.
+            The batch size to start the search with. If None, set batch_size=num_triples (i.e. full batch training).
 
         :return:
             Tuple containing the maximum possible batch size as well as an indicator if the evaluation with that size
             was successful.
         """
+        if batch_size is None:
+            batch_size = 8192
+
+        # Set upper bound
+        batch_size = min(batch_size, self.triples_factory.num_triples)
+
         reached_max = False
         evaluated_once = False
-        logger.info(f'Starting batch_size search for training now...')
+        logger.info('Starting batch_size search for training now...')
         while True:
-            logger.debug(f'Trying batch_size={batch_size}')
+            logger.debug(f'Trying batch_size={batch_size}.')
             try:
                 self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=None, only_size_probing=True)
             except RuntimeError as e:
                 self._free_graph_and_cache()
-                if 'CUDA out of memory.' not in e.args[0]:
-                    raise e
+                raise_if_not_cuda_oom(exception=e)
                 if batch_size == 1:
-                    logger.debug(
-                        f"Batch_size {batch_size} does not fit into your memory with these parameters."
-                    )
+                    logger.debug(f"batch_size={batch_size} does not fit into your memory with these parameters.")
                     break
 
                 if evaluated_once:
@@ -458,12 +460,12 @@ class TrainingLoop(ABC):
                     logger.info(f'Concluded batch_size search with batch_size={batch_size}.')
                     break
 
-                logger.debug(f'The batch_size {batch_size} was too big, trying less now')
+                logger.debug(f'batch_size={batch_size} was too big, trying less now.')
                 reached_max = True
                 batch_size //= 2
             else:
                 self._free_graph_and_cache()
-                if not reached_max:
+                if not reached_max and batch_size <= self.triples_factory.num_triples:
                     batch_size *= 2
                 else:
                     # Weird error requiring to half the batch size to avoid OOM
@@ -536,8 +538,7 @@ class TrainingLoop(ABC):
             self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
         except RuntimeError as e:
             self._free_graph_and_cache()
-            if 'CUDA out of memory.' not in e.args[0]:
-                raise e
+            raise_if_not_cuda_oom(exception=e)
             logger.debug(f'The batch_size {batch_size} was too big, sub_batching is required.')
             sub_batch_size //= 2
         else:
@@ -562,8 +563,7 @@ class TrainingLoop(ABC):
                         )
                     except RuntimeError as e:
                         self._free_graph_and_cache()
-                        if 'CUDA out of memory.' not in e.args[0]:
-                            raise e
+                        raise_if_not_cuda_oom(exception=e)
                         if sub_batch_size == 1:
                             logger.info(
                                 f"Even sub_batch_size={sub_batch_size} does not fit in memory with these parameters")

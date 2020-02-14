@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from ..models.base import Model
 from ..typing import MappedTriples
-from ..utils import normalize_string, split_list_in_batches_iter
+from ..utils import normalize_string, raise_if_not_cuda_oom, split_list_in_batches_iter
 
 __all__ = [
     'Evaluator',
@@ -191,8 +191,6 @@ class Evaluator(ABC):
         )
 
         if evaluated_once:  # slice_size = None
-            # Empty the cache to avoid an Out-Of-Memory error with the same parameters in the subsequent run.
-            torch.cuda.empty_cache()
             return batch_size, None
 
         # We need to try slicing, if the evaluation for the batch_size search never succeeded
@@ -209,8 +207,6 @@ class Evaluator(ABC):
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 
-        # Empty the cache to avoid an Out-Of-Memory error with the same parameters in the subsequent run.
-        torch.cuda.empty_cache()
         return batch_size, slice_size
 
     def _param_size_search(
@@ -254,8 +250,9 @@ class Evaluator(ABC):
                     use_tqdm=use_tqdm,
                 )
             except RuntimeError as e:
-                if 'CUDA out of memory.' not in e.args[0]:
-                    raise e
+                # The cache of the previous run has to be freed to allow accurate memory availability estimates
+                torch.cuda.empty_cache()
+                raise_if_not_cuda_oom(exception=e)
                 if values_dict[key] == 1:
                     logger.debug(
                         f"Even {key} {values_dict[key]} does not fit into your memory with these parameters."
@@ -267,6 +264,8 @@ class Evaluator(ABC):
                 evaluated_once = False
                 reached_max = True
             else:
+                # The cache of the previous run has to be freed to allow accurate memory availability estimates
+                torch.cuda.empty_cache()
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
                     values_dict[key] *= 2
                 elif evaluated_once:
