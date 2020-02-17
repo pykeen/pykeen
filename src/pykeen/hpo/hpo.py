@@ -693,11 +693,25 @@ def suggest_kwargs(
         prefixed_name = f'{prefix}.{name}'
         dtype, low, high = info['type'], info.get('low'), info.get('high')
         if dtype in {int, 'int'}:
-            q = info.get('q')
-            if q is not None:
-                _kwargs[name] = suggest_discrete_uniform_int(trial=trial, name=prefixed_name, low=low, high=high, q=q)
+            q, scale = info.get('q'), info.get('scale')
+            if scale == 'power_two':
+                _kwargs[name] = suggest_discrete_power_two_int(
+                    trial=trial,
+                    name=prefixed_name,
+                    low=low,
+                    high=high,
+                )
+            elif q is not None:
+                _kwargs[name] = suggest_discrete_uniform_int(
+                    trial=trial,
+                    name=prefixed_name,
+                    low=low,
+                    high=high,
+                    q=q,
+                )
             else:
                 _kwargs[name] = trial.suggest_int(name=prefixed_name, low=low, high=high)
+
         elif dtype in {float, 'float'}:
             if info.get('scale') == 'log':
                 _kwargs[name] = trial.suggest_loguniform(name=prefixed_name, low=low, high=high)
@@ -719,4 +733,12 @@ def suggest_discrete_uniform_int(trial: Trial, name, low, high, q) -> int:
     if (high - low) % q:
         logger.warning(f'bad range given: range({low}, {high}, {q}) - not divisible by q')
     choices = list(range(low, high + 1, q))
+    return trial.suggest_categorical(name=name, choices=choices)
+
+
+def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
+    """Suggest an integer in the given range [2^low, 2^high]."""
+    if high <= low:
+        raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
+    choices = [2 ** i for i in range(low, high + 1)]
     return trial.suggest_categorical(name=name, choices=choices)

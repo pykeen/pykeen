@@ -4,9 +4,11 @@
 
 import unittest
 
+import optuna
 import pytest
 
 from pykeen.hpo import hpo_pipeline
+from pykeen.hpo.hpo import suggest_kwargs
 
 
 @pytest.mark.slow
@@ -97,3 +99,29 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
         self.assertIn(('params', 'loss.margin'), df.columns)
         self.assertTrue(df[('params', 'loss.margin')].isin({1, 2}).all())
+
+    def test_sampling_values_from_2_power_x(self):
+        """Test making a study that has a range defined by f(x) = 2^x."""
+        def objective(trial):
+            suggest_kwargs(prefix='model', trial=trial, kwargs_ranges=model_kwargs_ranges)
+            return 1.
+
+        model_kwargs_ranges = dict(
+            embedding_dim=dict(type=int, low=0, high=4, scale='power_two'),
+        )
+
+        study = optuna.create_study()
+        study.optimize(objective, n_trials=2)
+
+        df = study.trials_dataframe(multi_index=True)
+        self.assertIn(('params', 'model.embedding_dim'), df.columns)
+        self.assertTrue(df[('params', 'model.embedding_dim')].isin({1, 2, 4, 8, 16}).all())
+
+        model_kwargs_ranges = dict(
+            embedding_dim=dict(type=int, low=0, high=4, scale='power_two'),
+        )
+
+        with self.assertRaises(Exception) as context:
+            study = optuna.create_study()
+            study.optimize(objective, n_trials=2)
+            self.assertIn('Upper bound 4 is not greater than lower bound 4.', context.exception)
