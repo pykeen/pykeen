@@ -4,6 +4,7 @@
 
 import logging
 import os
+import re
 from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
@@ -100,15 +101,16 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     }
 
 
-def create_relation_mapping(triples: LabeledTriples) -> RelationMapping:
+def create_relation_mapping(relations: set) -> RelationMapping:
     """Create mapping from relation labels to IDs.
 
-    :param triples: shape: (n, 3), dtype: str
+    :param relations: set
     """
-    # Extract relation labels
-    relations = triples[:, 1]
     # Sorting ensures consistent results when the triples are permuted
-    relation_labels = sorted(set(relations))
+    relation_labels = sorted(
+        set(relations),
+        key=lambda x: (re.sub(f'{INVERSE_SUFFIX}$', '', x), x.endswith(f'{INVERSE_SUFFIX}')),
+    )
     # Create mapping
     return {
         str(label): i
@@ -224,25 +226,39 @@ class TriplesFactory:
         relations = self.triples[:, 1]
         unique_relations = set(relations)
 
-        self.create_inverse_triples = create_inverse_triples
-        if create_inverse_triples:
-            self._raise_if_relations_not_invertible(unique_relations)
-            self.relation_to_inverse = {
-                relation: f"{relation}{INVERSE_SUFFIX}"
-                for relation in unique_relations
-            }
-            inverse_triples = np.stack(
-                [
-                    self.triples[:, 2],
-                    np.array([self.relation_to_inverse[relation] for relation in relations], dtype=np.str),
-                    self.triples[:, 0],
-                ],
-                axis=-1,
-            )
-            # extend original triples with inverse ones
-            self.triples = np.concatenate([self.triples, inverse_triples], axis=0)
-            self._num_relations = 2 * len(unique_relations)
+        # Check if the triples are inverted already
+        relations_already_inverted = self._check_already_inverted_relations(unique_relations)
+
+        if create_inverse_triples or relations_already_inverted:
+            self.create_inverse_triples = True
+            if relations_already_inverted:
+                logger.info(
+                    f'Some triples already have suffix {INVERSE_SUFFIX}. '
+                    f'Creating TriplesFactory based on inverse triples')
+                self.relation_to_inverse = {
+                    re.sub('_inverse$', '', relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
+                    for relation in unique_relations
+                }
+
+            else:
+                self.relation_to_inverse = {
+                    relation: f"{relation}{INVERSE_SUFFIX}"
+                    for relation in unique_relations
+                }
+                inverse_triples = np.stack(
+                    [
+                        self.triples[:, 2],
+                        np.array([self.relation_to_inverse[relation] for relation in relations], dtype=np.str),
+                        self.triples[:, 0],
+                    ],
+                    axis=-1,
+                )
+                # extend original triples with inverse ones
+                self.triples = np.concatenate([self.triples, inverse_triples], axis=0)
+                self._num_relations = 2 * len(unique_relations)
+
         else:
+            self.create_inverse_triples = False
             self.relation_to_inverse = None
             self._num_relations = len(unique_relations)
 
@@ -255,7 +271,12 @@ class TriplesFactory:
 
         # Generate relation mapping if necessary
         if relation_to_id is None:
-            relation_to_id = create_relation_mapping(triples=self.triples)
+            if self.create_inverse_triples:
+                relation_to_id = create_relation_mapping(
+                    set(self.relation_to_inverse.keys()).union(set(self.relation_to_inverse.values())),
+                )
+            else:
+                relation_to_id = create_relation_mapping(unique_relations)
         if compact_id:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
         self.relation_to_id = relation_to_id
@@ -293,17 +314,13 @@ class TriplesFactory:
         return f'{self.__class__.__name__}(path="{self.path}")'
 
     @staticmethod
-    def _raise_if_relations_not_invertible(relations: Iterable[str]) -> None:
-        relations_sans_inverse_suffix = set()
-        relations_with_inverse_suffix = set()
+    def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
         for relation in relations:
             if relation.endswith(INVERSE_SUFFIX):
-                relations_with_inverse_suffix.add(relation[:-len(INVERSE_SUFFIX)])
-            else:
-                relations_sans_inverse_suffix.add(relation)
+                # We can terminate the search after finding the first inverse occurrence
+                return True
 
-        if relations_with_inverse_suffix.intersection(relations_sans_inverse_suffix):
-            raise RuntimeError(f'Cannot add inverse triples. Some triples already have suffix {INVERSE_SUFFIX}')
+        return False
 
     def create_owa_instances(self) -> OWAInstances:
         """Create OWA instances for this factory's triples."""

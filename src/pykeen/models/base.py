@@ -345,14 +345,14 @@ class Model(nn.Module):
         Example:
         The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
         the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
-        of the _inverse relation_ is 103.
+        of the _inverse relation_ is 4 (id of relation + 1).
         '''
         rt_batch_cloned = rt_batch.clone()
         rt_batch_cloned.to(device=rt_batch.device)
 
         # The number of relations stored in the triples factory includes the number of inverse relations
-        num_relations = self.triples_factory.num_relations // 2
-        rt_batch_cloned[:, 0] = rt_batch_cloned[:, 0] + num_relations
+        # Id of inverse relation: relation + 1
+        rt_batch_cloned[:, 0] = rt_batch_cloned[:, 0] + 1
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
         rt_batch_cloned = rt_batch_cloned.flip(1)
