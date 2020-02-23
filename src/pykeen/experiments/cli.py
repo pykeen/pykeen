@@ -54,15 +54,16 @@ def experiments():
 @click.argument('model')
 @click.argument('reference')
 @click.argument('dataset')
+@click.option('--replicates', type=int, help='Number of times to retrain the model.')
 @directory_option
-def reproduce(model: str, reference: str, dataset: str, directory: str):
+def reproduce(model: str, reference: str, dataset: str, replicates: Optional[int], directory: str):
     """Reproduce a pre-defined experiment included in PyKEEN.
 
     Example: python -m pykeen.experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f'{reference}_{model}_{dataset}'
     path = os.path.join(HERE, model, f'{file_name}.json')
-    _help_reproduce(directory=directory, path=path, file_name=file_name)
+    _help_reproduce(directory=directory, path=path, replicates=replicates, file_name=file_name)
 
 
 @experiments.command()
@@ -73,20 +74,21 @@ def run(path: str, directory: str):
     _help_reproduce(directory=directory, path=path)
 
 
-def _help_reproduce(*, directory, path, file_name=None) -> None:
+def _help_reproduce(*, directory: str, path: str, replicates: Optional[int] = None, file_name=None) -> None:
     """Help run the configuration at a given path.
 
     :param directory: Output directory
     :param path: Path to configuration JSON file
     :param file_name: Name of JSON file (optional)
     """
-    from pykeen.pipeline import pipeline_from_path
+    from pykeen.pipeline import PipelineResultSet
 
     if not os.path.exists(path):
         click.secho(f'Could not find configuration at {path}', fg='red')
         return sys.exit(1)
     click.echo(f'Running configuration at {path}')
-    pipeline_result = pipeline_from_path(path)
+
+    pipeline_result_set = PipelineResultSet.from_path(path=path, replicates=replicates, use_testing_data=True)
 
     # Create directory in which all experimental artifacts are saved
     if file_name is not None:
@@ -95,7 +97,8 @@ def _help_reproduce(*, directory, path, file_name=None) -> None:
         output_directory = os.path.join(directory, time.strftime("%Y-%m-%d-%H-%M-%S"))
     os.makedirs(output_directory, exist_ok=True)
 
-    pipeline_result.save_to_directory(output_directory)
+    pipeline_result_set.save_to_directory(output_directory)
+
     shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
 
 
