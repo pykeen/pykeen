@@ -46,6 +46,11 @@ $ pip install pre-commit
 $ pre-commit install
 ```
 
+## Contributing
+
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
+See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
+
 ## Quickstart
 
 This example shows how to train a model on a data set and test on another data set.
