@@ -954,7 +954,6 @@ class TestTesting(unittest.TestCase):
             'RESCAL',
             'NTN',
             'ERMLP',
-            'ConvE',  # FIXME
             'ProjE',  # FIXME
             'ERMLPE',  # FIXME
         }

@@ -34,6 +34,9 @@
     "training_kwargs": {
       "num_epochs": 200,
       "batch_size": 256
+    },
+    "evaluator_kwargs": {
+      "filtered": true
     }
   }
 }
