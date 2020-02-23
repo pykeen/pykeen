@@ -164,10 +164,10 @@ learning_rate_option = click.option(
     default=0.001,
     show_default=True,
 )
+dataset_option = click.option('--dataset', help='Dataset name')
 training_option = click.option(
     '-t', '--training-triples-factory',
     callback=triples_factory_callback,
-    required=True,
     help='Path to training data',
 )
 testing_option = click.option(

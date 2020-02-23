@@ -97,10 +97,12 @@ def get_dataset(
             raise ValueError('Can not specify both dataset and any triples factory.')
 
         if isinstance(dataset, str):
-            try:
+            if normalize_string(dataset) in datasets:
                 dataset: Type[DataSet] = datasets[normalize_string(dataset)]
-            except KeyError:
-                raise ValueError(f'Invalid dataset name: {dataset}')
+            else:  # assume its a file path
+                _tf = TriplesFactory(path=dataset)
+                train, test, valid = _tf.split([0.8, 0.1, 0.1])
+                return train, test, valid
 
         elif not isinstance(dataset, type) or not issubclass(dataset, DataSet):
             raise TypeError(f'Data set is wrong type: {type(dataset)}')

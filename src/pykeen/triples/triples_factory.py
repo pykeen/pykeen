@@ -356,13 +356,19 @@ class TriplesFactory:
             triples = load_triples(triples)
         # Ensure 2d array in case only one triple was given
         triples = np.atleast_2d(triples)
+        # FIXME this function is only ever used in tests
         return _map_triples_elements_to_ids(
             triples=triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
-    def split(self, ratios: Union[float, Sequence[float]] = 0.8) -> List['TriplesFactory']:
+    def split(
+        self,
+        ratios: Union[float, Sequence[float]] = 0.8,
+        *,
+        random_state: Union[None, int, np.random.RandomState] = None,
+    ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
         :param ratios: There are three options for this argument. First, a float can be given between 0 and 1.0,
@@ -370,6 +376,7 @@ class TriplesFactory:
          a list of ratios can be given for which factory in which order should get what ratios as in ``[0.8, 0.1]``.
          The final ratio can be omitted because that can be calculated. Third, all ratios can be explicitly set in
          order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is 1.0.
+        :param random_state: The random state used to shuffle and split the triples in this factory.
 
         .. code-block:: python
 
@@ -386,7 +393,12 @@ class TriplesFactory:
 
         # Prepare shuffle index
         idx = np.arange(n_triples)
-        np.random.shuffle(idx)
+        if random_state is None:
+            random_state = np.random.randint(0, 2 ** 32 - 1)
+            logger.warning(f'Using random_state={random_state} to split {self}')
+        if isinstance(random_state, int):
+            random_state = np.random.RandomState(random_state)
+        random_state.shuffle(idx)
 
         # Prepare split index
         if isinstance(ratios, float):

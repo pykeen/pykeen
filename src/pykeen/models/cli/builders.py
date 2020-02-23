@@ -94,6 +94,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
     @options.device_option
+    @options.dataset_option
     @options.training_option
     @options.testing_option
     @options.valiadation_option
@@ -125,6 +126,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         output,
         mlflow_tracking_uri,
         title,
+        dataset,
         training_triples_factory,
         testing_triples_factory,
         validation_triples_factory,
@@ -145,6 +147,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             model=model,
             model_kwargs=model_kwargs,
             regularizer=regularizer,
+            dataset=dataset,
             training_triples_factory=training_triples_factory,
             testing_triples_factory=testing_triples_factory or training_triples_factory,
             validation_triples_factory=validation_triples_factory,
