@@ -43,6 +43,7 @@ directory_option = click.option(
     callback=_make_dir,
     default=os.getcwd(),
 )
+replicates_option = click.option('--replicates', type=int, help='Number of times to retrain the model.')
 
 
 @click.group()
@@ -54,7 +55,7 @@ def experiments():
 @click.argument('model')
 @click.argument('reference')
 @click.argument('dataset')
-@click.option('--replicates', type=int, help='Number of times to retrain the model.')
+@replicates_option
 @directory_option
 def reproduce(model: str, reference: str, dataset: str, replicates: Optional[int], directory: str):
     """Reproduce a pre-defined experiment included in PyKEEN.
@@ -68,10 +69,11 @@ def reproduce(model: str, reference: str, dataset: str, replicates: Optional[int
 
 @experiments.command()
 @click.argument('path')
+@replicates_option
 @directory_option
-def run(path: str, directory: str):
+def run(path: str, replicates: Optional[int], directory: str):
     """Run a single reproduction experiment."""
-    _help_reproduce(directory=directory, path=path)
+    _help_reproduce(directory=directory, path=path, replicates=replicates)
 
 
 def _help_reproduce(*, directory: str, path: str, replicates: Optional[int] = None, file_name=None) -> None:
