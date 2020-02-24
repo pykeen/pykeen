@@ -10,8 +10,8 @@ by using its interactive command line interface that can be started with the com
 
 News
 ----
-This code base is only temporary since soon we will publish PyKEEN 1.0 which encompassed major changes.
-Stay tuned!
+**This code base is only temporary since soon we will publish PyKEEN 1.0 which encompassed major changes.
+Stay tuned!**
 
 
 Citation
