@@ -1,0 +1,6 @@
+# See: https://docs.readthedocs.io/en/latest/yaml-config.html
+build:
+  image: latest
+python:
+  version: 3.6
+requirements_file: requirements-rtd.txt

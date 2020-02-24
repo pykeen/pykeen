@@ -1,0 +1,18 @@
+{
+  "training_set_path": "../test_resources/example_training.tsv",
+  "execution_mode": "HPO_mode",
+  "kg_embedding_model_name": "TransE",
+  "embedding_dim": [5,10],
+  "margin_loss": [1.0,2.5],
+  "scoring_function": 1,
+  "normalization_of_entities": 2,
+  "learning_rate": [0,1,0.01],
+  "batch_size": 2,
+  "num_epochs": 5,
+  "maximum_number_of_hpo_iters": 10,
+  "test_set_path": "../test_resources/example_test.tsv",
+  "filter_negative_triples": true,
+  "preferred_device": "cpu",
+  "output_direc": "../test_out",
+  "random_seed": 2
+}
