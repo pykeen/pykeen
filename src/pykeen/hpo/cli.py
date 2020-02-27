@@ -48,7 +48,7 @@ def optimize(
         storage=storage,
         sampler=sampler,
     )
-    hpo_pipeline_result.dump_to_directory(output)
+    hpo_pipeline_result.save_to_directory(output)
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
-from ..utils import normalize_string
+from ..utils import Result, normalize_string
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -215,7 +215,7 @@ class Objective:
 
 
 @dataclass
-class HpoPipelineResult:
+class HpoPipelineResult(Result):
     """A container for the results of the HPO pipeline."""
 
     #: The :mod:`optuna` study object
@@ -270,7 +270,7 @@ class HpoPipelineResult:
 
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def dump_to_directory(self, output_directory: str) -> None:
+    def save_to_directory(self, output_directory: str) -> None:
         """Dump the results of a study to the given directory."""
         os.makedirs(output_directory, exist_ok=True)
 

@@ -187,11 +187,10 @@ from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import MLFlowResultTracker, NoRandomSeedNecessary, ResultTracker, resolve_device, set_random_seed
+from .utils import MLFlowResultTracker, NoRandomSeedNecessary, Result, ResultTracker, resolve_device, set_random_seed
 from .version import get_git_hash, get_version
 
 __all__ = [
-    'BasePipelineResult',
     'PipelineResult',
     'PipelineResultSet',
     'pipeline_from_path',
@@ -201,16 +200,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class BasePipelineResult:
-    """A superclass of results that can be saved to a directory."""
-
-    def save_to_directory(self, directory: str) -> None:
-        """Save the results to the directory."""
-        raise NotImplementedError
-
-
 @dataclass
-class PipelineResult(BasePipelineResult):
+class PipelineResult(Result):
     """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
 
     #: The random seed used at the beginning of the pipeline
@@ -292,7 +283,7 @@ class PipelineResult(BasePipelineResult):
 
 
 @dataclass
-class PipelineResultSet(BasePipelineResult):
+class PipelineResultSet(Result):
     """A set of results."""
 
     pipeline_results: List[PipelineResult]

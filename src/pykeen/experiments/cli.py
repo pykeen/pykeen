@@ -140,7 +140,7 @@ def optimize(path: str, directory: str):
     """Run a single HPO experiment."""
     from pykeen.hpo import hpo_pipeline_from_path
     hpo_pipeline_result = hpo_pipeline_from_path(path)
-    hpo_pipeline_result.dump_to_directory(directory)
+    hpo_pipeline_result.save_to_directory(directory)
 
 
 @experiments.command()
@@ -178,7 +178,7 @@ def ablation(
 
     for output_directory, rv_config_path in directories:
         hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
-        hpo_pipeline_result.dump_to_directory(output_directory)
+        hpo_pipeline_result.save_to_directory(output_directory)
 
         if no_retrain_best:
             continue

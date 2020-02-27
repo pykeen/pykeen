@@ -31,6 +31,7 @@ __all__ = [
     'get_embedding_in_canonical_shape',
     'set_random_seed',
     'NoRandomSeedNecessary',
+    'Result',
 ]
 
 logger = logging.getLogger(__name__)
@@ -342,3 +343,11 @@ def compact_mapping(
         for k, v in mapping.items()
     }
     return translated, translation
+
+
+class Result:
+    """A superclass of results that can be saved to a directory."""
+
+    def save_to_directory(self, directory: str) -> None:
+        """Save the results to the directory."""
+        raise NotImplementedError
