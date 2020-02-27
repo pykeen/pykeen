@@ -288,7 +288,7 @@ class HpoPipelineResult:
         with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def test_best_pipeline(self, replicates: Optional[int] = None) -> PipelineResultSet:
+    def test_best_pipeline(self, replicates: Optional[int] = None, move_to_cpu: bool = False) -> PipelineResultSet:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
         :param replicates: The number of times to retrain the model. If left none, trains once and returns a
@@ -300,7 +300,12 @@ class HpoPipelineResult:
         if 'use_testing_data' in config:
             raise ValueError('use_testing_data not be set in the configuration at at all!')
 
-        return PipelineResultSet.from_config(config, replicates=replicates, use_testing_data=True)
+        return PipelineResultSet.from_config(
+            config,
+            replicates=replicates,
+            use_testing_data=True,
+            move_to_cpu=move_to_cpu,
+        )
 
 
 def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:

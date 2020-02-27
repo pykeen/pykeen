@@ -44,6 +44,7 @@ directory_option = click.option(
     default=os.getcwd(),
 )
 replicates_option = click.option('--replicates', type=int, help='Number of times to retrain the model.')
+move_to_cpu_option = click.option('--move-to-cpu', is_flag=True, help='Move trained model(s) to CPU after training.')
 
 
 @click.group()
@@ -56,27 +57,49 @@ def experiments():
 @click.argument('reference')
 @click.argument('dataset')
 @replicates_option
+@move_to_cpu_option
 @directory_option
-def reproduce(model: str, reference: str, dataset: str, replicates: Optional[int], directory: str):
+def reproduce(
+    model: str,
+    reference: str,
+    dataset: str,
+    replicates: Optional[int],
+    directory: str,
+    move_to_cpu: bool,
+):
     """Reproduce a pre-defined experiment included in PyKEEN.
 
-    Example: python -m pykeen.experiments reproduce tucker balazevic2019 fb15k
+    Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f'{reference}_{model}_{dataset}'
     path = os.path.join(HERE, model, f'{file_name}.json')
-    _help_reproduce(directory=directory, path=path, replicates=replicates, file_name=file_name)
+    _help_reproduce(
+        directory=directory,
+        path=path,
+        replicates=replicates,
+        move_to_cpu=move_to_cpu,
+        file_name=file_name,
+    )
 
 
 @experiments.command()
 @click.argument('path')
 @replicates_option
+@move_to_cpu_option
 @directory_option
 def run(path: str, replicates: Optional[int], directory: str):
     """Run a single reproduction experiment."""
     _help_reproduce(directory=directory, path=path, replicates=replicates)
 
 
-def _help_reproduce(*, directory: str, path: str, replicates: Optional[int] = None, file_name=None) -> None:
+def _help_reproduce(
+    *,
+    directory: str,
+    path: str,
+    replicates: Optional[int] = None,
+    move_to_cpu: bool = False,
+    file_name: Optional[str] = None,
+) -> None:
     """Help run the configuration at a given path.
 
     :param directory: Output directory
@@ -90,7 +113,12 @@ def _help_reproduce(*, directory: str, path: str, replicates: Optional[int] = No
         return sys.exit(1)
     click.echo(f'Running configuration at {path}')
 
-    pipeline_result_set = PipelineResultSet.from_path(path=path, replicates=replicates, use_testing_data=True)
+    pipeline_result_set = PipelineResultSet.from_path(
+        path=path,
+        replicates=replicates,
+        use_testing_data=True,
+        move_to_cpu=move_to_cpu,
+    )
 
     # Create directory in which all experimental artifacts are saved
     if file_name is not None:
@@ -121,6 +149,7 @@ def optimize(path: str, directory: str):
 @click.option('--dry-run', is_flag=True)
 @click.option('--no-retrain-best', is_flag=True)
 @click.option('--best-replicates', type=int, help='Number of times to retrain the best model.')
+@move_to_cpu_option
 @click.option('--save-artifacts', is_flag=True)
 @verbose_option
 def ablation(
@@ -130,6 +159,7 @@ def ablation(
     no_retrain_best: bool,
     best_replicates: int,
     save_artifacts: bool,
+    move_to_cpu: bool,
 ) -> None:
     """Generate a set of HPO configurations.
 
@@ -156,7 +186,10 @@ def ablation(
         best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
         os.makedirs(best_pipeline_dir, exist_ok=True)
         click.echo(f'Re-training best pipeline and saving artifacts in {best_pipeline_dir}')
-        pipeline_result_set = hpo_pipeline_result.test_best_pipeline(replicates=best_replicates)
+        pipeline_result_set = hpo_pipeline_result.test_best_pipeline(
+            replicates=best_replicates,
+            move_to_cpu=move_to_cpu,
+        )
         pipeline_result_set.save_to_directory(best_pipeline_dir)
 
 

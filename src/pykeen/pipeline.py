@@ -170,7 +170,7 @@ import os
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -298,28 +298,55 @@ class PipelineResultSet(BasePipelineResult):
     pipeline_results: List[PipelineResult]
 
     @classmethod
-    def from_path(cls, path: str, replicates: Optional[int] = None, **kwargs) -> 'PipelineResultSet':
+    def from_path(
+        cls,
+        path: str,
+        replicates: Optional[int] = None,
+        move_to_cpu: bool = True,
+        **kwargs,
+    ) -> 'PipelineResultSet':
         """Run the same pipeline several times.
 
         :param path: The path to the JSON configuration for the experiment.
         :param replicates: The number of replicates to run. If None, defaults to 10.
         """
-        return cls([
+        pipeline_result_iterator = (
             pipeline_from_path(path, **kwargs)
             for _ in range(replicates or 10)
-        ])
+        )
+        return cls._from_pipeline_results(pipeline_result_iterator, move_to_cpu)
 
     @classmethod
-    def from_config(cls, config, replicates: Optional[int] = None, **kwargs) -> 'PipelineResultSet':
+    def from_config(
+        cls,
+        config,
+        replicates: Optional[int] = None,
+        move_to_cpu: bool = False,
+        **kwargs,
+    ) -> 'PipelineResultSet':
         """Run the same pipeline several times.
 
         :param config: The configuration dictionary for the experiment.
         :param replicates: The number of replicates to run. If None, defaults to 10.
         """
-        return cls([
+        pipeline_result_iterator = (
             pipeline_from_config(config, **kwargs)
             for _ in range(replicates or 10)
-        ])
+        )
+        return cls._from_pipeline_results(pipeline_result_iterator, move_to_cpu)
+
+    @classmethod
+    def _from_pipeline_results(
+        cls,
+        pipeline_results: Iterable[PipelineResult],
+        move_to_cpu: bool,
+    ) -> 'PipelineResultSet':
+        _pipeline_results = []
+        for pipeline_result in pipeline_results:
+            if move_to_cpu:
+                pipeline_result.model.to_cpu_()
+            _pipeline_results.append(pipeline_result)
+        return cls(_pipeline_results)
 
     def get_loss_df(self) -> pd.DataFrame:
         """Get the losses as a dataframe."""
