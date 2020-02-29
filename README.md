@@ -135,16 +135,16 @@ in pykeen. These markdown tables can be regenerated with `pykeen ls`.
 
 ### Datasets (8)
 
-| Name     | Reference                  | Description                                                                                        |
-|----------|----------------------------|----------------------------------------------------------------------------------------------------|
-| fb15k    | `pykeen.datasets.FB15k`    | The FB15k data set.                                                                                |
-| fb15k237 | `pykeen.datasets.FB15k237` | The FB15k-237 data set.                                                                            |
-| kinship  | `pykeen.datasets.Kinship`  | The Kinship data set.                                                                              |
-| nations  | `pykeen.datasets.Nations`  | The Nations data set.                                                                              |
-| umls     | `pykeen.datasets.Umls`     | The UMLS data set.                                                                                 |
-| wn18     | `pykeen.datasets.WN18`     | The WN18 data set.                                                                                 |
-| wn18rr   | `pykeen.datasets.WN18RR`   | The WN18-RR data set.                                                                              |
-| yago310  | `pykeen.datasets.YAGO310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| Name      | Reference                   | Description                                                                                        |
+|-----------|-----------------------------|----------------------------------------------------------------------------------------------------|
+| fb15k     | `pykeen.datasets.FB15k`     | The FB15k data set.                                                                                |
+| fb15k237  | `pykeen.datasets.FB15k237`  | The FB15k-237 data set.                                                                            |
+| kinships  | `pykeen.datasets.Kinships`  | The Kinship data set.                                                                              |
+| nations   | `pykeen.datasets.Nations`   | The Nations data set.                                                                              |
+| umls      | `pykeen.datasets.Umls`      | The UMLS data set.                                                                                 |
+| wn18      | `pykeen.datasets.WN18`      | The WN18 data set.                                                                                 |
+| wn18rr    | `pykeen.datasets.WN18RR`    | The WN18-RR data set.                                                                              |
+| yago310   | `pykeen.datasets.YAGO310`   | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Training Modes (2)
 

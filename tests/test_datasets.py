@@ -9,7 +9,7 @@ from typing import Type, Union
 
 import pytest
 
-from pykeen.datasets import DataSet, FB15k, FB15k237, WN18, WN18RR, YAGO310, kinship, nations, umls
+from pykeen.datasets import DataSet, FB15k, FB15k237, WN18, WN18RR, YAGO310, kinships, nations, umls
 from pykeen.triples import TriplesFactory
 
 
@@ -82,12 +82,12 @@ class TestNations(_DataSetTestCase, unittest.TestCase):
     dataset = nations
 
 
-class TestKinship(_DataSetTestCase, unittest.TestCase):
+class TestKinships(_DataSetTestCase, unittest.TestCase):
     """Test the Nations dataset."""
 
     exp_num_entities = 104
     exp_num_relations = 25
-    dataset = kinship
+    dataset = kinships
 
 
 class TestUMLS(_DataSetTestCase, unittest.TestCase):

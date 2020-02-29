@@ -18,7 +18,7 @@ from torch.optim.adagrad import Adagrad
 
 import pykeen.experiments
 import pykeen.models
-from pykeen.datasets.kinship import TRAIN_PATH as KINSHIP_TRAIN_PATH
+from pykeen.datasets.kinships import TRAIN_PATH as KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
@@ -269,9 +269,9 @@ class _ModelTestCase:
         self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self.cli_extras)
 
     @pytest.mark.slow
-    def test_cli_training_kinship(self):
+    def test_cli_training_kinships(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', KINSHIP_TRAIN_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', KINSHIPS_TRAIN_PATH] + self.cli_extras)
 
     @pytest.mark.slow
     def test_cli_training_nations_testing(self):

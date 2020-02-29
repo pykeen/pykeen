@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Get triples from the Kinship data set."""
+"""Get triples from the Kinships data set."""
 
 import os
 
@@ -11,11 +11,11 @@ __all__ = [
     'TRAIN_PATH',
     'TEST_PATH',
     'VALIDATE_PATH',
-    'KinshipTestingTriplesFactory',
-    'KinshipTrainingTriplesFactory',
-    'KinshipValidationTriplesFactory',
-    'Kinship',
-    'kinship',
+    'KinshipsTestingTriplesFactory',
+    'KinshipsTrainingTriplesFactory',
+    'KinshipsValidationTriplesFactory',
+    'Kinships',
+    'kinships',
 ]
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -25,29 +25,29 @@ TEST_PATH = os.path.join(HERE, 'test.txt')
 VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-class KinshipTrainingTriplesFactory(TriplesFactory):
-    """A factory for the training portion of the Kinship data set."""
+class KinshipsTrainingTriplesFactory(TriplesFactory):
+    """A factory for the training portion of the Kinships data set."""
 
     def __init__(self):
         super().__init__(path=TRAIN_PATH)
 
 
-class KinshipTestingTriplesFactory(TriplesFactory):
-    """A factory for the testing portion of the Kinship data set."""
+class KinshipsTestingTriplesFactory(TriplesFactory):
+    """A factory for the testing portion of the Kinships data set."""
 
     def __init__(self):
         super().__init__(path=TEST_PATH)
 
 
-class KinshipValidationTriplesFactory(TriplesFactory):
-    """A factory for the validation portion of the Kinship data set."""
+class KinshipsValidationTriplesFactory(TriplesFactory):
+    """A factory for the validation portion of the Kinships data set."""
 
     def __init__(self):
         super().__init__(path=VALIDATE_PATH)
 
 
-class Kinship(DataSet):
-    """The Kinship data set."""
+class Kinships(DataSet):
+    """The Kinships data set."""
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -58,4 +58,4 @@ class Kinship(DataSet):
         )
 
 
-kinship = Kinship()
+kinships = Kinships()

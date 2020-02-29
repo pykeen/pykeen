@@ -2,18 +2,18 @@
 
 """Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
-========  =================================
+========  ==================================
 Name      Reference
-========  =================================
+========  ==================================
 fb15k     :class:`pykeen.datasets.fb15k`
 fb15k237  :class:`pykeen.datasets.fb15k237`
-kinship   :class:`pykeen.datasets.kinship`
+kinships   :class:`pykeen.datasets.kinships`
 nations   :class:`pykeen.datasets.nations`
 umls      :class:`pykeen.datasets.umls`
 wn18      :class:`pykeen.datasets.wn18`
 wn18rr    :class:`pykeen.datasets.wn18rr`
 yago310   :class:`pykeen.datasets.yago310`
-========  =================================
+========  ==================================
 
 .. note:: This table can be re-generated with ``pykeen ls datasets -f rst``
 """
@@ -22,8 +22,8 @@ from typing import Any, Mapping, Optional, Set, Tuple, Type, Union
 
 from .dataset import DataSet
 from .freebase import FB15k, FB15k237, fb15k, fb15k237
-from .kinship import (
-    Kinship, KinshipTestingTriplesFactory, KinshipTrainingTriplesFactory, KinshipValidationTriplesFactory, kinship,
+from .kinships import (
+    Kinships, KinshipsTestingTriplesFactory, KinshipsTrainingTriplesFactory, KinshipsValidationTriplesFactory, kinships,
 )
 from .nations import (
     Nations, NationsTestingTriplesFactory, NationsTrainingTriplesFactory, NationsValidationTriplesFactory, nations,
@@ -37,11 +37,11 @@ from ..utils import normalize_string
 __all__ = [
     'DataSet',
     'datasets',
-    'kinship',
-    'Kinship',
-    'KinshipTrainingTriplesFactory',
-    'KinshipTestingTriplesFactory',
-    'KinshipValidationTriplesFactory',
+    'kinships',
+    'Kinships',
+    'KinshipsTrainingTriplesFactory',
+    'KinshipsTestingTriplesFactory',
+    'KinshipsValidationTriplesFactory',
     'nations',
     'Nations',
     'NationsTrainingTriplesFactory',
@@ -67,7 +67,7 @@ __all__ = [
 
 _DATASETS: Set[Type[DataSet]] = {
     Nations,
-    Kinship,
+    Kinships,
     Umls,
     FB15k,
     FB15k237,
