@@ -12,6 +12,7 @@ from typing import Optional, TextIO, Tuple, Union
 
 import requests
 
+from ..constants import PYKEEN_HOME
 from ..triples import TriplesFactory
 
 __all__ = [
@@ -161,10 +162,11 @@ class RemoteDataSet(DataSet):
         :param url:
             The url where to download the dataset from.
         :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default tmp directory is used.
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         """
         if cache_root is None:
-            cache_root = os.path.join(os.path.expanduser('~'), 'pykeen')
+            cache_root = PYKEEN_HOME
         self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
         os.makedirs(cache_root, exist_ok=True)
 
