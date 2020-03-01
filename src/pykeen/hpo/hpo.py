@@ -23,7 +23,7 @@ from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
 from ..models import get_model_cls
 from ..models.base import Model
 from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
-from ..pipeline import PipelineResultSet, pipeline
+from ..pipeline import pipeline, replicate_pipeline_from_config
 from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
@@ -288,20 +288,27 @@ class HpoPipelineResult(Result):
         with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def test_best_pipeline(self, replicates: Optional[int] = None, move_to_cpu: bool = False) -> PipelineResultSet:
+    def replicate_best_pipeline(
+        self,
+        *,
+        directory: str,
+        replicates: int,
+        move_to_cpu: bool = False,
+    ) -> None:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
-        :param replicates: The number of times to retrain the model. If left none, trains once and returns a
-         :class:`pykeen.pipeline.PipelineResult` object. If set to an integer, returns a
-         :class:`pykeen.pipeline.PipelineResultSet` object.
+        :param directory: Output directory
+        :param replicates: The number of times to retrain the model
+        :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         """
         config = self._get_best_study_config()
 
         if 'use_testing_data' in config:
             raise ValueError('use_testing_data not be set in the configuration at at all!')
 
-        return PipelineResultSet.from_config(
-            config,
+        replicate_pipeline_from_config(
+            config=config,
+            directory=directory,
             replicates=replicates,
             use_testing_data=True,
             move_to_cpu=move_to_cpu,

@@ -43,7 +43,10 @@ directory_option = click.option(
     callback=_make_dir,
     default=os.getcwd(),
 )
-replicates_option = click.option('--replicates', type=int, help='Number of times to retrain the model.')
+replicates_option = click.option(
+    '-r', '--replicates', type=int, default=1, show_default=True,
+    help='Number of times to retrain the model.',
+)
 move_to_cpu_option = click.option('--move-to-cpu', is_flag=True, help='Move trained model(s) to CPU after training.')
 
 
@@ -63,7 +66,7 @@ def reproduce(
     model: str,
     reference: str,
     dataset: str,
-    replicates: Optional[int],
+    replicates: int,
     directory: str,
     move_to_cpu: bool,
 ):
@@ -87,7 +90,7 @@ def reproduce(
 @replicates_option
 @move_to_cpu_option
 @directory_option
-def run(path: str, replicates: Optional[int], directory: str):
+def run(path: str, replicates: int, directory: str):
     """Run a single reproduction experiment."""
     _help_reproduce(directory=directory, path=path, replicates=replicates)
 
@@ -96,7 +99,7 @@ def _help_reproduce(
     *,
     directory: str,
     path: str,
-    replicates: Optional[int] = None,
+    replicates: int,
     move_to_cpu: bool = False,
     file_name: Optional[str] = None,
 ) -> None:
@@ -104,21 +107,15 @@ def _help_reproduce(
 
     :param directory: Output directory
     :param path: Path to configuration JSON file
+    :param replicates: How many times the experiment should be run
     :param file_name: Name of JSON file (optional)
     """
-    from pykeen.pipeline import PipelineResultSet
+    from pykeen.pipeline import replicate_pipeline_from_path
 
     if not os.path.exists(path):
         click.secho(f'Could not find configuration at {path}', fg='red')
         return sys.exit(1)
     click.echo(f'Running configuration at {path}')
-
-    pipeline_result_set = PipelineResultSet.from_path(
-        path=path,
-        replicates=replicates,
-        use_testing_data=True,
-        move_to_cpu=move_to_cpu,
-    )
 
     # Create directory in which all experimental artifacts are saved
     if file_name is not None:
@@ -127,8 +124,13 @@ def _help_reproduce(
         output_directory = os.path.join(directory, time.strftime("%Y-%m-%d-%H-%M-%S"))
     os.makedirs(output_directory, exist_ok=True)
 
-    pipeline_result_set.save_to_directory(output_directory)
-
+    replicate_pipeline_from_path(
+        path=path,
+        directory=output_directory,
+        replicates=replicates,
+        use_testing_data=True,
+        move_to_cpu=move_to_cpu,
+    )
     shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
 
 
@@ -147,16 +149,14 @@ def optimize(path: str, directory: str):
 @click.argument('path', type=click.Path(file_okay=True, dir_okay=False, exists=True))
 @directory_option
 @click.option('--dry-run', is_flag=True)
-@click.option('--no-retrain-best', is_flag=True)
-@click.option('--best-replicates', type=int, help='Number of times to retrain the best model.')
+@click.option('-r', '--best-replicates', type=int, help='Number of times to retrain the best model.')
 @move_to_cpu_option
-@click.option('--save-artifacts', is_flag=True)
+@click.option('-s', '--save-artifacts', is_flag=True)
 @verbose_option
 def ablation(
     path: str,
     directory: Optional[str],
     dry_run: bool,
-    no_retrain_best: bool,
     best_replicates: int,
     save_artifacts: bool,
     move_to_cpu: bool,
@@ -180,17 +180,17 @@ def ablation(
         hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
         hpo_pipeline_result.save_to_directory(output_directory)
 
-        if no_retrain_best:
+        if not best_replicates:
             continue
 
         best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
         os.makedirs(best_pipeline_dir, exist_ok=True)
         click.echo(f'Re-training best pipeline and saving artifacts in {best_pipeline_dir}')
-        pipeline_result_set = hpo_pipeline_result.test_best_pipeline(
+        hpo_pipeline_result.replicate_best_pipeline(
             replicates=best_replicates,
             move_to_cpu=move_to_cpu,
+            directory=best_pipeline_dir,
         )
-        pipeline_result_set.save_to_directory(best_pipeline_dir)
 
 
 if __name__ == '__main__':

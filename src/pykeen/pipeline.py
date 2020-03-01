@@ -192,8 +192,10 @@ from .version import get_git_hash, get_version
 
 __all__ = [
     'PipelineResult',
-    'PipelineResultSet',
     'pipeline_from_path',
+    'pipeline_from_config',
+    'replicate_pipeline_from_config',
+    'replicate_pipeline_from_path',
     'pipeline',
 ]
 
@@ -282,95 +284,91 @@ class PipelineResult(Result):
         self.save_model(os.path.join(directory, 'trained_model.pkl'))
 
 
-@dataclass
-class PipelineResultSet(Result):
-    """A set of results."""
+def replicate_pipeline_from_path(
+    path: str,
+    directory: str,
+    replicates: int,
+    move_to_cpu: bool = False,
+    **kwargs,
+) -> None:
+    """Run the same pipeline several times from a configuration file by path.
 
-    pipeline_results: List[PipelineResult]
+    :param path: The path to the JSON configuration for the experiment.
+    :param directory: The output directory
+    :param replicates: The number of replicates to run.
+    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    """
+    pipeline_results = (
+        pipeline_from_path(path, **kwargs)
+        for _ in range(replicates)
+    )
+    save_pipeline_results_to_directory(
+        directory=directory,
+        pipeline_results=pipeline_results,
+        move_to_cpu=move_to_cpu,
+    )
 
-    @classmethod
-    def from_path(
-        cls,
-        path: str,
-        replicates: Optional[int] = None,
-        move_to_cpu: bool = True,
-        **kwargs,
-    ) -> 'PipelineResultSet':
-        """Run the same pipeline several times.
 
-        :param path: The path to the JSON configuration for the experiment.
-        :param replicates: The number of replicates to run. If None, defaults to 10.
-        """
-        pipeline_result_iterator = (
-            pipeline_from_path(path, **kwargs)
-            for _ in range(replicates or 10)
-        )
-        return cls._from_pipeline_results(pipeline_result_iterator, move_to_cpu)
+def replicate_pipeline_from_config(
+    config: Mapping[str, Any],
+    directory: str,
+    replicates: int,
+    move_to_cpu: bool = False,
+    **kwargs,
+) -> None:
+    """Run the same pipeline several times from a configuration dictionary.
 
-    @classmethod
-    def from_config(
-        cls,
-        config,
-        replicates: Optional[int] = None,
-        move_to_cpu: bool = False,
-        **kwargs,
-    ) -> 'PipelineResultSet':
-        """Run the same pipeline several times.
+    :param config: The configuration dictionary for the experiment.
+    :param directory: The output directory
+    :param replicates: The number of replicates to run
+    :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
+    """
+    pipeline_results = (
+        pipeline_from_config(config, **kwargs)
+        for _ in range(replicates)
+    )
+    save_pipeline_results_to_directory(
+        directory=directory,
+        pipeline_results=pipeline_results,
+        move_to_cpu=move_to_cpu,
+    )
 
-        :param config: The configuration dictionary for the experiment.
-        :param replicates: The number of replicates to run. If None, defaults to 10.
-        """
-        pipeline_result_iterator = (
-            pipeline_from_config(config, **kwargs)
-            for _ in range(replicates or 10)
-        )
-        return cls._from_pipeline_results(pipeline_result_iterator, move_to_cpu)
 
-    @classmethod
-    def _from_pipeline_results(
-        cls,
-        pipeline_results: Iterable[PipelineResult],
-        move_to_cpu: bool,
-    ) -> 'PipelineResultSet':
-        _pipeline_results = []
-        for pipeline_result in pipeline_results:
-            if move_to_cpu:
-                pipeline_result.model.to_cpu_()
-            _pipeline_results.append(pipeline_result)
-        return cls(_pipeline_results)
+def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
+    for pipeline_result in pipeline_results:
+        pipeline_result.model.to_cpu_()
+        yield pipeline_result
 
-    def get_loss_df(self) -> pd.DataFrame:
-        """Get the losses as a dataframe."""
-        return pd.DataFrame(
-            [
-                (replicate, epoch, loss)
-                for replicate, result in enumerate(self.pipeline_results, start=1)
-                for epoch, loss in enumerate(result.losses, start=1)
-            ],
-            columns=['Replicate', 'Epoch', 'Loss'],
-        )
 
-    def plot_losses(self, sns_kwargs: Optional[Mapping[str, Any]] = None):
-        """Plot the several losses."""
-        import matplotlib.pyplot as plt
-        import seaborn as sns
+def save_pipeline_results_to_directory(
+    *,
+    directory: str,
+    pipeline_results: Iterable[PipelineResult],
+    move_to_cpu: bool = False,
+    width: int = 5,
+) -> None:
+    """Save the result set to the directory.
 
-        df = self.get_loss_df()
-        sns.set()
-        if self.pipeline_results[0].title is not None:
-            plt.title(self.pipeline_results[0].title)
-        return sns.lineplot(data=df, x='Epoch', y='Loss', **(sns_kwargs or {}))
+    :param directory: The directory in which the replicates will be saved
+    :param pipeline_results: An iterable over results from training and evaluation
+    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    :param width: How many leading zeros should be put in the replicate names?
+    """
+    replicates_directory = os.path.join(directory, 'replicates')
+    losses_rows = []
 
-    def save_to_directory(self, directory: str) -> None:
-        """Save the result set to the directory."""
-        replicates_directory = os.path.join(directory, 'replicates')
-        for i, pipeline_result in enumerate(self.pipeline_results):
-            sd = os.path.join(replicates_directory, f'replicate-{i:05}')
-            os.makedirs(sd, exist_ok=True)
-            pipeline_result.save_to_directory(sd)
+    if move_to_cpu:
+        pipeline_results = _iterate_moved(pipeline_results)
 
-        loss_df = self.get_loss_df()
-        loss_df.to_csv(os.path.join(directory, 'all_replicates_losses.tsv'), sep='\t', index=False)
+    for i, pipeline_result in enumerate(pipeline_results):
+        sd = os.path.join(replicates_directory, f'replicate-{i:0{width}}')
+        os.makedirs(sd, exist_ok=True)
+        pipeline_result.save_to_directory(sd)
+        for epoch, loss in enumerate(pipeline_result.losses):
+            losses_rows.append((i, epoch, loss))
+
+    losses_df = pd.DataFrame(losses_rows, columns=['Replicate', 'Epoch', 'Loss'])
+    losses_df.to_csv(os.path.join(directory, 'all_replicates_losses.tsv'), sep='\t', index=False)
 
 
 def pipeline_from_path(
