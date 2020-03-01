@@ -13,6 +13,9 @@ later, but that will cause problems - the code will get executed twice:
 .. seealso:: http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 
+import os
+import sys
+
 import click
 from click_default_group import DefaultGroup
 from tabulate import tabulate
@@ -28,9 +31,12 @@ from .models.base import Model
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizers as optimizers_dict
 from .regularizers import regularizers as regularizers_dict
-from .sampling import negative_samplers as samplers_dict
+from .sampling import negative_samplers as negative_samplers_dict
+from .stoppers import stoppers as stoppers_dict
 from .training import training_loops as training_dict
 from .utils import get_until_first_blank
+
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 @click.group()
@@ -50,14 +56,16 @@ def ls():
 @tablefmt_option
 def models(tablefmt: str):
     """List models."""
+    click.echo(_help_models(tablefmt))
+
+
+def _help_models(tablefmt):
     lines = list(_get_model_lines(tablefmt=tablefmt))
     headers = ['Name', 'Reference', 'Citation'] if tablefmt in {'rst', 'github'} else ['Name', 'Citation']
-    click.echo(
-        tabulate(
-            lines,
-            headers=headers,
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=headers,
+        tablefmt=tablefmt,
     )
 
 
@@ -96,41 +104,63 @@ def parameters():
 @tablefmt_option
 def datasets(tablefmt: str):
     """List datasets."""
+    click.echo(_help_datasets(tablefmt))
+
+
+def _help_datasets(tablefmt):
     lines = _get_lines(datasets_dict, tablefmt, 'datasets')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
 @ls.command()
 @tablefmt_option
-def training(tablefmt: str):
-    """List training modes."""
+def training_loops(tablefmt: str):
+    """List training loops."""
+    click.echo(_help_training(tablefmt))
+
+
+def _help_training(tablefmt):
     lines = _get_lines(training_dict, tablefmt, 'training')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
 @ls.command()
 @tablefmt_option
-def samplers(tablefmt: str):
+def negative_samplers(tablefmt: str):
     """List negative samplers."""
-    lines = _get_lines(samplers_dict, tablefmt, 'sampling')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    click.echo(_help_negative_samplers(tablefmt))
+
+
+def _help_negative_samplers(tablefmt):
+    lines = _get_lines(negative_samplers_dict, tablefmt, 'sampling')
+    return tabulate(
+        lines,
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
+    )
+
+
+@ls.command()
+@tablefmt_option
+def stoppers(tablefmt: str):
+    """List stoppers."""
+    click.echo(_help_stoppers(tablefmt))
+
+
+def _help_stoppers(tablefmt):
+    lines = _get_lines(stoppers_dict, tablefmt, 'stoppers')
+    return tabulate(
+        lines,
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
@@ -138,13 +168,15 @@ def samplers(tablefmt: str):
 @tablefmt_option
 def evaluators(tablefmt: str):
     """List evaluators."""
+    click.echo(_help_evaluators(tablefmt))
+
+
+def _help_evaluators(tablefmt):
     lines = _get_lines(evaluators_dict, tablefmt, 'evaluators')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
@@ -152,13 +184,15 @@ def evaluators(tablefmt: str):
 @tablefmt_option
 def losses(tablefmt: str):
     """List losses."""
+    click.echo(_help_losses(tablefmt))
+
+
+def _help_losses(tablefmt):
     lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'pykeen.losses')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
@@ -166,13 +200,15 @@ def losses(tablefmt: str):
 @tablefmt_option
 def optimizers(tablefmt: str):
     """List optimizers."""
+    click.echo(_help_optimizers(tablefmt))
+
+
+def _help_optimizers(tablefmt):
     lines = _get_lines_alternative(tablefmt, optimizers_dict, 'torch.optim', 'pykeen.optimizers')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
@@ -180,13 +216,15 @@ def optimizers(tablefmt: str):
 @tablefmt_option
 def regularizers(tablefmt: str):
     """List regularizers."""
+    click.echo(_help_regularizers(tablefmt))
+
+
+def _help_regularizers(tablefmt):
     lines = _get_lines(regularizers_dict, tablefmt, 'regularizers')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
@@ -214,12 +252,14 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix):
 @tablefmt_option
 def metrics(tablefmt: str):
     """List metrics."""
-    click.echo(
-        tabulate(
-            _get_metrics_lines(tablefmt),
-            headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
-            tablefmt=tablefmt,
-        ),
+    click.echo(_help_metrics(tablefmt))
+
+
+def _help_metrics(tablefmt):
+    return tabulate(
+        _get_metrics_lines(tablefmt),
+        headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
+        tablefmt=tablefmt,
     )
 
 
@@ -227,13 +267,15 @@ def metrics(tablefmt: str):
 @tablefmt_option
 def hpo_samplers(tablefmt: str):
     """List HPO samplers."""
+    click.echo(_help_hpo_samplers(tablefmt))
+
+
+def _help_hpo_samplers(tablefmt):
     lines = _get_lines_alternative(tablefmt, hpo_samplers_dict, 'optuna.samplers', 'pykeen.hpo.samplers')
-    click.echo(
-        tabulate(
-            lines,
-            headers=['Name', 'Reference', 'Description'],
-            tablefmt=tablefmt,
-        ),
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
     )
 
 
@@ -272,28 +314,67 @@ def _get_lines(d, tablefmt, submodule):
             yield name, value.__doc__.splitlines()[0]
 
 
-@ls.command()
-@click.pass_context
-def github_readme(ctx: click.Context):
+@main.command()
+@click.option('--check', is_flag=True)
+def readme(check: bool):
     """Generate the GitHub readme's ## Implementation section."""
-    click.echo(f'### Models ({len(models_dict)})\n')
-    ctx.invoke(models, tablefmt='github')
-    click.echo(f'\n### Regularizers ({len(regularizers_dict)})\n')
-    ctx.invoke(regularizers, tablefmt='github')
-    click.echo(f'\n### Losses ({len(losses_dict)})\n')
-    ctx.invoke(losses, tablefmt='github')
-    click.echo(f'\n### Datasets ({len(datasets_dict)})\n')
-    ctx.invoke(datasets, tablefmt='github')
-    click.echo(f'\n### Training Modes ({len(training_dict)})\n')
-    ctx.invoke(training, tablefmt='github')
-    click.echo(f'\n### Optimizers ({len(optimizers_dict)})\n')
-    ctx.invoke(optimizers, tablefmt='github')
-    click.echo(f'\n### Evaluators ({len(evaluators_dict)})\n')
-    ctx.invoke(evaluators, tablefmt='github')
-    click.echo(f'\n### Metrics ({len(get_metric_list())})\n')
-    ctx.invoke(metrics, tablefmt='github')
-    click.echo(f'\n### HPO Samplers ({len(hpo_samplers_dict)})\n')
-    ctx.invoke(hpo_samplers, tablefmt='github')
+    readme_path = os.path.join(HERE, os.pardir, os.pardir, 'README.md')
+    new_readme = get_readme()
+
+    if check:
+        with open(readme_path) as file:
+            old_readme = file.read()
+        if new_readme.strip() != old_readme.strip():
+            click.secho(
+                'Readme has not been updated properly! Make sure all changes are made in the template first,'
+                ' and see the following diff:',
+                fg='red',
+            )
+            import difflib
+            for x in difflib.context_diff(new_readme.splitlines(), old_readme.splitlines()):
+                click.echo(x)
+
+            sys.exit(-1)
+
+    with open(readme_path, 'w') as file:
+        print(new_readme, file=file)
+
+
+def get_readme() -> str:
+    """Get the readme."""
+    from jinja2 import FileSystemLoader, Environment
+    loader = FileSystemLoader(os.path.join(HERE, 'templates'))
+    environment = Environment(
+        autoescape=True,
+        loader=loader,
+        trim_blocks=False,
+    )
+    readme_template = environment.get_template('README.md')
+    tablefmt = 'github'
+    return readme_template.render(
+        models=_help_models(tablefmt),
+        n_models=len(models_dict),
+        regularizers=_help_regularizers(tablefmt),
+        n_regularizers=len(regularizers_dict),
+        losses=_help_losses(tablefmt),
+        n_losses=len(losses_dict),
+        datasets=_help_datasets(tablefmt),
+        n_datasets=len(datasets_dict),
+        training_loops=_help_training(tablefmt),
+        n_training_loops=len(training_dict),
+        negative_samplers=_help_negative_samplers(tablefmt),
+        n_negative_samplers=len(negative_samplers_dict),
+        optimizers=_help_optimizers(tablefmt),
+        n_optimizers=len(optimizers_dict),
+        stoppers=_help_stoppers(tablefmt),
+        n_stoppers=len(stoppers_dict),
+        evaluators=_help_evaluators(tablefmt),
+        n_evaluators=len(evaluators_dict),
+        metrics=_help_metrics(tablefmt),
+        n_metrics=len(get_metric_list()),
+        hpo_samplers=_help_hpo_samplers(tablefmt),
+        n_hpo_samplers=len(hpo_samplers_dict),
+    )
 
 
 @main.group()

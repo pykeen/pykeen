@@ -17,6 +17,8 @@ jobs:
     - name: "Check RST documentation style"
       stage: docs
       env: TOXENV=doc8
+    - name: "Check readme template"
+      env: TOXENV=readme
     - name: "Check sphinx build"
       env: TOXENV=docs
     # tests stages

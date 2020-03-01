@@ -26,8 +26,8 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#models">Models</a> •
-  <a href="#datasets">Data Sets</a> •
+  <a href="#datasets-8">Datasets</a> •
+  <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a>
 </p>
 
@@ -81,7 +81,20 @@ PyKEEN is extensible such that:
 ## Implementation
 
 Below are the models, data sets, training modes, evaluators, and metrics implemented
-in pykeen. These markdown tables can be regenerated with `pykeen ls`.
+in ``pykeen``.
+
+### Datasets (8)
+
+| Name     | Reference                  | Description                                                                                        |
+|----------|----------------------------|----------------------------------------------------------------------------------------------------|
+| fb15k    | `pykeen.datasets.FB15k`    | The FB15k data set.                                                                                |
+| fb15k237 | `pykeen.datasets.FB15k237` | The FB15k-237 data set.                                                                            |
+| kinships | `pykeen.datasets.Kinships` | The Kinships data set.                                                                             |
+| nations  | `pykeen.datasets.Nations`  | The Nations data set.                                                                              |
+| umls     | `pykeen.datasets.Umls`     | The UMLS data set.                                                                                 |
+| wn18     | `pykeen.datasets.WN18`     | The WN18 data set.                                                                                 |
+| wn18rr   | `pykeen.datasets.WN18RR`   | The WN18-RR data set.                                                                              |
+| yago310  | `pykeen.datasets.YAGO310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Models (23)
 
@@ -111,16 +124,6 @@ in pykeen. These markdown tables can be regenerated with `pykeen ls`.
 | TuckER              | `pykeen.models.TuckER`              | Balazevic *et al.*, 2019     |
 | UnstructuredModel   | `pykeen.models.UnstructuredModel`   | Bordes *et al.*, 2014        |
 
-### Regularizers (5)
-
-| Name     | Reference                                 | Description                                              |
-|----------|-------------------------------------------|----------------------------------------------------------|
-| combined | `pykeen.regularizers.CombinedRegularizer` | A convex combination of regularizers.                    |
-| lp       | `pykeen.regularizers.LpRegularizer`       | A simple L_p norm based regularizer.                     |
-| no       | `pykeen.regularizers.NoRegularizer`       | A regularizer which does not perform any regularization. |
-| powersum | `pykeen.regularizers.PowerSumRegularizer` | A simple x^p based regularizer.                          |
-| transh   | `pykeen.regularizers.TransHRegularizer`   | Regularizer for TransH's soft constraints.               |
-
 ### Losses (7)
 
 | Name            | Reference                           | Description                                                                                                                                  |
@@ -133,25 +136,15 @@ in pykeen. These markdown tables can be regenerated with `pykeen ls`.
 | nssa            | `pykeen.losses.NSSALoss`            | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
 | softplus        | `pykeen.losses.SoftplusLoss`        | A loss function for the softplus.                                                                                                            |
 
-### Datasets (8)
+### Regularizers (5)
 
-| Name      | Reference                   | Description                                                                                        |
-|-----------|-----------------------------|----------------------------------------------------------------------------------------------------|
-| fb15k     | `pykeen.datasets.FB15k`     | The FB15k data set.                                                                                |
-| fb15k237  | `pykeen.datasets.FB15k237`  | The FB15k-237 data set.                                                                            |
-| kinships  | `pykeen.datasets.Kinships`  | The Kinship data set.                                                                              |
-| nations   | `pykeen.datasets.Nations`   | The Nations data set.                                                                              |
-| umls      | `pykeen.datasets.Umls`      | The UMLS data set.                                                                                 |
-| wn18      | `pykeen.datasets.WN18`      | The WN18 data set.                                                                                 |
-| wn18rr    | `pykeen.datasets.WN18RR`    | The WN18-RR data set.                                                                              |
-| yago310   | `pykeen.datasets.YAGO310`   | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
-
-### Training Modes (2)
-
-| Name   | Reference                          | Description                                                  |
-|--------|------------------------------------|--------------------------------------------------------------|
-| lcwa   | `pykeen.training.LCWATrainingLoop` | A training loop that uses the local closed world assumption. |
-| owa    | `pykeen.training.OWATrainingLoop`  | A training loop that uses the open world assumption.         |
+| Name     | Reference                                 | Description                                              |
+|----------|-------------------------------------------|----------------------------------------------------------|
+| combined | `pykeen.regularizers.CombinedRegularizer` | A convex combination of regularizers.                    |
+| lp       | `pykeen.regularizers.LpRegularizer`       | A simple L_p norm based regularizer.                     |
+| no       | `pykeen.regularizers.NoRegularizer`       | A regularizer which does not perform any regularization. |
+| powersum | `pykeen.regularizers.PowerSumRegularizer` | A simple x^p based regularizer.                          |
+| transh   | `pykeen.regularizers.TransHRegularizer`   | A regularizer for the soft constraints in TransH.        |
 
 ### Optimizers (6)
 
@@ -163,6 +156,27 @@ in pykeen. These markdown tables can be regenerated with `pykeen ls`.
 | adamax   | `torch.optim.Adamax`   | Implements Adamax algorithm (a variant of Adam based on infinity norm). |
 | adamw    | `torch.optim.AdamW`    | Implements AdamW algorithm.                                             |
 | sgd      | `torch.optim.SGD`      | Implements stochastic gradient descent (optionally with momentum).      |
+
+### Training Loops (2)
+
+| Name   | Reference                          | Description                                                  |
+|--------|------------------------------------|--------------------------------------------------------------|
+| lcwa   | `pykeen.training.LCWATrainingLoop` | A training loop that uses the local closed world assumption. |
+| owa    | `pykeen.training.OWATrainingLoop`  | A training loop that uses the open world assumption.         |
+
+### Negative Samplers (2)
+
+| Name      | Reference                                  | Description                                                                            |
+|-----------|--------------------------------------------|----------------------------------------------------------------------------------------|
+| basic     | `pykeen.sampling.BasicNegativeSampler`     | A basic negative sampler.                                                              |
+| bernoulli | `pykeen.sampling.BernoulliNegativeSampler` | An implementation of the bernoulli negative sampling approach proposed by [wang2014]_. |
+
+### Stoppers (2)
+
+| Name   | Reference                      | Description                   |
+|--------|--------------------------------|-------------------------------|
+| early  | `pykeen.stoppers.EarlyStopper` | A harness for early stopping. |
+| nop    | `pykeen.stoppers.NopStopper`   | A stopper that does nothing.  |
 
 ### Evaluators (2)
 
@@ -182,24 +196,37 @@ in pykeen. These markdown tables can be regenerated with `pykeen ls`.
 | Hits At K               | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Adjusted Mean Rank      | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 
-### HPO Samplers (2)
+## Hyperparameter Optimization
+
+### Samplers (2)
 
 | Name   | Reference                       | Description                                                     |
 |--------|---------------------------------|-----------------------------------------------------------------|
 | random | `optuna.samplers.RandomSampler` | Sampler using random sampling.                                  |
 | tpe    | `optuna.samplers.TPESampler`    | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
 
-## Reproduction
+## Experimentation
+
+### Reproduction
 
 PyKEEN includes a set of curated experimental settings for reproducing past landmark
 experiments. They can be accessed and run like:
 
 ```bash
-python -m pykeen.experiments reproduce tucker balazevic2019 fb15k
+pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
-Where the three arguments are the model name, the reference, and the data set. The
-output directory can be optionally set with `-d`.
+Where the three arguments are the model name, the reference, and the data set.
+The output directory can be optionally set with `-d`.
+
+### Ablation
+
+PyKEEN includes the ability to specify ablation studies using the
+hyper-parameter optimization module. They can be run like:
+
+```bash
+pykeen experiments ablation ~/path/to/config.json
+```
 
 ## Acknowledgements
 

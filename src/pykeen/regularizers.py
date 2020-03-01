@@ -186,7 +186,7 @@ class PowerSumRegularizer(Regularizer):
 
 
 class TransHRegularizer(Regularizer):
-    """Regularizer for TransH's soft constraints."""
+    """A regularizer for the soft constraints in TransH."""
 
     hpo_default = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
