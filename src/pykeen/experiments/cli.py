@@ -90,9 +90,9 @@ def reproduce(
 @replicates_option
 @move_to_cpu_option
 @directory_option
-def run(path: str, replicates: int, directory: str):
+def run(path: str, replicates: int, directory: str, move_to_cpu: bool):
     """Run a single reproduction experiment."""
-    _help_reproduce(directory=directory, path=path, replicates=replicates)
+    _help_reproduce(directory=directory, path=path, replicates=replicates, move_to_cpu=move_to_cpu)
 
 
 def _help_reproduce(
