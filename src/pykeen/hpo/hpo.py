@@ -294,6 +294,7 @@ class HpoPipelineResult(Result):
         directory: str,
         replicates: int,
         move_to_cpu: bool = False,
+        save_replicates: bool = True,
     ) -> None:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
@@ -312,6 +313,7 @@ class HpoPipelineResult(Result):
             replicates=replicates,
             use_testing_data=True,
             move_to_cpu=move_to_cpu,
+            save_replicates=save_replicates,
         )
 
 

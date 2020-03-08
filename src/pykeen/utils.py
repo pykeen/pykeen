@@ -348,6 +348,6 @@ def compact_mapping(
 class Result:
     """A superclass of results that can be saved to a directory."""
 
-    def save_to_directory(self, directory: str) -> None:
+    def save_to_directory(self, directory: str, **kwargs) -> None:
         """Save the results to the directory."""
         raise NotImplementedError

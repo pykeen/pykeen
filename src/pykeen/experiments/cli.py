@@ -48,6 +48,10 @@ replicates_option = click.option(
     help='Number of times to retrain the model.',
 )
 move_to_cpu_option = click.option('--move-to-cpu', is_flag=True, help='Move trained model(s) to CPU after training.')
+discard_replicates_option = click.option(
+    '--discard-replicates', is_flag=True,
+    help='Discard trained models after training.',
+)
 
 
 @click.group()
@@ -61,6 +65,7 @@ def experiments():
 @click.argument('dataset')
 @replicates_option
 @move_to_cpu_option
+@discard_replicates_option
 @directory_option
 def reproduce(
     model: str,
@@ -69,6 +74,7 @@ def reproduce(
     replicates: int,
     directory: str,
     move_to_cpu: bool,
+    discard_replicates: bool,
 ):
     """Reproduce a pre-defined experiment included in PyKEEN.
 
@@ -81,6 +87,7 @@ def reproduce(
         path=path,
         replicates=replicates,
         move_to_cpu=move_to_cpu,
+        save_replicates=not discard_replicates,
         file_name=file_name,
     )
 
@@ -89,10 +96,23 @@ def reproduce(
 @click.argument('path')
 @replicates_option
 @move_to_cpu_option
+@discard_replicates_option
 @directory_option
-def run(path: str, replicates: int, directory: str, move_to_cpu: bool):
+def run(
+    path: str,
+    replicates: int,
+    directory: str,
+    move_to_cpu: bool,
+    discard_replicates: bool,
+):
     """Run a single reproduction experiment."""
-    _help_reproduce(directory=directory, path=path, replicates=replicates, move_to_cpu=move_to_cpu)
+    _help_reproduce(
+        path=path,
+        replicates=replicates,
+        directory=directory,
+        move_to_cpu=move_to_cpu,
+        save_replicates=not discard_replicates,
+    )
 
 
 def _help_reproduce(
@@ -101,6 +121,7 @@ def _help_reproduce(
     path: str,
     replicates: int,
     move_to_cpu: bool = False,
+    save_replicates: bool = True,
     file_name: Optional[str] = None,
 ) -> None:
     """Help run the configuration at a given path.
@@ -130,6 +151,7 @@ def _help_reproduce(
         replicates=replicates,
         use_testing_data=True,
         move_to_cpu=move_to_cpu,
+        save_replicates=save_replicates,
     )
     shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
 
@@ -151,6 +173,7 @@ def optimize(path: str, directory: str):
 @click.option('--dry-run', is_flag=True)
 @click.option('-r', '--best-replicates', type=int, help='Number of times to retrain the best model.')
 @move_to_cpu_option
+@discard_replicates_option
 @click.option('-s', '--save-artifacts', is_flag=True)
 @verbose_option
 def ablation(
@@ -160,6 +183,7 @@ def ablation(
     best_replicates: int,
     save_artifacts: bool,
     move_to_cpu: bool,
+    discard_replicates: bool,
 ) -> None:
     """Generate a set of HPO configurations.
 
@@ -189,6 +213,7 @@ def ablation(
         hpo_pipeline_result.replicate_best_pipeline(
             replicates=best_replicates,
             move_to_cpu=move_to_cpu,
+            save_replicates=not discard_replicates,
             directory=best_pipeline_dir,
         )
 

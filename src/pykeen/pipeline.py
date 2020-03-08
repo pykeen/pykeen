@@ -275,13 +275,14 @@ class PipelineResult(Result):
             results['stopper'] = self.stopper.get_summary_dict()
         return results
 
-    def save_to_directory(self, directory: str) -> None:
+    def save_to_directory(self, directory: str, save_replicates: bool = True) -> None:
         """Save all artifacts in the given directory."""
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
             json.dump(self.metadata, file, indent=2)
         with open(os.path.join(directory, 'results.json'), 'w') as file:
             json.dump(self._get_results(), file, indent=2)
-        self.save_model(os.path.join(directory, 'trained_model.pkl'))
+        if save_replicates:
+            self.save_model(os.path.join(directory, 'trained_model.pkl'))
 
 
 def replicate_pipeline_from_path(
@@ -289,6 +290,7 @@ def replicate_pipeline_from_path(
     directory: str,
     replicates: int,
     move_to_cpu: bool = False,
+    save_replicates: bool = True,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration file by path.
@@ -297,6 +299,7 @@ def replicate_pipeline_from_path(
     :param directory: The output directory
     :param replicates: The number of replicates to run.
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    :param save_replicates: Should the artifacts of the replicates be saved?
     """
     pipeline_results = (
         pipeline_from_path(path, **kwargs)
@@ -306,6 +309,7 @@ def replicate_pipeline_from_path(
         directory=directory,
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
+        save_replicates=save_replicates,
     )
 
 
@@ -314,6 +318,7 @@ def replicate_pipeline_from_config(
     directory: str,
     replicates: int,
     move_to_cpu: bool = False,
+    save_replicates: bool = True,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration dictionary.
@@ -322,6 +327,7 @@ def replicate_pipeline_from_config(
     :param directory: The output directory
     :param replicates: The number of replicates to run
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
+    :param save_replicates: Should the artifacts of the replicates be saved?
     """
     pipeline_results = (
         pipeline_from_config(config, **kwargs)
@@ -331,6 +337,7 @@ def replicate_pipeline_from_config(
         directory=directory,
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
+        save_replicates=save_replicates,
     )
 
 
@@ -345,6 +352,7 @@ def save_pipeline_results_to_directory(
     directory: str,
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
+    save_replicates: bool = True,
     width: int = 5,
 ) -> None:
     """Save the result set to the directory.
@@ -352,6 +360,7 @@ def save_pipeline_results_to_directory(
     :param directory: The directory in which the replicates will be saved
     :param pipeline_results: An iterable over results from training and evaluation
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    :param save_replicates: Should the artifacts of the replicates be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
     replicates_directory = os.path.join(directory, 'replicates')
@@ -363,7 +372,7 @@ def save_pipeline_results_to_directory(
     for i, pipeline_result in enumerate(pipeline_results):
         sd = os.path.join(replicates_directory, f'replicate-{i:0{width}}')
         os.makedirs(sd, exist_ok=True)
-        pipeline_result.save_to_directory(sd)
+        pipeline_result.save_to_directory(sd, save_replicates=save_replicates)
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
 
