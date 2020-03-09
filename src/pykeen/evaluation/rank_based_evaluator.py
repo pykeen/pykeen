@@ -98,7 +98,15 @@ def compute_rank_from_scores(
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):
-    """Results from computing metrics."""
+    """Results from computing metrics.
+
+    Includes results from:
+
+    - Mean Rank (MR)
+    - Mean Reciprocal Rank (MRR)
+    - Adjusted Mean Rank (AMR; [berrendorf2020]_)
+    - Hits @ K
+    """
 
     #: The mean over all ranks: mean_i r_i. Lower is better.
     mean_rank: Dict[str, float] = field(metadata=dict(doc='The mean over all ranks: mean_i r_i. Lower is better.'))
@@ -116,6 +124,7 @@ class RankBasedMetricResults(MetricResults):
     ))
 
     #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.
+    #: Described by [berrendorf2020]_.
     adjusted_mean_rank: float = field(metadata=dict(
         doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.',
     ))
@@ -161,7 +170,15 @@ class RankBasedMetricResults(MetricResults):
 
 
 class RankBasedEvaluator(Evaluator):
-    """A rank-based evaluator for KGE models."""
+    """A rank-based evaluator for KGE models.
+
+    Calculates:
+
+    - Mean Rank (MR)
+    - Mean Reciprocal Rank (MRR)
+    - Adjusted Mean Rank (AMR; [berrendorf2020]_)
+    - Hits @ K
+    """
 
     def __init__(
         self,

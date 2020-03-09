@@ -182,8 +182,8 @@ in ``pykeen``.
 
 | Name      | Reference                              | Description                                   |
 |-----------|----------------------------------------|-----------------------------------------------|
-| rankbased | `pykeen.evaluators.RankBasedEvaluator` | A rank-based evaluator for KGE models.        |
-| sklearn   | `pykeen.evaluators.SklearnEvaluator`   | An evaluator that uses a Scikit-learn metric. |
+| rankbased | `pykeen.evaluation.RankBasedEvaluator` | A rank-based evaluator for KGE models.        |
+| sklearn   | `pykeen.evaluation.SklearnEvaluator`   | An evaluator that uses a Scikit-learn metric. |
 
 ### Metrics (6)
 

@@ -13,6 +13,11 @@ from sklearn import metrics
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
 
+__all__ = [
+    'SklearnEvaluator',
+    'SklearnMetricResults',
+]
+
 
 @dataclass_json
 @dataclass

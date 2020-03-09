@@ -5,8 +5,8 @@
 =========  =============================================
 Name       Reference
 =========  =============================================
-rankbased  :class:`pykeen.evaluators.RankBasedEvaluator`
-sklearn    :class:`pykeen.evaluators.SklearnEvaluator`
+rankbased  :class:`pykeen.evaluation.RankBasedEvaluator`
+sklearn    :class:`pykeen.evaluation.SklearnEvaluator`
 =========  =============================================
 
 .. note:: This table can be re-generated with ``pykeen ls evaluators -f rst``
@@ -19,6 +19,12 @@ sklearn    :class:`pykeen.evaluation.SklearnMetricResults`
 =========  =================================================
 
 .. note:: This table can be re-generated with ``pykeen ls metrics -f rst``
+
+References
+----------
+.. [berrendorf2020] Max Berrendorf, Evgeniy Faerman, Laurent Vermue, Volker Tresp (2020) `Interpretable and Fair
+   Comparison of Link Prediction or Entity Alignment Methods with Adjusted Mean Rank
+   <https://arxiv.org/abs/2002.06914>`_.
 """
 
 import dataclasses

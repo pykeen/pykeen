@@ -172,7 +172,7 @@ def evaluators(tablefmt: str):
 
 
 def _help_evaluators(tablefmt):
-    lines = _get_lines(evaluators_dict, tablefmt, 'evaluators')
+    lines = _get_lines(evaluators_dict, tablefmt, 'evaluation')
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
