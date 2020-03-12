@@ -14,7 +14,8 @@
       "relation_dim": 200,
       "dropout_0": 0.2,
       "dropout_1": 0.2,
-      "dropout_2": 0.3
+      "dropout_2": 0.3,
+      "apply_batch_normalization": true
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {

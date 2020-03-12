@@ -67,6 +67,7 @@ class TuckER(Model):
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
         regularizer: Optional[Regularizer] = None,
+        apply_batch_normalization: bool = True,
     ) -> None:
         """Initialize the model.
 
@@ -103,8 +104,11 @@ class TuckER(Model):
         self.hidden_dropout_1 = nn.Dropout(dropout_1)
         self.hidden_dropout_2 = nn.Dropout(dropout_2)
 
-        self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
-        self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
+        self.apply_batch_normalization = apply_batch_normalization
+
+        if self.apply_batch_normalization:
+            self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
+            self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
 
         # Finalize initialization
         self._init_weights_on_device()
@@ -154,7 +158,8 @@ class TuckER(Model):
         d_r = self.relation_dim
 
         # Compute h_n = DO(BN(h))
-        h_n = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
+        if self.apply_batch_normalization:
+            h_n = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
         h_n = self.input_dropout(h_n)
 
         # Compute wr = DO(W x_2 r)
@@ -166,7 +171,8 @@ class TuckER(Model):
         # compute whr = DO(BN(h_n x_1 wr))
         wr = wr.view(-1, d_e, d_e)
         whr = (h_n @ wr)
-        whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
+        if self.apply_batch_normalization:
+            whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
         whr = self.hidden_dropout_2(whr)
 
         # Compute whr x_3 t
