@@ -159,8 +159,9 @@ class TuckER(Model):
 
         # Compute h_n = DO(BN(h))
         if self.apply_batch_normalization:
-            h_n = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
-        h_n = self.input_dropout(h_n)
+            h = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
+
+        h = self.input_dropout(h)
 
         # Compute wr = DO(W x_2 r)
         w = w.view(1, d_e, d_r, d_e)
@@ -170,7 +171,7 @@ class TuckER(Model):
 
         # compute whr = DO(BN(h_n x_1 wr))
         wr = wr.view(-1, d_e, d_e)
-        whr = (h_n @ wr)
+        whr = (h @ wr)
         if self.apply_batch_normalization:
             whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
         whr = self.hidden_dropout_2(whr)
