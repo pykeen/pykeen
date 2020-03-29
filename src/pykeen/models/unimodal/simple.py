@@ -129,10 +129,10 @@ class SimplE(Model):
     def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
         # Lookup embeddings
         hh = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        ht = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
+        ht = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
         r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
         r_inv = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
-        th = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        th = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
         tt = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
 
         # compute scores
