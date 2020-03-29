@@ -28,6 +28,7 @@ from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
+from ..triples import TriplesFactory
 from ..utils import Result, normalize_string
 from ..version import get_git_hash, get_version
 
@@ -57,6 +58,9 @@ class Objective:
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
+    training_triples_factory: Optional[TriplesFactory] = None
+    testing_triples_factory: Optional[TriplesFactory] = None
+    validation_triples_factory: Optional[TriplesFactory] = None
     # 2. Model
     model_kwargs: Optional[Mapping[str, Any]] = None
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -173,6 +177,9 @@ class Objective:
             # 1. Dataset
             dataset=self.dataset,
             dataset_kwargs=self.dataset_kwargs,
+            training_triples_factory=self.training_triples_factory,
+            testing_triples_factory=self.testing_triples_factory,
+            validation_triples_factory=self.validation_triples_factory,
             # 2. Model
             model=self.model,
             model_kwargs=_model_kwargs,
@@ -338,6 +345,9 @@ def hpo_pipeline(
     # 1. Dataset
     dataset: Union[None, str, DataSet],
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    training_triples_factory: Optional[TriplesFactory] = None,
+    testing_triples_factory: Optional[TriplesFactory] = None,
+    validation_triples_factory: Optional[TriplesFactory] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -620,6 +630,9 @@ def hpo_pipeline(
         # 1. Dataset
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
+        training_triples_factory=training_triples_factory,
+        testing_triples_factory=testing_triples_factory,
+        validation_triples_factory=validation_triples_factory,
         # 2. Model
         model=model,
         model_kwargs=model_kwargs,

@@ -425,7 +425,7 @@ def pipeline_from_config(
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
-    dataset: Union[None, str, DataSet] = None,
+    dataset: Union[None, str, Type[DataSet]] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
@@ -517,6 +517,7 @@ def pipeline(  # noqa: C901
     device = resolve_device(device)
 
     result_tracker.log_params({'dataset': dataset})
+
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
