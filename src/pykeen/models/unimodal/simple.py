@@ -2,9 +2,8 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional
+from typing import Optional, Tuple, Union
 
-import torch
 import torch.autograd
 from torch import nn
 
@@ -12,7 +11,7 @@ from ..base import Model
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape, slice_triples
+from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'SimplE',
@@ -61,6 +60,7 @@ class SimplE(Model):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -75,6 +75,10 @@ class SimplE(Model):
         self.relation_embeddings = relation_embeddings
         self.tail_entity_embeddings = tail_entity_embeddings
         self.inverse_relation_embeddings = inverse_relation_embeddings
+
+        if isinstance(clamp_score, float):
+            clamp_score = (-clamp_score, clamp_score)
+        self.clamp = clamp_score
 
         # Finalize initialization
         self._init_weights_on_device()
@@ -98,54 +102,35 @@ class SimplE(Model):
         self.inverse_relation_embeddings = None
         return self
 
-    @staticmethod
-    def interaction_function(
-        hh: torch.FloatTensor,
-        ht: torch.FloatTensor,
-        r: torch.FloatTensor,
-        r_inv: torch.FloatTensor,
-        th: torch.FloatTensor,
-        tt: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function of SimplE for given embeddings.
+    def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
+        # forward model
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
+        scores = (h * r * t).sum(dim=-1)
 
-        The embeddings have to be in a broadcastable shape.
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
-        :return:
-            The scores.
-        """
-        # Compute CP scores for triple, and inverse triple
-        score = torch.sum(hh * r * tt, dim=-1)
-        inverse_score = torch.sum(ht * r_inv * th, dim=-1)
+        # backward model
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
+        scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
 
-        # Final score is average
-        scores = 0.5 * (score + inverse_score)
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
 
         # Note: In the code in their repository, the score is clamped to [-20, 20].
         #       That is not mentioned in the paper, so it is omitted here.
-
-        return scores
-
-    def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
-        # Lookup embeddings
-        hh = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        ht = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        r_inv = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
-        th = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
-        tt = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
-
-        # compute scores
-        scores = self.interaction_function(hh=hh, ht=ht, th=th, tt=tt, r=r, r_inv=r_inv)
-
-        # Regularization
-        self.regularize_if_necessary(hh, ht, th, tt, r, r_inv)
+        if self.clamp is not None:
+            min_, max_ = self.clamp
+            scores = scores.clamp(min=min_, max=max_)
 
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_ind, r_ind, t_ind = slice_triples(hrt_batch)
-        return self._score(h_ind=h_ind, r_ind=r_ind, t_ind=t_ind).view(-1, 1)
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None)
