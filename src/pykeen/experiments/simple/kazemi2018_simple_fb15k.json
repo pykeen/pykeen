@@ -7,7 +7,8 @@
     "dataset": "fb15k",
     "model": "SimplE",
     "model_kwargs": {
-      "embedding_dim": 200
+      "embedding_dim": 200,
+      "clamp_score": 20.0
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {
