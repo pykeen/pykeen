@@ -25,9 +25,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-#: An error that occurs becuase the input in CUDA is too big. See ConvE for an example.
-CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
-
 UNSUPPORTED_FOR_SUBBATCHING = (  # must be a tuple
     nn.BatchNorm1d,
     nn.BatchNorm2d,

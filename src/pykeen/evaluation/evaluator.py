@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from ..models.base import Model
 from ..typing import MappedTriples
-from ..utils import normalize_string, raise_if_not_cuda_oom, split_list_in_batches_iter
+from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
 
 __all__ = [
     'Evaluator',
@@ -249,10 +249,11 @@ class Evaluator(ABC):
                     squeeze=True,
                     use_tqdm=use_tqdm,
                 )
-            except RuntimeError as e:
+            except RuntimeError as runtime_error:
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 torch.cuda.empty_cache()
-                raise_if_not_cuda_oom(exception=e)
+                if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                    raise runtime_error
                 if values_dict[key] == 1:
                     logger.debug(
                         f"Even {key} {values_dict[key]} does not fit into your memory with these parameters."

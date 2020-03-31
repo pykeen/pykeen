@@ -17,7 +17,7 @@ from ..stoppers import Stopper
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import ResultTracker, normalize_string, raise_if_not_cuda_oom
+from ..utils import ResultTracker, is_cuda_oom_error, is_cudnn_error, normalize_string
 
 __all__ = [
     'TrainingLoop',
@@ -447,9 +447,10 @@ class TrainingLoop(ABC):
             logger.debug(f'Trying batch_size={batch_size}.')
             try:
                 self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=None, only_size_probing=True)
-            except RuntimeError as e:
+            except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
-                raise_if_not_cuda_oom(exception=e)
+                if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                    raise runtime_error
                 if batch_size == 1:
                     logger.debug(f"batch_size={batch_size} does not fit into your memory with these parameters.")
                     break
@@ -536,9 +537,10 @@ class TrainingLoop(ABC):
         try:
             logger.debug(f'Trying batch_size {batch_size} for training now.')
             self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
-        except RuntimeError as e:
+        except RuntimeError as runtime_error:
             self._free_graph_and_cache()
-            raise_if_not_cuda_oom(exception=e)
+            if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                raise runtime_error
             logger.debug(f'The batch_size {batch_size} was too big, sub_batching is required.')
             sub_batch_size //= 2
         else:
@@ -561,9 +563,10 @@ class TrainingLoop(ABC):
                             sub_batch_size=sub_batch_size,
                             only_size_probing=True
                         )
-                    except RuntimeError as e:
+                    except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
-                        raise_if_not_cuda_oom(exception=e)
+                        if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                            raise runtime_error
                         if sub_batch_size == 1:
                             logger.info(
                                 f"Even sub_batch_size={sub_batch_size} does not fit in memory with these parameters")

@@ -16,7 +16,7 @@ __all__ = [
     'clamp_norm',
     'compact_mapping',
     'l2_regularization',
-    'raise_if_not_cuda_oom',
+    'is_cuda_oom_error',
     'resolve_device',
     'slice_triples',
     'slice_doubles',
@@ -35,6 +35,11 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+#: An error that occurs because the input in CUDA is too big. See ConvE for an example.
+_CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
+
+_CUDA_OOM_ERROR = 'CUDA out of memory.'
 
 
 def l2_regularization(
@@ -317,10 +322,14 @@ def all_in_bounds(
     return True
 
 
-def raise_if_not_cuda_oom(exception: RuntimeError) -> None:
-    """Check whether the catched RuntimeError was due to a CUDA OOM, and if not, re-raise it."""
-    if 'CUDA out of memory.' not in exception.args[0]:
-        raise exception
+def is_cuda_oom_error(runtime_error: RuntimeError) -> bool:
+    """Check whether the caught RuntimeError was due to CUDA being out of memory."""
+    return _CUDA_OOM_ERROR in runtime_error.args[0]
+
+
+def is_cudnn_error(runtime_error: RuntimeError) -> bool:
+    """Check whether the caught RuntimeError was due to a CUDNN error."""
+    return _CUDNN_ERROR in runtime_error.args[0]
 
 
 def compact_mapping(

@@ -11,11 +11,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
-from ..base import CUDNN_ERROR, Model
+from ..base import Model
 from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import is_cudnn_error
 
 __all__ = [
     'ConvE',
@@ -266,17 +267,17 @@ class ConvE(Model):
                 x = self.bn2(x)
             x = F.relu(x)
         except RuntimeError as e:
-            if e.args[0] == CUDNN_ERROR:
-                logger.warning(
-                    '\nThis code crash might have been caused by a CUDA bug, see '
-                    'https://github.com/allenai/allennlp/issues/2888, '
-                    'which causes the code to crash during evaluation mode.\n'
-                    'To avoid this error, the batch size has to be reduced.\n'
-                    f'The original error message: \n{e.args[0]}',
-                )
-                sys.exit(1)
-            else:
+            if not is_cudnn_error(e):
                 raise e
+            logger.warning(
+                '\nThis code crash might have been caused by a CUDA bug, see '
+                'https://github.com/allenai/allennlp/issues/2888, '
+                'which causes the code to crash during evaluation mode.\n'
+                'To avoid this error, the batch size has to be reduced.\n'
+                f'The original error message: \n{e.args[0]}',
+            )
+            sys.exit(1)
+
         return x
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
