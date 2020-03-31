@@ -63,9 +63,13 @@ class Evaluator(ABC):
         self,
         filtered: bool = False,
         requires_positive_mask: bool = False,
+        batch_size: int = None,
+        slice_size: int = None,
     ):
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
+        self.batch_size = batch_size
+        self.slice_size = slice_size
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -126,7 +130,7 @@ class Evaluator(ABC):
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
-        if model.automatic_memory_optimization:
+        if model.automatic_memory_optimization and batch_size is None:
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,
@@ -134,6 +138,9 @@ class Evaluator(ABC):
                 device=device,
                 use_tqdm=False,
             )
+            # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
+            self.batch_size = batch_size
+            self.slice_size = slice_size
 
         return evaluate(
             model=model,

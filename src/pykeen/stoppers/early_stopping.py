@@ -76,6 +76,8 @@ class EarlyStopper(Stopper):
     evaluation_triples_factory: Optional[TriplesFactory]
     #: Size of the evaluation batches
     evaluation_batch_size: Optional[int] = None
+    #: Slice size of the evaluation batches
+    evaluation_slice_size: Optional[int] = None
     #: The number of epochs after which the model is evaluated on validation set
     frequency: int = 10
     #: The number of iterations (one iteration can correspond to various epochs)
@@ -140,7 +142,12 @@ class EarlyStopper(Stopper):
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,
+            slice_size=self.evaluation_slice_size,
         )
+        # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
+        self.evaluation_batch_size = self.evaluator.batch_size
+        self.evaluation_slice_size = self.evaluator.slice_size
+
         self.result_tracker.log_metrics(
             metrics=metric_results.to_json(),
             step=self.number_evaluations,

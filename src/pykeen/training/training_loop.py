@@ -166,6 +166,9 @@ class TrainingLoop(ABC):
         # During size probing the training instances should not show the tqdm progress bar
         self.training_instances = self._create_instances(use_tqdm=not only_size_probing)
 
+        # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
+        torch.cuda.empty_cache()
+
         return self._train(
             num_epochs=num_epochs,
             batch_size=batch_size,
@@ -347,7 +350,7 @@ class TrainingLoop(ABC):
 
                     # raise error when non-finite loss occurs (NaN, +/-inf)
                     if not torch.isfinite(loss):
-                        raise NonFiniteLossError
+                        raise NonFiniteLossError('Loss is non-finite.')
 
                     # correction for loss reduction
                     if self.model.loss.reduction == 'mean':
@@ -537,6 +540,8 @@ class TrainingLoop(ABC):
         try:
             logger.debug(f'Trying batch_size {batch_size} for training now.')
             self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
+            # A second run simulates the grow in Pytorch cache due to outside bindings of the results
+            self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
             if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
@@ -563,6 +568,13 @@ class TrainingLoop(ABC):
                             sub_batch_size=sub_batch_size,
                             only_size_probing=True
                         )
+                        # A second run simulates the grow in Pytorch cache due to outside bindings of the results
+                        self._train(
+                            num_epochs=1,
+                            batch_size=batch_size,
+                            sub_batch_size=sub_batch_size,
+                            only_size_probing=True
+                        )
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
                         if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
@@ -575,6 +587,8 @@ class TrainingLoop(ABC):
                         sub_batch_size //= 2
                     else:
                         finished_search = True
+                        # Weird error requiring to half the batch size to avoid OOM
+                        sub_batch_size //= 2
                         logger.info(f'Concluded search with sub_batch_size {sub_batch_size}.')
                         break
 
