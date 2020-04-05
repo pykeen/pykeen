@@ -25,7 +25,7 @@
     },
     "training_kwargs": {
       "num_epochs": 500,
-      "batch_size": 4831
+      "batch_size": 1414
     },
     "evaluator_kwargs": {
       "filtered": true
