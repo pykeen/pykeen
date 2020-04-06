@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with RotatE as described by Sun et al., 2019",
-    "comments": "Could not find initial learning rate; could not find number of epochs"
+    "title": "Learn WN18 Data Set with RotatE as described by Sun et al., 2019;",
+    "comments": "Could not find number of epochs since early stopping has been applied; https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/best_config.sh"
   },
   "pipeline": {
     "dataset": "wn18",
@@ -11,7 +11,7 @@
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
-      "lr": 0.001
+      "lr": 0.0001
     },
     "loss": "nssa",
     "loss_kwargs": {
