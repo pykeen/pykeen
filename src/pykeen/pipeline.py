@@ -275,7 +275,7 @@ class PipelineResult(Result):
             results['stopper'] = self.stopper.get_summary_dict()
         return results
 
-    def save_to_directory(self, directory: str, save_replicates: bool = True) -> None:
+    def save_to_directory(self, directory: str, save_metadata: bool = True, save_replicates: bool = True) -> None:
         """Save all artifacts in the given directory."""
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
             json.dump(self.metadata, file, indent=2)
@@ -352,6 +352,7 @@ def save_pipeline_results_to_directory(
     directory: str,
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
+    save_metadata: bool = False,
     save_replicates: bool = True,
     width: int = 5,
 ) -> None:
@@ -360,6 +361,8 @@ def save_pipeline_results_to_directory(
     :param directory: The directory in which the replicates will be saved
     :param pipeline_results: An iterable over results from training and evaluation
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    :param save_metadata: Should the metadata be saved? Might be redundant in a scenario when you're
+     using this function, so defaults to false.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
@@ -372,7 +375,7 @@ def save_pipeline_results_to_directory(
     for i, pipeline_result in enumerate(pipeline_results):
         sd = os.path.join(replicates_directory, f'replicate-{i:0{width}}')
         os.makedirs(sd, exist_ok=True)
-        pipeline_result.save_to_directory(sd, save_replicates=save_replicates)
+        pipeline_result.save_to_directory(sd, save_metadata=save_metadata, save_replicates=save_replicates)
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
 
