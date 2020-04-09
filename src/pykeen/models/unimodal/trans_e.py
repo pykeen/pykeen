@@ -30,9 +30,10 @@ class TransE(Model):
        - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
-        scoring_fct_norm=dict(type=int, low=1, high=2)
+        scoring_fct_norm=dict(type=int, low=1, high=2),
     )
 
     def __init__(

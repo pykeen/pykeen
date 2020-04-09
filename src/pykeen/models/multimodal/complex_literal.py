@@ -18,6 +18,7 @@ from ...utils import slice_doubles
 class ComplExLiteral(MultimodalModel):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the local closed world assumption (LCWA)."""
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
         input_dropout={
@@ -26,8 +27,9 @@ class ComplExLiteral(MultimodalModel):
             'high': 0.3,
         },
     )
-
+    #: The default loss function class
     loss_default = nn.BCELoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
     def __init__(

@@ -8,8 +8,8 @@ TransE model on the Nations dataset.
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ... )
 
 The results are returned in a :class:`pykeen.pipeline.PipelineResult` instance, which has
@@ -22,8 +22,8 @@ could be used as in:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
 >>> result = pipeline(
-...     model=TransE,
 ...     dataset='Nations',
+...     model=TransE,
 ... )
 
 In this example, the data set was given as a string. A list of available data sets can be found in
@@ -34,8 +34,8 @@ used as in:
 >>> from pykeen.models import TransE
 >>> from pykeen.datasets import nations
 >>> result = pipeline(
-...     model=TransE,
 ...     dataset=nations,
+...     model=TransE,
 ... )
 
 In each of the previous three examples, the training assumption, optimizer, and evaluation scheme
@@ -44,8 +44,8 @@ given as a string:
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     training_loop='OWA',
 ... )
 
@@ -54,8 +54,8 @@ is necessary, but it's worth reading up on the differences between these assumpt
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     training_loop='LCWA',
 ... )
 
@@ -64,8 +64,8 @@ can be given as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     training_loop='OWA',
 ...     negative_sampler='basic',
 ... )
@@ -77,8 +77,8 @@ of the negative sampler could be used as in:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.sampling import BasicNegativeSampler
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     training_loop='OWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
@@ -93,8 +93,8 @@ rank-based evaluation is used. It can be given explictly as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     evaluator='RankBasedEvaluator',
 ... )
 
@@ -105,8 +105,8 @@ of the evaluator could be used as in:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.evaluation import RankBasedEvaluator
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     evaluator=RankBasedEvaluator,
 ... )
 
@@ -115,8 +115,8 @@ argument as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     stopper='early',
 ... )
 
@@ -128,8 +128,8 @@ the other parameters used by :func:`pykeen.pipeline.pipeline`.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
-...     model='TransE',
 ...     dataset='Nations',
+...     model='TransE',
 ...     model_kwargs=dict(
 ...         scoring_fct_norm=2,
 ...     ),
@@ -158,9 +158,9 @@ the default data sets are also provided as subclasses of :class:`pykeen.triples.
 ...     relation_to_id=training.relation_to_id,
 ... )
 >>> pipeline_result = pipeline(
-...     model='TransE',
 ...     training_triples_factory=training,
 ...     testing_triples_factory=testing,
+...     model='TransE',
 ... )
 """
 
@@ -429,10 +429,10 @@ def pipeline(  # noqa: C901
     *,
     # 1. Dataset
     dataset: Union[None, str, Type[DataSet]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -466,38 +466,67 @@ def pipeline(  # noqa: C901
 ) -> PipelineResult:
     """Train and evaluate a model.
 
-    :param model: The name of the model or the model class
-    :param optimizer: The name of the optimizer or the optimizer class.
-     Defaults to :class:`torch.optim.Adagrad`.
-    :param dataset: The name of the dataset (a key from :data:`pykeen.datasets.datasets`)
-     or the :class:`pykeen.datasets.DataSet` instance. Alternatively, the ``training_triples_factory`` and
-     ``testing_triples_factory`` can be specified.
-    :param training_triples_factory: A triples factory with training instances if a
-     a dataset was not specified
-    :param testing_triples_factory: A triples factory with training instances if a
-     dataset was not specified
-    :param validation_triples_factory: A triples factory with validation instances if a
-     a dataset was not specified
-    :param training_loop: The name of the training loop's assumption (``'owa'`` or ``'lcwa'``)
-     or the training loop class. Defaults to :class:`pykeen.training.OWATrainingLoop`.
-    :param negative_sampler: The name of the negative sampler (``'basic'`` or ``'bernoulli'``)
-     or the negative sampler class. Only allowed when training with OWA. Defaults to
-     :class:`pykeen.sampling.BasicNegativeSampler`.
-    :param evaluator: The name of the evaluator or an evaluator class. Defaults to
-     :class:`pykeen.evaluation.RankBasedEvaluator`.
-    :param stopper: What kind of stopping to use. Default to no stopping, can be set to 'early'.
-    :param stopper_kwargs: Keyword arguments to pass to the stopper upon instantiation.
-    :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
-    :param model_kwargs: Keyword arguments to pass to the model class on instantiation
-    :param optimizer_kwargs: Keyword arguments to pass to the optimizer on instantiation
-    :param training_kwargs: Keyword arguments to pass to the training loop's train
-     function on call
-    :param evaluator_kwargs: Keyword arguments to pass to the evaluator on instantiation
-    :param evaluation_kwargs: Keyword arguments to pass to the evaluator's evaluate
-     function on call
+    :param dataset:
+        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.DataSet`
+        instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
+    :param dataset_kwargs:
+        The keyword arguments passed to the dataset upon instantiation
+    :param training_triples_factory:
+        A triples factory with training instances if a a dataset was not specified
+    :param testing_triples_factory:
+        A triples factory with training instances if a dataset was not specified
+    :param validation_triples_factory:
+        A triples factory with validation instances if a dataset was not specified
+
+    :param model:
+        The name of the model or the model class
+    :param model_kwargs:
+        Keyword arguments to pass to the model class on instantiation
+
+    :param loss:
+        The name of the loss or the loss class.
+    :param loss_kwargs:
+        Keyword arguments to pass to the loss on instantiation
+
+    :param regularizer:
+        The name of the regularizer or the regularizer class.
+    :param regularizer_kwargs:
+        Keyword arguments to pass to the regularizer on instantiation
+
+    :param optimizer:
+        The name of the optimizer or the optimizer class. Defaults to :class:`torch.optim.Adagrad`.
+    :param optimizer_kwargs:
+        Keyword arguments to pass to the optimizer on instantiation
+
+    :param training_loop:
+        The name of the training loop's assumption (``'owa'`` or ``'lcwa'``) or the training loop class.
+        Defaults to :class:`pykeen.training.OWATrainingLoop`.
+    :param negative_sampler:
+        The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
+        Only allowed when training with OWA.
+        Defaults to :class:`pykeen.sampling.BasicNegativeSampler`.
+    :param negative_sampler_kwargs:
+        Keyword arguments to pass to the negative sampler class on instantiation
+
+    :param training_kwargs:
+        Keyword arguments to pass to the training loop's train function on call
+    :param stopper:
+        What kind of stopping to use. Default to no stopping, can be set to 'early'.
+    :param stopper_kwargs:
+        Keyword arguments to pass to the stopper upon instantiation.
+
+    :param evaluator:
+        The name of the evaluator or an evaluator class. Defaults to :class:`pykeen.evaluation.RankBasedEvaluator`.
+    :param evaluator_kwargs:
+        Keyword arguments to pass to the evaluator on instantiation
+    :param evaluation_kwargs:
+        Keyword arguments to pass to the evaluator's evaluate function on call
+
     :param mlflow_tracking_uri:
         The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
     :param metadata: A JSON dictionary to store with the experiment
+    :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
+     Defaults to true - use testing triples.
     """
     if random_seed is None:
         random_seed = random.randint(0, 2 ** 32 - 1)

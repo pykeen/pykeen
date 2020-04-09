@@ -29,13 +29,14 @@ class SimplE(Model):
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
-
+    #: The default loss function class
     loss_default = SoftplusLoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs = {}
-
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.

@@ -123,7 +123,7 @@ in ``pykeen``.
 
 {{ metrics }}
 
-## Hyperparameter Optimization
+## Hyper-parameter Optimization
 
 ### Samplers ({{ n_hpo_samplers }})
 

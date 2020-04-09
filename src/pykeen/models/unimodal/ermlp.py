@@ -24,6 +24,7 @@ class ERMLP(Model):
     This model uses a neural network-based approach.
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )

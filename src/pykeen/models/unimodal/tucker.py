@@ -41,6 +41,7 @@ class TuckER(Model):
        - pykg2vec implementation of TuckEr  <https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py>
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
         relation_dim=dict(type=int, low=30, high=200, q=25),
@@ -48,8 +49,9 @@ class TuckER(Model):
         dropout_1=dict(type=float, low=0.1, high=0.5),
         dropout_2=dict(type=float, low=0.1, high=0.6),
     )
-
+    #: The default loss function class
     loss_default = BCEAfterSigmoidLoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
     def __init__(

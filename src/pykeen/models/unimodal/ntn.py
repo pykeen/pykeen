@@ -35,6 +35,7 @@ class NTN(Model):
        - Keras: `<https://github.com/dapurv5/keras-neural-tensor-layer (Keras)>`_
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
         num_slices=dict(type=int, low=2, high=4),

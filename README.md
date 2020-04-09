@@ -196,7 +196,7 @@ in ``pykeen``.
 | Hits At K               | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Adjusted Mean Rank      | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 
-## Hyperparameter Optimization
+## Hyper-parameter Optimization
 
 ### Samplers (2)
 

@@ -73,14 +73,19 @@ class Model(nn.Module):
     #: A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
-    #: Defaults for hyperparameter optimization
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
-
+    #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = nn.MarginRankingLoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
-
+    #: The instance of the loss
+    loss: Loss
+    #: The default regularizer class
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
+    #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+    #: The instance of the regularizer
     regularizer: Regularizer
 
     def __init__(

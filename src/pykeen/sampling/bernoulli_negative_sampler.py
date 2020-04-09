@@ -17,6 +17,7 @@ __all__ = [
 class BernoulliNegativeSampler(NegativeSampler):
     """An implementation of the bernoulli negative sampling approach proposed by [wang2014]_."""
 
+    #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default = dict(
         num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
     )

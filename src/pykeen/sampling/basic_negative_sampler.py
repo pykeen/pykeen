@@ -14,6 +14,7 @@ __all__ = [
 class BasicNegativeSampler(NegativeSampler):
     """A basic negative sampler."""
 
+    #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default = dict(
         num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
     )

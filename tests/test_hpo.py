@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test hyperparameter optimization."""
+"""Test hyper-parameter optimization."""
 
 import unittest
 
@@ -11,9 +11,23 @@ from pykeen.hpo import hpo_pipeline
 from pykeen.hpo.hpo import suggest_kwargs
 
 
+class TestInvalidConfigurations(unittest.TestCase):
+    """Tests of invalid HPO configurations."""
+
+    def test_earl_stopping_with_optimize_epochs(self):
+        """Assert that the pipeline raises a value error."""
+        with self.assertRaises(ValueError):
+            hpo_pipeline(
+                dataset='kinships',
+                model='transe',
+                stopper='early',
+                training_kwargs_ranges=dict(epochs=...)
+            )
+
+
 @pytest.mark.slow
 class TestHyperparameterOptimization(unittest.TestCase):
-    """Test hyperparameter optimization."""
+    """Test hyper-parameter optimization."""
 
     def test_run(self):
         """Test simply making a study."""
@@ -31,7 +45,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertNotIn(('params', 'training.num_epochs'), df.columns)
 
     def test_specified_model_hyperparameter(self):
-        """Test making a study that has a specified model hyperparameter."""
+        """Test making a study that has a specified model hyper-parameter."""
         target_embedding_dim = 50
         hpo_pipeline_result = hpo_pipeline(
             dataset='nations',
@@ -47,7 +61,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertIn(('params', 'loss.margin'), df.columns)
 
     def test_specified_loss_hyperparameter(self):
-        """Test making a study that has a specified loss hyperparameter."""
+        """Test making a study that has a specified loss hyper-parameter."""
         hpo_pipeline_result = hpo_pipeline(
             dataset='nations',
             model='TransE',
@@ -62,7 +76,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertNotIn(('params', 'loss.margin'), df.columns)
 
     def test_specified_loss_and_model_hyperparameter(self):
-        """Test making a study that has a specified loss hyperparameter."""
+        """Test making a study that has a specified loss hyper-parameter."""
         target_embedding_dim = 50
         hpo_pipeline_result = hpo_pipeline(
             dataset='nations',
@@ -80,7 +94,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertNotIn(('params', 'loss.margin'), df.columns)
 
     def test_specified_range(self):
-        """Test making a study that has a specified hyperparameter."""
+        """Test making a study that has a specified hyper-parameter."""
         hpo_pipeline_result = hpo_pipeline(
             dataset='nations',
             model='TransE',

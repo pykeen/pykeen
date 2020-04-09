@@ -41,6 +41,7 @@ class TransR(Model):
          <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=20, high=300, q=50),
         relation_dim=dict(type=int, low=20, high=300, q=50),

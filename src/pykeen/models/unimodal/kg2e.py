@@ -145,6 +145,7 @@ class KG2E(Model):
         'KL': _kullback_leibler_similarity,
     }
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
         c_min=dict(type=float, low=0.01, high=0.1, scale='log'),

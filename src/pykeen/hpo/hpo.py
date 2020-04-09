@@ -48,7 +48,7 @@ STOPPED_EPOCH_KEY = 'stopped_epoch'
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    dataset: Union[None, str, DataSet]  # 1.
+    dataset: Union[None, str, Type[DataSet]]  # 1.
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
     regularizer: Type[Regularizer]  # 4.
@@ -227,7 +227,7 @@ class HpoPipelineResult(Result):
 
     #: The :mod:`optuna` study object
     study: Study
-    #: The objective class, containing information on preset hyperparameters and those to optimize
+    #: The objective class, containing information on preset hyper-parameters and those to optimize
     objective: Objective
 
     def _get_best_study_config(self):
@@ -277,19 +277,19 @@ class HpoPipelineResult(Result):
 
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, output_directory: str) -> None:
+    def save_to_directory(self, directory: str, **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        os.makedirs(output_directory, exist_ok=True)
+        os.makedirs(directory, exist_ok=True)
 
         # Output study information
-        with open(os.path.join(output_directory, 'study.json'), 'w') as file:
+        with open(os.path.join(directory, 'study.json'), 'w') as file:
             json.dump(self.study.user_attrs, file, indent=2)
 
         # Output all trials
         df = self.study.trials_dataframe()
-        df.to_csv(os.path.join(output_directory, 'trials.tsv'), sep='\t', index=False)
+        df.to_csv(os.path.join(directory, 'trials.tsv'), sep='\t', index=False)
 
-        best_pipeline_directory = os.path.join(output_directory, 'best_pipeline')
+        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
         os.makedirs(best_pipeline_directory, exist_ok=True)
         # Output best trial as pipeline configuration file
         with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
@@ -308,6 +308,7 @@ class HpoPipelineResult(Result):
         :param directory: Output directory
         :param replicates: The number of times to retrain the model
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+        :param save_replicates: Should the artifacts of the replicates be saved?
         """
         config = self._get_best_study_config()
 
@@ -343,7 +344,7 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, DataSet],
+    dataset: Union[None, str, Type[DataSet]],
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
@@ -358,8 +359,8 @@ def hpo_pipeline(
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 4. Regularizer
     regularizer: Union[None, str, Type[Regularizer]] = None,
-    regularizer_kwargs=None,
-    regularizer_kwargs_ranges=None,
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+    regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 5. Optimizer
     optimizer: Union[None, str, Type[Optimizer]] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -398,13 +399,86 @@ def hpo_pipeline(
 ) -> HpoPipelineResult:
     """Train a model on the given dataset.
 
-    :param dataset: A data set to be passed to :func:`pykeen.pipeline.pipeline`
-    :param model: Either an implemented model from :mod:`pykeen.models` or a list of them.
-    :param model_kwargs: Keyword arguments to be passed to the model (that shouldn't be optimized)
-    :param model_kwargs_ranges: Ranges for hyperparameters to override the defaults
-    :param metric: The metric to optimize over. Defaults to ``adjusted_mean_rank``.
-    :param direction: The direction of optimization. Because the default metric is ``adjusted_mean_rank``,
-     the default direction is ``minimize``.
+    :param dataset:
+        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.DataSet`
+        instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
+    :param dataset_kwargs:
+        The keyword arguments passed to the dataset upon instantiation
+    :param training_triples_factory:
+        A triples factory with training instances if a a dataset was not specified
+    :param testing_triples_factory:
+        A triples factory with training instances if a dataset was not specified
+    :param validation_triples_factory:
+        A triples factory with validation instances if a dataset was not specified
+
+    :param model:
+        The name of the model or the model class to pass to :func:`pykeen.pipeline.pipeline`
+    :param model_kwargs:
+        Keyword arguments to pass to the model class on instantiation
+    :param model_kwargs_ranges:
+        Strategies for optimizing the models' hyper-parameters to override
+        the defaults
+
+    :param loss:
+        The name of the loss or the loss class to pass to :func:`pykeen.pipeline.pipeline`
+    :param loss_kwargs:
+        Keyword arguments to pass to the loss on instantiation
+    :param loss_kwargs_ranges:
+        Strategies for optimizing the losses' hyper-parameters to override
+        the defaults
+
+    :param regularizer:
+        The name of the regularizer or the regularizer class to pass to :func:`pykeen.pipeline.pipeline`
+    :param regularizer_kwargs:
+        Keyword arguments to pass to the regularizer on instantiation
+    :param regularizer_kwargs_ranges:
+        Strategies for optimizing the regularizers' hyper-parameters to override
+        the defaults
+
+    :param optimizer:
+        The name of the optimizer or the optimizer class. Defaults to :class:`torch.optim.Adagrad`.
+    :param optimizer_kwargs:
+        Keyword arguments to pass to the optimizer on instantiation
+    :param optimizer_kwargs_ranges:
+        Strategies for optimizing the optimizers' hyper-parameters to override
+        the defaults
+
+    :param training_loop:
+        The name of the training loop's assumption (``'owa'`` or ``'lcwa'``) or the training loop class
+        to pass to :func:`pykeen.pipeline.pipeline`
+    :param negative_sampler:
+        The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
+        to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with OWA.
+    :param negative_sampler_kwargs:
+        Keyword arguments to pass to the negative sampler class on instantiation
+    :param negative_sampler_kwargs_ranges:
+        Strategies for optimizing the negative samplers' hyper-parameters to override
+        the defaults
+
+    :param training_kwargs:
+        Keyword arguments to pass to the training loop's train function on call
+    :param training_kwargs_ranges:
+        Strategies for optimizing the training loops' hyper-parameters to override
+        the defaults. Can not specify ranges for batch size if early stopping is enabled.
+
+    :param stopper:
+        What kind of stopping to use. Default to no stopping, can be set to 'early'.
+    :param stopper_kwargs:
+        Keyword arguments to pass to the stopper upon instantiation.
+
+    :param evaluator:
+        The name of the evaluator or an evaluator class. Defaults to :class:`pykeen.evaluation.RankBasedEvaluator`.
+    :param evaluator_kwargs:
+        Keyword arguments to pass to the evaluator on instantiation
+    :param evaluation_kwargs:
+        Keyword arguments to pass to the evaluator's evaluate function on call
+
+    :param metric:
+        The metric to optimize over. Defaults to ``adjusted_mean_rank``.
+    :param direction:
+        The direction of optimization. Because the default metric is ``adjusted_mean_rank``,
+        the default direction is ``minimize``.
+
     :param n_jobs: The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
                 set to CPU counts. If none, defaults to 1.
 
@@ -412,158 +486,6 @@ def hpo_pipeline(
 
         The remaining parameters are passed to :func:`optuna.study.create_study`
         or :meth:`optuna.study.Study.optimize`.
-
-    All of the following examples are about getting the best model
-    when training TransE on the Nations data set. Each gives a bit
-    of insight into usage of the :func:`hpo_pipeline` function.
-
-    Run thirty trials:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',  # can also be the model itself
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ... )
-    >>> best_model = hpo_pipeline_result.study.best_trial.user_attrs['model']
-
-    Run as many trials as possible in 60 seconds:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    dataset='nations',
-    ...    timeout=60,  # this parameter is measured in seconds
-    ... )
-
-    Supply some default hyperparameters for TransE that won't be optimized:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    model_kwargs=dict(
-    ...        embedding_dim=200,
-    ...    ),
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ... )
-
-    Supply ranges for some parameters that are different than the defaults:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    model_kwargs_ranges=dict(
-    ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
-    ...    ),
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ... )
-
-    While each model has its own default loss, specify (explicitly) the loss with:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    model_kwargs_ranges=dict(
-    ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
-    ...    ),
-    ...    dataset='nations',
-    ...    loss='MarginRankingLoss',
-    ...    n_trials=30,
-    ... )
-
-    Each loss has its own default hyperparameter optimization ranges, but new ones can
-    be set with:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    model_kwargs_ranges=dict(
-    ...        embedding_dim=dict(type=int, low=100, high=200, q=25),  # normally low=50, high=350, q=25
-    ...    ),
-    ...    loss='MarginRankingLoss',
-    ...    loss_kwargs_ranges=dict(
-    ...        margin=dict(type=float, low=1.0, high=2.0),
-    ...    ),
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ... )
-
-    By default, :mod:`optuna` uses the Tree-structured Parzen Estimator (TPE)
-    estimator (:class:`optuna.samplers.TPESampler`), which is a probabilistic
-    approach.
-
-    To emulate most hyperparameter optimizations that have used random
-    sampling, use :class:`optuna.samplers.RandomSampler` like in:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> from optuna.samplers import RandomSampler
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ...    sampler=RandomSampler,
-    ... )
-
-    Alternatively, the strings ``"tpe"`` or ``"random"`` can be used so you
-    don't have to import :mod:`optuna` in your script.
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> from optuna.samplers import RandomSampler
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ...    sampler='random',
-    ... )
-
-    While :class:`optuna.samplers.RandomSampler` doesn't (currently) take
-    any arguments, the ``sampler_kwargs`` parameter can be used to pass
-    arguments by keyword to the instantiation of
-    :class:`optuna.samplers.TPESampler` like in:
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> from optuna.samplers import RandomSampler
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...    model='TransE',
-    ...    dataset='nations',
-    ...    n_trials=30,
-    ...    sampler='tpe',
-    ...    sampler_kwargs=dict(prior_weight=1.1),
-    ... )
-
-    Early stopping can be baked directly into the :mod:`optuna` optimization.
-    This example takes a lot longer to run, so keep in the mind explicit
-    configuration is just to keep it fast.
-
-    The important keys are ``stopping='early'`` and ``stopper_kwargs``.
-    When using early stopping, the :func:`hpo_pipeline` automatically takes
-    care of adding appropriate callbacks to interface with :mod:`optuna`.
-
-    >>> from pykeen.hpo import hpo_pipeline
-    >>> from pykeen.utils import resolve_device
-    >>> device = resolve_device() # not strictly necessary but reduces logging
-    >>> hpo_pipeline_result = hpo_pipeline(
-    ...     dataset='nations',
-    ...     model='transe',
-    ...     model_kwargs=dict(embedding_dim=20, scoring_fct_norm=1),
-    ...     optimizer='SGD',
-    ...     optimizer_kwargs=dict(lr=0.01),
-    ...     loss='marginranking',
-    ...     loss_kwargs=dict(margin=1),
-    ...     training_loop='owa',
-    ...     training_kwargs=dict(num_epochs=100, batch_size=128),
-    ...     negative_sampler='basic',
-    ...     negative_sampler_kwargs=dict(num_negs_per_pos=1),
-    ...     evaluator_kwargs=dict(filtered=True),
-    ...     evaluation_kwargs=dict(batch_size=128),
-    ...     stopper='early',
-    ...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
-    ...     n_trials=30,
-    ...     device=device,
-    ... )
-
     """
     sampler_cls = get_sampler_cls(sampler)
     pruner_cls = get_pruner_cls(pruner)
@@ -584,6 +506,9 @@ def hpo_pipeline(
     study.set_user_attr('pykeen_version', get_version())
     study.set_user_attr('pykeen_git_hash', get_git_hash())
     # 1. Dataset
+    # FIXME difference between dataset class and string
+    # FIXME how to handle if dataset or factories were set? Should have been
+    #  part of https://github.com/mali-git/POEM_develop/pull/483
     study.set_user_attr('dataset', dataset)
     # 2. Model
     model: Type[Model] = get_model_cls(model)
@@ -617,6 +542,10 @@ def hpo_pipeline(
         negative_sampler: Optional[Type[NegativeSampler]] = None
     # 7. Training
     stopper: Type[Stopper] = get_stopper_cls(stopper)
+
+    if stopper is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
+        raise ValueError('can not use early stopping while optimizing epochs')
+
     # 8. Evaluation
     evaluator: Type[Evaluator] = get_evaluator_cls(evaluator)
     study.set_user_attr('evaluator', evaluator.get_normalized_name())

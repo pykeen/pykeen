@@ -34,10 +34,10 @@ class DistMult(Model):
 
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
-
     #: The regularizer used by [yang2014]_ for DistMult
     #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
     #: Thus, when we use normalized regularization weight, the normalization factor is 10*sqrt(100) = 100, which is

@@ -22,6 +22,7 @@ __all__ = [
 class UnstructuredModel(Model):
     """An implementation of Unstructured Model (UM) from [bordes2014]_."""
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
         scoring_fct_norm=dict(type=int, low=1, high=2),

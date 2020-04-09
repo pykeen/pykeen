@@ -18,6 +18,7 @@ __all__ = [
 class NegativeSampler(ABC):
     """A negative sampler."""
 
+    #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]
 
     def __init__(

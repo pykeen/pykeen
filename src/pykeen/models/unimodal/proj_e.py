@@ -28,11 +28,13 @@ class ProjE(Model):
        - Official Implementation: <https://github.com/nddsg/ProjE>`_
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
-
+    #: The default loss function class
     loss_default = nn.BCEWithLogitsLoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs = dict(reduction='mean')
 
     def __init__(

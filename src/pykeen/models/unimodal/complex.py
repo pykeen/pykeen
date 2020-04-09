@@ -21,13 +21,14 @@ __all__ = [
 class ComplEx(Model):
     """An implementation of ComplEx [trouillon2016]_."""
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
     )
-
+    #: The default loss function class
     loss_default = SoftplusLoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs = dict(reduction='mean')
-
     #: The regularizer used by [trouillon2016]_ for ComplEx.
     regularizer_default = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.

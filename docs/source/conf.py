@@ -46,8 +46,8 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'pykeen'
-copyright = '2019, Mehdi Ali'
-author = 'Mehdi Ali'
+copyright = '2020, PyKEEN Project Team'
+author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
 release = '0.1.2-dev'
@@ -170,8 +170,11 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (
-        master_doc, 'pykeen.tex', 'pykeen Documentation',
-        'Mehdi Ali', 'manual',
+        master_doc,
+        'pykeen.tex',
+        'PyKEEN Documentation',
+        author,
+        'manual',
     ),
 ]
 
@@ -181,8 +184,11 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     (
-        master_doc, 'pykeen', 'pykeen Documentation',
-        [author], 1,
+        master_doc,
+        'pykeen',
+        'PyKEEN Documentation',
+        [author],
+        1,
     ),
 ]
 
@@ -193,8 +199,12 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (
-        master_doc, 'pykeen', 'pykeen Documentation',
-        author, 'pykeen', 'One line description of project.',
+        master_doc,
+        'pykeen',
+        'PyKEEN Documentation',
+        author,
+        'PyKEEN Project Team',
+        'Training and evaluatation knowledge graph embedding models.',
         'Miscellaneous',
     ),
 ]

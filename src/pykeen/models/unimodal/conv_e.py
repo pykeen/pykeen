@@ -114,13 +114,16 @@ class ConvE(Model):
     >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         output_channels=dict(type=int, low=16, high=64),
         input_dropout=dict(type=float, low=0.0, high=1.0),
         output_dropout=dict(type=float, low=0.0, high=1.0),
         feature_map_dropout=dict(type=float, low=0.0, high=1.0),
     )
+    #: The default loss function class
     loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
     def __init__(

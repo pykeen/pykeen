@@ -28,11 +28,11 @@ class TransH(Model):
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
-
     #: The custom regularizer used by [wang2014]_ for TransH
     regularizer_default = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH

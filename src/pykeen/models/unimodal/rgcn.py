@@ -92,6 +92,7 @@ class RGCN(Model):
     #: Activations for each layer (if used)
     activations: Optional[nn.ModuleList]
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=1000, q=50),
         num_bases_or_blocks=dict(type=int, low=2, high=20, q=1),

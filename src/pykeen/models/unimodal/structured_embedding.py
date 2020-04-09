@@ -27,6 +27,7 @@ class StructuredEmbedding(Model):
     This model projects different matrices for each relation head and tail entity.
     """
 
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
         scoring_fct_norm=dict(type=int, low=1, high=2),

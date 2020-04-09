@@ -49,6 +49,7 @@ optimizers: Mapping[str, Type[Optimizer]] = {
     for optimizer in _OPTIMIZER_LIST
 }
 
+#: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
 optimizers_hpo_defaults: Mapping[Type[Optimizer], Mapping[str, Any]] = {
     Adadelta: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale='log'),

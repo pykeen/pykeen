@@ -1,8 +1,10 @@
 Hyper-parameter Optimization
 ============================
-.. automodule:: pykeen.hpo
-   :members:
+.. autoclass:: pykeen.hpo.HpoPipelineResult
+    :members:
 
-.. seealso::
+.. autofunction:: pykeen.hpo.hpo_pipeline_from_path
 
-   - https://towardsdatascience.com/a-conceptual-explanation-of-bayesian-model-based-hyperparameter-optimization-for-machine-learning-b8172278050f
+.. autofunction:: pykeen.hpo.hpo_pipeline_from_config
+
+.. autofunction:: pykeen.hpo.hpo_pipeline
