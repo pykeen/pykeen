@@ -2,6 +2,7 @@
 
 """Run landmark experiments."""
 
+import json
 import logging
 import os
 import shutil
@@ -11,6 +12,9 @@ from typing import Optional
 from uuid import uuid4
 
 import click
+
+from ..datasets import get_dataset
+from ..pipeline import pipeline_from_config, replicate_pipeline_from_config
 
 __all__ = [
     'experiments',
@@ -89,6 +93,73 @@ def reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
         file_name=file_name,
+    )
+
+
+@experiments.command()
+@click.option('-fb15k237', is_flag=True, help='Reproduce results for ConvKB on FB15K237.')
+@click.option('-wn18rr', is_flag=True, help='Reproduce results for ConvKB on FB15K237.')
+@replicates_option
+@move_to_cpu_option
+@discard_replicates_option
+@directory_option
+def reproduce_convkb(
+    fb15k237: str,
+    wn18rr: str,
+    replicates: int,
+    directory: str,
+    move_to_cpu: bool,
+    discard_replicates: str,
+):
+    """Tran ConvKB."""
+    if fb15k237 and wn18rr:
+        raise Exception('Cannot define both FB15k237 and WN18RR at the same time.')
+    elif fb15k237:
+        config_transe = os.path.join(HERE, 'convkb', 'nguyen2018_transe_fb15k237.json')
+        config_convkb = os.path.join(HERE, 'convkb', 'nguyen2018_convkb_fb15k237.json')
+    elif wn18rr:
+        config_transe = os.path.join(HERE, 'convkb', 'nguyen2018_transe_wn18rr.json')
+        config_convkb = os.path.join(HERE, 'convkb', 'nguyen2018_convkb_wn18rr.json')
+    else:
+        raise Exception('Either FB15K-237 (using \'-fb15k237\')or WN18RR (using \'-wn18rr\') has to be defined.')
+
+    with open(config_transe) as file:
+        config_transe = json.load(file)
+
+    # Load TransE config
+    with open(config_convkb) as file:
+        config_convkb = json.load(file)
+
+    # Train ConvKB
+    training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
+        dataset=config_convkb.get('pipeline').get('dataset'),
+        dataset_kwargs=config_convkb.get('dataset_kwargs'),
+    )
+
+    del config_transe['pipeline']['dataset']
+
+    pipeline_results = pipeline_from_config(
+        config=config_transe,
+        training_triples_factory=training_triples_factory,
+        testing_triples_factory=testing_triples_factory,
+    )
+    trained_transe = pipeline_results.model
+
+    model_kwargs = config_convkb.get('pipeline').get('model_kwargs')
+    model_kwargs['entity_embeddings'] = trained_transe.entity_embeddings
+    model_kwargs['relation_embeddings'] = trained_transe.relation_emebddings
+
+    del config_convkb['pipeline']['dataset']
+
+    replicate_pipeline_from_config(
+        path=config_convkb,
+        training_triples_factory=training_triples_factory,
+        testing_triples_factory=testing_triples_factory,
+        directory=directory,
+        replicates=replicates,
+        move_to_cpu=move_to_cpu,
+        save_replicates=not discard_replicates,
+
     )
 
 
