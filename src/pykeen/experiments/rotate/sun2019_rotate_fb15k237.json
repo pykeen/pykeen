@@ -4,7 +4,7 @@
     "comments": "Could not find number of epochs since early stopping has been applied; https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/best_config.sh"
   },
   "pipeline": {
-    "dataset": "fb15k",
+    "dataset": "fb15k237",
     "model": "RotatE",
     "model_kwargs": {
       "embedding_dim": 1000
