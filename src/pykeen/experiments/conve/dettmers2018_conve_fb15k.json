@@ -4,6 +4,9 @@
   },
   "pipeline": {
     "dataset": "fb15k",
+    "dataset_kwargs": {
+      "create_inverse_triples": true
+    },
     "model": "ConvE",
     "model_kwargs": {
       "embedding_dim": 200,
@@ -15,7 +18,8 @@
       "kernel_width": 3,
       "input_dropout": 0.2,
       "feature_map_dropout": 0.2,
-      "output_dropout": 0.3
+      "output_dropout": 0.3,
+      "apply_batch_normalization": true
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {

@@ -81,6 +81,14 @@ class ConvE(Model):
 
         - Official Implementation: https://github.com/TimDettmers/ConvE/blob/master/model.py
 
+    The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
+    in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
+    However, batch normalization is not the only way to achieve more robust and effective training [1]. Therefore,
+    we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as default).
+
+    [1]: Santurkar, Shibani, et al. "How does batch normalization help optimization?."
+    Advances in Neural Information Processing Systems. 2018.
+
     Example usage:
 
     >>> # Step 1: Get triples
@@ -126,6 +134,12 @@ class ConvE(Model):
     #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
+    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
+    bn0: Optional[torch.nn.BatchNorm2d]
+    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
+    bn1: Optional[torch.nn.BatchNorm2d]
+    bn2: Optional[torch.nn.BatchNorm2d]
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -147,6 +161,7 @@ class ConvE(Model):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        apply_batch_normalization: bool = True,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
@@ -210,11 +225,17 @@ class ConvE(Model):
             padding=0,
             bias=True,
         )
-        # num_features – C from an expected input of size (N,C,L)
-        self.bn0 = torch.nn.BatchNorm2d(self.input_channels)
-        # num_features – C from an expected input of size (N,C,H,W)
-        self.bn1 = torch.nn.BatchNorm2d(output_channels)
-        self.bn2 = torch.nn.BatchNorm1d(self.embedding_dim)
+
+        self.apply_batch_normalization = apply_batch_normalization
+        if self.apply_batch_normalization:
+            self.bn0 = torch.nn.BatchNorm2d(self.input_channels)
+            self.bn1 = torch.nn.BatchNorm2d(output_channels)
+            self.bn2 = torch.nn.BatchNorm1d(self.embedding_dim)
+        else:
+            self.bn0 = None
+            self.bn1 = None
+            self.bn2 = None
+
         num_in_features = \
             output_channels \
             * (2 * self.embedding_height - kernel_height + 1) \
@@ -251,14 +272,16 @@ class ConvE(Model):
 
         try:
             # batch_size, num_input_channels, 2*height, width
-            x = self.bn0(x)
+            if self.apply_batch_normalization:
+                x = self.bn0(x)
 
             # batch_size, num_input_channels, 2*height, width
             x = self.inp_drop(x)
             # (N,C_out,H_out,W_out)
             x = self.conv1(x)
 
-            x = self.bn1(x)
+            if self.apply_batch_normalization:
+                x = self.bn1(x)
             x = F.relu(x)
             x = self.feature_map_drop(x)
             # batch_size, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
@@ -266,7 +289,7 @@ class ConvE(Model):
             x = self.fc(x)
             x = self.hidden_drop(x)
 
-            if batch_size > 1:
+            if self.apply_batch_normalization:
                 x = self.bn2(x)
             x = F.relu(x)
         except RuntimeError as e:
