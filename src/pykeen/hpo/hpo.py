@@ -2,15 +2,14 @@
 
 """Hyper-parameter optimiziation in PyKEEN."""
 
+import dataclasses
 import json
 import logging
-from multiprocessing import Process
+import os
+from dataclasses import dataclass
 from typing import Any, Dict, Mapping, Optional, Type, Union
 
-import dataclasses
-import os
 import torch
-from dataclasses import dataclass
 from optuna import Study, Trial, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
@@ -108,12 +107,6 @@ class Objective:
             stopper_kwargs.setdefault(key, []).append(callback)
 
     def __call__(self, trial: Trial) -> float:
-        """For each experiment start a new process."""
-        p = Process(target=self.run_experiment, args=(trial,))
-        p.start()
-        p.join()
-
-    def run_experiment(self, trial: Trial) -> float:
         """Suggest parameters then train the model."""
         if self.model_kwargs is not None:
             problems = [
