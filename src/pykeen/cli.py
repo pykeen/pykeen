@@ -13,6 +13,7 @@ later, but that will cause problems - the code will get executed twice:
 .. seealso:: http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 
+import inspect
 import os
 import sys
 
@@ -34,6 +35,7 @@ from .regularizers import regularizers as regularizers_dict
 from .sampling import negative_samplers as negative_samplers_dict
 from .stoppers import stoppers as stoppers_dict
 from .training import training_loops as training_dict
+from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -98,6 +100,15 @@ def parameters():
         click.echo(f'{i:>2}. {name}')
         for value in sorted(values):
             click.echo(f'    - {value}')
+
+
+@ls.command()
+def importers():
+    """List triple importers."""
+    for prefix, f in sorted(PREFIX_IMPORTERS.items()):
+        click.secho(f'prefix: {prefix} from {inspect.getmodule(f).__name__}')
+    for suffix, f in sorted(EXTENSION_IMPORTERS.items()):
+        click.secho(f'suffix: {suffix} from {inspect.getmodule(f).__name__}')
 
 
 @ls.command()

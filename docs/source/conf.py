@@ -236,6 +236,8 @@ intersphinx_mapping = {
     'torch': ('https://pytorch.org/docs/stable', None),
     'numpy': ('https://docs.scipy.org/doc/numpy', None),
     'optuna': ('https://optuna.readthedocs.io/en/latest', None),
+    'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
+    'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
 }
 
 autoclass_content = 'both'
