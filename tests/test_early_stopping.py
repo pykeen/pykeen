@@ -13,7 +13,7 @@ from pykeen.datasets.nations import NationsTrainingTriplesFactory, NationsValida
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE
 from pykeen.models import TransE
-from pykeen.models.base import Model
+from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
 from pykeen.training import OWATrainingLoop
 from pykeen.triples import TriplesFactory
@@ -80,7 +80,7 @@ class MockEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class MockModel(Model):
+class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
@@ -104,10 +104,7 @@ class MockModel(Model):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=rt_batch)
 
-    def init_empty_weights_(self) -> Model:  # noqa: D102
-        raise NotImplementedError('Not needed for unittest')
-
-    def clear_weights_(self) -> Model:  # noqa: D102
+    def reset_parameters_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
 

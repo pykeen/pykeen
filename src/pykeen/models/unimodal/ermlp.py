@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class ERMLP(Model):
+class ERMLP(EntityRelationEmbeddingModel):
     """An implementation of ERMLP from [dong2014]_.
 
     This model uses a neural network-based approach.
@@ -34,8 +34,6 @@ class ERMLP(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -43,20 +41,18 @@ class ERMLP(Model):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        if hidden_dim is None:
-            hidden_dim = embedding_dim
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
 
+        if hidden_dim is None:
+            hidden_dim = embedding_dim
         self.hidden_dim = hidden_dim
         """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
            with self.embedding_dim neurons and output layer with one neuron.
@@ -70,31 +66,19 @@ class ERMLP(Model):
             self.linear2,
         )
 
-        self.relation_embeddings = relation_embeddings
-
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
+    def _reset_parameters_(self):  # noqa: D102
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        self.entity_embeddings.reset_parameters()
+        self.relation_embeddings.reset_parameters()
 
-        # TODO: How to determine whether weights have been initialized
-        # weight (re-)initialization
+        # weight initialization
         nn.init.zeros_(self.linear1.bias)
         nn.init.xavier_uniform_(self.linear1.weight)
         nn.init.zeros_(self.linear2.bias)
         nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

@@ -15,11 +15,15 @@ from torch import nn
 __all__ = [
     'clamp_norm',
     'compact_mapping',
+    'get_embedding',
+    'imag_part',
     'l2_regularization',
     'is_cuda_oom_error',
+    'real_part',
     'resolve_device',
     'slice_triples',
     'slice_doubles',
+    'split_complex',
     'split_list_in_batches_iter',
     'split_list_in_batches',
     'normalize_string',
@@ -360,3 +364,67 @@ class Result:
     def save_to_directory(self, directory: str, **kwargs) -> None:
         """Save the results to the directory."""
         raise NotImplementedError
+
+
+def get_embedding(
+    num_embeddings: int,
+    embedding_dim: int,
+    device: torch.device,
+    initializer_: Optional = None,
+    initializer_kwargs: Optional[Mapping[str, Any]] = None,
+) -> nn.Embedding:
+    """Create an embedding object on a device.
+
+    This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
+    weight is always initialized on CPU and has to be moved to GPU afterwards.
+
+    :param num_embeddings: >0
+        The number of embeddings.
+    :param embedding_dim: >0
+        The embedding dimensionality.
+    :param device:
+        The device.
+    :param initializer_:
+        An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies the weights
+        in-place.
+    :param initializer_kwargs:
+        Additional keyword arguments passed to the initializer
+
+    :return:
+        The embedding.
+    """
+    # Allocate weight on device
+    weight = torch.empty(num_embeddings, embedding_dim, device=device)
+
+    # Initialize if initializer is provided
+    if initializer_ is not None:
+        if initializer_kwargs is None:
+            initializer_kwargs = {}
+        initializer_(weight, **initializer_kwargs)
+
+    # Wrap embedding around it.
+    return nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, _weight=weight)
+
+
+def split_complex(
+    x: torch.FloatTensor,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    """Split a complex tensor into real and imaginary part."""
+    dim = x.shape[-1] // 2
+    return x[..., :dim], x[..., dim:]
+
+
+def real_part(
+    x: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Get the real part from a complex tensor."""
+    dim = x.shape[-1] // 2
+    return x[..., :dim]
+
+
+def imag_part(
+    x: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Get the imaginary part from a complex tensor."""
+    dim = x.shape[-1] // 2
+    return x[..., dim:]

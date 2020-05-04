@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
@@ -30,7 +30,7 @@ def _apply_bn_to_tensor(
     return tensor
 
 
-class TuckER(Model):
+class TuckER(EntityRelationEmbeddingModel):
     """An implementation of TuckEr from [balazevic2019]_.
 
     This model uses the Tucker tensor factorization.
@@ -60,8 +60,6 @@ class TuckER(Model):
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         relation_dim: Optional[int] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -83,23 +81,20 @@ class TuckER(Model):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
 
-        if relation_dim is None:
-            relation_dim = embedding_dim
-        self.relation_dim = relation_dim
-
-        self.relation_embeddings = relation_embeddings
-
         # Core tensor
         # Note: we use a different dimension permutation as in the official implementation to match the paper.
-        self.core_tensor = nn.Parameter(torch.empty(self.embedding_dim, self.relation_dim, self.embedding_dim))
+        self.core_tensor = nn.Parameter(
+            torch.empty(self.embedding_dim, self.relation_dim, self.embedding_dim, device=self.device),
+            requires_grad=True,
+        )
 
         # Dropout
         self.input_dropout = nn.Dropout(dropout_0)
@@ -113,26 +108,13 @@ class TuckER(Model):
             self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_normal_(self.entity_embeddings)
-
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_dim)
-            embedding_xavier_normal_(self.relation_embeddings)
-
+    def _reset_parameters_(self):  # noqa: D102
+        embedding_xavier_normal_(self.entity_embeddings)
+        embedding_xavier_normal_(self.relation_embeddings)
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
 
     def _scoring_function(
         self,
@@ -150,7 +132,7 @@ class TuckER(Model):
         where BN denotes BatchNorm and DO denotes Dropout
 
         :param h: shape: (batch_size, 1, embedding_dim) or (1, num_entities, embedding_dim)
-        :param r: shape: (batch_size, relation_embedding_dim)
+        :param r: shape: (batch_size, relation_dim)
         :param t: shape: (1, num_entities, embedding_dim) or (batch_size, 1, embedding_dim)
         :return: shape: (batch_size, num_entities) or (batch_size, 1)
         """

@@ -16,11 +16,13 @@ from ..losses import Loss, NSSALoss
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed
 from ..version import get_version
 
 __all__ = [
     'Model',
+    'EntityEmbeddingModel',
+    'EntityRelationEmbeddingModel',
 ]
 
 logger = logging.getLogger(__name__)
@@ -91,8 +93,6 @@ class Model(nn.Module):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
-        entity_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
@@ -137,12 +137,6 @@ class Model(nn.Module):
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
 
-        #: The dimension of the embeddings to generate
-        self.embedding_dim = embedding_dim
-
-        # The embeddings are first initiated when calling the fit function
-        self.entity_embeddings = entity_embeddings
-
         '''
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
         also for predictions after training, but has no effect on the training.
@@ -181,11 +175,16 @@ class Model(nn.Module):
         """Does this model support sub-batching?"""
         return len(self.modules_not_supporting_sub_batching) == 0
 
-    def _init_weights_on_device(self):  # noqa: D401
-        """A hook called after initialization."""
-        self.init_empty_weights_()
-        self.to_device_()
+    @abstractmethod
+    def _reset_parameters_(self):  # noqa: D401
+        """Reset all parameters of the model in-place."""
+        raise NotImplementedError
+
+    def reset_parameters_(self) -> 'Model':  # noqa: D401
+        """Reset all parameters of the model and enforce model constraints."""
+        self._reset_parameters_()
         self.post_parameter_update()
+        return self
 
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass while keeping track of hyper-parameters."""
@@ -541,20 +540,6 @@ class Model(nn.Module):
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
-    @abstractmethod
-    def init_empty_weights_(self) -> 'Model':
-        """Initialize all uninitialized weights and embeddings."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def clear_weights_(self) -> 'Model':
-        """Clear all weights and embeddings."""
-        raise NotImplementedError
-
-    def reset_weights_(self) -> 'Model':
-        """Force re-initialization of all weights."""
-        return self.clear_weights_().init_empty_weights_().to_device_()
-
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
@@ -618,6 +603,75 @@ class Model(nn.Module):
             Path of the file where to load the state from.
         """
         self.load_state_dict(torch.load(path, map_location=self.device))
+
+
+class EntityEmbeddingModel(Model):
+    """A base module for most KGE models that have one embedding for entities."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        super().__init__(
+            triples_factory=triples_factory,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            predict_with_sigmoid=predict_with_sigmoid,
+        )
+        self.embedding_dim = embedding_dim
+        self.entity_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=self.embedding_dim,
+            device=self.device,
+        )
+
+
+class EntityRelationEmbeddingModel(EntityEmbeddingModel):
+    """A base module for most KGE models that have one embedding for entities and one for relations."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        relation_dim: Optional[int] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        super().__init__(
+            triples_factory=triples_factory,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            predict_with_sigmoid=predict_with_sigmoid,
+            embedding_dim=embedding_dim,
+        )
+
+        # Default for relation dimensionality
+        if relation_dim is None:
+            relation_dim = embedding_dim
+
+        self.relation_dim = relation_dim
+        self.relation_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=self.relation_dim,
+            device=self.device,
+        )
 
 
 def _can_slice(fn) -> bool:

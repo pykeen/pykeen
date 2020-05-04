@@ -11,10 +11,10 @@ from torch import nn
 from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
+from .. import EntityEmbeddingModel
 from ..base import Model
 from ...losses import Loss
 from ...triples import TriplesFactory
-from ...typing import InteractionFunction
 
 __all__ = [
     'RGCN',
@@ -68,7 +68,7 @@ class RGCN(Model):
     """
 
     #: Interaction model used as decoder
-    base_model: Model
+    base_model: EntityEmbeddingModel
 
     #: The blocks of the relation-specific weight matrices
     #: shape: (num_relations, num_blocks, embedding_dim//num_blocks, embedding_dim//num_blocks)
@@ -112,7 +112,6 @@ class RGCN(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 500,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
@@ -123,7 +122,7 @@ class RGCN(Model):
         use_batch_norm: bool = False,
         activation_cls: Optional[Type[nn.Module]] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
-        base_model_cls: Optional[Type[Model]] = None,
+        base_model: Optional[Model] = None,
         sparse_messages_owa: bool = True,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
@@ -131,25 +130,9 @@ class RGCN(Model):
         decomposition: str = 'basis',
         buffer_messages: bool = True,
     ):
-        if base_model_cls is None:
-            base_model_cls = DistMult
-
-        if activation_cls is None:
-            activation_cls = nn.ReLU
-
-        # Instantiate model
-        base_model = base_model_cls(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            entity_embeddings=entity_embeddings,
-            random_seed=random_seed,
-        )
-
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=base_model.entity_embeddings,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
@@ -159,8 +142,27 @@ class RGCN(Model):
         if self.triples_factory.create_inverse_triples:
             raise ValueError('R-GCN handles edges in an undirected manner.')
 
-        # Base model has to be set **after** nn.Module.__init__
+        if base_model is None:
+            # Instantiate model
+            base_model = DistMult(
+                triples_factory=triples_factory,
+                embedding_dim=embedding_dim,
+                automatic_memory_optimization=automatic_memory_optimization,
+                loss=loss,
+                preferred_device=preferred_device,
+                random_seed=random_seed,
+            )
         self.base_model = base_model
+        self.base_embeddings = nn.Parameter(
+            data=torch.empty(
+                self.triples_factory.num_entities,
+                embedding_dim,
+                device=self.device,
+            ),
+            requires_grad=True,
+        )
+
+        self.embedding_dim = embedding_dim
 
         self.decomposition = decomposition
         # Heuristic
@@ -201,6 +203,8 @@ class RGCN(Model):
             self_loop_dropout = edge_dropout
         self.self_loop_dropout = self_loop_dropout
         self.use_batch_norm = use_batch_norm
+        if activation_cls is None:
+            activation_cls = nn.ReLU
         self.activation_cls = activation_cls
         self.activation_kwargs = activation_kwargs
         if use_batch_norm:
@@ -217,15 +221,66 @@ class RGCN(Model):
         self.register_buffer('targets', t)
         self.register_buffer('edge_types', r)
 
+        self.activations = nn.ModuleList([
+            self.activation_cls(**(self.activation_kwargs or {})) for _ in range(self.num_layers)
+        ])
+
         # Weights
-        self.bases = None
-        self.att = None
-        self.biases = None
-        self.batch_norms = None
-        self.activations = None
+        self.bases = nn.ParameterList()
+        if self.decomposition == 'basis':
+            self.att = nn.ParameterList()
+            for _ in range(self.num_layers):
+                self.bases.append(
+                    nn.Parameter(
+                        torch.empty(
+                            self.num_bases,
+                            self.embedding_dim,
+                            self.embedding_dim,
+                            device=self.device,
+                        ), requires_grad=True)
+                )
+                self.att.append(
+                    nn.Parameter(
+                        torch.empty(
+                            self.num_relations + 1,
+                            self.num_bases,
+                            device=self.device,
+                        ), requires_grad=True)
+                )
+        elif self.decomposition == 'block':
+            block_size = self.embedding_dim // self.num_bases
+            for _ in range(self.num_layers):
+                self.bases.append(
+                    nn.Parameter(
+                        data=torch.empty(
+                            self.num_relations + 1,
+                            self.num_bases,
+                            block_size,
+                            block_size,
+                            device=self.device,
+                        ), requires_grad=True)
+                )
+
+            self.att = None
+        else:
+            raise NotImplementedError
+        if self.use_bias:
+            self.biases = nn.ParameterList([
+                nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
+                for _ in range(self.num_layers)
+            ])
+        else:
+            self.biases = None
+        if self.use_batch_norm:
+            self.batch_norms = nn.ModuleList([
+                nn.BatchNorm1d(num_features=self.embedding_dim)
+                for _ in range(self.num_layers)
+            ])
+        else:
+            self.batch_norms = None
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
@@ -233,87 +288,43 @@ class RGCN(Model):
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
-    def init_empty_weights_(self):  # noqa: D102
-        self.base_model = self.base_model.init_empty_weights_()
+    def _reset_parameters_(self):
+        self.base_model.reset_parameters_()
+
+        # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
+        nn.init.xavier_uniform_(self.base_embeddings)
+
+        gain = nn.init.calculate_gain(nonlinearity=self.activation_cls.__name__.lower())
         if self.decomposition == 'basis':
-            if self.bases is None:
-                self.bases = nn.ParameterList()
-                for _ in range(self.num_layers):
-                    layer_bases_init = torch.empty(
-                        self.num_bases,
-                        self.embedding_dim,
-                        self.embedding_dim,
-                        device=self.device,
-                    )
-                    gain = nn.init.calculate_gain(nonlinearity=self.activation_cls.__name__.lower())
-                    nn.init.xavier_normal_(layer_bases_init, gain=gain)
-                    layer_bases = nn.Parameter(layer_bases_init, requires_grad=True)
-                    self.bases.append(layer_bases)
-            if self.att is None:
-                self.att = nn.ParameterList()
-                for _ in range(self.num_layers):
-                    # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
-                    # initialized properly)
-                    # We have one additional relation for self-loops
-                    att_init = torch.rand(self.num_relations + 1, self.num_bases, device=self.device)
-                    functional.normalize(att_init, p=1, dim=1, out=att_init)
-                    att = nn.Parameter(att_init, requires_grad=True)
-                    self.att.append(att)
+            for base in self.bases:
+                nn.init.xavier_normal_(base, gain=gain)
+            for att in self.att:
+                # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
+                # initialized properly)
+                # We have one additional relation for self-loops
+                nn.init.uniform_(att)
+                functional.normalize(att.data, p=1, dim=1, out=att.data)
         elif self.decomposition == 'block':
-            if self.bases is None:
-                self.bases = nn.ParameterList()
-                block_size = self.embedding_dim // self.num_bases
-                for _ in range(self.num_layers):
-                    layer_bases_init = torch.empty(
-                        self.num_relations + 1,
-                        self.num_bases,
-                        block_size,
-                        block_size,
-                        device=self.device,
-                    )
-                    gain = nn.init.calculate_gain(nonlinearity=self.activation_cls.__name__.lower())
-                    # Xavier Glorot initialization of each block
-                    std = torch.sqrt(torch.as_tensor(2.)) * gain / (2 * block_size)
-                    nn.init.normal_(layer_bases_init, std=std)
-                    layer_bases = nn.Parameter(layer_bases_init, requires_grad=True)
-                    self.bases.append(layer_bases)
+            for base in self.bases:
+                block_size = base.shape[-1]
+                # Xavier Glorot initialization of each block
+                std = torch.sqrt(torch.as_tensor(2.)) * gain / (2 * block_size)
+                nn.init.normal_(base, std=std)
 
-        if self.biases is None and self.use_bias:
-            self.biases = nn.ParameterList([
-                nn.Parameter(torch.zeros(self.embedding_dim, device=self.device), requires_grad=True)
-                for _ in range(self.num_layers)
-            ])
-        if self.batch_norms is None and self.use_batch_norm:
-            self.batch_norms = nn.ModuleList([
-                nn.BatchNorm1d(num_features=self.embedding_dim)
-            ])
-        if self.activation_cls is not None and self.activations is None:
-            self.activations = nn.ModuleList([
-                self.activation_cls(**(self.activation_kwargs or {})) for _ in range(self.num_layers)
-            ])
-        return self
+        # Reset biases
+        if self.biases is not None:
+            for bias in self.biases:
+                nn.init.zeros_(bias)
 
-    def clear_weights_(self):  # noqa: D102
-        self.bases = None
-        self.att = None
-        self.biases = None
-        self.batch_norms = None
-        return self
+        # Reset batch norm parameters
+        if self.batch_norms is not None:
+            for bn in self.batch_norms:
+                bn.reset_parameters()
 
-    @property
-    def _entity_embeddings(self) -> nn.Embedding:
-        """Shorthand for the entity embeddings."""
-        return self.base_model.entity_embeddings
-
-    @property
-    def _relation_embeddings(self) -> nn.Embedding:
-        """Shorthand for the relation embeddings."""
-        return self.base_model.relation_embeddings
-
-    @property
-    def _interaction_function(self) -> InteractionFunction:
-        """Shorthand for the interaction function."""
-        return self.base_model.interaction_function
+        # Reset activation parameters, if any
+        for act in self.activations:
+            if hasattr(act, 'reset_parameters'):
+                act.reset_parameters()
 
     def _enrich_embeddings(self, batch: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         """
@@ -328,7 +339,7 @@ class RGCN(Model):
 
         # Bind fields
         # shape: (num_entities, embedding_dim)
-        x = self._entity_embeddings.weight
+        x = self.base_embeddings
         sources = self.sources
         targets = self.targets
         edge_types = self.edge_types
@@ -473,32 +484,6 @@ class RGCN(Model):
         return w
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Enrich only required embeddings
-        x = self._enrich_embeddings(batch=hrt_batch if self.sparse_messages_owa else None)
-
-        # Get embeddings
-        h = x[hrt_batch[:, 0]]
-        r = self._relation_embeddings(hrt_batch[:, 1])
-        t = x[hrt_batch[:, 2]]
-
-        return self._interaction_function(h=h, r=r, t=t).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        x = self._enrich_embeddings()
-
-        # Get embeddings
-        h = x[hr_batch[:, 0]].view(-1, 1, self.embedding_dim)
-        r = self._relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        t = x.view(1, -1, self.embedding_dim)
-
-        return self._interaction_function(h=h, r=r, t=t)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        x = self._enrich_embeddings()
-
-        # Get embeddings
-        h = x.view(1, -1, self.embedding_dim)
-        r = self._relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = x[rt_batch[:, 1]].view(-1, 1, self.embedding_dim)
-
-        return self._interaction_function(h=h, r=r, t=t)
+        # Enrich embeddings
+        self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=None)
+        return self.base_model.score_hrt(hrt_batch=hrt_batch)

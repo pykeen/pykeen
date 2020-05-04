@@ -23,7 +23,7 @@ from pykeen.datasets.nations import (
     NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
     TRAIN_PATH as NATIONS_TRAIN_PATH,
 )
-from pykeen.models.base import Model, _extend_batch
+from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.multimodal import MultimodalModel
 from pykeen.models.unimodal.trans_d import _project_entity
@@ -35,11 +35,15 @@ SKIP_MODULES = {
     Model.__name__,
     'DummyModel',
     MultimodalModel.__name__,
+    EntityEmbeddingModel.__name__,
+    EntityRelationEmbeddingModel.__name__,
     'MockModel',
     'models',
     'get_model_cls',
     'SimpleInteractionModel',
 }
+for cls in MultimodalModel.__subclasses__():
+    SKIP_MODULES.add(cls.__name__)
 
 _EPSILON = 1.0e-07
 
@@ -80,6 +84,10 @@ class _ModelTestCase:
     #: A random number generator from torch
     generator: torch.Generator
 
+    #: The number of parameters which receive a constant (i.e. non-randomized)
+    # initialization
+    num_constant_init: int = 0
+
     def setUp(self) -> None:
         """Set up the test case with a triples factory and model."""
         _, self.generator, _ = set_random_seed(42)
@@ -104,33 +112,38 @@ class _ModelTestCase:
         optimizer = SGD(params=self.model.get_grad_params(), lr=1.0)
         assert optimizer is not None
 
-    def test_init(self):
-        """Test the model's ``init_empty_weights_()`` function."""
-        # get number of parameters and shape
-        init_model = self.model.init_empty_weights_()
-        assert init_model == self.model
-        params = list(init_model.parameters())
-        param_shapes = set(p.shape for p in params)
-        num_params = len(params)
+    def test_reset_parameters_(self):
+        """Test :func:`Model.reset_parameters_`."""
+        # get model parameters
+        params = list(self.model.parameters())
+        old_content = {
+            id(p): p.data.detach().clone()
+            for p in params
+        }
 
-        # clear model
-        clear_model = self.model.clear_weights_()
-        assert clear_model == self.model
-        # init model
-        new_model = self.model.init_empty_weights_()
-        assert new_model == self.model
+        # re-initialize
+        self.model.reset_parameters_()
 
-        # check if number and shapes match
-        params = list(init_model.parameters())
-        new_num_params = len(params)
-        assert new_num_params == num_params
-        new_param_shapes = set(p.shape for p in params)
-        assert new_param_shapes == param_shapes
+        # check that the operation works in-place
+        new_params = list(self.model.parameters())
+        assert set(id(np) for np in new_params) == set(id(p) for p in params)
+
+        # check that the parameters where modified
+        num_equal_weights_after_re_init = sum(
+            1
+            for np in new_params
+            if (np.data == old_content[id(np)]).all()
+        )
+        assert num_equal_weights_after_re_init == self.num_constant_init, (
+            num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
         # check for finite values by default
         assert torch.all(torch.isfinite(scores)).item()
+
+        # check whether a gradient can be back-propgated
+        scores.mean().backward()
 
     def test_score_hrt(self) -> None:
         """Test the model's ``score_hrt()`` function."""
@@ -240,13 +253,19 @@ class _ModelTestCase:
             **(self.model_kwargs or {})
         ).to_device_()
 
-        assert not (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+        if isinstance(original_model, EntityEmbeddingModel):
+            assert not (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+        if isinstance(original_model, EntityRelationEmbeddingModel):
+            assert not (original_model.relation_embeddings.weight == loaded_model.relation_embeddings.weight).all()
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        assert (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+        if isinstance(original_model, EntityEmbeddingModel):
+            assert (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+        if isinstance(original_model, EntityRelationEmbeddingModel):
+            assert (original_model.relation_embeddings.weight == loaded_model.relation_embeddings.weight).all()
 
     @property
     def cli_extras(self):
@@ -438,6 +457,11 @@ class TestConvE(_ModelTestCase, unittest.TestCase):
         'embedding_height': 3,
         'embedding_width': 4,
     }
+    # 3x batch norm: bias + scale --> 6
+    # entity specific bias        --> 1
+    # ==================================
+    #                                 7
+    num_constant_init = 7
 
 
 class TestConvKB(_ModelTestCase, unittest.TestCase):
@@ -447,6 +471,8 @@ class TestConvKB(_ModelTestCase, unittest.TestCase):
     model_kwargs = {
         'num_filters': 2,
     }
+    # two bias terms, one conv-filter
+    num_constant_init = 3
 
 
 class TestDistMult(_ModelTestCase, unittest.TestCase):
@@ -470,6 +496,8 @@ class TestERMLP(_ModelTestCase, unittest.TestCase):
     model_kwargs = {
         'hidden_dim': 4,
     }
+    # Two linear layer biases
+    num_constant_init = 2
 
 
 class TestERMLPE(_ModelTestCase, unittest.TestCase):
@@ -479,6 +507,8 @@ class TestERMLPE(_ModelTestCase, unittest.TestCase):
     model_kwargs = {
         'hidden_dim': 4,
     }
+    # Two BN layers, bias & scale
+    num_constant_init = 4
 
 
 class TestHolE(_ModelTestCase, unittest.TestCase):
@@ -589,6 +619,8 @@ class TestRGCNBasis(_TestRGCN, unittest.TestCase):
     model_kwargs = {
         'decomposition': 'basis',
     }
+    #: one bias per layer
+    num_constant_init = 2
 
 
 class TestRGCNBlock(_TestRGCN, unittest.TestCase):
@@ -599,7 +631,10 @@ class TestRGCNBlock(_TestRGCN, unittest.TestCase):
         'decomposition': 'block',
         'num_bases_or_blocks': 3,
         'message_normalization': 'symmetric',
+        'use_batch_norm': True,
     }
+    #: (scale & bias for BN) * layers
+    num_constant_init = 4
 
 
 class TestRotatE(_ModelTestCase, unittest.TestCase):
@@ -777,15 +812,15 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         e_p = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
 
         # random relation embeddings & projections
-        r = torch.rand(self.batch_size, 1, self.model.relation_embedding_dim, generator=self.generator)
+        r = torch.rand(self.batch_size, 1, self.model.relation_dim, generator=self.generator)
         r = clamp_norm(r, maxnorm=1, p=2, dim=-1)
-        r_p = torch.rand(self.batch_size, 1, self.model.relation_embedding_dim, generator=self.generator)
+        r_p = torch.rand(self.batch_size, 1, self.model.relation_dim, generator=self.generator)
 
         # project
         e_bot = _project_entity(e=e, e_p=e_p, r=r, r_p=r_p)
 
         # check shape:
-        assert e_bot.shape == (self.batch_size, self.model.num_entities, self.model.relation_embedding_dim)
+        assert e_bot.shape == (self.batch_size, self.model.num_entities, self.model.relation_dim)
 
         # check normalization
         assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
@@ -841,7 +876,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         rel_embds = torch.nn.Embedding(2, 2)
         rel_embds.weight.data.copy_(rel_weights)
         self.model.relation_embeddings = rel_embds
-        self.model.relation_embedding_dim = 2
+        self.model.relation_dim = 2
 
         rel_proj_weights = torch.tensor([[5., 5., 6., 6.], [7., 7., 8., 8.]])
         rel_proj_embds = torch.nn.Embedding(2, 4)
@@ -873,6 +908,8 @@ class TestTuckEr(_ModelTestCase, unittest.TestCase):
     model_kwargs = {
         'relation_dim': 4,
     }
+    #: 2xBN (bias & scale)
+    num_constant_init = 4
 
 
 class TestUM(_DistanceModelTestCase, unittest.TestCase):
@@ -891,7 +928,7 @@ class TestTesting(unittest.TestCase):
         """
         model_names = {
             cls.__name__
-            for cls in Model.__subclasses__()
+            for cls in pykeen.models.models.values()
         }
         model_names -= SKIP_MODULES
 

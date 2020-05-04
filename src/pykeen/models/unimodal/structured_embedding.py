@@ -10,18 +10,19 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import Model
+from ..base import EntityEmbeddingModel
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import get_embedding
 
 __all__ = [
     'StructuredEmbedding',
 ]
 
 
-class StructuredEmbedding(Model):
+class StructuredEmbedding(EntityEmbeddingModel):
     """An implementation of Structured Embedding (SE) from [bordes2011]_.
 
     This model projects different matrices for each relation head and tail entity.
@@ -38,8 +39,6 @@ class StructuredEmbedding(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        left_relation_embeddings: Optional[nn.Embedding] = None,
-        right_relation_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -56,51 +55,34 @@ class StructuredEmbedding(Model):
             regularizer=regularizer,
         )
 
-        # Embeddings
         self.scoring_fct_norm = scoring_fct_norm
 
-        self.left_relation_embeddings = left_relation_embeddings
-        self.right_relation_embeddings = right_relation_embeddings
+        # Embeddings
+        self.left_relation_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim ** 2,
+            device=self.device,
+        )
+        self.right_relation_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim ** 2,
+            device=self.device,
+        )
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
+    def _reset_parameters_(self):  # noqa: D102
+        embedding_xavier_uniform_(self.entity_embeddings)
+
+        # Initialise left relation embeddings to unit length
         init_bound = 6 / np.sqrt(self.embedding_dim)
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_uniform_(self.entity_embeddings)
-        if self.left_relation_embeddings is None:
-            self.left_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
-            nn.init.uniform_(
-                self.left_relation_embeddings.weight.data,
-                a=-init_bound,
-                b=+init_bound,
-            )
-            # Initialise left relation embeddings to unit length
-            functional.normalize(
-                self.left_relation_embeddings.weight.data,
-                out=self.left_relation_embeddings.weight.data,
-            )
-        if not self.right_relation_embeddings:
-            self.right_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
-            nn.init.uniform_(
-                self.right_relation_embeddings.weight.data,
-                a=-init_bound,
-                b=+init_bound,
-            )
-            # Initialise right relation embeddings to unit length
-            functional.normalize(
-                self.right_relation_embeddings.weight.data,
-                out=self.right_relation_embeddings.weight.data,
-            )
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.left_relation_embeddings = None
-        self.right_relation_embeddings = None
-        return self
+        for emb in [
+            self.left_relation_embeddings,
+            self.right_relation_embeddings,
+        ]:
+            nn.init.uniform_(emb.weight, a=-init_bound, b=+init_bound)
+            functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data, )
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

@@ -7,19 +7,24 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from ..base import Model
-from ..init import embedding_xavier_normal_
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...utils import get_embedding_in_canonical_shape, split_complex
 
 __all__ = [
     'ComplEx',
 ]
 
 
-class ComplEx(Model):
-    """An implementation of ComplEx [trouillon2016]_."""
+class ComplEx(EntityRelationEmbeddingModel):
+    """An implementation of ComplEx [trouillon2016]_.
+
+    .. seealso ::
+        Official implementation: https://github.com/ttrouill/complex/
+
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
@@ -43,11 +48,9 @@ class ComplEx(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the module.
@@ -59,16 +62,12 @@ class ComplEx(Model):
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
             regards to the hardware at hand.
-        :param entity_embeddings: nn.Embedding (optional)
-            Initialization for the entity embeddings.
         :param loss: OptionalLoss (optional)
             The loss to use. Defaults to SoftplusLoss.
         :param preferred_device: str (optional)
             The default device where to model is located.
         :param random_seed: int (optional)
             An optional random seed to set before the initialization of weights.
-        :param relation_embeddings: nn.Embedding (optional)
-            Relation embeddings initialization.
         :param regularizer: BaseRegularizer
             The regularizer to use.
         """
@@ -76,39 +75,20 @@ class ComplEx(Model):
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
 
-        # Store the real embedding size
-        self.real_embedding_dim = embedding_dim
-
-        # The embeddings are first initialized when calling the get_grad_params function
-        self.relation_embeddings = relation_embeddings
-
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        # Initialize entity embeddings
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_normal_(self.entity_embeddings)
-
-        # Initialize relation embeddings
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_normal_(self.relation_embeddings)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        # initialize with entity and relation embeddings with standard normal distribution, cf.
+        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
+        nn.init.normal_(tensor=self.entity_embeddings.weight, mean=0., std=1.)
+        nn.init.normal_(tensor=self.relation_embeddings.weight, mean=0., std=1.)
 
     @staticmethod
     def interaction_function(
@@ -120,76 +100,46 @@ class ComplEx(Model):
 
         The embeddings have to be in a broadcastable shape.
 
-        :param h: shape: (..., e, 2)
-            Head embeddings. Last dimension corresponds to (real, imag).
-        :param r: shape: (..., e, 2)
-            Relation embeddings. Last dimension corresponds to (real, imag).
-        :param t: shape: (..., e, 2)
-            Tail embeddings. Last dimension corresponds to (real, imag).
+        :param h:
+            Head embeddings.
+        :param r:
+            Relation embeddings.
+        :param t:
+            Tail embeddings.
 
         :return: shape: (...)
             The scores.
         """
-        assert all(x.shape[-1] == 2 for x in (h, r, t))
+        # split into real and imaginary part
+        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
 
-        # ComplEx space bilinear product (equivalent to HolE)
+        # ComplEx space bilinear product
         # *: Elementwise multiplication
-        re_re_re = h[..., 0] * r[..., 0] * t[..., 0]
-        re_im_im = h[..., 0] * r[..., 1] * t[..., 1]
-        im_re_im = h[..., 1] * r[..., 0] * t[..., 1]
-        im_im_re = h[..., 1] * r[..., 1] * t[..., 0]
-        scores = torch.sum(re_re_re + re_im_im + im_re_im - im_im_re, dim=-1)
-
-        return scores
+        return sum(
+            (hh * rr * tt).sum(dim=-1)
+            for hh, rr, tt in [
+                (h_re, r_re, t_re),
+                (h_re, r_im, t_im),
+                (h_im, r_re, t_im),
+                (h_im, r_im, t_re),
+            ]
+        )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # view as (batch_size, embedding_dim, 2)
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-        reg_shape = (-1, self.real_embedding_dim, 2)
+        # get embeddings
+        h, r, t = [
+            get_embedding_in_canonical_shape(embedding=e, ind=ind)
+            for e, ind in [
+                (self.entity_embeddings, hrt_batch[:, 0]),
+                (self.relation_embeddings, hrt_batch[:, 1]),
+                (self.entity_embeddings, hrt_batch[:, 2]),
+            ]
+        ]
 
         # Compute scores
-        scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(reg_shape)).view(-1, 1)
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         # Regularization
-        reg_shape = (-1, self.embedding_dim)
-        self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(reg_shape))
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # view as (hr_batch_size, num_entities, embedding_dim, 2)
-        h = self.entity_embeddings(hr_batch[:, 0])
-        r = self.relation_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
-        reg_shape = (-1, 1, self.real_embedding_dim, 2)
-        new_shape_tails = (1, -1, self.real_embedding_dim, 2)
-
-        # Compute scores
-        scores = self.interaction_function(h=h.view(reg_shape), r=r.view(reg_shape), t=t.view(new_shape_tails))
-
-        # Regularization
-        reg_shape = (-1, 1, self.embedding_dim)
-        new_shape_tails = (1, -1, self.embedding_dim)
-        self.regularize_if_necessary(h.view(reg_shape), r.view(reg_shape), t.view(new_shape_tails))
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # view as (rt_batch_size, num_entities, embedding_dim, 2)
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0])
-        t = self.entity_embeddings(rt_batch[:, 1])
-        reg_shape = (-1, 1, self.real_embedding_dim, 2)
-        new_shape_heads = (1, -1, self.real_embedding_dim, 2)
-
-        # Compute scores
-        scores = self.interaction_function(h=h.view(new_shape_heads), r=r.view(reg_shape), t=t.view(reg_shape))
-
-        # Regularization
-        reg_shape = (-1, 1, self.embedding_dim)
-        new_shape_heads = (1, -1, self.embedding_dim)
-        self.regularize_if_necessary(h.view(new_shape_heads), r.view(reg_shape), t.view(reg_shape))
+        self.regularize_if_necessary(h, r, t)
 
         return scores

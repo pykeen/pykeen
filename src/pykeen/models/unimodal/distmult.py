@@ -9,8 +9,7 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import Model
-from ..init import embedding_xavier_uniform_
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class DistMult(Model):
+class DistMult(EntityRelationEmbeddingModel):
     """An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
@@ -55,8 +54,6 @@ class DistMult(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -67,34 +64,21 @@ class DistMult(Model):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.relation_embeddings = relation_embeddings
-
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_uniform_(self.entity_embeddings)
-
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_uniform_(self.relation_embeddings)
-            # Initialise relation embeddings to unit length
-            functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        # xavier uniform, cf.
+        # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
+        nn.init.xavier_uniform_(self.entity_embeddings.weight)
+        nn.init.xavier_uniform_(self.relation_embeddings.weight)
+        # Initialise relation embeddings to unit length
+        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

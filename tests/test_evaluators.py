@@ -14,7 +14,8 @@ from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, Rank
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import Model, TransE
+from pykeen.models import TransE
+from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
@@ -416,7 +417,7 @@ class DummyEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class DummyModel(Model):
+class DummyModel(EntityRelationEmbeddingModel):
     """A dummy model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
@@ -440,10 +441,7 @@ class DummyModel(Model):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=rt_batch)
 
-    def init_empty_weights_(self) -> Model:  # noqa: D102
-        raise NotImplementedError('Not needed for unittest')
-
-    def clear_weights_(self) -> Model:  # noqa: D102
+    def reset_parameters_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
 

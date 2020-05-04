@@ -5,20 +5,20 @@
 from typing import Optional
 
 import torch
-from torch import nn
 from torch.nn import functional
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
+from ...utils import get_embedding
 
 __all__ = [
     'TransH',
 ]
 
 
-class TransH(Model):
+class TransH(EntityRelationEmbeddingModel):
     """An implementation of TransH [wang2014]_.
 
     This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
@@ -46,9 +46,6 @@ class TransH(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
-        normal_vector_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -59,7 +56,6 @@ class TransH(Model):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -67,27 +63,25 @@ class TransH(Model):
         )
 
         self.scoring_fct_norm = scoring_fct_norm
-        self.relation_embeddings = relation_embeddings
-        self.normal_vector_embeddings = normal_vector_embeddings
+
+        # embeddings
+        self.normal_vector_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        if self.normal_vector_embeddings is None:
-            self.normal_vector_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+    def _reset_parameters_(self):  # noqa: D102
+        for emb in [
+            self.entity_embeddings,
+            self.relation_embeddings,
+            self.normal_vector_embeddings,
+        ]:
+            emb.reset_parameters()
         # TODO: Add initialization
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        self.normal_vector_embeddings = None
-        return self
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

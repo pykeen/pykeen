@@ -7,8 +7,7 @@ from typing import Optional, Type
 import torch
 from torch import nn
 
-from ..base import Model
-from ..init import embedding_xavier_normal_
+from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -18,7 +17,7 @@ __all__ = [
 ]
 
 
-class ERMLPE(Model):
+class ERMLPE(EntityRelationEmbeddingModel):
     r"""An extension of ERMLP proposed by [sharifzadeh2019]_.
 
     This model uses a neural network-based approach similar to ERMLP and with slight modifications.
@@ -56,8 +55,6 @@ class ERMLPE(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         hidden_dim: int = 300,
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
@@ -72,7 +69,6 @@ class ERMLPE(Model):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -80,41 +76,36 @@ class ERMLPE(Model):
         )
         self.hidden_dim = hidden_dim
         self.input_dropout = input_dropout
-        # Embeddings
-        self.entity_embeddings = entity_embeddings
-        self.relation_embeddings = relation_embeddings
 
         self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
         self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
         self.input_dropout = nn.Dropout(self.input_dropout)
+        self.bn1 = nn.BatchNorm1d(self.hidden_dim)
+        self.bn2 = nn.BatchNorm1d(self.embedding_dim)
         self.mlp = nn.Sequential(
             self.linear1,
             nn.Dropout(hidden_dropout),
-            nn.BatchNorm1d(self.hidden_dim),
+            self.bn1,
             nn.ReLU(),
             self.linear2,
             nn.Dropout(hidden_dropout),
-            nn.BatchNorm1d(self.embedding_dim),
+            self.bn2,
             nn.ReLU()
         )
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_normal_(self.entity_embeddings)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_normal_(self.relation_embeddings)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        self.entity_embeddings.reset_parameters()
+        self.relation_embeddings.reset_parameters()
+        for module in [
+            self.linear1,
+            self.linear2,
+            self.bn1,
+            self.bn2,
+        ]:
+            module.reset_parameters()
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

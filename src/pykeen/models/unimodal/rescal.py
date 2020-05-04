@@ -5,9 +5,8 @@
 from typing import Optional
 
 import torch
-from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -17,7 +16,7 @@ __all__ = [
 ]
 
 
-class RESCAL(Model):
+class RESCAL(EntityRelationEmbeddingModel):
     """An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -47,8 +46,6 @@ class RESCAL(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -58,31 +55,19 @@ class RESCAL(Model):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            relation_dim=embedding_dim ** 2,  # d x d matrices
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
-        self.relation_embeddings = relation_embeddings
-
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim ** 2)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        self.entity_embeddings.reset_parameters()
+        self.relation_embeddings.reset_parameters()
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

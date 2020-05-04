@@ -6,9 +6,8 @@ from typing import Optional
 
 import torch
 import torch.autograd
-from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class HolE(Model):
+class HolE(EntityRelationEmbeddingModel):
     """An implementation of HolE [nickel2016]_.
 
      This model uses circular correlation to compose head and tail embeddings to afterwards compute the inner
@@ -41,8 +40,6 @@ class HolE(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
@@ -53,19 +50,15 @@ class HolE(Model):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            loss=loss,
             embedding_dim=embedding_dim,
+            loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
-        self.relation_embeddings = relation_embeddings
-
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first
@@ -74,22 +67,10 @@ class HolE(Model):
         # Normalize entity embeddings
         self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
 
-    def init_empty_weights_(self):  # noqa: D102
+    def _reset_parameters_(self):  # noqa: D102
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_uniform_(self.entity_embeddings)
-
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_uniform_(self.relation_embeddings)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+        embedding_xavier_uniform_(self.entity_embeddings)
+        embedding_xavier_uniform_(self.relation_embeddings)
 
     @staticmethod
     def interaction_function(

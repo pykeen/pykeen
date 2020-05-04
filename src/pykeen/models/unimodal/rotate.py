@@ -7,10 +7,9 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.autograd
-from torch import nn
 from torch.nn import functional
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
@@ -21,7 +20,7 @@ __all__ = [
 ]
 
 
-class RotatE(Model):
+class RotatE(EntityRelationEmbeddingModel):
     """An implementation of RotatE from [sun2019]_.
 
      This model uses models relations as cotations in complex plane.
@@ -42,8 +41,6 @@ class RotatE(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -51,41 +48,25 @@ class RotatE(Model):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
+            embedding_dim=2 * embedding_dim,
             loss=loss,
-            embedding_dim=2 * embedding_dim,  # for complex numbers
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
         self.real_embedding_dim = embedding_dim
 
-        # Embeddings
-        self.relation_embeddings = relation_embeddings
-
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_uniform_(self.entity_embeddings)
-
-        if self.relation_embeddings is None:
-            # phases randomly between 0 and 2 pi
-            phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim)
-            relations = torch.stack([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
-            assert torch.allclose(torch.norm(relations, p=2, dim=-1), torch.ones(1, 1))
-            relations = relations.view(self.num_relations, self.embedding_dim)
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim, _weight=relations)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        embedding_xavier_uniform_(self.entity_embeddings)
+        # phases randomly between 0 and 2 pi
+        phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim)
+        relations = torch.stack([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
+        assert torch.allclose(torch.norm(relations, p=2, dim=-1), torch.ones(1, 1))
+        self.relation_embeddings.weight.data = relations.view(self.num_relations, self.embedding_dim)
 
     def post_parameter_update(self) -> None:  # noqa: D102
         r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.

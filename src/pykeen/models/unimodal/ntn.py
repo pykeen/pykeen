@@ -7,7 +7,7 @@ from typing import Optional
 import torch
 from torch import nn
 
-from ..base import Model
+from ..base import EntityEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class NTN(Model):
+class NTN(EntityEmbeddingModel):
     """An implementation of NTN from [socher2013]_.
 
     In NTN, a bilinear tensor layer relates the two entity vectors across multiple dimensions.
@@ -47,12 +47,6 @@ class NTN(Model):
         embedding_dim: int = 100,
         automatic_memory_optimization: Optional[bool] = None,
         num_slices: int = 4,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        w: Optional[nn.Embedding] = None,
-        vh: Optional[nn.Embedding] = None,
-        vt: Optional[nn.Embedding] = None,
-        b: Optional[nn.Embedding] = None,
-        u: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -60,66 +54,60 @@ class NTN(Model):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        if non_linearity is None:
-            non_linearity = nn.Tanh()
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
         self.num_slices = num_slices
 
-        self.w = w
-        self.vh = vh
-        self.vt = vt
-        self.b = b
-        self.u = u
+        self.w = nn.Parameter(data=torch.empty(
+            triples_factory.num_relations,
+            num_slices,
+            embedding_dim,
+            embedding_dim,
+            device=self.device,
+        ), requires_grad=True)
+        self.vh = nn.Parameter(data=torch.empty(
+            triples_factory.num_relations,
+            num_slices,
+            embedding_dim,
+            device=self.device,
+        ), requires_grad=True)
+        self.vt = nn.Parameter(data=torch.empty(
+            triples_factory.num_relations,
+            num_slices,
+            embedding_dim,
+            device=self.device,
+        ), requires_grad=True)
+        self.b = nn.Parameter(data=torch.empty(
+            triples_factory.num_relations,
+            num_slices,
+            device=self.device,
+        ), requires_grad=True)
+        self.u = nn.Parameter(data=torch.empty(
+            triples_factory.num_relations,
+            num_slices,
+            device=self.device,
+        ), requires_grad=True)
+        if non_linearity is None:
+            non_linearity = nn.Tanh()
         self.non_linearity = non_linearity
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        # Initialize entity embeddings
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        # bi-linear tensor layer
-        # W_R: (d, d, k); store as (k, d, d)
-        if self.w is None:
-            init_w = torch.randn(self.num_relations, self.num_slices, self.embedding_dim, self.embedding_dim)
-            self.w = nn.Parameter(init_w, requires_grad=True)
-        # V_R: (k, 2d)
-        if self.vh is None:
-            init_vh = torch.randn(self.num_relations, self.num_slices, self.embedding_dim)
-            self.vh = nn.Parameter(init_vh, requires_grad=True)
-        if self.vt is None:
-            init_vt = torch.randn(self.num_relations, self.num_slices, self.embedding_dim)
-            self.vt = nn.Parameter(init_vt, requires_grad=True)
-        # b_R: (k,)
-        if self.b is None:
-            init_b = torch.randn(self.num_relations, self.num_slices)
-            self.b = nn.Parameter(init_b, requires_grad=True)
-        # u_R: (k,)
-        if self.u is None:
-            init_u = torch.randn(self.num_relations, self.num_slices)
-            self.u = nn.Parameter(init_u, requires_grad=True)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.w = None
-        self.vh = None
-        self.b = None
-        self.u = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        self.entity_embeddings.reset_parameters()
+        nn.init.normal_(self.w)
+        nn.init.normal_(self.vh)
+        nn.init.normal_(self.vt)
+        nn.init.normal_(self.b)
+        nn.init.normal_(self.u)
 
     def _score(
         self,

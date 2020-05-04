@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class ProjE(Model):
+class ProjE(EntityRelationEmbeddingModel):
     """An implementation of ProjE from [shi2017]_.
 
     .. seealso::
@@ -42,67 +42,49 @@ class ProjE(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh()
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.relation_embeddings = relation_embeddings
-        self.inner_non_linearity = inner_non_linearity
 
         # Global entity projection
-        self.d_e = nn.Parameter(torch.empty(self.embedding_dim, requires_grad=True))
+        self.d_e = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
 
         # Global relation projection
-        self.d_r = nn.Parameter(torch.empty(self.embedding_dim, requires_grad=True))
+        self.d_r = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
 
         # Global combination bias
-        self.b_c = nn.Parameter(torch.empty(self.embedding_dim, requires_grad=True))
+        self.b_c = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
 
         # Global combination bias
-        self.b_p = nn.Parameter(torch.empty(1, requires_grad=True))
+        self.b_p = nn.Parameter(torch.empty(1, device=self.device), requires_grad=True)
+
+        if inner_non_linearity is None:
+            inner_non_linearity = nn.Tanh()
+        self.inner_non_linearity = inner_non_linearity
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_uniform_(self.entity_embeddings)
-
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_uniform_(self.relation_embeddings)
-
-        # TODO: How to determine whether weights have been initialized
+    def _reset_parameters_(self):  # noqa: D102
+        embedding_xavier_uniform_(self.entity_embeddings)
+        embedding_xavier_uniform_(self.relation_embeddings)
         bound = numpy.sqrt(6) / self.embedding_dim
         nn.init.uniform_(self.d_e, a=-bound, b=bound)
         nn.init.uniform_(self.d_r, a=-bound, b=bound)
         nn.init.uniform_(self.b_c, a=-bound, b=bound)
         nn.init.uniform_(self.b_p, a=-bound, b=bound)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

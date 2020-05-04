@@ -16,6 +16,7 @@ later, but that will cause problems - the code will get executed twice:
 import inspect
 import os
 import sys
+from itertools import chain
 
 import click
 from click_default_group import DefaultGroup
@@ -28,7 +29,7 @@ from .hpo.cli import optimize
 from .hpo.samplers import samplers as hpo_samplers_dict
 from .losses import losses as losses_dict
 from .models import models as models_dict
-from .models.base import Model
+from .models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizers as optimizers_dict
 from .regularizers import regularizers as regularizers_dict
@@ -90,13 +91,17 @@ def parameters():
     """List hyper-parameter usage."""
     click.echo('Names of __init__() parameters in all classes:')
 
-    base_parameters = set(Model.__init__.__annotations__)
-    _hyperparemeter_usage = sorted(
+    base_parameters = set(chain(
+        Model.__init__.__annotations__,
+        EntityEmbeddingModel.__init__.__annotations__,
+        EntityRelationEmbeddingModel.__init__.__annotations__,
+    ))
+    _hyperparameter_usage = sorted(
         (k, v)
         for k, v in Model._hyperparameter_usage.items()
         if k not in base_parameters
     )
-    for i, (name, values) in enumerate(_hyperparemeter_usage, start=1):
+    for i, (name, values) in enumerate(_hyperparameter_usage, start=1):
         click.echo(f'{i:>2}. {name}')
         for value in sorted(values):
             click.echo(f'    - {value}')

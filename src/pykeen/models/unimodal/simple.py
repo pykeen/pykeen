@@ -5,20 +5,19 @@
 from typing import Optional, Tuple, Union
 
 import torch.autograd
-from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape
+from ...utils import get_embedding, get_embedding_in_canonical_shape
 
 __all__ = [
     'SimplE',
 ]
 
 
-class SimplE(Model):
+class SimplE(EntityRelationEmbeddingModel):
     """An implementation of SimplE [kazemi2018]_.
 
     This model extends CP by updating a triple, and the inverse triple.
@@ -53,10 +52,6 @@ class SimplE(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        tail_entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
-        inverse_relation_embeddings: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -67,41 +62,39 @@ class SimplE(Model):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.relation_embeddings = relation_embeddings
-        self.tail_entity_embeddings = tail_entity_embeddings
-        self.inverse_relation_embeddings = inverse_relation_embeddings
+
+        # extra embeddings
+        self.tail_entity_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
+        self.inverse_relation_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
 
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp = clamp_score
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.tail_entity_embeddings is None:
-            self.tail_entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        if self.inverse_relation_embeddings is None:
-            self.inverse_relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.tail_entity_embeddings = None
-        self.relation_embeddings = None
-        self.inverse_relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        for emb in [
+            self.entity_embeddings,
+            self.tail_entity_embeddings,
+            self.relation_embeddings,
+            self.inverse_relation_embeddings,
+        ]:
+            emb.reset_parameters()
 
     def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
         # forward model

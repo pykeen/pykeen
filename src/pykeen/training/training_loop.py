@@ -264,7 +264,7 @@ class TrainingLoop(ABC):
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
             # Reset the weights
-            self.model.reset_weights_()
+            self.model.reset_parameters_()
 
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)

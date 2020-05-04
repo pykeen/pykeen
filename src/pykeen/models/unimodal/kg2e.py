@@ -7,13 +7,12 @@ from typing import Optional
 
 import torch
 import torch.autograd
-from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding_in_canonical_shape
+from ...utils import clamp_norm, get_embedding, get_embedding_in_canonical_shape
 
 __all__ = [
     'KG2E',
@@ -126,7 +125,7 @@ def _kullback_leibler_similarity(
     return -0.5 * (a + b - c - d)
 
 
-class KG2E(Model):
+class KG2E(EntityRelationEmbeddingModel):
     """An implementation of KG2E from [he2015]_.
 
     This model represents entities and relations as multi-dimensional Gaussian distributions.
@@ -157,10 +156,6 @@ class KG2E(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
-        entity_covariances: Optional[nn.Embedding] = None,
-        relation_covariances: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -173,7 +168,6 @@ class KG2E(Model):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -191,35 +185,30 @@ class KG2E(Model):
         self.c_min = c_min
         self.c_max = c_max
 
-        # Additional embeddings
-        self.relation_embeddings = relation_embeddings
-        self.entity_covariances = entity_covariances
-        self.relation_covariances = relation_covariances
+        # Additional covariance embeddings
+        self.entity_covariances = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
+        self.relation_covariances = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        # means are restricted to max norm of 1
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-
-        # covariance constraints are applied at _apply_forward_constraints_if_necessary
-        if self.entity_covariances is None:
-            self.entity_covariances = nn.Embedding(self.num_entities, self.embedding_dim)
-        if self.relation_covariances is None:
-            self.relation_covariances = nn.Embedding(self.num_relations, self.embedding_dim)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.entity_covariances = None
-        self.relation_embeddings = None
-        self.relation_covariances = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        # Constraints are applied through post_parameter_update
+        for emb in [
+            self.entity_embeddings,
+            self.entity_covariances,
+            self.relation_embeddings,
+            self.relation_covariances,
+        ]:
+            emb.reset_parameters()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

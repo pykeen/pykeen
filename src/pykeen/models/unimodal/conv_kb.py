@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -21,7 +21,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(Model):
+class ConvKB(EntityRelationEmbeddingModel):
     """An implementation of ConvKB from [nguyen2018]_.
 
     .. seealso::
@@ -48,8 +48,6 @@ class ConvKB(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
@@ -65,8 +63,8 @@ class ConvKB(Model):
         """
         super().__init__(
             triples_factory=triples_factory,
-            loss=loss,
             embedding_dim=embedding_dim,
+            loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -75,12 +73,6 @@ class ConvKB(Model):
 
         self.num_filters = num_filters
 
-        # Embeddings
-        if None in (entity_embeddings, relation_embeddings):
-            logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
-        self.entity_embeddings = entity_embeddings
-        self.relation_embeddings = relation_embeddings
-
         # The interaction model
         self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
         self.relu = nn.ReLU()
@@ -88,16 +80,14 @@ class ConvKB(Model):
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
+    def _reset_parameters_(self):  # noqa: D102
+        # embeddings
+        logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
+        self.entity_embeddings.reset_parameters()
+        self.relation_embeddings.reset_parameters()
 
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-
-        # TODO: How to determine whether weights have been initialized
         # Use Xavier initialization for weight; bias to zero
         nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
         nn.init.zeros_(self.linear.bias)
@@ -107,13 +97,6 @@ class ConvKB(Model):
         nn.init.constant_(self.conv.weight[..., :2], 0.1)
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(hrt_batch[:, 0])

@@ -10,7 +10,7 @@ from torch import nn
 
 from pykeen.datasets.nations import NationsTrainingTriplesFactory
 from pykeen.models import TransE
-from pykeen.models.base import Model
+from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 
@@ -21,7 +21,7 @@ class TestBaseModel(unittest.TestCase):
     batch_size: int
     embedding_dim: int
     factory: TriplesFactory
-    model: Model
+    model: EntityRelationEmbeddingModel
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""
@@ -158,7 +158,7 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         assert all(scores_r_function == scores_hrt_function)
 
 
-class SimpleInteractionModel(Model):
+class SimpleInteractionModel(EntityRelationEmbeddingModel):
     """A model with a simple interaction function for testing the base model."""
 
     def __init__(self, triples_factory: TriplesFactory):
@@ -174,10 +174,7 @@ class SimpleInteractionModel(Model):
 
         return torch.sum(h + r + t, dim=1)
 
-    def init_empty_weights_(self) -> Model:  # noqa: D102
-        raise NotImplementedError('Not needed for unittest')
-
-    def clear_weights_(self) -> Model:  # noqa: D102
+    def reset_parameters_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
 
 

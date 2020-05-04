@@ -6,10 +6,9 @@ from typing import Optional
 
 import torch
 import torch.autograd
-from torch import nn
 from torch.nn import functional
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class TransE(Model):
+class TransE(EntityRelationEmbeddingModel):
     """An implementation of TransE from [bordes2013]_.
 
      This model considers a relation as a translation from the head to the tail entity.
@@ -41,8 +40,6 @@ class TransE(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -53,34 +50,21 @@ class TransE(Model):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
         self.scoring_fct_norm = scoring_fct_norm
-        self.relation_embeddings = relation_embeddings
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_uniform_(self.entity_embeddings)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_uniform_(self.relation_embeddings)
-            # Initialise relation embeddings to unit length
-            functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        embedding_xavier_uniform_(self.entity_embeddings)
+        embedding_xavier_uniform_(self.relation_embeddings)
+        # Initialise relation embeddings to unit length
+        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

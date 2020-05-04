@@ -11,12 +11,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import is_cudnn_error
+from ...utils import get_embedding, is_cudnn_error
 
 __all__ = [
     'ConvE',
@@ -74,7 +74,7 @@ def _calculate_missing_shape_information(
     return input_channels, width, height
 
 
-class ConvE(Model):
+class ConvE(EntityRelationEmbeddingModel):
     """An implementation of ConvE from [dettmers2018]_.
 
     .. seealso::
@@ -143,9 +143,6 @@ class ConvE(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        relation_embeddings: Optional[nn.Embedding] = None,
-        bias_term: Optional[nn.Parameter] = None,
         input_channels: Optional[int] = None,
         output_channels: int = 32,
         embedding_height: Optional[int] = None,
@@ -175,7 +172,6 @@ class ConvE(Model):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            entity_embeddings=entity_embeddings,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
@@ -183,10 +179,12 @@ class ConvE(Model):
             regularizer=regularizer,
         )
 
-        # Embeddings
-        self.entity_embeddings = entity_embeddings
-        self.relation_embeddings = relation_embeddings
-        self.bias_term = bias_term
+        # ConvE uses one bias for each entity
+        self.bias_term = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=1,
+            device=self.device,
+        )
 
         # Automatic calculation of remaining dimensions
         logger.info(f'Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
@@ -202,7 +200,6 @@ class ConvE(Model):
             height=embedding_height,
         )
         logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
-
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
         self.input_channels = input_channels
@@ -213,9 +210,9 @@ class ConvE(Model):
                 f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})',
             )
 
-        self.inp_drop = torch.nn.Dropout(input_dropout)
-        self.hidden_drop = torch.nn.Dropout(output_dropout)
-        self.feature_map_drop = torch.nn.Dropout2d(feature_map_dropout)
+        self.inp_drop = nn.Dropout(input_dropout)
+        self.hidden_drop = nn.Dropout(output_dropout)
+        self.feature_map_drop = nn.Dropout2d(feature_map_dropout)
 
         self.conv1 = torch.nn.Conv2d(
             in_channels=self.input_channels,
@@ -228,40 +225,37 @@ class ConvE(Model):
 
         self.apply_batch_normalization = apply_batch_normalization
         if self.apply_batch_normalization:
-            self.bn0 = torch.nn.BatchNorm2d(self.input_channels)
-            self.bn1 = torch.nn.BatchNorm2d(output_channels)
-            self.bn2 = torch.nn.BatchNorm1d(self.embedding_dim)
+            self.bn0 = nn.BatchNorm2d(self.input_channels)
+            self.bn1 = nn.BatchNorm2d(output_channels)
+            self.bn2 = nn.BatchNorm1d(self.embedding_dim)
         else:
             self.bn0 = None
             self.bn1 = None
             self.bn2 = None
-
         num_in_features = \
             output_channels \
             * (2 * self.embedding_height - kernel_height + 1) \
             * (self.embedding_width - kernel_width + 1)
-        self.fc = torch.nn.Linear(num_in_features, self.embedding_dim)
+        self.fc = nn.Linear(num_in_features, self.embedding_dim)
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_normal_(self.entity_embeddings)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-            embedding_xavier_normal_(self.relation_embeddings)
-        if self.bias_term is None:
-            self.bias_term = nn.Parameter(torch.zeros(self.num_entities))
+    def _reset_parameters_(self):  # noqa: D102
+        # embeddings
+        embedding_xavier_normal_(self.entity_embeddings)
+        embedding_xavier_normal_(self.relation_embeddings)
+        nn.init.zeros_(self.bias_term.weight)
 
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.relation_embeddings = None
-        self.bias_term = None
-        return self
+        # weights
+        for module in [
+            self.conv1,
+            self.bn0,
+            self.bn1,
+            self.bn2,
+            self.fc,
+        ]:
+            module.reset_parameters()
 
     def _convolve_entity_relation(self, h: torch.LongTensor, r: torch.LongTensor) -> torch.FloatTensor:
         """Perform the main calculations of the ConvE model."""
@@ -333,7 +327,7 @@ class ConvE(Model):
         In ConvE the bias term add the end is added for each tail item. In the OWA assumption we only have one tail item
         for each head and relation. Accordingly the relevant bias for each tail item and triple has to be looked up.
         """
-        x += self.bias_term[hrt_batch[:, 2, None]]
+        x = x + self.bias_term(hrt_batch[:, 2])
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
@@ -359,7 +353,7 @@ class ConvE(Model):
         x = self._convolve_entity_relation(h, r)
 
         x = x @ t
-        x += self.bias_term.expand_as(x)
+        x = x + self.bias_term.weight.t()
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
@@ -404,7 +398,7 @@ class ConvE(Model):
         the same tail for many different heads, meaning that these items have to be looked up for each tail of each row
         and only then can be added correctly.
         """
-        x += self.bias_term[rt_batch[:, 1, None]]
+        x = x + self.bias_term(rt_batch[:, 1])
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x

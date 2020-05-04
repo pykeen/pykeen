@@ -6,14 +6,13 @@ from typing import Optional
 
 import torch
 import torch.autograd
-from torch import nn
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_normal_
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding_in_canonical_shape
+from ...utils import clamp_norm, get_embedding, get_embedding_in_canonical_shape
 
 __all__ = [
     'TransD',
@@ -67,7 +66,7 @@ def _project_entity(
     return e_bot
 
 
-class TransD(Model):
+class TransD(EntityRelationEmbeddingModel):
     """An implementation of TransD from [ji2015]_.
 
     This model extends TransR to use fewer parameters.
@@ -88,11 +87,7 @@ class TransD(Model):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        entity_embeddings: Optional[nn.Embedding] = None,
-        entity_projections: Optional[nn.Embedding] = None,
         relation_dim: int = 30,
-        relation_embeddings: Optional[nn.Embedding] = None,
-        relation_projections: Optional[nn.Embedding] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
@@ -101,20 +96,27 @@ class TransD(Model):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
-            entity_embeddings=entity_embeddings,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.relation_embedding_dim = relation_dim
-        self.relation_embeddings = relation_embeddings
-        self.entity_projections = entity_projections
-        self.relation_projections = relation_projections
+
+        self.entity_projections = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
+        self.relation_projections = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=relation_dim,
+            device=self.device,
+        )
 
         # Finalize initialization
-        self._init_weights_on_device()
+        self.reset_parameters_()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first
@@ -129,28 +131,11 @@ class TransD(Model):
             dim=-1,
         )
 
-    def init_empty_weights_(self):  # noqa: D102
-        if self.entity_embeddings is None:
-            self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_normal_(self.entity_embeddings)
-        if self.relation_embeddings is None:
-            self.relation_embeddings = nn.Embedding(self.num_relations, self.relation_embedding_dim)
-            embedding_xavier_normal_(self.relation_embeddings)
-        if self.entity_projections is None:
-            self.entity_projections = nn.Embedding(self.num_entities, self.embedding_dim)
-            embedding_xavier_normal_(self.entity_projections)
-        if self.relation_projections is None:
-            self.relation_projections = nn.Embedding(self.num_relations, self.relation_embedding_dim)
-            embedding_xavier_normal_(self.relation_projections)
-
-        return self
-
-    def clear_weights_(self):  # noqa: D102
-        self.entity_embeddings = None
-        self.entity_projections = None
-        self.relation_embeddings = None
-        self.relation_projections = None
-        return self
+    def _reset_parameters_(self):  # noqa: D102
+        embedding_xavier_normal_(self.entity_embeddings)
+        embedding_xavier_normal_(self.entity_projections)
+        embedding_xavier_normal_(self.relation_embeddings)
+        embedding_xavier_normal_(self.relation_projections)
 
     @staticmethod
     def interaction_function(

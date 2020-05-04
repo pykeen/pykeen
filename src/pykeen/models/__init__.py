@@ -33,10 +33,9 @@ UnstructuredModel    :class:`pykeen.models.UnstructuredModel`    [bordes2014]_
 .. note:: This table can be re-generated with ``pykeen ls models -f rst``
 """
 
-import itertools as itt
 from typing import Mapping, Set, Type, Union
 
-from .base import Model
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model
 from .multimodal import ComplExLiteral, DistMultLiteral, MultimodalModel
 from .unimodal import (
     ComplEx,
@@ -91,13 +90,17 @@ __all__ = [
     'get_model_cls',
 ]
 
+
+def _recur(c):
+    for sc in c.__subclasses__():
+        yield sc
+        yield from _recur(sc)
+
+
 _MODELS: Set[Type[Model]] = {
     cls
-    for cls in itt.chain(
-        Model.__subclasses__(),
-        MultimodalModel.__subclasses__(),
-    )
-    if cls not in {Model, MultimodalModel}
+    for cls in _recur(Model)
+    if cls not in {Model, MultimodalModel, EntityRelationEmbeddingModel, EntityEmbeddingModel}
 }
 
 #: A mapping of models' names to their implementations

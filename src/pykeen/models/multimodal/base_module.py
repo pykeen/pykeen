@@ -2,12 +2,12 @@
 
 """Utilities for multimodal KGE models."""
 
-from ..base import Model
+from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     'MultimodalModel',
 ]
 
 
-class MultimodalModel(Model):
+class MultimodalModel(EntityRelationEmbeddingModel):
     """A multimodal KGE model."""
