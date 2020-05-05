@@ -2,32 +2,37 @@
 
 """Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
-========  ==================================
-Name      Reference
-========  ==================================
-fb15k     :class:`pykeen.datasets.fb15k`
-fb15k237  :class:`pykeen.datasets.fb15k237`
-kinships   :class:`pykeen.datasets.kinships`
-nations   :class:`pykeen.datasets.nations`
-umls      :class:`pykeen.datasets.umls`
-wn18      :class:`pykeen.datasets.wn18`
-wn18rr    :class:`pykeen.datasets.wn18rr`
-yago310   :class:`pykeen.datasets.yago310`
-========  ==================================
+=============  ======================================
+Name           Reference
+=============  ======================================
+fb15k          :class:`pykeen.datasets.FB15k`
+fb15k237       :class:`pykeen.datasets.FB15k237`
+hetionet       :class:`pykeen.datasets.Hetionet`
+kinships       :class:`pykeen.datasets.Kinships`
+nations        :class:`pykeen.datasets.Nations`
+openbiolink    :class:`pykeen.datasets.OpenBioLink`
+openbiolinklq  :class:`pykeen.datasets.OpenBioLinkLQ`
+umls           :class:`pykeen.datasets.Umls`
+wn18           :class:`pykeen.datasets.WN18`
+wn18rr         :class:`pykeen.datasets.WN18RR`
+yago310        :class:`pykeen.datasets.YAGO310`
+=============  ======================================
 
-.. note:: This table can be re-generated with ``pykeen ls datasets -f rst``
+.. note:: This table can be re-generated with ``pykeen ls datasets -f rst | pbcopy``
 """
 
 from typing import Any, Mapping, Optional, Set, Tuple, Type, Union
 
 from .dataset import DataSet
 from .freebase import FB15k, FB15k237, fb15k, fb15k237
+from .hetionet import Hetionet
 from .kinships import (
     Kinships, KinshipsTestingTriplesFactory, KinshipsTrainingTriplesFactory, KinshipsValidationTriplesFactory, kinships,
 )
 from .nations import (
     Nations, NationsTestingTriplesFactory, NationsTrainingTriplesFactory, NationsValidationTriplesFactory, nations,
 )
+from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import Umls, UmlsTestingTriplesFactory, UmlsTrainingTriplesFactory, UmlsValidationTriplesFactory, umls
 from .wordnet import WN18, WN18RR, wn18, wn18rr
 from .yago import YAGO310, yago310
@@ -37,6 +42,7 @@ from ..utils import normalize_string
 __all__ = [
     'DataSet',
     'datasets',
+    'Hetionet',
     'kinships',
     'Kinships',
     'KinshipsTrainingTriplesFactory',
@@ -47,6 +53,8 @@ __all__ = [
     'NationsTrainingTriplesFactory',
     'NationsValidationTriplesFactory',
     'NationsTestingTriplesFactory',
+    'OpenBioLink',
+    'OpenBioLinkLQ',
     'umls',
     'Umls',
     'UmlsTrainingTriplesFactory',
@@ -71,6 +79,9 @@ _DATASETS: Set[Type[DataSet]] = {
     Umls,
     FB15k,
     FB15k237,
+    Hetionet,
+    OpenBioLink,
+    OpenBioLinkLQ,
     WN18,
     WN18RR,
     YAGO310,

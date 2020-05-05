@@ -26,7 +26,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-8">Datasets</a> •
+  <a href="#datasets-11">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a>
 </p>
@@ -83,18 +83,21 @@ PyKEEN is extensible such that:
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (8)
+### Datasets (11)
 
-| Name     | Reference                  | Description                                                                                        |
-|----------|----------------------------|----------------------------------------------------------------------------------------------------|
-| fb15k    | `pykeen.datasets.FB15k`    | The FB15k data set.                                                                                |
-| fb15k237 | `pykeen.datasets.FB15k237` | The FB15k-237 data set.                                                                            |
-| kinships | `pykeen.datasets.Kinships` | The Kinships data set.                                                                             |
-| nations  | `pykeen.datasets.Nations`  | The Nations data set.                                                                              |
-| umls     | `pykeen.datasets.Umls`     | The UMLS data set.                                                                                 |
-| wn18     | `pykeen.datasets.WN18`     | The WN18 data set.                                                                                 |
-| wn18rr   | `pykeen.datasets.WN18RR`   | The WN18-RR data set.                                                                              |
-| yago310  | `pykeen.datasets.YAGO310`  | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| Name          | Reference                       | Description                                                                                        |
+|---------------|---------------------------------|----------------------------------------------------------------------------------------------------|
+| fb15k         | `pykeen.datasets.FB15k`         | The FB15k data set.                                                                                |
+| fb15k237      | `pykeen.datasets.FB15k237`      | The FB15k-237 data set.                                                                            |
+| hetionet      | `pykeen.datasets.Hetionet`      | The Hetionet dataset is a large biological network.                                                |
+| kinships      | `pykeen.datasets.Kinships`      | The Kinships data set.                                                                             |
+| nations       | `pykeen.datasets.Nations`       | The Nations data set.                                                                              |
+| openbiolink   | `pykeen.datasets.OpenBioLink`   | The OpenBioLink dataset.                                                                           |
+| openbiolinklq | `pykeen.datasets.OpenBioLinkLQ` | The low-quality variant of the OpenBioLink dataset.                                                |
+| umls          | `pykeen.datasets.Umls`          | The UMLS data set.                                                                                 |
+| wn18          | `pykeen.datasets.WN18`          | The WN18 data set.                                                                                 |
+| wn18rr        | `pykeen.datasets.WN18RR`        | The WN18-RR data set.                                                                              |
+| yago310       | `pykeen.datasets.YAGO310`       | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Models (23)
 

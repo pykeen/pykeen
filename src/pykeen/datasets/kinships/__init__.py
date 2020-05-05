@@ -4,7 +4,7 @@
 
 import os
 
-from ..dataset import DataSet
+from ..dataset import PathDataSet
 from ...triples import TriplesFactory
 
 __all__ = [
@@ -46,7 +46,7 @@ class KinshipsValidationTriplesFactory(TriplesFactory):
         super().__init__(path=VALIDATE_PATH)
 
 
-class Kinships(DataSet):
+class Kinships(PathDataSet):
     """The Kinships data set."""
 
     def __init__(self, **kwargs):

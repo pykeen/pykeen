@@ -8,7 +8,7 @@ import os
 import click
 import numpy as np
 
-from .dataset import DataSet
+from .dataset import PathDataSet
 from ..triples import TriplesFactory
 
 LABELS = ['train', 'test', 'valid']
@@ -50,7 +50,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
         if no_validation:
             click.secho('Can not load as dataset if --no-validation was flagged.', fg='red')
             return
-        d = DataSet(
+        d = PathDataSet(
             training_path=os.path.join(directory, 'train.txt'),
             testing_path=os.path.join(directory, 'test.txt'),
             validation_path=os.path.join(directory, 'valid.txt'),
