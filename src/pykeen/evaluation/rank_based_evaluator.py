@@ -184,10 +184,12 @@ class RankBasedEvaluator(Evaluator):
         self,
         ks: Optional[Iterable[int]] = None,
         filtered: bool = True,
+        restrict_entities_to: Optional[torch.LongTensor] = None,
     ):
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         self.ranks: Dict[str, List[float]] = defaultdict(list)
+        self.restrict_entities_to = restrict_entities_to
 
     def _update_ranks_(
         self,
@@ -199,6 +201,10 @@ class RankBasedEvaluator(Evaluator):
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
         """
+        # Restrict evaluation to a subset of the entities
+        if self.restrict_entities_to is not None:
+            all_scores = all_scores[:, self.restrict_entities_to]
+
         batch_ranks = compute_rank_from_scores(
             true_score=true_scores,
             all_scores=all_scores,
