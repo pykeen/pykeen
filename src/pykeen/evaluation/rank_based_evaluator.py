@@ -186,6 +186,19 @@ class RankBasedEvaluator(Evaluator):
         filtered: bool = True,
         restrict_entities_to: Optional[torch.LongTensor] = None,
     ):
+        """
+        Constructor.
+
+        :param ks:
+            The values for which to calculate hits@k. Defaults to {1,3,5,10}.
+        :param filtered:
+            Whether to use the filtered evaluation protocol. If enabled, ranking another true triple higher than the
+            currently considered one will not decrease the score.
+        :param restrict_entities_to:
+            Optionally restrict the ranking to the given entity IDs. This may be useful if one is only interested in a
+            part of the entities, e.g. due to type constraints, but wants to train on all available data. The scores
+            will still be computed for all entities to avoid irregular access patterns which might decrease performance.
+        """
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         self.ranks: Dict[str, List[float]] = defaultdict(list)
