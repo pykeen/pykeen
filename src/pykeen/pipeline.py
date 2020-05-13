@@ -445,6 +445,7 @@ def pipeline(  # noqa: C901
     # 5. Optimizer
     optimizer: Union[None, str, Type[Optimizer]] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+    clear_optimizer: bool = True,
     # 6. Training Loop
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
@@ -497,6 +498,10 @@ def pipeline(  # noqa: C901
         The name of the optimizer or the optimizer class. Defaults to :class:`torch.optim.Adagrad`.
     :param optimizer_kwargs:
         Keyword arguments to pass to the optimizer on instantiation
+    :param clear_optimizer:
+        Whether to delete the optimizer instance after training. As the optimizer might have additional memory
+        consumption due to e.g. moments in Adam, this is the default option. If you want to continue training, you
+        should set it to False, as the optimizer's internal parameter will get lost otherwise.
 
     :param training_loop:
         The name of the training loop's assumption (``'owa'`` or ``'lcwa'``) or the training loop class.
@@ -662,6 +667,7 @@ def pipeline(  # noqa: C901
     losses = training_loop_instance.train(
         stopper=stopper,
         result_tracker=result_tracker,
+        clear_optimizer=clear_optimizer,
         **training_kwargs,
     )
     training_end_time = time.time() - training_start_time

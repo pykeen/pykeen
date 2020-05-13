@@ -189,6 +189,7 @@ class Objective:
             # 4. Regularizer
             regularizer=self.regularizer,
             regularizer_kwargs=_regularizer_kwargs,
+            clear_optimizer=True,
             # 5. Optimizer
             optimizer=self.optimizer,
             optimizer_kwargs=_optimizer_kwargs,

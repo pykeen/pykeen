@@ -128,6 +128,7 @@ class TrainingLoop(ABC):
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
+        clear_optimizer: bool = False,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -158,6 +159,9 @@ class TrainingLoop(ABC):
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
             The number of child CPU workers used for loading data. If None, data are loaded in the main process.
+        :param clear_optimizer:
+            Whether to delete the optimizer instance after training (as the optimizer might have additional memory
+            consumption due to e.g. moments in Adam).
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -169,7 +173,7 @@ class TrainingLoop(ABC):
         # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
         torch.cuda.empty_cache()
 
-        return self._train(
+        result = self._train(
             num_epochs=num_epochs,
             batch_size=batch_size,
             slice_size=slice_size,
@@ -183,6 +187,12 @@ class TrainingLoop(ABC):
             sub_batch_size=sub_batch_size,
             num_workers=num_workers,
         )
+
+        # Clear optimizer
+        if clear_optimizer:
+            self.optimizer = None
+
+        return result
 
     def _train(  # noqa: C901
         self,
