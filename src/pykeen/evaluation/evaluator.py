@@ -397,6 +397,82 @@ def filter_scores_(
     return scores
 
 
+def _compute_triples_mask_high_memory(
+    mapped_triples: MappedTriples,
+    restrict_entities_to: Optional[torch.LongTensor] = None,
+    restrict_relations_to: Optional[torch.LongTensor] = None,
+) -> torch.BoolTensor:
+    """
+    Compute a mask for triples, which contain only entities/relations from a set of allowed IDs.
+
+    May allocate intermediate tensors of shape (num_triples, restricted_num), but makes heavy use of vectorization.
+
+    :param mapped_triples: shape: (num_triples, 3), dtype: int
+        The triples.
+    :param restrict_entities_to: shape: (restricted_num_entities,)
+        The entity ID restriction.
+    :param restrict_relations_to: shape: (restricted_num_relations,)
+        The relation ID restriction.
+
+    :return: shape: (num_triples,)
+        A mask of triples to select.
+    """
+    # Allocate mask
+    mask = torch.ones(mapped_triples.shape[0], dtype=torch.bool, device=mapped_triples.device)
+
+    # Filter by entity
+    if restrict_entities_to is not None:
+        for col in (0, 2):
+            mask &= (mapped_triples[:, None, col] == restrict_entities_to[None, :]).any(dim=-1)
+
+    # Filter by relation
+    if restrict_relations_to is not None:
+        mask &= (mapped_triples[:, None, 1] == restrict_relations_to[None, :]).any(dim=-1)
+
+    return mask
+
+
+def _compute_triples_mask_low_memory(
+    mapped_triples: MappedTriples,
+    restrict_entities_to: Optional[torch.LongTensor] = None,
+    restrict_relations_to: Optional[torch.LongTensor] = None,
+):
+    """
+    Compute a mask for triples, which contain only entities/relations from a set of allowed IDs.
+
+    Does not allocate intermediate tensors of shape larger than (num_triples,)
+
+    :param mapped_triples: shape: (num_triples, 3), dtype: int
+        The triples.
+    :param restrict_entities_to: shape: (restricted_num_entities,)
+        The entity ID restriction.
+    :param restrict_relations_to: shape: (restricted_num_relations,)
+        The relation ID restriction.
+
+    :return: shape: (num_triples,)
+        A mask of triples to select.
+    """
+    # Allocate mask
+    mask = torch.ones(mapped_triples.shape[0], dtype=torch.bool, device=mapped_triples.device)
+
+    # Filter by entity
+    if restrict_entities_to is not None:
+        triples_entity_mask = torch.zeros(mapped_triples.shape[0], dtype=torch.bool, device=mapped_triples.device)
+        for entity_id in restrict_entities_to:
+            for col in (0, 2):
+                triples_entity_mask |= (mapped_triples[:, col] == entity_id)
+        mask &= triples_entity_mask
+        del triples_entity_mask
+
+    # Filter by relation
+    if restrict_relations_to is not None:
+        triples_relation_mask = torch.zeros(mapped_triples.shape[0], dtype=torch.bool, device=mapped_triples.device)
+        for relation_id in restrict_relations_to:
+            triples_relation_mask |= (mapped_triples[:, 1] == relation_id)
+
+    return mask
+
+
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
@@ -407,6 +483,9 @@ def evaluate(
     device: Optional[torch.device] = None,
     squeeze: bool = True,
     use_tqdm: bool = True,
+    restrict_entities_to: Optional[torch.LongTensor] = None,
+    restrict_relations_to: Optional[torch.LongTensor] = None,
+    memory_intense_filtering: bool = False,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -434,11 +513,37 @@ def evaluate(
         Return a single instance of :class:`MetricResults` if only one evaluator was given.
     :param use_tqdm:
         Should a progress bar be displayed?
+    :param restrict_entities_to:
+        Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
+        part of the entities, e.g. due to type constraints, but wants to train on all available data.This will filter
+        all triples to retain only those which contain the entities of interest. For ranking the entities, we still
+        compute all scores for all possible replacement entities to avoid irregular access patterns which might decrease
+        performance.
+    :param restrict_relations_to:
+        Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
+        part of the relations, e.g. because these relations matter the most for a given application. This will filter
+        all triples to keep only those which contain the relation. This will likely result in a speed-up of evaluation.
+    :param memory_intense_filtering:
+        Whether to use a memory-intense variant of filtering which supports a higher degree of vectorization. Only
+        relevant when restricting either entities, or relations.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
 
     start = timeit.default_timer()
+
+    # Filter triples
+    if restrict_relations_to is not None or restrict_entities_to is not None:
+        logger.info('Filtering triples to retain only those of interest.')
+        _compute_triples_mask = _compute_triples_mask_high_memory if memory_intense_filtering else \
+            _compute_triples_mask_low_memory
+        mask = _compute_triples_mask(
+            mapped_triples=mapped_triples,
+            restrict_entities_to=restrict_entities_to,
+            restrict_relations_to=restrict_relations_to,
+        )
+        # Actual filtering
+        mapped_triples = mapped_triples[mask]
 
     # Send to device
     if device is not None:
@@ -522,12 +627,19 @@ def evaluate(
             else:
                 positive_mask_tails = None
 
+            # Restrict to entities of interest
+            if restrict_entities_to is not None:
+                scores_of_corrupted_tails_batch_ = scores_of_corrupted_tails_batch[:, restrict_entities_to]
+                positive_mask_tails = positive_mask_tails[:, restrict_entities_to]
+            else:
+                scores_of_corrupted_tails_batch_ = scores_of_corrupted_tails_batch
+
             # Evaluate metrics on these *unfiltered* tail scores
             for unfiltered_evaluator in unfiltered_evaluators:
                 unfiltered_evaluator.process_tail_scores_(
                     hrt_batch=batch,
                     true_scores=scores_of_true_tails_batch[:, None],
-                    scores=scores_of_corrupted_tails_batch,
+                    scores=scores_of_corrupted_tails_batch_,
                     dense_positive_mask=positive_mask_tails,
                 )
 
@@ -539,10 +651,15 @@ def evaluate(
                 )
 
                 # The scores for the true triples have to be rewritten to the scores tensor
-                scores_of_corrupted_tails_batch[
+                filtered_scores_of_corrupted_tails_batch[
                     torch.arange(0, batch.shape[0]),
                     batch[:, 2],
                 ] = scores_of_true_tails_batch
+
+                # Restrict to entities of interest
+                if restrict_entities_to is not None:
+                    filtered_scores_of_corrupted_tails_batch = \
+                        filtered_scores_of_corrupted_tails_batch[:, restrict_entities_to]
 
                 # Evaluate metrics on these *filtered* tail scores
                 for filtered_evaluator in filtered_evaluators:
@@ -579,12 +696,19 @@ def evaluate(
             else:
                 positive_mask_heads = None
 
+            # Restrict to entities of interest
+            if restrict_entities_to is not None:
+                scores_of_corrupted_heads_batch_ = scores_of_corrupted_heads_batch[:, restrict_entities_to]
+                positive_mask_heads = positive_mask_heads[:, restrict_entities_to]
+            else:
+                scores_of_corrupted_heads_batch_ = scores_of_corrupted_heads_batch
+
             # Evaluate metrics on these head scores
             for evaluator in unfiltered_evaluators:
                 evaluator.process_head_scores_(
                     hrt_batch=batch,
                     true_scores=scores_of_true_heads_batch[:, None],
-                    scores=scores_of_corrupted_heads_batch,
+                    scores=scores_of_corrupted_heads_batch_,
                     dense_positive_mask=positive_mask_heads,
                 )
 
@@ -598,10 +722,15 @@ def evaluate(
                 )
 
                 # The scores for the true triples have to be rewritten to the scores tensor
-                scores_of_corrupted_heads_batch[
+                filtered_scores_of_corrupted_heads_batch[
                     torch.arange(0, batch.shape[0]),
                     batch[:, 0],
                 ] = scores_of_true_heads_batch
+
+                # Restrict to entities of interest
+                if restrict_entities_to is not None:
+                    filtered_scores_of_corrupted_heads_batch = \
+                        filtered_scores_of_corrupted_heads_batch[:, restrict_entities_to]
 
                 # Evaluate metrics on these *filtered* tail scores
                 for filtered_evaluator in filtered_evaluators:
