@@ -186,8 +186,7 @@ class RankBasedEvaluator(Evaluator):
         filtered: bool = True,
         restrict_entities_to: Optional[torch.LongTensor] = None,
     ):
-        """
-        Constructor.
+        """Constructor.
 
         :param ks:
             The values for which to calculate hits@k. Defaults to {1,3,5,10}.
