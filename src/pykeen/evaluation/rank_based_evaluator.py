@@ -184,7 +184,6 @@ class RankBasedEvaluator(Evaluator):
         self,
         ks: Optional[Iterable[int]] = None,
         filtered: bool = True,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
     ):
         """Constructor.
 
@@ -193,15 +192,10 @@ class RankBasedEvaluator(Evaluator):
         :param filtered:
             Whether to use the filtered evaluation protocol. If enabled, ranking another true triple higher than the
             currently considered one will not decrease the score.
-        :param restrict_entities_to:
-            Optionally restrict the ranking to the given entity IDs. This may be useful if one is only interested in a
-            part of the entities, e.g. due to type constraints, but wants to train on all available data. The scores
-            will still be computed for all entities to avoid irregular access patterns which might decrease performance.
         """
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         self.ranks: Dict[str, List[float]] = defaultdict(list)
-        self.restrict_entities_to = restrict_entities_to
 
     def _update_ranks_(
         self,
@@ -213,10 +207,6 @@ class RankBasedEvaluator(Evaluator):
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
         """
-        # Restrict evaluation to a subset of the entities
-        if self.restrict_entities_to is not None:
-            all_scores = all_scores[:, self.restrict_entities_to]
-
         batch_ranks = compute_rank_from_scores(
             true_score=true_scores,
             all_scores=all_scores,
