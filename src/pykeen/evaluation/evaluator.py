@@ -125,12 +125,16 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
+        restrict_entities_to: Optional[torch.LongTensor] = None,
+        restrict_relations_to: Optional[torch.LongTensor] = None,
+        memory_intense_filtering: bool = False,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
         if model.automatic_memory_optimization and batch_size is None:
+            # TODO: Pass restriction to this as well?
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,
@@ -151,6 +155,9 @@ class Evaluator(ABC):
             device=device,
             squeeze=True,
             use_tqdm=use_tqdm,
+            restrict_entities_to=restrict_entities_to,
+            restrict_relations_to=restrict_relations_to,
+            memory_intense_filtering=memory_intense_filtering,
         )
 
     def batch_and_slice(
