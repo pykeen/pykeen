@@ -607,6 +607,7 @@ def evaluate(
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]
+            relation_filter = None
             for column in (0, 2):
                 relation_filter = _evaluate(
                     batch=batch,
