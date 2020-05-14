@@ -185,7 +185,7 @@ class RankBasedEvaluator(Evaluator):
         ks: Optional[Iterable[int]] = None,
         filtered: bool = True,
     ):
-        """Constructor.
+        """Initialize rank-based evaluator.
 
         :param ks:
             The values for which to calculate hits@k. Defaults to {1,3,5,10}.
