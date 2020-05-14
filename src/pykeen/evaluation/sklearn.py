@@ -75,7 +75,7 @@ class SklearnEvaluator(Evaluator):
         self,
         keys: torch.LongTensor,
         scores: torch.FloatTensor,
-        positive_mask: torch.BoolTensor,
+        positive_mask: torch.FloatTensor,
         head_side: bool,
     ) -> None:
         # Transfer to cpu and convert to numpy
@@ -95,7 +95,7 @@ class SklearnEvaluator(Evaluator):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         if dense_positive_mask is None:
             raise KeyError('Sklearn evaluators need the positive mask!')
@@ -107,7 +107,7 @@ class SklearnEvaluator(Evaluator):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         if dense_positive_mask is None:
             raise KeyError('Sklearn evaluators need the positive mask!')

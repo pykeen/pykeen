@@ -392,7 +392,7 @@ class DummyEvaluator(Evaluator):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         self.counter += 1
 
@@ -401,7 +401,7 @@ class DummyEvaluator(Evaluator):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         self.counter -= 1
 

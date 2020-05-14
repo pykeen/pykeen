@@ -219,7 +219,7 @@ class RankBasedEvaluator(Evaluator):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores)
 
@@ -228,7 +228,7 @@ class RankBasedEvaluator(Evaluator):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores)
 
