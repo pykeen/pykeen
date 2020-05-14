@@ -566,7 +566,7 @@ def pipeline(  # noqa: C901
     if regularizer is not None:
         # FIXME this should never happen.
         if 'regularizer' in model_kwargs:
-            logger.warning(f'Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
+            logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
             del model_kwargs['regularizer']
         regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
         model_kwargs['regularizer'] = regularizer_cls(
@@ -576,7 +576,7 @@ def pipeline(  # noqa: C901
 
     if loss is not None:
         if 'loss' in model_kwargs:  # FIXME
-            logger.warning(f'duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
+            logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
             del model_kwargs['loss']
         loss_cls = get_loss_cls(loss)
         _loss = loss_cls(**(loss_kwargs or {}))
