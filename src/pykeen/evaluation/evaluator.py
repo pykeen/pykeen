@@ -607,145 +607,20 @@ def evaluate(
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]
-
-            # Predict tail scores once
-            scores_of_corrupted_tails_batch = model.predict_scores_all_tails(batch[:, 0:2], slice_size=slice_size)
-            scores_of_true_tails_batch = scores_of_corrupted_tails_batch[
-                torch.arange(0, batch.shape[0]),
-                batch[:, 2],
-            ]
-
-            # Create positive filter for all corrupted tails
-            if filtering_necessary or positive_masks_required:
-                assert all_pos_triples is not None
-                positive_filter_tails, relation_filter = create_sparse_positive_filter_(
-                    hrt_batch=batch,
-                    all_pos_triples=all_pos_triples,
-                    relation_filter=None,
-                    filter_col=2,
-                )
-
-            # Create a positive mask with the size of the scores from the positive tails filter
-            if positive_masks_required:
-                positive_mask_tails = create_dense_positive_mask_(
-                    zero_tensor=torch.zeros_like(scores_of_corrupted_tails_batch),
-                    filter_batch=positive_filter_tails,
-                )
-            else:
-                positive_mask_tails = None
-
-            # Restrict to entities of interest
-            if restrict_entities_to is not None:
-                scores_of_corrupted_tails_batch_ = scores_of_corrupted_tails_batch[:, restrict_entities_to]
-                positive_mask_tails = positive_mask_tails[:, restrict_entities_to]
-            else:
-                scores_of_corrupted_tails_batch_ = scores_of_corrupted_tails_batch
-
-            # Evaluate metrics on these *unfiltered* tail scores
-            for unfiltered_evaluator in unfiltered_evaluators:
-                unfiltered_evaluator.process_tail_scores_(
-                    hrt_batch=batch,
-                    true_scores=scores_of_true_tails_batch[:, None],
-                    scores=scores_of_corrupted_tails_batch_,
-                    dense_positive_mask=positive_mask_tails,
-                )
-
-            # Filter
-            if filtering_necessary:
-                filtered_scores_of_corrupted_tails_batch = filter_scores_(
-                    scores=scores_of_corrupted_tails_batch,
-                    filter_batch=positive_filter_tails,
-                )
-
-                # The scores for the true triples have to be rewritten to the scores tensor
-                filtered_scores_of_corrupted_tails_batch[
-                    torch.arange(0, batch.shape[0]),
-                    batch[:, 2],
-                ] = scores_of_true_tails_batch
-
-                # Restrict to entities of interest
-                if restrict_entities_to is not None:
-                    filtered_scores_of_corrupted_tails_batch = \
-                        filtered_scores_of_corrupted_tails_batch[:, restrict_entities_to]
-
-                # Evaluate metrics on these *filtered* tail scores
-                for filtered_evaluator in filtered_evaluators:
-                    filtered_evaluator.process_tail_scores_(
-                        hrt_batch=batch,
-                        true_scores=scores_of_true_tails_batch[:, None],
-                        scores=filtered_scores_of_corrupted_tails_batch,
-                    )
-
-            # Predict head scores once
-            scores_of_corrupted_heads_batch = model.predict_scores_all_heads(batch[:, 1:3], slice_size=slice_size)
-            scores_of_true_heads_batch = scores_of_corrupted_heads_batch[
-                torch.arange(0, batch.shape[0]),
-                batch[:, 0],
-            ]
-
-            # Create positive filter for all corrupted heads
-            if filtering_necessary or positive_masks_required:
-                assert all_pos_triples is not None
-                assert relation_filter is not None
-                positive_filter_heads, _ = create_sparse_positive_filter_(
-                    hrt_batch=batch,
+            for column in (0, 2):
+                relation_filter = _evaluate(
+                    batch=batch,
+                    model=model,
+                    column=column,
+                    filtered_evaluators=filtered_evaluators,
+                    unfiltered_evaluators=unfiltered_evaluators,
+                    slice_size=slice_size,
                     all_pos_triples=all_pos_triples,
                     relation_filter=relation_filter,
-                    filter_col=0,
+                    restrict_entities_to=restrict_entities_to,
+                    positive_masks_required=positive_masks_required,
+                    filtering_necessary=filtering_necessary
                 )
-
-            # Create a positive mask with the size of the scores from the positive heads filter
-            if positive_masks_required:
-                positive_mask_heads = create_dense_positive_mask_(
-                    zero_tensor=torch.zeros_like(scores_of_corrupted_heads_batch),
-                    filter_batch=positive_filter_heads,
-                )
-            else:
-                positive_mask_heads = None
-
-            # Restrict to entities of interest
-            if restrict_entities_to is not None:
-                scores_of_corrupted_heads_batch_ = scores_of_corrupted_heads_batch[:, restrict_entities_to]
-                positive_mask_heads = positive_mask_heads[:, restrict_entities_to]
-            else:
-                scores_of_corrupted_heads_batch_ = scores_of_corrupted_heads_batch
-
-            # Evaluate metrics on these head scores
-            for evaluator in unfiltered_evaluators:
-                evaluator.process_head_scores_(
-                    hrt_batch=batch,
-                    true_scores=scores_of_true_heads_batch[:, None],
-                    scores=scores_of_corrupted_heads_batch_,
-                    dense_positive_mask=positive_mask_heads,
-                )
-
-            # Filter
-            if filtering_necessary:
-                assert all_pos_triples is not None
-                assert relation_filter is not None
-                filtered_scores_of_corrupted_heads_batch = filter_scores_(
-                    scores=scores_of_corrupted_heads_batch,
-                    filter_batch=positive_filter_heads
-                )
-
-                # The scores for the true triples have to be rewritten to the scores tensor
-                filtered_scores_of_corrupted_heads_batch[
-                    torch.arange(0, batch.shape[0]),
-                    batch[:, 0],
-                ] = scores_of_true_heads_batch
-
-                # Restrict to entities of interest
-                if restrict_entities_to is not None:
-                    filtered_scores_of_corrupted_heads_batch = \
-                        filtered_scores_of_corrupted_heads_batch[:, restrict_entities_to]
-
-                # Evaluate metrics on these *filtered* tail scores
-                for filtered_evaluator in filtered_evaluators:
-                    filtered_evaluator.process_head_scores_(
-                        hrt_batch=batch,
-                        true_scores=scores_of_true_heads_batch[:, None],
-                        scores=filtered_scores_of_corrupted_heads_batch,
-                    )
 
             # If we only probe sizes we do not need more than one batch
             if only_size_probing and evaluated_once:
@@ -769,3 +644,130 @@ def evaluate(
         return results[0]
 
     return results
+
+
+def _evaluate(
+    batch: MappedTriples,
+    model: Model,
+    column: int,
+    filtered_evaluators: Collection[Evaluator],
+    unfiltered_evaluators: Collection[Evaluator],
+    slice_size: Optional[int],
+    all_pos_triples: Optional[MappedTriples],
+    relation_filter: Optional[torch.BoolTensor],
+    restrict_entities_to: Optional[torch.LongTensor],
+    positive_masks_required: bool,
+    filtering_necessary: bool,
+) -> torch.BoolTensor:
+    """
+    Evaluate batch for all head predictions(column=0), or all tail predictions (column=2).
+
+    :param batch: shape: (batch_size, 3)
+        The batch of currently evaluated triples.
+    :param model:
+        The model to evaluate.
+    :param column:
+        The column which to evaluate. Either 0 for head prediction, or 2 for tail prediction.
+    :param filtered_evaluators:
+        The evaluators which work on filtered scores.
+    :param unfiltered_evaluators:
+        The evaluators which work on unfiltered scores.
+    :param slice_size:
+        An optional slice size for computing the scores.
+    :param all_pos_triples:
+        All positive triples (required if filtering is necessary).
+    :param relation_filter:
+        The relation filter. Can be re-used.
+    :param restrict_entities_to:
+        Restriction to evaluate only for these entities.
+    :param positive_masks_required:
+        Whether dense positive masks are required (by any unfiltered evaluator).
+    :param filtering_necessary:
+        Whether filtering is necessary.
+
+    :return:
+        The relation filter, which can be re-used for the same batch.
+    """
+    if column not in {0, 2}:
+        raise ValueError(f'column must be either 0 or 2, but is column={column}')
+
+    # Predict tail scores once
+    if column == 2:  # tail scores
+        scores_of_corrupted_tails_batch = model.predict_scores_all_tails(batch[:, 0:2], slice_size=slice_size)
+    else:
+        scores_of_corrupted_tails_batch = model.predict_scores_all_heads(batch[:, 1:3], slice_size=slice_size)
+    scores_of_true_tails_batch = scores_of_corrupted_tails_batch[
+        torch.arange(0, batch.shape[0]),
+        batch[:, column],
+    ]
+
+    # Create positive filter for all corrupted tails
+    if filtering_necessary or positive_masks_required:
+        assert all_pos_triples is not None
+        positive_filter_tails, relation_filter = create_sparse_positive_filter_(
+            hrt_batch=batch,
+            all_pos_triples=all_pos_triples,
+            relation_filter=relation_filter,
+            filter_col=column,
+        )
+
+    # Create a positive mask with the size of the scores from the positive tails filter
+    if positive_masks_required:
+        positive_mask_tails = create_dense_positive_mask_(
+            zero_tensor=torch.zeros_like(scores_of_corrupted_tails_batch),
+            filter_batch=positive_filter_tails,
+        )
+    else:
+        positive_mask_tails = None
+
+    # Restrict to entities of interest
+    if restrict_entities_to is not None:
+        scores_of_corrupted_tails_batch_ = scores_of_corrupted_tails_batch[:, restrict_entities_to]
+        positive_mask_tails = positive_mask_tails[:, restrict_entities_to]
+    else:
+        scores_of_corrupted_tails_batch_ = scores_of_corrupted_tails_batch
+
+    # Evaluate metrics on these *unfiltered* tail scores
+    for unfiltered_evaluator in unfiltered_evaluators:
+        if column == 2:  # tail scores
+            process = unfiltered_evaluator.process_tail_scores_
+        else:
+            process = unfiltered_evaluator.process_head_scores_
+        process(
+            hrt_batch=batch,
+            true_scores=scores_of_true_tails_batch[:, None],
+            scores=scores_of_corrupted_tails_batch_,
+            dense_positive_mask=positive_mask_tails,
+        )
+
+    # Filter
+    if filtering_necessary:
+        filtered_scores_of_corrupted_tails_batch = filter_scores_(
+            scores=scores_of_corrupted_tails_batch,
+            filter_batch=positive_filter_tails,
+        )
+
+        # The scores for the true triples have to be rewritten to the scores tensor
+        filtered_scores_of_corrupted_tails_batch[
+            torch.arange(0, batch.shape[0]),
+            batch[:, column],
+        ] = scores_of_true_tails_batch
+
+        # Restrict to entities of interest
+        if restrict_entities_to is not None:
+            filtered_scores_of_corrupted_tails_batch = \
+                filtered_scores_of_corrupted_tails_batch[:, restrict_entities_to]
+
+        # Evaluate metrics on these *filtered* tail scores
+        for filtered_evaluator in filtered_evaluators:
+            if column == 2:  # tail scores
+                process = filtered_evaluator.process_tail_scores_
+            else:
+                process = filtered_evaluator.process_head_scores_
+            process(
+                hrt_batch=batch,
+                true_scores=scores_of_true_tails_batch[:, None],
+                scores=filtered_scores_of_corrupted_tails_batch,
+            )
+
+    return relation_filter
