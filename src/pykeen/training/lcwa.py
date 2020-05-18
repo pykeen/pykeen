@@ -124,7 +124,7 @@ class LCWATrainingLoop(TrainingLoop):
         self._check_slicing_availability(supports_sub_batching)
         reached_max = False
         evaluated_once = False
-        logger.info(f"Trying slicing now.")
+        logger.info("Trying slicing now.")
         # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
         # must have failed to start slice_size search, we start with trying half the entities.
         slice_size = ceil(self.model.num_entities / 2)

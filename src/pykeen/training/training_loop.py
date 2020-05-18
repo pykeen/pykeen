@@ -560,12 +560,12 @@ class TrainingLoop(ABC):
             sub_batch_size //= 2
         else:
             finished_search = True
-            logger.debug(f'No sub-batching required.')
+            logger.debug('No sub-batching required.')
 
         if not finished_search:
-            logger.info(f'Starting sub_batch_size search for training now...')
+            logger.info('Starting sub_batch_size search for training now...')
             if not self.model.supports_subbatching:
-                logger.info(f'This model does not support sub-batching.')
+                logger.info('This model does not support sub-batching.')
                 supports_sub_batching = False
                 sub_batch_size = batch_size
             else:
