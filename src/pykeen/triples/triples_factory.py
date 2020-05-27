@@ -493,6 +493,11 @@ class TriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
+        if self.create_inverse_triples:
+            raise NotImplementedError(
+                'Restriction on triples factories with create_inverse_triples=True is currently not supported. For '
+                'that we need a way to construct a triples factory with manually transmitting the inverse relations.'
+            )
         keep_mask = None
         # Filter for entities
         if entities is not None:
