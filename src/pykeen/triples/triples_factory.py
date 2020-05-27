@@ -494,27 +494,43 @@ class TriplesFactory:
             interest. The label-to-ID mapping is *not* modified.
         """
         if self.create_inverse_triples:
-            raise NotImplementedError(
-                'Restriction on triples factories with create_inverse_triples=True is currently not supported. For '
-                'that we need a way to construct a triples factory with manually transmitting the inverse relations.'
+            logger.info(
+                'Since %s already contain inverse relations, the relation filter is expanded to contain the inverse '
+                'relations as well.',
+                str(self),
             )
+            relations = list(relations) + list(map(self.relation_to_inverse.__getitem__, relations))
+
         keep_mask = None
+
         # Filter for entities
         if entities is not None:
             keep_mask = self.get_idx_for_entities(entities=entities)
             logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
+
         # Filter for relations
         if relations is not None:
             relation_mask = self.get_idx_for_relations(relations=relations)
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
         # No filtering happened
         if keep_mask is None:
             return self
+
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
-        return TriplesFactory(
+        factory = TriplesFactory(
             triples=self.triples[keep_mask],
+            create_inverse_triples=False,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
             compact_id=False,
         )
+
+        # manually copy the inverse relation mappings
+        if self.create_inverse_triples:
+            factory.create_inverse_triples = True
+            factory.relation_to_inverse = self.relation_to_inverse
+            factory._num_relations = self._num_relations
+
+        return factory
