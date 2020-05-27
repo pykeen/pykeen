@@ -450,6 +450,11 @@ class TriplesFactory:
             for relation, _ in counter.most_common(n)
         }
 
+    def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
+        """Get an np.array index for triples with the given entities."""
+        return np.isin(self.triples[:, 0], list(entities), invert=invert) \
+               & np.isin(self.triples[:, 1], list(entities), invert=invert)
+
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
         """Get an np.array index for triples with the given relations."""
         return np.isin(self.triples[:, 1], list(relations), invert=invert)
@@ -471,3 +476,40 @@ class TriplesFactory:
         logger.info(f'removing {len(relations)}/{self.num_relations} relations'
                     f' and {idx.sum()}/{self.num_triples} triples')
         return TriplesFactory(triples=self.triples[idx])
+
+    def new_with_restriction(
+        self,
+        entities: Optional[Collection[str]] = None,
+        relations: Optional[Collection[str]] = None,
+    ) -> 'TriplesFactory':
+        """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
+
+        :param entities:
+            The entities of interest. If None, defaults to all entities.
+        :param relations:
+            The relations of interest. If None, defaults to all relations.
+
+        :return:
+            A new triples factory, which has only a subset of the triples containing the entities and relations of
+            interest. The label-to-ID mapping is *not* modified.
+        """
+        keep_mask = None
+        # Filter for entities
+        if entities is not None:
+            keep_mask = self.get_idx_for_entities(entities=entities)
+            logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
+        # Filter for relations
+        if relations is not None:
+            relation_mask = self.get_idx_for_relations(relations=relations)
+            logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
+            keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+        # No filtering happened
+        if keep_mask is None:
+            return self
+        logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
+        return TriplesFactory(
+            triples=self.triples[keep_mask],
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            compact_id=False,
+        )
