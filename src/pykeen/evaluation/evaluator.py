@@ -126,7 +126,6 @@ class Evaluator(ABC):
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
         restrict_entities_to: Optional[torch.LongTensor] = None,
-        restrict_relations_to: Optional[torch.LongTensor] = None,
         memory_intense_filtering: bool = False,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
@@ -156,7 +155,6 @@ class Evaluator(ABC):
             squeeze=True,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
-            restrict_relations_to=restrict_relations_to,
             memory_intense_filtering=memory_intense_filtering,
         )
 
@@ -491,8 +489,6 @@ def evaluate(
     squeeze: bool = True,
     use_tqdm: bool = True,
     restrict_entities_to: Optional[torch.LongTensor] = None,
-    restrict_relations_to: Optional[torch.LongTensor] = None,
-    memory_intense_filtering: bool = False,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -522,34 +518,24 @@ def evaluate(
         Should a progress bar be displayed?
     :param restrict_entities_to:
         Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
-        part of the entities, e.g. due to type constraints, but wants to train on all available data.This will filter
-        all triples to retain only those which contain the entities of interest. For ranking the entities, we still
-        compute all scores for all possible replacement entities to avoid irregular access patterns which might decrease
-        performance.
-    :param restrict_relations_to:
-        Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
-        part of the relations, e.g. because these relations matter the most for a given application. This will filter
-        all triples to keep only those which contain the relation. This will likely result in a speed-up of evaluation.
-    :param memory_intense_filtering:
-        Whether to use a memory-intense variant of filtering which supports a higher degree of vectorization. Only
-        relevant when restricting either entities, or relations.
+        part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
+        entities, we still compute all scores for all possible replacement entities to avoid irregular access patterns
+        which might decrease performance, but the scores with afterwards be filtered to only keep those of interest.
+        If provided, we assume that the triples are already filtered, such that it only contains the entities of
+        interest.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
 
     start = timeit.default_timer()
 
-    # Filter triples
-    if restrict_relations_to is not None or restrict_entities_to is not None:
-        logger.info('Filtering triples to retain only those of interest.')
-        _compute_triples_mask = _compute_triples_mask_high_memory if memory_intense_filtering else \
-            _compute_triples_mask_low_memory
-        # Actual filtering
-        mapped_triples = mapped_triples[_compute_triples_mask(
-            mapped_triples=mapped_triples,
-            restrict_entities_to=restrict_entities_to,
-            restrict_relations_to=restrict_relations_to,
-        )]
+    # verify that the triples have been filtered
+    if restrict_entities_to is not None:
+        present_entity_ids = set(mapped_triples[:, 0].unique().tolist()).union(mapped_triples[:, 2].unique().tolist())
+        unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
+        if len(unwanted) > 0:
+            raise ValueError(f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
+                             f'{unwanted}. This will invalidate the evaluation results.')
 
     # Send to device
     if device is not None:
@@ -608,7 +594,7 @@ def evaluate(
             batch_size = batch.shape[0]
             relation_filter = None
             for column in (0, 2):
-                relation_filter = _evaluate(
+                relation_filter = _evaluate_batch(
                     batch=batch,
                     model=model,
                     column=column,
@@ -646,7 +632,7 @@ def evaluate(
     return results
 
 
-def _evaluate(
+def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
     column: int,
