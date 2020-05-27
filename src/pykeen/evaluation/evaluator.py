@@ -161,7 +161,7 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: int,
+        batch_size: Optional[int],
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
@@ -181,7 +181,7 @@ class Evaluator(ABC):
         :param mapped_triples:
             The triples on which to evaluate.
         :param batch_size:
-            The initial batch size to start with.
+            The initial batch size to start with. None defaults to number_of_triples.
         :param device:
             The device on which the evaluation shall be run. If None is given, use the model's device.
         :param use_tqdm:
