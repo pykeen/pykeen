@@ -544,13 +544,12 @@ def evaluate(
         logger.info('Filtering triples to retain only those of interest.')
         _compute_triples_mask = _compute_triples_mask_high_memory if memory_intense_filtering else \
             _compute_triples_mask_low_memory
-        mask = _compute_triples_mask(
+        # Actual filtering
+        mapped_triples = mapped_triples[_compute_triples_mask(
             mapped_triples=mapped_triples,
             restrict_entities_to=restrict_entities_to,
             restrict_relations_to=restrict_relations_to,
-        )
-        # Actual filtering
-        mapped_triples = mapped_triples[mask]
+        )]
 
     # Send to device
     if device is not None:
