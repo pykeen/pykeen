@@ -132,7 +132,6 @@ class Evaluator(ABC):
             mapped_triples = model.triples_factory.mapped_triples
 
         if model.automatic_memory_optimization and batch_size is None:
-            # TODO: Pass restriction to this as well?
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,
