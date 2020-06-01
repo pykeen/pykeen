@@ -124,6 +124,10 @@ def _map_triples_elements_to_ids(
     relation_to_id: RelationMapping,
 ) -> MappedTriples:
     """Map entities and relations to pre-defined ids."""
+    if triples.size < 1:
+        logger.warning('Provided empty triples to map.')
+        return torch.empty(0, 3, dtype=torch.long)
+
     heads, relations, tails = slice_triples(triples)
 
     # When triples that don't exist are trying to be mapped, they get the id "-1"
