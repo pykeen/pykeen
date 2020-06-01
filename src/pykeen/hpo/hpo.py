@@ -106,7 +106,7 @@ class Objective:
         for key, callback in zip(('continue_callbacks', 'stopped_callbacks'), (_continue_callback, _stopped_callback)):
             stopper_kwargs.setdefault(key, []).append(callback)
 
-    def __call__(self, trial: Trial) -> float:
+    def __call__(self, trial: Trial) -> Optional[float]:
         """Suggest parameters then train the model."""
         if self.model_kwargs is not None:
             problems = [
@@ -173,53 +173,59 @@ class Objective:
         if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
             self._update_stopper_callbacks(_stopper_kwargs, trial)
 
-        result = pipeline(
-            # 1. Dataset
-            dataset=self.dataset,
-            dataset_kwargs=self.dataset_kwargs,
-            training_triples_factory=self.training_triples_factory,
-            testing_triples_factory=self.testing_triples_factory,
-            validation_triples_factory=self.validation_triples_factory,
-            # 2. Model
-            model=self.model,
-            model_kwargs=_model_kwargs,
-            # 3. Loss
-            loss=self.loss,
-            loss_kwargs=_loss_kwargs,
-            # 4. Regularizer
-            regularizer=self.regularizer,
-            regularizer_kwargs=_regularizer_kwargs,
-            clear_optimizer=True,
-            # 5. Optimizer
-            optimizer=self.optimizer,
-            optimizer_kwargs=_optimizer_kwargs,
-            # 6. Training Loop
-            training_loop=self.training_loop,
-            negative_sampler=self.negative_sampler,
-            negative_sampler_kwargs=_negative_sampler_kwargs,
-            # 7. Training
-            training_kwargs=_training_kwargs,
-            stopper=self.stopper,
-            stopper_kwargs=_stopper_kwargs,
-            # 8. Evaluation
-            evaluator=self.evaluator,
-            evaluator_kwargs=self.evaluator_kwargs,
-            evaluation_kwargs=self.evaluation_kwargs,
-            # Misc.
-            use_testing_data=False,  # use validation set during HPO!
-            device=self.device,
-        )
-        if self.save_model_directory:
-            model_directory = os.path.join(self.save_model_directory, str(trial.number))
-            os.makedirs(model_directory, exist_ok=True)
-            result.save_to_directory(model_directory)
+        try:
+            result = pipeline(
+                # 1. Dataset
+                dataset=self.dataset,
+                dataset_kwargs=self.dataset_kwargs,
+                training_triples_factory=self.training_triples_factory,
+                testing_triples_factory=self.testing_triples_factory,
+                validation_triples_factory=self.validation_triples_factory,
+                # 2. Model
+                model=self.model,
+                model_kwargs=_model_kwargs,
+                # 3. Loss
+                loss=self.loss,
+                loss_kwargs=_loss_kwargs,
+                # 4. Regularizer
+                regularizer=self.regularizer,
+                regularizer_kwargs=_regularizer_kwargs,
+                clear_optimizer=True,
+                # 5. Optimizer
+                optimizer=self.optimizer,
+                optimizer_kwargs=_optimizer_kwargs,
+                # 6. Training Loop
+                training_loop=self.training_loop,
+                negative_sampler=self.negative_sampler,
+                negative_sampler_kwargs=_negative_sampler_kwargs,
+                # 7. Training
+                training_kwargs=_training_kwargs,
+                stopper=self.stopper,
+                stopper_kwargs=_stopper_kwargs,
+                # 8. Evaluation
+                evaluator=self.evaluator,
+                evaluator_kwargs=self.evaluator_kwargs,
+                evaluation_kwargs=self.evaluation_kwargs,
+                # Misc.
+                use_testing_data=False,  # use validation set during HPO!
+                device=self.device,
+            )
+        except (MemoryError, RuntimeError) as e:
+            trial.set_user_attr('failure', str(e))
+            # Will trigger Optuna to set the state of the trial as failed
+            return None
+        else:
+            if self.save_model_directory:
+                model_directory = os.path.join(self.save_model_directory, str(trial.number))
+                os.makedirs(model_directory, exist_ok=True)
+                result.save_to_directory(model_directory)
 
-        trial.set_user_attr('random_seed', result.random_seed)
+            trial.set_user_attr('random_seed', result.random_seed)
 
-        for k, v in result.metric_results.to_flat_dict().items():
-            trial.set_user_attr(k, v)
+            for k, v in result.metric_results.to_flat_dict().items():
+                trial.set_user_attr(k, v)
 
-        return result.metric_results.get_metric(self.metric)
+            return result.metric_results.get_metric(self.metric)
 
 
 @dataclass
