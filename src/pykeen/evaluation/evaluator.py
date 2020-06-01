@@ -160,7 +160,7 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: Optional[int],
+        batch_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
