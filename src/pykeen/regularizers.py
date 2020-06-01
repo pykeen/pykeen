@@ -61,9 +61,15 @@ class Regularizer(nn.Module):
     ):
         super().__init__()
         self.device = device
-        self.weight = torch.as_tensor(weight, device=self.device)
+        self.register_buffer(name='weight', tensor=torch.as_tensor(weight, device=self.device))
         self.apply_only_once = apply_only_once
         self.reset()
+
+    def to(self, *args, **kwargs) -> 'Regularizer':  # noqa: D102
+        super().to(*args, **kwargs)
+        self.device = torch._C._nn._parse_to(*args, **kwargs)[0]
+        self.reset()
+        return self
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -231,6 +237,9 @@ class TransHRegularizer(Regularizer):
 class CombinedRegularizer(Regularizer):
     """A convex combination of regularizers."""
 
+    # The normalization factor to balance individual regularizers' contribution.
+    normalization_factor: torch.FloatTensor
+
     def __init__(
         self,
         regularizers: Iterable[Regularizer],
@@ -239,11 +248,13 @@ class CombinedRegularizer(Regularizer):
         apply_only_once: bool = False,
     ):
         super().__init__(weight=total_weight, device=device, apply_only_once=apply_only_once)
-        self.regularizers = list(regularizers)
+        self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
                 raise TypeError('Can not combine a no-op regularizer')
-        self.normalization_factor = torch.reciprocal(torch.as_tensor(sum(r.weight for r in self.regularizers)))
+        self.register_buffer(name='normalization_factor', tensor=torch.as_tensor(
+            sum(r.weight for r in self.regularizers), device=device
+        ).reciprocal())
 
     @property
     def normalize(self):  # noqa: D102

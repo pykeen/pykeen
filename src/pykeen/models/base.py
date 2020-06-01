@@ -213,6 +213,7 @@ class Model(nn.Module):
     def to_device_(self) -> 'Model':
         """Transfer model to device."""
         self.to(self.device)
+        self.regularizer.to(self.device)
         torch.cuda.empty_cache()
         return self
 
