@@ -143,6 +143,8 @@ class EarlyStopper(Stopper):
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
+            # Only perform time consuming checks for the first call.
+            do_time_consuming_checks=self.evaluation_batch_size is None,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size

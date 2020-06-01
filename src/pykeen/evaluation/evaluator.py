@@ -126,6 +126,7 @@ class Evaluator(ABC):
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
         restrict_entities_to: Optional[torch.LongTensor] = None,
+        do_time_consuming_checks: bool = True,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if mapped_triples is None:
@@ -139,6 +140,7 @@ class Evaluator(ABC):
                 device=device,
                 use_tqdm=False,
                 restrict_entities_to=restrict_entities_to,
+                do_time_consuming_checks=do_time_consuming_checks,
             )
             # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
             self.batch_size = batch_size
@@ -154,6 +156,7 @@ class Evaluator(ABC):
             squeeze=True,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
+            do_time_consuming_checks=do_time_consuming_checks,
         )
 
     def batch_and_slice(
@@ -164,6 +167,7 @@ class Evaluator(ABC):
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
+        do_time_consuming_checks: bool = True,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -202,6 +206,7 @@ class Evaluator(ABC):
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
+            do_time_consuming_checks=do_time_consuming_checks,
         )
 
         if evaluated_once:  # slice_size = None
@@ -218,6 +223,7 @@ class Evaluator(ABC):
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
+            do_time_consuming_checks=False,
         )
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
@@ -233,6 +239,7 @@ class Evaluator(ABC):
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
+        do_time_consuming_checks: bool = True,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -265,6 +272,7 @@ class Evaluator(ABC):
                     squeeze=True,
                     use_tqdm=use_tqdm,
                     restrict_entities_to=restrict_entities_to,
+                    do_time_consuming_checks=do_time_consuming_checks,
                 )
             except RuntimeError as runtime_error:
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
