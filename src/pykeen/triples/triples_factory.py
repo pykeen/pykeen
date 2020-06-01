@@ -497,7 +497,7 @@ class TriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
-        if self.create_inverse_triples:
+        if self.create_inverse_triples and relations is not None:
             logger.info(
                 'Since %s already contain inverse relations, the relation filter is expanded to contain the inverse '
                 'relations as well.',
