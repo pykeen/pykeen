@@ -82,7 +82,7 @@ class Evaluator(ABC):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
         """Process a batch of triples with their computed tail scores for all entities.
 
@@ -90,7 +90,7 @@ class Evaluator(ABC):
         :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
         :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional boolean tensor indicating other true entities.
+            An optional binary (0/1) tensor indicating other true entities.
         """
         raise NotImplementedError
 
@@ -100,7 +100,7 @@ class Evaluator(ABC):
         hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.BoolTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
         """Process a batch of triples with their computed head scores for all entities.
 
@@ -108,7 +108,7 @@ class Evaluator(ABC):
         :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
         :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional boolean tensor indicating other true entities.
+            An optional binary (0/1) tensor indicating other true entities.
         """
         raise NotImplementedError
 
@@ -157,7 +157,7 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        batch_size: int,
+        batch_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
     ) -> Tuple[int, Optional[int]]:
@@ -176,7 +176,7 @@ class Evaluator(ABC):
         :param mapped_triples:
             The triples on which to evaluate.
         :param batch_size:
-            The initial batch size to start with.
+            The initial batch size to start with. None defaults to number_of_triples.
         :param device:
             The device on which the evaluation shall be run. If None is given, use the model's device.
         :param use_tqdm:
