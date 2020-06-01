@@ -418,6 +418,7 @@ def evaluate(
     squeeze: bool = True,
     use_tqdm: bool = True,
     restrict_entities_to: Optional[torch.LongTensor] = None,
+    do_time_consuming_checks: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -452,6 +453,10 @@ def evaluate(
         which might decrease performance, but the scores with afterwards be filtered to only keep those of interest.
         If provided, we assume that the triples are already filtered, such that it only contains the entities of
         interest.
+    :param do_time_consuming_checks:
+        Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
+        - If restrict_entities_to is not None, check whether the triples have been filtered.
+        Disabling this option can accelerate the method.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
@@ -459,7 +464,7 @@ def evaluate(
     start = timeit.default_timer()
 
     # verify that the triples have been filtered
-    if restrict_entities_to is not None:
+    if restrict_entities_to is not None and do_time_consuming_checks:
         present_entity_ids = set(mapped_triples[:, 0].unique().tolist()).union(mapped_triples[:, 2].unique().tolist())
         unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
         if len(unwanted) > 0:
