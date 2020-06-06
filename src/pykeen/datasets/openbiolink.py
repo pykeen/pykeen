@@ -13,10 +13,14 @@ from .dataset import PackedZipRemoteDataSet
 
 __all__ = [
     'OpenBioLink',
+    'OpenBioLinkF1',
+    'OpenBioLinkF2',
     'OpenBioLinkLQ',
 ]
 
 HQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/HQ_DIR.zip'
+F1_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filter_1/openbiolink_f1.zip'
+F2_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filter_2/openbiolink_f2.zip'
 LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
 
 
@@ -39,6 +43,36 @@ class OpenBioLink(PackedZipRemoteDataSet):
             relative_training_path='HQ_DIR/train_test_data/train_sample.csv',
             relative_testing_path='HQ_DIR/train_test_data/test_sample.csv',
             relative_validation_path='HQ_DIR/train_test_data/val_sample.csv',
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+        )
+
+
+class OpenBioLinkF1(PackedZipRemoteDataSet):
+    """The PyKEEN First Filtered OpenBioLink 2020 Dataset."""
+
+    def __init__(self, create_inverse_triples: bool = False, eager: bool = False):
+        super().__init__(
+            url=F1_URL,
+            name='openbiolink_f1.zip',
+            relative_training_path='train.tsv',
+            relative_testing_path='test.csv',
+            relative_validation_path='val.csv',
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+        )
+
+
+class OpenBioLinkF2(PackedZipRemoteDataSet):
+    """The PyKEEN Second Filtered OpenBioLink 2020 Dataset."""
+
+    def __init__(self, create_inverse_triples: bool = False, eager: bool = False):
+        super().__init__(
+            url=F2_URL,
+            name='openbiolink_f2.zip',
+            relative_training_path='train.tsv',
+            relative_testing_path='test.csv',
+            relative_validation_path='val.csv',
             eager=eager,
             create_inverse_triples=create_inverse_triples,
         )

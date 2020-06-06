@@ -11,6 +11,8 @@ hetionet       :class:`pykeen.datasets.Hetionet`
 kinships       :class:`pykeen.datasets.Kinships`
 nations        :class:`pykeen.datasets.Nations`
 openbiolink    :class:`pykeen.datasets.OpenBioLink`
+openbiolinkf1  :class:`pykeen.datasets.OpenBioLinkF1`
+openbiolinkf2  :class:`pykeen.datasets.OpenBioLinkF2`
 openbiolinklq  :class:`pykeen.datasets.OpenBioLinkLQ`
 umls           :class:`pykeen.datasets.Umls`
 wn18           :class:`pykeen.datasets.WN18`
@@ -32,7 +34,7 @@ from .kinships import (
 from .nations import (
     Nations, NationsTestingTriplesFactory, NationsTrainingTriplesFactory, NationsValidationTriplesFactory, nations,
 )
-from .openbiolink import OpenBioLink, OpenBioLinkLQ
+from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
 from .umls import Umls, UmlsTestingTriplesFactory, UmlsTrainingTriplesFactory, UmlsValidationTriplesFactory, umls
 from .wordnet import WN18, WN18RR, wn18, wn18rr
 from .yago import YAGO310, yago310
@@ -54,6 +56,8 @@ __all__ = [
     'NationsValidationTriplesFactory',
     'NationsTestingTriplesFactory',
     'OpenBioLink',
+    'OpenBioLinkF1',
+    'OpenBioLinkF2',
     'OpenBioLinkLQ',
     'umls',
     'Umls',
@@ -81,6 +85,8 @@ _DATASETS: Set[Type[DataSet]] = {
     FB15k237,
     Hetionet,
     OpenBioLink,
+    OpenBioLinkF1,
+    OpenBioLinkF2,
     OpenBioLinkLQ,
     WN18,
     WN18RR,

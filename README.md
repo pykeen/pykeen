@@ -26,7 +26,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-11">Datasets</a> •
+  <a href="#datasets-13">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a>
 </p>
@@ -83,7 +83,7 @@ PyKEEN is extensible such that:
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (11)
+### Datasets (13)
 
 | Name          | Reference                       | Description                                                                                        |
 |---------------|---------------------------------|----------------------------------------------------------------------------------------------------|
@@ -93,6 +93,8 @@ in ``pykeen``.
 | kinships      | `pykeen.datasets.Kinships`      | The Kinships data set.                                                                             |
 | nations       | `pykeen.datasets.Nations`       | The Nations data set.                                                                              |
 | openbiolink   | `pykeen.datasets.OpenBioLink`   | The OpenBioLink dataset.                                                                           |
+| openbiolinkf1 | `pykeen.datasets.OpenBioLinkF1` | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
+| openbiolinkf2 | `pykeen.datasets.OpenBioLinkF2` | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
 | openbiolinklq | `pykeen.datasets.OpenBioLinkLQ` | The low-quality variant of the OpenBioLink dataset.                                                |
 | umls          | `pykeen.datasets.Umls`          | The UMLS data set.                                                                                 |
 | wn18          | `pykeen.datasets.WN18`          | The WN18 data set.                                                                                 |
