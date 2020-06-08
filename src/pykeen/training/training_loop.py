@@ -246,9 +246,6 @@ class TrainingLoop(ABC):
         :return:
             A pair of the KGE model and the losses per epoch.
         """
-        # Ensure the model is on the correct device
-        self.model: Model = self.model.to(self.device)
-
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
@@ -288,6 +285,9 @@ class TrainingLoop(ABC):
             )
         elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
+
+        # Ensure the model is on the correct device
+        self.model: Model = self.model.to(self.device)
 
         # Create Sampler
         if sampler == 'schlichtkrull':
