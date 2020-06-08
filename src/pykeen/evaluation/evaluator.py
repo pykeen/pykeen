@@ -2,6 +2,7 @@
 
 """Basic structure of a evaluator."""
 
+import gc
 import logging
 import timeit
 from abc import ABC, abstractmethod
@@ -130,7 +131,7 @@ class Evaluator(ABC):
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
-        if model.automatic_memory_optimization and batch_size is None:
+        if batch_size is None and model.automatic_memory_optimization:
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,
@@ -141,6 +142,9 @@ class Evaluator(ABC):
             # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
             self.batch_size = batch_size
             self.slice_size = slice_size
+
+            # Clear the ranks from the current evaluator
+            self.finalize()
 
         return evaluate(
             model=model,
@@ -246,6 +250,9 @@ class Evaluator(ABC):
         while True:
             logger.debug(f'Trying {key}={values_dict[key]}')
             try:
+                # The cache of the previous run has to be freed to allow accurate memory availability estimates
+                gc.collect()
+                torch.cuda.empty_cache()
                 evaluate(
                     **values_dict,
                     model=model,
@@ -256,8 +263,14 @@ class Evaluator(ABC):
                     squeeze=True,
                     use_tqdm=use_tqdm,
                 )
+                evaluated_once = True
             except RuntimeError as runtime_error:
+                # Due to the caused OOM Runtime Error, the failed model has to be cleared to avoid memory leakage
+                for p in model.parameters():
+                    if p.grad is not None:
+                        del p.grad  # free some memory
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
+                gc.collect()
                 torch.cuda.empty_cache()
                 if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
                     raise runtime_error
@@ -267,20 +280,22 @@ class Evaluator(ABC):
                     )
                     break
 
-                logger.debug(f'The {key} {values_dict[key]} was too big, trying less now')
                 values_dict[key] //= 2
-                evaluated_once = False
                 reached_max = True
+                if evaluated_once:
+                    logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
+                    break
+                else:
+                    logger.debug(f'The {key} {values_dict[key]} was too big, trying less now')
             else:
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
+                gc.collect()
                 torch.cuda.empty_cache()
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
                     values_dict[key] *= 2
-                elif evaluated_once:
+                else:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
-
-                evaluated_once = True
 
         return values_dict[key], evaluated_once
 

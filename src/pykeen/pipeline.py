@@ -662,6 +662,27 @@ def pipeline(  # noqa: C901
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
 
+    # Add logging for debugging
+    logging.debug("Run Pipeline based on following config:")
+    logging.debug(f"dataset: {dataset}")
+    logging.debug(f"dataset_kwargs: {dataset_kwargs}")
+    logging.debug(f"model: {model}")
+    logging.debug(f"model_kwargs: {model_kwargs}")
+    logging.debug(f"loss: {loss}")
+    logging.debug(f"loss_kwargs: {loss_kwargs}")
+    logging.debug(f"regularizer: {regularizer}")
+    logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
+    logging.debug(f"optimizer: {optimizer}")
+    logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
+    logging.debug(f"training_loop: {training_loop}")
+    logging.debug(f"negative_sampler: {negative_sampler}")
+    logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
+    logging.debug(f"_training_kwargs: {training_kwargs}")
+    logging.debug(f"stopper: {stopper}")
+    logging.debug(f"stopper_kwargs: {stopper_kwargs}")
+    logging.debug(f"evaluator: {evaluator}")
+    logging.debug(f"evaluator_kwargs: {evaluator_kwargs}")
+
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
@@ -678,6 +699,13 @@ def pipeline(  # noqa: C901
         mapped_triples = validation_triples_factory.mapped_triples
 
     # Evaluate
+    # Reuse optimal evaluation parameters from training if available
+    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None:
+        evaluation_kwargs['batch_size'] = evaluator_instance.batch_size
+        evaluation_kwargs['slice_size'] = evaluator_instance.slice_size
+    # Add logging about evaluator for debugging
+    logging.debug("Evaluation will be run with following parameters:")
+    logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
     metric_results: MetricResults = evaluator_instance.evaluate(
         model=model_instance,
