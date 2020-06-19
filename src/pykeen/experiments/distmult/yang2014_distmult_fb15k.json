@@ -37,5 +37,15 @@
     "evaluator_kwargs": {
       "filtered": true
     }
+  },
+  "results": {
+    "hits_at_k": {
+      "unknown": {
+        "10": 0.577
+      }
+    },
+    "mean_reciprocal_rank": {
+      "unknown": 0.35
+    }
   }
 }

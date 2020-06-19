@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with TransR as described by Li et al., 2015"
+    "title": "Learn WN18 Data Set with TransR as described by Li et al., 2015. For evaluation, the non-deterministic rank is used, cf. https://github.com/Mrlyk423/Relation_Extraction/blob/9f311285abd7e29273be7e4fd8c680dd761f40eb/TransR/Test_TransR.cpp#L177-L206."
   },
   "pipeline": {
     "dataset": "wn18",
@@ -30,6 +30,16 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 225
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "10": 0.920
+      }
     }
   }
 }
