@@ -1,0 +1,18 @@
+{
+  "training_set_path": "../../data/rdf.nt",
+  "test_set_path": "../../data/rdf.nt",
+  "execution_mode": "Training_mode",
+  "random_seed": 2,
+  "kg_embedding_model_name": "TransE",
+  "embedding_dim": 100,
+  "scoring_function": 1,
+  "normalization_of_entities": 2,
+  "margin_loss": 3,
+  "learning_rate": 0.1,
+  "num_epochs": 100,
+  "batch_size": 32,
+  "filter_negative_triples": true,
+  "preferred_device": "cpu",
+  "num_entities": 89,
+  "num_relations": 24
+}

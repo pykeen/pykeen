@@ -1,0 +1,106 @@
+<http://commons.dbpedia.org/resource/Template:Cc-by-1.0> <http://commons.dbpedia.org/property/version> "1"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://commons.dbpedia.org/resource/Category:Events> <http://commons.dbpedia.org/property/de> "Ereignis, Veranstaltung."@en .
+<http://commons.dbpedia.org/resource/Category:Events> <http://commons.dbpedia.org/property/en> "Events"@en .
+<http://commons.dbpedia.org/resource/Category:Events> <http://commons.dbpedia.org/property/fr> "\u00C9v\u00E9nements."@en .
+<http://commons.dbpedia.org/resource/Template:Cc-by-sa-1.0> <http://commons.dbpedia.org/property/version> "1"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://commons.dbpedia.org/resource/File:Hunebed_003.jpg> <http://commons.dbpedia.org/property/description> "Hunebed D24 near Bronneger, August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_003.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_003.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Buswachten.jpg> <http://commons.dbpedia.org/property/date> "2004-07-22"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:Buswachten.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Groninger-museum.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Groninger-museum.jpg> <http://commons.dbpedia.org/property/date> "2004-08-26"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:Groninger-museum.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Groninger-museum.jpg> <http://commons.dbpedia.org/property/permission> "Commons:Freedom of panorama#Netherlands"@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_014.jpg> <http://commons.dbpedia.org/property/description> "Hunebed near Drouwen, the Netherlands. August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_014.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_014.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_004.jpg> <http://commons.dbpedia.org/property/description> "Hunebed D21 near Bronneger, August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_004.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_004.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Bustaxi.jpg> <http://commons.dbpedia.org/property/date> "2004"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://commons.dbpedia.org/resource/File:Bustaxi.jpg> <http://commons.dbpedia.org/property/author> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:StationAssen3.jpg> <http://commons.dbpedia.org/property/date> "2004-07-22"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:StationAssen3.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:StationAssen3.jpg> <http://commons.dbpedia.org/property/permission> "Cc-by-1.0"@en .
+<http://commons.dbpedia.org/resource/File:De_Slegte,_Groningen.jpg> <http://commons.dbpedia.org/property/description> "'De Slegte' bookshop in Groningen. De Slegte is the largest chain of second-hand and remainder books in the Netherlands. This is the back entrance ."@en .
+<http://commons.dbpedia.org/resource/File:De_Slegte,_Groningen.jpg> <http://commons.dbpedia.org/property/date> "2004-08-26"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:De_Slegte,_Groningen.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_011.jpg> <http://commons.dbpedia.org/property/description> "The hunebed of Borger, the largest of the Netherlands. August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_011.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_011.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Paddestoel_003.jpg> <http://commons.dbpedia.org/property/description> "Paddestoel . These are used in the Netherlands to show directions for cyclists."@en .
+<http://commons.dbpedia.org/resource/File:Paddestoel_003.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Paddestoel_003.jpg> <http://commons.dbpedia.org/property/date> "2004-08-20"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:Paddestoel_003.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_012.jpg> <http://commons.dbpedia.org/property/description> "Hunebed near Drouwen, the Netherlands. August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_012.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_012.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/Category:Places> <http://commons.dbpedia.org/property/de> "Orte, Pl\u00E4tze, St\u00E4tten"@en .
+<http://commons.dbpedia.org/resource/Category:Places> <http://commons.dbpedia.org/property/es> "Lugares"@en .
+<http://commons.dbpedia.org/resource/Category:Places> <http://commons.dbpedia.org/property/eo> "Lokoj"@en .
+<http://commons.dbpedia.org/resource/Category:Places> <http://commons.dbpedia.org/property/fr> "Lieux"@en .
+<http://commons.dbpedia.org/resource/Category:Places> <http://commons.dbpedia.org/property/sv> "Platser"@en .
+<http://commons.dbpedia.org/resource/Category:People> <http://commons.dbpedia.org/property/inline> "o"@en .
+<http://commons.dbpedia.org/resource/Category:People> <http://commons.dbpedia.org/property/hidetitle> "o"@en .
+<http://commons.dbpedia.org/resource/Category:People> <http://commons.dbpedia.org/property/width> "100.0"^^<http://dbpedia.org/datatype/perCent> .
+<http://commons.dbpedia.org/resource/Category:People> <http://commons.dbpedia.org/property/fr> "Personnalit\u00E9s"@en .
+<http://commons.dbpedia.org/resource/File:BordUtrecht.jpg> <http://commons.dbpedia.org/property/date> "2004-07-22"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:BordUtrecht.jpg> <http://commons.dbpedia.org/property/author> "Own picture from Andre Engels"@en .
+<http://commons.dbpedia.org/resource/File:BordUtrecht.jpg> <http://commons.dbpedia.org/property/otherVersions> "130"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://commons.dbpedia.org/resource/File:Quail2.png> <http://commons.dbpedia.org/property/otherVersions> "File:Two Gambel's Quail  - Paradise Valley, Arizona, ca 2004.png"@en .
+<http://commons.dbpedia.org/resource/File:Kane_QC.png> <http://commons.dbpedia.org/property/description> "Kane quantum computer"@en .
+<http://commons.dbpedia.org/resource/File:Kane_QC.png> <http://commons.dbpedia.org/property/author> "Diagram drawn by Tim Starling"@en .
+<http://commons.dbpedia.org/resource/File:Lijn51.jpg> <http://commons.dbpedia.org/property/source> "Created by  Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Lijn51.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_001.jpg> <http://commons.dbpedia.org/property/description> "Hunebed D25 near Bronneger, August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_001.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_001.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/Category:Public_domain> <http://commons.dbpedia.org/property/en> "This category is a copyright status category for media files on Commons with copyright expired or released into the public domain by the copyright holders. For media related to the topic Public domain see the topic category :Category:Public domain (copyright)."@en .
+<http://commons.dbpedia.org/resource/Category:Public_domain> <http://commons.dbpedia.org/property/de> "Gemeinfrei: Diese Kategorie ist eine Urheberrechtsstatus-Kategorie f\u00FCr Medien auf Commons, deren Urheberrecht abgelaufen ist, oder deren Urheber diese gemeinfrei zur Verf\u00FCgung stellt. Medien zum Thema Gemeinfreiheit befinden sich in der Kategorie :Category:Public domain (copyright)."@en .
+<http://commons.dbpedia.org/resource/Category:Public_domain> <http://commons.dbpedia.org/property/es> "Dominio p\u00FAblico: Es esta una categor\u00EDa de estado de derecho del autor para medios cuyos derechos del autor han expirado o aquellos que han sido hechos disponibles como dominio p\u00FAblico por el autor. Medios relacionados con el tema Dominio p\u00FAblico se encuentran en la categor\u00EDa :Category:Public domain (copyright)."@en .
+<http://commons.dbpedia.org/resource/Category:Public_domain> <http://commons.dbpedia.org/property/eo> "Publika hava\u0135o"@en .
+<http://commons.dbpedia.org/resource/Category:Public_domain> <http://commons.dbpedia.org/property/mk> "\u0414\u0435\u043B\u0430 \u0432\u043E \u0458\u0430\u0432\u043D\u0430 \u0441\u043E\u043F\u0441\u0442\u0432\u0435\u043D\u043E\u0441\u0442"@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_006.jpg> <http://commons.dbpedia.org/property/description> "Hunebed near Borger, the largest hunebed in the Netherlands, August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_006.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_006.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_008.jpg> <http://commons.dbpedia.org/property/description> "Entrance to the hunebed of Borger. August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_008.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_008.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Paddestoel_002.jpg> <http://commons.dbpedia.org/property/description> "Paddestoel . These are used in the Netherlands to show directions for cyclists."@en .
+<http://commons.dbpedia.org/resource/File:Paddestoel_002.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Paddestoel_002.jpg> <http://commons.dbpedia.org/property/date> "2004-08-20"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:Paddestoel_002.jpg> <http://commons.dbpedia.org/property/author> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:The_Death_of_Hyacinthos.gif> <http://commons.dbpedia.org/property/wikidata> "Q2717601"@en .
+<http://commons.dbpedia.org/resource/File:The_Death_of_Hyacinthos.gif> <http://commons.dbpedia.org/property/artist> "Jean Broc"@en .
+<http://commons.dbpedia.org/resource/File:The_Death_of_Hyacinthos.gif> <http://commons.dbpedia.org/property/year> "1801"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://commons.dbpedia.org/resource/File:The_Death_of_Hyacinthos.gif> <http://commons.dbpedia.org/property/gallery> "Mus\u00E9e Sainte-Croix"@en .
+<http://commons.dbpedia.org/resource/File:The_Death_of_Hyacinthos.gif> <http://commons.dbpedia.org/property/source> <http://exitinterview.biz/rarities/paidika/n12/pdk12ill.htm> .
+<http://commons.dbpedia.org/resource/File:Groningen_003.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Groningen_003.jpg> <http://commons.dbpedia.org/property/date> "2004-08-26"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:Groningen_003.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Groningen_003.jpg> <http://commons.dbpedia.org/property/permission> "Cc-by-1.0"@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_005.jpg> <http://commons.dbpedia.org/property/description> "Hunebed D21 near Bronneger, August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_005.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_005.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_010.jpg> <http://commons.dbpedia.org/property/description> "View under the hunebed of Borger. August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_010.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_010.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:StationAssen2.jpg> <http://commons.dbpedia.org/property/date> "2004-07-22"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:StationAssen2.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:StationAssen2.jpg> <http://commons.dbpedia.org/property/permission> "Cc-by-1.0"@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_002.jpg> <http://commons.dbpedia.org/property/description> "Hunebed D25 near Bronneger, August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_002.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_002.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Lijn10.jpg> <http://commons.dbpedia.org/property/date> "2004-07-22"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://commons.dbpedia.org/resource/File:Lijn10.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_013.jpg> <http://commons.dbpedia.org/property/description> "Hunebed near Drouwen, the Netherlands. August 2004."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_013.jpg> <http://commons.dbpedia.org/property/source> "Own picture from Andre Engels."@en .
+<http://commons.dbpedia.org/resource/File:Hunebed_013.jpg> <http://commons.dbpedia.org/property/author> <http://commons.dbpedia.org/resource/User:Andre_Engels> .
+<http://commons.dbpedia.org/resource/File:Hunebed_015.jpg> <http://commons.dbpedia.org/property/description> "Hunebeds  near Drouwen, the Netherlands."@en .
+<http://dbpedia.org/resource/Guy_de_Maupassant>	<http://xmlns.com/foaf/0.1/givenName>	"Guy De" .
+<http://dbpedia.org/resource/Guy_de_Maupassant>	<http://dbpedia.org/ontology/influenced>	<http://dbpedia.org/resource/Tobias_Wolff> .
+<http://dbpedia.org/resource/Guy_de_Maupassant>	<http://dbpedia.org/ontology/influenced>	<http://dbpedia.org/resource/Henry_James> .
+<http://dbpedia.org/resource/Guy_de_Maupassant>	<http://dbpedia.org/ontology/deathPlace>	<http://dbpedia.org/resource/Passy> .
+<http://dbpedia.org/resource/Charles_Dickens>	<http://xmlns.com/foaf/0.1/givenName>	"Charles"@en .
+<http://dbpedia.org/resource/Charles_Dickens>	<http://dbpedia.org/ontology/deathPlace>	<http://dbpedia.org/resource/Gads_Hill_Place> .

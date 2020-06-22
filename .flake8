@@ -1,0 +1,43 @@
+#########################
+# Flake8 Configuration  #
+# (.flake8)             #
+# (formerly in tox.ini) #
+#########################
+[flake8]
+ignore =
+    # Related to generating random numbers
+    S311
+    # Related to security for pickles
+    S403
+    # Line length
+	E501
+    # Don't complain about asserts
+    S101
+    # Documentation in public method
+    D102
+    D103
+    # Documentation in public class
+    D101
+    # Documentation in init
+    D107
+    # line break before binary operator
+    W503
+exclude =
+    .tox,
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    build,
+    dist,
+    tests/fixtures/*,
+    *.pyc,
+    *.egg-info,
+    .cache,
+    .eggs,
+    data
+max-complexity = 20
+import-order-style = pycharm
+application-import-names =
+    pykeen
+    tests
+format = ${cyan}%(path)s${reset}:${yellow_bold}%(row)d${reset}:${green_bold}%(col)d${reset}: ${red_bold}%(code)s${reset} %(text)s
