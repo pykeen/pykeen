@@ -4,7 +4,7 @@
 
 import logging
 from os import path
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Callable, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -52,6 +52,55 @@ def _get_neighborhood(
         edge_mask |= node_mask[sources]
 
     return edge_mask
+
+
+def inverse_indegree_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
+    """Normalize messages by inverse in-degree.
+
+    :param source: shape: (num_edges,)
+            The source indices.
+    :param target: shape: (num_edges,)
+        The target indices.
+
+    :return: shape: (num_edges,)
+         The edge weights.
+    """
+    # Calculate in-degree, i.e. number of incoming edges
+    uniq, inv, cnt = torch.unique(target, return_counts=True, return_inverse=True)
+    return cnt[inv].float().reciprocal()
+
+
+def inverse_outdegree_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
+    """Normalize messages by inverse out-degree.
+
+    :param source: shape: (num_edges,)
+            The source indices.
+    :param target: shape: (num_edges,)
+        The target indices.
+
+    :return: shape: (num_edges,)
+         The edge weights.
+    """
+    # Calculate in-degree, i.e. number of incoming edges
+    uniq, inv, cnt = torch.unique(source, return_counts=True, return_inverse=True)
+    return cnt[inv].float().reciprocal()
+
+
+def symmetric_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
+    """Normalize messages by product of inverse sqrt of in-degree and out-degree.
+
+    :param source: shape: (num_edges,)
+            The source indices.
+    :param target: shape: (num_edges,)
+        The target indices.
+
+    :return: shape: (num_edges,)
+         The edge weights.
+    """
+    return (
+        inverse_indegree_edge_weights(source=source, target=target)
+        * inverse_outdegree_edge_weights(source=source, target=target)
+    ).sqrt()
 
 
 class RGCN(Model):
@@ -126,7 +175,10 @@ class RGCN(Model):
         sparse_messages_owa: bool = True,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
-        message_normalization: str = 'nonsymmetric',
+        message_normalization: Callable[
+            [torch.LongTensor, torch.LongTensor],
+            torch.FloatTensor
+        ] = inverse_indegree_edge_weights,
         decomposition: str = 'basis',
         buffer_messages: bool = True,
     ):
@@ -189,13 +241,6 @@ class RGCN(Model):
         # buffering of messages
         self.buffer_messages = buffer_messages
         self.enriched_embeddings = None
-
-        # TODO: Better use a enum for that?
-        allowed_normalizations = {None, 'symmetric', 'nonsymmetric'}
-        if message_normalization not in allowed_normalizations:
-            raise ValueError(
-                f'Unknown message normalization: "{message_normalization}". Please use one of {allowed_normalizations}.'
-            )
 
         self.message_normalization = message_normalization
         self.edge_dropout = edge_dropout
@@ -408,20 +453,8 @@ class RGCN(Model):
                 m_r = x_s @ w
 
                 # Normalize messages by relation-specific in-degree
-                if self.message_normalization == 'nonsymmetric':
-                    # Calculate in-degree, i.e. number of incoming edges of relation type r
-                    uniq, inv, cnt = torch.unique(targets_r, return_counts=True, return_inverse=True)
-                    m_r /= cnt[inv].unsqueeze(dim=1).float()
-                elif self.message_normalization == 'symmetric':
-                    # Calculate in-degree, i.e. number of incoming edges of relation type r
-                    uniq, inv, cnt = torch.unique(targets_r, return_counts=True, return_inverse=True)
-                    m_r /= cnt[inv].unsqueeze(dim=1).float().sqrt()
-
-                    # Calculate out-degree, i.e. number of outgoing edges of relation type r
-                    uniq, inv, cnt = torch.unique(sources_r, return_counts=True, return_inverse=True)
-                    m_r /= cnt[inv].unsqueeze(dim=1).float().sqrt()
-                else:
-                    assert self.message_normalization is None
+                if self.message_normalization is not None:
+                    m_r *= self.message_normalization(source=sources_r, target=targets_r).unsqueeze(dim=-1)
 
                 # Aggregate messages in target
                 new_x.index_add_(dim=0, index=targets_r, source=m_r)
