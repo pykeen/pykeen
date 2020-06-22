@@ -155,22 +155,6 @@ class RelationSpecificMessagePassing(nn.Module):
         """Reset the parameters of this layer."""
         raise NotImplementedError
 
-    def _aggregate_messages_with_weighting_(
-        self,
-        message: torch.FloatTensor,
-        accumulator: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-    ) -> torch.FloatTensor:
-        # optional message weighting
-        if self.edge_weighting is not None:
-            message = message * self.edge_weighting(source=source, target_r=target)
-
-        # message aggregation
-        accumulator.index_add_(dim=0, index=target, source=message)
-
-        return accumulator
-
 
 class BasesDecomposition(RelationSpecificMessagePassing):
     """Represent relation-weights as a linear combination of base transformation matrices."""
