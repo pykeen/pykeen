@@ -26,7 +26,7 @@ from pykeen.datasets.nations import (
 from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.multimodal import MultimodalModel
-from pykeen.models.unimodal.rgcn import BlockDecomposition, RelationSpecificMessagePassing, inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
+from pykeen.models.unimodal.rgcn import BasesDecomposition, BlockDecomposition, RelationSpecificMessagePassing, inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
@@ -1106,3 +1106,11 @@ class _MessagePassingTests(unittest.TestCase):
 class BlockDecompositionTests(_MessagePassingTests):
     """unittest for BlockDecomposition"""
     cls = BlockDecomposition
+
+
+class BlockDecompositionTests(_MessagePassingTests):
+    """unittest for BasesDecomposition"""
+    cls = BasesDecomposition
+    kwargs = dict(
+        num_bases=4,
+    )
