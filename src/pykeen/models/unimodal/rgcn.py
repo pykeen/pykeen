@@ -351,7 +351,10 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
             # optional message weighting
             if edge_weights is not None:
-                m = m * edge_weights[edge_mask].unsqueeze(dim=0)
+                # bi-directional
+                w = edge_weights[edge_mask]
+                w = torch.cat([w, w])
+                m = m * w.unsqueeze(dim=1)
 
             # message aggregation
             out.index_add_(dim=0, index=target_r, source=m)

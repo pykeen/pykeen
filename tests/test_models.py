@@ -26,7 +26,7 @@ from pykeen.datasets.nations import (
 from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.multimodal import MultimodalModel
-from pykeen.models.unimodal.rgcn import inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
+from pykeen.models.unimodal.rgcn import BlockDecomposition, RelationSpecificMessagePassing, inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
@@ -1073,3 +1073,36 @@ class MessageWeightingTests(unittest.TestCase):
     def test_symmetric_edge_weights(self):
         """unittest for symmetric_edge_weights."""
         self._test_message_weighting(weight_func=symmetric_edge_weights)
+
+
+class _MessagePassingTests(unittest.TestCase):
+    cls: Type[RelationSpecificMessagePassing]
+    kwargs: Optional[Mapping[str, Any]] = None
+    input_dim: int = 3
+
+    def setUp(self) -> None:
+        self.output_dim = self.input_dim
+        self.factory = NationsTrainingTriplesFactory()
+        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
+        kwargs = self.kwargs or {}
+        self.instance = self.cls(input_dim=self.input_dim, num_relations=self.factory.num_relations, **kwargs)
+
+    def test_forward(self):
+        """unittest for forward."""
+        for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
+            for edge_weights in [None, inverse_indegree_edge_weights(source=self.source, target=self.target)]:
+                y = self.instance(
+                    x=self.x,
+                    node_keep_mask=node_keep_mask,
+                    source=self.source,
+                    target=self.target,
+                    edge_type=self.edge_type,
+                    edge_weights=edge_weights,
+                )
+                assert y.shape == (self.x.shape[0], self.output_dim)
+
+
+class BlockDecompositionTests(_MessagePassingTests):
+    """unittest for BlockDecomposition"""
+    cls = BlockDecomposition
