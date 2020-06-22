@@ -154,7 +154,12 @@ class RGCN(Model):
         base_model_cls=dict(type='categorical', choices=[DistMult, ComplEx, ERMLP]),
         edge_dropout=dict(type=float, low=0.0, high=.9),
         self_loop_dropout=dict(type=float, low=0.0, high=.9),
-        message_normalization=dict(type='categorical', choices=[None, 'nonsymmetric', 'symmetric']),
+        message_normalization=dict(type='categorical', choices=[
+            None,
+            inverse_indegree_edge_weights,
+            inverse_outdegree_edge_weights,
+            symmetric_edge_weights,
+        ]),
         decomposition=dict(type='categorical', choices=['basis', 'block']),
     )
 
