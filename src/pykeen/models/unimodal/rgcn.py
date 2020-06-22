@@ -54,6 +54,83 @@ def _get_neighborhood(
     return edge_mask
 
 
+class MessageWeighting(nn.Module):
+    def forward(self, source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
+        raise NotImplementedError
+
+class SymmetricMessageWeighting(MessageWeighting):
+
+
+class MessagePassing(nn.Module):
+    pass
+
+
+class BlockDecomposition(MessagePassing):
+    pass
+
+
+class BasesDecomposition(MessagePassing):
+    def __init__(
+        self,
+        input_dim: int,
+        num_relations: int,
+        num_bases: int,
+        output_dim: Optional[int] = None,
+    ):
+        super().__init__()
+        self.num_relations = num_relations
+        self.bases = nn.Parameter(
+            torch.empty(
+                num_bases,
+                output_dim,
+                input_dim,
+                device=self.device,
+            ), requires_grad=True)
+        self.att = nn.Parameter(
+            torch.empty(
+                num_relations + 1,
+                num_bases,
+                device=self.device,
+            ), requires_grad=True)
+
+    def reset_parameters(self):
+        for base in self.bases:
+            nn.init.xavier_normal_(base)
+        for att in self.att:
+            # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
+            # initialized properly)
+            # We have one additional relation for self-loops
+            nn.init.uniform_(att)
+            functional.normalize(att.data, p=1, dim=1, out=att.data)
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: torch.FloatTensor,
+    ):
+        """
+
+        :param x: shape: (num_nodes, input_dim)
+        :param source:
+        :param target:
+        :param edge_type:
+        :return:
+        """
+        # Transform with all bases, shape: (num_bases, num_nodes, output_dim)
+        t = self.bases @ x.unsqueeze(dim=0)
+        out = torch.zeros_like(x)
+        for r in range(self.num_relations):
+            edge_mask = edge_type == r
+            if not edge_mask.any():
+                continue
+            # compute message, shape: (num_edges_of_type, output_dim)
+            m = (t.index_select(dim=0, index=source[edge_mask]) * self.att[r, None, None]).sum(dim=0)
+            out.index_add_(dim=0, index=target[edge_mask], source=m)
+
+
 class RGCN(Model):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
