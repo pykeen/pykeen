@@ -26,6 +26,7 @@ from pykeen.datasets.nations import (
 from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.multimodal import MultimodalModel
+from pykeen.models.unimodal.rgcn import inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
@@ -1029,3 +1030,45 @@ def test_extend_batch():
                 exp_content.add(tuple(c))
 
         assert actual_content == exp_content
+
+
+class MessageWeightingTests(unittest.TestCase):
+    """unittests for message weighting."""
+
+    #: The number of entities
+    num_entities: int = 16
+
+    #: The number of triples
+    num_triples: int = 101
+
+    def setUp(self) -> None:
+        """Setup edges."""
+        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+
+    def _test_message_weighting(self, weight_func):
+        """Common tests for message weighting."""
+        weights = weight_func(source=self.source, target=self.target)
+
+        # check shape
+        assert weights.shape == self.source.shape
+
+        # check dtype
+        assert weights.dtype == torch.float32
+
+        # check finite values (e.g. due to division by zero)
+        assert torch.isfinite(weights).all()
+
+        # check non-negativity
+        assert (weights >= 0.).all()
+
+    def test_inverse_indegree_edge_weights(self):
+        """unittest for inverse_indegree_edge_weights."""
+        self._test_message_weighting(weight_func=inverse_indegree_edge_weights)
+
+    def test_inverse_outdegree_edge_weights(self):
+        """unittest for inverse_outdegree_edge_weights."""
+        self._test_message_weighting(weight_func=inverse_outdegree_edge_weights)
+
+    def test_symmetric_edge_weights(self):
+        """unittest for symmetric_edge_weights."""
+        self._test_message_weighting(weight_func=symmetric_edge_weights)
