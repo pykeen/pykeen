@@ -110,13 +110,11 @@ class RelationSpecificMessagePassing(nn.Module):
 
     def __init__(
         self,
-        edge_weighting: Optional[Callable[[torch.LongTensor, torch.LongTensor], torch.FloatTensor]],
         input_dim: int,
         num_relations: int,
         output_dim: Optional[int] = None,
     ):
         super().__init__()
-        self.edge_weighting = edge_weighting
         self.input_dim = input_dim
         self.num_relations = num_relations
         if output_dim is None:
@@ -179,18 +177,24 @@ class BasesDecomposition(RelationSpecificMessagePassing):
 
     def __init__(
         self,
-        edge_weighting: Optional[Callable[[torch.LongTensor, torch.LongTensor], torch.FloatTensor]],
         input_dim: int,
         num_relations: int,
-        num_bases: int,
+        num_bases: Optional[int],
         output_dim: Optional[int] = None,
     ):
         super().__init__(
-            edge_weighting=edge_weighting,
             input_dim=input_dim,
             num_relations=num_relations,
             output_dim=output_dim,
         )
+
+        # Heuristic for default value
+        if num_bases is None:
+            logging.info('Using a heuristic to determine the number of bases.')
+            num_bases = num_relations // 2 + 1
+
+        if num_bases > num_relations:
+            raise ValueError('The number of bases should not exceed the number of relations.')
 
         # weights
         self.bases = nn.Parameter(
@@ -267,21 +271,28 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
     def __init__(
         self,
-        edge_weighting: Optional[Callable[[torch.LongTensor, torch.LongTensor], torch.FloatTensor]],
         input_dim: int,
         num_relations: int,
-        num_blocks: int,
+        num_blocks: Optional[int] = None,
         output_dim: Optional[int] = None,
     ):
         super().__init__(
-            edge_weighting=edge_weighting,
             input_dim=input_dim,
             num_relations=num_relations,
             output_dim=output_dim,
         )
+
+        if num_blocks is None:
+            logging.info('Using a heuristic to determine the number of blocks.')
+            num_blocks = min(i for i in range(2, input_dim + 1) if input_dim % i == 0)
+
         block_size, remainder = divmod(input_dim, num_blocks)
         if remainder != 0:
-            raise NotImplementedError
+            raise ValueError(
+                'With block decomposition, the embedding dimension has to be divisible by the number of'
+                f' blocks, but {input_dim} % {num_blocks} != 0.'
+            )
+
         self.blocks = nn.Parameter(
             data=torch.empty(
                 num_relations + 1,
@@ -382,7 +393,8 @@ class RGCN(Model):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=1000, q=50),
-        num_bases_or_blocks=dict(type=int, low=2, high=20, q=1),
+        num_bases=dict(type=int, low=2, high=100, q=1),
+        num_blocks=dict(type=int, low=2, high=20, q=1),
         num_layers=dict(type=int, low=1, high=5, q=1),
         use_bias=dict(type='bool'),
         use_batch_norm=dict(type='bool'),
@@ -396,7 +408,7 @@ class RGCN(Model):
             inverse_outdegree_edge_weights,
             symmetric_edge_weights,
         ]),
-        decomposition=dict(type='categorical', choices=['basis', 'block']),
+        decomposition=dict(type='categorical', choices=[BasesDecomposition, BlockDecomposition]),
     )
 
     def __init__(
@@ -423,7 +435,7 @@ class RGCN(Model):
             [torch.LongTensor, torch.LongTensor],
             torch.FloatTensor
         ] = inverse_indegree_edge_weights,
-        decomposition: str = 'basis',
+        decomposition: Type[RelationSpecificMessagePassing] = BasesDecomposition,
         buffer_messages: bool = True,
     ):
         super().__init__(
@@ -460,27 +472,6 @@ class RGCN(Model):
 
         self.embedding_dim = embedding_dim
 
-        # TODO: Fix
-        edge_weighting = None
-        #: TODO: use enum, of class names
-        if decomposition == 'basis':
-            if num_bases is None:
-                logging.info('Using a heuristic to determine the number of bases.')
-                num_bases = triples_factory.num_relations // 2 + 1
-            if num_bases > triples_factory.num_relations:
-                raise ValueError('The number of bases should not exceed the number of relations.')
-        elif decomposition == 'block':
-            if num_blocks is None:
-                logging.info('Using a heuristic to determine the number of blocks.')
-                num_blocks = 2
-            if embedding_dim % num_blocks != 0:
-                raise ValueError(
-                    'With block decomposition, the embedding dimension has to be divisible by the number of'
-                    f' blocks, but {embedding_dim} % {num_blocks} != 0.'
-                )
-        else:
-            raise ValueError(decomposition)
-
         # buffering of messages
         self.buffer_messages = buffer_messages
         self.enriched_embeddings = None
@@ -510,25 +501,16 @@ class RGCN(Model):
         self.register_buffer('edge_types', r)
 
         layers = []
+        message_passing_kwargs = dict(
+            input_dim=self.embedding_dim,
+            num_relations=self.num_relations,
+        )
+        if decomposition is BasesDecomposition:
+            message_passing_kwargs['num_bases'] = num_bases
+        elif decomposition is BasesDecomposition:
+            message_passing_kwargs['num_blocks'] = num_blocks
         for _ in range(num_layers):
-            if decomposition == 'basis':
-                assert num_bases is not None
-                layers.append(BasesDecomposition(
-                    edge_weighting=edge_weighting,
-                    input_dim=self.embedding_dim,
-                    num_relations=self.num_relations,
-                    num_bases=num_bases,
-                ))
-            elif decomposition == 'block':
-                assert num_blocks is not None
-                layers.append(BlockDecomposition(
-                    edge_weighting=edge_weighting,
-                    input_dim=self.embedding_dim,
-                    num_relations=self.num_relations,
-                    num_blocks=num_blocks,
-                ))
-            else:
-                raise AssertionError
+            layers.append(decomposition(**message_passing_kwargs))
             if self.use_bias:
                 layers.append(Bias(self.embedding_dim))
             if self.use_batch_norm:
