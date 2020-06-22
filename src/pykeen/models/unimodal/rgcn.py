@@ -4,7 +4,7 @@
 
 import logging
 from os import path
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Callable, Mapping, Optional, Sequence, Type
 
 import torch
 from torch import nn
@@ -54,81 +54,259 @@ def _get_neighborhood(
     return edge_mask
 
 
-class MessageWeighting(nn.Module):
-    def forward(self, source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
-        raise NotImplementedError
+class RelationSpecificMessagePassing(nn.Module):
+    """Base module for relation-specific message passing."""
 
-class SymmetricMessageWeighting(MessageWeighting):
-
-
-class MessagePassing(nn.Module):
-    pass
-
-
-class BlockDecomposition(MessagePassing):
-    pass
-
-
-class BasesDecomposition(MessagePassing):
     def __init__(
         self,
+        edge_weighting: Optional[Callable[[torch.LongTensor, torch.LongTensor], torch.FloatTensor]],
+        input_dim: int,
+        num_relations: int,
+        output_dim: Optional[int] = None,
+    ):
+        super().__init__()
+        self.edge_weighting = edge_weighting
+        self.input_dim = input_dim
+        self.num_relations = num_relations
+        if output_dim is None:
+            output_dim = input_dim
+        self.output_dim = output_dim
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        node_keep_mask: Optional[torch.BoolTensor],
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:
+        """
+        Relation-specific message passing from source to target.
+
+        :param x: shape: (num_nodes, input_dim)
+            The node representations.
+        :param node_keep_mask: shape: (num_nodes,)
+            The node-keep mask for self-loop dropout.
+        :param source: shape: (num_edges,)
+            The source indices.
+        :param target: shape: (num_edges,)
+            The target indices.
+        :param edge_type: shape: (num_edges,)
+            The edge types.
+        :param edge_weights: shape: (num_edges,)
+            Precomputed edge weights.
+
+        :return: shape: (num_nodes, output_dim)
+            The enriched node embeddings.
+        """
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        """Reset the parameters of this layer."""
+        raise NotImplementedError
+
+    def _aggregate_messages_with_weighting_(
+        self,
+        message: torch.FloatTensor,
+        accumulator: torch.FloatTensor,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        # optional message weighting
+        if self.edge_weighting is not None:
+            message = message * self.edge_weighting(source=source, target_r=target)
+
+        # message aggregation
+        accumulator.index_add_(dim=0, index=target, source=message)
+
+        return accumulator
+
+
+class BasesDecomposition(RelationSpecificMessagePassing):
+    """Represent relation-weights as a linear combination of base transformation matrices."""
+
+    def __init__(
+        self,
+        edge_weighting: Optional[Callable[[torch.LongTensor, torch.LongTensor], torch.FloatTensor]],
         input_dim: int,
         num_relations: int,
         num_bases: int,
         output_dim: Optional[int] = None,
     ):
-        super().__init__()
-        self.num_relations = num_relations
+        super().__init__(
+            edge_weighting=edge_weighting,
+            input_dim=input_dim,
+            num_relations=num_relations,
+            output_dim=output_dim,
+        )
+
+        # weights
         self.bases = nn.Parameter(
             torch.empty(
                 num_bases,
-                output_dim,
-                input_dim,
-                device=self.device,
+                self.input_dim,
+                self.output_dim,
             ), requires_grad=True)
         self.att = nn.Parameter(
             torch.empty(
                 num_relations + 1,
                 num_bases,
-                device=self.device,
             ), requires_grad=True)
 
-    def reset_parameters(self):
-        for base in self.bases:
-            nn.init.xavier_normal_(base)
-        for att in self.att:
-            # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
-            # initialized properly)
-            # We have one additional relation for self-loops
-            nn.init.uniform_(att)
-            functional.normalize(att.data, p=1, dim=1, out=att.data)
+    def reset_parameters(self):  # noqa: D102
+        nn.init.xavier_normal_(self.bases)
+        # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
+        # initialized properly)
+        # We have one additional relation for self-loops
+        nn.init.uniform_(self.att)
+        functional.normalize(self.att.data, p=1, dim=1, out=self.att.data)
 
     def forward(
         self,
         x: torch.FloatTensor,
+        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
-        edge_weights: torch.FloatTensor,
-    ):
-        """
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Transform with all bases, shape: (num_nodes, num_bases, output_dim)
+        batch_size = x.shape[0]
+        num_bases = self.bases.shape[0]
+        t = (x.view(batch_size, 1, 1, -1) @ self.bases).view(batch_size, num_bases, self.output_dim)
 
-        :param x: shape: (num_nodes, input_dim)
-        :param source:
-        :param target:
-        :param edge_type:
-        :return:
-        """
-        # Transform with all bases, shape: (num_bases, num_nodes, output_dim)
-        t = self.bases @ x.unsqueeze(dim=0)
-        out = torch.zeros_like(x)
+        # self-loops first
+        if node_keep_mask is not None:
+            out = torch.zeros_like(x)
+            out[node_keep_mask] = (t[node_keep_mask, :, :] * self.att[None, self.num_relations, :, None]).sum(dim=1)
+        else:
+            out = (t * self.att[None, self.num_relations, :, None]).sum(dim=1)
+
+        # other relations
         for r in range(self.num_relations):
+            # mask, shape: (num_edges,)
             edge_mask = edge_type == r
+
             if not edge_mask.any():
+                # skip relations without edges
                 continue
+
+            source_r = source[edge_mask]
+            target_r = target[edge_mask]
+
+            # bi-directional message passing
+            source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
+
             # compute message, shape: (num_edges_of_type, output_dim)
-            m = (t.index_select(dim=0, index=source[edge_mask]) * self.att[r, None, None]).sum(dim=0)
-            out.index_add_(dim=0, index=target[edge_mask], source=m)
+            m = (t.index_select(dim=0, index=source_r) * self.att[None, r, :, None]).sum(dim=1)
+
+            # optional message weighting
+            if edge_weights is not None:
+                m = m * edge_weights[edge_mask].unsqueeze(dim=0)
+
+            # message aggregation
+            out.index_add_(dim=0, index=target_r, source=m)
+
+        return out
+
+
+class BlockDecomposition(RelationSpecificMessagePassing):
+    """Represent relation-specific weight matrices via block-diagonal matrices."""
+
+    def __init__(
+        self,
+        edge_weighting: Optional[Callable[[torch.LongTensor, torch.LongTensor], torch.FloatTensor]],
+        input_dim: int,
+        num_relations: int,
+        num_blocks: int,
+        output_dim: Optional[int] = None,
+    ):
+        super().__init__(
+            edge_weighting=edge_weighting,
+            input_dim=input_dim,
+            num_relations=num_relations,
+            output_dim=output_dim,
+        )
+        block_size, remainder = divmod(input_dim, num_blocks)
+        if remainder != 0:
+            raise NotImplementedError
+        self.blocks = nn.Parameter(
+            data=torch.empty(
+                num_relations + 1,
+                num_blocks,
+                block_size,
+                block_size,
+            ), requires_grad=True)
+
+    def reset_parameters(self):  # noqa: D102
+        block_size = self.blocks.shape[-1]
+        # Xavier Glorot initialization of each block
+        std = torch.sqrt(torch.as_tensor(2.)) / (2 * block_size)
+        nn.init.normal_(self.blocks, std=std)
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        node_keep_mask: Optional[torch.BoolTensor],
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # self-loop first
+        start = 0
+        out = torch.zeros_like(x)
+        for block in self.blocks[-1]:
+            stop = start + block.shape[0]
+            if node_keep_mask is not None:
+                out[node_keep_mask, start:stop] = x[node_keep_mask, start:stop] @ block
+            else:
+                out[:, start:stop] = x[:, start:stop] @ block
+
+        # other relations
+        for r in range(self.num_relations):
+            # mask, shape: (num_edges,)
+            edge_mask = edge_type == r
+
+            if not edge_mask.any():
+                # skip relations without edges
+                continue
+
+            source_r = source[edge_mask]
+            target_r = target[edge_mask]
+
+            # bi-directional message passing
+            source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
+
+            # compute message, shape: (num_edges_of_type, output_dim)
+            m = []
+            start = 0
+            for block in self.blocks[r]:
+                stop = start + block.shape[0]
+                m.append(x[:, start:stop].index_select(dim=0, index=source_r) @ block)
+            m = torch.cat(m, dim=-1)
+
+            # optional message weighting
+            if edge_weights is not None:
+                m = m * edge_weights[edge_mask].unsqueeze(dim=0)
+
+            # message aggregation
+            out.index_add_(dim=0, index=target_r, source=m)
+
+        return out
+
+
+class Bias(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.bias = nn.Parameter(torch.empty(dim, ), requires_grad=True)
+
+    def reset_parameters(self):
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        return x + self.bias.unsqueeze(dim=0)
 
 
 class RGCN(Model):
@@ -147,27 +325,8 @@ class RGCN(Model):
     #: Interaction model used as decoder
     base_model: EntityEmbeddingModel
 
-    #: The blocks of the relation-specific weight matrices
-    #: shape: (num_relations, num_blocks, embedding_dim//num_blocks, embedding_dim//num_blocks)
-    blocks: Optional[nn.ParameterList]
-
-    #: The base weight matrices to generate relation-specific weights
-    #: shape: (num_bases, embedding_dim, embedding_dim)
-    bases: Optional[nn.ParameterList]
-
-    #: The relation-specific weights for each base
-    #: shape: (num_relations, num_bases)
-    att: Optional[nn.ParameterList]
-
-    #: The biases for each layer (if used)
-    #: shape of each element: (embedding_dim,)
-    biases: Optional[nn.ParameterList]
-
-    #: Batch normalization for each layer (if used)
-    batch_norms: Optional[nn.ModuleList]
-
-    #: Activations for each layer (if used)
-    activations: Optional[nn.ModuleList]
+    #: The layers
+    layers: Sequence[nn.Module]
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
@@ -193,7 +352,8 @@ class RGCN(Model):
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        num_bases_or_blocks: int = 5,
+        num_bases: Optional[int] = None,
+        num_blocks: Optional[int] = None,
         num_layers: int = 2,
         use_bias: bool = True,
         use_batch_norm: bool = False,
@@ -241,27 +401,26 @@ class RGCN(Model):
 
         self.embedding_dim = embedding_dim
 
-        self.decomposition = decomposition
-        # Heuristic
-        if self.decomposition == 'basis':
-            if num_bases_or_blocks is None:
+        # TODO: Fix
+        edge_weighting = None
+        #: TODO: use enum, of class names
+        if decomposition == 'basis':
+            if num_bases is None:
                 logging.info('Using a heuristic to determine the number of bases.')
-                num_bases_or_blocks = triples_factory.num_relations // 2 + 1
-            if num_bases_or_blocks > triples_factory.num_relations:
+                num_bases = triples_factory.num_relations // 2 + 1
+            if num_bases > triples_factory.num_relations:
                 raise ValueError('The number of bases should not exceed the number of relations.')
-        elif self.decomposition == 'block':
-            if num_bases_or_blocks is None:
+        elif decomposition == 'block':
+            if num_blocks is None:
                 logging.info('Using a heuristic to determine the number of blocks.')
-                num_bases_or_blocks = 2
-            if embedding_dim % num_bases_or_blocks != 0:
+                num_blocks = 2
+            if embedding_dim % num_blocks != 0:
                 raise ValueError(
                     'With block decomposition, the embedding dimension has to be divisible by the number of'
-                    f' blocks, but {embedding_dim} % {num_bases_or_blocks} != 0.'
+                    f' blocks, but {embedding_dim} % {num_blocks} != 0.'
                 )
         else:
-            raise ValueError(f'Unknown decomposition: "{decomposition}". Please use either "basis" or "block".')
-
-        self.num_bases = num_bases_or_blocks
+            raise ValueError(decomposition)
 
         # buffering of messages
         self.buffer_messages = buffer_messages
@@ -275,6 +434,8 @@ class RGCN(Model):
             )
 
         self.message_normalization = message_normalization
+        # TODO: Fix
+        self.edge_weighting = None
         self.edge_dropout = edge_dropout
         if self_loop_dropout is None:
             self_loop_dropout = edge_dropout
@@ -298,63 +459,32 @@ class RGCN(Model):
         self.register_buffer('targets', t)
         self.register_buffer('edge_types', r)
 
-        self.activations = nn.ModuleList([
-            self.activation_cls(**(self.activation_kwargs or {})) for _ in range(self.num_layers)
-        ])
-
-        # Weights
-        self.bases = nn.ParameterList()
-        if self.decomposition == 'basis':
-            self.att = nn.ParameterList()
-            for _ in range(self.num_layers):
-                self.bases.append(
-                    nn.Parameter(
-                        torch.empty(
-                            self.num_bases,
-                            self.embedding_dim,
-                            self.embedding_dim,
-                            device=self.device,
-                        ), requires_grad=True)
-                )
-                self.att.append(
-                    nn.Parameter(
-                        torch.empty(
-                            self.num_relations + 1,
-                            self.num_bases,
-                            device=self.device,
-                        ), requires_grad=True)
-                )
-        elif self.decomposition == 'block':
-            block_size = self.embedding_dim // self.num_bases
-            for _ in range(self.num_layers):
-                self.bases.append(
-                    nn.Parameter(
-                        data=torch.empty(
-                            self.num_relations + 1,
-                            self.num_bases,
-                            block_size,
-                            block_size,
-                            device=self.device,
-                        ), requires_grad=True)
-                )
-
-            self.att = None
-        else:
-            raise NotImplementedError
-        if self.use_bias:
-            self.biases = nn.ParameterList([
-                nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-                for _ in range(self.num_layers)
-            ])
-        else:
-            self.biases = None
-        if self.use_batch_norm:
-            self.batch_norms = nn.ModuleList([
-                nn.BatchNorm1d(num_features=self.embedding_dim)
-                for _ in range(self.num_layers)
-            ])
-        else:
-            self.batch_norms = None
+        layers = []
+        for _ in range(num_layers):
+            if decomposition == 'basis':
+                assert num_bases is not None
+                layers.append(BasesDecomposition(
+                    edge_weighting=edge_weighting,
+                    input_dim=self.embedding_dim,
+                    num_relations=self.num_relations,
+                    num_bases=num_bases,
+                ))
+            elif decomposition == 'block':
+                assert num_blocks is not None
+                layers.append(BlockDecomposition(
+                    edge_weighting=edge_weighting,
+                    input_dim=self.embedding_dim,
+                    num_relations=self.num_relations,
+                    num_blocks=num_blocks,
+                ))
+            else:
+                raise AssertionError
+            if self.use_bias:
+                layers.append(Bias(self.embedding_dim))
+            if self.use_batch_norm:
+                layers.append(nn.BatchNorm1d(num_features=self.embedding_dim))
+            layers.append(self.activation_cls(**(self.activation_kwargs or {})))
+        self.layers = nn.ModuleList(layers)
 
         # Finalize initialization
         self.reset_parameters_()
@@ -371,37 +501,11 @@ class RGCN(Model):
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
         nn.init.xavier_uniform_(self.base_embeddings)
 
-        gain = nn.init.calculate_gain(nonlinearity=self.activation_cls.__name__.lower())
-        if self.decomposition == 'basis':
-            for base in self.bases:
-                nn.init.xavier_normal_(base, gain=gain)
-            for att in self.att:
-                # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
-                # initialized properly)
-                # We have one additional relation for self-loops
-                nn.init.uniform_(att)
-                functional.normalize(att.data, p=1, dim=1, out=att.data)
-        elif self.decomposition == 'block':
-            for base in self.bases:
-                block_size = base.shape[-1]
-                # Xavier Glorot initialization of each block
-                std = torch.sqrt(torch.as_tensor(2.)) * gain / (2 * block_size)
-                nn.init.normal_(base, std=std)
-
-        # Reset biases
-        if self.biases is not None:
-            for bias in self.biases:
-                nn.init.zeros_(bias)
-
-        # Reset batch norm parameters
-        if self.batch_norms is not None:
-            for bn in self.batch_norms:
-                bn.reset_parameters()
-
-        # Reset activation parameters, if any
-        for act in self.activations:
-            if hasattr(act, 'reset_parameters'):
-                act.reset_parameters()
+        for m in self.layers:
+            if hasattr(m, 'reset_parameters'):
+                m.reset_parameters()
+            elif any(p.requires_grad for p in m.parameters()):
+                logger.warning('Layers %s has parameters, but no reset_parameters.', m)
 
     def _enrich_embeddings(self, batch: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         """
@@ -437,6 +541,15 @@ class RGCN(Model):
         else:
             node_keep_mask = None
 
+        # fixed edges -> pre-compute weights
+        if self.edge_weighting is not None:
+            edge_weights = torch.empty_like(sources, dtype=torch.float32)
+            for r in range(self.num_relations):
+                mask = edge_types == r
+                edge_weights[mask] = self.edge_weighting(source=sources[mask], target=targets[mask])
+        else:
+            edge_weights = None
+
         # If batch is given, compute (num_layers)-hop neighbourhood
         if batch is not None:
             start_nodes = torch.cat([batch[:, 0], batch[:, 2]], dim=0)
@@ -448,117 +561,29 @@ class RGCN(Model):
                 num_nodes=self.num_entities,
                 undirected=True,
             )
-        else:
-            edge_mask = None
+            sources = sources[edge_mask]
+            targets = targets[edge_mask]
+            edge_types = edge_types[edge_mask]
+            if edge_weights is not None:
+                edge_weights = edge_weights[edge_mask]
 
-        for i in range(self.num_layers):
-            # Initialize embeddings in the next layer for all nodes
-            new_x = torch.zeros_like(x)
-
-            # TODO: Can we vectorize this loop?
-            for r in range(self.num_relations):
-                # Choose the edges which are of the specific relation
-                mask = (edge_types == r)
-
-                # Only propagate messages on subset of edges
-                if edge_mask is not None:
-                    mask &= edge_mask
-
-                # No edges available? Skip rest of inner loop
-                if not mask.any():
-                    continue
-
-                # Get source and target node indices
-                sources_r = sources[mask]
-                targets_r = targets[mask]
-
-                # send messages in both directions
-                sources_r, targets_r = torch.cat([sources_r, targets_r]), torch.cat([targets_r, sources_r])
-
-                # Select source node embeddings
-                x_s = x[sources_r]
-
-                # get relation weights
-                w = self._get_relation_weights(i_layer=i, r=r)
-
-                # Compute message (b x d) * (d x d) = (b x d)
-                m_r = x_s @ w
-
-                # Normalize messages by relation-specific in-degree
-                if self.message_normalization == 'nonsymmetric':
-                    # Calculate in-degree, i.e. number of incoming edges of relation type r
-                    uniq, inv, cnt = torch.unique(targets_r, return_counts=True, return_inverse=True)
-                    m_r /= cnt[inv].unsqueeze(dim=1).float()
-                elif self.message_normalization == 'symmetric':
-                    # Calculate in-degree, i.e. number of incoming edges of relation type r
-                    uniq, inv, cnt = torch.unique(targets_r, return_counts=True, return_inverse=True)
-                    m_r /= cnt[inv].unsqueeze(dim=1).float().sqrt()
-
-                    # Calculate out-degree, i.e. number of outgoing edges of relation type r
-                    uniq, inv, cnt = torch.unique(sources_r, return_counts=True, return_inverse=True)
-                    m_r /= cnt[inv].unsqueeze(dim=1).float().sqrt()
-                else:
-                    assert self.message_normalization is None
-
-                # Aggregate messages in target
-                new_x.index_add_(dim=0, index=targets_r, source=m_r)
-
-            # Self-loop
-            self_w = self._get_relation_weights(i_layer=i, r=self.num_relations)
-            if node_keep_mask is None:
-                new_x += new_x @ self_w
+        for layer in self.layers:
+            if isinstance(layer, RelationSpecificMessagePassing):
+                kwargs = dict(
+                    node_keep_mask=node_keep_mask,
+                    source=sources,
+                    target=targets,
+                    edge_type=edge_types,
+                    edge_weights=edge_weights,
+                )
             else:
-                new_x[node_keep_mask] += new_x[node_keep_mask] @ self_w
-
-            # Apply bias, if requested
-            if self.use_bias:
-                bias = self.biases[i]
-                new_x += bias
-
-            # Apply batch normalization, if requested
-            if self.use_batch_norm:
-                batch_norm = self.batch_norms[i]
-                new_x = batch_norm(new_x)
-
-            # Apply non-linearity
-            if self.activations is not None:
-                activation = self.activations[i]
-                new_x = activation(new_x)
-
-            x = new_x
+                kwargs = dict()
+            x = layer(x, **kwargs)
 
         if batch is None and self.buffer_messages:
             self.enriched_embeddings = x
 
         return x
-
-    def _get_relation_weights(self, i_layer: int, r: int) -> torch.FloatTensor:
-        if self.decomposition == 'block':
-            # allocate weight
-            w = torch.zeros(self.embedding_dim, self.embedding_dim, device=self.device)
-
-            # Get blocks
-            this_layer_blocks = self.bases[i_layer]
-
-            # self.bases[i_layer].shape (num_relations, num_blocks, embedding_dim/num_blocks, embedding_dim/num_blocks)
-            # note: embedding_dim is guaranteed to be divisible by num_bases in the constructor
-            block_size = self.embedding_dim // self.num_bases
-            for b, start in enumerate(range(0, self.embedding_dim, block_size)):
-                stop = start + block_size
-                w[start:stop, start:stop] = this_layer_blocks[r, b, :, :]
-
-        elif self.decomposition == 'basis':
-            # The current basis weights, shape: (num_bases)
-            att = self.att[i_layer][r, :]
-            # the current bases, shape: (num_bases, embedding_dim, embedding_dim)
-            b = self.bases[i_layer]
-            # compute the current relation weights, shape: (embedding_dim, embedding_dim)
-            w = torch.sum(att[:, None, None] * b, dim=0)
-
-        else:
-            raise AssertionError(f'Unknown decomposition: {self.decomposition}')
-
-        return w
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings

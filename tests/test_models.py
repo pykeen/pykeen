@@ -618,6 +618,7 @@ class TestRGCNBasis(_TestRGCN, unittest.TestCase):
 
     model_kwargs = {
         'decomposition': 'basis',
+        'num_bases': 3,
     }
     #: one bias per layer
     num_constant_init = 2
@@ -629,7 +630,7 @@ class TestRGCNBlock(_TestRGCN, unittest.TestCase):
     embedding_dim = 6
     model_kwargs = {
         'decomposition': 'block',
-        'num_bases_or_blocks': 3,
+        'num_blocks': 3,
         'message_normalization': 'symmetric',
         'use_batch_norm': True,
     }
