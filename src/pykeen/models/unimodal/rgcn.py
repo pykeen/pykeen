@@ -4,7 +4,7 @@
 
 import logging
 from os import path
-from typing import Any, Callable, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type
 
 import torch
 from torch import nn
@@ -156,6 +156,48 @@ class RelationSpecificMessagePassing(nn.Module):
         raise NotImplementedError
 
 
+def _reduce_relation_specific(
+    relation: int,
+    source: torch.LongTensor,
+    target: torch.LongTensor,
+    edge_type: torch.LongTensor,
+    edge_weights: Optional[torch.FloatTensor],
+) -> Optional[Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.FloatTensor]]]:
+    """
+    Reduce edge information to one relation.
+
+    :param relation:
+        The relation ID.
+    :param source: shape: (num_edges,)
+        The source node IDs.
+    :param target: shape: (num_edges,)
+        The target node IDs.
+    :param edge_type: shape: (num_edges,)
+        The edge types.
+    :param edge_weights: shape: (num_edges,)
+        The edge weights.
+
+    :return:
+        The source, target, weights for edges related to the desired relation type.
+    """
+    # mask, shape: (num_edges,)
+    edge_mask = edge_type == relation
+    if not edge_mask.any():
+        return None
+
+    source_r = source[edge_mask]
+    target_r = target[edge_mask]
+    if edge_weights is not None:
+        edge_weights = edge_weights[edge_mask]
+
+    # bi-directional message passing
+    source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
+    if edge_weights is not None:
+        edge_weights = torch.cat([edge_weights, edge_weights])
+
+    return source_r, target_r, edge_weights
+
+
 class BasesDecomposition(RelationSpecificMessagePassing):
     """Represent relation-weights as a linear combination of base transformation matrices."""
 
@@ -224,28 +266,26 @@ class BasesDecomposition(RelationSpecificMessagePassing):
 
         # other relations
         for r in range(self.num_relations):
-            # mask, shape: (num_edges,)
-            edge_mask = edge_type == r
+            specific = _reduce_relation_specific(
+                relation=r,
+                source=source,
+                target=target,
+                edge_type=edge_type,
+                edge_weights=edge_weights,
+            )
 
-            if not edge_mask.any():
-                # skip relations without edges
+            # skip relations without edges
+            if specific is None:
                 continue
 
-            source_r = source[edge_mask]
-            target_r = target[edge_mask]
-
-            # bi-directional message passing
-            source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
+            source_r, target_r, weights_r = specific
 
             # compute message, shape: (num_edges_of_type, output_dim)
             m = (t.index_select(dim=0, index=source_r) * self.att[None, r, :, None]).sum(dim=1)
 
             # optional message weighting
-            if edge_weights is not None:
-                # bi-directional
-                w = edge_weights[edge_mask]
-                w = torch.cat([w, w])
-                m = m * w.unsqueeze(dim=1)
+            if weights_r is not None:
+                m = m * weights_r.unsqueeze(dim=1)
 
             # message aggregation
             out.index_add_(dim=0, index=target_r, source=m)
@@ -315,18 +355,19 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
         # other relations
         for r in range(self.num_relations):
-            # mask, shape: (num_edges,)
-            edge_mask = edge_type == r
+            specific = _reduce_relation_specific(
+                relation=r,
+                source=source,
+                target=target,
+                edge_type=edge_type,
+                edge_weights=edge_weights,
+            )
 
-            if not edge_mask.any():
-                # skip relations without edges
+            # skip relations without edges
+            if specific is None:
                 continue
 
-            source_r = source[edge_mask]
-            target_r = target[edge_mask]
-
-            # bi-directional message passing
-            source_r, target_r = torch.cat([source_r, target_r]), torch.cat([target_r, source_r])
+            source_r, target_r, weights_r = specific
 
             # compute message, shape: (num_edges_of_type, output_dim)
             m = []
@@ -337,11 +378,8 @@ class BlockDecomposition(RelationSpecificMessagePassing):
             m = torch.cat(m, dim=-1)
 
             # optional message weighting
-            if edge_weights is not None:
-                # bi-directional
-                w = edge_weights[edge_mask]
-                w = torch.cat([w, w])
-                m = m * w.unsqueeze(dim=1)
+            if weights_r is not None:
+                m = m * weights_r.unsqueeze(dim=1)
 
             # message aggregation
             out.index_add_(dim=0, index=target_r, source=m)

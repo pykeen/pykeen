@@ -1108,7 +1108,7 @@ class BlockDecompositionTests(_MessagePassingTests):
     cls = BlockDecomposition
 
 
-class BlockDecompositionTests(_MessagePassingTests):
+class BasesDecompositionTests(_MessagePassingTests):
     """unittest for BasesDecomposition"""
     cls = BasesDecomposition
     kwargs = dict(
