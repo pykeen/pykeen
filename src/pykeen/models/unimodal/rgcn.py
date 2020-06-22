@@ -54,6 +54,7 @@ def _get_neighborhood(
     return edge_mask
 
 
+# pylint: disable=unused-argument
 def inverse_indegree_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
     """Normalize messages by inverse in-degree.
 
@@ -70,6 +71,7 @@ def inverse_indegree_edge_weights(source: torch.LongTensor, target: torch.LongTe
     return cnt[inv].float().reciprocal()
 
 
+# pylint: disable=unused-argument
 def inverse_outdegree_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -> torch.FloatTensor:
     """Normalize messages by inverse out-degree.
 
