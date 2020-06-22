@@ -429,9 +429,9 @@ class RGCN(Model):
             # Self-loop
             self_w = self._get_relation_weights(i_layer=i, r=self.num_relations)
             if node_keep_mask is None:
-                new_x += new_x @ self_w
+                new_x += x @ self_w
             else:
-                new_x[node_keep_mask] += new_x[node_keep_mask] @ self_w
+                new_x[node_keep_mask] += x[node_keep_mask] @ self_w
 
             # Apply bias, if requested
             if self.use_bias:
