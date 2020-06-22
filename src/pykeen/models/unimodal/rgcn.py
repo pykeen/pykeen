@@ -390,7 +390,7 @@ class RGCN(Model):
         base_model_cls=dict(type='categorical', choices=[DistMult, ComplEx, ERMLP]),
         edge_dropout=dict(type=float, low=0.0, high=.9),
         self_loop_dropout=dict(type=float, low=0.0, high=.9),
-        message_normalization=dict(type='categorical', choices=[
+        edge_weighting=dict(type='categorical', choices=[
             None,
             inverse_indegree_edge_weights,
             inverse_outdegree_edge_weights,
@@ -419,7 +419,7 @@ class RGCN(Model):
         sparse_messages_owa: bool = True,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
-        message_normalization: Callable[
+        edge_weighting: Callable[
             [torch.LongTensor, torch.LongTensor],
             torch.FloatTensor
         ] = inverse_indegree_edge_weights,
@@ -485,9 +485,7 @@ class RGCN(Model):
         self.buffer_messages = buffer_messages
         self.enriched_embeddings = None
 
-        self.message_normalization = message_normalization
-        # TODO: Fix
-        self.edge_weighting = None
+        self.edge_weighting = edge_weighting
         self.edge_dropout = edge_dropout
         if self_loop_dropout is None:
             self_loop_dropout = edge_dropout
