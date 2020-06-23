@@ -638,7 +638,7 @@ class TestRGCNBlock(_TestRGCN, unittest.TestCase):
     model_kwargs = {
         'decomposition': 'block',
         'num_blocks': 3,
-        'message_normalization': 'symmetric',
+        'edge_weighting': symmetric_edge_weights,
         'use_batch_norm': True,
     }
     #: (scale & bias for BN) * layers
