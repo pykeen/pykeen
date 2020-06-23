@@ -632,7 +632,7 @@ class RGCN(Model):
         )
         if decomposition is BasesDecomposition:
             message_passing_kwargs['num_bases'] = num_bases
-        elif decomposition is BasesDecomposition:
+        elif decomposition is BlockDecomposition:
             message_passing_kwargs['num_blocks'] = num_blocks
         for _ in range(num_layers):
             layers.append(decomposition(**message_passing_kwargs))
