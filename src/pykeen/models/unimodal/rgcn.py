@@ -637,7 +637,7 @@ class RGCN(Model):
         for _ in range(num_layers):
             layers.append(decomposition(**message_passing_kwargs))
             if self.use_bias:
-                layers.append(Bias(self.embedding_dim))
+                layers.append(Bias(dim=self.embedding_dim))
             if self.use_batch_norm:
                 layers.append(nn.BatchNorm1d(num_features=self.embedding_dim))
             layers.append(self.activation_cls(**(self.activation_kwargs or {})))
