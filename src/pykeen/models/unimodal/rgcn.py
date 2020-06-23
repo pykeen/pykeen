@@ -114,6 +114,15 @@ class RelationSpecificMessagePassing(nn.Module):
         num_relations: int,
         output_dim: Optional[int] = None,
     ):
+        """Initialize the layer.
+
+        :param input_dim: >0
+            The input dimension.
+        :param num_relations: >0
+            The number of relations.
+        :param output_dim: >0
+            The output dimension. If None is given, defaults to input_dim.
+        """
         super().__init__()
         self.input_dim = input_dim
         self.num_relations = num_relations
@@ -130,8 +139,7 @@ class RelationSpecificMessagePassing(nn.Module):
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
-        """
-        Relation-specific message passing from source to target.
+        """Relation-specific message passing from source to target.
 
         :param x: shape: (num_nodes, input_dim)
             The node representations.
@@ -163,8 +171,7 @@ def _reduce_relation_specific(
     edge_type: torch.LongTensor,
     edge_weights: Optional[torch.FloatTensor],
 ) -> Optional[Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.FloatTensor]]]:
-    """
-    Reduce edge information to one relation.
+    """Reduce edge information to one relation.
 
     :param relation:
         The relation ID.
@@ -208,6 +215,17 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         num_bases: Optional[int],
         output_dim: Optional[int] = None,
     ):
+        """Initialize the layer.
+
+        :param input_dim: >0
+            The input dimension.
+        :param num_relations: >0
+            The number of relations.
+        :param num_bases: >0
+            The number of bases to use.
+        :param output_dim: >0
+            The output dimension. If None is given, defaults to input_dim.
+        """
         super().__init__(
             input_dim=input_dim,
             num_relations=num_relations,
@@ -303,6 +321,17 @@ class BlockDecomposition(RelationSpecificMessagePassing):
         num_blocks: Optional[int] = None,
         output_dim: Optional[int] = None,
     ):
+        """Initialize the layer.
+
+        :param input_dim: >0
+            The input dimension.
+        :param num_relations: >0
+            The number of relations.
+        :param num_blocks: >0
+            The number of blocks to use. Has to be a divisor of input_dim.
+        :param output_dim: >0
+            The output dimension. If None is given, defaults to input_dim.
+        """
         super().__init__(
             input_dim=input_dim,
             num_relations=num_relations,
@@ -315,7 +344,7 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
         block_size, remainder = divmod(input_dim, num_blocks)
         if remainder != 0:
-            raise ValueError(
+            raise NotImplementedError(
                 'With block decomposition, the embedding dimension has to be divisible by the number of'
                 f' blocks, but {input_dim} % {num_blocks} != 0.'
             )
@@ -391,8 +420,7 @@ class Bias(nn.Module):
     """A module wrapper for adding a bias."""
 
     def __init__(self, dim: int):
-        """
-        Initialize the module.
+        """Initialize the module.
 
         :param dim: >0
             The dimension of the input.
@@ -407,8 +435,7 @@ class Bias(nn.Module):
 
     # pylint: disable=arguments-differ
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """
-        Add a learned bias to the input.
+        """Add the learned bias to the input.
 
         :param x: shape: (n, d)
             The input.
@@ -486,6 +513,56 @@ class RGCN(Model):
         decomposition: Type[RelationSpecificMessagePassing] = BasesDecomposition,
         buffer_messages: bool = True,
     ):
+        """Initialize the model.
+
+        :param triples_factory:
+            The triples factory.
+        :param embedding_dim:
+            The embedding dimension to use. The same dimension is kept for all message passing layers.
+        :param automatic_memory_optimization:
+            Whether to apply automatic memory optimization for evaluation.
+        :param loss:
+            The loss function.
+        :param predict_with_sigmoid:
+            Whether to apply sigmoid on the model's output in evaluation mode.
+        :param preferred_device:
+            The preferred device.
+        :param random_seed:
+            The random seed used for initializing weights.
+        :param num_bases: >0
+            The number of bases. Requires decomposition=BasesDecomposition to become effective.
+        :param num_blocks: >0
+            The number of blocks. Requires decomposition=BlockDecomposition to become effective.
+        :param num_layers:
+            The number of layers.
+        :param use_bias:
+            Whether to use a bias.
+        :param use_batch_norm:
+            Whether to use batch normalization layers.
+        :param activation_cls:
+            The activation function to use.
+        :param activation_kwargs:
+            Additional key-word based parameters used to instantiate the activation layer.
+        :param base_model:
+            The base model, i.e. which interaction function to use as a decoder.
+        :param sparse_messages_owa:
+            Whether to use sparse messages when training with OWA, i.e. do not compute representations for all nodes,
+            but only those in a neighborhood of the currently considered ones. Theoretically improves memory
+            requirements and runtime, since only a part of the messages are computed, but leads to additional masking.
+            Moreover, real-world graphs often exhibit small-world properties leading to neighborhoods quickly comprising
+            larger parts of the graph.
+        :param edge_dropout:
+            The edge dropout to use. Set to None to disable edge dropout.
+        :param self_loop_dropout:
+            The edge dropout to use for self-loops. Set to None to disable edge dropout.
+        :param edge_weighting:
+            The edge weighting function to use.
+        :param decomposition:
+            The decomposition of the relation-specific weight matrices.
+        :param buffer_messages:
+            Whether to buffer messages. Useful for instance in evaluation mode, when the parameters remain unchanged,
+            but many forward passes are requested.
+        """
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -588,8 +665,11 @@ class RGCN(Model):
                 logger.warning('Layers %s has parameters, but no reset_parameters.', m)
 
     def _enrich_embeddings(self, batch: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        """
-        Enrich the entity embeddings using R-GCN message propagation.
+        """Enrich the entity embeddings using R-GCN message propagation.
+
+        :param batch: shape: (batch_size, 3)
+            The currently considered batch. If provided try to restrict the computed node representations only to those
+            in the receptive field of the entities of interest.
 
         :return: shape: (num_entities, embedding_dim)
             The updated entity embeddings
