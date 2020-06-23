@@ -749,3 +749,13 @@ class RGCN(Model):
         # Enrich embeddings
         self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=None)
         return self.base_model.score_hrt(hrt_batch=hrt_batch)
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # Enrich embeddings
+        self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=None)
+        return self.base_model.score_h(rt_batch=rt_batch)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # Enrich embeddings
+        self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=None)
+        return self.base_model.score_t(hr_batch=hr_batch)
