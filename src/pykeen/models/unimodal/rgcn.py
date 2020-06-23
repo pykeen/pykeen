@@ -388,14 +388,33 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
 
 class Bias(nn.Module):
-    def __init__(self, dim):
+    """A module wrapper for adding a bias."""
+
+    def __init__(self, dim: int):
+        """
+        Initialize the module.
+
+        :param dim: >0
+            The dimension of the input.
+        """
         super().__init__()
         self.bias = nn.Parameter(torch.empty(dim, ), requires_grad=True)
+        self.reset_parameters()
 
     def reset_parameters(self):
+        """Reset the layer's parameters."""
         nn.init.zeros_(self.bias)
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """
+        Add a learned bias to the input.
+
+        :param x: shape: (n, d)
+            The input.
+
+        :return:
+            x + b[None, :]
+        """
         return x + self.bias.unsqueeze(dim=0)
 
 
