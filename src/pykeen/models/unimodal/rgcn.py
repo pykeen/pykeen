@@ -555,7 +555,7 @@ class RGCN(Model):
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
-    def _reset_parameters_(self):
+    def _reset_parameters_(self):  # noqa: D102
         self.base_model.reset_parameters_()
 
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
