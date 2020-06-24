@@ -56,8 +56,8 @@ class OpenBioLinkF1(PackedZipRemoteDataSet):
             url=F1_URL,
             name='openbiolink_f1.zip',
             relative_training_path='train.tsv',
-            relative_testing_path='test.csv',
-            relative_validation_path='val.csv',
+            relative_testing_path='test.tsv',
+            relative_validation_path='val.tsv',
             eager=eager,
             create_inverse_triples=create_inverse_triples,
         )
@@ -71,8 +71,8 @@ class OpenBioLinkF2(PackedZipRemoteDataSet):
             url=F2_URL,
             name='openbiolink_f2.zip',
             relative_training_path='train.tsv',
-            relative_testing_path='test.csv',
-            relative_validation_path='val.csv',
+            relative_testing_path='test.tsv',
+            relative_validation_path='val.tsv',
             eager=eager,
             create_inverse_triples=create_inverse_triples,
         )
