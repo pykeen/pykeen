@@ -12,13 +12,13 @@ from pykeen.datasets import NationsTrainingTriplesFactory
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model
-from pykeen.training import OWATrainingLoop
-from pykeen.training.training_loop import AssumptionLossMismatchError, NonFiniteLossError
+from pykeen.training import SLCWATrainingLoop
+from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
 
 
-class DummyTrainingLoop(OWATrainingLoop):
-    """A wrapper around OWATrainingLoop."""
+class DummyTrainingLoop(SLCWATrainingLoop):
+    """A wrapper around SLCWATrainingLoop."""
 
     def __init__(self, model: Model, sub_batch_size: int):
         super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
@@ -47,8 +47,8 @@ class DummyTrainingLoop(OWATrainingLoop):
         )
 
 
-class NaNTrainingLoop(OWATrainingLoop):
-    """A wrapper around OWATrainingLoop returning NaN losses."""
+class NaNTrainingLoop(SLCWATrainingLoop):
+    """A wrapper around SLCWATrainingLoop returning NaN losses."""
 
     def __init__(self, model: Model, patience: int):
         super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
@@ -112,12 +112,12 @@ class TrainingLoopTests(unittest.TestCase):
         with self.assertRaises(NonFiniteLossError):
             training_loop.train(num_epochs=3, batch_size=self.batch_size)
 
-    def test_blacklist_loss_on_owa(self):
-        """Test an allowed OWA loss."""
+    def test_blacklist_loss_on_slcwa(self):
+        """Test an allowed sLCWA loss."""
         model = TransE(
             triples_factory=self.triples_factory,
             loss=CrossEntropyLoss(),
             automatic_memory_optimization=False,
         )
-        with self.assertRaises(AssumptionLossMismatchError):
+        with self.assertRaises(TrainingApproachLossMismatchError):
             NaNTrainingLoop(model=model, patience=2)

@@ -27,7 +27,7 @@ from ..pipeline import pipeline, replicate_pipeline_from_config
 from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
-from ..training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
+from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
 from ..utils import Result, normalize_string
 from ..version import get_git_hash, get_version
@@ -150,7 +150,7 @@ class Objective:
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
 
-        if self.training_loop is not OWATrainingLoop:
+        if self.training_loop is not SLCWATrainingLoop:
             _negative_sampler_kwargs = {}
         else:
             _negative_sampler_kwargs = _get_kwargs(
@@ -451,11 +451,11 @@ def hpo_pipeline(
         the defaults
 
     :param training_loop:
-        The name of the training loop's assumption (``'owa'`` or ``'lcwa'``) or the training loop class
+        The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
         to pass to :func:`pykeen.pipeline.pipeline`
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
-        to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with OWA.
+        to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
     :param negative_sampler_kwargs_ranges:
@@ -541,7 +541,7 @@ def hpo_pipeline(
     training_loop: Type[TrainingLoop] = get_training_loop_cls(training_loop)
     study.set_user_attr('training_loop', training_loop.get_normalized_name())
     logger.info(f'Using training loop: {training_loop}')
-    if training_loop is OWATrainingLoop:
+    if training_loop is SLCWATrainingLoop:
         negative_sampler: Optional[Type[NegativeSampler]] = get_negative_sampler_cls(negative_sampler)
         study.set_user_attr('negative_sampler', negative_sampler.get_normalized_name())
         logger.info(f'Using negative sampler: {negative_sampler}')

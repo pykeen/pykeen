@@ -136,7 +136,7 @@ the same way that the default strategies for losses are stored externally.
 
 Optimizing the Negative Sampler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When the open world assumption is used for training, a negative sampler
+When the stochastic local closed world assumption (sLCWA) training approach is used for training, a negative sampler
 (subclass of :py:class:`pykeen.sampling.NegativeSampler`) is chosen.
 Each has a strategy stored in :py:attr:`pykeen.sampling.NegativeSampler.hpo_default`.
 
@@ -233,7 +233,7 @@ evaluation, and early stopping settings.
 ...     optimizer_kwargs=dict(lr=0.01),
 ...     loss='marginranking',
 ...     loss_kwargs=dict(margin=1),
-...     training_loop='owa',
+...     training_loop='slcwa',
 ...     training_kwargs=dict(num_epochs=100, batch_size=128),
 ...     negative_sampler='basic',
 ...     negative_sampler_kwargs=dict(num_negs_per_pos=1),
@@ -258,7 +258,7 @@ If you have the configuration as a dictionary:
 ...         optimizer_kwargs=dict(lr=0.01),
 ...         loss='marginranking',
 ...         loss_kwargs=dict(margin=1),
-...         training_loop='owa',
+...         training_loop='slcwa',
 ...         training_kwargs=dict(num_epochs=100, batch_size=128),
 ...         negative_sampler='basic',
 ...         negative_sampler_kwargs=dict(num_negs_per_pos=1),
@@ -285,7 +285,7 @@ If you have a configuration (in the same format) in a JSON file:
 ...         optimizer_kwargs=dict(lr=0.01),
 ...         loss='marginranking',
 ...         loss_kwargs=dict(margin=1),
-...         training_loop='owa',
+...         training_loop='slcwa',
 ...         training_kwargs=dict(num_epochs=100, batch_size=128),
 ...         negative_sampler='basic',
 ...         negative_sampler_kwargs=dict(num_negs_per_pos=1),

@@ -65,8 +65,8 @@ This example shows how to train a model on a data set and test on another data s
 The fastest way to get up and running is to use the pipeline function. It
 provides a high-level entry into the extensible functionality of this package.
 The following example shows how to train and evaluate the TransE model on the
-Nations dataset. By default, the training loop uses the open world assumption
-and evaluates with rank-based evaluation.
+Nations dataset. By default, the training loop uses the stochastic local closed world assumption (sLCWA) training
+approach and evaluates with rank-based evaluation.
 
 ```python
 from pykeen.pipeline import pipeline

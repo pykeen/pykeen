@@ -38,19 +38,20 @@ used as in:
 ...     model=TransE,
 ... )
 
-In each of the previous three examples, the training assumption, optimizer, and evaluation scheme
-were omitted. By default, the open world assumption (OWA) is used in training. This can be explicitly
-given as a string:
+In each of the previous three examples, the training approach, optimizer, and evaluation scheme
+were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
+This can be explicitly given as a string:
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
-...     training_loop='OWA',
+...     training_loop='sLCWA',
 ... )
 
-Alternatively, the local closed world assumption (LCWA) can be given with ``'LCWA'``. No additional configuration
-is necessary, but it's worth reading up on the differences between these assumptions.
+Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
+No additional configuration is necessary, but it's worth reading up on the differences between these training
+approaches.
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
@@ -59,14 +60,14 @@ is necessary, but it's worth reading up on the differences between these assumpt
 ...     training_loop='LCWA',
 ... )
 
-One of these differences is that the OWA relies on *negative sampling*. The type of negative sampling
+One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
-...     training_loop='OWA',
+...     training_loop='sLCWA',
 ...     negative_sampler='basic',
 ... )
 
@@ -79,14 +80,14 @@ of the negative sampler could be used as in:
 >>> result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
-...     training_loop='OWA',
+...     training_loop='sLCWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
 
 .. warning ::
 
    The ``negative_sampler`` keyword argument should not be used if the LCWA is being used.
-   In general, all other options are available under either assumption.
+   In general, all other options are available under either training approach.
 
 The type of evaluation perfomed can be specified with the ``evaluator`` keyword. By default,
 rank-based evaluation is used. It can be given explictly as in:
@@ -185,7 +186,7 @@ from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
-from .training import OWATrainingLoop, TrainingLoop, get_training_loop_cls
+from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import MLFlowResultTracker, NoRandomSeedNecessary, Result, ResultTracker, resolve_device, set_random_seed
 from .version import get_git_hash, get_version
@@ -504,11 +505,11 @@ def pipeline(  # noqa: C901
         should set it to False, as the optimizer's internal parameter will get lost otherwise.
 
     :param training_loop:
-        The name of the training loop's assumption (``'owa'`` or ``'lcwa'``) or the training loop class.
-        Defaults to :class:`pykeen.training.OWATrainingLoop`.
+        The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
+        Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
-        Only allowed when training with OWA.
+        Only allowed when training with sLCWA.
         Defaults to :class:`pykeen.sampling.BasicNegativeSampler`.
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
@@ -614,11 +615,11 @@ def pipeline(  # noqa: C901
             model=model_instance,
             optimizer=optimizer_instance,
         )
-    elif training_loop is not OWATrainingLoop:
+    elif training_loop is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
-        training_loop_instance: TrainingLoop = OWATrainingLoop(
+        training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
             negative_sampler_cls=negative_sampler,

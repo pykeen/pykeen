@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from .instances import LCWAInstances, OWAInstances
+from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, slice_triples
@@ -322,9 +322,9 @@ class TriplesFactory:
 
         return False
 
-    def create_owa_instances(self) -> OWAInstances:
-        """Create OWA instances for this factory's triples."""
-        return OWAInstances(
+    def create_slcwa_instances(self) -> SLCWAInstances:
+        """Create sLCWA instances for this factory's triples."""
+        return SLCWAInstances(
             mapped_triples=self.mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

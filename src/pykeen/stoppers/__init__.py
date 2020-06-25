@@ -15,7 +15,7 @@ The following code will create a scenario in which training will stop
 ...     optimizer_kwargs=dict(lr=0.01),
 ...     loss='marginranking',
 ...     loss_kwargs=dict(margin=1),
-...     training_loop='owa',
+...     training_loop='slcwa',
 ...     training_kwargs=dict(num_epochs=100, batch_size=128),
 ...     negative_sampler='basic',
 ...     negative_sampler_kwargs=dict(num_negs_per_pos=1),
