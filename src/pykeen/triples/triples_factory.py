@@ -39,7 +39,7 @@ def _create_multi_label_tails_instance(
 
     '''
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
-    https://github.com/mali-git/POEM_develop/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
+    https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
     '''
     mapped_triples = mapped_triples.cpu().detach().numpy()
 

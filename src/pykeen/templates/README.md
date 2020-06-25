@@ -7,8 +7,8 @@
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/mali-git/POEM_develop">
-    <img src="https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
+  <a href="https://travis-ci.com/pykeen/pykeen">
+    <img src="https://travis-ci.com/pykeen/pykeen.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
          alt="Travis CI">
   </a>
 
@@ -20,7 +20,7 @@
 <p align="center">
     <b>PyKEEN</b> (<b>P</b>ython <b>K</b>nowl<b>E</b>dge <b>E</b>mbeddi<b>N</b>gs) is a Python package designed to
     train and evaluate knowledge graph embedding models (incorporating multi-modal information). It is part of the
-    <a href="https://github.com/SmartDataAnalytics/PyKEEN">KEEN Universe</a>.
+    <a href="https://github.com/pykeen">KEEN Universe</a>.
 </p>
 
 <p align="center">
@@ -35,10 +35,17 @@
 ## Installation
 
 The development version of PyKEEN can be downloaded and installed from
-[GitHub](https://github.com/mali-git/POEM_develop) on Python 3.7+ with:
+[PyPI](https://pypi.org/project/pykeen/) on Python 3.7+ with:
 
 ```bash
-$ git clone https://github.com/mali-git/POEM_develop.git pykeen
+$ pip install pykeen
+```
+
+The development version of PyKEEN can be downloaded and installed from
+[GitHub](https://github.com/pykeen/pykeen) on Python 3.7+ with:
+
+```bash
+$ git clone https://github.com/pykeen/pykeeen.git pykeen
 $ cd pykeen
 $ pip install -e .
 $ # Install pre-commit
@@ -156,16 +163,19 @@ pykeen experiments ablation ~/path/to/config.json
 
 ### Supporters
 
-This project has been supported by several organizations:
+This project has been supported by several organizations (in alphabetical order):
 
-- [Smart Data Analytics (University of Bonn)](http://sda.cs.uni-bonn.de)
-- [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
-- [Bonn Aachen International Center for IT (University of Bonn)](http://www.b-it-center.de)
+- [Bayer](https://www.bayer.com/)
+- [Enveda Therapeutics](https://envedatherapeutics.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
+- [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
+- [Ludwig Maximilian University of Munich](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
+- [Smart Data Analytics (University of Bonn)](http://sda.cs.uni-bonn.de)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
+- [University of Bonn](https://www.uni-bonn.de/)
 
 ### Logo
 

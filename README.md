@@ -7,8 +7,8 @@
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/mali-git/POEM_develop">
-    <img src="https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
+  <a href="https://travis-ci.com/pykeen/pykeen">
+    <img src="https://travis-ci.com/pykeen/pykeen.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
          alt="Travis CI">
   </a>
 
