@@ -15,11 +15,11 @@
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
-    
+
   <a href="https://zenodo.org/badge/latestdoi/242672435">
     <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
   </a>
-  
+
   <a href="https://badge.fury.io/py/pykeen">
     <img src="https://badge.fury.io/py/pykeen.svg" alt="PyPI version" height="18">
   </a>
@@ -65,7 +65,7 @@ $ pre-commit install
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
-## Quickstart
+## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
 This example shows how to train a model on a data set and test on another data set.
 
@@ -208,12 +208,12 @@ in ``pykeen``.
 
 | Metric                  | Description                                                                                                        | Evaluator   | Reference                                  |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------|-------------|--------------------------------------------|
-| Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
+| Adjusted Mean Rank      | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Average Precision Score | The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.                                   | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
+| Hits At K               | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Mean Rank               | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Mean Reciprocal Rank    | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Hits At K               | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Adjusted Mean Rank      | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
+| Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
 
 ## Hyper-parameter Optimization
 

@@ -19,7 +19,7 @@
   <a href="https://zenodo.org/badge/latestdoi/242672435">
     <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
   </a>
-  
+
   <a href="https://badge.fury.io/py/pykeen">
     <img src="https://badge.fury.io/py/pykeen.svg" alt="PyPI version" height="18">
   </a>
@@ -38,7 +38,6 @@
   <a href="#models-{{ n_models }}">Models</a> •
   <a href="#supporters">Support</a>
 </p>
-
 
 ## Installation
 
@@ -66,7 +65,7 @@ $ pre-commit install
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
-## Quickstart
+## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
 This example shows how to train a model on a data set and test on another data set.
 

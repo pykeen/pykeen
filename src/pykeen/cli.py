@@ -273,7 +273,7 @@ def metrics(tablefmt: str):
 
 def _help_metrics(tablefmt):
     return tabulate(
-        _get_metrics_lines(tablefmt),
+        sorted(_get_metrics_lines(tablefmt)),
         headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
         tablefmt=tablefmt,
     )
