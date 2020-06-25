@@ -1,0 +1,36 @@
+#########################
+# Flake8 Configuration  #
+# (.flake8)             #
+#########################
+[flake8]
+ignore =
+    # Related to generating random numbers
+    S311
+    # Related to security for pickles
+    S403
+    # Don't complain about asserts
+    S101
+    # line break before binary operator
+    W503
+    # Missing docstring in __init__
+    D107
+exclude =
+    .tox,
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    build,
+    dist,
+    tests/fixtures/*,
+    *.pyc,
+    *.egg-info,
+    .cache,
+    .eggs,
+    data
+max-line-length = 120
+max-complexity = 20
+import-order-style = pycharm
+application-import-names =
+    pykeen
+    tests
+format = ${cyan}%(path)s${reset}:${yellow_bold}%(row)d${reset}:${green_bold}%(col)d${reset}: ${red_bold}%(code)s${reset} %(text)s
