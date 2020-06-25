@@ -20,7 +20,7 @@
 <p align="center">
     <b>PyKEEN</b> (<b>P</b>ython <b>K</b>nowl<b>E</b>dge <b>E</b>mbeddi<b>N</b>gs) is a Python package designed to
     train and evaluate knowledge graph embedding models (incorporating multi-modal information). It is part of the
-    <a href="https://github.com/SmartDataAnalytics/PyKEEN">KEEN Universe</a>.
+    <a href="https://github.com/pykeen">KEEN Universe</a>.
 </p>
 
 <p align="center">
