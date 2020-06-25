@@ -188,7 +188,7 @@ def evaluators(tablefmt: str):
 
 
 def _help_evaluators(tablefmt):
-    lines = _get_lines(evaluators_dict, tablefmt, 'evaluation')
+    lines = sorted(_get_lines(evaluators_dict, tablefmt, 'evaluation'))
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -334,7 +334,7 @@ def _get_lines(d, tablefmt, submodule):
 @click.option('--check', is_flag=True)
 def readme(check: bool):
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = os.path.join(HERE, os.pardir, os.pardir, 'README.md')
+    readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, 'README.md'))
     new_readme = get_readme()
 
     if check:
