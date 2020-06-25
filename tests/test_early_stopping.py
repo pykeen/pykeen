@@ -15,7 +15,7 @@ from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
-from pykeen.training import OWATrainingLoop
+from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
@@ -207,7 +207,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             delta=self.delta,
             metric='mean_rank',
         )
-        training_loop = OWATrainingLoop(
+        training_loop = SLCWATrainingLoop(
             model=model,
             optimizer=Adam(params=model.get_grad_params()),
         )

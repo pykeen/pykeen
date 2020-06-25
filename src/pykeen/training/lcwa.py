@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class LCWATrainingLoop(TrainingLoop):
-    """A training loop that uses the local closed world assumption."""
+    """A training loop that uses the local closed world assumption training approach."""
 
     def _create_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:  # noqa: D102
         return self.triples_factory.create_lcwa_instances(use_tqdm=use_tqdm)

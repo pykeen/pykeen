@@ -135,7 +135,7 @@ def _help_datasets(tablefmt):
 @ls.command()
 @tablefmt_option
 def training_loops(tablefmt: str):
-    """List training loops."""
+    """List training approaches."""
     click.echo(_help_training(tablefmt))
 
 

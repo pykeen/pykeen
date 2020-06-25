@@ -1,6 +1,6 @@
 Training
 ========
-.. autoclass:: pykeen.training.OWATrainingLoop
+.. autoclass:: pykeen.training.SLCWATrainingLoop
    :members:
    :inherited-members:
 

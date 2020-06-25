@@ -7,7 +7,7 @@ from typing import Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 
-from .instances import MultimodalLCWAInstances, MultimodalOWAInstances
+from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples
@@ -94,26 +94,25 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             entity_to_id=self.entity_to_id,
         )
 
-    def create_owa_instances(self) -> MultimodalOWAInstances:
-        """Create multi-modal OWA instances for this factory's triples."""
-        owa_instances = super().create_owa_instances()
+    def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
+        """Create multi-modal sLCWA instances for this factory's triples."""
+        slcwa_instances = super().create_slcwa_instances()
 
         # FIXME is this ever possible, since this function is called in __init__?
         if self.numeric_literals is None:
             self._create_numeric_literals()
 
-        return MultimodalOWAInstances(
-            mapped_triples=owa_instances.mapped_triples,
-            entity_to_id=owa_instances.entity_to_id,
-            relation_to_id=owa_instances.relation_to_id,
-            assumption=owa_instances.assumption,
+        return MultimodalSLCWAInstances(
+            mapped_triples=slcwa_instances.mapped_triples,
+            entity_to_id=slcwa_instances.entity_to_id,
+            relation_to_id=slcwa_instances.relation_to_id,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
         )
 
-    def create_lcwa_instances(self) -> MultimodalLCWAInstances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> MultimodalLCWAInstances:
         """Create multi-modal LCWA instances for this factory's triples."""
-        lcwa_instances = super().create_lcwa_instances()
+        lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm)
 
         if self.numeric_literals is None:
             self._create_numeric_literals()
@@ -122,7 +121,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             mapped_triples=lcwa_instances.mapped_triples,
             entity_to_id=lcwa_instances.entity_to_id,
             relation_to_id=lcwa_instances.relation_to_id,
-            assumption=lcwa_instances.assumption,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
             labels=lcwa_instances.labels,
