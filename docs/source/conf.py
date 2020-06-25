@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # sys.path.insert(0, os.path.abspath('..'))
 
 # -- Mockup PyTorch to exclude it while compiling the docs--------------------
-autodoc_mock_imports = ['torch', 'torchvision']
+# autodoc_mock_imports = ['torch', 'torchvision']
 
 # from unittest.mock import Mock
 # sys.modules['numpy'] = Mock()
@@ -46,16 +46,16 @@ autodoc_mock_imports = ['torch', 'torchvision']
 # -- Project information -----------------------------------------------------
 
 project = 'pykeen'
-copyright = '2018, Mehdi Ali'
-author = 'Mehdi Ali'
+copyright = '2020, PyKEEN Project Team'
+author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '0.0.27-dev'
+release = '0.1.2-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
     '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(?P<build>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?',
-    release
+    release,
 )
 version = parsed_version.expand('\g<major>.\g<minor>.\g<patch>')
 
@@ -135,6 +135,10 @@ html_theme = 'sphinx_rtd_theme'
 #
 # html_sidebars = {}
 
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+#
+html_logo = 'logo.png'
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
@@ -165,8 +169,13 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pykeen.tex', 'pykeen Documentation',
-     'Mehdi Ali', 'manual'),
+    (
+        master_doc,
+        'pykeen.tex',
+        'PyKEEN Documentation',
+        author,
+        'manual',
+    ),
 ]
 
 # -- Options for manual page output ------------------------------------------
@@ -174,8 +183,13 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pykeen', 'pykeen Documentation',
-     [author], 1)
+    (
+        master_doc,
+        'pykeen',
+        'PyKEEN Documentation',
+        [author],
+        1,
+    ),
 ]
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -184,9 +198,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pykeen', 'pykeen Documentation',
-     author, 'pykeen', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        'pykeen',
+        'PyKEEN Documentation',
+        author,
+        'PyKEEN Project Team',
+        'Training and evaluatation knowledge graph embedding models.',
+        'Miscellaneous',
+    ),
 ]
 
 # -- Options for Epub output -------------------------------------------------
@@ -213,6 +233,11 @@ epub_exclude_files = ['search.html']
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'https://docs.python.org/3/': None,
-    'torch': ('https://pytorch.org/docs/0.3.0', None),
+    'torch': ('https://pytorch.org/docs/stable', None),
     'numpy': ('https://docs.scipy.org/doc/numpy', None),
+    'optuna': ('https://optuna.readthedocs.io/en/latest', None),
+    'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
+    'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
 }
+
+autoclass_content = 'both'

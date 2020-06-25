@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with KG2E as described by He et al., 2015"
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "model": "KG2E",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "c_min": 0.03,
+      "c_max": 3.0
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.01
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 4.0
+    },
+    "training_loop": "OWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 20
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "unknown": {
+        "10": 0.928
+      }
+    },
+    "mean_rank": {
+      "unknown": 331
+    }
+  }
+}

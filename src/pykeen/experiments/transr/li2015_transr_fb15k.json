@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "title": "Learn FB15K Data Set with TransR as described by Li et al., 2015. For evaluation, the non-deterministic rank is used, cf. https://github.com/Mrlyk423/Relation_Extraction/blob/9f311285abd7e29273be7e4fd8c680dd761f40eb/TransR/Test_TransR.cpp#L177-L206."
+  },
+  "pipeline": {
+    "dataset": "fb15k",
+    "model": "TransR",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "relation_dim": 50,
+      "scoring_fct_norm": 1
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.001
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 1
+    },
+    "training_loop": "OWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 4800
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 77
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "10": 0.687
+      }
+    }
+  }
+}

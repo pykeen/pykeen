@@ -102,16 +102,11 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
 .idea/
-.idea/*
-/data_local/
-/data_local/*
-/src/try_and_Error/
-/dist/
-/t_s.py
-/corpora/
 
 /try_and_error/*
 
 /src/try_and_error/
+
+/data/
+/data/*

@@ -1,0 +1,51 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with TuckER as described by Balazevic et al., 2019",
+    "comments": "Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs.In the code 500 was the default value for all datasets, that's we assume that this is the number of epochs. For evaluation, the non-deterministic rank is used, cf. https://github.com/ibalazevic/TuckER/blob/63dbba8751670db0d807579303679c0a2c266130/main.py#L78 ."
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "dataset_kwargs": {
+      "create_inverse_triples": true
+    },
+    "model": "TuckER",
+    "model_kwargs": {
+      "embedding_dim": 200,
+      "relation_dim": 30,
+      "dropout_0": 0.2,
+      "dropout_1": 0.1,
+      "dropout_2": 0.2,
+      "apply_batch_normalization": true
+    },
+    "optimizer": "Adam",
+    "optimizer_kwargs": {
+      "lr": 0.005,
+      "weight_decay": 0.995
+    },
+    "loss": "BCEAfterSigmoid",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
+    "training_loop": "LCWA",
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 128,
+      "label_smoothing": 0.1
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.949,
+        "3": 0.955,
+        "10": 0.958
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.953
+    }
+  }
+}

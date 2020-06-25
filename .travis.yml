@@ -1,37 +1,36 @@
-sudo: false
+sudo: true
 cache: pip
+dist: xenial
 language: python
-python:
-  - 3.6
-stages:
-  - lint
-  - docs
-  - test
+python: "3.7"
 jobs:
   include:
     # lint stage
-    - stage: lint
+    - name: "Check package metadata"
+      stage: lint
+      env: TOXENV=pyroma
+    - name: "Check package manifest"
       env: TOXENV=manifest
-    - env: TOXENV=flake8
-    - env: TOXENV=xenon
-    - env: TOXENV=pyroma
+    - name: "Check code style"
+      env: TOXENV=flake8
     # docs stage
-    - stage: docs
+    - name: "Check RST documentation style"
+      stage: docs
       env: TOXENV=doc8
-    - env: TOXENV=readme
-    - env: TOXENV=docs
-    - stage: test
+    - name: "Check readme template"
+      env: TOXENV=readme
+    - name: "Check sphinx build"
+      env: TOXENV=docs
+    # tests stages
+    - name: "Test fast unit tests"
+      stage: fast_tests
       env: TOXENV=py
-      python: "3.6"
-    - env: TOXENV=py
-      sudo: true
-      python: "3.7"
-      dist: xenial
+    - name: "Test slow unit tests"
+      stage: slow_tests
+      env: TOXENV=integration
 matrix:
   allow_failures:
-    - env: TOXENV=flake8
     - env: TOXENV=xenon
-    - python: "3.7"
 install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
 script:
