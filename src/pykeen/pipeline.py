@@ -303,6 +303,8 @@ class PipelineResult(Result):
 
     def save_to_directory(self, directory: str, save_metadata: bool = True, save_replicates: bool = True) -> None:
         """Save all artifacts in the given directory."""
+        os.makedirs(directory, exist_ok=True)
+
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
             json.dump(self.metadata, file, indent=2)
         with open(os.path.join(directory, 'results.json'), 'w') as file:
