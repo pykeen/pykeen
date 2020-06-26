@@ -58,7 +58,7 @@ class TransE(EntityRelationEmbeddingModel):
     ) -> None:
         r"""Initialize TransE.
 
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $`d \in [50, 300]$.
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
 
         .. seealso::
