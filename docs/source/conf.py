@@ -91,6 +91,7 @@ extensions = [
     'sphinx_autodoc_typehints',
     'sphinx_click.ext',
     'sphinx_automodapi.automodapi',
+    'texext',
 ]
 
 # generate autosummary pages
