@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
-"""TransE models relations as a translation from head to tail entities in :math:`\\textbf{e}`.
+r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`.
 
 .. math::
 
-    \\textbf{e}_h + \\textbf{e}_r \\approx \\textbf{e}_t
+    \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
 
 This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
 
 .. math::
 
-    f(h, r, t) = - \\|\\textbf{e}_h + \\textbf{e}_r - \\textbf{e}_t\\|_{p}
+    f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
 
 While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
-many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \\in \\mathcal{K}` where :math:`t_1 \\neq t_2`,
-the model adapts the embeddings in order to ensure :math:`\\textbf{e}_h + \\textbf{e}_r \\approx \\textbf{e}_{t_1}`
-and :math:`\\textbf{e}_h + \\textbf{e}_r \\approx \\textbf{e}_{t_2}` which results in
-:math:`\\textbf{e}_{t_1} \\approx \\textbf{e}_{t_2}`.
+many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
+the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
+and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
+:math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
 """
 
 from typing import Optional
@@ -63,10 +63,10 @@ class TransE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Instantiate the TransE model.
+        r"""Instantiate the TransE model.
 
-        :param embedding_dim: The entity embedding dimension :math:`|\\textbf{e}_i|`.
-         Is usually :math:`|\\textbf{e}_i| \\in [50, 300]`.
+        :param embedding_dim: The entity embedding dimension :math:`|\textbf{e}_i|`.
+         Is usually :math:`|\textbf{e}_i| \in [50, 300]`.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
         """
         super().__init__(
