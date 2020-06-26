@@ -26,6 +26,13 @@ PyKEEN
    reference/hpo
 
 .. toctree::
+   :caption: Models
+   :name: models
+   :maxdepth: 2
+
+   models/transe
+
+.. toctree::
    :caption: Appendix
    :name: appendix
    :maxdepth: 2
