@@ -110,3 +110,5 @@ venv.bak/
 
 /data/
 /data/*
+docs/source/reference/generated/*
+docs/source/api/*
