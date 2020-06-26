@@ -62,9 +62,13 @@ class BCELoss(PointwiseLoss, nn.BCELoss):
 
         \sigma(x) = \frac{1}{1 + \exp(-x)}
 
-    Thus, the problem is framed as a binary classification problem of triples, where the model's outputs are regarded
-    as logits. The loss is not well-suited for translational distance models because these models produce a negative
-    distance as score and cannot produce positive model outputs.
+    Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
+    are regarded as logits.
+
+    .. warning::
+
+        This loss is not well-suited for translational distance models because these models produce
+        a negative distance as score and cannot produce positive model outputs.
     """
 
 
