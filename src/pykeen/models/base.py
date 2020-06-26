@@ -8,6 +8,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
+import pandas as pd
 import torch
 from torch import nn
 
@@ -276,6 +277,64 @@ class Model(nn.Module):
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
+
+    def predict_heads(
+        self,
+        relation_label: str,
+        tail_label: str,
+    ) -> pd.DataFrame:
+        """Predict tails for the given head and relation (given by label).
+
+        The following example shows that after you train a model on the Nations dataset,
+        you can score all entities w.r.t a given relation and tail entity.
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(
+        ...     dataset='Nations',
+        ...     model='RotatE',
+        ... )
+        >>> df = result.model.predict_heads('accusation', 'brazil')
+        """
+        tail_id = self.triples_factory.entity_to_id[tail_label]
+        relation_id = self.triples_factory.relation_to_id[relation_label]
+        rt_batch = torch.LongTensor([[relation_id, tail_id]])
+        scores = self.predict_scores_all_heads(rt_batch)
+        return pd.DataFrame(
+            [
+                (entity_id, entity_label, scores[:, entity_id].item())
+                for entity_label, entity_id in self.triples_factory.entity_to_id.items()
+            ],
+            columns=['head_id', 'head_label', 'score'],
+        ).sort_values('score', ascending=False)
+
+    def predict_tails(
+        self,
+        head_label: str,
+        relation_label: str,
+    ) -> pd.DataFrame:
+        """Predict tails for the given head and relation (given by label).
+
+        The following example shows that after you train a model on the Nations dataset,
+        you can score all entities w.r.t a given head entity and relation.
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(
+        ...     dataset='Nations',
+        ...     model='RotatE',
+        ... )
+        >>> df = result.model.predict_tails('brazil', 'accusation')
+        """
+        head_id = self.triples_factory.entity_to_id[head_label]
+        relation_id = self.triples_factory.relation_to_id[relation_label]
+        batch = torch.LongTensor([[head_id, relation_id]])
+        scores = self.predict_scores_all_tails(batch)
+        return pd.DataFrame(
+            [
+                (entity_id, entity_label, scores[:, entity_id].item())
+                for entity_label, entity_id in self.triples_factory.entity_to_id.items()
+            ],
+            columns=['tail_id', 'tail_label', 'score'],
+        ).sort_values('score', ascending=False)
 
     def predict_scores_all_relations(
         self,
