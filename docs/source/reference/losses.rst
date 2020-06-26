@@ -3,19 +3,7 @@ Loss Functions
 .. automodapi:: pykeen.losses
     :no-heading:
     :headings: --
-
-PyTorch Losses
---------------
-There are several loss functions from PyTorch that can be used
-as well:
-
-===============  ==========================================
-Name             Reference
-===============  ==========================================
-bce              :class:`torch.nn.BCELoss`
-marginranking    :class:`torch.nn.MarginRankingLoss`
-mse              :class:`torch.nn.MSELoss`
-===============  ==========================================
+    :skip: Loss
 
 HPO Defaults
 ------------
