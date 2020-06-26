@@ -10,11 +10,11 @@ from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
-from tqdm import tqdm, trange
 
 from ..losses import Loss
 from ..models.base import Model
 from ..stoppers import Stopper
+from ..tqdmw import tqdm, trange
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples

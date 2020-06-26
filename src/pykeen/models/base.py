@@ -10,10 +10,10 @@ from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Opt
 
 import torch
 from torch import nn
-from tqdm import tqdm
 
 from ..losses import Loss, NSSALoss
 from ..regularizers import NoRegularizer, Regularizer
+from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
 from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed

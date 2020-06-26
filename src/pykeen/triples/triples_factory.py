@@ -11,10 +11,10 @@ from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence
 
 import numpy as np
 import torch
-from tqdm import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
+from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, slice_triples
 
