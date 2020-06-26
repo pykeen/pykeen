@@ -516,6 +516,15 @@ class TestERMLPE(_ModelTestCase, unittest.TestCase):
     num_constant_init = 4
 
 
+class TestHAKE(_ModelTestCase, unittest.TestCase):
+    """Test the HAKE model."""
+
+    model_cls = pykeen.models.HAKE
+
+    # relation modulus & bias; modulus & phase weight
+    num_constant_init = 4
+
+
 class TestHolE(_ModelTestCase, unittest.TestCase):
     """Test the HolE model."""
 

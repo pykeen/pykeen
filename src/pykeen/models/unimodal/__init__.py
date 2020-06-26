@@ -49,6 +49,8 @@
 .. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
                 <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
                 NIPS. 2013.
+.. [zhang2020] Z. Zhang, *et al.* (2020) `Learning Hierarchy-Aware Knowledge Graph Embeddings for Link Prediction.
+              <https://arxiv.org/abs/1911.09419>`_. AAAI. 2020.
 """
 
 from .complex import ComplEx
@@ -57,6 +59,7 @@ from .conv_kb import ConvKB
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
+from .hake import HAKE
 from .hole import HolE
 from .kg2e import KG2E
 from .ntn import NTN
@@ -80,6 +83,7 @@ __all__ = [
     'DistMult',
     'ERMLP',
     'ERMLPE',
+    'HAKE',
     'HolE',
     'KG2E',
     'NTN',
