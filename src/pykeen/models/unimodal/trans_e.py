@@ -56,16 +56,15 @@ class TransE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        r"""
+        r"""Initialize TransE.
 
-        :param embedding_dim: The entity embedding dimension :math:`|\textbf{e}_i|`.
-         Is usually :math:`|\textbf{e}_i| \in [50, 300]`.
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $`d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
 
         .. seealso::
 
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
-        """  # noqa: D205
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

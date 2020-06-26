@@ -19,7 +19,23 @@ __all__ = [
 
 
 class UnstructuredModel(EntityEmbeddingModel):
-    """An implementation of Unstructured Model (UM) from [bordes2014]_."""
+    r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
+
+
+    UM computes the distance between head and tail entities then applies the $l_p$ norm.
+
+    .. math::
+
+        f(h, r, t) = - \|\textbf{e}_h  - \textbf{e}_t\|_p^2
+
+    A small distance between the embeddings for the head and tail entity indicates a plausible triple. It is
+    appropriate for networks with a single relationship type that is undirected.
+
+    .. warning::
+
+        In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
+        However, it may serve as a baseline for comparison against relation-aware models.
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
@@ -38,6 +54,11 @@ class UnstructuredModel(EntityEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        r"""Initialize UM.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
