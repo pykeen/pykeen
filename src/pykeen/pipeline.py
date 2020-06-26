@@ -18,6 +18,7 @@ the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of ev
 ...     dataset='Nations',
 ...     model='TransE',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 The results are returned in a :class:`pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
@@ -32,6 +33,7 @@ could be used as in:
 ...     dataset='Nations',
 ...     model=TransE,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In this example, the data set was given as a string. A list of available data sets can be found in
 :mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.DataSet` could be
@@ -44,6 +46,7 @@ used as in:
 ...     dataset=Nations,
 ...     model=TransE,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
@@ -55,6 +58,7 @@ This can be explicitly given as a string:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
@@ -66,6 +70,7 @@ approaches.
 ...     model='TransE',
 ...     training_loop='LCWA',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
@@ -77,6 +82,7 @@ can be given as in:
 ...     training_loop='sLCWA',
 ...     negative_sampler='basic',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
@@ -90,6 +96,7 @@ of the negative sampler could be used as in:
 ...     training_loop='sLCWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 .. warning ::
 
@@ -105,6 +112,7 @@ rank-based evaluation is used. It can be given explictly as in:
 ...     model='TransE',
 ...     evaluator='RankBasedEvaluator',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
@@ -117,6 +125,7 @@ of the evaluator could be used as in:
 ...     model='TransE',
 ...     evaluator=RankBasedEvaluator,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
@@ -127,6 +136,7 @@ argument as in:
 ...     model='TransE',
 ...     stopper='early',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
@@ -140,6 +150,7 @@ Arguments for the model can be given as a dictionary using ``model_kwargs``.
 ...         scoring_fct_norm=2,
 ...     ),
 ... )
+>>> result.save_to_directory('nations_transe')
 
 The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
@@ -173,6 +184,7 @@ the default data sets are also provided as subclasses of :class:`pykeen.triples.
 ...     testing_triples_factory=testing,
 ...     model='TransE',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 .. todo:: Example with creation of triples factory
 """
