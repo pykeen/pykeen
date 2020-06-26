@@ -26,6 +26,7 @@ __all__ = [
     'split_list_in_batches_iter',
     'split_list_in_batches',
     'normalize_string',
+    'normalized_lookup',
     'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
@@ -119,6 +120,14 @@ def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     if suffix is not None and s.endswith(suffix.lower()):
         return s[:-len(suffix)]
     return s
+
+
+def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
+    """Make a normalized lookup dict."""
+    return {
+        normalize_string(cls.__name__): cls
+        for cls in classes
+    }
 
 
 def get_cls(

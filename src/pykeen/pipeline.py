@@ -39,9 +39,9 @@ used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
->>> from pykeen.datasets import nations
+>>> from pykeen.datasets import Nations
 >>> result = pipeline(
-...     dataset=nations,
+...     dataset=Nations,
 ...     model=TransE,
 ... )
 
@@ -162,19 +162,19 @@ the default data sets are also provided as subclasses of :class:`pykeen.triples.
 
     Make sure they are mapped to the same entities.
 
->>> from pykeen.datasets import NationsTestingTriplesFactory
->>> from pykeen.datasets import NationsTrainingTriplesFactory
+>>> from pykeen.datasets import Nations
+>>> from pykeen.triples import TriplesFactory
 >>> from pykeen.pipeline import pipeline
->>> training = NationsTrainingTriplesFactory()
->>> testing = NationsTestingTriplesFactory(
-...     entity_to_id=training.entity_to_id,
-...     relation_to_id=training.relation_to_id,
-... )
+>>> nations = Nations()
+>>> training: TriplesFactory = nations.training
+>>> testing: TriplesFactory = nations.testing
 >>> pipeline_result = pipeline(
 ...     training_triples_factory=training,
 ...     testing_triples_factory=testing,
 ...     model='TransE',
 ... )
+
+.. todo:: Example with creation of triples factory
 """
 
 import json
@@ -189,7 +189,8 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .datasets import DataSet, get_dataset
+from .datasets import get_dataset
+from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, get_loss_cls
 from .models import get_model_cls

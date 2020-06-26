@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from .base_module import MultimodalModel
+from ..base import MultimodalModel
 from ...losses import Loss
 from ...triples import TriplesNumericLiteralsFactory
 from ...utils import slice_doubles

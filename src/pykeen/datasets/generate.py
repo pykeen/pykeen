@@ -8,7 +8,7 @@ import os
 import click
 import numpy as np
 
-from .dataset import PathDataSet
+from .base import PathDataSet
 from ..triples import TriplesFactory
 
 LABELS = ['train', 'test', 'valid']

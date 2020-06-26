@@ -18,14 +18,12 @@ from torch.optim.adagrad import Adagrad
 
 import pykeen.experiments
 import pykeen.models
-from pykeen.datasets.kinships import TRAIN_PATH as KINSHIPS_TRAIN_PATH
+from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH as KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import (
-    NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
-    TRAIN_PATH as NATIONS_TRAIN_PATH,
+    NATIONS_TEST_PATH as NATIONS_TEST_PATH, NATIONS_TRAIN_PATH as NATIONS_TRAIN_PATH, Nations,
 )
-from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _extend_batch
+from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.multimodal import MultimodalModel
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
@@ -97,7 +95,8 @@ class _ModelTestCase:
         """Set up the test case with a triples factory and model."""
         _, self.generator, _ = set_random_seed(42)
 
-        self.factory = NationsTrainingTriplesFactory(create_inverse_triples=self.create_inverse_triples)
+        dataset = Nations(create_inverse_triples=self.create_inverse_triples)
+        self.factory = dataset.training
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
@@ -981,9 +980,6 @@ class TestTesting(unittest.TestCase):
         model_names -= SKIP_MODULES
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
-
-        for name in model_names:
-            self.assertIn(f':class:`pykeen.models.{name}`', pykeen.models.__doc__, msg=f'Forgot to document {name}')
 
     def test_models_have_experiments(self):
         """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""

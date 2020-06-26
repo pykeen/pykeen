@@ -130,12 +130,10 @@ class KG2E(EntityRelationEmbeddingModel):
 
     This model represents entities and relations as multi-dimensional Gaussian distributions.
 
-    Each relation is represented as
-        R ~ N(mu_r, Sigma_r)
-    Each entity is represented as
-        E ~ N(mu_e, Sigma_e)
+    - Each relation is represented as :math:`R ~ N(mu_r, Sigma_r)`.
+    - Each entity is represented as :math:`E ~ N(mu_e, Sigma_e)`.
 
-    For scoring, we compare E = (H - T) with R using a similarity function on distributions (KL div,
+    For scoring, we compare :math:`E = (H - T)` with R using a similarity function on distributions (KL div,
     Expected Likelihood).
     """
 

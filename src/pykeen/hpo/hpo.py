@@ -17,7 +17,7 @@ from optuna.storages import BaseStorage
 
 from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
-from ..datasets import DataSet
+from ..datasets.base import DataSet
 from ..evaluation import Evaluator, get_evaluator_cls
 from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
 from ..models import get_model_cls

@@ -1,23 +1,6 @@
 # -*- coding: utf-8 -*-
 
-r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`.
-
-.. math::
-
-    \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
-
-This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
-
-.. math::
-
-    f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
-
-While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
-many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
-the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
-and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
-:math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
-"""
+"""TransE."""
 
 from typing import Optional
 
@@ -37,13 +20,23 @@ __all__ = [
 
 
 class TransE(EntityRelationEmbeddingModel):
-    """An implementation of TransE from [bordes2013]_.
+    r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}` [bordes2013]_.
 
-     This model considers a relation as a translation from the head to the tail entity in .
+    .. math::
 
-    .. seealso::
+        \textbf{e}_h + \textbf{e}_r \approx \textbf{e}_t
 
-       - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
+    This equation is rearranged and the :math:`l_p` norm is applied to create the TransE interaction function.
+
+    .. math::
+
+        f(h, r, t) = - \|\textbf{e}_h + \textbf{e}_r - \textbf{e}_t\|_{p}
+
+    While this formulation is computationally efficient, it inherently cannot model one-to-many, many-to-one, and
+    many-to-many relationships. For triples :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}` where :math:`t_1 \neq t_2`,
+    the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
+    and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
+    :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -63,12 +56,16 @@ class TransE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        r"""Instantiate the TransE model.
+        r"""
 
         :param embedding_dim: The entity embedding dimension :math:`|\textbf{e}_i|`.
          Is usually :math:`|\textbf{e}_i| \in [50, 300]`.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
-        """
+
+        .. seealso::
+
+           - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
+        """  # noqa: D205
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

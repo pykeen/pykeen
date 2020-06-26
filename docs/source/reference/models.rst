@@ -1,5 +1,9 @@
 Models
 ======
-.. automodule:: pykeen.models
-    :members:
-    :exclude-members: TransE
+.. automodapi:: pykeen.models
+    :no-heading:
+    :headings: --
+
+Lookup
+------
+.. autofunction:: get_model_cls

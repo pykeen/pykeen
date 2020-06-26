@@ -4,58 +4,29 @@
 
 import os
 
-from ..dataset import PathDataSet
-from ...triples import TriplesFactory
+from ..base import PathDataSet
 
 __all__ = [
-    'TRAIN_PATH',
-    'TEST_PATH',
-    'VALIDATE_PATH',
-    'UmlsTestingTriplesFactory',
-    'UmlsTrainingTriplesFactory',
-    'UmlsValidationTriplesFactory',
-    'Umls',
-    'umls',
+    'UMLS_TRAIN_PATH',
+    'UMLS_TEST_PATH',
+    'UMLS_VALIDATE_PATH',
+    'UMLS',
 ]
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
-TRAIN_PATH = os.path.join(HERE, 'train.txt')
-TEST_PATH = os.path.join(HERE, 'test.txt')
-VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
+UMLS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
+UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
+UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-class UmlsTrainingTriplesFactory(TriplesFactory):
-    """A factory for the training portion of the UMLS data set."""
-
-    def __init__(self):
-        super().__init__(path=TRAIN_PATH)
-
-
-class UmlsTestingTriplesFactory(TriplesFactory):
-    """A factory for the testing portion of the UMLS data set."""
-
-    def __init__(self):
-        super().__init__(path=TEST_PATH)
-
-
-class UmlsValidationTriplesFactory(TriplesFactory):
-    """A factory for the validation portion of the UMLS data set."""
-
-    def __init__(self):
-        super().__init__(path=VALIDATE_PATH)
-
-
-class Umls(PathDataSet):
+class UMLS(PathDataSet):
     """The UMLS data set."""
 
     def __init__(self, **kwargs):
         super().__init__(
-            training_path=TRAIN_PATH,
-            testing_path=TEST_PATH,
-            validation_path=VALIDATE_PATH,
+            training_path=UMLS_TRAIN_PATH,
+            testing_path=UMLS_TEST_PATH,
+            validation_path=UMLS_VALIDATE_PATH,
             **kwargs,
         )
-
-
-umls = Umls()

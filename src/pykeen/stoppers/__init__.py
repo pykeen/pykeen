@@ -55,7 +55,11 @@ stoppers: Mapping[str, Type[Stopper]] = {
 
 
 def get_stopper_cls(query: Union[None, str, Type[Stopper]]) -> Type[Stopper]:
-    """Get the training loop class."""
+    """Look up a stopper class by name (case/punctuation insensitive) in :data:`pykeen.stoppers.stoppers`.
+
+    :param query: The name of the stopper (case insensitive, punctuation insensitive).
+    :return: The stopper class
+    """
     return get_cls(
         query,
         base=Stopper,

@@ -1,21 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Loss functions implemented in PyKEEN and additionally imported from :class:`torch`.
-
-===============  ==========================================
-Name             Reference
-===============  ==========================================
-bce              :class:`torch.nn.BCELoss`
-bceaftersigmoid  :class:`pykeen.losses.BCEAfterSigmoidLoss`
-crossentropy     :class:`pykeen.losses.CrossEntropyLoss`
-marginranking    :class:`torch.nn.MarginRankingLoss`
-mse              :class:`torch.nn.MSELoss`
-nssa             :class:`pykeen.losses.NSSALoss`
-softplus         :class:`pykeen.losses.SoftplusLoss`
-===============  ==========================================
-
-.. note:: This table can be re-generated with ``pykeen ls losses -f rst``
-"""
+"""Loss functions implemented in PyKEEN and additionally imported from :class:`torch`."""
 
 from typing import Any, Mapping, Set, Type, Union
 
@@ -31,7 +16,6 @@ __all__ = [
     'SoftplusLoss',
     'NSSALoss',
     'CrossEntropyLoss',
-    'losses',
     'losses_hpo_defaults',
     'get_loss_cls',
 ]

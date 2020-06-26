@@ -23,6 +23,7 @@ __all__ = [
     'Model',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
+    'MultimodalModel',
 ]
 
 logger = logging.getLogger(__name__)
@@ -677,3 +678,7 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
 
 def _can_slice(fn) -> bool:
     return 'slice_size' in inspect.getfullargspec(fn).args
+
+
+class MultimodalModel(EntityRelationEmbeddingModel):
+    """A multimodal KGE model."""

@@ -1,4 +1,10 @@
-Data Sets
-=========
-.. automodule:: pykeen.datasets
-   :members:
+Datasets
+========
+.. automodapi:: pykeen.datasets
+    :no-heading:
+    :headings: --
+    :skip: get_dataset
+
+Lookup
+------
+.. autofunction:: get_dataset

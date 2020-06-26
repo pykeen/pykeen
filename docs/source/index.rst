@@ -24,13 +24,7 @@ PyKEEN
    reference/evaluation/index
    reference/sampling
    reference/hpo
-
-.. toctree::
-   :caption: Models
-   :name: models
-   :maxdepth: 2
-
-   models/transe
+   reference/lookup
 
 .. toctree::
    :caption: Appendix
