@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional
 
 import numpy as np
+import pandas as pd
 import torch
 from dataclasses_json import dataclass_json
 
@@ -167,6 +168,17 @@ class RankBasedMetricResults(MetricResults):
             for k, v in self.hits_at_k[rank_type].items():
                 r[f'{rank_type}.hits_at_{k}'] = v
         return r
+
+    def to_df(self) -> pd.DataFrame: # noqa: D102
+        rows = [
+            ('avg', 'adjusted_mean_rank', self.adjusted_mean_rank)
+        ]
+        for rank_type in RANK_TYPES:
+            rows.append((rank_type, 'mean_rank', self.mean_rank[rank_type]))
+            rows.append((rank_type, 'mean_reciprocal_rank', self.mean_reciprocal_rank[rank_type]))
+            for k, v in self.hits_at_k[rank_type].items():
+                rows.append((rank_type, f'hits_at_{k}', v))
+        return pd.DataFrame(rows, columns=['Type', 'Metric', 'Value'])
 
 
 class RankBasedEvaluator(Evaluator):
