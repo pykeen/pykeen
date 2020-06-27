@@ -471,3 +471,43 @@ class TriplesFactory:
         logger.info(f'removing {len(relations)}/{self.num_relations} relations'
                     f' and {idx.sum()}/{self.num_triples} triples')
         return TriplesFactory(triples=self.triples[idx])
+
+    def entity_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each entity.
+
+        :param top: The number of top entities to show. Defaults to 100.
+
+        .. warning::
+
+            The ``word_cloud`` package is not available through pip. You should install it yourself
+            with ``pip install git+ssh://git@github.com/kavgan/word_cloud.git``.
+        """
+        text = [f'{h} {t}' for h, _, t in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def relation_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each relation.
+
+        :param top: The number of top relations to show. Defaults to 100.
+
+        .. warning::
+
+            The ``word_cloud`` package is not available through pip. You should install it yourself
+            with ``pip install git+ssh://git@github.com/kavgan/word_cloud.git``.
+        """
+        text = [r for _, r, _ in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def _word_cloud(self, *, text: List[str], top: int):
+        try:
+            from word_cloud.word_cloud_generator import WordCloud
+        except ImportError:
+            logger.warning(
+                'Could not import module `word_cloud`. '
+                'Try installing with `pip install git+ssh://git@github.com/kavgan/word_cloud.git`',
+            )
+            return
+
+        from IPython.core.display import HTML
+        word_cloud = WordCloud()
+        return HTML(word_cloud.get_embed_code(text=text, topn=top))

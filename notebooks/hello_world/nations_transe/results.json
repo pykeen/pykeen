@@ -1,7 +1,7 @@
 {
   "times": {
-    "training": 16.91899800300598,
-    "evaluation": 0.191986083984375
+    "training": 16.950926065444946,
+    "evaluation": 0.18178319931030273
   },
   "metrics": {
     "mean_rank": {
