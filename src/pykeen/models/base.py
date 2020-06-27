@@ -282,8 +282,19 @@ class Model(nn.Module):
         self,
         relation_label: str,
         tail_label: str,
+        add_novelties: bool = True,
+        remove_known: bool = False,
     ) -> pd.DataFrame:
         """Predict tails for the given head and relation (given by label).
+
+        :param relation_label: The string label for the relation
+        :param tail_label: The string label for the tail entity
+        :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
+         to novel triples?
+        :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+         may pose as a distraction.
 
         The following example shows that after you train a model on the Nations dataset,
         you can score all entities w.r.t a given relation and tail entity.
@@ -299,20 +310,37 @@ class Model(nn.Module):
         relation_id = self.triples_factory.relation_to_id[relation_label]
         rt_batch = torch.LongTensor([[relation_id, tail_id]])
         scores = self.predict_scores_all_heads(rt_batch)
-        return pd.DataFrame(
+        rv = pd.DataFrame(
             [
                 (entity_id, entity_label, scores[:, entity_id].item())
                 for entity_label, entity_id in self.triples_factory.entity_to_id.items()
             ],
             columns=['head_id', 'head_label', 'score'],
         ).sort_values('score', ascending=False)
+        if add_novelties or remove_known:
+            rv['novel'] = rv['head_id'].map(lambda head_id: self._novel(head_id, relation_id, tail_id))
+        if remove_known:
+            rv = rv[rv['novel']]
+            del rv['novel']
+        return rv
 
     def predict_tails(
         self,
         head_label: str,
         relation_label: str,
+        add_novelties: bool = True,
+        remove_known: bool = False,
     ) -> pd.DataFrame:
         """Predict tails for the given head and relation (given by label).
+
+        :param head_label: The string label for the head entity
+        :param relation_label: The string label for the relation
+        :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
+         to novel triples?
+        :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+         may pose as a distraction.
 
         The following example shows that after you train a model on the Nations dataset,
         you can score all entities w.r.t a given head entity and relation.
@@ -328,13 +356,26 @@ class Model(nn.Module):
         relation_id = self.triples_factory.relation_to_id[relation_label]
         batch = torch.LongTensor([[head_id, relation_id]])
         scores = self.predict_scores_all_tails(batch)
-        return pd.DataFrame(
+        rv = pd.DataFrame(
             [
                 (entity_id, entity_label, scores[:, entity_id].item())
                 for entity_label, entity_id in self.triples_factory.entity_to_id.items()
             ],
             columns=['tail_id', 'tail_label', 'score'],
         ).sort_values('score', ascending=False)
+        if add_novelties or remove_known:
+            rv['novel'] = rv['tail_id'].map(lambda tail_id: self._novel(head_id, relation_id, tail_id))
+        if remove_known:
+            rv = rv[rv['novel']]
+            del rv['novel']
+        return rv
+
+    def _novel(self, h, r, t) -> bool:
+        """Return if the triple is novel with respect to the training triples."""
+        return not any(
+            h == _h and r == _r and t == _t
+            for _h, _r, _t in self.triples_factory.mapped_triples
+        )
 
     def predict_scores_all_relations(
         self,
