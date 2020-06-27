@@ -21,7 +21,6 @@ __all__ = [
 class UnstructuredModel(EntityEmbeddingModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
-
     UM computes the distance between head and tail entities then applies the $l_p$ norm.
 
     .. math::

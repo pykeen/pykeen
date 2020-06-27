@@ -71,7 +71,6 @@ class RotatE(EntityRelationEmbeddingModel):
     def post_parameter_update(self):  # noqa: D102
         r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 
-
         The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
 
         .. math::

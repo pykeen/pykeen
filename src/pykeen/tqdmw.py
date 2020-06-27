@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""A wrapper around tqdm to make it automatically play nice with Jupyter Notebook"""
+"""A wrapper around tqdm to make it automatically play nice with Jupyter Notebook."""
 
 __all__ = [
     'tqdm',

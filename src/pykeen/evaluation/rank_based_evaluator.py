@@ -169,7 +169,8 @@ class RankBasedMetricResults(MetricResults):
                 r[f'{rank_type}.hits_at_{k}'] = v
         return r
 
-    def to_df(self) -> pd.DataFrame: # noqa: D102
+    def to_df(self) -> pd.DataFrame:
+        """Output the metrics as a pandas dataframe."""
         rows = [
             ('avg', 'adjusted_mean_rank', self.adjusted_mean_rank)
         ]
