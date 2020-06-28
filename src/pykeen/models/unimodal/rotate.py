@@ -21,9 +21,23 @@ __all__ = [
 
 
 class RotatE(EntityRelationEmbeddingModel):
-    """An implementation of RotatE from [sun2019]_.
+    r"""An implementation of RotatE from [sun2019]_.
 
-     This model uses models relations as cotations in complex plane.
+    RotatE models relations as rotations from head to tail entities in complex space:
+
+    .. math::
+
+        \textbf{e}_t= \textbf{e}_h \odot \textbf{r}_r
+
+    where $\textbf{e}, \textbf{r} \in \mathbb{C}^{d}$ and the complex elements of
+    $\textbf{r}_r$ are restricted to have a modulus of one ($\|\textbf{r}_r\| = 1$). The
+    interaction model is then defined as:
+
+    .. math::
+
+        f(h,r,t) = -\|\textbf{e}_h \odot \textbf{r}_r - \textbf{e}_t\|
+
+    which allows to model symmetry, antisymmetry, inversion, and composition.
 
     .. seealso::
 
