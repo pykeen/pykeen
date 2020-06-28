@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Implementations of various knowledge graph embedding models."""
+r"""An interaction model $f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}$ computes a
+real-valued score representing the plausibility of a triple $(h,r,t) \in \mathbb{K}$ given the embeddings for the
+entities and relations. In general, a larger score indicates a higher plausibility. The interpretation of the
+score value is model-dependent, and usually it cannot be directly interpreted as a probability.
+"""  # noqa: D205, D400
 
 from typing import Mapping, Set, Type, Union
 
