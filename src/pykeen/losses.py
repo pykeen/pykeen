@@ -95,7 +95,7 @@ class BCELoss(PointwiseLoss):
         return functional.binary_cross_entropy_with_logits(score, labels, reduction=self.reduction)
 
 
-class BCEAfterSigmoidLoss(nn.Module):
+class BCEAfterSigmoidLoss(PointwiseLoss):
     """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
 
     def forward(
@@ -118,7 +118,7 @@ class MSELoss(PointwiseLoss):
         return functional.mse_loss(score, labels, reduction=self.reduction)
 
 
-class SoftplusLoss(nn.Module):
+class SoftplusLoss(PointwiseLoss):
     """A loss function using softplus."""
 
     def forward(
@@ -288,7 +288,7 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
     """Get the loss class."""
     return get_cls(
         query,
-        base=nn.Module,
+        base=Loss,
         lookup_dict=losses,
         default=MarginRankingLoss,
         suffix=_LOSS_SUFFIX,
