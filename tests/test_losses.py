@@ -3,36 +3,20 @@
 """Test the PyKEEN custom loss functions."""
 
 import unittest
-from typing import Any, Mapping, Optional, Type
 
 import torch
 from torch.nn import functional
 
-from pykeen.losses import BCEAfterSigmoidLoss, CrossEntropyLoss, Loss, NSSALoss, SoftplusLoss
+from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, NSSALoss, PointwiseLoss, SoftplusLoss
 from pykeen.pipeline import PipelineResult, pipeline
+from tests.base import GenericTest, TestsTest
 
 
-class _LossTests:
+class _LossTests(GenericTest[Loss]):
     """Base unittest for loss functions."""
-
-    #: The class
-    cls: Type[Loss]
-
-    #: Constructor keyword arguments
-    kwargs: Optional[Mapping[str, Any]] = None
-
-    #: The loss instance
-    instance: Loss
 
     #: The batch size
     batch_size: int = 3
-
-    def setUp(self) -> None:
-        """Initialize the instance."""
-        kwargs = self.kwargs
-        if kwargs is None:
-            kwargs = {}
-        self.instance = self.cls(**kwargs)
 
     def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
@@ -43,21 +27,54 @@ class _LossTests:
         loss_value.backward()
 
 
-class _LabelLossTests(_LossTests):
-    """Base unit test for label-based losses."""
+class _PointwiseLossTests(_LossTests):
+    """Base unit test for point-wise losses."""
+
+    instance: PointwiseLoss
 
     #: The number of entities.
     num_entities: int = 17
 
-    def test_label_loss(self):
+    def test_pointwise_loss_forward(self):
         """Test ``forward(logits, labels)``."""
-        logits = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = functional.normalize(torch.rand(self.batch_size, self.num_entities, requires_grad=False), p=1, dim=-1)
-        loss_value = self.instance.forward(
-            logits=logits,
+        loss_value = self.instance(
+            scores=scores,
             labels=labels,
         )
-        self._check_loss_value(loss_value)
+        self._check_loss_value(loss_value=loss_value)
+
+
+class BCELossTests(_PointwiseLossTests, unittest.TestCase):
+    """Unit test for BCELoss."""
+
+    cls = BCELoss
+
+
+class BCEAfterSigmoidLossTests(_PointwiseLossTests, unittest.TestCase):
+    """Unit test for BCEAfterSigmoidLoss."""
+
+    cls = BCEAfterSigmoidLoss
+
+
+class MSELossTests(_PointwiseLossTests, unittest.TestCase):
+    """Unit test for MSELoss."""
+
+    cls = MSELoss
+
+
+class SoftplusLossTests(_PointwiseLossTests, unittest.TestCase):
+    """Unit test for SoftplusLoss."""
+
+    cls = SoftplusLoss
+
+
+class PointwiseLossTestsTest(TestsTest[PointwiseLoss], unittest.TestCase):
+    """unittest for unittests for pointwise losses."""
+
+    base_cls = PointwiseLoss
+    base_test_cls = _PointwiseLossTests
 
 
 class _PairLossTests(_LossTests):
@@ -77,24 +94,6 @@ class _PairLossTests(_LossTests):
         self._check_loss_value(loss_value)
 
 
-class CrossEntropyLossTests(_LabelLossTests, unittest.TestCase):
-    """Unit test for CrossEntropyLoss."""
-
-    cls = CrossEntropyLoss
-
-
-class BCEAfterSigmoidLossTests(_LabelLossTests, unittest.TestCase):
-    """Unit test for BCEAfterSigmoidLoss."""
-
-    cls = BCEAfterSigmoidLoss
-
-
-class SoftplusLossTests(_LabelLossTests, unittest.TestCase):
-    """Unit test for SoftplusLoss."""
-
-    cls = SoftplusLoss
-
-
 class NSSALossTests(_PairLossTests, unittest.TestCase):
     """Unit test for NSSALoss."""
 
@@ -103,6 +102,12 @@ class NSSALossTests(_PairLossTests, unittest.TestCase):
         'margin': 1.,
         'adversarial_temperature': 1.,
     }
+
+
+class CrossEntropyLossTests(_PointwiseLossTests, unittest.TestCase):
+    """Unit test for CrossEntropyLoss."""
+
+    cls = CrossEntropyLoss
 
 
 class TestCustomLossFunctions(unittest.TestCase):

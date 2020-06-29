@@ -50,7 +50,7 @@ class GenericTest(Generic[B]):
         """Called after instantiation."""
 
 
-class TestTests(Generic[B]):
+class TestsTest(Generic[B]):
     """Checks whether all subclasses have unittests."""
 
     #: The base class to check for having unittests
