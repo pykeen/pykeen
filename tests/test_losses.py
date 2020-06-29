@@ -186,6 +186,9 @@ class _SetwiseLossTests(_LossTests, unittest.TestCase):
         lcwa=True,
     )
 
+    #: The number of entities.
+    num_entities: int = 13
+
     def test_forward(self):
         """Test forward(scores, labels)."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
