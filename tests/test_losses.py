@@ -17,7 +17,8 @@ class _LossTests(GenericTest[Loss]):
     #: The batch size
     batch_size: int = 3
 
-    def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
+    @staticmethod
+    def _check_loss_value(loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
         assert loss_value.ndim == 0
@@ -51,7 +52,7 @@ class _PointwiseLossTests(_LossTests):
     def test_label_sanity_check(self):
         """Test that the losses check the labels for appropriate value range."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
-        
+
         # labels < 0
         with self.assertRaises(AssertionError):
             self.instance(
