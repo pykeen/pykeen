@@ -39,8 +39,6 @@ __all__ = [
     'get_loss_cls',
 ]
 
-# Loss = nn.modules.loss._Loss
-
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
     sum=torch.sum,

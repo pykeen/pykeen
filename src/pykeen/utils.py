@@ -4,7 +4,7 @@
 
 import logging
 import random
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
 import mlflow
 import numpy
@@ -15,6 +15,7 @@ from torch import nn
 __all__ = [
     'clamp_norm',
     'compact_mapping',
+    'get_all_subclasses',
     'get_embedding',
     'imag_part',
     'l2_regularization',
@@ -428,3 +429,8 @@ def imag_part(
     """Get the imaginary part from a complex tensor."""
     dim = x.shape[-1] // 2
     return x[..., dim:]
+
+
+def get_all_subclasses(base_class: Type[X]) -> Set[Type[X]]:
+    """Get a collection of all (recursive) subclasses of a given base class."""
+    return set(base_class.__subclasses__()).union(s for c in base_class.__subclasses__() for s in get_all_subclasses(c))

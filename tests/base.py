@@ -2,14 +2,11 @@
 """Generic unittests."""
 import logging
 import pprint
-from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Set, Type, TypeVar
+from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Type, TypeVar
+
+from pykeen.utils import get_all_subclasses
 
 B = TypeVar('B')
-
-
-def get_all_subclasses(base_class: Type[B]) -> Set[Type[B]]:
-    """Get a collection of all (recursive) subclasses of a given base class."""
-    return set(base_class.__subclasses__()).union(s for c in base_class.__subclasses__() for s in get_all_subclasses(c))
 
 
 def kwargs_or_empty(kwargs: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
