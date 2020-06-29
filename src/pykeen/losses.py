@@ -67,12 +67,12 @@ class PointwiseLoss(Loss):
 
     def forward(
         self,
-        score: torch.FloatTensor,
+        scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Evaluate the loss function.
 
-        :param score: (batch_size,)
+        :param scores: (batch_size,)
             The individual triple scores.
         :param labels:  (batch_size,)
             The corresponding labels in [0, 1].
@@ -88,11 +88,11 @@ class BCELoss(PointwiseLoss):
 
     def forward(
         self,
-        score: torch.FloatTensor,
+        scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         assert labels.min() >= 0 and labels.max() <= 1
-        return functional.binary_cross_entropy_with_logits(score, labels, reduction=self.reduction)
+        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
 
 
 class BCEAfterSigmoidLoss(PointwiseLoss):
@@ -100,10 +100,10 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
     def forward(
         self,
-        logits: torch.FloatTensor,
+        scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy(torch.sigmoid(logits), labels, reduction=self.reduction)
+        return functional.binary_cross_entropy(torch.sigmoid(scores), labels, reduction=self.reduction)
 
 
 class MSELoss(PointwiseLoss):
@@ -111,11 +111,11 @@ class MSELoss(PointwiseLoss):
 
     def forward(
         self,
-        score: torch.FloatTensor,
+        scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         assert labels.min() >= 0 and labels.max() <= 1
-        return functional.mse_loss(score, labels, reduction=self.reduction)
+        return functional.mse_loss(scores, labels, reduction=self.reduction)
 
 
 class SoftplusLoss(PointwiseLoss):
