@@ -54,7 +54,8 @@ class _LossTests(GenericTest[Loss]):
             if applicable:
                 pipeline(**kwargs)
             else:
-                with self.assertRaises():
+                # TODO: Better exception specification
+                with self.assertRaises(Exception):
                     pipeline(**kwargs)
 
 
