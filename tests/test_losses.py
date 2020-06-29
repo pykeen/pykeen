@@ -39,8 +39,8 @@ class _PointwiseLossTests(_LossTests):
     #: The number of entities.
     num_entities: int = 17
 
-    def test_pointwise_loss_forward(self):
-        """Test ``forward(logits, labels)``."""
+    def test_forward(self):
+        """Test ``forward(scores, labels)``."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
         loss_value = self.instance(
@@ -107,7 +107,7 @@ class _PairwiseLossTests(_LossTests):
     #: The number of negative samples
     num_negatives: int = 5
 
-    def test_pairwise_loss_forward(self):
+    def test_forward(self):
         """Test ``forward(pos_scores, neg_scores)``."""
         pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
