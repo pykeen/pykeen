@@ -28,8 +28,7 @@ def _expected_likelihood(
     sigma_r: torch.FloatTensor,
     epsilon: float = 1.0e-10,
 ) -> torch.FloatTensor:
-    r"""
-    Compute the similarity based on expected likelihood.
+    r"""Compute the similarity based on expected likelihood.
 
     .. math::
 
@@ -126,15 +125,38 @@ def _kullback_leibler_similarity(
 
 
 class KG2E(EntityRelationEmbeddingModel):
-    """An implementation of KG2E from [he2015]_.
+    r"""An implementation of KG2E from [he2015]_.
 
-    This model represents entities and relations as multi-dimensional Gaussian distributions.
+    KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
+    observed for these entities and relations). Therefore, entities and relations are represented by probability
+    distributions, in particular by multi-variate Gaussian distributions $\mathcal{N}_i(\mu_i,\Sigma_i)$
+    where the mean $\mu_i \in \mathbb{R}^d$ denotes the position in the vector space and the diagonal variance
+    $\Sigma_i \in \mathbb{R}^{d \times d}$ models the uncertainty.
+    Inspired by the :class:`pykeen.models.TransE` model, relations are modeled as transformations from head to tail
+    entities: $\mathcal{H} - \mathcal{T} \approx \mathcal{R}$ where
+    $\mathcal{H} \sim \mathcal{N}_h(\mu_h,\Sigma_h)$, $\mathcal{H} \sim \mathcal{N}_t(\mu_t,\Sigma_t)$,
+    $\mathcal{R} \sim \mathcal{P}_r = \mathcal{N}_r(\mu_r,\Sigma_r)$, and
+    $\mathcal{H} - \mathcal{T} \sim \mathcal{P}_e = \mathcal{N}_{h-t}(\mu_h - \mu_t,\Sigma_h + \Sigma_t)$
+    (since head and tail entities are considered to be independent with regards to the relations).
+    The interaction model measures the similarity between $\mathcal{P}_e$ and $\mathcal{P}_r$ by
+    means of the KL divergence:
 
-    - Each relation is represented as :math:`R ~ N(mu_r, Sigma_r)`.
-    - Each entity is represented as :math:`E ~ N(mu_e, Sigma_e)`.
+    .. math::
+            f(h,r,t) = \mathcal{D_{KL}}(\mathcal{P}_e, \mathcal{P}_r)
+            = \frac{1}{2}\Big\{tr(\Sigma_{r}^{-1}\Sigma_{e}) + (\mu_{r}
+            - \mu_{e})^{T} \Sigma_{r}^{-1} (\mu_{r} - \mu_{e})
+            - log\left(\frac{det(\Sigma_e)}{det(\Sigma_r)}\right) - d\Big\}
 
-    For scoring, we compare :math:`E = (H - T)` with R using a similarity function on distributions (KL div,
-    Expected Likelihood).
+    Besides the asymmetric KL divergence, the authors propose a symmetric variant which uses the expected likelihood:
+
+    .. math::
+
+        f(h,r,t) = \log \mathcal{D_{KL}}(\mathcal{P}_e, \mathcal{P}_r)
+            = \frac{1}{2}\Big\{
+            (\mu_e - \mu_r)^T \left(\Sigma_e + \Sigma_r\right)^{-1}
+            (\mu_e - \mu_r)\\
+            + \log \det (\Sigma_e + \Sigma_r) + k_e \log (2 \pi)
+            \Big\}
     """
 
     DISTRIBUTION_SIMILARITIES = {

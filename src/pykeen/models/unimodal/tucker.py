@@ -41,7 +41,7 @@ class TuckER(EntityRelationEmbeddingModel):
 
     .. math::
 
-        \mathfrak{X} \approx \mathfrak{Z} \times_1 \textbf{A} \times_2 \textbf{B} \times_3 \textbf{C} \enspace,
+        \mathfrak{X} \approx \mathfrak{Z} \times_1 \textbf{A} \times_2 \textbf{B} \times_3 \textbf{C}
 
     where $\times_n$ is the tensor product, with $n$ denoting along which mode the tensor product is computed.
     In TuckER, a knowledge graph is considered as a binary tensor which is factorized using the Tucker factorization
@@ -52,7 +52,7 @@ class TuckER(EntityRelationEmbeddingModel):
 
     .. math::
 
-        f(h,r,t) = \mathfrak{W} \times_1 \textbf{h} \times_2 \textbf{r} \times_3 \textbf{t} \enspace,
+        f(h,r,t) = \mathfrak{W} \times_1 \textbf{h} \times_2 \textbf{r} \times_3 \textbf{t}
 
     where $\textbf{h},\textbf{t}$ correspond to rows of $\textbf{E}$ and $\textbf{r}$ to a row of $\textbf{R}$.
 

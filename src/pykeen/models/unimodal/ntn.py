@@ -19,14 +19,24 @@ __all__ = [
 
 
 class NTN(EntityEmbeddingModel):
-    """An implementation of NTN from [socher2013]_.
+    r"""An implementation of NTN from [socher2013]_.
 
-    In NTN, a bilinear tensor layer relates the two entity vectors across multiple dimensions.
+    NTN uses a bilinear tensor layer instead of a standard linear neural network layer:
 
-    Scoring function:
-        u_R.T . f(h.T . W_R^[1:k] . t + V_r . [h; t] + b_R)
+    .. math::
 
-    where h.T . W_R^[1:k] . t denotes the bilinear tensor product.
+        f(h,r,t) = \textbf{u}_{r}^{T} \cdot \tanh(\textbf{h} \mathfrak{W}_{r} \textbf{t}
+        + \textbf{V}_r [\textbf{h};\textbf{t}] + \textbf{b}_r)
+
+    where $\mathfrak{W}_r \in \mathbb{R}^{d \times d \times k}$ is the relation specific tensor, and the weight
+    matrix $\textbf{V}_r \in \mathbb{R}^{k \times 2d}$, and the bias vector $\textbf{b}_r$ and
+    the weight vector $\textbf{u}_r \in \mathbb{R}^k$ are the standard
+    parameters of a neural network, which are also relation specific. The result of the tensor product
+    $\textbf{h} \mathfrak{W}_{r} \textbf{t}$ is a vector $\textbf{x} \in \mathbb{R}^k$ where each entry $x_i$ is
+    computed based on the slice $i$ of the tensor $\mathfrak{W}_{r}$:
+    $\textbf{x}_i = \textbf{h}\mathfrak{W}_{r}^{i} \textbf{t}$. As indicated by the interaction model, NTN defines
+    for each relation a separate neural network which makes the model very expressive, but at the same time
+    computationally expensive.
 
     .. seealso::
 
