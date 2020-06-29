@@ -7,7 +7,7 @@ from typing import Mapping
 
 import torch
 
-from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SoftplusLoss, losses
+from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss, losses
 from pykeen.pipeline import PipelineResult, pipeline
 from tests.base import GenericTest, TestsTest
 
@@ -176,6 +176,8 @@ class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
 class _SetwiseLossTests(_LossTests):
     """unittests for setwise losses."""
 
+    instance: SetwiseLoss
+
     #: Setwise do not support owa training loop
     training_loop_support = dict(
         owa=False,
@@ -200,6 +202,14 @@ class CrossEntropyLossTests(_SetwiseLossTests, unittest.TestCase):
     """Unit test for CrossEntropyLoss."""
 
     cls = CrossEntropyLoss
+
+
+class LossTestTests(TestsTest, unittest.TestCase):
+    """Unittest for unittests for all losses."""
+
+    base_cls = Loss
+    base_test_cls = _LossTests
+    skip_cls = {PointwiseLoss, PairwiseLoss, SetwiseLoss}
 
 
 class TestCustomLossFunctions(unittest.TestCase):
