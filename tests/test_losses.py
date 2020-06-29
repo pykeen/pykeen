@@ -5,7 +5,6 @@
 import unittest
 
 import torch
-from torch.nn import functional
 
 from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, NSSALoss, PointwiseLoss, SoftplusLoss
 from pykeen.pipeline import PipelineResult, pipeline
@@ -25,6 +24,10 @@ class _LossTests(GenericTest[Loss]):
 
         # Test backward
         loss_value.backward()
+
+    def test_consistent_default_reduction(self):
+        """Verify that the default reduction equals 'mean'."""
+        assert self.instance.reduction == 'mean'
 
 
 class _PointwiseLossTests(_LossTests):
