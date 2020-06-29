@@ -38,7 +38,7 @@ class _PointwiseLossTests(_LossTests):
     def test_pointwise_loss_forward(self):
         """Test ``forward(logits, labels)``."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
-        labels = functional.normalize(torch.rand(self.batch_size, self.num_entities, requires_grad=False), p=1, dim=-1)
+        labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
         loss_value = self.instance(
             scores=scores,
             labels=labels,
