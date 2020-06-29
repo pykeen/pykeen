@@ -178,7 +178,7 @@ class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
     base_test_cls = _PairwiseLossTests
 
 
-class _SetwiseLossTests(_LossTests, unittest.TestCase):
+class _SetwiseLossTests(_LossTests):
     """unittests for setwise losses."""
 
     training_loop_support = dict(
