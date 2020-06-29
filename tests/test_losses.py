@@ -3,6 +3,7 @@
 """Test the PyKEEN custom loss functions."""
 
 import unittest
+from typing import Mapping
 
 import torch
 
@@ -16,6 +17,10 @@ class _LossTests(GenericTest[Loss]):
 
     #: The batch size
     batch_size: int = 3
+
+    #: Which training loops are supported
+    # TODO: Make this part of the loss class
+    training_loop_support: Mapping[str, bool]
 
     @staticmethod
     def _check_loss_value(loss_value: torch.FloatTensor) -> None:
@@ -34,6 +39,24 @@ class _LossTests(GenericTest[Loss]):
         """Verify that the loss class is in losses.losses"""
         assert self.cls in losses.values()
 
+    def test_training_loops(self):
+        """Verify that the loss can be used in the training pipeline with appropriate traiining loops."""
+        for training_loop, applicable in self.training_loop_support.items():
+            kwargs = dict(
+                dataset='nations',
+                model='transe',
+                loss=self.cls,
+                training_loop=training_loop,
+                training_kwargs=dict(
+                    num_epochs=2,
+                )
+            )
+            if applicable:
+                pipeline(**kwargs)
+            else:
+                with self.assertRaises():
+                    pipeline(**kwargs)
+
 
 class _PointwiseLossTests(_LossTests):
     """Base unit test for point-wise losses."""
@@ -42,6 +65,11 @@ class _PointwiseLossTests(_LossTests):
 
     #: The number of entities.
     num_entities: int = 17
+
+    training_loop_support = dict(
+        owa=True,
+        lcwa=True,
+    )
 
     def test_forward(self):
         """Test ``forward(scores, labels)``."""
@@ -70,17 +98,6 @@ class _PointwiseLossTests(_LossTests):
                 scores=scores,
                 labels=torch.empty(self.batch_size, self.num_entities, requires_grad=False).fill_(value=1.1),
             )
-
-    def test_owa_training_loop(self):
-        pipeline(
-            dataset='nations',
-            model='transe',
-            loss=self.instance,
-            training_loop='owa',
-            training_kwargs=dict(
-                num_epochs=2,
-            )
-        )
 
 
 class BCELossTests(_PointwiseLossTests, unittest.TestCase):
@@ -118,6 +135,11 @@ class _PairwiseLossTests(_LossTests):
     """Base unit test for pair-wise losses."""
 
     instance: PairwiseLoss
+
+    training_loop_support = dict(
+        owa=True,
+        lcwa=False,
+    )
 
     #: The number of negative samples
     num_negatives: int = 5
@@ -158,6 +180,11 @@ class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
 
 class _SetwiseLossTests(_LossTests, unittest.TestCase):
     """unittests for setwise losses."""
+
+    training_loop_support = dict(
+        owa=False,
+        lcwa=True,
+    )
 
     def test_forward(self):
         """Test forward(scores, labels)."""
