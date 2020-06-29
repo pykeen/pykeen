@@ -16,7 +16,7 @@ softplus         :class:`pykeen.losses.SoftplusLoss`
 
 .. note:: This table can be re-generated with ``pykeen ls losses -f rst``
 """
-
+from collections import defaultdict
 from typing import Any, Callable, Mapping, Set, Type, Union
 
 import torch
@@ -273,15 +273,10 @@ losses: Mapping[str, Type[Loss]] = {
     for cls in _LOSSES
 }
 
-losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
-    MarginRankingLoss: dict(
-        margin=dict(type=int, low=0, high=3, q=1),
-    ),
-}
-# Add empty dictionaries as defaults for all remaining losses
-for cls in _LOSSES:
-    if cls not in losses_hpo_defaults:
-        losses_hpo_defaults[cls] = {}
+losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = defaultdict(dict)
+losses_hpo_defaults[MarginRankingLoss] = dict(
+    margin=dict(type=int, low=0, high=3, q=1),
+)
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
