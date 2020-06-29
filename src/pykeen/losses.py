@@ -146,7 +146,7 @@ class PairwiseLoss(Loss):
     ) -> torch.FloatTensor:
         """Evaluate the loss function.
 
-        :param pos_scores: shape: (batch_size,)
+        :param pos_scores: shape: (batch_size, 1)
             Scores for positive triples.
         :param neg_scores: shape: (batch_size, num_neg_per_pos)
             Score for negative triples. There may be more than one negative for each positive.
