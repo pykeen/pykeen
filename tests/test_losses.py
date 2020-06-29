@@ -122,10 +122,10 @@ class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
     """Unit test for NSSALoss."""
 
     cls = NSSALoss
-    kwargs = {
-        'margin': 1.,
-        'adversarial_temperature': 1.,
-    }
+    kwargs = dict(
+        margin=1.,
+        adversarial_temperature=1.,
+    )
 
 
 class CrossEntropyLossTests(_PointwiseLossTests, unittest.TestCase):
