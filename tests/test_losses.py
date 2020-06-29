@@ -6,7 +6,7 @@ import unittest
 
 import torch
 
-from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, NSSALoss, PairwiseLoss, PointwiseLoss, SoftplusLoss
+from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SoftplusLoss
 from pykeen.pipeline import PipelineResult, pipeline
 from tests.base import GenericTest, TestsTest
 
@@ -116,6 +116,12 @@ class _PairwiseLossTests(_LossTests):
             neg_scores=neg_scores,
         )
         self._check_loss_value(loss_value=loss_value)
+
+
+class MarginRankingLossTests(_PairwiseLossTests, unittest.TestCase):
+    """Unittest for MarginRankingLoss."""
+
+    cls = MarginRankingLoss
 
 
 class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
