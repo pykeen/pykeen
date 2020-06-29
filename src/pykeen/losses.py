@@ -27,7 +27,10 @@ from .utils import get_cls, normalize_string
 
 __all__ = [
     'Loss',
+    'BCELoss',
     'BCEAfterSigmoidLoss',
+    'MarginRankingLoss',
+    'MSELoss',
     'SoftplusLoss',
     'NSSALoss',
     'CrossEntropyLoss',
