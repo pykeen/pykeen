@@ -82,6 +82,11 @@ class PointwiseLoss(Loss):
         """
         raise NotImplementedError
 
+    @staticmethod
+    def validate_labels(labels: torch.FloatTensor) -> bool:
+        """Check whether labels are in [0, 1]."""
+        return labels.min() >= 0 and labels.max() <= 1
+
 
 class BCELoss(PointwiseLoss):
     """The binary cross entropy loss directly calculated from logits."""
@@ -91,7 +96,7 @@ class BCELoss(PointwiseLoss):
         scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        assert labels.min() >= 0 and labels.max() <= 1
+        assert self.validate_labels(labels=labels)
         return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
 
 
@@ -103,6 +108,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
+        assert self.validate_labels(labels=labels)
         return functional.binary_cross_entropy(torch.sigmoid(scores), labels, reduction=self.reduction)
 
 
@@ -114,7 +120,7 @@ class MSELoss(PointwiseLoss):
         scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        assert labels.min() >= 0 and labels.max() <= 1
+        assert self.validate_labels(labels=labels)
         return functional.mse_loss(scores, labels, reduction=self.reduction)
 
 
@@ -123,13 +129,13 @@ class SoftplusLoss(PointwiseLoss):
 
     def forward(
         self,
-        logits: torch.FloatTensor,
+        scores: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        assert labels.min() >= 0 and labels.max() <= 1
+        assert self.validate_labels(labels=labels)
         # scale labels from [0, 1] to [-1, 1]
         labels = 2 * labels - 1
-        loss = functional.softplus((-1) * labels * logits)
+        loss = functional.softplus((-1) * labels * scores)
         return self.reduction_operation(loss)
 
 
