@@ -23,7 +23,7 @@ import torch
 from torch import nn
 from torch.nn import functional
 
-from .utils import get_cls, normalize_string
+from .utils import get_all_subclasses, get_cls, normalize_string
 
 __all__ = [
     'Loss',
@@ -258,15 +258,8 @@ class NSSALoss(PairwiseLoss):
 
 
 _LOSS_SUFFIX = 'Loss'
-_LOSSES: Set[Type[Loss]] = {
-    MarginRankingLoss,
-    BCELoss,
-    SoftplusLoss,
-    BCEAfterSigmoidLoss,
-    CrossEntropyLoss,
-    MSELoss,
-    NSSALoss,
-}
+_LOSSES: Set[Type[Loss]] = get_all_subclasses(base_class=Loss).difference({PointwiseLoss, PairwiseLoss, SetwiseLoss})
+
 # To add *all* losses implemented in Torch, uncomment:
 # _LOSSES.update({
 #     loss
