@@ -40,7 +40,7 @@ class _LossTests(GenericTest[Loss]):
         assert self.cls in losses.values()
 
     def test_training_loops(self):
-        """Verify that the loss can be used in the training pipeline with appropriate traiining loops."""
+        """Verify that the loss can be used in the training pipeline with appropriate training loops."""
         for training_loop, applicable in self.training_loop_support.items():
             kwargs = dict(
                 dataset='nations',
