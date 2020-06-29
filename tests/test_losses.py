@@ -128,6 +128,13 @@ class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
     )
 
 
+class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
+    """unittest for unittests for pairwise losses."""
+
+    base_cls = PairwiseLoss
+    base_test_cls = _PairwiseLossTests
+
+
 class CrossEntropyLossTests(_PointwiseLossTests, unittest.TestCase):
     """Unit test for CrossEntropyLoss."""
 
