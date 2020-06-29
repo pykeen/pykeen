@@ -48,6 +48,24 @@ class _PointwiseLossTests(_LossTests):
         )
         self._check_loss_value(loss_value=loss_value)
 
+    def test_label_sanity_check(self):
+        """Test that the losses check the labels for appropriate value range."""
+        scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        
+        # labels < 0
+        with self.assertRaises(AssertionError):
+            self.instance(
+                scores=scores,
+                labels=torch.empty(self.batch_size, self.num_entities, requires_grad=False).fill_(value=-0.1),
+            )
+
+        # labels > 1
+        with self.assertRaises(AssertionError):
+            self.instance(
+                scores=scores,
+                labels=torch.empty(self.batch_size, self.num_entities, requires_grad=False).fill_(value=1.1),
+            )
+
 
 class BCELossTests(_PointwiseLossTests, unittest.TestCase):
     """Unit test for BCELoss."""
@@ -92,11 +110,11 @@ class _PairwiseLossTests(_LossTests):
         """Test ``forward(pos_scores, neg_scores)``."""
         pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
-        loss_value = self.instance.forward(
+        loss_value = self.instance(
             pos_scores=pos_scores,
             neg_scores=neg_scores,
         )
-        self._check_loss_value(loss_value)
+        self._check_loss_value(loss_value=loss_value)
 
 
 class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
