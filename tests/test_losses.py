@@ -6,7 +6,7 @@ import unittest
 
 import torch
 
-from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SoftplusLoss
+from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SoftplusLoss, losses
 from pykeen.pipeline import PipelineResult, pipeline
 from tests.base import GenericTest, TestsTest
 
@@ -29,6 +29,10 @@ class _LossTests(GenericTest[Loss]):
     def test_consistent_default_reduction(self):
         """Verify that the default reduction equals 'mean'."""
         assert self.instance.reduction == 'mean'
+
+    def test_cls_in_losses(self):
+        """Verify that the loss class is in losses.losses"""
+        assert self.cls in losses.values()
 
 
 class _PointwiseLossTests(_LossTests):
@@ -66,6 +70,17 @@ class _PointwiseLossTests(_LossTests):
                 scores=scores,
                 labels=torch.empty(self.batch_size, self.num_entities, requires_grad=False).fill_(value=1.1),
             )
+
+    def test_owa_training_loop(self):
+        pipeline(
+            dataset='nations',
+            model='transe',
+            loss=self.instance,
+            training_loop='owa',
+            training_kwargs=dict(
+                num_epochs=2,
+            )
+        )
 
 
 class BCELossTests(_PointwiseLossTests, unittest.TestCase):
@@ -141,7 +156,21 @@ class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
     base_test_cls = _PairwiseLossTests
 
 
-class CrossEntropyLossTests(_PointwiseLossTests, unittest.TestCase):
+class _SetwiseLossTests(_LossTests, unittest.TestCase):
+    """unittests for setwise losses."""
+
+    def test_forward(self):
+        """Test forward(scores, labels)."""
+        scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
+        loss_value = self.instance(
+            scores=scores,
+            labels=labels,
+        )
+        self._check_loss_value(loss_value=loss_value)
+
+
+class CrossEntropyLossTests(_SetwiseLossTests, unittest.TestCase):
     """Unit test for CrossEntropyLoss."""
 
     cls = CrossEntropyLoss
