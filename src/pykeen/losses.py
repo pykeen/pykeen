@@ -17,11 +17,11 @@ softplus         :class:`pykeen.losses.SoftplusLoss`
 .. note:: This table can be re-generated with ``pykeen ls losses -f rst``
 """
 
-from typing import Any, Mapping, Set, Type, Union
+from typing import Any, Callable, Mapping, Set, Type, Union
 
 import torch
 from torch import nn
-from torch.nn import BCELoss, MSELoss, MarginRankingLoss, functional
+from torch.nn import functional
 
 from .utils import get_cls, normalize_string
 
@@ -36,7 +36,7 @@ __all__ = [
     'get_loss_cls',
 ]
 
-Loss = nn.modules.loss._Loss
+# Loss = nn.modules.loss._Loss
 
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
@@ -44,78 +44,188 @@ _REDUCTION_METHODS = dict(
 )
 
 
-class SoftplusLoss(nn.Module):
-    """A loss function for the softplus."""
+class Loss(nn.Module):
+    """A base class for losses for link prediction."""
 
-    def __init__(self, reduction: str = 'mean') -> None:
+    def __init__(
+        self,
+        reduction: str = 'mean',
+    ):
         super().__init__()
         self.reduction = reduction
-        self.softplus = torch.nn.Softplus(beta=1, threshold=20)
-        self._reduction_method = _REDUCTION_METHODS[reduction]
+
+    @property
+    def reduction_operation(self) -> Callable[[torch.FloatTensor], torch.FloatTensor]:
+        """Return the reduction operation."""
+        return _REDUCTION_METHODS[self.reduction]
+
+
+class PointwiseLoss(Loss):
+    """Base class for point-wise losses.
+
+    These losses receive the score of a triple together with its label."""
 
     def forward(
         self,
-        logits: torch.FloatTensor,
+        score: torch.FloatTensor,
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """Calculate the loss for the given scores and labels."""
-        assert 0. <= labels.min() and labels.max() <= 1.
-        # scale labels from [0, 1] to [-1, 1]
-        labels = 2 * labels - 1
-        loss = self.softplus((-1) * labels * logits)
-        loss = self._reduction_method(loss)
-        return loss
+        """Evaluate the loss function.
+
+        :param score: (batch_size,)
+            The individual triple scores.
+        :param labels:  (batch_size,)
+            The corresponding labels in [0, 1].
+
+        :return:
+            A scalar loss value.
+        """
+        raise NotImplementedError
+
+
+class BCELoss(PointwiseLoss):
+    """The binary cross entropy loss directly calculated from logits."""
+
+    def forward(
+        self,
+        score: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        assert labels.min() >= 0 and labels.max() <= 1
+        return functional.binary_cross_entropy_with_logits(score, labels, reduction=self.reduction)
 
 
 class BCEAfterSigmoidLoss(nn.Module):
     """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
 
-    def __init__(self, reduction: str = 'mean'):
-        super().__init__()
-        self.reduction = reduction
+    def forward(
+        self,
+        logits: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return functional.binary_cross_entropy(torch.sigmoid(logits), labels, reduction=self.reduction)
+
+
+class MSELoss(PointwiseLoss):
+    """The MSE loss."""
+
+    def forward(
+        self,
+        score: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        assert labels.min() >= 0 and labels.max() <= 1
+        return functional.mse_loss(score, labels, reduction=self.reduction)
+
+
+class SoftplusLoss(nn.Module):
+    """A loss function using softplus."""
 
     def forward(
         self,
         logits: torch.FloatTensor,
         labels: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        post_sigmoid = torch.sigmoid(logits)
-        return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
+        assert labels.min() >= 0 and labels.max() <= 1
+        # scale labels from [0, 1] to [-1, 1]
+        labels = 2 * labels - 1
+        loss = functional.softplus((-1) * labels * logits)
+        return self.reduction_operation(loss)
 
 
-class CrossEntropyLoss(nn.Module):
+class PairwiseLoss(Loss):
+    """Base class for pair-wise losses.
+
+    These losses consider a pair of a positive and negative score.
+    """
+
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the loss function.
+
+        :param pos_scores: shape: (batch_size,)
+            Scores for positive triples.
+        :param neg_scores: shape: (batch_size, num_neg_per_pos)
+            Score for negative triples. There may be more than one negative for each positive.
+
+        :return:
+            A scalar loss value.
+        """
+        raise NotImplementedError
+
+
+class MarginRankingLoss(PairwiseLoss):
+    """The margin ranking loss."""
+
+    def __init__(
+        self,
+        margin: float = 1.0,
+        margin_activation: Callable[[torch.FloatTensor], torch.FloatTensor] = functional.relu,
+        reduction: str = 'mean',
+    ):
+        super().__init__(reduction=reduction)
+        self.margin = margin
+        self.margin_activation = margin_activation
+
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.reduction_operation(self.margin_activation(neg_scores - pos_scores.unsqueeze(dim=-1) + self.margin))
+
+
+class SetwiseLoss(Loss):
+    """Base class for set-wise losses.
+
+    These losses consider the whole set of triple scores."""
+
+    def forward(
+        self,
+        scores: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the loss function.
+
+        :param scores: shape: (batch_size, num_triples_per_batch)
+            The triple scores.
+        :param labels: shape: (batch_size, num_triples_per_batch)
+            The labels for each triple, in [0, 1].
+        """
+        raise NotImplementedError
+
+
+class CrossEntropyLoss(SetwiseLoss):
     """Evaluate cross entropy after softmax output."""
 
-    def __init__(self, reduction: str = 'mean'):
-        super().__init__()
-        self.reduction = reduction
-        self._reduction_method = _REDUCTION_METHODS[reduction]
-
     def forward(
         self,
-        logits: torch.FloatTensor,
+        scores: torch.FloatTensor,
         labels: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         # cross entropy expects a proper probability distribution -> normalize labels
         p_true = functional.normalize(labels, p=1, dim=-1)
+
         # Use numerically stable variant to compute log(softmax)
-        log_p_pred = logits.log_softmax(dim=-1)
+        log_p_pred = scores.log_softmax(dim=-1)
+
         # compute cross entropy: ce(b) = sum_i p_true(b, i) * log p_pred(b, i)
         sample_wise_cross_entropy = -(p_true * log_p_pred).sum(dim=-1)
-        return self._reduction_method(sample_wise_cross_entropy)
+        return self.reduction_operation(sample_wise_cross_entropy)
 
 
-class NSSALoss(nn.Module):
+class NSSALoss(PairwiseLoss):
     """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
 
-    def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean') -> None:
-        super().__init__()
-        self.reduction = reduction
+    # TODO: Actually the loss is pointwise. It is only the weighting, which is setwise on the negative triples.
+
+    def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean'):
+        super().__init__(reduction=reduction)
         self.adversarial_temperature = adversarial_temperature
         self.margin = margin
-        self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def forward(
         self,
@@ -129,12 +239,12 @@ class NSSALoss(nn.Module):
         neg_score_weights = functional.softmax(neg_scores * self.adversarial_temperature, dim=-1).detach()
         neg_distances = -neg_scores
         weighted_neg_scores = neg_score_weights * functional.logsigmoid(neg_distances - self.margin)
-        neg_loss = self._reduction_method(weighted_neg_scores)
+        neg_loss = self.reduction_operation(weighted_neg_scores)
         pos_distances = -pos_scores
-        pos_loss = self._reduction_method(functional.logsigmoid(self.margin - pos_distances))
+        pos_loss = self.reduction_operation(functional.logsigmoid(self.margin - pos_distances))
         loss = -pos_loss - neg_loss
 
-        if self._reduction_method is torch.mean:
+        if self.reduction == 'mean':
             loss = loss / 2.
 
         return loss
