@@ -20,6 +20,7 @@ __all__ = [
     'imag_part',
     'l2_regularization',
     'is_cuda_oom_error',
+    'kwargs_or_empty',
     'real_part',
     'resolve_device',
     'slice_triples',
@@ -434,3 +435,10 @@ def imag_part(
 def get_all_subclasses(base_class: Type[X]) -> Set[Type[X]]:
     """Get a collection of all (recursive) subclasses of a given base class."""
     return set(base_class.__subclasses__()).union(s for c in base_class.__subclasses__() for s in get_all_subclasses(c))
+
+
+def kwargs_or_empty(kwargs: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+    """Return the dictionary, or an empty dictionary."""
+    if kwargs is None:
+        kwargs = {}
+    return kwargs

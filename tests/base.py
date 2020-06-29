@@ -4,16 +4,9 @@ import logging
 import pprint
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Type, TypeVar
 
-from pykeen.utils import get_all_subclasses
+from pykeen.utils import get_all_subclasses, kwargs_or_empty
 
 B = TypeVar('B')
-
-
-def kwargs_or_empty(kwargs: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
-    """Return the dictionary, or an empty dictionary."""
-    if kwargs is None:
-        kwargs = {}
-    return kwargs
 
 
 class GenericTest(Generic[B]):
