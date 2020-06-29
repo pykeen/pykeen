@@ -6,7 +6,7 @@ import unittest
 
 import torch
 
-from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, NSSALoss, PointwiseLoss, SoftplusLoss
+from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, NSSALoss, PairwiseLoss, PointwiseLoss, SoftplusLoss
 from pykeen.pipeline import PipelineResult, pipeline
 from tests.base import GenericTest, TestsTest
 
@@ -80,13 +80,15 @@ class PointwiseLossTestsTest(TestsTest[PointwiseLoss], unittest.TestCase):
     base_test_cls = _PointwiseLossTests
 
 
-class _PairLossTests(_LossTests):
+class _PairwiseLossTests(_LossTests):
     """Base unit test for pair-wise losses."""
+
+    instance: PairwiseLoss
 
     #: The number of negative samples
     num_negatives: int = 5
 
-    def test_pair_loss(self):
+    def test_pairwise_loss_forward(self):
         """Test ``forward(pos_scores, neg_scores)``."""
         pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
@@ -97,7 +99,7 @@ class _PairLossTests(_LossTests):
         self._check_loss_value(loss_value)
 
 
-class NSSALossTests(_PairLossTests, unittest.TestCase):
+class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
     """Unit test for NSSALoss."""
 
     cls = NSSALoss
