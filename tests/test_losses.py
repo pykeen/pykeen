@@ -20,7 +20,10 @@ class _LossTests(GenericTest[Loss]):
 
     #: Which training loops are supported
     # TODO: Make this part of the loss class
-    training_loop_support: Mapping[str, bool]
+    training_loop_support: Mapping[str, bool] = dict(
+        owa=True,
+        lcwa=True,
+    )
 
     @staticmethod
     def _check_loss_value(loss_value: torch.FloatTensor) -> None:
@@ -46,6 +49,7 @@ class _LossTests(GenericTest[Loss]):
                 dataset='nations',
                 model='transe',
                 loss=self.cls,
+                loss_kwargs=self.kwargs,
                 training_loop=training_loop,
                 training_kwargs=dict(
                     num_epochs=2,
@@ -66,11 +70,6 @@ class _PointwiseLossTests(_LossTests):
 
     #: The number of entities.
     num_entities: int = 17
-
-    training_loop_support = dict(
-        owa=True,
-        lcwa=True,
-    )
 
     def test_forward(self):
         """Test ``forward(scores, labels)``."""
@@ -137,11 +136,6 @@ class _PairwiseLossTests(_LossTests):
 
     instance: PairwiseLoss
 
-    training_loop_support = dict(
-        owa=True,
-        lcwa=False,
-    )
-
     #: The number of negative samples
     num_negatives: int = 5
 
@@ -182,6 +176,7 @@ class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
 class _SetwiseLossTests(_LossTests):
     """unittests for setwise losses."""
 
+    #: Setwise do not support owa training loop
     training_loop_support = dict(
         owa=False,
         lcwa=True,

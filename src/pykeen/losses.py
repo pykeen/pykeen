@@ -153,9 +153,11 @@ class PairwiseLoss(Loss):
     ) -> torch.FloatTensor:
         """Evaluate the loss function.
 
-        :param pos_scores: shape: (batch_size, 1)
+        If num_positives > 1, all pairs within one batch will be used.
+
+        :param pos_scores: shape: (batch_size, num_positives)
             Scores for positive triples.
-        :param neg_scores: shape: (batch_size, num_neg_per_pos)
+        :param neg_scores: shape: (batch_size, num_negatives)
             Score for negative triples. There may be more than one negative for each positive.
 
         :return:
@@ -182,7 +184,7 @@ class MarginRankingLoss(PairwiseLoss):
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        return self.reduction_operation(self.margin_activation(neg_scores - pos_scores.unsqueeze(dim=-1) + self.margin))
+        return self.reduction_operation(self.margin_activation(neg_scores[:, :, None] - pos_scores[:, None, :] + self.margin))
 
 
 class SetwiseLoss(Loss):
