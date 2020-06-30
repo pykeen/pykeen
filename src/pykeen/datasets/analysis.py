@@ -186,7 +186,7 @@ def entity_relation_co_occurrence_dataframe(
     num_relations = dataset.num_relations
     num_entities = dataset.num_entities
     data = numpy.zeros(shape=(4 * num_entities, 2 * num_relations), dtype=numpy.int64)
-    for i, (subset_name, triples_factory) in enumerate(sorted(dataset.factory_dict.items())):
+    for i, (_subset_name, triples_factory) in enumerate(sorted(dataset.factory_dict.items())):
         # head-relation co-occurrence
         unique_hr, counts_hr = triples_factory.mapped_triples[:, :2].unique(dim=0, return_counts=True)
         h, r = unique_hr.t().numpy()
