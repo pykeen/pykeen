@@ -5,7 +5,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -182,12 +182,18 @@ class RankBasedEvaluator(Evaluator):
 
     def __init__(
         self,
-        ks: Optional[Iterable[int]] = None,
+        ks: Optional[Iterable[Union[int, float]]] = None,
         filtered: bool = True,
     ):
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
+        for k in self.ks:
+            if isinstance(k, float) and not (0 < k < 1):
+                raise ValueError(
+                    'If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)'
+                )
         self.ranks: Dict[str, List[float]] = defaultdict(list)
+        self.num_entities = None
 
     def _update_ranks_(
         self,
@@ -203,6 +209,7 @@ class RankBasedEvaluator(Evaluator):
             true_score=true_scores,
             all_scores=all_scores,
         )
+        self.num_entities = all_scores.shape[1]
         for k, v in batch_ranks.items():
             self.ranks[k].extend(v.detach().cpu().tolist())
 
@@ -232,7 +239,7 @@ class RankBasedEvaluator(Evaluator):
         for rank_type in RANK_TYPES:
             ranks = np.asarray(self.ranks.get(rank_type), dtype=np.float64)
             hits_at_k[rank_type] = {
-                k: np.mean(ranks <= k)
+                k: np.mean(ranks <= k) if isinstance(k, int) else np.mean(ranks <= int(self.num_entities * k))
                 for k in self.ks
             }
             mean_rank[rank_type] = np.mean(ranks)
