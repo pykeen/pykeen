@@ -20,7 +20,7 @@ request a useful feature or add-on for this software you should follow the steps
 ### Bug report
 
 We track bugs for this software as [GitHub Issues](https://guides.github.com/features/issues/).
-To file a bug report, please [submit an issue](#https://github.com/mali-git/POEM_develop/issues/new?assignees=&labels=&template=bug_report.md&title=)
+To file a bug report, please [submit an issue](#https://github.com/pykeen/pykeen/issues/new?assignees=&labels=&template=bug_report.md&title=)
 and provide the therein requested information.
 
 In case you don't have a GitHub account, you can use [this template](./ISSUE_TEMPLATE/bug_report.md)
@@ -30,7 +30,7 @@ and send it via e-mail to the [project team.](./project_team.md)
 ### Feature request
 
 We track feature requests for this software as [GitHub Issues](https://guides.github.com/features/issues/).
-To file a feature request, please [submit an issue](#https://github.com/mali-git/POEM_develop/issues/new?assignees=&labels=&template=feature_request.md&title=)
+To file a feature request, please [submit an issue](#https://github.com/pykeen/pykeen/issues/new?assignees=&labels=&template=feature_request.md&title=)
 and provide the therein requested information.
 
 In case you don't have a GitHub account, you can use [this template](./ISSUE_TEMPLATE/feature_request.md)
@@ -41,7 +41,7 @@ and send it via e-mail to the [project team.](./project_team.md)
 
 Requests for direct code changes are handled as
 [GitHub Pull Requests](https://help.github.com/articles/about-pull-requests/) and can be
-[submitted here](https://github.com/mali-git/POEM_develop/compare).
+[submitted here](https://github.com/pykeen/pykeen/compare).
 
 Before submitting pull requests, please make sure that these address existing bug reports and/or feature requests. If this
 is not the case, please make sure to first create these as described in

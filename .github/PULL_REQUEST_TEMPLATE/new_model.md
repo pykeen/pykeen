@@ -2,7 +2,7 @@
 
  - Fill out the template below
  - The pull request should refer to an existing model request that has the label 'help wanted' or 'accepted'
- - The pull request should comply with these points mentioned in [the contribution guidelines](https://github.com/mali-git/POEM_develop/blob/master/.github/CONTRIBUTING.md#pull-request)
+ - The pull request should comply with these points mentioned in [the contribution guidelines](https://github.com/pykeen/pykeen/blob/master/.github/CONTRIBUTING.md#pull-request)
 
 
 ### Link to the relevant model request

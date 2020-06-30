@@ -108,9 +108,9 @@ class LabelSmoothingTest(unittest.TestCase):
         # Check if smooth labels form probability distribution
         np.testing.assert_allclose(torch.sum(smooth_labels, dim=1).numpy(), 1.0, rtol=self.relative_tolerance)
 
-    def test_owa_label_smoothing(self):
-        """Test if output is correct for the OWA training loop use case."""
-        # Create dummy OWA labels
+    def test_slcwa_label_smoothing(self):
+        """Test if output is correct for the sLCWA training loop use case."""
+        # Create dummy sLCWA labels
         ones = torch.ones(self.batch_size, 1)
         zeros = torch.zeros(self.batch_size, 1)
         labels = torch.cat([ones, zeros], dim=0)

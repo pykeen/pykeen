@@ -11,7 +11,7 @@ import torch
 from pykeen.datasets import NationsTrainingTriplesFactory
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
-from pykeen.triples import OWAInstances, TriplesFactory
+from pykeen.triples import SLCWAInstances, TriplesFactory
 
 
 def _array_check_bounds(
@@ -32,8 +32,8 @@ class _NegativeSamplingTestCase:
     seed: int
     #: The triples factory
     triples_factory: TriplesFactory
-    #: The OWA instances
-    owa_instances: OWAInstances
+    #: The sLCWA instances
+    slcwa_instances: SLCWAInstances
     #: Class of negative sampling to test
     negative_sampling_cls: ClassVar[Type[NegativeSampler]]
     #: The negative sampler instance, initialized in setUp
@@ -47,15 +47,15 @@ class _NegativeSamplingTestCase:
         self.seed = 42
         self.num_negs_per_pos = 10
         self.triples_factory = NationsTrainingTriplesFactory()
-        self.owa_instances = self.triples_factory.create_owa_instances()
+        self.slcwa_instances = self.triples_factory.create_slcwa_instances()
         self.negative_sampler = self.negative_sampling_cls(triples_factory=self.triples_factory)
         self.scaling_negative_sampler = self.negative_sampling_cls(
             triples_factory=self.triples_factory,
             num_negs_per_pos=self.num_negs_per_pos,
         )
         random = numpy.random.RandomState(seed=self.seed)
-        batch_indices = random.randint(low=0, high=self.owa_instances.num_instances, size=(self.batch_size,))
-        self.positive_batch = self.owa_instances.mapped_triples[batch_indices]
+        batch_indices = random.randint(low=0, high=self.slcwa_instances.num_instances, size=(self.batch_size,))
+        self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
 
     def test_sample(self) -> None:
         # Generate negative sample

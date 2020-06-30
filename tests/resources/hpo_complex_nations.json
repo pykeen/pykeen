@@ -23,7 +23,7 @@
       }
     },
     "training_loops": [
-      "owa",
+      "slcwa",
       "lcwa"
     ],
     "optimizers": [
@@ -135,7 +135,7 @@
     },
     "training_kwargs": {
       "ComplEx": {
-        "owa": {
+        "slcwa": {
           "num_epochs": 10
         },
         "lcwa": {
@@ -146,7 +146,7 @@
     },
     "training_kwargs_ranges": {
       "ComplEx": {
-        "owa": {
+        "slcwa": {
           "batch_size": {
             "type": "int",
             "low": 128,

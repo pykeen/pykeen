@@ -168,7 +168,7 @@ def get_configuration_errors(path: str):  # noqa: C901
         normalize=True, suffix=_TRAINING_LOOP_SUFFIX, check_kwargs=False,
     )
 
-    if training_loop == 'owa':
+    if training_loop == 'slcwa':
         _check(
             pipeline, 'negative_sampler', negative_samplers_dict,
             normalize=True, suffix=_NEGATIVE_SAMPLER_SUFFIX, check_kwargs=True,

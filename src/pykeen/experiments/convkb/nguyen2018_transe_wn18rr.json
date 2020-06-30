@@ -19,7 +19,7 @@
       "reduction": "mean",
       "margin": 5
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler_cls": "bernoulli",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
