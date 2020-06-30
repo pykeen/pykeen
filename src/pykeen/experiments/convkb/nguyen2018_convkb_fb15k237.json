@@ -26,7 +26,7 @@
     "loss_kwargs": {
       "reduction": "mean"
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "bernoulli",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1

@@ -8,8 +8,9 @@ function.
 It provides a high-level entry into the extensible functionality of
 this package. The following example shows how to train and evaluate the
 TransE model (:class:`pykeen.models.TransE`) on the Nations dataset (:class:`pykeen.datasets.Nations`)
-by referring to them by name. By default, the training loop uses the open world assumption
-(:class:`pykeen.training.OWATrainingLoop`) and evaluates with rank-based evaluation
+by referring to them by name. By default, the training loop uses the stochastic closed world assumption training
+approach
+(:class:`pykeen.training.SLCWATrainingLoop`) and evaluates with rank-based evaluation
 (:class:`pykeen.evaluation.RankBasedEvaluator`).
 
 >>> from pykeen.pipeline import pipeline

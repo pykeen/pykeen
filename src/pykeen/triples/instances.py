@@ -9,15 +9,14 @@ import numpy as np
 import torch
 from torch.utils import data
 
-from .utils import Assumption
 from ..typing import EntityMapping, MappedTriples, RelationMapping
 
 __all__ = [
     'Instances',
-    'OWAInstances',
+    'SLCWAInstances',
     'LCWAInstances',
     'MultimodalInstances',
-    'MultimodalOWAInstances',
+    'MultimodalSLCWAInstances',
     'MultimodalLCWAInstances',
 ]
 
@@ -45,10 +44,8 @@ class Instances(data.Dataset):
 
 
 @dataclass
-class OWAInstances(Instances):
-    """Triples and mappings to their indices for OWA."""
-
-    assumption: Assumption = Assumption.open
+class SLCWAInstances(Instances):
+    """Triples and mappings to their indices for sLCWA."""
 
     def __getitem__(self, item):  # noqa: D105
         return self.mapped_triples[item]
@@ -59,7 +56,6 @@ class LCWAInstances(Instances):
     """Triples and mappings to their indices for LCWA."""
 
     labels: np.ndarray
-    assumption: Assumption = Assumption.local_closed
 
     def __getitem__(self, item):  # noqa: D105
         # Create dense target
@@ -77,8 +73,8 @@ class MultimodalInstances(Instances):
 
 
 @dataclass
-class MultimodalOWAInstances(OWAInstances, MultimodalInstances):
-    """Triples and mappings to their indices as well as multimodal data for OWA."""
+class MultimodalSLCWAInstances(SLCWAInstances, MultimodalInstances):
+    """Triples and mappings to their indices as well as multimodal data for sLCWA."""
 
 
 @dataclass

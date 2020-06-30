@@ -2,26 +2,26 @@
 
 """Training loops for KGE models using multi-modal information.
 
-======  =========================================
+======  ==========================================
 Name    Reference
-======  =========================================
+======  ==========================================
 lcwa    :class:`pykeen.training.LCWATrainingLoop`
-owa     :class:`pykeen.training.OWATrainingLoop`
-======  =========================================
+slcwa   :class:`pykeen.training.SLCWATrainingLoop`
+======  ==========================================
 
-.. note:: This table can be re-generated with ``pykeen ls training -f rst``
+.. note:: This table can be re-generated with ``pykeen ls trainers -f rst``
 """
 
 from typing import Mapping, Set, Type, Union
 
 from .lcwa import LCWATrainingLoop  # noqa: F401
-from .owa import OWATrainingLoop  # noqa: F401
+from .slcwa import SLCWATrainingLoop  # noqa: F401
 from .training_loop import NonFiniteLossError, TrainingLoop  # noqa: F401
 from ..utils import get_cls, normalize_string
 
 __all__ = [
     'TrainingLoop',
-    'OWATrainingLoop',
+    'SLCWATrainingLoop',
     'LCWATrainingLoop',
     'NonFiniteLossError',
     'training_loops',
@@ -31,7 +31,7 @@ __all__ = [
 _TRAINING_LOOP_SUFFIX = 'TrainingLoop'
 _TRAINING_LOOPS: Set[Type[TrainingLoop]] = {
     LCWATrainingLoop,
-    OWATrainingLoop,
+    SLCWATrainingLoop,
 }
 
 #: A mapping of training loops' names to their implementations
@@ -47,6 +47,6 @@ def get_training_loop_cls(query: Union[None, str, Type[TrainingLoop]]) -> Type[T
         query,
         base=TrainingLoop,
         lookup_dict=training_loops,
-        default=OWATrainingLoop,
+        default=SLCWATrainingLoop,
         suffix=_TRAINING_LOOP_SUFFIX,
     )

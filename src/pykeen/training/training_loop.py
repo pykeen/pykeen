@@ -23,7 +23,7 @@ from ..utils import ResultTracker, is_cuda_oom_error, is_cudnn_error, normalize_
 __all__ = [
     'TrainingLoop',
     'NonFiniteLossError',
-    'AssumptionLossMismatchError',
+    'TrainingApproachLossMismatchError',
     'SubBatchingNotSupportedError',
 ]
 
@@ -34,8 +34,8 @@ class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
 
 
-class AssumptionLossMismatchError(TypeError):
-    """An exception when an illegal loss function is used with a given training assumption."""
+class TrainingApproachLossMismatchError(TypeError):
+    """An exception when an illegal loss function is used with a given training approach."""
 
 
 class SubBatchingNotSupportedError(NotImplementedError):
@@ -88,9 +88,9 @@ class TrainingLoop(ABC):
         self.losses_per_epochs = []
 
         if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
-            raise AssumptionLossMismatchError(
+            raise TrainingApproachLossMismatchError(
                 f'Can not use loss {self.model.loss.__class__.__name__}'
-                f' with training assumption {self.__class__.__name__}',
+                f' with training approach {self.__class__.__name__}',
             )
 
         if self.model.is_mr_loss:
@@ -144,7 +144,7 @@ class TrainingLoop(ABC):
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
-            The type of sampler to use. At the moment OWA in R-GCN is the only user of schlichtkrull sampling.
+            The type of sampler to use. At the moment sLCWA in R-GCN is the only user of schlichtkrull sampling.
         :param continue_training:
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:
@@ -226,7 +226,7 @@ class TrainingLoop(ABC):
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
-            The type of sampler to use. At the moment OWA in R-GCN is the only user of schlichtkrull sampling.
+            The type of sampler to use. At the moment sLCWA in R-GCN is the only user of schlichtkrull sampling.
         :param continue_training:
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:

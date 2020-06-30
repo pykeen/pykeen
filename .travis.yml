@@ -1,4 +1,4 @@
-sudo: true
+os: linux
 cache: pip
 dist: xenial
 language: python
@@ -28,9 +28,6 @@ jobs:
     - name: "Test slow unit tests"
       stage: slow_tests
       env: TOXENV=integration
-matrix:
-  allow_failures:
-    - env: TOXENV=xenon
 install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
 script:
