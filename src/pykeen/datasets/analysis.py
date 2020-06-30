@@ -180,9 +180,9 @@ def entity_relation_co_occurrence_dataframe(
         The dataset.
 
     :return:
-        A dataframe with a multi-index (subset, entity_id) as index, and a multi-index (kind, relation) as columns, where
-        subset in {'training', 'validation', 'testing', 'total'}, and kind in {'head', 'tail'}. For each entity, the
-        corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
+        A dataframe with a multi-index (subset, entity_id) as index, and a multi-index (kind, relation) as columns,
+        where subset in {'training', 'validation', 'testing', 'total'}, and kind in {'head', 'tail'}. For each entity,
+        the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
     """
     num_relations = dataset.num_relations
     num_entities = dataset.num_entities
