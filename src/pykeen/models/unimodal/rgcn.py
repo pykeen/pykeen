@@ -179,7 +179,7 @@ class RGCN(Model):
         activation_cls: Optional[Type[nn.Module]] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         base_model: Optional[Model] = None,
-        sparse_messages_owa: bool = True,
+        sparse_messages_slcwa: bool = True,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
         edge_weighting: Callable[
@@ -265,7 +265,7 @@ class RGCN(Model):
             use_bias = False
         self.use_bias = use_bias
         self.num_layers = num_layers
-        self.sparse_messages_owa = sparse_messages_owa
+        self.sparse_messages_slcwa = sparse_messages_slcwa
 
         # Save graph using buffers, such that the tensors are moved together with the model
         h, r, t = self.triples_factory.mapped_triples.t()

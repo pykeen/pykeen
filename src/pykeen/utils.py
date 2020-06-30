@@ -6,7 +6,6 @@ import logging
 import random
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, TypeVar, Union
 
-import mlflow
 import numpy
 import numpy as np
 import torch
@@ -216,12 +215,16 @@ class MLFlowResultTracker(ResultTracker):
     """A tracker for MLFlow."""
 
     def __init__(self, tracking_uri: Optional[str] = None):
+        import mlflow as _mlflow
+        self.mlflow = _mlflow
+
         if tracking_uri is None:
             tracking_uri = 'localhost:5000'
-        mlflow.set_tracking_uri(tracking_uri)
+
+        self.mlflow.set_tracking_uri(tracking_uri)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
-        mlflow.start_run(run_name=run_name)
+        self.mlflow.start_run(run_name=run_name)
 
     def log_metrics(
         self,
@@ -230,14 +233,14 @@ class MLFlowResultTracker(ResultTracker):
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
-        mlflow.log_metrics(metrics=metrics, step=step)
+        self.mlflow.log_metrics(metrics=metrics, step=step)
 
     def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
-        mlflow.log_params(params=params)
+        self.mlflow.log_params(params=params)
 
     def end_run(self) -> None:  # noqa: D102
-        mlflow.end_run()
+        self.mlflow.end_run()
 
 
 def get_embedding_in_canonical_shape(

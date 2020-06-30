@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from .instances import LCWAInstances, OWAInstances
+from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, slice_triples
@@ -39,7 +39,7 @@ def _create_multi_label_tails_instance(
 
     '''
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
-    https://github.com/mali-git/POEM_develop/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
+    https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
     '''
     mapped_triples = mapped_triples.cpu().detach().numpy()
 
@@ -322,9 +322,9 @@ class TriplesFactory:
 
         return False
 
-    def create_owa_instances(self) -> OWAInstances:
-        """Create OWA instances for this factory's triples."""
-        return OWAInstances(
+    def create_slcwa_instances(self) -> SLCWAInstances:
+        """Create sLCWA instances for this factory's triples."""
+        return SLCWAInstances(
             mapped_triples=self.mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Training KGE models based on the OWA."""
+"""Training KGE models based on the sLCWA."""
 
 import logging
 from typing import Any, Mapping, Optional, Type
@@ -13,18 +13,18 @@ from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models.base import Model
 from ..sampling import BasicNegativeSampler, NegativeSampler
-from ..triples import OWAInstances
+from ..triples import SLCWAInstances
 from ..typing import MappedTriples
 
 __all__ = [
-    'OWATrainingLoop',
+    'SLCWATrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class OWATrainingLoop(TrainingLoop):
-    """A training loop that uses the open world assumption."""
+class SLCWATrainingLoop(TrainingLoop):
+    """A training loop that uses the stochastic local closed world assumption training approach."""
 
     negative_sampler: NegativeSampler
     loss_blacklist = [CrossEntropyLoss]
@@ -65,8 +65,8 @@ class OWATrainingLoop(TrainingLoop):
         """
         return self.negative_sampler.num_negs_per_pos
 
-    def _create_instances(self, use_tqdm: Optional[bool] = None) -> OWAInstances:  # noqa: D102
-        return self.triples_factory.create_owa_instances()
+    def _create_instances(self, use_tqdm: Optional[bool] = None) -> SLCWAInstances:  # noqa: D102
+        return self.triples_factory.create_slcwa_instances()
 
     @staticmethod
     def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
@@ -80,9 +80,9 @@ class OWATrainingLoop(TrainingLoop):
         label_smoothing: float = 0.0,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Slicing is not possible in OWA training loops
+        # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
-            raise AttributeError('Slicing is not possible for OWA training loops.')
+            raise AttributeError('Slicing is not possible for sLCWA training loops.')
 
         # Send positive batch to device
         positive_batch = batch[start:stop].to(device=self.device)
@@ -156,7 +156,7 @@ class OWATrainingLoop(TrainingLoop):
             )
 
         # Normalize the loss to have the average loss per positive triple
-        # This allows comparability of OWA and LCWA losses
+        # This allows comparability of sLCWA and LCWA losses
         return self.model.compute_label_loss(
             predictions=predictions,
             labels=labels,
@@ -168,11 +168,11 @@ class OWATrainingLoop(TrainingLoop):
         sub_batch_size: int,
         supports_sub_batching: bool,
     ) -> None:  # noqa: D102
-        # Slicing is not possible for OWA
+        # Slicing is not possible for sLCWA
         if supports_sub_batching:
             report = "This model supports sub-batching, but it also requires slicing," \
-                     " which is not possible for owa"
+                     " which is not possible for sLCWA"
         else:
-            report = "This model doesn't support sub-batching and slicing is not possible for owa"
+            report = "This model doesn't support sub-batching and slicing is not possible for sLCWA"
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")

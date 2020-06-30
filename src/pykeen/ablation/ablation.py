@@ -121,11 +121,11 @@ def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save
         _set_arguments(key='optimizer', value=optimizer)
         logger.info(f"Optimizer: {optimizer}")
 
-        # Add training assumption to current_pipeline
+        # Add training approach to current_pipeline
         hpo_config['training_loop'] = training_loop
         logger.info(f"Training loop: {training_loop}")
 
-        if normalize_string(training_loop, suffix=_TRAINING_LOOP_SUFFIX) == 'owa':
+        if normalize_string(training_loop, suffix=_TRAINING_LOOP_SUFFIX) == 'slcwa':
             negative_sampler = ablation_config['negative_sampler']
             _set_arguments(key='negative_sampler', value=negative_sampler)
             logger.info(f"Negative sampler: {negative_sampler}")

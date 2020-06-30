@@ -2,7 +2,6 @@
 
 """Instance creation utilities."""
 
-import enum
 from typing import Callable, Mapping, TextIO, Union
 
 import numpy as np
@@ -12,7 +11,6 @@ from ..typing import LabeledTriples
 
 __all__ = [
     'load_triples',
-    'Assumption',
 ]
 
 
@@ -52,13 +50,3 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t') -> LabeledTrip
         comments='@Comment@ Head Relation Tail',
         delimiter=delimiter,
     )
-
-
-class Assumption(enum.Enum):
-    """The assumption made by the model."""
-
-    #: Local closed-world assumption (LCWA)
-    local_closed = 'local-closed'
-
-    #: Open world assumption (OWA)
-    open = 'open'

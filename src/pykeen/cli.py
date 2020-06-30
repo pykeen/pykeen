@@ -135,7 +135,7 @@ def _help_datasets(tablefmt):
 @ls.command()
 @tablefmt_option
 def training_loops(tablefmt: str):
-    """List training loops."""
+    """List training approaches."""
     click.echo(_help_training(tablefmt))
 
 
@@ -188,7 +188,7 @@ def evaluators(tablefmt: str):
 
 
 def _help_evaluators(tablefmt):
-    lines = _get_lines(evaluators_dict, tablefmt, 'evaluation')
+    lines = sorted(_get_lines(evaluators_dict, tablefmt, 'evaluation'))
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -273,7 +273,7 @@ def metrics(tablefmt: str):
 
 def _help_metrics(tablefmt):
     return tabulate(
-        _get_metrics_lines(tablefmt),
+        sorted(_get_metrics_lines(tablefmt)),
         headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
         tablefmt=tablefmt,
     )
@@ -334,7 +334,7 @@ def _get_lines(d, tablefmt, submodule):
 @click.option('--check', is_flag=True)
 def readme(check: bool):
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = os.path.join(HERE, os.pardir, os.pardir, 'README.md')
+    readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, 'README.md'))
     new_readme = get_readme()
 
     if check:
