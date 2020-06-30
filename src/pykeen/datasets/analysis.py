@@ -128,7 +128,7 @@ def get_id_counts(
     num_ids: int,
 ) -> numpy.ndarray:
     """Create a dense tensor of ID counts.
-    
+
     :param id_tensor:
         The tensor of IDs.
     :param num_ids:
