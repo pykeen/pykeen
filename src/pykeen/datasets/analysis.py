@@ -1,3 +1,4 @@
+"""Dataset analysis utilities."""
 from typing import Any, Mapping
 
 import numpy
