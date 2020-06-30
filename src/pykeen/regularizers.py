@@ -272,6 +272,7 @@ _REGULARIZERS: Collection[Type[Regularizer]] = {
     TransHRegularizer,
 }
 
+#: A mapping of regularizers' names to their implementations
 regularizers: Mapping[str, Type[Regularizer]] = {
     cls.get_normalized_name(): cls
     for cls in _REGULARIZERS

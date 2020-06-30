@@ -47,7 +47,7 @@ _STOPPERS: Collection[Type[Stopper]] = {
     EarlyStopper,
 }
 
-#: A mapping of training loops' names to their implementations
+#: A mapping of stoppers' names to their implementations
 stoppers: Mapping[str, Type[Stopper]] = {
     normalize_string(cls.__name__, suffix=_STOPPER_SUFFIX): cls
     for cls in _STOPPERS

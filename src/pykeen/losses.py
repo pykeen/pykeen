@@ -194,11 +194,13 @@ _LOSSES: Set[Type[Loss]] = {
 # })
 
 
+#: A mapping of losses' names to their implementations
 losses: Mapping[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
 
+#: HPO Defaults for losses
 losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
     MarginRankingLoss: dict(
         margin=dict(type=int, low=0, high=3, q=1),

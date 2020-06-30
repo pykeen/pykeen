@@ -52,7 +52,7 @@ _DATASETS: Set[Type[DataSet]] = {
     YAGO310,
 }
 
-#: A mapping of data sets' names to their classes
+#: A mapping of datasets' names to their classes
 datasets: Mapping[str, Type[DataSet]] = normalized_lookup(_DATASETS)
 
 
