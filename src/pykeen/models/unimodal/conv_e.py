@@ -78,25 +78,25 @@ class ConvE(EntityRelationEmbeddingModel):
     r"""An implementation of ConvE from [dettmers2018]_.
 
     ConvE  is a CNN-based approach. For each triple $(h,r,t)$, the input to ConvE is a matrix
-    $\textbf{A} \in \mathbb{R}^{2 \times d}$ where the first row of $\textbf{A}$ represents
-    $\textbf{h} \in \mathbb{R}^d$ and the second row represents $\textbf{r} \in \mathbb{R}^d$. $\textbf{A}$ is
-    reshaped to a matrix $\textbf{B} \in \mathbb{R}^{m \times n}$ where the first $m/2$ half rows represent
-    $\textbf{h}$ and the remaining $m/2$ half rows represent $\textbf{r}$. In the convolution layer, a set of
+    $\mathbf{A} \in \mathbb{R}^{2 \times d}$ where the first row of $\mathbf{A}$ represents
+    $\mathbf{h} \in \mathbb{R}^d$ and the second row represents $\mathbf{r} \in \mathbb{R}^d$. $\mathbf{A}$ is
+    reshaped to a matrix $\mathbf{B} \in \mathbb{R}^{m \times n}$ where the first $m/2$ half rows represent
+    $\mathbf{h}$ and the remaining $m/2$ half rows represent $\mathbf{r}$. In the convolution layer, a set of
     \textit{2-dimensional} convolutional filters
     $\Omega = \{\omega_i \ | \ \omega_i \in \mathbb{R}^{r \times c}\}$ are applied on
-    $\textbf{B}$ that capture interactions between $\textbf{h}$ and $\textbf{r}$. The resulting feature maps are
-    reshaped and concatenated in order to create a feature vector $\textbf{v} \in \mathbb{R}^{|\Omega|rc}$. In the
-    next step, $\textbf{v}$ is mapped into the entity space using a linear transformation
-    $\textbf{W} \in \mathbb{R}^{|\Omega|rc \times d}$, that is $\textbf{e}_{h,r} = \textbf{v}^{T} \textbf{W}$.
+    $\mathbf{B}$ that capture interactions between $\mathbf{h}$ and $\mathbf{r}$. The resulting feature maps are
+    reshaped and concatenated in order to create a feature vector $\mathbf{v} \in \mathbb{R}^{|\Omega|rc}$. In the
+    next step, $\mathbf{v}$ is mapped into the entity space using a linear transformation
+    $\mathbf{W} \in \mathbb{R}^{|\Omega|rc \times d}$, that is $\mathbf{e}_{h,r} = \mathbf{v}^{T} \mathbf{W}$.
     The score for the triple $(h,r,t) \in \mathbb{K}$ is then given by:
 
     .. math::
 
-        f(h,r,t) = \textbf{e}_{h,r} \textbf{t}
+        f(h,r,t) = \mathbf{e}_{h,r} \mathbf{t}
 
     Since the interaction model can be decomposed into
     $f(h,r,t) = \left\langle f'(\mathbf{h}, \mathbf{r}), \mathbf{t} \right\rangle$, the model is particularly
-    designed to 1-N scoring, i.e.\ efficient computation of scores for $(h,r,t)$ for fixed $h,r$ and
+    designed to 1-N scoring, i.e. efficient computation of scores for $(h,r,t)$ for fixed $h,r$ and
     many different $t$.
 
     .. seealso::
