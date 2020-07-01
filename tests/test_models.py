@@ -18,10 +18,8 @@ from torch.optim.adagrad import Adagrad
 
 import pykeen.experiments
 import pykeen.models
-from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH as KINSHIPS_TRAIN_PATH
-from pykeen.datasets.nations import (
-    NATIONS_TEST_PATH as NATIONS_TEST_PATH, NATIONS_TRAIN_PATH as NATIONS_TRAIN_PATH, Nations,
-)
+from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
+from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
 from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
