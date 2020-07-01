@@ -308,7 +308,7 @@ class Model(nn.Module):
         """
         tail_id = self.triples_factory.entity_to_id[tail_label]
         relation_id = self.triples_factory.relation_to_id[relation_label]
-        rt_batch = torch.LongTensor([[relation_id, tail_id]])
+        rt_batch = torch.tensor([[relation_id, tail_id]], dtype=torch.long)
         scores = self.predict_scores_all_heads(rt_batch)
         rv = pd.DataFrame(
             [
@@ -354,7 +354,7 @@ class Model(nn.Module):
         """
         head_id = self.triples_factory.entity_to_id[head_label]
         relation_id = self.triples_factory.relation_to_id[relation_label]
-        batch = torch.LongTensor([[head_id, relation_id]])
+        batch = torch.tensor([[head_id, relation_id]], dtype=torch.long)
         scores = self.predict_scores_all_tails(batch)
         rv = pd.DataFrame(
             [
