@@ -10,3 +10,5 @@ Lookup
 .. autodata:: pykeen.training.training_loops
 .. autodata:: pykeen.evaluation.evaluators
 .. autodata:: pykeen.evaluation.metrics
+.. autodata:: pykeen.hpo.pruners.pruners
+.. autodata:: pykeen.hpo.samplers.samplers
