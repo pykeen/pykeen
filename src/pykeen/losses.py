@@ -216,7 +216,7 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
     """Get the loss class."""
     return get_cls(
         query,
-        base=nn.Module,
+        base=Loss,
         lookup_dict=losses,
         default=MarginRankingLoss,
         suffix=_LOSS_SUFFIX,
