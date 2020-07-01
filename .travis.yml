@@ -30,6 +30,7 @@ jobs:
       env: TOXENV=integration
 install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
+  - sh -c 'if [ "$TOXENV" = "py" ]; then sudo apt-get install graphviz; fi'
 script:
   - tox
 after_success:
