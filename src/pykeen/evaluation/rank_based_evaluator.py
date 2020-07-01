@@ -14,6 +14,7 @@ from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
+from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     'compute_rank_from_scores',
@@ -96,6 +97,7 @@ def compute_rank_from_scores(
     }
 
 
+@fix_dataclass_init_docs
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):

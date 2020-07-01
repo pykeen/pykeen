@@ -29,7 +29,7 @@ from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
-from ..utils import Result, normalize_string
+from ..utils import Result, fix_dataclass_init_docs, normalize_string
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -228,6 +228,7 @@ class Objective:
             return result.metric_results.get_metric(self.metric)
 
 
+@fix_dataclass_init_docs
 @dataclass
 class HpoPipelineResult(Result):
     """A container for the results of the HPO pipeline."""

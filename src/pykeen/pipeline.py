@@ -214,7 +214,7 @@ from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .trackers import MLFlowResultTracker, ResultTracker
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import NoRandomSeedNecessary, Result, resolve_device, set_random_seed
+from .utils import NoRandomSeedNecessary, Result, fix_dataclass_init_docs, resolve_device, set_random_seed
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -229,6 +229,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+@fix_dataclass_init_docs
 @dataclass
 class PipelineResult(Result):
     """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""

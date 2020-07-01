@@ -34,6 +34,7 @@ __all__ = [
     'set_random_seed',
     'NoRandomSeedNecessary',
     'Result',
+    'fix_dataclass_init_docs',
 ]
 
 logger = logging.getLogger(__name__)
@@ -382,3 +383,12 @@ def imag_part(
     """Get the imaginary part from a complex tensor."""
     dim = x.shape[-1] // 2
     return x[..., dim:]
+
+
+def fix_dataclass_init_docs(cls: Type):
+    """Fix the __init__ doumentation for dataclasses.
+
+    .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
+    """
+    cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
+    return cls
