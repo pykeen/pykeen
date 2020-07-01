@@ -294,7 +294,8 @@ class Model(nn.Module):
         :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
          On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
          non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-         may pose as a distraction.
+         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
 
         The following example shows that after you train a model on the Nations dataset,
         you can score all entities w.r.t a given relation and tail entity.
@@ -340,7 +341,8 @@ class Model(nn.Module):
         :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
          On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
          non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-         may pose as a distraction.
+         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
 
         The following example shows that after you train a model on the Nations dataset,
         you can score all entities w.r.t a given head entity and relation.
