@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import INVERSE_SUFFIX
 
@@ -123,7 +123,7 @@ class TestSplit(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the tests."""
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
     def test_split_naive(self):

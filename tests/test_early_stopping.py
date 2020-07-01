@@ -9,7 +9,7 @@ import numpy
 import torch
 from torch.optim import Adam
 
-from pykeen.datasets.nations import NationsTrainingTriplesFactory, NationsValidationTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE
 from pykeen.models import TransE
@@ -124,11 +124,12 @@ class TestEarlyStopping(unittest.TestCase):
         """Prepare for testing the early stopper."""
         self.mock_evaluator = MockEvaluator(self.mock_losses)
         # Set automatic_memory_optimization to false for tests
-        self.model = MockModel(triples_factory=NationsTrainingTriplesFactory(), automatic_memory_optimization=False)
+        nations = Nations()
+        self.model = MockModel(triples_factory=nations.training, automatic_memory_optimization=False)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
-            evaluation_triples_factory=NationsValidationTriplesFactory(),
+            evaluation_triples_factory=nations.validation,
             patience=self.patience,
             delta=self.delta,
             larger_is_better=False,
@@ -197,12 +198,13 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
     def test_early_stopping(self):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
-        model: Model = TransE(triples_factory=NationsTrainingTriplesFactory(), automatic_memory_optimization=False)
+        nations = Nations()
+        model: Model = TransE(triples_factory=nations.training, automatic_memory_optimization=False)
         evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
-            evaluation_triples_factory=NationsValidationTriplesFactory(),
+            evaluation_triples_factory=nations.validation,
             patience=self.patience,
             delta=self.delta,
             metric='mean_rank',

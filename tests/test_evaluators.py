@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import torch
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
@@ -50,7 +50,7 @@ class _AbstractEvaluatorTests:
         self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
 
         # Use small test dataset
-        self.factory = NationsTrainingTriplesFactory()
+        self.factory = Nations().training
 
         # Use small model (untrained)
         self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
@@ -242,7 +242,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
         batch_size = 4
-        factory = NationsTrainingTriplesFactory()
+        factory = Nations().training
         all_triples = factory.mapped_triples
         batch = all_triples[:batch_size, :]
 
@@ -452,7 +452,7 @@ class TestEvaluationStructure(unittest.TestCase):
         """Prepare for testing the evaluation structure."""
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.model = DummyModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
 
     def test_evaluation_structure(self):
