@@ -374,7 +374,7 @@ class Model(nn.Module):
 
     def _novel(self, h, r, t) -> bool:
         """Return if the triple is novel with respect to the training triples."""
-        triple = torch.tensor(data=[h,r,t], dtype=torch.long).view(1, 3)
+        triple = torch.tensor(data=[h, r, t], dtype=torch.long).view(1, 3)
         return (triple == self.triples_factory.mapped_triples).all(dim=1).any().item()
 
     def predict_scores_all_relations(
