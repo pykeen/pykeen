@@ -473,7 +473,7 @@ class TriplesFactory:
         return TriplesFactory(triples=self.triples[idx])
 
     def entity_word_cloud(self, top: Optional[int] = None):
-        """Make a word cloud based on the frequency of occurrence of each entity.
+        """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
         :param top: The number of top entities to show. Defaults to 100.
 
@@ -486,7 +486,7 @@ class TriplesFactory:
         return self._word_cloud(text=text, top=top or 100)
 
     def relation_word_cloud(self, top: Optional[int] = None):
-        """Make a word cloud based on the frequency of occurrence of each relation.
+        """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
 
         :param top: The number of top relations to show. Defaults to 100.
 
