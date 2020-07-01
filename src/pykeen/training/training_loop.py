@@ -18,7 +18,8 @@ from ..tqdmw import tqdm, trange
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import ResultTracker, is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..trackers import ResultTracker
 
 __all__ = [
     'TrainingLoop',

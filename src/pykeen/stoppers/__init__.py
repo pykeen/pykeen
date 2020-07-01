@@ -36,8 +36,6 @@ __all__ = [
     'Stopper',
     'NopStopper',
     'EarlyStopper',
-    'StopperCallback',
-    'stoppers',
     'get_stopper_cls',
 ]
 

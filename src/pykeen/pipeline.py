@@ -211,9 +211,10 @@ from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
+from .trackers import MLFlowResultTracker, ResultTracker
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import MLFlowResultTracker, NoRandomSeedNecessary, Result, ResultTracker, resolve_device, set_random_seed
+from .utils import NoRandomSeedNecessary, Result, resolve_device, set_random_seed
 from .version import get_git_hash, get_version
 
 __all__ = [

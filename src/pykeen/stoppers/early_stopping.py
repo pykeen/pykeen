@@ -12,8 +12,8 @@ import numpy
 from .stopper import Stopper
 from ..evaluation import Evaluator
 from ..models.base import Model
+from ..trackers import ResultTracker
 from ..triples import TriplesFactory
-from ..utils import ResultTracker
 
 __all__ = [
     'smaller_than_any_buffer_element',
