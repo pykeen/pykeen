@@ -1,5 +1,5 @@
-Sampling
-========
+Negative Sampling
+=================
 .. automodapi:: pykeen.sampling
     :no-heading:
     :headings: --
