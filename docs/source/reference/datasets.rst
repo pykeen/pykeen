@@ -3,8 +3,7 @@ Datasets
 .. automodapi:: pykeen.datasets
     :no-heading:
     :headings: --
-    :skip: get_dataset
 
-Lookup
-------
-.. autofunction:: get_dataset
+.. automodapi:: pykeen.datasets.base
+    :no-heading:
+    :headings: --

@@ -8,7 +8,3 @@ Loss Functions
 HPO Defaults
 ------------
 .. autodata:: losses_hpo_defaults
-
-Lookup
-------
-.. autofunction:: get_loss_cls
