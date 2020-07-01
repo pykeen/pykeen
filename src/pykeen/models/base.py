@@ -12,7 +12,7 @@ import pandas as pd
 import torch
 from torch import nn
 
-from ..losses import Loss, NSSALoss
+from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
@@ -80,7 +80,7 @@ class Model(nn.Module):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = nn.MarginRankingLoss
+    loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
@@ -124,7 +124,7 @@ class Model(nn.Module):
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(self.loss, nn.MarginRankingLoss)
+        self.is_mr_loss = isinstance(self.loss, MarginRankingLoss)
 
         # Regularizer
         if regularizer is None:
