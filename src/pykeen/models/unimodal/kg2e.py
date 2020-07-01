@@ -21,109 +21,6 @@ __all__ = [
 _LOG_2_PI = math.log(2. * math.pi)
 
 
-def _expected_likelihood(
-    mu_e: torch.FloatTensor,
-    mu_r: torch.FloatTensor,
-    sigma_e: torch.FloatTensor,
-    sigma_r: torch.FloatTensor,
-    epsilon: float = 1.0e-10,
-) -> torch.FloatTensor:
-    r"""Compute the similarity based on expected likelihood.
-
-    .. math::
-
-        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-        = \frac{1}{2} \left(
-            (\mu_e - \mu_r)^T(\Sigma_e + \Sigma_r)^{-1}(\mu_e - \mu_r)
-            + \log \det (\Sigma_e + \Sigma_r) + d \log (2 \pi)
-        \right)
-        = \frac{1}{2} \left(
-            \mu^T\Sigma^{-1}\mu
-            + \log \det \Sigma + d \log (2 \pi)
-        \right)
-
-    :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The mean of the first Gaussian.
-    :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The mean of the second Gaussian.
-    :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The diagonal covariance matrix of the first Gaussian.
-    :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The diagonal covariance matrix of the second Gaussian.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
-
-    :return: torch.Tensor, shape: (s_1, ..., s_k)
-        The similarity.
-    """
-    d = sigma_e.shape[-1]
-    sigma = sigma_r + sigma_e
-    mu = mu_e - mu_r
-
-    #: a = \mu^T\Sigma^{-1}\mu
-    safe_sigma = torch.clamp_min(sigma, min=epsilon)
-    sigma_inv = torch.reciprocal(safe_sigma)
-    a = torch.sum(sigma_inv * mu ** 2, dim=-1)
-
-    #: b = \log \det \Sigma
-    b = safe_sigma.log().sum(dim=-1)
-    return a + b + d * _LOG_2_PI
-
-
-def _kullback_leibler_similarity(
-    mu_e: torch.FloatTensor,
-    mu_r: torch.FloatTensor,
-    sigma_e: torch.FloatTensor,
-    sigma_r: torch.FloatTensor,
-    epsilon: float = 1.0e-10,
-) -> torch.FloatTensor:
-    r"""Compute the similarity based on KL divergence.
-
-    This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
-
-    .. math::
-
-        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-        = \frac{1}{2} \left(
-            tr(\Sigma_r^{-1}\Sigma_e)
-            + (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
-            - \log \frac{det(\Sigma_e)}{det(\Sigma_r)} - k_e
-        \right)
-
-    Note: The sign of the function has been flipped as opposed to the description in the paper, as the
-          Kullback Leibler divergence is large if the distributions are dissimilar.
-
-    :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The mean of the first Gaussian.
-    :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The mean of the second Gaussian.
-    :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The diagonal covariance matrix of the first Gaussian.
-    :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-        The diagonal covariance matrix of the second Gaussian.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
-
-    :return: torch.Tensor, shape: (s_1, ..., s_k)
-        The similarity.
-    """
-    d = mu_e.shape[-1]
-    safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
-    sigma_r_inv = torch.reciprocal(safe_sigma_r)
-
-    #: a = tr(\Sigma_r^{-1}\Sigma_e)
-    a = torch.sum(sigma_e * sigma_r_inv, dim=-1)
-
-    #: b = (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
-    mu = mu_r - mu_e
-    b = torch.sum(sigma_r_inv * mu ** 2, dim=-1)
-
-    #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
-    # = sum log (sigma_e)_i - sum log (sigma_r)_i
-    c = sigma_e.clamp_min(min=epsilon).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
-    return -0.5 * (a + b - c - d)
-
-
 class KG2E(EntityRelationEmbeddingModel):
     r"""An implementation of KG2E from [he2015]_.
 
@@ -139,30 +36,17 @@ class KG2E(EntityRelationEmbeddingModel):
     $\mathcal{H} - \mathcal{T} \sim \mathcal{P}_e = \mathcal{N}_{h-t}(\mu_h - \mu_t,\Sigma_h + \Sigma_t)$
     (since head and tail entities are considered to be independent with regards to the relations).
     The interaction model measures the similarity between $\mathcal{P}_e$ and $\mathcal{P}_r$ by
-    means of the KL divergence:
+    means of the Kullback-Liebler Divergence (:meth:`KG2E.kullback_leibler_similarity`).
 
     .. math::
             f(h,r,t) = \mathcal{D_{KL}}(\mathcal{P}_e, \mathcal{P}_r)
-            = \frac{1}{2}\Big\{tr(\Sigma_{r}^{-1}\Sigma_{e}) + (\mu_{r}
-            - \mu_{e})^{T} \Sigma_{r}^{-1} (\mu_{r} - \mu_{e})
-            - log\left(\frac{det(\Sigma_e)}{det(\Sigma_r)}\right) - d\Big\}
 
-    Besides the asymmetric KL divergence, the authors propose a symmetric variant which uses the expected likelihood:
+    Besides the asymmetric KL divergence, the authors propose a symmetric variant which uses the expected
+    likelihood (:meth:`KG2E.expected_likelihood`)
 
     .. math::
-
-        f(h,r,t) = \log \mathcal{D_{KL}}(\mathcal{P}_e, \mathcal{P}_r)
-            = \frac{1}{2}\Big\{
-            (\mu_e - \mu_r)^T \left(\Sigma_e + \Sigma_r\right)^{-1}
-            (\mu_e - \mu_r)\\
-            + \log \det (\Sigma_e + \Sigma_r) + k_e \log (2 \pi)
-            \Big\}
+            f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
     """
-
-    DISTRIBUTION_SIMILARITIES = {
-        'EL': _expected_likelihood,
-        'KL': _kullback_leibler_similarity,
-    }
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
@@ -184,6 +68,13 @@ class KG2E(EntityRelationEmbeddingModel):
         c_max: float = 5.,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        r"""Initialize KG2E.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
+        :param dist_similarity: Either 'KL' for kullback-liebler or 'EL' for expected liklihood. Defaults to KL.
+        :param c_min:
+        :param c_max:
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -195,11 +86,12 @@ class KG2E(EntityRelationEmbeddingModel):
         )
 
         # Similarity function used for distributions
-        if dist_similarity is None:
-            dist_similarity = 'KL'
-        if dist_similarity not in self.DISTRIBUTION_SIMILARITIES:
+        if dist_similarity is None or dist_similarity.upper() == 'KL':
+            self.similarity = self.kullback_leibler_similarity
+        elif dist_similarity.upper() == 'EL':
+            self.similarity = self.expected_likelihood
+        else:
             raise ValueError(f'Unknown distribution similarity: "{dist_similarity}".')
-        self.similarity = self.DISTRIBUTION_SIMILARITIES[dist_similarity]
 
         # element-wise covariance bounds
         self.c_min = c_min
@@ -288,3 +180,106 @@ class KG2E(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+
+    @staticmethod
+    def expected_likelihood(
+        mu_e: torch.FloatTensor,
+        mu_r: torch.FloatTensor,
+        sigma_e: torch.FloatTensor,
+        sigma_r: torch.FloatTensor,
+        epsilon: float = 1.0e-10,
+    ) -> torch.FloatTensor:
+        r"""Compute the similarity based on expected likelihood.
+
+        .. math::
+
+            D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
+            = \frac{1}{2} \left(
+                (\mu_e - \mu_r)^T(\Sigma_e + \Sigma_r)^{-1}(\mu_e - \mu_r)
+                + \log \det (\Sigma_e + \Sigma_r) + d \log (2 \pi)
+            \right)
+            = \frac{1}{2} \left(
+                \mu^T\Sigma^{-1}\mu
+                + \log \det \Sigma + d \log (2 \pi)
+            \right)
+
+        :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The mean of the first Gaussian.
+        :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The mean of the second Gaussian.
+        :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The diagonal covariance matrix of the first Gaussian.
+        :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The diagonal covariance matrix of the second Gaussian.
+        :param epsilon: float (default=1.0)
+            Small constant used to avoid numerical issues when dividing.
+
+        :return: torch.Tensor, shape: (s_1, ..., s_k)
+            The similarity.
+        """
+        d = sigma_e.shape[-1]
+        sigma = sigma_r + sigma_e
+        mu = mu_e - mu_r
+
+        #: a = \mu^T\Sigma^{-1}\mu
+        safe_sigma = torch.clamp_min(sigma, min=epsilon)
+        sigma_inv = torch.reciprocal(safe_sigma)
+        a = torch.sum(sigma_inv * mu ** 2, dim=-1)
+
+        #: b = \log \det \Sigma
+        b = safe_sigma.log().sum(dim=-1)
+        return a + b + d * _LOG_2_PI
+
+    @staticmethod
+    def kullback_leibler_similarity(
+        mu_e: torch.FloatTensor,
+        mu_r: torch.FloatTensor,
+        sigma_e: torch.FloatTensor,
+        sigma_r: torch.FloatTensor,
+        epsilon: float = 1.0e-10,
+    ) -> torch.FloatTensor:
+        r"""Compute the similarity based on KL divergence.
+
+        This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
+
+        .. math::
+
+            D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
+            = \frac{1}{2} \left(
+                tr(\Sigma_r^{-1}\Sigma_e)
+                + (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
+                - \log \frac{det(\Sigma_e)}{det(\Sigma_r)} - k_e
+            \right)
+
+        Note: The sign of the function has been flipped as opposed to the description in the paper, as the
+              Kullback Leibler divergence is large if the distributions are dissimilar.
+
+        :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The mean of the first Gaussian.
+        :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The mean of the second Gaussian.
+        :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The diagonal covariance matrix of the first Gaussian.
+        :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
+            The diagonal covariance matrix of the second Gaussian.
+        :param epsilon: float (default=1.0)
+            Small constant used to avoid numerical issues when dividing.
+
+        :return: torch.Tensor, shape: (s_1, ..., s_k)
+            The similarity.
+        """
+        d = mu_e.shape[-1]
+        safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
+        sigma_r_inv = torch.reciprocal(safe_sigma_r)
+
+        #: a = tr(\Sigma_r^{-1}\Sigma_e)
+        a = torch.sum(sigma_e * sigma_r_inv, dim=-1)
+
+        #: b = (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
+        mu = mu_r - mu_e
+        b = torch.sum(sigma_r_inv * mu ** 2, dim=-1)
+
+        #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
+        # = sum log (sigma_e)_i - sum log (sigma_r)_i
+        c = sigma_e.clamp_min(min=epsilon).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
+        return -0.5 * (a + b - c - d)

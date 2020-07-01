@@ -75,11 +75,11 @@ class ComplEx(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the module.
+        """Initialize ComplEx.
 
         :param triples_factory: TriplesFactory
             The triple factory connected to the model.
-        :param embedding_dim: int
+        :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during training and batch size during evaluation with

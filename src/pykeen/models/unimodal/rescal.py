@@ -59,7 +59,9 @@ class RESCAL(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the model.
+        r"""Initialize RESCAL.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
 
         .. seealso::
 

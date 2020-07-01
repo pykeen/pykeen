@@ -63,7 +63,13 @@ class NTN(EntityEmbeddingModel):
         non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the model."""
+        r"""Initialize NTN.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
+        :param num_slices:
+        :param non_linearity: A non-linear activation function. Defaults to the hyperbolic
+         tangent :class:`torch.nn.Tanh`.
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
