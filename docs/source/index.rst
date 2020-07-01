@@ -21,6 +21,7 @@ PyKEEN
    reference/training
    reference/stoppers
    reference/losses
+   reference/regularizers
    reference/evaluation/index
    reference/sampling
    reference/hpo
