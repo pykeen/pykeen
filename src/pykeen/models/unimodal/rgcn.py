@@ -706,7 +706,8 @@ class RGCN(Model):
             edge_weights = torch.empty_like(sources, dtype=torch.float32)
             for r in range(self.num_relations):
                 mask = edge_types == r
-                edge_weights[mask] = self.edge_weighting(source=sources[mask], target=targets[mask])
+                if torch.nonzero(mask).shape[0] != 0:
+                    edge_weights[mask] = self.edge_weighting(source=sources[mask], target=targets[mask])
         else:
             edge_weights = None
 
