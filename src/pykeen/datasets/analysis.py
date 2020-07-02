@@ -1,4 +1,8 @@
+# -*- coding: utf-8 -*-
+
 """Dataset analysis utilities."""
+
+from operator import itemgetter
 from typing import Any, Mapping
 
 import numpy
@@ -37,6 +41,7 @@ def describe_id_tensor(
 
     # descriptive statistics via pandas
     frequency = pandas.Series(counts).describe().to_dict()
+    frequency['count'] = int(frequency['count'])
 
     # Get top-k IDs
     top_counts, top_ids = counts.topk(k=k, largest=True, sorted=True)
@@ -87,9 +92,7 @@ def describe_triples(
     )
 
 
-def describe_dataset(
-    dataset: DataSet,
-) -> Mapping[str, Any]:
+def describe_dataset(dataset: DataSet) -> Mapping[str, Any]:
     """Describe a dataset by computing numerous statistics.
 
     :param dataset:
@@ -143,9 +146,7 @@ def get_id_counts(
     return total_counts
 
 
-def entity_count_dataframe(
-    dataset: DataSet,
-) -> pandas.DataFrame:
+def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
 
     :param dataset:
@@ -158,22 +159,20 @@ def entity_count_dataframe(
     num_entities = dataset.num_entities
     for subset_name, triples_factory in dataset.factory_dict.items():
         for col, col_name in zip((0, 2), ('head', 'tail')):
-            data[(subset_name, col_name)] = get_id_counts(
+            data[subset_name, col_name] = get_id_counts(
                 id_tensor=triples_factory.mapped_triples[:, col],
                 num_ids=num_entities,
             )
-        data[(subset_name, 'total')] = data[(subset_name, 'head')] + data[(subset_name, 'tail')]
+        data[subset_name, 'total'] = data[subset_name, 'head'] + data[subset_name, 'tail']
     for kind in ('head', 'tail', 'total'):
-        data[('total', kind)] = sum(data[(subset_name, kind)] for subset_name in dataset.factory_dict.keys())
+        data['total', kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
     return pandas.DataFrame(
         data=data,
-        index=sorted(dataset.entity_to_id.items(), key=lambda label_id: label_id[1]),
+        index=sorted(dataset.entity_to_id.items(), key=itemgetter(1)),
     )
 
 
-def entity_relation_co_occurrence_dataframe(
-    dataset: DataSet,
-) -> pandas.DataFrame:
+def entity_relation_co_occurrence_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """Create a dataframe of entity/relation co-occurence.
 
     :param dataset:
