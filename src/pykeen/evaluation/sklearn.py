@@ -12,6 +12,7 @@ from sklearn import metrics
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
+from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     'SklearnEvaluator',
@@ -19,6 +20,7 @@ __all__ = [
 ]
 
 
+@fix_dataclass_init_docs
 @dataclass_json
 @dataclass
 class SklearnMetricResults(MetricResults):

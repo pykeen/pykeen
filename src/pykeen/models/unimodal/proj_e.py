@@ -21,11 +21,28 @@ __all__ = [
 
 
 class ProjE(EntityRelationEmbeddingModel):
-    """An implementation of ProjE from [shi2017]_.
+    r"""An implementation of ProjE from [shi2017]_.
+
+    ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model
+    first combines $h$ and $r$ by following combination operator:
+
+    .. math::
+
+        \textbf{h} \otimes \textbf{r} = \textbf{D}_e \textbf{h} + \textbf{D}_r \textbf{r} + \textbf{b}_c
+
+    where $\textbf{D}_e, \textbf{D}_r \in \mathbb{R}^{k \times k}$ are diagonal matrices which are used as shared
+    parameters among all entities and relations, and $\textbf{b}_c \in \mathbb{R}^{k}$ represents the candidate bias
+    vector shared across all entities. Next, the score for the triple $(h,r,t) \in \mathbb{K}$ is computed:
+
+    .. math::
+
+        f(h, r, t) = g(\textbf{t} \ z(\textbf{h} \otimes \textbf{r}) + \textbf{b}_p)
+
+    where $g$ and $z$ are activation functions, and $\textbf{b}_p$ represents the shared projection bias vector.
 
     .. seealso::
 
-       - Official Implementation: <https://github.com/nddsg/ProjE>`_
+       - Official Implementation: https://github.com/nddsg/ProjE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

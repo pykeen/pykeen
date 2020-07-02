@@ -1,19 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Regularization in PyKEEN.
-
-========  ================================================
-Name      Reference
-========  ================================================
-combined  :class:`pykeen.regularizers.CombinedRegularizer`
-lp        :class:`pykeen.regularizers.LpRegularizer`
-no        :class:`pykeen.regularizers.NoRegularizer`
-powersum  :class:`pykeen.regularizers.PowerSumRegularizer`
-transh    :class:`pykeen.regularizers.TransHRegularizer`
-========  ================================================
-
-.. note:: This table can be re-generated with ``pykeen ls regularizers -f rst``
-"""
+"""Regularization in PyKEEN."""
 
 from abc import abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
@@ -31,7 +18,6 @@ __all__ = [
     'CombinedRegularizer',
     'PowerSumRegularizer',
     'TransHRegularizer',
-    'regularizers',
     'get_regularizer_cls',
 ]
 
@@ -272,6 +258,7 @@ _REGULARIZERS: Collection[Type[Regularizer]] = {
     TransHRegularizer,
 }
 
+#: A mapping of regularizers' names to their implementations
 regularizers: Mapping[str, Type[Regularizer]] = {
     cls.get_normalized_name(): cls
     for cls in _REGULARIZERS

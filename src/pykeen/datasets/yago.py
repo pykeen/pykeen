@@ -4,11 +4,10 @@
 
 from typing import Optional
 
-from .dataset import TarFileRemoteDataSet
+from .base import TarFileRemoteDataSet
 
 __all__ = [
     'YAGO310',
-    'yago310',
 ]
 
 
@@ -24,6 +23,3 @@ class YAGO310(TarFileRemoteDataSet):
             cache_root=cache_root,
             **kwargs,
         )
-
-
-yago310 = YAGO310()

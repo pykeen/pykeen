@@ -21,9 +21,23 @@ __all__ = [
 
 
 class RotatE(EntityRelationEmbeddingModel):
-    """An implementation of RotatE from [sun2019]_.
+    r"""An implementation of RotatE from [sun2019]_.
 
-     This model uses models relations as cotations in complex plane.
+    RotatE models relations as rotations from head to tail entities in complex space:
+
+    .. math::
+
+        \textbf{e}_t= \textbf{e}_h \odot \textbf{r}_r
+
+    where $\textbf{e}, \textbf{r} \in \mathbb{C}^{d}$ and the complex elements of
+    $\textbf{r}_r$ are restricted to have a modulus of one ($\|\textbf{r}_r\| = 1$). The
+    interaction model is then defined as:
+
+    .. math::
+
+        f(h,r,t) = -\|\textbf{e}_h \odot \textbf{r}_r - \textbf{e}_t\|
+
+    which allows to model symmetry, antisymmetry, inversion, and composition.
 
     .. seealso::
 
@@ -68,23 +82,23 @@ class RotatE(EntityRelationEmbeddingModel):
         assert torch.allclose(torch.norm(relations, p=2, dim=-1), torch.ones(1, 1))
         self.relation_embeddings.weight.data = relations.view(self.num_relations, self.embedding_dim)
 
-    def post_parameter_update(self) -> None:  # noqa: D102
+    def post_parameter_update(self):  # noqa: D102
         r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 
-        Absolute value of complex number
+        The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
 
         .. math::
 
             |a + ib| = \sqrt{a^2 + b^2}
 
-        L2 norm of complex vector:
+        $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
 
         .. math::
             \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                     = \sum_{i=1}^d (x_i.re^2 + x_i.im^2)
-                     = (\sum_{i=1}^d x_i.re^2) + (\sum_{i=1}^d x_i.im^2)
-                     = \|x.re\|^2 + \|x.im\|^2
-                     = \| [x.re; x.im] \|^2
+                     = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
+                     = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
+                     = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
+                     = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
         """
         # Make sure to call super first
         super().post_parameter_update()

@@ -19,9 +19,29 @@ __all__ = [
 
 
 class TransH(EntityRelationEmbeddingModel):
-    """An implementation of TransH [wang2014]_.
+    r"""An implementation of TransH [wang2014]_.
 
-    This model extends TransE by applying the translation from head to tail entity in a relational-specific hyperplane.
+    This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
+    relational-specific hyperplane in order to address its inability to model one-to-many, many-to-one, and
+    many-to-many relations.
+
+    In TransH, each relation is represented by a hyperplane, or more specifically a normal vector of this hyperplane
+    $\textbf{w}_{r} \in \mathbb{R}^d$ and a vector $\textbf{d}_{r} \in \mathbb{R}^d$ that lies in the hyperplane.
+    To compute the plausibility of a triple $(h,r,t)\in \mathbb{K}$, the head embedding $\textbf{e}_h \in \mathbb{R}^d$
+    and the tail embedding $\textbf{e}_t \in \mathbb{R}^d$ are first projected onto the relation-specific hyperplane:
+
+    .. math::
+
+        \textbf{e'}_{h,r} = \textbf{e}_h - \textbf{w}_{r}^\top \textbf{e}_h \textbf{w}_r
+
+        \textbf{e'}_{t,r} = \textbf{e}_t - \textbf{w}_{r}^\top \textbf{e}_t \textbf{w}_r
+
+    where $\textbf{h}, \textbf{t} \in \mathbb{R}^d$. Then, the projected embeddings are used to compute the score
+    for the triple $(h,r,t)$:
+
+    .. math::
+
+        f(h, r, t) = -\|\textbf{e'}_{h,r} + \textbf{d}_r - \textbf{e'}_{t,r}\|_{p}^2
 
     .. seealso::
 
@@ -52,6 +72,11 @@ class TransH(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        r"""Initialize TransH.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
