@@ -308,9 +308,9 @@ class PipelineResult(Result):
         os.makedirs(directory, exist_ok=True)
 
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
-            json.dump(self.metadata, file, indent=2)
+            json.dump(self.metadata, file, indent=2, sort_keys=True)
         with open(os.path.join(directory, 'results.json'), 'w') as file:
-            json.dump(self._get_results(), file, indent=2)
+            json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(os.path.join(directory, 'trained_model.pkl'))
 

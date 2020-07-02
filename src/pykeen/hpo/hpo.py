@@ -291,7 +291,7 @@ class HpoPipelineResult(Result):
 
         # Output study information
         with open(os.path.join(directory, 'study.json'), 'w') as file:
-            json.dump(self.study.user_attrs, file, indent=2)
+            json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
