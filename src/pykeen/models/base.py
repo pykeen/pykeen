@@ -311,9 +311,10 @@ class Model(nn.Module):
         relation_id = self.triples_factory.relation_to_id[relation_label]
         rt_batch = torch.tensor([[relation_id, tail_id]], dtype=torch.long)
         scores = self.predict_scores_all_heads(rt_batch)
+        scores = scores[0, :].tolist()
         rv = pd.DataFrame(
             [
-                (entity_id, entity_label, scores[:, entity_id].item())
+                (entity_id, entity_label, scores[entity_id])
                 for entity_label, entity_id in self.triples_factory.entity_to_id.items()
             ],
             columns=['head_id', 'head_label', 'score'],
@@ -358,9 +359,10 @@ class Model(nn.Module):
         relation_id = self.triples_factory.relation_to_id[relation_label]
         batch = torch.tensor([[head_id, relation_id]], dtype=torch.long)
         scores = self.predict_scores_all_tails(batch)
+        scores = scores[0, :].tolist()
         rv = pd.DataFrame(
             [
-                (entity_id, entity_label, scores[:, entity_id].item())
+                (entity_id, entity_label, scores[entity_id])
                 for entity_label, entity_id in self.triples_factory.entity_to_id.items()
             ],
             columns=['tail_id', 'tail_label', 'score'],
