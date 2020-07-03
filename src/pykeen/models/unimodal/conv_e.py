@@ -324,8 +324,9 @@ class ConvE(EntityRelationEmbeddingModel):
         x = (x.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
 
         """
-        In ConvE the bias term add the end is added for each tail item. In the OWA assumption we only have one tail item
-        for each head and relation. Accordingly the relevant bias for each tail item and triple has to be looked up.
+        In ConvE the bias term add the end is added for each tail item. In the sLCWA training approach we only have
+        one tail item for each head and relation. Accordingly the relevant bias for each tail item and triple has to be
+        looked up.
         """
         x = x + self.bias_term(hrt_batch[:, 2])
         # The application of the sigmoid during training is automatically handled by the default loss.

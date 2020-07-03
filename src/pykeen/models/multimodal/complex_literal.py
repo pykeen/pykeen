@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA)."""
+"""Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA) training approach."""
 
 from typing import Optional
 
@@ -16,7 +16,7 @@ from ...utils import slice_doubles
 
 # TODO: Check entire build of the model
 class ComplExLiteral(MultimodalModel):
-    """An implementation of ComplexLiteral from [agustinus2018]_ based on the local closed world assumption (LCWA)."""
+    """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(

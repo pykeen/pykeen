@@ -34,7 +34,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
 
@@ -79,7 +79,7 @@ class _ModelTestCase:
     #: Whether to create inverse triples (needed e.g. by ConvE)
     create_inverse_triples: bool = False
 
-    #: The sampler to use for OWA (different e.g. for R-GCN)
+    #: The sampler to use for sLCWA (different e.g. for R-GCN)
     sampler = 'default'
 
     #: The batch size for use when testing training procedures
@@ -204,9 +204,9 @@ class _ModelTestCase:
         self._check_scores(batch, scores)
 
     @pytest.mark.slow
-    def test_train_owa(self) -> None:
-        """Test that OWA training does not fail."""
-        loop = OWATrainingLoop(
+    def test_train_slcwa(self) -> None:
+        """Test that sLCWA training does not fail."""
+        loop = SLCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
