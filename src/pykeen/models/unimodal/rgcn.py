@@ -11,7 +11,7 @@ from torch import nn
 from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
-from .. import EntityEmbeddingModel
+from .. import EntityRelationEmbeddingModel
 from ..base import Model
 from ...losses import Loss
 from ...triples import TriplesFactory
@@ -261,6 +261,17 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         nn.init.uniform_(self.att)
         functional.normalize(self.att.data, p=1, dim=1, out=self.att.data)
 
+    def _get_weight(self, relation_id: int) -> torch.FloatTensor:
+        """Construct weight matrix for a specific relation ID.
+
+        :param relation_id:
+            The relation ID.
+
+        :return:
+            A 2-D matrix.
+        """
+        return torch.einsum('bij,b->ij', self.bases, self.att[relation_id])
+
     def forward(
         self,
         x: torch.FloatTensor,
@@ -270,17 +281,14 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # Transform with all bases, shape: (num_nodes, num_bases, output_dim)
-        batch_size = x.shape[0]
-        num_bases = self.bases.shape[0]
-        t = (x.view(batch_size, 1, 1, -1) @ self.bases).view(batch_size, num_bases, self.output_dim)
-
         # self-loops first
+        w = self._get_weight(relation_id=self.num_relations)
         if node_keep_mask is not None:
+            assert node_keep_mask.shape == x.shape[:1]
             out = torch.zeros_like(x)
-            out[node_keep_mask] = (t[node_keep_mask, :, :] * self.att[None, self.num_relations, :, None]).sum(dim=1)
+            out[node_keep_mask] = x[node_keep_mask] @ w
         else:
-            out = (t * self.att[None, self.num_relations, :, None]).sum(dim=1)
+            out = x @ w
 
         # other relations
         for r in range(self.num_relations):
@@ -299,7 +307,9 @@ class BasesDecomposition(RelationSpecificMessagePassing):
             source_r, target_r, weights_r = specific
 
             # compute message, shape: (num_edges_of_type, output_dim)
-            m = (t.index_select(dim=0, index=source_r) * self.att[None, r, :, None]).sum(dim=1)
+            w = self._get_weight(relation_id=r)
+            uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
+            m = (x[uniq_source_r] @ w).index_select(dim=0, index=inv_source_r)
 
             # optional message weighting
             if weights_r is not None:
@@ -401,9 +411,10 @@ class BlockDecomposition(RelationSpecificMessagePassing):
             # compute message, shape: (num_edges_of_type, output_dim)
             m = []
             start = 0
+            uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
             for block in self.blocks[r]:
                 stop = start + block.shape[0]
-                m.append(x[:, start:stop].index_select(dim=0, index=source_r) @ block)
+                m.append((x[uniq_source_r, start:stop] @ block).index_select(dim=0, index=inv_source_r))
             m = torch.cat(m, dim=-1)
 
             # optional message weighting
@@ -446,7 +457,7 @@ class Bias(nn.Module):
         return x + self.bias.unsqueeze(dim=0)
 
 
-class RGCN(Model):
+class RGCN(EntityRelationEmbeddingModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
     This model uses graph convolutions with relation-specific weights.
@@ -458,9 +469,6 @@ class RGCN(Model):
        - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
     """
-
-    #: Interaction model used as decoder
-    base_model: EntityEmbeddingModel
 
     #: The layers
     layers: Sequence[nn.Module]
@@ -565,35 +573,16 @@ class RGCN(Model):
         """
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
+            embedding_dim=embedding_dim,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
+            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
 
         if self.triples_factory.create_inverse_triples:
             raise ValueError('R-GCN handles edges in an undirected manner.')
-
-        if base_model is None:
-            # Instantiate model
-            base_model = DistMult(
-                triples_factory=triples_factory,
-                embedding_dim=embedding_dim,
-                automatic_memory_optimization=automatic_memory_optimization,
-                loss=loss,
-                preferred_device=preferred_device,
-                random_seed=random_seed,
-            )
-        self.base_model = base_model
-        self.base_embeddings = nn.Parameter(
-            data=torch.empty(
-                self.triples_factory.num_entities,
-                embedding_dim,
-                device=self.device,
-            ),
-            requires_grad=True,
-        )
 
         self.embedding_dim = embedding_dim
 
@@ -653,10 +642,9 @@ class RGCN(Model):
         self.enriched_embeddings = None
 
     def _reset_parameters_(self):  # noqa: D102
-        self.base_model.reset_parameters_()
-
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
-        nn.init.xavier_uniform_(self.base_embeddings)
+        nn.init.xavier_uniform_(self.entity_embeddings.weight)
+        nn.init.xavier_uniform_(self.relation_embeddings.weight)
 
         for m in self.layers:
             if hasattr(m, 'reset_parameters'):
@@ -664,23 +652,18 @@ class RGCN(Model):
             elif any(p.requires_grad for p in m.parameters()):
                 logger.warning('Layers %s has parameters, but no reset_parameters.', m)
 
-    def _enrich_embeddings(self, batch: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        """Enrich the entity embeddings using R-GCN message propagation.
-
-        :param batch: shape: (batch_size, 3)
-            The currently considered batch. If provided try to restrict the computed node representations only to those
-            in the receptive field of the entities of interest.
-
-        :return: shape: (num_entities, embedding_dim)
-            The updated entity embeddings
-        """
+    def _enrich_embeddings_(self) -> torch.FloatTensor:
+        """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
         # use buffered messages if applicable
-        if batch is None and self.enriched_embeddings is not None:
+        if self.enriched_embeddings is not None:
             return self.enriched_embeddings
+
+        # clear cached embeddings as soon as possible to avoid unnecessary memory consumption
+        self.enriched_embeddings = None
 
         # Bind fields
         # shape: (num_entities, embedding_dim)
-        x = self.base_embeddings
+        x = self.entity_embeddings.weight
         sources = self.sources
         targets = self.targets
         edge_types = self.edge_types
@@ -711,23 +694,6 @@ class RGCN(Model):
         else:
             edge_weights = None
 
-        # If batch is given, compute (num_layers)-hop neighbourhood
-        if batch is not None:
-            start_nodes = torch.cat([batch[:, 0], batch[:, 2]], dim=0)
-            edge_mask = _get_neighborhood(
-                start_nodes=start_nodes,
-                sources=sources,
-                targets=targets,
-                k=self.num_layers,
-                num_nodes=self.num_entities,
-                undirected=True,
-            )
-            sources = sources[edge_mask]
-            targets = targets[edge_mask]
-            edge_types = edge_types[edge_mask]
-            if edge_weights is not None:
-                edge_weights = edge_weights[edge_mask]
-
         for layer in self.layers:
             if isinstance(layer, RelationSpecificMessagePassing):
                 kwargs = dict(
@@ -741,22 +707,25 @@ class RGCN(Model):
                 kwargs = dict()
             x = layer(x, **kwargs)
 
-        if batch is None and self.buffer_messages:
-            self.enriched_embeddings = x
+        # Cache embeddings
+        self.enriched_embeddings = x
 
         return x
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
-        self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=hrt_batch)
-        return self.base_model.score_hrt(hrt_batch=hrt_batch)
+        x = self._enrich_embeddings_()
+        h, r, t = hrt_batch.t()
+        return torch.einsum('bd,bd,bd->b', x[h], self.relation_embeddings(r), x[t]).unsqueeze(dim=-1)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
-        self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=None)
-        return self.base_model.score_h(rt_batch=rt_batch)
+        x = self._enrich_embeddings_()
+        r, t = rt_batch.t()
+        return torch.einsum('ed,bd,bd->be', x, self.relation_embeddings(r), x[t])
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
-        self.base_model.entity_embeddings.weight.data = self._enrich_embeddings(batch=None)
-        return self.base_model.score_t(hr_batch=hr_batch)
+        x = self._enrich_embeddings_()
+        h, r = hr_batch.t()
+        return torch.einsum('bd,bd,ed->be', x[h], self.relation_embeddings(r), x)
