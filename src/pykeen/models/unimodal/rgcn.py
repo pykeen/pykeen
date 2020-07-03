@@ -366,6 +366,8 @@ class BlockDecomposition(RelationSpecificMessagePassing):
                 block_size,
                 block_size,
             ), requires_grad=True)
+        self.num_blocks = num_blocks
+        self.block_size = block_size
 
     def reset_parameters(self):  # noqa: D102
         block_size = self.blocks.shape[-1]
@@ -382,15 +384,16 @@ class BlockDecomposition(RelationSpecificMessagePassing):
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # view as blocks
+        x = x.view(-1, self.num_blocks, self.block_size)
+
         # self-loop first
-        start = 0
         out = torch.zeros_like(x)
-        for block in self.blocks[-1]:
-            stop = start + block.shape[0]
-            if node_keep_mask is not None:
-                out[node_keep_mask, start:stop] = x[node_keep_mask, start:stop] @ block
-            else:
-                out[:, start:stop] = x[:, start:stop] @ block
+        w = self.blocks[-1]
+        if node_keep_mask is not None:
+            out[node_keep_mask] = torch.einsum('nbi,bij->nbj', x[node_keep_mask], w)
+        else:
+            out = torch.einsum('nbi,bij->nbj', x, w)
 
         # other relations
         for r in range(self.num_relations):
@@ -408,23 +411,19 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
             source_r, target_r, weights_r = specific
 
-            # compute message, shape: (num_edges_of_type, output_dim)
-            m = []
-            start = 0
+            # compute message, shape: (num_edges_of_type, num_blocks, block_size)
             uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
-            for block in self.blocks[r]:
-                stop = start + block.shape[0]
-                m.append((x[uniq_source_r, start:stop] @ block).index_select(dim=0, index=inv_source_r))
-            m = torch.cat(m, dim=-1)
+            w_r = self.blocks[r]
+            m = torch.einsum('nbi,bij->nbj', x[uniq_source_r], w_r).index_select(dim=0, index=inv_source_r)
 
             # optional message weighting
             if weights_r is not None:
-                m = m * weights_r.unsqueeze(dim=1)
+                m = m * weights_r.unsqueeze(dim=1).unsqueeze(dim=2)
 
             # message aggregation
             out.index_add_(dim=0, index=target_r, source=m)
 
-        return out
+        return out.reshape(-1, self.output_dim)
 
 
 class Bias(nn.Module):
