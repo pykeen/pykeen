@@ -77,9 +77,9 @@ class RotatE(EntityRelationEmbeddingModel):
     def _reset_parameters_(self):  # noqa: D102
         embedding_xavier_uniform_(self.entity_embeddings)
         # phases randomly between 0 and 2 pi
-        phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim)
+        phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim, device=self.device)
         relations = torch.stack([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
-        assert torch.allclose(torch.norm(relations, p=2, dim=-1), torch.ones(1, 1))
+        assert torch.allclose(torch.norm(relations, p=2, dim=-1), phases.new_ones(size=(1, 1)))
         self.relation_embeddings.weight.data = relations.view(self.num_relations, self.embedding_dim)
 
     def post_parameter_update(self):  # noqa: D102

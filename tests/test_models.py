@@ -432,6 +432,18 @@ Traceback
 
         assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
 
+    def test_reset_parameters_constructor_call(self):
+        """Tests whether reset_parameters is called in the constructor."""
+        self.model.reset_parameters_ = None
+        try:
+            self.model.__init__(
+                self.factory,
+                embedding_dim=self.embedding_dim,
+                **(self.model_kwargs or {})
+            )
+        except TypeError as error:
+            assert error.args == ("'NoneType' object is not callable",)
+
 
 class _DistanceModelTestCase(_ModelTestCase):
     """A test case for distance-based models."""
