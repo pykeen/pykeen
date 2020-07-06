@@ -146,7 +146,7 @@ class CrossEntropyLoss(SetwiseLoss):
 class NSSALoss(SetwiseLoss):
     """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
 
-    def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean') -> None:
+    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
         super().__init__()
         self.reduction = reduction
         self.adversarial_temperature = adversarial_temperature
