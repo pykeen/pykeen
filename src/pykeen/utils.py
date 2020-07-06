@@ -241,6 +241,31 @@ class MLFlowResultTracker(ResultTracker):
         self.mlflow.end_run()
 
 
+def get_embedding_in_long_canonical_shape(
+    embedding: nn.Embedding,
+    ind: Optional[torch.LongTensor],
+    col: int,
+) -> torch.FloatTensor:
+    """Get embedding in long canonical shape.
+
+    :param embedding: The embedding.
+    :param ind: The indices. If None, return all embeddings.
+    :param col: The column on which to place the embeddings, in case indices is None.
+
+    :return: shape: (batch_size, a, b, c, d)
+        where exactly one of {batch_size, a, b, c} is larger 1.
+    """
+    d = embedding.embedding_dim
+    if ind is None:
+        inner_dims = [1, 1, 1]
+        inner_dims[col - 1] = embedding.num_embeddings
+        e = embedding.weight.view([1] + inner_dims + [d])
+    else:
+        batch_size = ind.shape[0]
+        e = embedding(ind).view(batch_size, 1, 1, 1, d)
+    return e
+
+
 def get_embedding_in_canonical_shape(
     embedding: nn.Embedding,
     ind: Optional[torch.LongTensor],
