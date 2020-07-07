@@ -175,7 +175,7 @@ def flatten_dictionary(
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
-    return {sep.join(k): v for k, v in partial_result.items()}
+    return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
 
 def _flatten_dictionary(
