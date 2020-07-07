@@ -35,61 +35,17 @@ _REDUCTION_METHODS = dict(
 class Loss(nn.Module):
     """A loss function."""
 
-
-class PointwiseLoss(Loss):
-    """Pointwise loss functions compute an independent loss term for each triple-label pair."""
-
-
-class PairwiseLoss(Loss):
-    """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
-
-
-class SetwiseLoss(Loss):
-    """Setwise loss functions compare the scores of several triples."""
-
-
-class BCELoss(PointwiseLoss, nn.BCELoss):
-    r"""A wrapper around the PyTorch binary cross entropy loss.
-
-    For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
-    function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
-    the binary cross entropy loss is defined as:
-
-    .. math::
-
-        L(h, r, t) = -(l(h,r,t) \cdot \log(\sigma(f(h,r,t))) + (1 - l(h,r,t)) \cdot \log(1 - \sigma(f(h,r,t))))
-
-    where represents the logistic sigmoid function
-
-    .. math::
-
-        \sigma(x) = \frac{1}{1 + \exp(-x)}
-
-    Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
-    are regarded as logits.
-
-    .. warning::
-
-        This loss is not well-suited for translational distance models because these models produce
-        a negative distance as score and cannot produce positive model outputs.
-    """
-
-
-class MSELoss(PointwiseLoss, nn.MSELoss):
-    """A wrapper around the PyTorch mean square error loss."""
-
-
-class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
-    """A wrapper around the PyTorch margin ranking loss."""
-
-
-class SoftplusLoss(PointwiseLoss):
-    """A base class for losses for link prediction."""
-
     def __init__(
         self,
         reduction: str = 'mean',
     ):
+        """
+        Initialize the loss module.
+
+        :param reduction:
+            The reduction operation to use for aggregating individual loss values of a batch into a scalar batch loss
+            value. From {'mean', 'sum'}.
+        """
         super().__init__()
         self.reduction = reduction
 
@@ -100,9 +56,7 @@ class SoftplusLoss(PointwiseLoss):
 
 
 class PointwiseLoss(Loss):
-    """Base class for point-wise losses.
-
-    These losses receive the score of a triple together with its label."""
+    """Pointwise loss functions compute an independent loss term for each triple-label pair."""
 
     def forward(
         self,
@@ -128,7 +82,30 @@ class PointwiseLoss(Loss):
 
 
 class BCELoss(PointwiseLoss):
-    """The binary cross entropy loss directly calculated from logits."""
+    r"""A wrapper around the PyTorch binary cross entropy loss.
+
+    For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
+    function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
+    the binary cross entropy loss is defined as:
+
+    .. math::
+
+        L(h, r, t) = -(l(h,r,t) \cdot \log(\sigma(f(h,r,t))) + (1 - l(h,r,t)) \cdot \log(1 - \sigma(f(h,r,t))))
+
+    where represents the logistic sigmoid function
+
+    .. math::
+
+        \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+    Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
+    are regarded as logits.
+
+    .. warning::
+
+        This loss is not well-suited for translational distance models because these models produce
+        a negative distance as score and cannot produce positive model outputs.
+    """
 
     def forward(
         self,
@@ -152,7 +129,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
 
 class MSELoss(PointwiseLoss):
-    """The MSE loss."""
+    """A wrapper around the PyTorch mean square error loss."""
 
     def forward(
         self,
@@ -179,10 +156,7 @@ class SoftplusLoss(PointwiseLoss):
 
 
 class PairwiseLoss(Loss):
-    """Base class for pair-wise losses.
-
-    These losses consider a pair of a positive and negative score.
-    """
+    """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
 
     def forward(
         self,
@@ -226,9 +200,7 @@ class MarginRankingLoss(PairwiseLoss):
 
 
 class SetwiseLoss(Loss):
-    """Base class for set-wise losses.
-
-    These losses consider the whole set of triple scores."""
+    """Setwise loss functions compare the scores of several triples."""
 
     def forward(
         self,
