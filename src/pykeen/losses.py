@@ -43,7 +43,7 @@ class Loss(nn.Module):
         Initialize the loss module.
 
         :param reduction:
-            The reduction operation to use for aggregating individual loss values of a batch into a scalar batch loss
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
         """
         super().__init__()
@@ -187,6 +187,18 @@ class MarginRankingLoss(PairwiseLoss):
         margin_activation: Callable[[torch.FloatTensor], torch.FloatTensor] = functional.relu,
         reduction: str = 'mean',
     ):
+        """
+        Initialize the margin loss instance.
+
+        :param margin:
+            The margin by which positive and negative scores should be apart.
+        :param margin_activation:
+            A margin activation. Defaults to relu, i.e. f(x) = max(0, x), which is the default "margin loss". Using e.g.
+            softplus leads to a "soft-margin" formulation, as e.g. discussed here https://arxiv.org/abs/1703.07737
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
         super().__init__(reduction=reduction)
         self.margin = margin
         self.margin_activation = margin_activation
@@ -241,7 +253,26 @@ class NSSALoss(PairwiseLoss):
 
     # TODO: Actually the loss is pointwise. It is only the weighting, which is setwise on the negative triples.
 
-    def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean'):
+    def __init__(
+        self,
+        margin: float,
+        adversarial_temperature: float,
+        reduction: str = 'mean',
+    ):
+        """
+        Initialize the loss module.
+
+        :param margin:
+            The margin parameter to use for the base loss. Negative scores should be below -margin, and positive ones
+            above +margin.
+        :param adversarial_temperature:
+            The softmax temperature to use for computing the weights of negative scores. Smaller values lead to more
+            uniform distribution, whereas large values in the limit only consider the largest negative score.
+            # TODO: The usage of temperature here is inverse to the "normal" usage of softmax temperature.
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
         super().__init__(reduction=reduction)
         self.adversarial_temperature = adversarial_temperature
         self.margin = margin
@@ -256,12 +287,9 @@ class NSSALoss(PairwiseLoss):
         .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
         """
         neg_score_weights = functional.softmax(neg_scores * self.adversarial_temperature, dim=-1).detach()
-        neg_distances = -neg_scores
-        weighted_neg_scores = neg_score_weights * functional.logsigmoid(neg_distances - self.margin)
-        neg_loss = self.reduction_operation(weighted_neg_scores)
-        pos_distances = -pos_scores
-        pos_loss = self.reduction_operation(functional.logsigmoid(self.margin - pos_distances))
-        loss = -pos_loss - neg_loss
+        neg_loss = -self.reduction_operation(neg_score_weights * functional.logsigmoid(-neg_scores - self.margin))
+        pos_loss = -self.reduction_operation(functional.logsigmoid(self.margin + pos_scores))
+        loss = pos_loss + neg_loss
 
         if self.reduction == 'mean':
             loss = loss / 2.
