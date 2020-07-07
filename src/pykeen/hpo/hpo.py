@@ -86,9 +86,9 @@ class Objective:
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
     # 9. MLFlow
-    mlflow_tracking_uri: Optional[str] = None,
-    mlflow_experiment_id: Optional[int] = None,
-    mlflow_experiment_name: Optional[int] = None,
+    mlflow_tracking_uri: Optional[str] = None
+    mlflow_experiment_id: Optional[int] = None
+    mlflow_experiment_name: Optional[int] = None
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
