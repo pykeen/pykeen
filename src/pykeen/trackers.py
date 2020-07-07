@@ -39,7 +39,12 @@ class ResultTracker:
 class MLFlowResultTracker(ResultTracker):
     """A tracker for MLFlow."""
 
-    def __init__(self, tracking_uri: Optional[str] = None):
+    def __init__(
+        self,
+        tracking_uri: Optional[str] = None,
+        experiment_id: Optional[int] = None,
+        experiment_name: Optional[str] = None,
+    ):
         import mlflow as _mlflow
         self.mlflow = _mlflow
 
@@ -47,6 +52,14 @@ class MLFlowResultTracker(ResultTracker):
             tracking_uri = 'http://localhost:5000'
 
         self.mlflow.set_tracking_uri(tracking_uri)
+        if experiment_id is not None:
+            experiment = self.mlflow.get_experiment(experiment_id=experiment_id)
+            self.mlflow.set_experiment(experiment.name)
+        elif experiment_name is not None:
+            experiment = self.mlflow.get_experiment_by_name(name=experiment_name)
+            if experiment is None:
+                experiment = self.mlflow.create_experiment(name=experiment_name)
+            self.mlflow.set_experiment(experiment.name)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
