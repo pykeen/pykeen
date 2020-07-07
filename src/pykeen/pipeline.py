@@ -653,7 +653,7 @@ def pipeline(  # noqa: C901
         **optimizer_kwargs,
     )
 
-    result_tracker.log_params(params=dict(cls=training_loop.__class__.__name__), prefix='training_loop')
+    result_tracker.log_params(params=dict(cls=training_loop), prefix='training_loop')
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
