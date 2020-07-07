@@ -151,7 +151,7 @@ class EarlyStopper(Stopper):
         self.evaluation_slice_size = self.evaluator.slice_size
 
         self.result_tracker.log_metrics(
-            metrics=metric_results.to_json(),
+            metrics=metric_results.to_flat_dict(),
             step=self.number_evaluations,
             prefix='validation',
         )
