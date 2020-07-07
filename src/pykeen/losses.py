@@ -147,6 +147,13 @@ class NSSALoss(SetwiseLoss):
     """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
 
     def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
+        """Initialize the NSSA loss.
+
+        :param margin: The loss's margin (also written as gamma in the reference paper)
+        :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+
+        .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
+        """
         super().__init__()
         self.reduction = reduction
         self.adversarial_temperature = adversarial_temperature
