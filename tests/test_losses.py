@@ -52,7 +52,7 @@ class _LossTests(GenericTest[Loss]):
         assert self.instance.reduction == 'mean'
 
     def test_cls_in_losses(self):
-        """Verify that the loss class is in losses.losses"""
+        """Verify that the loss class is in losses.losses."""
         assert self.cls in losses.values()
 
     def test_training_loops(self):
