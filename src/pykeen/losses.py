@@ -214,7 +214,7 @@ losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
     ),
     NSSALoss: dict(
         margin=dict(type=int, low=3, high=30, q=3),
-        adversarial_temperature=dict(type='categorical', choices=[0.5, 1.0]),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     ),
 }
 # Add empty dictionaries as defaults for all remaining losses
