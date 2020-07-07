@@ -422,7 +422,7 @@ class TriplesFactory:
         logger.info(f'split triples to groups of sizes {[triples.shape[0] for triples in triples_groups]}')
 
         # Make sure that the first element has all the right stuff in it
-        triples_groups = _fixall(triples_groups)
+        triples_groups = _tf_cleanup_all(triples_groups)
 
         # Make new triples factories for each group
         return [
@@ -516,31 +516,25 @@ class TriplesFactory:
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
 
 
-def _fixall(triples_groups: List[np.ndarray]):
+def _tf_cleanup_all(triples_groups: List[np.ndarray]) -> List[np.ndarray]:
+    """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
     rv = []
     for other in others:
-        reference, other = _move(reference, other)
+        reference, other = _tf_cleanup(reference, other)
         rv.append(other)
     return [reference, *rv]
 
 
-def _move(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    training_entities = set(training[:, 0]).union(training[:, 2])
-    testing_entities = set(testing[:, 0]).union(testing[:, 2])
+def _tf_cleanup(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Cleanup a triples array (testing) with respect to another (training)."""
+    training_entities = np.unique(training[:, [0, 2]])
+    testing_entities = np.unique(testing[:, [0, 2]])
 
-    testing_entities_move = testing_entities - training_entities
-    # print(len(testing_entities_move))
+    to_move = testing_entities[~np.isin(testing_entities, training_entities)]
 
-    move_id_set = set(
-        i
-        for e in testing_entities_move
-        for i, x in enumerate((testing[:, 0] == e) | (testing[:, 2] == e))
-        if x
-    )
-    move_idxs = np.array(sorted(move_id_set))
-    # print('number edges to move', len(move_idxs))
+    move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+    training = np.concatenate([training, testing[move_id_mask]])
+    testing = testing[~move_id_mask]
 
-    training = np.concatenate([training, testing[move_idxs]])
-    testing = testing[np.array([i not in move_id_set for i in range(testing.shape[0])])]
     return training, testing

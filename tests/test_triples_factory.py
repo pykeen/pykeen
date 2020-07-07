@@ -8,7 +8,7 @@ import numpy as np
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.triples_factory import INVERSE_SUFFIX
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup
 
 triples = np.array(
     [
@@ -144,6 +144,33 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(expected_0_triples, t0.num_triples)
         self.assertEqual(expected_1_triples, t1.num_triples)
         self.assertEqual(expected_2_triples, t2.num_triples)
+
+    def test_move(self):
+        """Test that triples in a test set can get moved properly to the training set."""
+        training = np.array([
+            [1, 1000, 2],
+            [1, 1000, 3],
+        ])
+        testing = np.array([
+            [2, 1001, 3],
+            [1, 1002, 4],
+        ])
+        expected_training = [
+            [1, 1000, 2],
+            [1, 1000, 3],
+            [1, 1002, 4],
+        ]
+        expected_testing = [
+            [2, 1001, 3],
+        ]
+
+        new_training, new_testing = _tf_cleanup(training, testing)
+        self.assertEqual(expected_training, new_training.tolist())
+        self.assertEqual(expected_testing, new_testing.tolist())
+
+        new_testing, new_testing = _tf_cleanup_all([training, testing])
+        self.assertEqual(expected_training, new_training.tolist())
+        self.assertEqual(expected_testing, new_testing.tolist())
 
 
 class TestLiterals(unittest.TestCase):
