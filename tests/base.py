@@ -11,6 +11,7 @@ B = TypeVar('B')
 
 class GenericTest(Generic[B]):
     """A generic test case."""
+
     #: The class
     cls: Type[B]
 
@@ -33,11 +34,11 @@ class GenericTest(Generic[B]):
         self._post_instantiation_hook()
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Called before instantiation, e.g. to populate kwargs."""
+        """Prepare key-word based instantiation arguments."""
         return kwargs
 
     def _post_instantiation_hook(self) -> None:
-        """Called after instantiation."""
+        """Apply test preparations after the instance to test has been instantiated."""
 
 
 class TestsTest(Generic[B]):
