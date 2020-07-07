@@ -9,7 +9,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Optional, TextIO, Tuple, Union
+from typing import Mapping, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
 
 import numpy as np
@@ -49,6 +49,15 @@ class DataSet:
     def factories(self) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
         """Return a tuple of three factories in order (training, testing, validation)."""
         return self.training, self.testing, self.validation
+
+    @property
+    def factory_dict(self) -> Mapping[str, TriplesFactory]:
+        """Return a dictionary of the three factories."""
+        return dict(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+        )
 
     @property
     def entity_to_id(self):  # noqa: D401
