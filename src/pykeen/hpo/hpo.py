@@ -327,6 +327,26 @@ class HpoPipelineResult(Result):
         best_config_path = os.path.join(best_pipeline_directory, 'pipeline_config.json')
         ftp.storbinary(f'STOR {best_config_path}', get_json_bytes_io(self._get_best_study_config()))
 
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        study_path = os.path.join(directory, 'study.json')
+        s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
+
+        trials_path = os.path.join(directory, 'trials.tsv')
+        s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
+
+        best_config_path = os.path.join(directory, 'best_pipeline', 'pipeline_config.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
+
     def replicate_best_pipeline(
         self,
         *,
