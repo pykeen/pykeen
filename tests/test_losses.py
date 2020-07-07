@@ -7,7 +7,20 @@ from typing import Mapping
 
 import torch
 
-from pykeen.losses import BCEAfterSigmoidLoss, BCELoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss, losses
+from pykeen.losses import (
+    BCEAfterSigmoidLoss,
+    BCELoss,
+    CrossEntropyLoss,
+    Loss,
+    MSELoss,
+    MarginRankingLoss,
+    NSSALoss,
+    PairwiseLoss,
+    PointwiseLoss,
+    SetwiseLoss,
+    SoftplusLoss,
+    losses,
+)
 from pykeen.pipeline import pipeline
 from tests.base import GenericTest, TestsTest
 
@@ -166,6 +179,7 @@ class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
     )
 
     def test_explicit_loss_values(self):
+        """Test loss value for a manually prepared toy example."""
         assert self.kwargs['margin'] == 1.
         assert self.kwargs['adversarial_temperature'] == 1.
 
