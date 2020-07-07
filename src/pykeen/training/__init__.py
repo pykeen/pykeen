@@ -42,7 +42,11 @@ training_loops: Mapping[str, Type[TrainingLoop]] = {
 
 
 def get_training_loop_cls(query: Union[None, str, Type[TrainingLoop]]) -> Type[TrainingLoop]:
-    """Get the training loop class."""
+    """Look up a training loop class by name (case/punctuation insensitive) in :data:`pykeen.training.training_loops`.
+
+    :param query: The name of the training loop (case insensitive, punctuation insensitive).
+    :return: The training loop class
+    """
     return get_cls(
         query,
         base=TrainingLoop,

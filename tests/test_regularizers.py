@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Dict, Optional, Type
 import torch
 from torch.nn import functional
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.models import ConvKB, RESCAL, TransH
 from pykeen.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, \
     TransHRegularizer
@@ -40,7 +40,7 @@ class _RegularizerTestCase:
         """Set up the test case with a triples factory and model."""
         self.generator = torch.random.manual_seed(seed=42)
         self.batch_size = 16
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.device = resolve_device()
         self.regularizer = self.regularizer_cls(
             device=self.device,

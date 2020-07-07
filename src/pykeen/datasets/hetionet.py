@@ -11,7 +11,7 @@ from typing import Union
 import click
 import numpy as np
 
-from .dataset import SingleTabbedDataset
+from .base import SingleTabbedDataset
 
 __all__ = [
     'Hetionet',

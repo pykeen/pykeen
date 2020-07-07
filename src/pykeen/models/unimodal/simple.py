@@ -18,9 +18,23 @@ __all__ = [
 
 
 class SimplE(EntityRelationEmbeddingModel):
-    """An implementation of SimplE [kazemi2018]_.
+    r"""An implementation of SimplE [kazemi2018]_.
 
-    This model extends CP by updating a triple, and the inverse triple.
+    SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
+    $e \in \mathcal{E}$ is represented by two vectors $\textbf{h}_e, \textbf{t}_e \in \mathbb{R}^d$ and each
+    relation by a single vector $\textbf{r}_r \in \mathbb{R}^d$. Depending whether an entity participates in a
+    triple as the head or tail entity, either $\textbf{h}$ or $\textbf{t}$ is used. Both entity
+    representations are learned independently, i.e. observing a triple $(h,r,t)$, the method only updates
+    $\textbf{h}_h$ and $\textbf{t}_t$. In contrast to CP, SimplE introduces for each relation $\textbf{r}_r$
+    the inverse relation $\textbf{r'}_r$, and formulates its the interaction model based on both:
+
+    .. math::
+
+        f(h,r,t) = \frac{1}{2}\left(\left\langle\textbf{h}_h, \textbf{r}_r, \textbf{t}_t\right\rangle
+        + \left\langle\textbf{h}_t, \textbf{r'}_r, \textbf{t}_h\right\rangle\right)
+
+    Therefore, for each triple $(h,r,t) \in \mathbb{K}$, both $\textbf{h}_h$ and $\textbf{h}_t$
+    as well as $\textbf{t}_h$ and $\textbf{t}_t$ are updated.
 
     .. seealso::
 

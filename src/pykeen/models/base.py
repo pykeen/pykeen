@@ -8,12 +8,13 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
+import pandas as pd
 import torch
 from torch import nn
-from tqdm import tqdm
 
-from ..losses import Loss, NSSALoss
+from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..regularizers import NoRegularizer, Regularizer
+from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
 from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed
@@ -23,6 +24,7 @@ __all__ = [
     'Model',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
+    'MultimodalModel',
 ]
 
 logger = logging.getLogger(__name__)
@@ -78,7 +80,7 @@ class Model(nn.Module):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = nn.MarginRankingLoss
+    loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
@@ -122,7 +124,7 @@ class Model(nn.Module):
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(self.loss, nn.MarginRankingLoss)
+        self.is_mr_loss = isinstance(self.loss, MarginRankingLoss)
 
         # Regularizer
         if regularizer is None:
@@ -275,6 +277,107 @@ class Model(nn.Module):
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
+
+    def predict_heads(
+        self,
+        relation_label: str,
+        tail_label: str,
+        add_novelties: bool = True,
+        remove_known: bool = False,
+    ) -> pd.DataFrame:
+        """Predict tails for the given head and relation (given by label).
+
+        :param relation_label: The string label for the relation
+        :param tail_label: The string label for the tail entity
+        :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
+         to novel triples?
+        :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+
+        The following example shows that after you train a model on the Nations dataset,
+        you can score all entities w.r.t a given relation and tail entity.
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(
+        ...     dataset='Nations',
+        ...     model='RotatE',
+        ... )
+        >>> df = result.model.predict_heads('accusation', 'brazil')
+        """
+        tail_id = self.triples_factory.entity_to_id[tail_label]
+        relation_id = self.triples_factory.relation_to_id[relation_label]
+        rt_batch = torch.tensor([[relation_id, tail_id]], dtype=torch.long)
+        scores = self.predict_scores_all_heads(rt_batch)
+        scores = scores[0, :].tolist()
+        rv = pd.DataFrame(
+            [
+                (entity_id, entity_label, scores[entity_id])
+                for entity_label, entity_id in self.triples_factory.entity_to_id.items()
+            ],
+            columns=['head_id', 'head_label', 'score'],
+        ).sort_values('score', ascending=False)
+        if add_novelties or remove_known:
+            rv['novel'] = rv['head_id'].map(lambda head_id: self._novel(head_id, relation_id, tail_id))
+        if remove_known:
+            rv = rv[rv['novel']]
+            del rv['novel']
+        return rv
+
+    def predict_tails(
+        self,
+        head_label: str,
+        relation_label: str,
+        add_novelties: bool = True,
+        remove_known: bool = False,
+    ) -> pd.DataFrame:
+        """Predict tails for the given head and relation (given by label).
+
+        :param head_label: The string label for the head entity
+        :param relation_label: The string label for the relation
+        :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
+         to novel triples?
+        :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+
+        The following example shows that after you train a model on the Nations dataset,
+        you can score all entities w.r.t a given head entity and relation.
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(
+        ...     dataset='Nations',
+        ...     model='RotatE',
+        ... )
+        >>> df = result.model.predict_tails('brazil', 'accusation')
+        """
+        head_id = self.triples_factory.entity_to_id[head_label]
+        relation_id = self.triples_factory.relation_to_id[relation_label]
+        batch = torch.tensor([[head_id, relation_id]], dtype=torch.long)
+        scores = self.predict_scores_all_tails(batch)
+        scores = scores[0, :].tolist()
+        rv = pd.DataFrame(
+            [
+                (entity_id, entity_label, scores[entity_id])
+                for entity_label, entity_id in self.triples_factory.entity_to_id.items()
+            ],
+            columns=['tail_id', 'tail_label', 'score'],
+        ).sort_values('score', ascending=False)
+        if add_novelties or remove_known:
+            rv['novel'] = rv['tail_id'].map(lambda tail_id: self._novel(head_id, relation_id, tail_id))
+        if remove_known:
+            rv = rv[rv['novel']]
+            del rv['novel']
+        return rv
+
+    def _novel(self, h, r, t) -> bool:
+        """Return if the triple is novel with respect to the training triples."""
+        triple = torch.tensor(data=[h, r, t], dtype=torch.long).view(1, 3)
+        return (triple == self.triples_factory.mapped_triples).all(dim=1).any().item()
 
     def predict_scores_all_relations(
         self,
@@ -677,3 +780,7 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
 
 def _can_slice(fn) -> bool:
     return 'slice_size' in inspect.getfullargspec(fn).args
+
+
+class MultimodalModel(EntityRelationEmbeddingModel):
+    """A multimodal KGE model."""

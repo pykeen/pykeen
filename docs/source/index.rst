@@ -21,9 +21,12 @@ PyKEEN
    reference/training
    reference/stoppers
    reference/losses
+   reference/regularizers
+   reference/trackers
    reference/evaluation/index
-   reference/sampling
+   reference/negative_sampling
    reference/hpo
+   reference/lookup
 
 .. toctree::
    :caption: Appendix

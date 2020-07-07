@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets."""
+"""Utility classes for constructing datasets."""
 
 import logging
 import os
@@ -22,6 +22,7 @@ from ..triples import TriplesFactory
 
 __all__ = [
     'DataSet',
+    'LazyDataSet',
     'PathDataSet',
     'RemoteDataSet',
     'TarFileRemoteDataSet',
