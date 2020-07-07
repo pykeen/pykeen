@@ -491,7 +491,7 @@ def pipeline(  # noqa: C901
     # 9. MLFlow
     mlflow_tracking_uri: Optional[str] = None,
     mlflow_experiment_id: Optional[int] = None,
-    mlflow_experiment_name: Optional[int] = None,
+    mlflow_experiment_name: Optional[str] = None,
     # Misc
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,

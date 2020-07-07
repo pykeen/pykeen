@@ -88,7 +88,7 @@ class Objective:
     # 9. MLFlow
     mlflow_tracking_uri: Optional[str] = None
     mlflow_experiment_id: Optional[int] = None
-    mlflow_experiment_name: Optional[int] = None
+    mlflow_experiment_name: Optional[str] = None
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
@@ -399,7 +399,7 @@ def hpo_pipeline(
     # MLFlow
     mlflow_tracking_uri: Optional[str] = None,
     mlflow_experiment_id: Optional[int] = None,
-    mlflow_experiment_name: Optional[int] = None,
+    mlflow_experiment_name: Optional[str] = None,
     # 6. Misc
     device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
