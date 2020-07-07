@@ -383,7 +383,7 @@ class PipelineResult(Result):
 
         The following code will train a model and upload it to S3 using :mod:`boto3`:
 
-        .. source-code:: python
+        ..code-block:: python
 
             import time
             from pykeen.pipeline import pipeline
