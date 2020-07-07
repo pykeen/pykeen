@@ -283,8 +283,11 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def save_model(self, path) -> None:
+    def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
+
+        :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
+         like `*.pkl` or `*.pickle`.
 
         The model contains within it the triples factory that was used for training.
         """
@@ -330,6 +333,7 @@ def replicate_pipeline_from_path(
     :param replicates: The number of replicates to run.
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
     """
     pipeline_results = (
         pipeline_from_path(path, **kwargs)
@@ -358,6 +362,7 @@ def replicate_pipeline_from_config(
     :param replicates: The number of replicates to run
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
     """
     pipeline_results = (
         pipeline_from_config(config, **kwargs)

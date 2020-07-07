@@ -14,3 +14,9 @@ Base Classes
     EntityEmbeddingModel
     EntityRelationEmbeddingModel
     MultimodalModel
+
+
+Initialization
+--------------
+.. automodule:: pykeen.models.init
+    :members:
