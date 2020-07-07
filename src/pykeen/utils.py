@@ -28,15 +28,15 @@ __all__ = [
     'split_list_in_batches_iter',
     'split_list_in_batches',
     'normalize_string',
+    'normalized_lookup',
     'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
-    'ResultTracker',
-    'MLFlowResultTracker',
     'get_embedding_in_canonical_shape',
     'set_random_seed',
     'NoRandomSeedNecessary',
     'Result',
+    'fix_dataclass_init_docs',
 ]
 
 logger = logging.getLogger(__name__)
@@ -123,6 +123,14 @@ def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     return s
 
 
+def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
+    """Make a normalized lookup dict."""
+    return {
+        normalize_string(cls.__name__): cls
+        for cls in classes
+    }
+
+
 def get_cls(
     query: Union[None, str, Type[X]],
     base: Type[X],
@@ -185,62 +193,6 @@ def _flatten_dictionary(
         else:
             result[new_prefix] = v
     return result
-
-
-class ResultTracker:
-    """A class that tracks the results from a pipeline run."""
-
-    def start_run(self, run_name: Optional[str] = None) -> None:
-        """Start a run with an optional name."""
-
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:
-        """Log parameters to result store."""
-
-    def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None, prefix: Optional[str] = None) -> None:
-        """Log metrics to result store.
-
-        :param metrics: The metrics to log.
-        :param step: An optional step to attach the metrics to (e.g. the epoch).
-        :param prefix: An optional prefix to prepend to every key in metrics.
-        """
-
-    def end_run(self) -> None:
-        """End a run.
-
-        HAS to be called after the experiment is finished.
-        """
-
-
-class MLFlowResultTracker(ResultTracker):
-    """A tracker for MLFlow."""
-
-    def __init__(self, tracking_uri: Optional[str] = None):
-        import mlflow as _mlflow
-        self.mlflow = _mlflow
-
-        if tracking_uri is None:
-            tracking_uri = 'localhost:5000'
-
-        self.mlflow.set_tracking_uri(tracking_uri)
-
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
-        self.mlflow.start_run(run_name=run_name)
-
-    def log_metrics(
-        self,
-        metrics: Dict[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
-    ) -> None:  # noqa: D102
-        metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
-        self.mlflow.log_metrics(metrics=metrics, step=step)
-
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
-        params = flatten_dictionary(dictionary=params, prefix=prefix)
-        self.mlflow.log_params(params=params)
-
-    def end_run(self) -> None:  # noqa: D102
-        self.mlflow.end_run()
 
 
 def get_embedding_in_canonical_shape(
@@ -433,6 +385,15 @@ def imag_part(
     """Get the imaginary part from a complex tensor."""
     dim = x.shape[-1] // 2
     return x[..., dim:]
+
+
+def fix_dataclass_init_docs(cls: Type):
+    """Fix the __init__ doumentation for dataclasses.
+
+    .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
+    """
+    cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
+    return cls
 
 
 def get_all_subclasses(base_class: Type[X]) -> Set[Type[X]]:

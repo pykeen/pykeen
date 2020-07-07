@@ -5,13 +5,11 @@
 import os
 from typing import Optional
 
-from .dataset import TarFileRemoteDataSet
+from .base import TarFileRemoteDataSet
 
 __all__ = [
     'WN18',
-    'wn18',
     'WN18RR',
-    'wn18rr',
 ]
 
 
@@ -41,7 +39,3 @@ class WN18RR(TarFileRemoteDataSet):
             cache_root=cache_root,
             **kwargs,
         )
-
-
-wn18 = WN18()
-wn18rr = WN18RR()

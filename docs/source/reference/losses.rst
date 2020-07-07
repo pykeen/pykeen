@@ -1,4 +1,10 @@
 Loss Functions
 ==============
-.. automodule:: pykeen.losses
-   :members:
+.. automodapi:: pykeen.losses
+    :no-heading:
+    :headings: --
+    :skip: Loss
+
+HPO Defaults
+------------
+.. autodata:: losses_hpo_defaults

@@ -20,10 +20,25 @@ __all__ = [
 
 
 class HolE(EntityRelationEmbeddingModel):
-    """An implementation of HolE [nickel2016]_.
+    r"""An implementation of HolE [nickel2016]_.
 
-     This model uses circular correlation to compose head and tail embeddings to afterwards compute the inner
-     product with a relation embedding.
+    Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between
+    latent features of entities and relations:
+
+    .. math::
+
+        f(h,r,t) = \sigma(\textbf{r}^{T}(\textbf{h} \star \textbf{t}))
+
+    where the circular correlation $\star: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}^d$ is defined as:
+
+    .. math::
+
+        [\textbf{a} \star \textbf{b}]_i = \sum_{k=0}^{d-1} \textbf{a}_{k} * \textbf{b}_{(i+k)\ mod \ d}
+
+    By using the correlation operator each component $[\textbf{h} \star \textbf{t}]_i$ represents a sum over a
+    fixed partition over pairwise interactions. This enables the model to put semantic similar interactions into the
+    same partition and share weights through $\textbf{r}$. Similarly irrelevant interactions of features could also
+    be placed into the same partition which could be assigned a small weight in $\textbf{r}$.
 
     .. seealso::
 

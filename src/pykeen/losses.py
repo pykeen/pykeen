@@ -1,21 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Loss functions implemented in PyKEEN and additionally imported from :class:`torch`.
-
-===============  ==========================================
-Name             Reference
-===============  ==========================================
-bce              :class:`torch.nn.BCELoss`
-bceaftersigmoid  :class:`pykeen.losses.BCEAfterSigmoidLoss`
-crossentropy     :class:`pykeen.losses.CrossEntropyLoss`
-marginranking    :class:`torch.nn.MarginRankingLoss`
-mse              :class:`torch.nn.MSELoss`
-nssa             :class:`pykeen.losses.NSSALoss`
-softplus         :class:`pykeen.losses.SoftplusLoss`
-===============  ==========================================
-
-.. note:: This table can be re-generated with ``pykeen ls losses -f rst``
-"""
+"""Loss functions integrated in PyKEEN."""
 from collections import defaultdict
 from typing import Any, Callable, Mapping, Set, Type, Union
 
@@ -34,7 +19,9 @@ __all__ = [
     'SoftplusLoss',
     'NSSALoss',
     'CrossEntropyLoss',
-    'losses',
+    'MarginRankingLoss',
+    'MSELoss',
+    'BCELoss',
     'losses_hpo_defaults',
     'get_loss_cls',
 ]
@@ -46,6 +33,57 @@ _REDUCTION_METHODS = dict(
 
 
 class Loss(nn.Module):
+    """A loss function."""
+
+
+class PointwiseLoss(Loss):
+    """Pointwise loss functions compute an independent loss term for each triple-label pair."""
+
+
+class PairwiseLoss(Loss):
+    """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
+
+
+class SetwiseLoss(Loss):
+    """Setwise loss functions compare the scores of several triples."""
+
+
+class BCELoss(PointwiseLoss, nn.BCELoss):
+    r"""A wrapper around the PyTorch binary cross entropy loss.
+
+    For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
+    function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
+    the binary cross entropy loss is defined as:
+
+    .. math::
+
+        L(h, r, t) = -(l(h,r,t) \cdot \log(\sigma(f(h,r,t))) + (1 - l(h,r,t)) \cdot \log(1 - \sigma(f(h,r,t))))
+
+    where represents the logistic sigmoid function
+
+    .. math::
+
+        \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+    Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
+    are regarded as logits.
+
+    .. warning::
+
+        This loss is not well-suited for translational distance models because these models produce
+        a negative distance as score and cannot produce positive model outputs.
+    """
+
+
+class MSELoss(PointwiseLoss, nn.MSELoss):
+    """A wrapper around the PyTorch mean square error loss."""
+
+
+class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
+    """A wrapper around the PyTorch margin ranking loss."""
+
+
+class SoftplusLoss(PointwiseLoss):
     """A base class for losses for link prediction."""
 
     def __init__(
@@ -270,11 +308,13 @@ _LOSSES: Set[Type[Loss]] = get_all_subclasses(base_class=Loss).difference({Point
 # })
 
 
+#: A mapping of losses' names to their implementations
 losses: Mapping[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
 
+#: HPO Defaults for losses
 losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = defaultdict(dict)
 losses_hpo_defaults[MarginRankingLoss] = dict(
     margin=dict(type=int, low=0, high=3, q=1),
