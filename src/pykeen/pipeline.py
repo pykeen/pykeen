@@ -488,8 +488,11 @@ def pipeline(  # noqa: C901
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    # Misc
+    # 9. MLFlow
     mlflow_tracking_uri: Optional[str] = None,
+    mlflow_experiment_id: Optional[int] = None,
+    mlflow_experiment_name: Optional[int] = None,
+    # Misc
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -559,6 +562,13 @@ def pipeline(  # noqa: C901
 
     :param mlflow_tracking_uri:
         The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
+    :param mlflow_experiment_id:
+        The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
+        experiment_name. Only effective if mlflow_tracking_uri is not None.
+    :param mlflow_experiment_name:
+        The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
+        create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
+
     :param metadata: A JSON dictionary to store with the experiment
     :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
      Defaults to true - use testing triples.
@@ -570,7 +580,11 @@ def pipeline(  # noqa: C901
 
     # Create result store
     if mlflow_tracking_uri is not None:
-        result_tracker = MLFlowResultTracker(tracking_uri=mlflow_tracking_uri)
+        result_tracker = MLFlowResultTracker(
+            tracking_uri=mlflow_tracking_uri,
+            experiment_id=mlflow_experiment_id,
+            experiment_name=mlflow_experiment_name,
+        )
     else:
         result_tracker = ResultTracker()
 
