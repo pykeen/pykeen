@@ -653,6 +653,7 @@ def pipeline(  # noqa: C901
         **optimizer_kwargs,
     )
 
+    result_tracker.log_params(params=dict(cls=training_loop.__class__.__name__), prefix='training_loop')
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
@@ -662,6 +663,7 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
+        result_tracker.log_params(params=dict(negative_sampler=negative_sampler_kwargs), prefix='training_loop')
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
@@ -705,6 +707,7 @@ def pipeline(  # noqa: C901
 
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
+    result_tracker.log_params(params=training_kwargs, prefix='training')
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")
