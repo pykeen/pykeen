@@ -32,6 +32,8 @@ install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
   - sh -c 'if [ "$TOXENV" = "docs" ]; then sudo apt-get install graphviz; fi'
 script:
+  - pip install --upgrade pip
   - tox
+  - cat /home/travis/build/pykeen/pykeen/.tox/docs/log/docs-2.log
 after_success:
   - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'
