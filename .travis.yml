@@ -34,7 +34,5 @@ install:
 script:
   - pip install --upgrade pip
   - tox
-  - touch /home/travis/build/pykeen/pykeen/.tox/docs/log/docs-2.log
-  - cat /home/travis/build/pykeen/pykeen/.tox/docs/log/docs-2.log
 after_success:
   - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'
