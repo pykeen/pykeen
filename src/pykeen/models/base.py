@@ -185,6 +185,7 @@ class Model(nn.Module):
     def reset_parameters_(self) -> 'Model':  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
+        self.to_device_()
         self.post_parameter_update()
         return self
 
