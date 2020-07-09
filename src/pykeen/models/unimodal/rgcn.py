@@ -4,7 +4,7 @@
 
 import logging
 from os import path
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import torch
 from torch import nn
@@ -170,7 +170,7 @@ def _reduce_relation_specific(
     target: torch.LongTensor,
     edge_type: torch.LongTensor,
     edge_weights: Optional[torch.FloatTensor],
-) -> Optional[Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.FloatTensor]]]:
+) -> Union[Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.FloatTensor]], Tuple[None, None, None]]:
     """Reduce edge information to one relation.
 
     :param relation:
@@ -190,7 +190,7 @@ def _reduce_relation_specific(
     # mask, shape: (num_edges,)
     edge_mask = edge_type == relation
     if not edge_mask.any():
-        return None
+        return None, None, None
 
     source_r = source[edge_mask]
     target_r = target[edge_mask]
@@ -286,14 +286,15 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         w = self._get_weight(relation_id=self.num_relations)
         if node_keep_mask is not None:
             assert node_keep_mask.shape == x.shape[:1]
-            out = torch.zeros_like(x)
+            out = torch.empty_like(x)
             out[node_keep_mask] = x[node_keep_mask] @ w
+            out[~node_keep_mask].fill_(value=0.0)
         else:
             out = x @ w
 
         # other relations
         for r in range(self.num_relations):
-            specific = _reduce_relation_specific(
+            source_r, target_r, weights_r = _reduce_relation_specific(
                 relation=r,
                 source=source,
                 target=target,
@@ -302,22 +303,29 @@ class BasesDecomposition(RelationSpecificMessagePassing):
             )
 
             # skip relations without edges
-            if specific is None:
+            if source_r is None:
                 continue
-
-            source_r, target_r, weights_r = specific
 
             # compute message, shape: (num_edges_of_type, output_dim)
             w = self._get_weight(relation_id=r)
+            # since we may have one node ID appearing multiple times as source
+            # ID, we can save some computation by first reducing to the unique
+            # source IDs, compute transformed representations and afterwards
+            # select these representations for the correct edges.
             uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
-            m = (x[uniq_source_r] @ w).index_select(dim=0, index=inv_source_r)
+            # select unique source node representations
+            m = x[uniq_source_r]
+            # transform representations by relation specific weight
+            m = m @ w
+            # select the uniquely transformed representations for each edge
+            m = m.index_select(dim=0, index=inv_source_r)
 
             # optional message weighting
             if weights_r is not None:
-                m = m * weights_r.unsqueeze(dim=1)
+                m = m * weights_r.unsqueeze(dim=-1)
 
             # message aggregation
-            out.index_add_(dim=0, index=target_r, source=m)
+            out = out.index_add(dim=0, index=target_r, source=m)
 
         return out
 
