@@ -294,6 +294,8 @@ class BasesDecomposition(RelationSpecificMessagePassing):
 
         # other relations
         for r in range(self.num_relations):
+            # Select source and target indices as well as edge weights for the
+            # currently considered relation
             source_r, target_r, weights_r = _reduce_relation_specific(
                 relation=r,
                 source=source,
