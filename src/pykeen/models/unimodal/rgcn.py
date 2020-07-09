@@ -281,6 +281,9 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # TODO: Make this a choice (more memory-intense, but faster)
+        # trans_x = torch.einsum('bij,ni->nbj', self.bases, x)
+
         # self-loops first
         # the last relation_id refers to the self-loop
         w = self._get_weight(relation_id=self.num_relations)
