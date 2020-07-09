@@ -9,8 +9,7 @@ import numpy as np
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup_deterministic,
-    _tf_cleanup_randomized,
+    INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
 
 triples = np.array(
