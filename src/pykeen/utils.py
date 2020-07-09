@@ -2,12 +2,16 @@
 
 """Utilities for PyKEEN."""
 
+import ftplib
+import json
 import logging
 import random
+from io import BytesIO
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 
@@ -320,6 +324,10 @@ class Result:
         """Save the results to the directory."""
         raise NotImplementedError
 
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save the results to the directory in an FTP server."""
+        raise NotImplementedError
+
 
 def get_embedding(
     num_embeddings: int,
@@ -392,3 +400,34 @@ def fix_dataclass_init_docs(cls: Type):
     """
     cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
     return cls
+
+
+def get_model_io(model) -> BytesIO:
+    """Get the model as bytes."""
+    model_io = BytesIO()
+    torch.save(model, model_io)
+    model_io.seek(0)
+    return model_io
+
+
+def get_json_bytes_io(obj) -> BytesIO:
+    """Get the JSON as bytes."""
+    obj_str = json.dumps(obj, indent=2)
+    obj_bytes = obj_str.encode('utf-8')
+    return BytesIO(obj_bytes)
+
+
+def get_df_io(df: pd.DataFrame) -> BytesIO:
+    """Get the dataframe as bytes."""
+    df_io = BytesIO()
+    df.to_csv(df_io, sep='\t', index=False)
+    df_io.seek(0)
+    return df_io
+
+
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+    """Ensure the directory exists on the FTP server."""
+    try:
+        ftp.mkd(directory)
+    except ftplib.error_perm:
+        pass  # its fine...
