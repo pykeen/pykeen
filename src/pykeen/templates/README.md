@@ -60,6 +60,18 @@ $ pip install pre-commit
 $ pre-commit install
 ```
 
+PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section
+of the ``setup.cfg``. They can be included with installation using the bracket notation like in 
+``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
+``pip install pykeen[docs,plotting]``.
+
+| Name | Description |
+|------|-------------|
+| ``plotting`` | Plotting with ``seaborn`` and generation of word clouds  |
+| ``mlflow`` | Tracking of results with ``mlflow`` |
+| ``docs`` | Building of the documentation |
+| ``templating`` | Building of templated documentation, like the README |
+
 ## Contributing
 
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
@@ -179,6 +191,7 @@ This project has been supported by several organizations (in alphabetical order)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
 - [Ludwig-Maximilians-Universität München](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
+- [Siemens](https://new.siemens.com/global/en.html)
 - [Smart Data Analytics Research Group (University of Bonn & Fraunhofer IAIS)](https://sda.tech)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)

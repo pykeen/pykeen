@@ -17,13 +17,21 @@ __all__ = [
 
 
 class RESCAL(EntityRelationEmbeddingModel):
-    """An implementation of RESCAL from [nickel2011]_.
+    r"""An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
 
-    .. seealso::
+    RESCAL is a bilinear model that models entities as vectors and relations as matrices.
+    The relation matrices $\textbf{W}_{r} \in \mathbb{R}^{d \times d}$ contain weights $w_{i,j}$ that
+    capture the amount of interaction between the $i$-th latent factor of $\textbf{e}_h \in \mathbb{R}^{d}$ and the
+    $j$-th latent factor of $\textbf{e}_t \in \mathbb{R}^{d}$.
 
-       - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
+    Thus, the plausibility score of $(h,r,t) \in \mathbb{K}$ is given by:
+
+    .. math::
+
+        f(h,r,t) = \textbf{e}_h^{T} \textbf{W}_{r} \textbf{e}_t = \sum_{i=1}^{d}\sum_{j=1}^{d} w_{ij}^{(r)}
+        (\textbf{e}_h)_{i} (\textbf{e}_t)_{j}
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -51,7 +59,14 @@ class RESCAL(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the model."""
+        r"""Initialize RESCAL.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+
+        .. seealso::
+
+            - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

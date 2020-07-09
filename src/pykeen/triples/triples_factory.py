@@ -11,10 +11,10 @@ from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence
 
 import numpy as np
 import torch
-from tqdm import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
+from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, slice_triples
 
@@ -471,3 +471,45 @@ class TriplesFactory:
         logger.info(f'removing {len(relations)}/{self.num_relations} relations'
                     f' and {idx.sum()}/{self.num_triples} triples')
         return TriplesFactory(triples=self.triples[idx])
+
+    def entity_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
+
+        :param top: The number of top entities to show. Defaults to 100.
+
+        .. warning::
+
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+        """
+        text = [f'{h} {t}' for h, _, t in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def relation_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
+
+        :param top: The number of top relations to show. Defaults to 100.
+
+        .. warning::
+
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+        """
+        text = [r for _, r, _ in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def _word_cloud(self, *, text: List[str], top: int):
+        try:
+            from word_cloud.word_cloud_generator import WordCloud
+        except ImportError:
+            logger.warning(
+                'Could not import module `word_cloud`. '
+                'Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`',
+            )
+            return
+
+        from IPython.core.display import HTML
+        word_cloud = WordCloud()
+        return HTML(word_cloud.get_embed_code(text=text, topn=top))

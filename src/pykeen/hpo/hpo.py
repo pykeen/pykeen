@@ -17,7 +17,7 @@ from optuna.storages import BaseStorage
 
 from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
-from ..datasets import DataSet
+from ..datasets.base import DataSet
 from ..evaluation import Evaluator, get_evaluator_cls
 from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
 from ..models import get_model_cls
@@ -29,7 +29,7 @@ from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
-from ..utils import Result, normalize_string
+from ..utils import Result, fix_dataclass_init_docs, normalize_string
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -228,6 +228,7 @@ class Objective:
             return result.metric_results.get_metric(self.metric)
 
 
+@fix_dataclass_init_docs
 @dataclass
 class HpoPipelineResult(Result):
     """A container for the results of the HPO pipeline."""
@@ -290,7 +291,7 @@ class HpoPipelineResult(Result):
 
         # Output study information
         with open(os.path.join(directory, 'study.json'), 'w') as file:
-            json.dump(self.study.user_attrs, file, indent=2)
+            json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
