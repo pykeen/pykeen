@@ -531,12 +531,7 @@ def _tf_cleanup_all(triples_groups: List[np.ndarray], *, randomized: bool = Fals
 
 def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Cleanup a triples array (testing) with respect to another (training)."""
-    training_entities = np.unique(training[:, [0, 2]])
-    testing_entities = np.unique(testing[:, [0, 2]])
-
-    # a subset of all testing entities that are not in training
-    to_move = testing_entities[~np.isin(testing_entities, training_entities)]
-    move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+    training_entities, testing_entities, to_move, move_id_mask = _prepare_cleanup(training, testing)
 
     training = np.concatenate([training, testing[move_id_mask]])
     testing = testing[~move_id_mask]
@@ -551,23 +546,32 @@ def _tf_cleanup_randomized(training: np.ndarray, testing: np.ndarray) -> Tuple[n
     2. Choose a triple to move, recalculate move_id_mask
     3. Continue until move_id_mask has no true bits
     """
-    training_entities = np.unique(training[:, [0, 2]])
-    testing_entities = np.unique(testing[:, [0, 2]])
-    # a subset of all testing entities that are not in training
-    to_move = testing_entities[~np.isin(testing_entities, training_entities)]
-    move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+    training_entities, testing_entities, to_move, move_id_mask = _prepare_cleanup(training, testing)
 
+    # While there are still triples that should be moved to the training set
     while move_id_mask.any():
+        # Pick a random triple to move over to the training triples
         idx = np.random.choice(move_id_mask.nonzero()[0])
         training = np.concatenate([training, testing[idx].reshape(1, -1)])
 
+        # Recalculate the testing triples without that index
         testing_mask = np.ones_like(move_id_mask)
         testing_mask[idx] = False
         testing = testing[testing_mask]
 
-        training_entities = np.unique(training[:, [0, 2]])
-        testing_entities = np.unique(testing[:, [0, 2]])
-        to_move = testing_entities[~np.isin(testing_entities, training_entities)]
-        move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+        # Recalculate the training entities, testing entities, to_move, and move_id_mask
+        training_entities, testing_entities, to_move, move_id_mask = _prepare_cleanup(training, testing)
 
     return training, testing
+
+
+def _prepare_cleanup(training: np.ndarray, testing: np.ndarray):
+    training_entities = _get_unique(training)
+    testing_entities = _get_unique(testing)
+    to_move = testing_entities[~np.isin(testing_entities, training_entities)]
+    move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+    return training_entities, testing_entities, to_move, move_id_mask
+
+
+def _get_unique(x):
+    return np.unique(x[:, [0, 2]])
