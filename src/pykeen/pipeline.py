@@ -663,7 +663,7 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
-        result_tracker.log_params(params=dict(negative_sampler=negative_sampler_kwargs), prefix='training_loop')
+        result_tracker.log_params(params=dict(negative_sampler=negative_sampler_kwargs), prefix='negative_sampler')
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
