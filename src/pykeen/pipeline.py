@@ -189,6 +189,7 @@ the default data sets are also provided as subclasses of :class:`pykeen.triples.
 .. todo:: Example with creation of triples factory
 """
 
+import ftplib
 import json
 import logging
 import os
@@ -214,7 +215,10 @@ from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .trackers import MLFlowResultTracker, ResultTracker
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import NoRandomSeedNecessary, Result, fix_dataclass_init_docs, resolve_device, set_random_seed
+from .utils import (
+    NoRandomSeedNecessary, Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    resolve_device, set_random_seed,
+)
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -313,6 +317,60 @@ class PipelineResult(Result):
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(os.path.join(directory, 'trained_model.pkl'))
+
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save all artifacts to the given directory in the FTP server.
+
+        :param directory: The directory in the FTP server to save to
+        :param ftp: A connection to the FTP server
+
+        The following code will train a model and upload it to FTP using Python's builtin
+        :class:`ftplib.FTP`:
+
+        .. code-block:: python
+
+            import ftplib
+            from pykeen.pipeline import pipeline
+
+            directory = 'test/test'
+            pipeline_result = pipeline(
+                model='TransE',
+                dataset='Kinships',
+            )
+            with ftplib.FTP(host='0.0.0.0', user='user', passwd='12345') as ftp:
+                pipeline_result.save_to_ftp(directory, ftp)
+
+        If you want to try this with your own local server, run this code based on the
+        example from Giampaolo Rodola's excellent library,
+        `pyftpdlib <https://github.com/giampaolo/pyftpdlib#quick-start>`_.
+
+        .. code-block:: python
+
+            import os
+            from pyftpdlib.authorizers import DummyAuthorizer
+            from pyftpdlib.handlers import FTPHandler
+            from pyftpdlib.servers import FTPServer
+
+            authorizer = DummyAuthorizer()
+            authorizer.add_user("user", "12345", homedir=os.path.expanduser('~/ftp'), perm="elradfmwMT")
+
+            handler = FTPHandler
+            handler.authorizer = authorizer
+
+            address = '0.0.0.0', 21
+            server = FTPServer(address, handler)
+            server.serve_forever()
+        """
+        ensure_ftp_directory(ftp=ftp, directory=directory)
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        ftp.storbinary(f'STOR {metadata_path}', get_json_bytes_io(self.metadata))
+
+        results_path = os.path.join(directory, 'results.json')
+        ftp.storbinary(f'STOR {results_path}', get_json_bytes_io(self._get_results()))
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
 
 
 def replicate_pipeline_from_path(
