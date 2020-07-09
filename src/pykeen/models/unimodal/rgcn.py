@@ -282,6 +282,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # self-loops first
+        # the last relation_id refers to the self-loop
         w = self._get_weight(relation_id=self.num_relations)
         if node_keep_mask is not None:
             assert node_keep_mask.shape == x.shape[:1]
