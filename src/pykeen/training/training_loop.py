@@ -289,6 +289,8 @@ class TrainingLoop(ABC):
         # Ensure the model is on the correct device
         self.model: Model = self.model.to(self.device)
 
+        # TODO: Add warning if RGCN without schlichtkrull
+
         # Create Sampler
         if sampler == 'schlichtkrull':
             sampler = GraphSampler(self.triples_factory, num_samples=sub_batch_size)
