@@ -479,8 +479,9 @@ class TriplesFactory:
 
         .. warning::
 
-            The ``word_cloud`` package is not available through pip. You should install it yourself
-            with ``pip install git+ssh://git@github.com/kavgan/word_cloud.git``.
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         text = [f'{h} {t}' for h, _, t in self.triples]
         return self._word_cloud(text=text, top=top or 100)
@@ -492,8 +493,9 @@ class TriplesFactory:
 
         .. warning::
 
-            The ``word_cloud`` package is not available through pip. You should install it yourself
-            with ``pip install git+ssh://git@github.com/kavgan/word_cloud.git``.
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         text = [r for _, r, _ in self.triples]
         return self._word_cloud(text=text, top=top or 100)
@@ -504,7 +506,7 @@ class TriplesFactory:
         except ImportError:
             logger.warning(
                 'Could not import module `word_cloud`. '
-                'Try installing with `pip install git+ssh://git@github.com/kavgan/word_cloud.git`',
+                'Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`',
             )
             return
 
