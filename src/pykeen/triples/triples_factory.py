@@ -561,7 +561,7 @@ def _tf_cleanup_randomized(
     """
     if random_state is None:
         random_state = np.random.randint(0, 2 ** 32 - 1)
-        logger.warning(f'Using random_state=%s', random_state)
+        logger.warning('Using random_state=%s', random_state)
     if isinstance(random_state, int):
         random_state = np.random.RandomState(random_state)
 
