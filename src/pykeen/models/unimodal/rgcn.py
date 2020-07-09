@@ -234,8 +234,8 @@ class BasesDecomposition(RelationSpecificMessagePassing):
 
         # Heuristic for default value
         if num_bases is None:
-            logging.info('Using a heuristic to determine the number of bases.')
-            num_bases = num_relations // 2 + 1
+            logging.info('No num_bases was provided. Falling back to 2.')
+            num_bases = 2
 
         if num_bases > num_relations:
             raise ValueError('The number of bases should not exceed the number of relations.')
