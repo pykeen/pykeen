@@ -288,7 +288,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
             assert node_keep_mask.shape == x.shape[:1]
             out = torch.empty_like(x)
             out[node_keep_mask] = x[node_keep_mask] @ w
-            out[~node_keep_mask].fill_(value=0.0)
+            out[~node_keep_mask] = 0.0
         else:
             out = x @ w
 
