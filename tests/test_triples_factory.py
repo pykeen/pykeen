@@ -8,7 +8,10 @@ import numpy as np
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _tf_cleanup, _tf_cleanup_all
+from pykeen.triples.triples_factory import (
+    INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup_deterministic,
+    _tf_cleanup_randomized,
+)
 
 triples = np.array(
     [
@@ -145,7 +148,7 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(expected_1_triples, t1.num_triples)
         self.assertEqual(expected_2_triples, t2.num_triples)
 
-    def test_move(self):
+    def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
         training = np.array([
             [1, 1000, 2],
@@ -164,13 +167,53 @@ class TestSplit(unittest.TestCase):
             [2, 1001, 3],
         ]
 
-        new_training, new_testing = _tf_cleanup(training, testing)
+        new_training, new_testing = _tf_cleanup_deterministic(training, testing)
         self.assertEqual(expected_training, new_training.tolist())
         self.assertEqual(expected_testing, new_testing.tolist())
 
         new_testing, new_testing = _tf_cleanup_all([training, testing])
         self.assertEqual(expected_training, new_training.tolist())
         self.assertEqual(expected_testing, new_testing.tolist())
+
+    def test_cleanup_randomized(self):
+        """Test that triples in a test set can get moved properly to the training set."""
+        training = np.array([
+            [1, 1000, 2],
+            [1, 1000, 3],
+        ])
+        testing = np.array([
+            [2, 1001, 3],
+            [1, 1002, 4],
+            [1, 1003, 4],
+        ])
+        expected_training_1 = [
+            [1, 1000, 2],
+            [1, 1000, 3],
+            [1, 1002, 4],
+        ]
+        expected_testing_1 = [
+            [2, 1001, 3],
+            [1, 1003, 4],
+        ]
+
+        expected_training_2 = [
+            [1, 1000, 2],
+            [1, 1000, 3],
+            [1, 1003, 4],
+        ]
+        expected_testing_2 = [
+            [2, 1001, 3],
+            [1, 1002, 4],
+        ]
+
+        new_training, new_testing = _tf_cleanup_randomized(training, testing)
+
+        if expected_training_1 == new_training.tolist():
+            self.assertEqual(expected_testing_1, new_testing.tolist())
+        elif expected_training_2 == new_training.tolist():
+            self.assertEqual(expected_testing_2, new_testing.tolist())
+        else:
+            self.fail('training was not correct')
 
 
 class TestLiterals(unittest.TestCase):

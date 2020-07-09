@@ -516,25 +516,58 @@ class TriplesFactory:
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
 
 
-def _tf_cleanup_all(triples_groups: List[np.ndarray]) -> List[np.ndarray]:
+def _tf_cleanup_all(triples_groups: List[np.ndarray], *, randomized: bool = False) -> List[np.ndarray]:
     """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
     rv = []
     for other in others:
-        reference, other = _tf_cleanup(reference, other)
+        if randomized:
+            reference, other = _tf_cleanup_randomized(reference, other)
+        else:
+            reference, other = _tf_cleanup_deterministic(reference, other)
         rv.append(other)
     return [reference, *rv]
 
 
-def _tf_cleanup(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Cleanup a triples array (testing) with respect to another (training)."""
     training_entities = np.unique(training[:, [0, 2]])
     testing_entities = np.unique(testing[:, [0, 2]])
 
+    # a subset of all testing entities that are not in training
     to_move = testing_entities[~np.isin(testing_entities, training_entities)]
-
     move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+
     training = np.concatenate([training, testing[move_id_mask]])
     testing = testing[~move_id_mask]
+
+    return training, testing
+
+
+def _tf_cleanup_randomized(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
+
+    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
+    2. Choose a triple to move, recalculate move_id_mask
+    3. Continue until move_id_mask has no true bits
+    """
+    training_entities = np.unique(training[:, [0, 2]])
+    testing_entities = np.unique(testing[:, [0, 2]])
+    # a subset of all testing entities that are not in training
+    to_move = testing_entities[~np.isin(testing_entities, training_entities)]
+    move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
+
+    while move_id_mask.any():
+        idx = np.random.choice(move_id_mask.nonzero()[0])
+        training = np.concatenate([training, testing[idx].reshape(1, -1)])
+
+        testing_mask = np.ones_like(move_id_mask)
+        testing_mask[idx] = False
+        testing = testing[testing_mask]
+
+        training_entities = np.unique(training[:, [0, 2]])
+        testing_entities = np.unique(testing[:, [0, 2]])
+        to_move = testing_entities[~np.isin(testing_entities, training_entities)]
+        move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
 
     return training, testing
