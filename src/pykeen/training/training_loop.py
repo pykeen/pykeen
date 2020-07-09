@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 
 from ..losses import Loss
+from ..models import RGCN
 from ..models.base import Model
 from ..stoppers import Stopper
 from ..training.schlichtkrull_sampler import GraphSampler
@@ -246,6 +247,9 @@ class TrainingLoop(ABC):
         :return:
             A pair of the KGE model and the losses per epoch.
         """
+        if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
+            logger.warning('Using RGCN without graph-based sampling!')
+
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
@@ -288,8 +292,6 @@ class TrainingLoop(ABC):
 
         # Ensure the model is on the correct device
         self.model: Model = self.model.to(self.device)
-
-        # TODO: Add warning if RGCN without schlichtkrull
 
         # Create Sampler
         if sampler == 'schlichtkrull':
