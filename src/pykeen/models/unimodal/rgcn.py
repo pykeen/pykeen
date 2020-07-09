@@ -247,7 +247,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
                 self.input_dim,
                 self.output_dim,
             ), requires_grad=True)
-        self.att = nn.Parameter(
+        self.relation_base_weights = nn.Parameter(
             torch.empty(
                 num_relations + 1,
                 num_bases,
@@ -258,8 +258,8 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
         # initialized properly)
         # We have one additional relation for self-loops
-        nn.init.uniform_(self.att)
-        functional.normalize(self.att.data, p=1, dim=1, out=self.att.data)
+        nn.init.uniform_(self.relation_base_weights)
+        functional.normalize(self.relation_base_weights.data, p=1, dim=1, out=self.relation_base_weights.data)
 
     def _get_weight(self, relation_id: int) -> torch.FloatTensor:
         """Construct weight matrix for a specific relation ID.
@@ -270,7 +270,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         :return:
             A 2-D matrix.
         """
-        return torch.einsum('bij,b->ij', self.bases, self.att[relation_id])
+        return torch.einsum('bij,b->ij', self.bases, self.relation_base_weights[relation_id])
 
     def forward(
         self,
