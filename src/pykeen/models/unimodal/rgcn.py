@@ -653,12 +653,14 @@ class RGCN(EntityRelationEmbeddingModel):
 
     def _enrich_embeddings_(self) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
-        # use buffered messages if applicable
-        if self.enriched_embeddings is not None:
-            return self.enriched_embeddings
-
-        # clear cached embeddings as soon as possible to avoid unnecessary memory consumption
-        self.enriched_embeddings = None
+        # TODO: Start of commented out for debugging.
+        # # use buffered messages if applicable
+        # if self.enriched_embeddings is not None:
+        #     return self.enriched_embeddings
+        #
+        # # clear cached embeddings as soon as possible to avoid unnecessary memory consumption
+        # self.enriched_embeddings = None
+        # TODO: End of commented out for debugging
 
         # Bind fields
         # shape: (num_entities, embedding_dim)
@@ -706,8 +708,10 @@ class RGCN(EntityRelationEmbeddingModel):
                 kwargs = dict()
             x = layer(x, **kwargs)
 
-        # Cache embeddings
-        self.enriched_embeddings = x
+        # TODO: Start of commented out for debugging.
+        # # Cache enriched representations
+        # self.enriched_embeddings = x
+        # TODO: End of commented out for debugging
 
         return x
 
