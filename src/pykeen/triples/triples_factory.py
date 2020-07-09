@@ -506,7 +506,7 @@ class TriplesFactory:
         except ImportError:
             logger.warning(
                 'Could not import module `word_cloud`. '
-                'Try installing with `pip install git+ssh://git@github.com/kavgan/word_cloud.git`',
+                'Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`',
             )
             return
 
