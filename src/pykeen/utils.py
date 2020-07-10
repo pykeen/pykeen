@@ -328,6 +328,15 @@ class Result:
         """Save the results to the directory in an FTP server."""
         raise NotImplementedError
 
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+        """
+        raise NotImplementedError
+
 
 def get_embedding(
     num_embeddings: int,

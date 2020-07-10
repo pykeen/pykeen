@@ -372,6 +372,42 @@ class PipelineResult(Result):
         model_path = os.path.join(directory, 'trained_model.pkl')
         ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
 
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+
+        .. note:: Need to have ``~/.aws/credentials`` file set up. Read: https://realpython.com/python-boto3-aws-s3/
+
+        The following code will train a model and upload it to S3 using :mod:`boto3`:
+
+        .. code-block:: python
+
+            import time
+            from pykeen.pipeline import pipeline
+            pipeline_result = pipeline(
+                dataset='Kinships',
+                model='TransE',
+            )
+            directory = f'tests/{time.strftime("%Y-%m-%d-%H%M%S")}'
+            bucket = 'pykeen'
+            pipeline_result.save_to_s3(directory, bucket=bucket)
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
+
+        results_path = os.path.join(directory, 'results.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
+
 
 def replicate_pipeline_from_path(
     path: str,
