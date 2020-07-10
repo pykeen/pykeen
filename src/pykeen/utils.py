@@ -16,6 +16,7 @@ __all__ = [
     'compact_mapping',
     'get_embedding',
     'imag_part',
+    'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
     'real_part',
