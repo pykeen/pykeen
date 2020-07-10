@@ -162,31 +162,6 @@ can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
 the :class:`pykeen.dataset.Nations`
-
-Bring Your Own Data
-~~~~~~~~~~~~~~~~~~~
-As an alternative to using a pre-packaged dataset, the training and testing can be set
-explicitly with instances of :class:`pykeen.triples.TriplesFactory`. For convenience,
-the default data sets are also provided as subclasses of :class:`pykeen.triples.TriplesFactory`.
-
-.. warning ::
-
-    Make sure they are mapped to the same entities.
-
->>> from pykeen.datasets import Nations
->>> from pykeen.triples import TriplesFactory
->>> from pykeen.pipeline import pipeline
->>> nations = Nations()
->>> training: TriplesFactory = nations.training
->>> testing: TriplesFactory = nations.testing
->>> pipeline_result = pipeline(
-...     training_triples_factory=training,
-...     testing_triples_factory=testing,
-...     model='TransE',
-... )
->>> result.save_to_directory('nations_transe')
-
-.. todo:: Example with creation of triples factory
 """
 
 import ftplib
@@ -287,8 +262,11 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def save_model(self, path) -> None:
+    def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
+
+        :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
+         like `*.pkl` or `*.pickle`.
 
         The model contains within it the triples factory that was used for training.
         """
@@ -377,7 +355,7 @@ class PipelineResult(Result):
 
         :param directory: The directory in the S3 bucket
         :param bucket: The name of the S3 bucket
-        :param s3: The boto3.client, if already instantiated
+        :param s3: A client from :func:`boto3.client`, if already instantiated
 
         .. note:: Need to have ``~/.aws/credentials`` file set up. Read: https://realpython.com/python-boto3-aws-s3/
 
@@ -424,6 +402,7 @@ def replicate_pipeline_from_path(
     :param replicates: The number of replicates to run.
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
     """
     pipeline_results = (
         pipeline_from_path(path, **kwargs)
@@ -452,6 +431,7 @@ def replicate_pipeline_from_config(
     :param replicates: The number of replicates to run
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
     """
     pipeline_results = (
         pipeline_from_config(config, **kwargs)
