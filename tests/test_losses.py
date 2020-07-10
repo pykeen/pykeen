@@ -7,25 +7,12 @@ from typing import Mapping
 
 import torch
 
-from pykeen.losses import (
-    BCEAfterSigmoidLoss,
-    BCELoss,
-    CrossEntropyLoss,
-    Loss,
-    MSELoss,
-    MarginRankingLoss,
-    NSSALoss,
-    PairwiseLoss,
-    PointwiseLoss,
-    SetwiseLoss,
-    SoftplusLoss,
-    losses,
-)
+import pykeen.losses
 from pykeen.pipeline import pipeline
 from tests.base import GenericTest, TestsTest
 
 
-class _LossTests(GenericTest[Loss]):
+class _LossTests(GenericTest[pykeen.losses.Loss]):
     """Base unittest for loss functions."""
 
     #: The batch size
@@ -53,7 +40,7 @@ class _LossTests(GenericTest[Loss]):
 
     def test_cls_in_losses(self):
         """Verify that the loss class is in losses.losses."""
-        assert self.cls in losses.values()
+        assert self.cls in pykeen.losses.losses.values()
 
     def test_training_loops(self):
         """Verify that the loss can be used in the training pipeline with appropriate training loops."""
@@ -79,7 +66,7 @@ class _LossTests(GenericTest[Loss]):
 class _PointwiseLossTests(_LossTests):
     """Base unit test for point-wise losses."""
 
-    instance: PointwiseLoss
+    instance: pykeen.losses.PointwiseLoss
 
     #: The number of entities.
     num_entities: int = 17
@@ -116,38 +103,38 @@ class _PointwiseLossTests(_LossTests):
 class BCELossTests(_PointwiseLossTests, unittest.TestCase):
     """Unit test for BCELoss."""
 
-    cls = BCELoss
+    cls = pykeen.losses.BCELoss
 
 
 class BCEAfterSigmoidLossTests(_PointwiseLossTests, unittest.TestCase):
     """Unit test for BCEAfterSigmoidLoss."""
 
-    cls = BCEAfterSigmoidLoss
+    cls = pykeen.losses.BCEAfterSigmoidLoss
 
 
 class MSELossTests(_PointwiseLossTests, unittest.TestCase):
     """Unit test for MSELoss."""
 
-    cls = MSELoss
+    cls = pykeen.losses.MSELoss
 
 
 class SoftplusLossTests(_PointwiseLossTests, unittest.TestCase):
     """Unit test for SoftplusLoss."""
 
-    cls = SoftplusLoss
+    cls = pykeen.losses.SoftplusLoss
 
 
-class PointwiseLossTestsTest(TestsTest[PointwiseLoss], unittest.TestCase):
+class PointwiseLossTestsTest(TestsTest[pykeen.losses.PointwiseLoss], unittest.TestCase):
     """unittest for unittests for pointwise losses."""
 
-    base_cls = PointwiseLoss
+    base_cls = pykeen.losses.PointwiseLoss
     base_test_cls = _PointwiseLossTests
 
 
 class _PairwiseLossTests(_LossTests):
     """Base unit test for pair-wise losses."""
 
-    instance: PairwiseLoss
+    instance: pykeen.losses.PairwiseLoss
 
     #: The number of negative samples
     num_negatives: int = 5
@@ -166,13 +153,13 @@ class _PairwiseLossTests(_LossTests):
 class MarginRankingLossTests(_PairwiseLossTests, unittest.TestCase):
     """Unittest for MarginRankingLoss."""
 
-    cls = MarginRankingLoss
+    cls = pykeen.losses.MarginRankingLoss
 
 
 class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
     """Unit test for NSSALoss."""
 
-    cls = NSSALoss
+    cls = pykeen.losses.NSSALoss
     kwargs = dict(
         margin=1.,
         adversarial_temperature=1.,
@@ -211,17 +198,17 @@ class NSSALossTests(_PairwiseLossTests, unittest.TestCase):
         self.assertAlmostEqual(expected_loss, loss, delta=0.02)
 
 
-class PairwiseLossTestsTest(TestsTest[PairwiseLoss], unittest.TestCase):
+class PairwiseLossTestsTest(TestsTest[pykeen.losses.PairwiseLoss], unittest.TestCase):
     """unittest for unittests for pairwise losses."""
 
-    base_cls = PairwiseLoss
+    base_cls = pykeen.losses.PairwiseLoss
     base_test_cls = _PairwiseLossTests
 
 
 class _SetwiseLossTests(_LossTests):
     """unittests for setwise losses."""
 
-    instance: SetwiseLoss
+    instance: pykeen.losses.SetwiseLoss
 
     #: Setwise do not support slcwa training loop
     training_loop_support = dict(
@@ -246,12 +233,12 @@ class _SetwiseLossTests(_LossTests):
 class CrossEntropyLossTests(_SetwiseLossTests, unittest.TestCase):
     """Unit test for CrossEntropyLoss."""
 
-    cls = CrossEntropyLoss
+    cls = pykeen.losses.CrossEntropyLoss
 
 
 class LossTestTests(TestsTest, unittest.TestCase):
     """Unittest for unittests for all losses."""
 
-    base_cls = Loss
+    base_cls = pykeen.losses.Loss
     base_test_cls = _LossTests
-    skip_cls = {PointwiseLoss, PairwiseLoss, SetwiseLoss}
+    skip_cls = {pykeen.losses.PointwiseLoss, pykeen.losses.PairwiseLoss, pykeen.losses.SetwiseLoss}
