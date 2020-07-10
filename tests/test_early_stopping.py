@@ -67,9 +67,15 @@ class MockEvaluator(Evaluator):
     def finalize(self) -> MetricResults:  # noqa: D102
         hits = next(self.losses_iter)
         return RankBasedMetricResults(
-            mean_rank={rank_type: None for rank_type in RANK_TYPES},
-            mean_reciprocal_rank={rank_type: None for rank_type in RANK_TYPES},
-            adjusted_mean_rank=None,
+            mean_rank={
+                rank_type: 10
+                for rank_type in RANK_TYPES
+            },
+            mean_reciprocal_rank={
+                rank_type: 1.0
+                for rank_type in RANK_TYPES
+            },
+            adjusted_mean_rank=1.0,
             hits_at_k={
                 rank_type: {
                     10: hits,
