@@ -24,6 +24,10 @@ def describe_id_tensor(
 
     In particular computes
 
+    1. The occurrence frequency of each ID.
+    2. The labels of the k most frequent IDs.
+    3. The number of IDs not occurring in the tensor.
+
     :param tensor: shape: (num,)
         The tensor of IDs.
     :param max_id:
