@@ -37,6 +37,19 @@ def get_id_counts(
 def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """Create a dataframe with relation counts for all subsets, and the full dataset.
 
+    Example usage:
+
+    >>> from pykeen.datasets import FB15k237
+    >>> dataset = FB15k237()
+    >>> from pykeen.datasets.analysis import relation_count_dataframe
+    >>> df = relation_count_dataframe(dataset=dataset)
+
+    # Get the most frequent relations
+    >>> df.sort_values(by="training").head()
+
+    # Get all relations which do not occur in the test part
+    >>> df[df["testing"] == 0]
+
     :param dataset:
         The dataset.
 
