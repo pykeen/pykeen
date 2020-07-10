@@ -72,6 +72,22 @@ def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
 def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
 
+    Example usage:
+
+    >>> from pykeen.datasets import FB15k237
+    >>> dataset = FB15k237()
+    >>> from pykeen.datasets.analysis import relation_count_dataframe
+    >>> df = entity_count_dataframe(dataset=dataset)
+
+    # Get the most frequent entities in training (counting both, occurrences as heads as well as occurences as tails)
+    >>> df.sort_values(by=[("training", "total")]).head()
+
+    # Get entities which do not occur in testing
+    >>> df[df[("testing", "total")] == 0]
+
+    # Get entities which never occur as head entity (in any subset)
+    >>> df[df[("total", "head")] == 0]
+
     :param dataset:
         The dataset.
 
