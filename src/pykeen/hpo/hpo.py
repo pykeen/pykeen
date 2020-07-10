@@ -3,6 +3,7 @@
 """Hyper-parameter optimiziation in PyKEEN."""
 
 import dataclasses
+import ftplib
 import json
 import logging
 import os
@@ -29,7 +30,10 @@ from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
-from ..utils import Result, fix_dataclass_init_docs, normalize_string
+from ..utils import (
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
+    normalize_string,
+)
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -302,6 +306,46 @@ class HpoPipelineResult(Result):
         # Output best trial as pipeline configuration file
         with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
+
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
+        """Save the results to the directory in an FTP server.
+
+        :param directory: The directory in the FTP server to save to
+        :param ftp: A connection to the FTP server
+        """
+        ensure_ftp_directory(ftp=ftp, directory=directory)
+
+        study_path = os.path.join(directory, 'study.json')
+        ftp.storbinary(f'STOR {study_path}', get_json_bytes_io(self.study.user_attrs))
+
+        trials_path = os.path.join(directory, 'trials.tsv')
+        ftp.storbinary(f'STOR {trials_path}', get_df_io(self.study.trials_dataframe()))
+
+        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
+        ensure_ftp_directory(ftp=ftp, directory=best_pipeline_directory)
+
+        best_config_path = os.path.join(best_pipeline_directory, 'pipeline_config.json')
+        ftp.storbinary(f'STOR {best_config_path}', get_json_bytes_io(self._get_best_study_config()))
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        study_path = os.path.join(directory, 'study.json')
+        s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
+
+        trials_path = os.path.join(directory, 'trials.tsv')
+        s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
+
+        best_config_path = os.path.join(directory, 'best_pipeline', 'pipeline_config.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
 
     def replicate_best_pipeline(
         self,

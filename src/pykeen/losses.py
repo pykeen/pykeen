@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Loss functions integrated in PyKEEN."""
-from collections import defaultdict
 from typing import Any, Callable, Mapping, Set, Type, Union
 
 import torch
@@ -265,15 +264,18 @@ class NSSALoss(PairwiseLoss):
         Initialize the loss module.
 
         :param margin:
-            The margin parameter to use for the base loss. Negative scores should be below -margin, and positive ones
-            above +margin.
+            The margin parameter to use for the base loss (also written as gamma in the reference paper). Negative
+            scores should be below -margin, and positive ones above +margin.
         :param adversarial_temperature:
             The softmax temperature to use for computing the weights of negative scores. Smaller values lead to more
             uniform distribution, whereas large values in the limit only consider the largest negative score.
+            Called alpha in the reference paper.
             # TODO: The usage of temperature here is inverse to the "normal" usage of softmax temperature.
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
+
+        .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
         """
         super().__init__(reduction=reduction)
         self.adversarial_temperature = adversarial_temperature
@@ -317,10 +319,19 @@ losses: Mapping[str, Type[Loss]] = {
 }
 
 #: HPO Defaults for losses
-losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = defaultdict(dict)
-losses_hpo_defaults[MarginRankingLoss] = dict(
-    margin=dict(type=int, low=0, high=3, q=1),
-)
+losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
+    MarginRankingLoss: dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    ),
+    NSSALoss: dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    ),
+}
+# Add empty dictionaries as defaults for all remaining losses
+for cls in _LOSSES:
+    if cls not in losses_hpo_defaults:
+        losses_hpo_defaults[cls] = {}
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
