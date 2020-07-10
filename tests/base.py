@@ -1,5 +1,7 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
+
 """Generic unittests."""
+
 import logging
 import pprint
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Type, TypeVar
