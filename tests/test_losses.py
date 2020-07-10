@@ -34,7 +34,7 @@ class _LossTests(GenericTest[Loss]):
     #: Which training loops are supported
     # TODO: Make this part of the loss class
     training_loop_support: Mapping[str, bool] = dict(
-        owa=True,
+        slcwa=True,
         lcwa=True,
     )
 
@@ -223,9 +223,9 @@ class _SetwiseLossTests(_LossTests):
 
     instance: SetwiseLoss
 
-    #: Setwise do not support owa training loop
+    #: Setwise do not support slcwa training loop
     training_loop_support = dict(
-        owa=False,
+        slcwa=False,
         lcwa=True,
     )
 
