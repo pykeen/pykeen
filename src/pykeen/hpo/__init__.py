@@ -94,10 +94,9 @@ Each model also specifies default hyper-parameters for the loss function in
 :py:attr:`pykeen.models.Model.loss_default_kwargs`. For example, DistMultLiteral
 explicitly sets the margin to `0.0` in  :py:attr:`pykeen.models.DistMultLiteral.loss_default_kwargs`.
 
-Unlike the model's hyper-parameters, the models don't store the strategies for
-optimizing the loss functions' hyper-parameters. The pre-configured strategies
-are stored in :py:attr:`pykeen.losses.losses_hpo_defaults`. Currently, this
-list only has a strategy for optimizing margin raking loss.
+Further, each loss function specifies default hyper-parameters optimization strategy in
+:py:attr:`pykeen.losses.Loss.hpo_default`. Many loss functions do not have hyper-parameters
+and do not need ot be optimized.
 
 However, similarily to how you would specify ``model_kwargs_ranges``, you can
 specify the ``loss_kwargs_ranges`` explicitly, as in the following example.

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Loss functions integrated in PyKEEN."""
-from typing import Any, Callable, Mapping, Set, Type, Union
+
+from typing import Any, Callable, ClassVar, Mapping, Set, Type, Union
 
 import torch
 from torch import nn
@@ -21,7 +22,6 @@ __all__ = [
     'MarginRankingLoss',
     'MSELoss',
     'BCELoss',
-    'losses_hpo_defaults',
     'get_loss_cls',
 ]
 
@@ -34,12 +34,14 @@ _REDUCTION_METHODS = dict(
 class Loss(nn.Module):
     """A loss function."""
 
+    #: The default strategy for optimizing the loss's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
+
     def __init__(
         self,
         reduction: str = 'mean',
     ):
-        """
-        Initialize the loss module.
+        """Initialize the loss module.
 
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
@@ -180,14 +182,17 @@ class PairwiseLoss(Loss):
 class MarginRankingLoss(PairwiseLoss):
     """The margin ranking loss."""
 
+    hpo_default = dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    )
+
     def __init__(
         self,
         margin: float = 1.0,
         margin_activation: Callable[[torch.FloatTensor], torch.FloatTensor] = functional.relu,
         reduction: str = 'mean',
     ):
-        """
-        Initialize the margin loss instance.
+        """Initialize the margin loss instance.
 
         :param margin:
             The margin by which positive and negative scores should be apart.
@@ -254,14 +259,18 @@ class NSSALoss(PairwiseLoss):
 
     # TODO: Actually the loss is pointwise. It is only the weighting, which is setwise on the negative triples.
 
+    hpo_default = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+
     def __init__(
         self,
         margin: float,
         adversarial_temperature: float,
         reduction: str = 'mean',
     ):
-        """
-        Initialize the loss module.
+        """Initialize the NSSA loss module.
 
         :param margin:
             The margin parameter to use for the base loss (also written as gamma in the reference paper). Negative
@@ -304,34 +313,11 @@ class NSSALoss(PairwiseLoss):
 _LOSS_SUFFIX = 'Loss'
 _LOSSES: Set[Type[Loss]] = get_all_subclasses(base_class=Loss).difference({PointwiseLoss, PairwiseLoss, SetwiseLoss})
 
-# To add *all* losses implemented in Torch, uncomment:
-# _LOSSES.update({
-#     loss
-#     for loss in Loss.__subclasses__() + WeightedLoss.__subclasses__()
-#     if not loss.__name__.startswith('_')
-# })
-
-
 #: A mapping of losses' names to their implementations
 losses: Mapping[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
-
-#: HPO Defaults for losses
-losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
-    MarginRankingLoss: dict(
-        margin=dict(type=int, low=0, high=3, q=1),
-    ),
-    NSSALoss: dict(
-        margin=dict(type=int, low=3, high=30, q=3),
-        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
-    ),
-}
-# Add empty dictionaries as defaults for all remaining losses
-for cls in _LOSSES:
-    if cls not in losses_hpo_defaults:
-        losses_hpo_defaults[cls] = {}
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
