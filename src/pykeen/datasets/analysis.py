@@ -159,6 +159,28 @@ def get_id_counts(
     return total_counts
 
 
+def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
+    """Create a dataframe with relation counts for all subsets, and the full dataset.
+
+    :param dataset:
+        The dataset.
+
+    :return:
+        A dataframe with one row per relation.
+    """
+    data = dict()
+    for subset_name, triples_factory in dataset.factory_dict.items():
+        data[subset_name] = get_id_counts(
+            id_tensor=triples_factory.mapped_triples[:, 1],
+            num_ids=dataset.num_relations,
+        )
+    data['total'] = sum(data[subset_name] for subset_name in dataset.factory_dict.keys())
+    return pandas.DataFrame(
+        data=data,
+        index=sorted(dataset.relation_to_id.items(), key=itemgetter(1)),
+    )
+
+
 def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
 
