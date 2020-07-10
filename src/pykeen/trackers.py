@@ -60,9 +60,6 @@ class MLFlowResultTracker(ResultTracker):
         import mlflow as _mlflow
         self.mlflow = _mlflow
 
-        if tracking_uri is None:
-            tracking_uri = 'http://localhost:5000'
-
         self.mlflow.set_tracking_uri(tracking_uri)
         if experiment_id is not None:
             experiment = self.mlflow.get_experiment(experiment_id=experiment_id)
