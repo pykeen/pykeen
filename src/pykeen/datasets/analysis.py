@@ -188,6 +188,9 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
 def entity_relation_co_occurrence_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """Create a dataframe of entity/relation co-occurrence.
 
+    This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
+    `born_in`.
+
     :param dataset:
         The dataset.
 
