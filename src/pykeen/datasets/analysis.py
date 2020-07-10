@@ -175,10 +175,10 @@ def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
             num_ids=dataset.num_relations,
         )
     data['total'] = sum(data[subset_name] for subset_name in dataset.factory_dict.keys())
-    return pandas.DataFrame(
-        data=data,
-        index=sorted(dataset.relation_to_id.items(), key=itemgetter(1)),
-    )
+    index = [relation_label for (relation_label, _) in sorted(dataset.relation_to_id.items(), key=itemgetter(1))]
+    df = pandas.DataFrame(data=data, index=index, columns=['training', 'testing', 'validation', 'total'])
+    df.index.name = 'relation_label'
+    return df
 
 
 def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
@@ -201,10 +201,10 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
         data[subset_name, 'total'] = data[subset_name, 'head'] + data[subset_name, 'tail']
     for kind in ('head', 'tail', 'total'):
         data['total', kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
-    return pandas.DataFrame(
-        data=data,
-        index=sorted(dataset.entity_to_id.items(), key=itemgetter(1)),
-    )
+    index = [entity_label for (entity_label, _) in sorted(dataset.entity_to_id.items(), key=itemgetter(1))]
+    df = pandas.DataFrame(data=data, index=index)
+    df.index.name = 'entity_label'
+    return df
 
 
 def entity_relation_co_occurrence_dataframe(dataset: DataSet) -> pandas.DataFrame:
