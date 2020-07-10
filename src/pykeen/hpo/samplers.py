@@ -31,6 +31,7 @@ _SAMPLERS: Set[Type[BaseSampler]] = {
     TPESampler
 }
 
+#: A mapping of HPO samplers' names to their implementations
 samplers: Mapping[str, Type[BaseSampler]] = {
     normalize_string(cls.__name__, suffix=_SAMPLER_SUFFIX): cls
     for cls in _SAMPLERS

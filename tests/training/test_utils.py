@@ -8,6 +8,7 @@ from typing import Type
 import numpy as np
 import torch
 
+from pykeen.losses import MarginRankingLoss
 from pykeen.models import TransE
 from pykeen.models.base import Model
 from pykeen.training.lcwa import LCWATrainingLoop
@@ -49,7 +50,7 @@ class LossTensorTest(unittest.TestCase):
         """Test if output is correct for the LCWA training loop use case."""
         factory = TriplesFactory(triples=self.triples)
 
-        loss_cls = torch.nn.MarginRankingLoss(
+        loss_cls = MarginRankingLoss(
             margin=0,
             reduction='sum',
         )
@@ -65,7 +66,7 @@ class LossTensorTest(unittest.TestCase):
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(14, loss)
 
-        loss_cls = torch.nn.MarginRankingLoss(
+        loss_cls = MarginRankingLoss(
             margin=0,
             reduction='mean',
         )

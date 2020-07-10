@@ -60,6 +60,18 @@ $ pip install pre-commit
 $ pre-commit install
 ```
 
+PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section
+of the ``setup.cfg``. They can be included with installation using the bracket notation like in 
+``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
+``pip install pykeen[docs,plotting]``.
+
+| Name | Description |
+|------|-------------|
+| ``plotting`` | Plotting with ``seaborn`` and generation of word clouds  |
+| ``mlflow`` | Tracking of results with ``mlflow`` |
+| ``docs`` | Building of the documentation |
+| ``templating`` | Building of templated documentation, like the README |
+
 ## Contributing
 
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
@@ -110,7 +122,7 @@ in ``pykeen``.
 | openbiolinkf1 | `pykeen.datasets.OpenBioLinkF1` | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
 | openbiolinkf2 | `pykeen.datasets.OpenBioLinkF2` | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
 | openbiolinklq | `pykeen.datasets.OpenBioLinkLQ` | The low-quality variant of the OpenBioLink dataset.                                                |
-| umls          | `pykeen.datasets.Umls`          | The UMLS data set.                                                                                 |
+| umls          | `pykeen.datasets.UMLS`          | The UMLS data set.                                                                                 |
 | wn18          | `pykeen.datasets.WN18`          | The WN18 data set.                                                                                 |
 | wn18rr        | `pykeen.datasets.WN18RR`        | The WN18-RR data set.                                                                              |
 | yago310       | `pykeen.datasets.YAGO310`       | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
@@ -145,15 +157,15 @@ in ``pykeen``.
 
 ### Losses (7)
 
-| Name            | Reference                           | Description                                                                                                                                  |
-|-----------------|-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| bce             | `torch.nn.BCELoss`                  | Creates a criterion that measures the Binary Cross Entropy between the target and the output:                                                |
-| bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.                                                       |
-| crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                                                                 |
-| marginranking   | `torch.nn.MarginRankingLoss`        | Creates a criterion that measures the loss given inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,                                 |
-| mse             | `torch.nn.MSELoss`                  | Creates a criterion that measures the mean squared error (squared L2 norm) between each element in the input :math:`x` and target :math:`y`. |
-| nssa            | `pykeen.losses.NSSALoss`            | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.                                            |
-| softplus        | `pykeen.losses.SoftplusLoss`        | A loss function for the softplus.                                                                                                            |
+| Name            | Reference                           | Description                                                                                       |
+|-----------------|-------------------------------------|---------------------------------------------------------------------------------------------------|
+| bce             | `pykeen.losses.BCELoss`             | A wrapper around the PyTorch binary cross entropy loss.                                           |
+| bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
+| crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                      |
+| marginranking   | `pykeen.losses.MarginRankingLoss`   | A wrapper around the PyTorch margin ranking loss.                                                 |
+| mse             | `pykeen.losses.MSELoss`             | A wrapper around the PyTorch mean square error loss.                                              |
+| nssa            | `pykeen.losses.NSSALoss`            | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
+| softplus        | `pykeen.losses.SoftplusLoss`        | A loss function for the softplus.                                                                 |
 
 ### Regularizers (5)
 

@@ -1,42 +1,15 @@
 # -*- coding: utf-8 -*-
 
-"""Implementations of various knowledge graph embedding models.
-
-===================  ==========================================  ====================
-Name                 Reference                                   Citation
-===================  ==========================================  ====================
-ComplEx              :class:`pykeen.models.ComplEx`              [trouillon2016]_
-ComplExLiteral       :class:`pykeen.models.ComplExLiteral`       [agustinus2018]_
-ConvE                :class:`pykeen.models.ConvE`                [dettmers2018]_
-ConvKB               :class:`pykeen.models.ConvKB`               [nguyen2018]_
-DistMult             :class:`pykeen.models.DistMult`             [yang2014]_
-DistMultLiteral      :class:`pykeen.models.DistMultLiteral`      [agustinus2018]_
-ERMLP                :class:`pykeen.models.ERMLP`                [dong2014]_
-ERMLPE               :class:`pykeen.models.ERMLPE`               [sharifzadeh2019]_
-HolE                 :class:`pykeen.models.HolE`                 [nickel2016]_
-KG2E                 :class:`pykeen.models.KG2E`                 [he2015]_
-NTN                  :class:`pykeen.models.NTN`                  [socher2013]_
-ProjE                :class:`pykeen.models.ProjE`                [shi2017]_
-RESCAL               :class:`pykeen.models.RESCAL`               [nickel2011]_
-RGCN                 :class:`pykeen.models.RGCN`                 [schlichtkrull2018]_
-RotatE               :class:`pykeen.models.RotatE`               [sun2019]_
-SimplE               :class:`pykeen.models.SimplE`               [kazemi2018]_
-StructuredEmbedding  :class:`pykeen.models.StructuredEmbedding`  [bordes2011]_
-TransD               :class:`pykeen.models.TransD`               [ji2015]_
-TransE               :class:`pykeen.models.TransE`               [bordes2013]_
-TransH               :class:`pykeen.models.TransH`               [wang2014]_
-TransR               :class:`pykeen.models.TransR`               [lin2015]_
-TuckER               :class:`pykeen.models.TuckER`               [balazevic2019]_
-UnstructuredModel    :class:`pykeen.models.UnstructuredModel`    [bordes2014]_
-===================  ==========================================  ====================
-
-.. note:: This table can be re-generated with ``pykeen ls models -f rst``
-"""
+r"""An interaction model $f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}$ computes a
+real-valued score representing the plausibility of a triple $(h,r,t) \in \mathbb{K}$ given the embeddings for the
+entities and relations. In general, a larger score indicates a higher plausibility. The interpretation of the
+score value is model-dependent, and usually it cannot be directly interpreted as a probability.
+"""  # noqa: D205, D400
 
 from typing import Mapping, Set, Type, Union
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model
-from .multimodal import ComplExLiteral, DistMultLiteral, MultimodalModel
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel
+from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
     ComplEx,
     ConvE,
@@ -111,7 +84,11 @@ models: Mapping[str, Type[Model]] = {
 
 
 def get_model_cls(query: Union[str, Type[Model]]) -> Type[Model]:
-    """Get the model class."""
+    """Look up a model class by name (case/punctuation insensitive) in :data:`pykeen.models.models`.
+
+    :param query: The name of the model (case insensitive, punctuation insensitive).
+    :return: The model class
+    """
     return get_cls(
         query,
         base=Model,

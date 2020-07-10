@@ -9,7 +9,7 @@ import logging
 
 import click
 
-from .dataset import PackedZipRemoteDataSet
+from .base import PackedZipRemoteDataSet
 
 __all__ = [
     'OpenBioLink',

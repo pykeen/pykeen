@@ -3,14 +3,22 @@
 """The easiest way to train and evaluate a model is with the :func:`pykeen.pipeline.pipeline` function.
 
 It provides a high-level entry point into the extensible functionality of
-this package. The following example shows how to train and evaluate the
-TransE model on the Nations dataset.
+this package.
+
+Training a Model
+~~~~~~~~~~~~~~~~
+The following example shows how to train and evaluate the :class:`pykeen.models.TransE` model
+on the :class:`pykeen.dataset.Nations` dataset. Throughout the documentation, you'll notice
+that each asset has a corresponding class in PyKEEN. You can follow the links to learn more
+about each and see the reference on how to use them specifically. Don't worry, in this part of
+the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of everything for you.
 
 >>> from pykeen.pipeline import pipeline
 >>> result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 The results are returned in a :class:`pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
@@ -25,6 +33,7 @@ could be used as in:
 ...     dataset='Nations',
 ...     model=TransE,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In this example, the data set was given as a string. A list of available data sets can be found in
 :mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.DataSet` could be
@@ -32,11 +41,12 @@ used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
->>> from pykeen.datasets import nations
+>>> from pykeen.datasets import Nations
 >>> result = pipeline(
-...     dataset=nations,
+...     dataset=Nations,
 ...     model=TransE,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
@@ -48,6 +58,7 @@ This can be explicitly given as a string:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
@@ -59,6 +70,7 @@ approaches.
 ...     model='TransE',
 ...     training_loop='LCWA',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
@@ -70,6 +82,7 @@ can be given as in:
 ...     training_loop='sLCWA',
 ...     negative_sampler='basic',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
@@ -83,6 +96,7 @@ of the negative sampler could be used as in:
 ...     training_loop='sLCWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 .. warning ::
 
@@ -98,6 +112,7 @@ rank-based evaluation is used. It can be given explictly as in:
 ...     model='TransE',
 ...     evaluator='RankBasedEvaluator',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
@@ -110,6 +125,7 @@ of the evaluator could be used as in:
 ...     model='TransE',
 ...     evaluator=RankBasedEvaluator,
 ... )
+>>> result.save_to_directory('nations_transe')
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
@@ -120,12 +136,11 @@ argument as in:
 ...     model='TransE',
 ...     stopper='early',
 ... )
+>>> result.save_to_directory('nations_transe')
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
-Arguments for the model can be given as a dictionary using
-``model_kwargs``. There are several other options for passing kwargs in to
-the other parameters used by :func:`pykeen.pipeline.pipeline`.
+Arguments for the model can be given as a dictionary using ``model_kwargs``.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -135,10 +150,18 @@ the other parameters used by :func:`pykeen.pipeline.pipeline`.
 ...         scoring_fct_norm=2,
 ...     ),
 ... )
+>>> result.save_to_directory('nations_transe')
+
+The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
+complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
+model that explain what kwargs are possible.
 
 Because the pipeline takes care of looking up classes and instantiating them,
 there are several other parameters to :func:`pykeen.pipeline.pipeline` that
 can be used to specify the parameters during their respective instantiations.
+
+Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
+the :class:`pykeen.dataset.Nations`
 
 Bring Your Own Data
 ~~~~~~~~~~~~~~~~~~~
@@ -150,21 +173,23 @@ the default data sets are also provided as subclasses of :class:`pykeen.triples.
 
     Make sure they are mapped to the same entities.
 
->>> from pykeen.datasets import NationsTestingTriplesFactory
->>> from pykeen.datasets import NationsTrainingTriplesFactory
+>>> from pykeen.datasets import Nations
+>>> from pykeen.triples import TriplesFactory
 >>> from pykeen.pipeline import pipeline
->>> training = NationsTrainingTriplesFactory()
->>> testing = NationsTestingTriplesFactory(
-...     entity_to_id=training.entity_to_id,
-...     relation_to_id=training.relation_to_id,
-... )
+>>> nations = Nations()
+>>> training: TriplesFactory = nations.training
+>>> testing: TriplesFactory = nations.testing
 >>> pipeline_result = pipeline(
 ...     training_triples_factory=training,
 ...     testing_triples_factory=testing,
 ...     model='TransE',
 ... )
+>>> result.save_to_directory('nations_transe')
+
+.. todo:: Example with creation of triples factory
 """
 
+import ftplib
 import json
 import logging
 import os
@@ -177,7 +202,8 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .datasets import DataSet, get_dataset
+from .datasets import get_dataset
+from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, get_loss_cls
 from .models import get_model_cls
@@ -186,9 +212,13 @@ from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
+from .trackers import MLFlowResultTracker, ResultTracker
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import MLFlowResultTracker, NoRandomSeedNecessary, Result, ResultTracker, resolve_device, set_random_seed
+from .utils import (
+    NoRandomSeedNecessary, Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    resolve_device, set_random_seed,
+)
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -203,6 +233,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+@fix_dataclass_init_docs
 @dataclass
 class PipelineResult(Result):
     """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
@@ -278,12 +309,104 @@ class PipelineResult(Result):
 
     def save_to_directory(self, directory: str, save_metadata: bool = True, save_replicates: bool = True) -> None:
         """Save all artifacts in the given directory."""
+        os.makedirs(directory, exist_ok=True)
+
         with open(os.path.join(directory, 'metadata.json'), 'w') as file:
-            json.dump(self.metadata, file, indent=2)
+            json.dump(self.metadata, file, indent=2, sort_keys=True)
         with open(os.path.join(directory, 'results.json'), 'w') as file:
-            json.dump(self._get_results(), file, indent=2)
+            json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(os.path.join(directory, 'trained_model.pkl'))
+
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save all artifacts to the given directory in the FTP server.
+
+        :param directory: The directory in the FTP server to save to
+        :param ftp: A connection to the FTP server
+
+        The following code will train a model and upload it to FTP using Python's builtin
+        :class:`ftplib.FTP`:
+
+        .. code-block:: python
+
+            import ftplib
+            from pykeen.pipeline import pipeline
+
+            directory = 'test/test'
+            pipeline_result = pipeline(
+                model='TransE',
+                dataset='Kinships',
+            )
+            with ftplib.FTP(host='0.0.0.0', user='user', passwd='12345') as ftp:
+                pipeline_result.save_to_ftp(directory, ftp)
+
+        If you want to try this with your own local server, run this code based on the
+        example from Giampaolo Rodola's excellent library,
+        `pyftpdlib <https://github.com/giampaolo/pyftpdlib#quick-start>`_.
+
+        .. code-block:: python
+
+            import os
+            from pyftpdlib.authorizers import DummyAuthorizer
+            from pyftpdlib.handlers import FTPHandler
+            from pyftpdlib.servers import FTPServer
+
+            authorizer = DummyAuthorizer()
+            authorizer.add_user("user", "12345", homedir=os.path.expanduser('~/ftp'), perm="elradfmwMT")
+
+            handler = FTPHandler
+            handler.authorizer = authorizer
+
+            address = '0.0.0.0', 21
+            server = FTPServer(address, handler)
+            server.serve_forever()
+        """
+        ensure_ftp_directory(ftp=ftp, directory=directory)
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        ftp.storbinary(f'STOR {metadata_path}', get_json_bytes_io(self.metadata))
+
+        results_path = os.path.join(directory, 'results.json')
+        ftp.storbinary(f'STOR {results_path}', get_json_bytes_io(self._get_results()))
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+
+        .. note:: Need to have ``~/.aws/credentials`` file set up. Read: https://realpython.com/python-boto3-aws-s3/
+
+        The following code will train a model and upload it to S3 using :mod:`boto3`:
+
+        .. code-block:: python
+
+            import time
+            from pykeen.pipeline import pipeline
+            pipeline_result = pipeline(
+                dataset='Kinships',
+                model='TransE',
+            )
+            directory = f'tests/{time.strftime("%Y-%m-%d-%H%M%S")}'
+            bucket = 'pykeen'
+            pipeline_result.save_to_s3(directory, bucket=bucket)
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
+
+        results_path = os.path.join(directory, 'results.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
 def replicate_pipeline_from_path(

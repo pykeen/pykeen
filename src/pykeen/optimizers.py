@@ -44,6 +44,7 @@ _OPTIMIZER_LIST: Set[Type[Optimizer]] = {
     SGD,
 }
 
+#: A mapping of optimizers' names to their implementations
 optimizers: Mapping[str, Type[Optimizer]] = {
     normalize_string(optimizer.__name__): optimizer
     for optimizer in _OPTIMIZER_LIST
