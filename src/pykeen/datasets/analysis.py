@@ -69,6 +69,9 @@ def describe_triples(
 ) -> Mapping[str, Any]:
     """Describe a tensor of triples.
 
+    In particular describes the individual columns (head, relation, tail), as well as the union of head and tail (i.e.
+    the set of all occurring entities).
+
     :param mapped_triples:
         The mapped triples (i.e. ID-based).
     :param num_entities:
