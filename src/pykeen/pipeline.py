@@ -162,31 +162,6 @@ can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
 the :class:`pykeen.dataset.Nations`
-
-Bring Your Own Data
-~~~~~~~~~~~~~~~~~~~
-As an alternative to using a pre-packaged dataset, the training and testing can be set
-explicitly with instances of :class:`pykeen.triples.TriplesFactory`. For convenience,
-the default data sets are also provided as subclasses of :class:`pykeen.triples.TriplesFactory`.
-
-.. warning ::
-
-    Make sure they are mapped to the same entities.
-
->>> from pykeen.datasets import Nations
->>> from pykeen.triples import TriplesFactory
->>> from pykeen.pipeline import pipeline
->>> nations = Nations()
->>> training: TriplesFactory = nations.training
->>> testing: TriplesFactory = nations.testing
->>> pipeline_result = pipeline(
-...     training_triples_factory=training,
-...     testing_triples_factory=testing,
-...     model='TransE',
-... )
->>> result.save_to_directory('nations_transe')
-
-.. todo:: Example with creation of triples factory
 """
 
 import ftplib

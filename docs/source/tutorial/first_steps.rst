@@ -41,8 +41,3 @@ executed with one of the previous examples.
     # Evaluate
     results = evaluator.evaluate(mapped_triples, batch_size=1024)
     print(results)
-
-Optimizing a Model
-------------------
-.. automodule:: pykeen.hpo
-    :noindex:
