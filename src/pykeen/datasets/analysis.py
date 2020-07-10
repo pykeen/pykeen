@@ -102,12 +102,18 @@ def describe_triples(
 def describe_dataset(dataset: DataSet) -> Mapping[str, Any]:
     """Describe a dataset by computing numerous statistics.
 
+    In particular this comprises:
+
+    1. The number of entities / relations / triples.
+    2. For each subset ('train', 'test', 'validation') describe the triples using `describe_triples`.
+    3. Describe all triples, i.e. the concatenation of the triples of each subset.
+
     :param dataset:
         The dataset.
 
     :return:
         A JSON-compatible description. Comprises descriptions of the each subset, train/test/validation, as well as the
-         union over the subsets.
+        union over the subsets.
     """
     return dict(
         num_entities=dataset.num_entities,
