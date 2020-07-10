@@ -162,10 +162,10 @@ in ``pykeen``.
 | bce             | `pykeen.losses.BCELoss`             | A wrapper around the PyTorch binary cross entropy loss.                                           |
 | bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
 | crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                      |
-| marginranking   | `pykeen.losses.MarginRankingLoss`   | A wrapper around the PyTorch margin ranking loss.                                                 |
+| marginranking   | `pykeen.losses.MarginRankingLoss`   | The margin ranking loss.                                                                          |
 | mse             | `pykeen.losses.MSELoss`             | A wrapper around the PyTorch mean square error loss.                                              |
 | nssa            | `pykeen.losses.NSSALoss`            | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
-| softplus        | `pykeen.losses.SoftplusLoss`        | A loss function for the softplus.                                                                 |
+| softplus        | `pykeen.losses.SoftplusLoss`        | A loss function using softplus.                                                                   |
 
 ### Regularizers (5)
 
