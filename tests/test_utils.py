@@ -66,6 +66,25 @@ class FlattenDictionaryTest(unittest.TestCase):
         observed_output = flatten_dictionary(nested_dictionary)
         self._compare(observed_output, expected_output)
 
+    def test_flatten_dictionary_mixed_key_type(self):
+        """Test if the output of flatten_dictionary is correct if some keys are not strings."""
+        nested_dictionary = {
+            'a': {
+                5: {
+                    'c': 1,
+                    'd': 2
+                },
+                'e': 3,
+            }
+        }
+        expected_output = {
+            'a.5.c': 1,
+            'a.5.d': 2,
+            'a.e': 3,
+        }
+        observed_output = flatten_dictionary(nested_dictionary)
+        self._compare(observed_output, expected_output)
+
     def test_flatten_dictionary_prefix(self):
         """Test if the output of flatten_dictionary is correct."""
         nested_dictionary = {

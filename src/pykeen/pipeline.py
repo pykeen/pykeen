@@ -189,6 +189,7 @@ the default data sets are also provided as subclasses of :class:`pykeen.triples.
 .. todo:: Example with creation of triples factory
 """
 
+import ftplib
 import json
 import logging
 import os
@@ -214,7 +215,10 @@ from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .trackers import MLFlowResultTracker, ResultTracker
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import NoRandomSeedNecessary, Result, fix_dataclass_init_docs, resolve_device, set_random_seed
+from .utils import (
+    NoRandomSeedNecessary, Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    resolve_device, set_random_seed,
+)
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -316,6 +320,96 @@ class PipelineResult(Result):
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(os.path.join(directory, 'trained_model.pkl'))
+
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save all artifacts to the given directory in the FTP server.
+
+        :param directory: The directory in the FTP server to save to
+        :param ftp: A connection to the FTP server
+
+        The following code will train a model and upload it to FTP using Python's builtin
+        :class:`ftplib.FTP`:
+
+        .. code-block:: python
+
+            import ftplib
+            from pykeen.pipeline import pipeline
+
+            directory = 'test/test'
+            pipeline_result = pipeline(
+                model='TransE',
+                dataset='Kinships',
+            )
+            with ftplib.FTP(host='0.0.0.0', user='user', passwd='12345') as ftp:
+                pipeline_result.save_to_ftp(directory, ftp)
+
+        If you want to try this with your own local server, run this code based on the
+        example from Giampaolo Rodola's excellent library,
+        `pyftpdlib <https://github.com/giampaolo/pyftpdlib#quick-start>`_.
+
+        .. code-block:: python
+
+            import os
+            from pyftpdlib.authorizers import DummyAuthorizer
+            from pyftpdlib.handlers import FTPHandler
+            from pyftpdlib.servers import FTPServer
+
+            authorizer = DummyAuthorizer()
+            authorizer.add_user("user", "12345", homedir=os.path.expanduser('~/ftp'), perm="elradfmwMT")
+
+            handler = FTPHandler
+            handler.authorizer = authorizer
+
+            address = '0.0.0.0', 21
+            server = FTPServer(address, handler)
+            server.serve_forever()
+        """
+        ensure_ftp_directory(ftp=ftp, directory=directory)
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        ftp.storbinary(f'STOR {metadata_path}', get_json_bytes_io(self.metadata))
+
+        results_path = os.path.join(directory, 'results.json')
+        ftp.storbinary(f'STOR {results_path}', get_json_bytes_io(self._get_results()))
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+
+        .. note:: Need to have ``~/.aws/credentials`` file set up. Read: https://realpython.com/python-boto3-aws-s3/
+
+        The following code will train a model and upload it to S3 using :mod:`boto3`:
+
+        .. code-block:: python
+
+            import time
+            from pykeen.pipeline import pipeline
+            pipeline_result = pipeline(
+                dataset='Kinships',
+                model='TransE',
+            )
+            directory = f'tests/{time.strftime("%Y-%m-%d-%H%M%S")}'
+            bucket = 'pykeen'
+            pipeline_result.save_to_s3(directory, bucket=bucket)
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
+
+        results_path = os.path.join(directory, 'results.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
 def replicate_pipeline_from_path(
@@ -493,8 +587,11 @@ def pipeline(  # noqa: C901
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    # Misc
+    # 9. MLFlow
     mlflow_tracking_uri: Optional[str] = None,
+    mlflow_experiment_id: Optional[int] = None,
+    mlflow_experiment_name: Optional[str] = None,
+    # Misc
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -564,6 +661,13 @@ def pipeline(  # noqa: C901
 
     :param mlflow_tracking_uri:
         The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
+    :param mlflow_experiment_id:
+        The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
+        experiment_name. Only effective if mlflow_tracking_uri is not None.
+    :param mlflow_experiment_name:
+        The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
+        create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
+
     :param metadata: A JSON dictionary to store with the experiment
     :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
      Defaults to true - use testing triples.
@@ -575,7 +679,11 @@ def pipeline(  # noqa: C901
 
     # Create result store
     if mlflow_tracking_uri is not None:
-        result_tracker = MLFlowResultTracker(tracking_uri=mlflow_tracking_uri)
+        result_tracker = MLFlowResultTracker(
+            tracking_uri=mlflow_tracking_uri,
+            experiment_id=mlflow_experiment_id,
+            experiment_name=mlflow_experiment_name,
+        )
     else:
         result_tracker = ResultTracker()
 
@@ -588,7 +696,7 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params({'dataset': dataset})
+    result_tracker.log_params(dict(dataset=dataset))
 
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
         dataset=dataset,
@@ -622,14 +730,13 @@ def pipeline(  # noqa: C901
         _loss = loss_cls(**(loss_kwargs or {}))
         model_kwargs.setdefault('loss', _loss)
 
-    # Log model parameters
-    result_tracker.log_params(model_kwargs, prefix='model')
-
     model = get_model_cls(model)
     model_instance: Model = model(
         triples_factory=training_triples_factory,
         **model_kwargs,
     )
+    # Log model parameters
+    result_tracker.log_params(params=dict(cls=model.__name__, kwargs=model_kwargs), prefix='model')
 
     optimizer = get_optimizer_cls(optimizer)
     training_loop = get_training_loop_cls(training_loop)
@@ -638,12 +745,13 @@ def pipeline(  # noqa: C901
         optimizer_kwargs = {}
 
     # Log optimizer parameters
-    result_tracker.log_params({'class': optimizer, 'kwargs': optimizer_kwargs}, prefix='optimizer')
+    result_tracker.log_params(params=dict(cls=optimizer.__name__, kwargs=optimizer_kwargs), prefix='optimizer')
     optimizer_instance = optimizer(
         params=model_instance.get_grad_params(),
         **optimizer_kwargs,
     )
 
+    result_tracker.log_params(params=dict(cls=training_loop.__name__), prefix='training_loop')
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
@@ -653,6 +761,10 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
+        result_tracker.log_params(
+            params=dict(cls=negative_sampler.__name__, kwargs=negative_sampler_kwargs),
+            prefix='negative_sampler'
+        )
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
@@ -696,6 +808,7 @@ def pipeline(  # noqa: C901
 
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
+    result_tracker.log_params(params=training_kwargs, prefix='training')
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")

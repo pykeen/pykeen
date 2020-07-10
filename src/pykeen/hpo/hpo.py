@@ -3,6 +3,7 @@
 """Hyper-parameter optimiziation in PyKEEN."""
 
 import dataclasses
+import ftplib
 import json
 import logging
 import os
@@ -29,7 +30,10 @@ from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
-from ..utils import Result, fix_dataclass_init_docs, normalize_string
+from ..utils import (
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
+    normalize_string,
+)
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -85,6 +89,10 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
+    # 9. MLFlow
+    mlflow_tracking_uri: Optional[str] = None
+    mlflow_experiment_id: Optional[int] = None
+    mlflow_experiment_name: Optional[str] = None
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
@@ -206,6 +214,10 @@ class Objective:
                 evaluator=self.evaluator,
                 evaluator_kwargs=self.evaluator_kwargs,
                 evaluation_kwargs=self.evaluation_kwargs,
+                # 9. MLFlow
+                mlflow_tracking_uri=self.mlflow_tracking_uri,
+                mlflow_experiment_id=self.mlflow_experiment_id,
+                mlflow_experiment_name=self.mlflow_experiment_name,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
@@ -303,6 +315,46 @@ class HpoPipelineResult(Result):
         with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
+        """Save the results to the directory in an FTP server.
+
+        :param directory: The directory in the FTP server to save to
+        :param ftp: A connection to the FTP server
+        """
+        ensure_ftp_directory(ftp=ftp, directory=directory)
+
+        study_path = os.path.join(directory, 'study.json')
+        ftp.storbinary(f'STOR {study_path}', get_json_bytes_io(self.study.user_attrs))
+
+        trials_path = os.path.join(directory, 'trials.tsv')
+        ftp.storbinary(f'STOR {trials_path}', get_df_io(self.study.trials_dataframe()))
+
+        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
+        ensure_ftp_directory(ftp=ftp, directory=best_pipeline_directory)
+
+        best_config_path = os.path.join(best_pipeline_directory, 'pipeline_config.json')
+        ftp.storbinary(f'STOR {best_config_path}', get_json_bytes_io(self._get_best_study_config()))
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: The boto3.client, if already instantiated
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        study_path = os.path.join(directory, 'study.json')
+        s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
+
+        trials_path = os.path.join(directory, 'trials.tsv')
+        s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
+
+        best_config_path = os.path.join(directory, 'best_pipeline', 'pipeline_config.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
+
     def replicate_best_pipeline(
         self,
         *,
@@ -388,6 +440,10 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
+    # MLFlow
+    mlflow_tracking_uri: Optional[str] = None,
+    mlflow_experiment_id: Optional[int] = None,
+    mlflow_experiment_name: Optional[str] = None,
     # 6. Misc
     device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
@@ -480,6 +536,15 @@ def hpo_pipeline(
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
+
+    :param mlflow_tracking_uri:
+        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
+    :param mlflow_experiment_id:
+        The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
+        experiment_name. Only effective if mlflow_tracking_uri is not None.
+    :param mlflow_experiment_name:
+        The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
+        create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
 
     :param metric:
         The metric to optimize over. Defaults to ``adjusted_mean_rank``.
@@ -600,6 +665,10 @@ def hpo_pipeline(
         evaluator=evaluator,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
+        # 9. MLFlow
+        mlflow_tracking_uri=mlflow_tracking_uri,
+        mlflow_experiment_id=mlflow_experiment_id,
+        mlflow_experiment_name=mlflow_experiment_name,
         # Optuna Misc.
         metric=metric,
         save_model_directory=save_model_directory,
