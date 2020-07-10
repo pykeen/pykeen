@@ -1,6 +1,9 @@
 Using MLflow
 ============
-You'll first have to install MLflow with ``pip install mlflow==1.7.0`` and run it in the background
+`MLflow <https://mlflow.org>`_ is a graphical tool for tracking the results of machine learning. PyKEEN integrates
+MLflow into the pipeline and HPO pipeline.
+
+To use it, you'll first have to install MLflow with ``pip install mlflow`` and run it in the background
 with ``mlflow ui``. More information can be found on the
 `MLflow Quickstart <https://mlflow.org/docs/latest/quickstart.html>`_. It'll be running at http://localhost:5000
 by default.
