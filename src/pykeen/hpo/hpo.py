@@ -89,6 +89,10 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
+    # 9. MLFlow
+    mlflow_tracking_uri: Optional[str] = None
+    mlflow_experiment_id: Optional[int] = None
+    mlflow_experiment_name: Optional[str] = None
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
@@ -210,6 +214,10 @@ class Objective:
                 evaluator=self.evaluator,
                 evaluator_kwargs=self.evaluator_kwargs,
                 evaluation_kwargs=self.evaluation_kwargs,
+                # 9. MLFlow
+                mlflow_tracking_uri=self.mlflow_tracking_uri,
+                mlflow_experiment_id=self.mlflow_experiment_id,
+                mlflow_experiment_name=self.mlflow_experiment_name,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
@@ -432,6 +440,10 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
+    # MLFlow
+    mlflow_tracking_uri: Optional[str] = None,
+    mlflow_experiment_id: Optional[int] = None,
+    mlflow_experiment_name: Optional[str] = None,
     # 6. Misc
     device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
@@ -524,6 +536,15 @@ def hpo_pipeline(
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
+
+    :param mlflow_tracking_uri:
+        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
+    :param mlflow_experiment_id:
+        The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
+        experiment_name. Only effective if mlflow_tracking_uri is not None.
+    :param mlflow_experiment_name:
+        The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
+        create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
 
     :param metric:
         The metric to optimize over. Defaults to ``adjusted_mean_rank``.
@@ -644,6 +665,10 @@ def hpo_pipeline(
         evaluator=evaluator,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
+        # 9. MLFlow
+        mlflow_tracking_uri=mlflow_tracking_uri,
+        mlflow_experiment_id=mlflow_experiment_id,
+        mlflow_experiment_name=mlflow_experiment_name,
         # Optuna Misc.
         metric=metric,
         save_model_directory=save_model_directory,
