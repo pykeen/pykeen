@@ -691,7 +691,7 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params({'dataset': dataset})
+    result_tracker.log_params(dict(dataset=dataset))
 
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
         dataset=dataset,
@@ -725,14 +725,13 @@ def pipeline(  # noqa: C901
         _loss = loss_cls(**(loss_kwargs or {}))
         model_kwargs.setdefault('loss', _loss)
 
-    # Log model parameters
-    result_tracker.log_params(model_kwargs, prefix='model')
-
     model = get_model_cls(model)
     model_instance: Model = model(
         triples_factory=training_triples_factory,
         **model_kwargs,
     )
+    # Log model parameters
+    result_tracker.log_params(params=dict(cls=model.__name__, kwargs=model_kwargs), prefix='model')
 
     optimizer = get_optimizer_cls(optimizer)
     training_loop = get_training_loop_cls(training_loop)
@@ -741,7 +740,7 @@ def pipeline(  # noqa: C901
         optimizer_kwargs = {}
 
     # Log optimizer parameters
-    result_tracker.log_params({'class': optimizer.__name__, 'kwargs': optimizer_kwargs}, prefix='optimizer')
+    result_tracker.log_params(params=dict(cls=optimizer.__name__, kwargs=optimizer_kwargs), prefix='optimizer')
     optimizer_instance = optimizer(
         params=model_instance.get_grad_params(),
         **optimizer_kwargs,
@@ -757,7 +756,10 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
-        result_tracker.log_params(params=dict(negative_sampler=negative_sampler_kwargs), prefix='negative_sampler')
+        result_tracker.log_params(
+            params=dict(cls=negative_sampler.__name__, kwargs=negative_sampler_kwargs),
+            prefix='negative_sampler'
+        )
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
