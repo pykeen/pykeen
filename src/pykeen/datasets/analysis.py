@@ -44,7 +44,7 @@ def describe_id_tensor(
     unique, counts = tensor.unique(return_counts=True)
 
     # descriptive statistics via pandas
-    frequency = pandas.Series(counts).describe().to_dict()
+    frequency = dict(pandas.Series(counts).describe().to_dict())
     frequency['count'] = int(frequency['count'])
 
     # Get top-k IDs
