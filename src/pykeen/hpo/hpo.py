@@ -340,7 +340,7 @@ class HpoPipelineResult(Result):
 
         :param directory: The directory in the S3 bucket
         :param bucket: The name of the S3 bucket
-        :param s3: The boto3.client, if already instantiated
+        :param s3: A client from :func:`boto3.client`, if already instantiated
         """
         if s3 is None:
             import boto3

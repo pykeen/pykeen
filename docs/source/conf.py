@@ -255,6 +255,7 @@ intersphinx_mapping = {
     'optuna': ('https://optuna.readthedocs.io/en/latest', None),
     'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
+    'boto3': ('https://boto3.amazonaws.com/v1/documentation/api/latest/', None),
 }
 
 autoclass_content = 'both'
