@@ -8,6 +8,7 @@ PyKEEN
    :maxdepth: 2
 
    first_steps
+   tutorial/using_mlflow
 
 .. toctree::
    :caption: Reference
