@@ -44,7 +44,7 @@ def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     >>> from pykeen.datasets.analysis import relation_count_dataframe
     >>> df = relation_count_dataframe(dataset=dataset)
 
-    # Get the most frequent relations
+    # Get the most frequent relations in training
     >>> df.sort_values(by="training").head()
 
     # Get all relations which do not occur in the test part
