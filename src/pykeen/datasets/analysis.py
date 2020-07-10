@@ -9,9 +9,9 @@ import numpy
 import pandas
 import torch
 
-from pykeen.datasets import DataSet
-from pykeen.typing import MappedTriples
-from pykeen.utils import invert_mapping
+from .dataset import DataSet
+from ..typing import MappedTriples
+from ..utils import invert_mapping
 
 
 def describe_id_tensor(
