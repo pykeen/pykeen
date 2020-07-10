@@ -50,3 +50,21 @@ This example shows using MLflow with the :func:`pykeen.hpo.hpo_pipeline` functio
     )
 
 The same navigation through MLflow can be done for this example.
+
+Reusing Experiments
+-------------------
+In the MLflow UI, you'll see that experiments are assigned an ID. This means you can re-use the same ID to group
+different sub-experiments together using the ``mlflow_experiment_id`` keyword argument instead of
+``mlflow_experiment_name``.
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    experiment_id = 4  # if doesn't already exist, will throw an error!
+    results = pipeline(
+        model='RotatE',
+        dataset='Kinships',
+        mlflow_tracking_uri='http://localhost:5000',
+        mlflow_experiment_id=4,
+    )
