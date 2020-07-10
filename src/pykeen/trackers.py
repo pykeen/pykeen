@@ -63,12 +63,9 @@ class MLFlowResultTracker(ResultTracker):
         self.mlflow.set_tracking_uri(tracking_uri)
         if experiment_id is not None:
             experiment = self.mlflow.get_experiment(experiment_id=experiment_id)
-            self.mlflow.set_experiment(experiment.name)
-        elif experiment_name is not None:
-            experiment = self.mlflow.get_experiment_by_name(name=experiment_name)
-            if experiment is None:
-                experiment = self.mlflow.create_experiment(name=experiment_name)
-            self.mlflow.set_experiment(experiment.name)
+            experiment_name = experiment.name
+        if experiment_name is not None:
+            self.mlflow.set_experiment(experiment_name)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
