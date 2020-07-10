@@ -39,8 +39,8 @@ def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
 
     Example usage:
 
-    >>> from pykeen.datasets import FB15k237
-    >>> dataset = FB15k237()
+    >>> from pykeen.datasets import Nations
+    >>> dataset = Nations()
     >>> from pykeen.datasets.analysis import relation_count_dataframe
     >>> df = relation_count_dataframe(dataset=dataset)
 
@@ -80,7 +80,7 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     >>> df = entity_count_dataframe(dataset=dataset)
 
     # Get the most frequent entities in training (counting both, occurrences as heads as well as occurences as tails)
-    >>> df.sort_values(by=[("training", "total")]).head()
+    >>> df.sort_values(by=[("training", "total")]).tail()
 
     # Get entities which do not occur in testing
     >>> df[df[("testing", "total")] == 0]
@@ -117,6 +117,18 @@ def entity_relation_co_occurrence_dataframe(dataset: DataSet) -> pandas.DataFram
 
     This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
     `born_in`.
+
+    Example usages:
+    >>> from pykeen.datasets import Nations
+    >>> dataset = Nations()
+    >>> from pykeen.datasets.analysis import relation_count_dataframe
+    >>> df = entity_count_dataframe(dataset=dataset)
+
+    # Which countries have to most embassies (considering only training triples)?
+    >>> df.loc['training', ('head', 'embassy')].sort_values().tail()
+
+    # In which countries are to most embassies (considering only training triples)?
+    >>> df.loc['training', ('tail', 'embassy')].sort_values().tail()
 
     :param dataset:
         The dataset.
