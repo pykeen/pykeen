@@ -6,7 +6,7 @@ from typing import Collection, Optional, Sequence
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import entity_count_dataframe, relation_count_dataframe
+from pykeen.datasets.analysis import SUBSET_LABELS, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_count_dataframe
 
 
 class AnalysisTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class AnalysisTests(unittest.TestCase):
         df: pandas.DataFrame,
         label_name: str,
         expected_labels: Collection[str],
-        first_level_column_labels: Sequence[str] = ('training', 'testing', 'validation', 'total'),
+        first_level_column_labels: Sequence[str] = SUBSET_LABELS,
         second_level_column_labels: Optional[Sequence[str]] = None,
     ):
         """Check the general structure of a count dataframe."""
@@ -58,4 +58,17 @@ class AnalysisTests(unittest.TestCase):
             label_name='entity_label',
             expected_labels=self.dataset.entity_to_id.keys(),
             second_level_column_labels=['head', 'tail', 'total'],
+        )
+
+    def test_entity_relation_co_occurrence_dataframe(self):
+        """Test entity_relation_co_occurrence_dataframe()"""
+        df = entity_relation_co_occurrence_dataframe(dataset=self.dataset)
+
+        # check correct type
+        assert isinstance(df, pandas.DataFrame)
+
+        # check index
+        self.assertListEqual(
+            list(df.index),
+            list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys())))
         )

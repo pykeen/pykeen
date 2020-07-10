@@ -11,6 +11,8 @@ import torch
 from .base import DataSet
 from ..utils import invert_mapping
 
+SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
+
 
 def get_id_counts(
     id_tensor: torch.LongTensor,
@@ -49,7 +51,7 @@ def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
         )
     data['total'] = sum(data[subset_name] for subset_name in dataset.factory_dict.keys())
     index = [relation_label for (relation_label, _) in sorted(dataset.relation_to_id.items(), key=itemgetter(1))]
-    df = pandas.DataFrame(data=data, index=index, columns=['training', 'testing', 'validation', 'total'])
+    df = pandas.DataFrame(data=data, index=index, columns=SUBSET_LABELS)
     df.index.name = 'relation_label'
     return df
 
@@ -65,6 +67,7 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     """
     data = {}
     num_entities = dataset.num_entities
+    second_level_order = ('head', 'tail', 'total')
     for subset_name, triples_factory in dataset.factory_dict.items():
         for col, col_name in zip((0, 2), ('head', 'tail')):
             data[subset_name, col_name] = get_id_counts(
@@ -75,7 +78,7 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     for kind in ('head', 'tail', 'total'):
         data['total', kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
     index = [entity_label for (entity_label, _) in sorted(dataset.entity_to_id.items(), key=itemgetter(1))]
-    df = pandas.DataFrame(data=data, index=index)
+    df = pandas.DataFrame(data=data, index=index, columns=pandas.MultiIndex.from_product(iterables=[SUBSET_LABELS, second_level_order]))
     df.index.name = 'entity_label'
     return df
 
