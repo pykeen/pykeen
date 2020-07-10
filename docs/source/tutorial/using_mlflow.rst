@@ -24,12 +24,12 @@ If you navigate to the MLflow UI at http://localhost:5000, you'll see the experi
 in the left column.
 
 .. image:: ../img/mlflow_tutorial_1.png
-  :alt: Alternative text
+  :alt: MLflow home
 
 If you click on the experiment, you'll see this:
 
 .. image:: ../img/mlflow_tutorial_2.png
-  :alt: Alternative text
+  :alt: MLflow experiment view
 
 HPO Example
 -----------
