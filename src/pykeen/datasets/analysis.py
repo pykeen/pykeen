@@ -9,7 +9,7 @@ import numpy
 import pandas
 import torch
 
-from .dataset import DataSet
+from .base import DataSet
 from ..typing import MappedTriples
 from ..utils import invert_mapping
 
