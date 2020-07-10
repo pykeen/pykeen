@@ -92,7 +92,7 @@ def describe_triples(
         relation=describe_id_tensor(tensor=mapped_triples[:, 1], max_id=num_relations, label_to_id=relation_to_id),
         tail=describe_id_tensor(tensor=mapped_triples[:, 2], max_id=num_entities, label_to_id=entity_to_id),
         entity=describe_id_tensor(
-            tensor=torch.cat([mapped_triples[:, col] for col in (0, 2)], dim=0),
+            tensor=mapped_triples[:, [0, 2]].view(-1),
             max_id=num_entities,
             label_to_id=entity_to_id,
         ),
