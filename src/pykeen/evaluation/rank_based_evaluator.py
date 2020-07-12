@@ -172,7 +172,7 @@ class RankBasedMetricResults(MetricResults):
 
     def to_flat_dict(self):  # noqa: D102
         r = {
-            f'{side}.avg.adjusted_mean_rank': self.adjusted_mean_rank
+            f'{side}.avg.adjusted_mean_rank': self.adjusted_mean_rank[side]
             for side in SIDES
         }
         for side in SIDES:
