@@ -66,7 +66,7 @@ class AnalysisTests(unittest.TestCase):
         )
 
     def test_entity_relation_co_occurrence_dataframe(self):
-        """Test entity_relation_co_occurrence_dataframe()"""
+        """Test entity_relation_co_occurrence_dataframe()."""
         df = entity_relation_co_occurrence_dataframe(dataset=self.dataset)
 
         # check correct type
