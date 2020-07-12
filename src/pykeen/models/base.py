@@ -317,7 +317,7 @@ class Model(nn.Module):
         for each q in query_ids where :math:`\neg col` denotes all columns but `col`, and `p` equals `other_col_ids`.
 
         :param query_ids: shape: (num_queries,), dtype: long
-            The query IDs.
+            The query IDs. Are assumed to be unique (i.e. without duplicates).
         :param col:
             The column to which the query IDs correspond.
         :param other_col_ids:
