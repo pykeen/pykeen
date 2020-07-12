@@ -11,10 +11,11 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE
+from pykeen.evaluation.rank_based_evaluator import RANK_TYPES
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
+from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
@@ -65,15 +66,22 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
+        hits = next(self.losses_iter)
         return RankBasedMetricResults(
-            mean_rank=None,
-            mean_reciprocal_rank=None,
-            adjusted_mean_rank=None,
+            mean_rank={
+                rank_type: 10
+                for rank_type in RANK_TYPES
+            },
+            mean_reciprocal_rank={
+                rank_type: 1.0
+                for rank_type in RANK_TYPES
+            },
+            adjusted_mean_rank=1.0,
             hits_at_k={
                 'both': {
-                    RANK_AVERAGE: {
-                        10: next(self.losses_iter),
-                    },
+                    rank_type: {
+                        10: hits,
+                    } for rank_type in RANK_TYPES
                 }
             },
         )
@@ -108,6 +116,27 @@ class MockModel(EntityRelationEmbeddingModel):
 
     def reset_parameters_(self) -> Model:  # noqa: D102
         raise NotImplementedError('Not needed for unittest')
+
+
+class LogCallWrapper:
+    """An object which wraps functions and checks whether they have been called."""
+
+    def __init__(self):
+        self.called = set()
+
+    def wrap(self, func):
+        """Wrap the function."""
+        id_func = id(func)
+
+        def wrapped(*args, **kwargs):
+            self.called.add(id_func)
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    def was_called(self, func) -> bool:
+        """Report whether the previously wrapped function has been called."""
+        return id(func) in self.called
 
 
 class TestEarlyStopping(unittest.TestCase):
@@ -163,6 +192,15 @@ class TestEarlyStopping(unittest.TestCase):
         for _ in range(self.stop_constant):
             self.assertFalse(self.stopper.should_stop())
         self.assertTrue(self.stopper.should_stop())
+
+    def test_result_logging_with_mlflow(self):
+        """Test whether the MLFLow result logger works."""
+        self.stopper.result_tracker = MLFlowResultTracker()
+        wrapper = LogCallWrapper()
+        real_log_metrics = self.stopper.result_tracker.mlflow.log_metrics
+        self.stopper.result_tracker.mlflow.log_metrics = wrapper.wrap(real_log_metrics)
+        self.stopper.should_stop()
+        assert wrapper.was_called(real_log_metrics)
 
 
 class TestDeltaEarlyStopping(TestEarlyStopping):

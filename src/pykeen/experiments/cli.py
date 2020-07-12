@@ -129,7 +129,10 @@ def _help_reproduce(
     :param directory: Output directory
     :param path: Path to configuration JSON file
     :param replicates: How many times the experiment should be run
+    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    :param save_replicates: Should the artifacts of the replicates be saved?
     :param file_name: Name of JSON file (optional)
+    :return: None
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 

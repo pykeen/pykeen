@@ -179,7 +179,7 @@ def flatten_dictionary(
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
-    return {sep.join(k): v for k, v in partial_result.items()}
+    return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
 
 def _flatten_dictionary(
@@ -333,7 +333,7 @@ class Result:
 
         :param directory: The directory in the S3 bucket
         :param bucket: The name of the S3 bucket
-        :param s3: The boto3.client, if already instantiated
+        :param s3: A client from :func:`boto3.client`, if already instantiated
         """
         raise NotImplementedError
 
@@ -402,8 +402,11 @@ def imag_part(
     return x[..., dim:]
 
 
-def fix_dataclass_init_docs(cls: Type):
-    """Fix the __init__ doumentation for dataclasses.
+def fix_dataclass_init_docs(cls: Type) -> Type:
+    """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
+
+    :param cls: The class whose docstring needs fixing
+    :returns: The class that was passed so this function can be used as a decorator
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """

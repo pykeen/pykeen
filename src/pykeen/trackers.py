@@ -39,14 +39,33 @@ class ResultTracker:
 class MLFlowResultTracker(ResultTracker):
     """A tracker for MLFlow."""
 
-    def __init__(self, tracking_uri: Optional[str] = None):
+    def __init__(
+        self,
+        tracking_uri: Optional[str] = None,
+        experiment_id: Optional[int] = None,
+        experiment_name: Optional[str] = None,
+    ):
+        """
+        Initialize result tracking via MLFlow.
+
+        :param tracking_uri:
+            The tracking uri.
+        :param experiment_id:
+            The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
+            experiment_name.
+        :param experiment_name:
+            The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
+            create an experiment of the given name.
+        """
         import mlflow as _mlflow
         self.mlflow = _mlflow
 
-        if tracking_uri is None:
-            tracking_uri = 'localhost:5000'
-
         self.mlflow.set_tracking_uri(tracking_uri)
+        if experiment_id is not None:
+            experiment = self.mlflow.get_experiment(experiment_id=experiment_id)
+            experiment_name = experiment.name
+        if experiment_name is not None:
+            self.mlflow.set_experiment(experiment_name)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)

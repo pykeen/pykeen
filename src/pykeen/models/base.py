@@ -102,7 +102,27 @@ class Model(nn.Module):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the module."""
+        """Initialize the module.
+
+        :param triples_factory:
+            The triples factory facilitates access to the dataset.
+        :param loss:
+            The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param predict_with_sigmoid:
+            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
+            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
+            applying sigmoid (or using BCEWithLogits), the scores are not calibrated to perform well with sigmoid.
+        :param automatic_memory_optimization:
+            If set to `True`, the model derives the maximum possible batch sizes for the scoring of triples during
+            evaluation and also training (if no batch size was given). This allows to fully utilize the hardware at hand
+            and achieves the fastest calculations possible.
+        :param preferred_device:
+            The preferred device for model training and inference.
+        :param random_seed:
+            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param regularizer:
+            A regularizer to use for training.
+        """
         super().__init__()
 
         # Initialize the device
@@ -237,10 +257,10 @@ class Model(nn.Module):
 
         Additionally, the model is set to evaluation mode.
 
-        :param triples: torch.Tensor, shape: (number of triples, 3), dtype: long
+        :param triples: shape: (number of triples, 3), dtype: long
             The indices of (head, relation, tail) triples.
 
-        :return: torch.Tensor, shape: (number of triples, 1), dtype: float
+        :return: shape: (number of triples, 1), dtype: float
             The score for each triple.
         """
         # Enforce evaluation mode
@@ -261,12 +281,12 @@ class Model(nn.Module):
 
         Additionally, the model is set to evaluation mode.
 
-        :param hr_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+        :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
-        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
         # Enforce evaluation mode
@@ -391,12 +411,12 @@ class Model(nn.Module):
 
         Additionally, the model is set to evaluation mode.
 
-        :param ht_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+        :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
-        :return: torch.Tensor, shape: (batch_size, num_relations), dtype: float
+        :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         # Enforce evaluation mode
@@ -420,12 +440,12 @@ class Model(nn.Module):
 
         Additionally, the model is set to evaluation mode.
 
-        :param rt_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+        :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
-        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
         # Enforce evaluation mode
@@ -475,7 +495,10 @@ class Model(nn.Module):
         self.regularizer.reset()
 
     def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
-        """Update the regularizer's term given some tensors, if regularization is requested."""
+        """Update the regularizer's term given some tensors, if regularization is requested.
+
+        :param tensors: The tensors that should be passed to the regularizer to update its term.
+        """
         if self.training:
             self.regularizer.update(*tensors)
 
@@ -486,12 +509,13 @@ class Model(nn.Module):
     ) -> torch.FloatTensor:
         """Compute the mean ranking loss for the positive and negative scores.
 
-        :param positive_scores: torch.Tensor, shape: s, dtype: float
+        :param positive_scores:  shape: s, dtype: float
             The scores for positive triples.
-        :param negative_scores: torch.Tensor, shape: s, dtype: float
+        :param negative_scores: shape: s, dtype: float
             The scores for negative triples.
-
-        :return: torch.Tensor, dtype: float, scalar
+        :raises RuntimeError:
+            If the chosen loss function does not allow the calculation of margin ranking
+        :return: dtype: float, scalar
             The margin ranking loss value.
         """
         if not self.is_mr_loss:
@@ -514,7 +538,7 @@ class Model(nn.Module):
         :param labels: shape: s
             The tensor containing labels.
 
-        :return: torch.Tensor, dtype: float, scalar
+        :return: dtype: float, scalar
             The label loss value.
         """
         return self._compute_loss(tensor_1=predictions, tensor_2=labels)
@@ -522,7 +546,7 @@ class Model(nn.Module):
     def compute_self_adversarial_negative_sampling_loss(
         self,
         positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor
+        negative_scores: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Compute self adversarial negative sampling loss.
 
@@ -530,7 +554,9 @@ class Model(nn.Module):
             The tensor containing the positive scores.
         :param negative_scores: shape: s
             Tensor containing the negative scores.
-        :return: torch.Tensor, dtype: float, scalar
+        :raises RuntimeError:
+            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
+        :return: dtype: float, scalar
             The loss value.
         """
         if not self.is_nssa_loss:
@@ -551,8 +577,9 @@ class Model(nn.Module):
             The tensor containing predictions or positive scores.
         :param tensor_2: shape: s
             The tensor containing target values or the negative scores.
-
-        :return: torch.Tensor, dtype: float, scalar
+        :raises RuntimeError:
+            If the chosen loss does not allow the calculation of margin label losses.
+        :return: dtype: float, scalar
             The label loss value.
         """
         if self.is_mr_loss:
@@ -568,10 +595,11 @@ class Model(nn.Module):
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
 
-        :param hrt_batch: torch.Tensor, shape: (batch_size, 3), dtype: long
+        :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
-
-        :return: torch.Tensor, shape: (batch_size, 1), dtype: float
+        :raises NotImplementedError:
+            If the method was not implemented for this class.
+        :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
         raise NotImplementedError
@@ -581,10 +609,10 @@ class Model(nn.Module):
 
         This method calculates the score for all possible tails for each (head, relation) pair.
 
-        :param hr_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+        :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
 
-        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
         logger.warning(
@@ -604,10 +632,10 @@ class Model(nn.Module):
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
 
-        :param rt_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+        :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
 
-        :return: torch.Tensor, shape: (batch_size, num_entities), dtype: float
+        :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
         logger.warning(
@@ -627,10 +655,10 @@ class Model(nn.Module):
 
         This method calculates the score for all possible relations for each (head, tail) pair.
 
-        :param ht_batch: torch.Tensor, shape: (batch_size, 2), dtype: long
+        :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
 
-        :return: torch.Tensor, shape: (batch_size, num_relations), dtype: float
+        :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         logger.warning(
@@ -724,6 +752,13 @@ class EntityEmbeddingModel(Model):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        """Initialize the entity embedding model.
+
+        :param embedding_dim:
+            The embedding dimensionality. Exact usages depends on the specific model subclass.
+
+        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
+        """
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -742,7 +777,7 @@ class EntityEmbeddingModel(Model):
 
 
 class EntityRelationEmbeddingModel(EntityEmbeddingModel):
-    """A base module for most KGE models that have one embedding for entities and one for relations."""
+    """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
         self,
@@ -756,6 +791,15 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        """Initialize the entity embedding model.
+
+        :param relation_dim:
+            The relation embedding dimensionality. If not given, defaults to same size as entity embedding
+            dimension.
+
+        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
+        .. seealso:: Constructor of the base class :class:`pykeen.models.EntityEmbeddingModel`
+        """
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
