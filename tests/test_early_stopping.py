@@ -70,9 +70,11 @@ class MockEvaluator(Evaluator):
             mean_reciprocal_rank=None,
             adjusted_mean_rank=None,
             hits_at_k={
-                RANK_AVERAGE: {
-                    10: next(self.losses_iter),
-                },
+                'both': {
+                    RANK_AVERAGE: {
+                        10: next(self.losses_iter),
+                    },
+                }
             },
         )
 
