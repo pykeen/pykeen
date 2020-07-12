@@ -6,7 +6,12 @@ from typing import Collection, Optional, Sequence
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import SUBSET_LABELS, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_count_dataframe
+from pykeen.datasets.analysis import (
+    SUBSET_LABELS,
+    entity_count_dataframe,
+    entity_relation_co_occurrence_dataframe,
+    relation_count_dataframe,
+)
 
 
 class AnalysisTests(unittest.TestCase):
