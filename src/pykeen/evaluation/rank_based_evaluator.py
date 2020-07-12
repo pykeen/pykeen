@@ -177,9 +177,9 @@ class RankBasedMetricResults(MetricResults):
         }
         for side in SIDES:
             for rank_type in RANK_TYPES:
-                r[f'{side}.{rank_type}.mean_rank'] = self.mean_rank[side, rank_type]
-                r[f'{side}.{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[side, rank_type]
-                for k, v in self.hits_at_k[side, rank_type].items():
+                r[f'{side}.{rank_type}.mean_rank'] = self.mean_rank[side][rank_type]
+                r[f'{side}.{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[side][rank_type]
+                for k, v in self.hits_at_k[side][rank_type].items():
                     r[f'{side}.{rank_type}.hits_at_{k}'] = v
         return r
 
