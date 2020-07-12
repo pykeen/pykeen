@@ -6,8 +6,9 @@ import inspect
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, Union
 
+import numpy
 import pandas as pd
 import torch
 from torch import nn
@@ -299,6 +300,39 @@ class Model(nn.Module):
             scores = torch.sigmoid(scores)
         return scores
 
+    def _get_novelty_mask(
+        self,
+        query_ids: numpy.ndarray,
+        col: int,
+        other_col_ids: Tuple[int, int],
+    ) -> numpy.ndarray:
+        r"""
+        Calculate for each query ID whether it is novel.
+
+        In particular computes
+
+        .. math ::
+            q \notin \{t[col] in T \mid t[\neg col] = p\}
+
+        for each q in query_ids where :math:`\neg col` denotes all columns but `col`, and `p` equals `other_col_ids`.
+
+        :param query_ids: shape: (num_queries,), dtype: long
+            The query IDs.
+        :param col:
+            The column to which the query IDs correspond.
+        :param other_col_ids:
+            Fixed IDs for the other columns.
+
+        :return: shape: (num_queries,), dtype: bool
+            A boolean mask indicating whether the ID does not correspond to a known triple.
+        """
+        mapped_triples = self.triples_factory.mapped_triples
+        other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
+        other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
+        filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+        known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
+        return numpy.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
+
     def predict_heads(
         self,
         relation_label: str,
@@ -341,7 +375,11 @@ class Model(nn.Module):
             columns=['head_id', 'head_label', 'score'],
         ).sort_values('score', ascending=False)
         if add_novelties or remove_known:
-            rv['novel'] = rv['head_id'].map(lambda head_id: self._novel(head_id, relation_id, tail_id))
+            rv['novel'] = self._get_novelty_mask(
+                query_ids=rv['head_id'],
+                col=0,
+                other_col_ids=(relation_id, tail_id),
+            )
         if remove_known:
             rv = rv[rv['novel']]
             del rv['novel']
@@ -389,16 +427,15 @@ class Model(nn.Module):
             columns=['tail_id', 'tail_label', 'score'],
         ).sort_values('score', ascending=False)
         if add_novelties or remove_known:
-            rv['novel'] = rv['tail_id'].map(lambda tail_id: self._novel(head_id, relation_id, tail_id))
+            rv['novel'] = self._get_novelty_mask(
+                query_ids=rv['tail_id'],
+                col=2,
+                other_col_ids=(head_id, relation_id),
+            )
         if remove_known:
             rv = rv[rv['novel']]
             del rv['novel']
         return rv
-
-    def _novel(self, h, r, t) -> bool:
-        """Return if the triple is novel with respect to the training triples."""
-        triple = torch.tensor(data=[h, r, t], dtype=torch.long, device=self.device).view(1, 3)
-        return (triple == self.triples_factory.mapped_triples).all(dim=1).any().item()
 
     def predict_scores_all_relations(
         self,
