@@ -137,23 +137,30 @@ class RankBasedMetricResults(MetricResults):
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         if name == 'adjusted_mean_rank':
-            return self.adjusted_mean_rank
+            # TODO: Sided adjusted mean rank
+            return self.adjusted_mean_rank['both']
 
         dot_count = name.count('.')
         if 0 == dot_count:  # assume average by default
-            rank_type, metric = 'avg', name
+            side, rank_type, metric = 'both', 'avg', name
         elif 1 == dot_count:
+            # assume both side by default
+            side = 'both'
             rank_type, metric = name.split('.')
+        elif 2 == dot_count:
+            side, rank_type, metric = name.split('.')
         else:
             raise ValueError(f'Malformed metric name: {name}')
 
+        if side not in SIDES:
+            raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
         if rank_type not in RANK_TYPES:
-            raise ValueError(f'Invalid rank type: {rank_type}')
+            raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
         if metric in {'mean_rank', 'mean_reciprocal_rank'}:
-            return getattr(self, metric)['both', rank_type]
+            return getattr(self, metric)[side][rank_type]
 
-        rank_type_hits_at_k = self.hits_at_k['both', rank_type]
+        rank_type_hits_at_k = self.hits_at_k[side][rank_type]
         for prefix in ('hits_at_', 'hits@'):
             if not metric.startswith(prefix):
                 continue
