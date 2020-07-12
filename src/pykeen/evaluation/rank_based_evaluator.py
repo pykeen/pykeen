@@ -191,9 +191,9 @@ class RankBasedMetricResults(MetricResults):
         ]
         for side in SIDES:
             for rank_type in RANK_TYPES:
-                rows.append((side, rank_type, 'mean_rank', self.mean_rank[side, rank_type]))
-                rows.append((side, rank_type, 'mean_reciprocal_rank', self.mean_reciprocal_rank[side, rank_type]))
-                for k, v in self.hits_at_k[side, rank_type].items():
+                rows.append((side, rank_type, 'mean_rank', self.mean_rank[side][rank_type]))
+                rows.append((side, rank_type, 'mean_reciprocal_rank', self.mean_reciprocal_rank[side][rank_type]))
+                for k, v in self.hits_at_k[side][rank_type].items():
                     rows.append((side, rank_type, f'hits_at_{k}', v))
         return pd.DataFrame(rows, columns=['Side', 'Type', 'Metric', 'Value'])
 
