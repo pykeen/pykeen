@@ -107,7 +107,11 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     for kind in ('head', 'tail', 'total'):
         data['total', kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
     index = [entity_label for (entity_label, _) in sorted(dataset.entity_to_id.items(), key=itemgetter(1))]
-    df = pandas.DataFrame(data=data, index=index, columns=pandas.MultiIndex.from_product(iterables=[SUBSET_LABELS, second_level_order]))
+    df = pandas.DataFrame(
+        data=data,
+        index=index,
+        columns=pandas.MultiIndex.from_product(iterables=[SUBSET_LABELS, second_level_order]),
+    )
     df.index.name = 'entity_label'
     return df
 
