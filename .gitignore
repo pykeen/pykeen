@@ -113,6 +113,3 @@ venv.bak/
 docs/source/reference/generated/*
 docs/source/api/*
 .DS_Store
-
-# MLflow artifacts
-mlruns
