@@ -289,7 +289,7 @@ class RankBasedEvaluator(Evaluator):
             adjusted_ranks = self._get_ranks(side=side, rank_type=RANK_AVERAGE_ADJUSTED)
             if len(adjusted_ranks) < 1:
                 continue
-            adjusted_mean_rank[side] = np.mean(adjusted_ranks)
+            adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
 
         # Clear buffers
         self.ranks.clear()
