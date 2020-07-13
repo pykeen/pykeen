@@ -4,12 +4,12 @@
 
 import inspect
 import logging
-from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import pandas as pd
 import torch
+from abc import abstractmethod
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
@@ -397,8 +397,9 @@ class Model(nn.Module):
 
     def _novel(self, h, r, t) -> bool:
         """Return if the triple is novel with respect to the training triples."""
-        triple = torch.tensor(data=[h, r, t], dtype=torch.long, device=self.device).view(1, 3)
-        return (triple == self.triples_factory.mapped_triples.to(self.device)).all(dim=1).any().item()
+        triple = torch.tensor(data=[h, r, t], dtype=torch.long, device=self.triples_factory.mapped_triples.device).view(
+            1, 3)
+        return (triple == self.triples_factory.mapped_triples).all(dim=1).any().item()
 
     def predict_scores_all_relations(
         self,
