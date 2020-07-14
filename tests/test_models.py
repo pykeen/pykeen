@@ -21,7 +21,14 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch, get_novelty_mask
+from pykeen.models.base import (
+    EntityEmbeddingModel,
+    EntityRelationEmbeddingModel,
+    Model,
+    MultimodalModel,
+    _extend_batch,
+    get_novelty_mask,
+)
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
