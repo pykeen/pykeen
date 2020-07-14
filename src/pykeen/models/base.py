@@ -72,6 +72,41 @@ def _extend_batch(
     return hrt_batch
 
 
+def get_novelty_mask(
+    mapped_triples: MappedTriples,
+    query_ids: numpy.ndarray,
+    col: int,
+    other_col_ids: Tuple[int, int],
+) -> numpy.ndarray:
+    r"""
+    Calculate for each query ID whether it is novel.
+
+    In particular computes
+
+    .. math ::
+        q \notin \{t[col] in T \mid t[\neg col] = p\}
+
+    for each q in query_ids where :math:`\neg col` denotes all columns but `col`, and `p` equals `other_col_ids`.
+
+    :param mapped_triples: shape: (num_triples, 3), dtype: long
+        The mapped triples (i.e. ID-based).
+    :param query_ids: shape: (num_queries,), dtype: long
+        The query IDs. Are assumed to be unique (i.e. without duplicates).
+    :param col:
+        The column to which the query IDs correspond.
+    :param other_col_ids:
+        Fixed IDs for the other columns.
+
+    :return: shape: (num_queries,), dtype: bool
+        A boolean mask indicating whether the ID does not correspond to a known triple.
+    """
+    other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
+    other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
+    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+    known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
+    return numpy.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
+
+
 class Model(nn.Module):
     """A base module for all of the KGE models."""
 
@@ -300,39 +335,6 @@ class Model(nn.Module):
             scores = torch.sigmoid(scores)
         return scores
 
-    def _get_novelty_mask(
-        self,
-        query_ids: numpy.ndarray,
-        col: int,
-        other_col_ids: Tuple[int, int],
-    ) -> numpy.ndarray:
-        r"""
-        Calculate for each query ID whether it is novel.
-
-        In particular computes
-
-        .. math ::
-            q \notin \{t[col] in T \mid t[\neg col] = p\}
-
-        for each q in query_ids where :math:`\neg col` denotes all columns but `col`, and `p` equals `other_col_ids`.
-
-        :param query_ids: shape: (num_queries,), dtype: long
-            The query IDs. Are assumed to be unique (i.e. without duplicates).
-        :param col:
-            The column to which the query IDs correspond.
-        :param other_col_ids:
-            Fixed IDs for the other columns.
-
-        :return: shape: (num_queries,), dtype: bool
-            A boolean mask indicating whether the ID does not correspond to a known triple.
-        """
-        mapped_triples = self.triples_factory.mapped_triples
-        other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
-        other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
-        filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
-        known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
-        return numpy.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
-
     def predict_heads(
         self,
         relation_label: str,
@@ -375,7 +377,8 @@ class Model(nn.Module):
             columns=['head_id', 'head_label', 'score'],
         ).sort_values('score', ascending=False)
         if add_novelties or remove_known:
-            rv['novel'] = self._get_novelty_mask(
+            rv['novel'] = get_novelty_mask(
+                mapped_triples=self.triples_factory.mapped_triples,
                 query_ids=rv['head_id'],
                 col=0,
                 other_col_ids=(relation_id, tail_id),
@@ -427,7 +430,8 @@ class Model(nn.Module):
             columns=['tail_id', 'tail_label', 'score'],
         ).sort_values('score', ascending=False)
         if add_novelties or remove_known:
-            rv['novel'] = self._get_novelty_mask(
+            rv['novel'] = get_novelty_mask(
+                mapped_triples=self.triples_factory.mapped_triples,
                 query_ids=rv['tail_id'],
                 col=2,
                 other_col_ids=(head_id, relation_id),
