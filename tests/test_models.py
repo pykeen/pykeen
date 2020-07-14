@@ -9,6 +9,7 @@ import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
+import numpy
 import pytest
 import torch
 from click.testing import CliRunner, Result
@@ -20,7 +21,7 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch
+from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch, get_novelty_mask
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
@@ -1082,3 +1083,22 @@ class MessageWeightingTests(unittest.TestCase):
     def test_symmetric_edge_weights(self):
         """Test symmetric_edge_weights."""
         self._test_message_weighting(weight_func=symmetric_edge_weights)
+
+
+def test_get_novelty_mask():
+    """Test `get_novelty_mask()`."""
+    num_triples = 7
+    base = torch.arange(num_triples)
+    mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
+    query_ids = torch.randperm(num_triples).numpy()[:num_triples // 2]
+    exp_novel = query_ids != 0
+    col = 2
+    other_col_ids = numpy.asarray([0, 0])
+    mask = get_novelty_mask(
+        mapped_triples=mapped_triples,
+        query_ids=query_ids,
+        col=col,
+        other_col_ids=other_col_ids,
+    )
+    assert mask.shape == query_ids.shape
+    assert (mask == exp_novel).all()
