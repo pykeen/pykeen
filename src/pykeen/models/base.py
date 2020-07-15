@@ -8,7 +8,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, Union
 
-import numpy
+import numpy as np
 import pandas as pd
 import torch
 from torch import nn
@@ -74,10 +74,10 @@ def _extend_batch(
 
 def get_novelty_mask(
     mapped_triples: MappedTriples,
-    query_ids: numpy.ndarray,
+    query_ids: np.ndarray,
     col: int,
     other_col_ids: Tuple[int, int],
-) -> numpy.ndarray:
+) -> np.ndarray:
     r"""
     Calculate for each query ID whether it is novel.
 
@@ -104,7 +104,7 @@ def get_novelty_mask(
     other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
     filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
     known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
-    return numpy.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
+    return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
 
 class Model(nn.Module):
@@ -341,6 +341,7 @@ class Model(nn.Module):
         tail_label: str,
         add_novelties: bool = True,
         remove_known: bool = False,
+        testing: Optional[torch.LongTensor] = None,
     ) -> pd.DataFrame:
         """Predict tails for the given head and relation (given by label).
 
@@ -353,6 +354,7 @@ class Model(nn.Module):
          non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
          may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
          denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+        :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
 
         The following example shows that after you train a model on the Nations dataset,
         you can score all entities w.r.t a given relation and tail entity.
@@ -377,15 +379,25 @@ class Model(nn.Module):
             columns=['head_id', 'head_label', 'score'],
         ).sort_values('score', ascending=False)
         if add_novelties or remove_known:
-            rv['novel'] = get_novelty_mask(
+            rv['in_training'] = ~get_novelty_mask(
                 mapped_triples=self.triples_factory.mapped_triples,
                 query_ids=rv['head_id'],
                 col=0,
                 other_col_ids=(relation_id, tail_id),
             )
+        if testing is not None:
+            rv['in_testing'] = ~get_novelty_mask(
+                mapped_triples=testing,
+                query_ids=rv['head_id'],
+                col=0,
+                other_col_ids=(relation_id, tail_id),
+            )
         if remove_known:
-            rv = rv[rv['novel']]
-            del rv['novel']
+            rv = rv[~rv['in_training']]
+            del rv['in_training']
+            if testing is not None:
+                rv = rv[~rv['in_testing']]
+                del rv['in_testing']
         return rv
 
     def predict_tails(
@@ -394,6 +406,7 @@ class Model(nn.Module):
         relation_label: str,
         add_novelties: bool = True,
         remove_known: bool = False,
+        testing: Optional[torch.LongTensor] = None,
     ) -> pd.DataFrame:
         """Predict tails for the given head and relation (given by label).
 
@@ -406,6 +419,7 @@ class Model(nn.Module):
          non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
          may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
          denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+        :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
 
         The following example shows that after you train a model on the Nations dataset,
         you can score all entities w.r.t a given head entity and relation.
@@ -430,15 +444,25 @@ class Model(nn.Module):
             columns=['tail_id', 'tail_label', 'score'],
         ).sort_values('score', ascending=False)
         if add_novelties or remove_known:
-            rv['novel'] = get_novelty_mask(
+            rv['in_training'] = ~get_novelty_mask(
                 mapped_triples=self.triples_factory.mapped_triples,
                 query_ids=rv['tail_id'],
                 col=2,
                 other_col_ids=(head_id, relation_id),
             )
+        if testing is not None:
+            rv['in_testing'] = ~get_novelty_mask(
+                mapped_triples=testing,
+                query_ids=rv['tail_id'],
+                col=2,
+                other_col_ids=(head_id, relation_id),
+            )
         if remove_known:
-            rv = rv[rv['novel']]
-            del rv['novel']
+            rv = rv[~rv['in_training']]
+            del rv['in_training']
+            if testing is not None:
+                rv = rv[~rv['in_testing']]
+                del rv['in_testing']
         return rv
 
     def predict_scores_all_relations(
