@@ -136,17 +136,18 @@ class RankBasedMetricResults(MetricResults):
     ))
 
     def get_metric(self, name: str) -> float:  # noqa: D102
-        if name == 'adjusted_mean_rank':
-            # TODO: Sided adjusted mean rank
-            return self.adjusted_mean_rank['both']
-
         dot_count = name.count('.')
         if 0 == dot_count:  # assume average by default
             side, rank_type, metric = 'both', 'avg', name
         elif 1 == dot_count:
-            # assume both side by default
-            side = 'both'
-            rank_type, metric = name.split('.')
+            # Check if it a side or rank type
+            side_or_ranktype, metric = name.split('.')
+            if side_or_ranktype in SIDES:
+                side = side_or_ranktype
+                rank_type = 'avg'
+            else:
+                side = 'both'
+                rank_type = side_or_ranktype
         elif 2 == dot_count:
             side, rank_type, metric = name.split('.')
         else:
@@ -154,11 +155,15 @@ class RankBasedMetricResults(MetricResults):
 
         if side not in SIDES:
             raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
-        if rank_type not in RANK_TYPES:
+        if rank_type not in RANK_AVERAGE and metric in {'adjusted_mean_rank'}:
+            raise ValueError(f'Invalid rank type for adjusted mean rank: {rank_type}. Allowed type: {RANK_AVERAGE}')
+        elif rank_type not in RANK_TYPES:
             raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
         if metric in {'mean_rank', 'mean_reciprocal_rank'}:
             return getattr(self, metric)[side][rank_type]
+        elif metric in {'adjusted_mean_rank'}:
+            return getattr(self, metric)[side]
 
         rank_type_hits_at_k = self.hits_at_k[side][rank_type]
         for prefix in ('hits_at_', 'hits@'):
