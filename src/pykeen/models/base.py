@@ -385,7 +385,7 @@ class Model(nn.Module):
                 col=0,
                 other_col_ids=(relation_id, tail_id),
             )
-        if testing is not None:
+        if add_novelties and testing is not None:
             rv['in_testing'] = ~get_novelty_mask(
                 mapped_triples=testing,
                 query_ids=rv['head_id'],
@@ -450,7 +450,7 @@ class Model(nn.Module):
                 col=2,
                 other_col_ids=(head_id, relation_id),
             )
-        if testing is not None:
+        if add_novelties and testing is not None:
             rv['in_testing'] = ~get_novelty_mask(
                 mapped_triples=testing,
                 query_ids=rv['tail_id'],
