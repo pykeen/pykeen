@@ -57,7 +57,7 @@ def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save
         optimizer,
         training_loop,
     ) in enumerate(it):
-        dataset_name = normalize_string(dataset) if isinstance(dataset,str) else 'user_data'
+        dataset_name = normalize_string(dataset) if isinstance(dataset, str) else 'user_data'
         experiment_name = f'{counter:04d}_{dataset_name}_{normalize_string(model)}'
         output_directory = os.path.join(directory, experiment_name)
         os.makedirs(output_directory, exist_ok=True)
