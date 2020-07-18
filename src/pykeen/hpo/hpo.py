@@ -266,7 +266,11 @@ class HpoPipelineResult(Result):
                 pipeline_config[k] = v
 
         for field in dataclasses.fields(self.objective):
-            if not field.name.endswith('_kwargs') or field.name in {'metric'}:
+            if (not field.name.endswith('_kwargs') and field.name not in {
+                'training_triples_factory',
+                'testing_triples_factory',
+                'validation_triples_factory'
+            }) or field.name in {'metric'}:
                 continue
             field_kwargs = getattr(self.objective, field.name)
             if field_kwargs:
@@ -294,7 +298,6 @@ class HpoPipelineResult(Result):
                 f' early stopping will now switch it to {int(stopped_epoch)}'
             )
             pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
-
         return dict(metadata=metadata, pipeline=pipeline_config)
 
     def save_to_directory(self, directory: str, **kwargs) -> None:
@@ -404,11 +407,11 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, Type[DataSet]],
+    dataset: Union[None, str, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Optional[TriplesFactory] = None,
-    testing_triples_factory: Optional[TriplesFactory] = None,
-    validation_triples_factory: Optional[TriplesFactory] = None,
+    training_triples_factory: Union[None, TriplesFactory, str] = None,
+    testing_triples_factory: Union[None, TriplesFactory, str] = None,
+    validation_triples_factory: Union[None, TriplesFactory, str] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
