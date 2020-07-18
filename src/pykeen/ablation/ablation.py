@@ -107,7 +107,7 @@ def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save
             hpo_config['validation_triples_factory'] = dataset['validation_triples_factory']
         else:
             TypeError("Dataset must be either the dataset name, i.e., of type str, or a dictionary containing\n"
-                      " the paths to training, testing, and validation data.")
+                      "the paths to training, testing, and validation data.")
         logger.info(f"Dataset: {dataset}")
         hpo_config['dataset_kwargs'] = dict(create_inverse_triples=create_inverse_triples)
         logger.info(f"Add inverse triples: {create_inverse_triples}")
