@@ -60,9 +60,9 @@ def get_dataset(
     *,
     dataset: Union[None, str, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Optional[TriplesFactory] = None,
-    testing_triples_factory: Optional[TriplesFactory] = None,
-    validation_triples_factory: Optional[TriplesFactory] = None,
+    training_triples_factory: Union[None, TriplesFactory, str] = None,
+    testing_triples_factory: Union[None, TriplesFactory, str] = None,
+    validation_triples_factory: Union[None, TriplesFactory, str] = None,
 ) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
     """Get the dataset."""
     if dataset is not None:
@@ -84,6 +84,15 @@ def get_dataset(
             **(dataset_kwargs or {})
         )
         return dataset_instance.factories
+    elif training_triples_factory is not None and testing_triples_factory is not None:
+        if isinstance(training_triples_factory, str) and isinstance(testing_triples_factory, str):
+            dataset_instance = PathDataSet(
+                training_path=training_triples_factory,
+                testing_path=testing_triples_factory,
+                validation_path=validation_triples_factory,
+                **(dataset_kwargs or {})
+            )
+            return dataset_instance.factories
 
     elif testing_triples_factory is None or training_triples_factory is None:
         raise ValueError('Must specify either dataset or both training_triples_factory and testing_triples_factory.')
