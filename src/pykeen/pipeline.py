@@ -534,9 +534,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Optional[TriplesFactory] = None,
-    testing_triples_factory: Optional[TriplesFactory] = None,
-    validation_triples_factory: Optional[TriplesFactory] = None,
+    training_triples_factory: Union[None, TriplesFactory, str] = None,
+    testing_triples_factory: Union[None, TriplesFactory, str] = None,
+    validation_triples_factory: Union[None, TriplesFactory, str] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
