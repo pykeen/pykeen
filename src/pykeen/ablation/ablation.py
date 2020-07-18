@@ -57,7 +57,8 @@ def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save
         optimizer,
         training_loop,
     ) in enumerate(it):
-        experiment_name = f'{counter:04d}_{normalize_string(dataset)}_{normalize_string(model)}'
+        dataset_name = normalize_string(dataset) if isinstance(dataset,str) else 'user_data'
+        experiment_name = f'{counter:04d}_{dataset_name}_{normalize_string(model)}'
         output_directory = os.path.join(directory, experiment_name)
         os.makedirs(output_directory, exist_ok=True)
         # TODO what happens if already exists?
@@ -97,7 +98,16 @@ def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save
             hpo_config.update(d)
 
         # Add dataset to current_pipeline
-        hpo_config['dataset'] = dataset
+        if isinstance(dataset, str):
+            hpo_config['dataset'] = dataset
+        elif isinstance(dataset, dict):
+            # Training, test, and validation paths are provided
+            hpo_config['training_triples_factory'] = dataset['training_triples_factory']
+            hpo_config['testing_triples_factory'] = dataset['testing_triples_factory']
+            hpo_config['validation_triples_factory'] = dataset['validation_triples_factory']
+        else:
+            TypeError("Datast must be either dataset name, i.e. str, or a dictionary containing the paths to\n"
+                      "training, testing, and validation data.")
         logger.info(f"Dataset: {dataset}")
         hpo_config['dataset_kwargs'] = dict(create_inverse_triples=create_inverse_triples)
         logger.info(f"Add inverse triples: {create_inverse_triples}")
