@@ -288,6 +288,36 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
         )
 
+    @staticmethod
+    def from_path(
+        path: Union[str, TextIO] = None,
+        create_inverse_triples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        compact_id: bool = True,
+    ) -> 'TriplesFactory':
+        raise NotImplementedError
+
+    @staticmethod
+    def from_triples(
+        triples: LabeledTriples,
+        create_inverse_triples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        compact_id: bool = True,
+    ) -> 'TriplesFactory':
+        raise NotImplementedError
+
+    @staticmethod
+    def from_mapped_triples(
+        mapped_triples: MappedTriples,
+        create_inverse_triples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        compact_id: bool = True,
+    ) -> 'TriplesFactory':
+        raise NotImplementedError
+
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
