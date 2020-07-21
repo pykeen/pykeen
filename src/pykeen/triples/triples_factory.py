@@ -413,12 +413,12 @@ class TriplesFactory:
         elif ratio_sum > 1.0:
             raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
 
-        split_idxs = [
+        sizes = [
             int(split_ratio * n_triples)
             for split_ratio in ratios
         ]
         # Take cumulative sum so the get separated properly
-        split_idxs = np.cumsum(split_idxs)
+        split_idxs = np.cumsum(sizes)
 
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
@@ -426,6 +426,15 @@ class TriplesFactory:
 
         # Make sure that the first element has all the right stuff in it
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+            actual_size = triples.shape[0]
+            actual_ratio = actual_size / exp_size * exp_ratio
+            if actual_size != exp_size:
+                logger.warning(
+                    f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
+                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.'
+                )
 
         # Make new triples factories for each group
         return [
