@@ -439,8 +439,8 @@ class TriplesFactory:
         return [
             TriplesFactory(
                 triples=triples,
-                entity_to_id=deepcopy(self.entity_to_id),
-                relation_to_id=deepcopy(self.relation_to_id),
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
             )
             for triples in triples_groups
         ]
