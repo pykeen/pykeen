@@ -203,7 +203,7 @@ class TestSplit(unittest.TestCase):
         testing = np.array([
             [2, 1000, 3],
             [1, 1000, 4],
-            [1, 1000, 4],
+            [2, 1000, 4],
             [1, 1001, 3],
         ])
         expected_training_1 = {
@@ -214,13 +214,13 @@ class TestSplit(unittest.TestCase):
         }
         expected_testing_1 = {
             (2, 1000, 3),
-            (1, 1000, 4),
+            (2, 1000, 4),
         }
 
         expected_training_2 = {
             (1, 1000, 2),
             (1, 1000, 3),
-            (1, 1000, 4),
+            (2, 1000, 4),
             (1, 1001, 3),
         }
         expected_testing_2 = {
