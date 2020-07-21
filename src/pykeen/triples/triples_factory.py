@@ -441,6 +441,7 @@ class TriplesFactory:
                 triples=triples,
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
+                compact_id=False,
             )
             for triples in triples_groups
         ]
