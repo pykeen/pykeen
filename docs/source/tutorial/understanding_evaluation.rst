@@ -15,6 +15,7 @@ triple :math:`(h, r, t) \in \mathcal{T}_{eval}` in this set, we solve two tasks:
   :math:`e \in \mathcal{E}` is scored according to the knowledge graph embedding model.
 
 .. note ::
+
     Practically, many embedding models allow fast computation of all scores :math:`(e, r, t)` for all
     :math:`e \in \mathcal{E}`, than just passing the triples through the model's score function. As an example,
     consider DistMult with the score function
@@ -22,7 +23,6 @@ triple :math:`(h, r, t) \in \mathcal{T}_{eval}` in this set, we solve two tasks:
     entities as candidate heads for a given tail and relation by first computing the element-wise product of tail and
     relation, and then performing a matrix multiplication with the matrix of all entity embeddings.
     # TODO: Link to section explaining this concept.
-
 
 Rank-Based Evaluation
 ---------------------
@@ -32,8 +32,10 @@ performance. Based on these individual ranks, which are obtained for each evalua
 prediction (left/right), there exist several aggregation measures to quantify the performance of a model in a single
 number.
 
+Ranking Types
+~~~~~~~~~~~~~
 While the aforementioned definition of the rank as "the index in the sorted list" is intuitive, it does not specify
-what happens when there are multiple choices with exactly the same score. Therefore, in existing works, different
+what happens when there are multiple choices with exactly the same score. Therefore, in previous work, different
 variants have been implemented, which yield different results in the presence of equal scores.
 
 * The *optimistic* rank assumes that the true choice is on the first position of all those with equal score.
@@ -43,13 +45,15 @@ variants have been implemented, which yield different results in the presence of
 * The *non-deterministic* rank delegates the decision to the sort algorithm. Thus, the result depends on the internal
   tie breaking mechanism of the sort algorithm's implementation.
 
-In pykeen, we support the first three: optimistic, pessimistic and realistic. When only using a single score, the
+In PyKEEN, we support the first three: optimistic, pessimistic and realistic. When only using a single score, the
 realistic score should be reported. The pessimistic and optimistic rank, or more specific the deviation between both,
 can be used to detect whether a model predicts exactly equal scores for many choices. There are a few causes such as
 
 * finite-precision arithmetic in conjunction with explicitly using sigmoid activation
 * clamping of scores, e.g. by using a ReLU activation or similar.
 
+Ranking Sidedness
+~~~~~~~~~~~~~~~~~
 Besides the different rank definitions, we also report scores for the individual side predictions, i.e.
 
 * "head": The rank-based metric evaluated only for the head / left-side prediction.
@@ -60,6 +64,8 @@ By default, "both" is often used in publications. The side-specific scores can h
 interesting insights, such as the difference in difficulty of predicting a head/tail given the rest, or the model's
 incapability to solve of one the tasks.
 
+Filtering
+~~~~~~~~~
 Finally, the rank-based evaluation allows using the "filtered setting", which is enabled by default. When evaluating
 the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there may be
 additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
