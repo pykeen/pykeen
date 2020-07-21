@@ -6,7 +6,6 @@ import logging
 import os
 import re
 from collections import Counter, defaultdict
-from copy import deepcopy
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
