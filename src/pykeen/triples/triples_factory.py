@@ -296,7 +296,37 @@ class TriplesFactory:
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
     ) -> 'TriplesFactory':
-        raise NotImplementedError
+        """
+        Instantiate triples factory from a TSV file.
+
+        :param path:
+            The path to a 3-column TSV file with triples in it.
+        :param entity_to_id:
+            If provided use this mapping to translate from entity labels to IDs.
+        :param relation_to_id:
+            If provided use this mapping to translate from relation labels to IDs.
+        :param create_inverse_triples:
+            Should inverse triples be created?
+        :param compact_id:
+            Whether to compact the IDs such that they range from 0 to (num_entities or num_relations)-1.
+        """
+        if isinstance(path, str):
+            path = os.path.abspath(path)
+        elif isinstance(path, TextIO):
+            path = os.path.abspath(path.name)
+        else:
+            raise TypeError(f'path is invalid type: {type(path)}')
+
+        # TODO: Check if lazy evaluation would make sense
+        triples = load_triples(path)
+
+        return TriplesFactory.from_triples(
+            triples=triples,
+            create_inverse_triples=create_inverse_triples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            compact_id=compact_id,
+        )
 
     @staticmethod
     def from_triples(
