@@ -238,7 +238,6 @@ class TestSplit(unittest.TestCase):
         elif expected_training_2 == new_training:
             self.assertEqual(expected_testing_2, new_testing)
         else:
-            print(new_testing, new_training)
             self.fail('training was not correct')
 
 
