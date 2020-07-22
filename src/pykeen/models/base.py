@@ -572,7 +572,8 @@ class Model(nn.Module):
             A tensor containing the k highest scoring triples.
         """
         logger.warning(
-            f'This is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} score evaluations'
+            f'predict_top_k_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
+            f'score evaluations.'
         )
 
         # initialize buffer on device
