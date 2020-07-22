@@ -3,6 +3,7 @@
 """Base module for all KGE models."""
 
 import inspect
+import itertools as itt
 import logging
 from abc import abstractmethod
 from collections import defaultdict
@@ -580,35 +581,38 @@ class Model(nn.Module):
         result = torch.ones(0, 3, dtype=torch.long, device=self.device)
         scores = torch.empty(0, dtype=torch.float32, device=self.device)
 
-        for r in range(self.num_relations):
-            for e in range(0, self.num_entities, batch_size):
-                # calculate batch scores
-                hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
-                hr_batch = torch.stack([
-                    hs,
-                    hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
+        it = itt.product(
+            range(self.num_relations),
+            range(0, self.num_entities, batch_size),
+        )
+        for r, e in it:
+            # calculate batch scores
+            hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
+            hr_batch = torch.stack([
+                hs,
+                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
+            ], dim=-1)
+            t_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
+
+            # get top scores within batch
+            top_scores, top_indices = t_scores.view(-1).topk(k=k, largest=True, sorted=False)
+            top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
+
+            # append to global top scores
+            scores = torch.cat([scores, top_scores])
+            result = torch.cat([
+                result,
+                torch.stack([
+                    top_heads,
+                    top_heads.new_empty(top_heads.shape).fill_(value=r),
+                    top_tails,
                 ], dim=-1)
-                t_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
+            ])
 
-                # get top scores within batch
-                top_scores, top_indices = t_scores.view(-1).topk(k=k, largest=True, sorted=False)
-                top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
-
-                # append to global top scores
-                scores = torch.cat([scores, top_scores])
-                result = torch.cat([
-                    result,
-                    torch.stack([
-                        top_heads,
-                        top_heads.new_empty(top_heads.shape).fill_(value=r),
-                        top_tails,
-                    ], dim=-1)
-                ])
-
-                # reduce size if necessary
-                if result.shape[0] > k:
-                    scores, ind = scores.topk(k=k, largest=True, sorted=False)
-                    result = result[ind]
+            # reduce size if necessary
+            if result.shape[0] > k:
+                scores, ind = scores.topk(k=k, largest=True, sorted=False)
+                result = result[ind]
 
         return result
 
