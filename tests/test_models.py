@@ -510,6 +510,27 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
+    def test_predict_top_k_triples(self):
+        """Test predict_top_k_triples."""
+        # this is only done in one of the models
+        k = 10
+        batch_size = 16
+        top_triples = self.model.predict_top_k_triples(k=k, batch_size=batch_size)
+
+        # check type
+        assert torch.is_tensor(top_triples)
+        assert top_triples.dtype == torch.long
+
+        # check shape
+        actual_k, n_cols = top_triples.shape
+        assert actual_k == min(k, self.factory.num_triples)
+        assert n_cols == 3
+
+        # check ID ranges
+        assert (top_triples >= 0).all()
+        assert top_triples[:, [0, 2]].max() < self.model.num_entities
+        assert top_triples[:, 1].max() < self.model.num_relations
+
 
 class TestERMLP(_ModelTestCase, unittest.TestCase):
     """Test the ERMLP model."""
