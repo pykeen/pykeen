@@ -11,6 +11,7 @@ PyKEEN
    tutorial/byod
    tutorial/running_hpo
    tutorial/using_mlflow
+   tutorial/making_predictions
 
 .. toctree::
    :caption: Reference
