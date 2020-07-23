@@ -581,11 +581,10 @@ class Model(nn.Module):
         result = torch.ones(0, 3, dtype=torch.long, device=self.device)
         scores = torch.empty(0, dtype=torch.float32, device=self.device)
 
-        it = itt.product(
+        for r, e in itt.product(
             range(self.num_relations),
             range(0, self.num_entities, batch_size),
-        )
-        for r, e in it:
+        ):
             # calculate batch scores
             hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
             hr_batch = torch.stack([
