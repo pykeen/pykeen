@@ -515,7 +515,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         # this is only done in one of the models
         k = 10
         batch_size = 16
-        top_triples = self.model.predict_top_k_triples(k=k, batch_size=batch_size)
+        top_triples = self.model.score_all_triples(k=k, batch_size=batch_size)
 
         # check type
         assert torch.is_tensor(top_triples)

@@ -556,13 +556,13 @@ class Model(nn.Module):
             scores = torch.sigmoid(scores)
         return scores
 
-    def predict_top_k_triples(
+    def score_all_triples(
         self,
-        k: int,
+        k: Optional[int] = None,
         batch_size: int = 1,
     ) -> torch.LongTensor:
         """
-        Compute scores for all triples, and return the k highest scoring.
+        Compute scores for all triples, optionally returning only the k highest scoring.
 
         :param k:
             The number of triples to return.
@@ -573,7 +573,7 @@ class Model(nn.Module):
             A tensor containing the k highest scoring triples.
         """
         logger.warning(
-            f'predict_top_k_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
+            f'score_all_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
             f'score evaluations.'
         )
 
