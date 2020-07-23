@@ -571,7 +571,7 @@ class Model(nn.Module):
             The number of triples to return. Set to None, to keep all.
 
             .. warning ::
-                This may lead to huge memory requirements.
+                Setting k=None may lead to huge memory requirements.
 
 
         :param batch_size:
