@@ -564,8 +564,16 @@ class Model(nn.Module):
         """
         Compute scores for all triples, optionally returning only the k highest scoring.
 
+        .. note ::
+            This operation is very expensive for reasonably-sized knowledge graphs.
+
         :param k:
-            The number of triples to return.
+            The number of triples to return. Set to None, to keep all.
+
+            .. warning ::
+                This may lead to huge memory requirements.
+
+
         :param batch_size:
             The batch size to use for calculating scores.
 
@@ -576,6 +584,12 @@ class Model(nn.Module):
             f'score_all_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
             f'score evaluations.'
         )
+
+        if k is not None:
+            logger.warning(
+                'Not providing k to predict_top_k_triples entails huge memory requirements for reasonably-sized '
+                'knowledge graphs.'
+            )
 
         # initialize buffer on device
         result = torch.ones(0, 3, dtype=torch.long, device=self.device)
