@@ -633,9 +633,9 @@ class Model(nn.Module):
                 result = result[ind]
 
         # Sort final result
-        idx = scores.argsort(descending=True)
-        result = result[idx]
-        # scores = scores[idx]
+        ind = scores.argsort(descending=True)
+        result = result[ind]
+        # scores = scores[ind]
 
         return result
 
