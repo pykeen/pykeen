@@ -14,9 +14,53 @@ pipeline like this:
     from pykeen.triples import TriplesFactory
     from pykeen.pipeline import pipeline
 
-    training = TriplesFactory(path=...)
+    training_path: str = ...
+    testing_path: str = ...
+
+    pipeline_result = pipeline(
+        training_triples_factory=training_path,
+        testing_triples_factory=testing_path,
+        model='TransE',
+    )
+    result.save_to_directory('test_pre_stratified_transe')
+
+PyKEEN will take care of making sure that the entities are mapped from their labels to appropriate integer
+(technically, 0-dimensional :class:`torch.LongTensor`) indexes and that the different sets of triples
+share the same mapping.
+
+If you want to add dataset-wide arguments, you can use the ``dataset_kwargs`` argument
+to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse_triples=True``.
+
+.. code-block:: python
+
+    from pykeen.triples import TriplesFactory
+    from pykeen.pipeline import pipeline
+
+    training_path: str = ...
+    testing_path: str = ...
+
+    pipeline_result = pipeline(
+        training_triples_factory=training_path,
+        testing_triples_factory=testing_path,
+        dataset_kwargs={'create_inverse_triples': True},
+        model='TransE',
+    )
+    result.save_to_directory('test_pre_stratified_transe')
+
+If you want finer control over how the triples are created, for example, if they are not all coming from
+TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
+
+.. code-block:: python
+
+    from pykeen.triples import TriplesFactory
+    from pykeen.pipeline import pipeline
+
+    training_path: str = ...
+    testing_path: str = ...
+
+    training = TriplesFactory(path=training_path)
     testing = TriplesFactory(
-        path=...,
+        path=testing_path,
         entity_to_id=training.entity_to_id,
         relation_to_id=training.relation_to_id,
     )
@@ -28,11 +72,43 @@ pipeline like this:
     )
     result.save_to_directory('test_pre_stratified_transe')
 
-Note that in the instantiation of the testing factory, we used the ``entity_to_id`` and ``relation_to_id``
-keyword arguments. This is because PyKEEN automatically assigns numeric identifiers to all entities and relations
-for each triples factory. However, we want the identifiers to be exactly the same for the testing set as the training
-set, so we just reuse it. If we didn't have the same identifiers, then the testing set would get mixed up with
-the wrong identifiers in the training set during evaluation, and we'd get nonsense results.
+.. warning::
+
+    The instantiation of the testing factory, we used the ``entity_to_id`` and ``relation_to_id`` keyword arguments.
+    This is because PyKEEN automatically assigns numeric identifiers to all entities and relations for each triples
+    factory. However, we want the identifiers to be exactly the same for the testing set as the training
+    set, so we just reuse it. If we didn't have the same identifiers, then the testing set would get mixed up with
+    the wrong identifiers in the training set during evaluation, and we'd get nonsense results.
+
+The ``dataset_kwargs`` argument is ignored when passing your own :class:`pykeen.triples.TriplesFactory`, so be
+sure to include the ``create_inverse_triples=True`` in the instantiation of those classes if that's your
+desired behavior as in:
+
+.. code-block:: python
+
+    from pykeen.triples import TriplesFactory
+    from pykeen.pipeline import pipeline
+
+    training_path: str = ...
+    testing_path: str = ...
+
+    training = TriplesFactory(
+        path=training_path,
+        create_inverse_triples=True,
+    )
+    testing = TriplesFactory(
+        path=testing_path,
+        entity_to_id=training.entity_to_id,
+        relation_to_id=training.relation_to_id,
+        create_inverse_triples=True,
+    )
+
+    pipeline_result = pipeline(
+        training_triples_factory=training,
+        testing_triples_factory=testing,
+        model='TransE',
+    )
+    result.save_to_directory('test_pre_stratified_transe')
 
 Triples factories can also be instantiated using the ``triples`` keyword argument instead of the ``path`` argument
 if you already have triples loaded in a :class:`numpy.ndarray`.
