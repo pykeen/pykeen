@@ -578,7 +578,7 @@ class Model(nn.Module):
             The batch size to use for calculating scores.
 
         :return: shape: (k, 3)
-            A tensor containing the k highest scoring triples.
+            A tensor containing the k highest scoring triples, or all triples if k=None.
         """
         logger.warning(
             f'score_all_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
