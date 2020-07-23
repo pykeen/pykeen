@@ -587,7 +587,7 @@ class Model(nn.Module):
 
         if k is not None:
             logger.warning(
-                'Not providing k to predict_top_k_triples entails huge memory requirements for reasonably-sized '
+                'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
                 'knowledge graphs.'
             )
 
