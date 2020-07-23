@@ -605,27 +605,37 @@ class Model(nn.Module):
                 hs,
                 hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
             ], dim=-1)
-            t_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
+            top_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
 
             # get top scores within batch
-            top_scores, top_indices = t_scores.view(-1).topk(k=k, largest=True, sorted=False)
-            top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
-
-            # append to global top scores
-            scores = torch.cat([scores, top_scores])
-            result = torch.cat([
-                result,
-                torch.stack([
+            if k is not None:
+                top_scores, top_indices = top_scores.view(-1).topk(k=k, largest=True, sorted=False)
+                top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
+                top_triples = torch.stack([
                     top_heads,
                     top_heads.new_empty(top_heads.shape).fill_(value=r),
                     top_tails,
                 ], dim=-1)
-            ])
+            else:
+                top_scores = top_scores.flatten()
+                top_triples = torch.cat([
+                    hr_batch.unsqueeze(dim=1).repeat(1, self.num_entities, 1),
+                    torch.arange(self.num_entities).view(1, self.num_entities, 1).repeat(hr_batch.shape[0], 1, 1)
+                ], dim=-1).view(-1, 3)
+
+            # append to global top scores
+            scores = torch.cat([scores, top_scores])
+            result = torch.cat([result, top_triples])
 
             # reduce size if necessary
-            if result.shape[0] > k:
+            if k is not None and result.shape[0] > k:
                 scores, ind = scores.topk(k=k, largest=True, sorted=False)
                 result = result[ind]
+
+        # Sort final result
+        idx = scores.argsort(descending=True)
+        result = result[idx]
+        # scores = scores[idx]
 
         return result
 
