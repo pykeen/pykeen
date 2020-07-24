@@ -21,9 +21,9 @@ part has a high relative complexity compared to the overall interaction function
 
 To make this technique possible, PyKEEN models have to provide an explicit broadcasting function via following methods
 in the model class:
- - :func:`score_t` - Scoring all possible tail entities for a given (h, r) tuple
  - :func:`score_h` - Scoring all possible head entities for a given (r, t) tuple
  - :func:`score_r` - Scoring all possible relations for a given (h, t) tuple
+ - :func:`score_t` - Scoring all possible tail entities for a given (h, r) tuple
 The PyKEEN architecture natively supports these methods and makes use of this technique wherever possible without any
 additional modifications. Providing these methods is completely optional and not required when implementing new models.
 
@@ -38,11 +38,20 @@ are identical to training without sub-batching. Note: In order to guarantee this
 since certain components, e.g. batch normalization, require the entire batch to be calculated in one pass to avoid
 altering statistics.
 
-
 GPU-Filtering with index-based masking
 --------------------------------------
 tbd
 
 Automated Memory Optimization
 -----------------------------
-tbd
+Allowing high computational throughput while ensuring that the available hardware memory is not exceeded during training
+and evaluation requires the knowledge of the maximum possible training and evaluation batch size for the current model
+configuration. However, determining the training and evaluation batch sizes is a tedious process, and not feasible when
+a large set of heterogeneous experiments are run. Therefore, PyKEEN has an automatic memory optimization step that
+computes the maximum possible training and evaluation batch sizes for the current model configuration and available
+hardware before the actual calculation starts. If the user-provided batch size is too large for the used hardware, the
+automatic memory optimization determines the maximum sub-batch size for training and accumulates the gradients with the
+above described process :ref:`Sub-batching`. The batch sizes are determined using binary search taking into
+consideration the CUDA architecture,
+`<https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9926-tensor-core-performance-the-ultimate-guide.pdf>`
+which ensures that the chosen batch size is the most CUDA efficient one.
