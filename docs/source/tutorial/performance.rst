@@ -6,14 +6,14 @@ evaluation as well as try to maximize the utilization of the hardware at hand (c
 Aligned entity/relation ID and embeddings vector position
 ---------------------------------------------------------
 The foundation of the PyKEEN performance optimization is laid by a consistent and continuous numbering of all entities
-that is strictly aligned with the position in the embedding tensor. When working with knowledge graphs (KG) the entities and relations
-contained in triples are usually stored as strings. In PyKEEN KGs are handled by the TriplesFactory
+that is strictly aligned with the position in the embedding tensor. When working with knowledge graphs (KG) the entities
+and relations contained in triples are usually stored as strings. In PyKEEN KGs are handled by the TriplesFactory
 :class:`pykeen.triples.TriplesFactory`. Inside the TriplesFactory sets are created for the entities and relations
 contained in the KG. Consequently, the entities and relations are numbered uniquely from 0 to _num_unique_entities_ and
 0 to _num_unique_relations_ respectively. These numbers always correspond to the position in the embedding tensor, i.e.
 the entity with the ID 10 has the 10th position in the embedding tensor. Subsequently, the TriplesFactory translates the
 entire KG using these unique IDs to a tensor called mapped_triples, which is the only data used within PyKEEN. This
-allows PyKEEN to perform all calculations and functions without expensive string lookups and comparisons.
+allows PyKEEN to perform all calculations and functions without expensive string lookups and/or comparisons.
 
 Tuple broadcasting
 ------------------
@@ -39,10 +39,55 @@ in the model class:
 The PyKEEN architecture natively supports these methods and makes use of this technique wherever possible without any
 additional modifications. Providing these methods is completely optional and not required when implementing new models.
 
-GPU-Filtering with index-based masking
---------------------------------------
-tbd
+Filtering with index-based masking
+----------------------------------
+In a standard evaluation setting of a KGEM for each triple (h, r, t) in the test/validation dataset two calculations are
+performed:
+ - the tuple (h, r) is combined with all possible tail entities t*
+ - the tuple (r, t) is combined with all possible head entities h*
+Afterwards the rank of (h, r, t) is compared to all possible (h, r, t*) as well as (h*, r, t) triples.
 
+In the filtered setting, t* is not allowed to contain tail entities that would lead to (h, r, t*) triples already found
+in the train dataset. Analogue to that, h* is not allowed to contain head entities leading to (h*, r, t) triples found
+in the train dataset. This leads to the computational challenge that all new possible triples (h, r, t*) and (h*, r, t)
+have to be checked against their existence in the train dataset. Considering a dataset like FB15k237, with almost 15,000
+entities, each test triples leads to 30,000 possible new triples, which have to be checked against the train dataset.
+After removing all possible entities found in the train dataset from h* and t*, new sets h** and t** are obtained that
+allow to construct purely novel triples (h**, r, t) and (h, r, t**) not found in the train dataset.
+
+To obtain very fast filtering PyKEEN combines the technique presented above in
+:ref:`Aligned entity/relation ID and embeddings vector position` and :ref:`Tuple broadcasting` together with the
+mechanism described below, which in our case has led up to 600,000 fold increase in speed for the filtered evaluation
+compared to the mechanisms used in previous versions.
+
+As a starting point, PyKEEN will always compute all possible scores also in the filtered setting. This is due to the
+fact that the number of positive triples in average is very low and thus, few results have to be removed as well as the
+fact that due to the technique presented in :ref:`Tuple broadcasting` any additionally scored entity has a marginally
+low additional cost. Therefore, we start with the score vectors *score_t* for all possible triples (h, r, t*) and
+*score_h* for all possible triples (h*, r, t).
+
+Following, the sparse filters t' and h' are created, which state which of the entities would lead to triples found in
+the train dataset. To achieve this we will rely on the technique presented in
+:ref:`Aligned entity/relation ID and embeddings vector position`, i.e. all entity/relation IDs correspond to their
+exact position in the respective embedding tensor.
+As an example we take the tuple (h, r) from the test triple (h, r, t) and are interested in all tail entities t' that
+should be removed from (h, r, t*) in order to obtain (h, r, t**).
+This is achieved by performing the following steps:
+ - Take r and compare it to the relations of all triples in the train dataset, leading to a boolean vector of the
+size of number of triples contained in the train dataset, being true where any triple had the relation r
+ - Take h and compare it to the head entities of all triples in the train dataset, leading to a boolean vector of the
+size of number of triples contained in the train dataset, being true where any triple had the head entity h
+ - Combine both boolean vectors, leading to a boolean vector of the size of number of triples contained in the train
+dataset, being true where any triple had both the head entity h and the relation r
+ - Convert the boolean vector to a non-zero index vector, stating at which indices the train dataset contains triples
+that contain both the head entity h and the relation r, having the size of the number of non-zero elements
+ - The index vector is now applied on the tail entity column of the train dataset, returning all tail entity IDs t' that
+combined with h and r lead to triples contained in the train dataset
+ - Finally, the t' tail entity ID index vector is applied on the initially mentioned *score_t* vector for all possible
+triples (h, r, t*) and all affected scores are set to float('nan') following the IEEE-754 specification, which makes
+these scores non-comparable, effectively leading to the score vector for all possible novel triples (h, r, t**).
+
+In an analogue fashion h' is obtained and filtered from (h*, r, t) to obtain (h**, r, t).
 
 Sub-batching
 ------------
