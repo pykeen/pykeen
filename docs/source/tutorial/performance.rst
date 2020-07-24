@@ -3,6 +3,18 @@ Performance Tricks
 PyKEEN uses a combination of techniques under the hood that ensure efficient calculations during both training and
 evaluation as well as try to maximize the utilization of the hardware at hand (currently focused on single GPU usage).
 
+Aligned entity/relation ID and embeddings vector position
+---------------------------------------------------------
+The foundation of the PyKEEN performance optimization is laid by a consistent and continuous numbering of all entities
+that is strictly aligned with the position in the embedding tensor. When working with knowledge graphs (KG) the entities and relations
+contained in triples are usually stored as strings. In PyKEEN KGs are handled by the TriplesFactory
+:class:`pykeen.triples.TriplesFactory`. Inside the TriplesFactory sets are created for the entities and relations
+contained in the KG. Consequently, the entities and relations are numbered uniquely from 0 to _num_unique_entities_ and
+0 to _num_unique_relations_ respectively. These numbers always correspond to the position in the embedding tensor, i.e.
+the entity with the ID 10 has the 10th position in the embedding tensor. Subsequently, the TriplesFactory translates the
+entire KG using these unique IDs to a tensor called mapped_triples, which is the only data used within PyKEEN. This
+allows PyKEEN to perform all calculations and functions without expensive string lookups and comparisons.
+
 Tuple broadcasting
 ------------------
 Interaction functions are usually only given for the standard case of scoring a single triple (h, r, t). This function
@@ -27,6 +39,11 @@ in the model class:
 The PyKEEN architecture natively supports these methods and makes use of this technique wherever possible without any
 additional modifications. Providing these methods is completely optional and not required when implementing new models.
 
+GPU-Filtering with index-based masking
+--------------------------------------
+tbd
+
+
 Sub-batching
 ------------
 With growing model and dataset sizes the KGEM at hand is likely to exceed the memory provided by GPUs. Especially during
@@ -37,10 +54,6 @@ This allows to train KGEM on GPU that otherwise would be too big for the hardwar
 are identical to training without sub-batching. Note: In order to guarantee this, not all models support sub-batching,
 since certain components, e.g. batch normalization, require the entire batch to be calculated in one pass to avoid
 altering statistics.
-
-GPU-Filtering with index-based masking
---------------------------------------
-tbd
 
 Automated Memory Optimization
 -----------------------------
