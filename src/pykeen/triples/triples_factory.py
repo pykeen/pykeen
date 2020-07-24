@@ -6,7 +6,6 @@ import logging
 import os
 import re
 from collections import Counter, defaultdict
-from copy import deepcopy
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
@@ -413,12 +412,12 @@ class TriplesFactory:
         elif ratio_sum > 1.0:
             raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
 
-        split_idxs = [
+        sizes = [
             int(split_ratio * n_triples)
             for split_ratio in ratios
         ]
         # Take cumulative sum so the get separated properly
-        split_idxs = np.cumsum(split_idxs)
+        split_idxs = np.cumsum(sizes)
 
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
@@ -427,12 +426,22 @@ class TriplesFactory:
         # Make sure that the first element has all the right stuff in it
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
 
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+            actual_size = triples.shape[0]
+            actual_ratio = actual_size / exp_size * exp_ratio
+            if actual_size != exp_size:
+                logger.warning(
+                    f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
+                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.'
+                )
+
         # Make new triples factories for each group
         return [
             TriplesFactory(
                 triples=triples,
-                entity_to_id=deepcopy(self.entity_to_id),
-                relation_to_id=deepcopy(self.relation_to_id),
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
+                compact_id=False,
             )
             for triples in triples_groups
         ]
@@ -540,7 +549,7 @@ def _tf_cleanup_all(
 
 def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Cleanup a triples array (testing) with respect to another (training)."""
-    training_entities, testing_entities, to_move, move_id_mask = _prepare_cleanup(training, testing)
+    move_id_mask = _prepare_cleanup(training, testing)
 
     training = np.concatenate([training, testing[move_id_mask]])
     testing = testing[~move_id_mask]
@@ -565,7 +574,7 @@ def _tf_cleanup_randomized(
     if isinstance(random_state, int):
         random_state = np.random.RandomState(random_state)
 
-    training_entities, testing_entities, to_move, move_id_mask = _prepare_cleanup(training, testing)
+    move_id_mask = _prepare_cleanup(training, testing)
 
     # While there are still triples that should be moved to the training set
     while move_id_mask.any():
@@ -579,18 +588,22 @@ def _tf_cleanup_randomized(
         testing = testing[testing_mask]
 
         # Recalculate the training entities, testing entities, to_move, and move_id_mask
-        training_entities, testing_entities, to_move, move_id_mask = _prepare_cleanup(training, testing)
+        move_id_mask = _prepare_cleanup(training, testing)
 
     return training, testing
 
 
-def _prepare_cleanup(training: np.ndarray, testing: np.ndarray):
-    training_entities = _get_unique(training)
-    testing_entities = _get_unique(testing)
-    to_move = testing_entities[~np.isin(testing_entities, training_entities)]
-    move_id_mask = np.isin(testing[:, [0, 2]], to_move).any(axis=1)
-    return training_entities, testing_entities, to_move, move_id_mask
+def _prepare_cleanup(training: np.ndarray, testing: np.ndarray) -> np.ndarray:
+    to_move_mask = None
+    for col in [[0, 2], 1]:
+        training_ids, test_ids = [np.unique(triples[:, col]) for triples in [training, testing]]
+        to_move = test_ids[~np.isin(test_ids, training_ids)]
+        this_to_move_mask = np.isin(testing[:, col], to_move)
+        if this_to_move_mask.ndim > 1:
+            this_to_move_mask = this_to_move_mask.any(axis=1)
+        if to_move_mask is None:
+            to_move_mask = this_to_move_mask
+        else:
+            to_move_mask = this_to_move_mask | to_move_mask
 
-
-def _get_unique(x):
-    return np.unique(x[:, [0, 2]])
+    return to_move_mask
