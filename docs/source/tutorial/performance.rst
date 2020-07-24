@@ -33,9 +33,10 @@ With growing model and dataset sizes the KGEM at hand is likely to exceed the me
 training it might be desired to train using a certain batch size. When this batch size is too big for the hardware at
 hand, PyKEEN allows to set a sub-batch size in the range of :math:`[1, {batch size}[`. When the sub-batch size is set,
 PyKEEN automatically accumulates the gradients after each sub-batch and clears the computational graph during training.
-By doing this the obtained results are identical to training without sub-batching. Note: Not that in order to guarantee
-this, not all models support sub-batching, since certain components, e.g. batch normalization, require the entire batch
-to be calculated in one pass to avoid altering statistics.
+This allows to train KGEM on GPU that otherwise would be too big for the hardware at hand, while the obtained results
+are identical to training without sub-batching. Note: In order to guarantee this, not all models support sub-batching,
+since certain components, e.g. batch normalization, require the entire batch to be calculated in one pass to avoid
+altering statistics.
 
 
 GPU-Filtering with index-based masking
