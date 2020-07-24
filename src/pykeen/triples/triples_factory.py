@@ -471,8 +471,9 @@ class TriplesFactory:
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
         """Get an np.array index for triples with the given entities."""
-        return np.isin(self.triples[:, 0], list(entities), invert=invert) \
-               & np.isin(self.triples[:, 1], list(entities), invert=invert)
+        entities = np.asanyarray(entities, dtype=self.triples.dtype)
+        return np.isin(self.triples[:, 0], entities, invert=invert) \
+               & np.isin(self.triples[:, 2], entities, invert=invert)
 
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
         """Get an np.array index for triples with the given relations."""
