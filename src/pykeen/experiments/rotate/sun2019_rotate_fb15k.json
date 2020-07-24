@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Learn FB15K Data Set with RotatE as described by Sun et al., 2019",
-    "comments": "Could not find number of epochs since early stopping has been applied; https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/best_config.sh"
+    "comments": "Could not find number of epochs; https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/best_config.sh. The evaluation uses the non-deterministic rank, cf. https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/a0a3cf75e8e324ef113472489a16927c39c997b2/codes/model.py#L406."
   },
   "pipeline": {
     "dataset": "fb15k",
@@ -19,7 +19,7 @@
       "adversarial_temperature": 1.0,
       "margin": 24
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 128
@@ -31,6 +31,21 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 40
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.746,
+        "3": 0.830,
+        "10": 0.884
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.797
     }
   }
 }

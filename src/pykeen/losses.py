@@ -1,27 +1,12 @@
 # -*- coding: utf-8 -*-
 
-"""Loss functions implemented in PyKEEN and additionally imported from :class:`torch`.
-
-===============  ==========================================
-Name             Reference
-===============  ==========================================
-bce              :class:`torch.nn.BCELoss`
-bceaftersigmoid  :class:`pykeen.losses.BCEAfterSigmoidLoss`
-crossentropy     :class:`pykeen.losses.CrossEntropyLoss`
-marginranking    :class:`torch.nn.MarginRankingLoss`
-mse              :class:`torch.nn.MSELoss`
-nssa             :class:`pykeen.losses.NSSALoss`
-softplus         :class:`pykeen.losses.SoftplusLoss`
-===============  ==========================================
-
-.. note:: This table can be re-generated with ``pykeen ls losses -f rst``
-"""
+"""Loss functions integrated in PyKEEN."""
 
 from typing import Any, Mapping, Set, Type, Union
 
 import torch
 from torch import nn
-from torch.nn import BCELoss, MSELoss, MarginRankingLoss, functional
+from torch.nn import functional
 
 from .utils import get_cls, normalize_string
 
@@ -31,12 +16,12 @@ __all__ = [
     'SoftplusLoss',
     'NSSALoss',
     'CrossEntropyLoss',
-    'losses',
+    'MarginRankingLoss',
+    'MSELoss',
+    'BCELoss',
     'losses_hpo_defaults',
     'get_loss_cls',
 ]
-
-Loss = nn.modules.loss._Loss
 
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
@@ -44,7 +29,58 @@ _REDUCTION_METHODS = dict(
 )
 
 
-class SoftplusLoss(nn.Module):
+class Loss(nn.Module):
+    """A loss function."""
+
+
+class PointwiseLoss(Loss):
+    """Pointwise loss functions compute an independent loss term for each triple-label pair."""
+
+
+class PairwiseLoss(Loss):
+    """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
+
+
+class SetwiseLoss(Loss):
+    """Setwise loss functions compare the scores of several triples."""
+
+
+class BCELoss(PointwiseLoss, nn.BCELoss):
+    r"""A wrapper around the PyTorch binary cross entropy loss.
+
+    For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
+    function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
+    the binary cross entropy loss is defined as:
+
+    .. math::
+
+        L(h, r, t) = -(l(h,r,t) \cdot \log(\sigma(f(h,r,t))) + (1 - l(h,r,t)) \cdot \log(1 - \sigma(f(h,r,t))))
+
+    where represents the logistic sigmoid function
+
+    .. math::
+
+        \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+    Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
+    are regarded as logits.
+
+    .. warning::
+
+        This loss is not well-suited for translational distance models because these models produce
+        a negative distance as score and cannot produce positive model outputs.
+    """
+
+
+class MSELoss(PointwiseLoss, nn.MSELoss):
+    """A wrapper around the PyTorch mean square error loss."""
+
+
+class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
+    """A wrapper around the PyTorch margin ranking loss."""
+
+
+class SoftplusLoss(PointwiseLoss):
     """A loss function for the softplus."""
 
     def __init__(self, reduction: str = 'mean') -> None:
@@ -67,7 +103,7 @@ class SoftplusLoss(nn.Module):
         return loss
 
 
-class BCEAfterSigmoidLoss(nn.Module):
+class BCEAfterSigmoidLoss(PointwiseLoss):
     """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
 
     def __init__(self, reduction: str = 'mean'):
@@ -84,7 +120,7 @@ class BCEAfterSigmoidLoss(nn.Module):
         return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
 
 
-class CrossEntropyLoss(nn.Module):
+class CrossEntropyLoss(SetwiseLoss):
     """Evaluate cross entropy after softmax output."""
 
     def __init__(self, reduction: str = 'mean'):
@@ -107,10 +143,17 @@ class CrossEntropyLoss(nn.Module):
         return self._reduction_method(sample_wise_cross_entropy)
 
 
-class NSSALoss(nn.Module):
+class NSSALoss(SetwiseLoss):
     """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
 
-    def __init__(self, margin: float, adversarial_temperature: float, reduction: str = 'mean') -> None:
+    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
+        """Initialize the NSSA loss.
+
+        :param margin: The loss's margin (also written as gamma in the reference paper)
+        :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+
+        .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
+        """
         super().__init__()
         self.reduction = reduction
         self.adversarial_temperature = adversarial_temperature
@@ -158,14 +201,20 @@ _LOSSES: Set[Type[Loss]] = {
 # })
 
 
+#: A mapping of losses' names to their implementations
 losses: Mapping[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
 
+#: HPO Defaults for losses
 losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
     MarginRankingLoss: dict(
         margin=dict(type=int, low=0, high=3, q=1),
+    ),
+    NSSALoss: dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     ),
 }
 # Add empty dictionaries as defaults for all remaining losses
@@ -178,7 +227,7 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
     """Get the loss class."""
     return get_cls(
         query,
-        base=nn.Module,
+        base=Loss,
         lookup_dict=losses,
         default=MarginRankingLoss,
         suffix=_LOSS_SUFFIX,

@@ -1,4 +1,22 @@
 Models
 ======
-.. automodule:: pykeen.models
+.. automodapi:: pykeen.models
+    :no-heading:
+    :headings: --
+
+Base Classes
+------------
+.. currentmodule:: pykeen.models.base
+.. autosummary::
+    :toctree: generated/
+
+    Model
+    EntityEmbeddingModel
+    EntityRelationEmbeddingModel
+    MultimodalModel
+
+
+Initialization
+--------------
+.. automodule:: pykeen.models.init
     :members:

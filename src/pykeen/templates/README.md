@@ -7,20 +7,28 @@
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/mali-git/POEM_develop">
-    <img src="https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
+  <a href="https://travis-ci.com/pykeen/pykeen">
+    <img src="https://travis-ci.com/pykeen/pykeen.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
          alt="Travis CI">
   </a>
 
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
+
+  <a href="https://zenodo.org/badge/latestdoi/242672435">
+    <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
+  </a>
+
+  <a href="https://badge.fury.io/py/pykeen">
+    <img src="https://badge.fury.io/py/pykeen.svg" alt="PyPI version" height="18">
+  </a>
 </p>
 
 <p align="center">
     <b>PyKEEN</b> (<b>P</b>ython <b>K</b>nowl<b>E</b>dge <b>E</b>mbeddi<b>N</b>gs) is a Python package designed to
     train and evaluate knowledge graph embedding models (incorporating multi-modal information). It is part of the
-    <a href="https://github.com/SmartDataAnalytics/PyKEEN">KEEN Universe</a>.
+    <a href="https://github.com/pykeen">KEEN Universe</a>.
 </p>
 
 <p align="center">
@@ -31,14 +39,20 @@
   <a href="#supporters">Support</a>
 </p>
 
-
 ## Installation
 
 The development version of PyKEEN can be downloaded and installed from
-[GitHub](https://github.com/mali-git/POEM_develop) on Python 3.7+ with:
+[PyPI](https://pypi.org/project/pykeen/) on Python 3.7+ with:
 
 ```bash
-$ git clone https://github.com/mali-git/POEM_develop.git pykeen
+$ pip install pykeen
+```
+
+The development version of PyKEEN can be downloaded and installed from
+[GitHub](https://github.com/pykeen/pykeen) on Python 3.7+ with:
+
+```bash
+$ git clone https://github.com/pykeen/pykeeen.git pykeen
 $ cd pykeen
 $ pip install -e .
 $ # Install pre-commit
@@ -46,20 +60,32 @@ $ pip install pre-commit
 $ pre-commit install
 ```
 
+PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section
+of the ``setup.cfg``. They can be included with installation using the bracket notation like in 
+``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
+``pip install pykeen[docs,plotting]``.
+
+| Name | Description |
+|------|-------------|
+| ``plotting`` | Plotting with ``seaborn`` and generation of word clouds  |
+| ``mlflow`` | Tracking of results with ``mlflow`` |
+| ``docs`` | Building of the documentation |
+| ``templating`` | Building of templated documentation, like the README |
+
 ## Contributing
 
 Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
-## Quickstart
+## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
 This example shows how to train a model on a data set and test on another data set.
 
 The fastest way to get up and running is to use the pipeline function. It
 provides a high-level entry into the extensible functionality of this package.
 The following example shows how to train and evaluate the TransE model on the
-Nations dataset. By default, the training loop uses the open world assumption
-and evaluates with rank-based evaluation.
+Nations dataset. By default, the training loop uses the stochastic local closed world assumption (sLCWA) training
+approach and evaluates with rank-based evaluation.
 
 ```python
 from pykeen.pipeline import pipeline
@@ -156,16 +182,20 @@ pykeen experiments ablation ~/path/to/config.json
 
 ### Supporters
 
-This project has been supported by several organizations:
+This project has been supported by several organizations (in alphabetical order):
 
-- [Smart Data Analytics (University of Bonn)](http://sda.cs.uni-bonn.de)
-- [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
-- [Bonn Aachen International Center for IT (University of Bonn)](http://www.b-it-center.de)
+- [Bayer](https://www.bayer.com/)
+- [Enveda Therapeutics](https://envedatherapeutics.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
+- [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
+- [Ludwig-Maximilians-Universität München](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
+- [Siemens](https://new.siemens.com/global/en.html)
+- [Smart Data Analytics Research Group (University of Bonn & Fraunhofer IAIS)](https://sda.tech)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
+- [University of Bonn](https://www.uni-bonn.de/)
 
 ### Logo
 

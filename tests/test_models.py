@@ -18,16 +18,17 @@ from torch.optim.adagrad import Adagrad
 
 import pykeen.experiments
 import pykeen.models
-from pykeen.datasets.kinships import TRAIN_PATH as KINSHIPS_TRAIN_PATH
-from pykeen.datasets.nations import (
-    NationsTrainingTriplesFactory, TEST_PATH as NATIONS_TEST_PATH,
-    TRAIN_PATH as NATIONS_TRAIN_PATH,
-)
-from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _extend_batch
+from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
+from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
+from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.multimodal import MultimodalModel
+from pykeen.models.unimodal.rgcn import (
+    inverse_indegree_edge_weights,
+    inverse_outdegree_edge_weights,
+    symmetric_edge_weights,
+)
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.training import LCWATrainingLoop, OWATrainingLoop, TrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
 
@@ -72,7 +73,7 @@ class _ModelTestCase:
     #: Whether to create inverse triples (needed e.g. by ConvE)
     create_inverse_triples: bool = False
 
-    #: The sampler to use for OWA (different e.g. for R-GCN)
+    #: The sampler to use for sLCWA (different e.g. for R-GCN)
     sampler = 'default'
 
     #: The batch size for use when testing training procedures
@@ -92,7 +93,8 @@ class _ModelTestCase:
         """Set up the test case with a triples factory and model."""
         _, self.generator, _ = set_random_seed(42)
 
-        self.factory = NationsTrainingTriplesFactory(create_inverse_triples=self.create_inverse_triples)
+        dataset = Nations(create_inverse_triples=self.create_inverse_triples)
+        self.factory = dataset.training
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
@@ -197,9 +199,9 @@ class _ModelTestCase:
         self._check_scores(batch, scores)
 
     @pytest.mark.slow
-    def test_train_owa(self) -> None:
-        """Test that OWA training does not fail."""
-        loop = OWATrainingLoop(
+    def test_train_slcwa(self) -> None:
+        """Test that sLCWA training does not fail."""
+        loop = SLCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
         )
@@ -430,6 +432,18 @@ Traceback
 
         assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
 
+    def test_reset_parameters_constructor_call(self):
+        """Tests whether reset_parameters is called in the constructor."""
+        self.model.reset_parameters_ = None
+        try:
+            self.model.__init__(
+                self.factory,
+                embedding_dim=self.embedding_dim,
+                **(self.model_kwargs or {})
+            )
+        except TypeError as error:
+            assert error.args == ("'NoneType' object is not callable",)
+
 
 class _DistanceModelTestCase(_ModelTestCase):
     """A test case for distance-based models."""
@@ -630,7 +644,7 @@ class TestRGCNBlock(_TestRGCN, unittest.TestCase):
     model_kwargs = {
         'decomposition': 'block',
         'num_bases_or_blocks': 3,
-        'message_normalization': 'symmetric',
+        'edge_weighting': symmetric_edge_weights,
         'use_batch_norm': True,
     }
     #: (scale & bias for BN) * layers
@@ -977,9 +991,6 @@ class TestTesting(unittest.TestCase):
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
-        for name in model_names:
-            self.assertIn(f':class:`pykeen.models.{name}`', pykeen.models.__doc__, msg=f'Forgot to document {name}')
-
     def test_models_have_experiments(self):
         """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
         experiments_path = os.path.abspath(os.path.dirname(pykeen.experiments.__file__))
@@ -1029,3 +1040,45 @@ def test_extend_batch():
                 exp_content.add(tuple(c))
 
         assert actual_content == exp_content
+
+
+class MessageWeightingTests(unittest.TestCase):
+    """unittests for message weighting."""
+
+    #: The number of entities
+    num_entities: int = 16
+
+    #: The number of triples
+    num_triples: int = 101
+
+    def setUp(self) -> None:
+        """Initialize data for unittest."""
+        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+
+    def _test_message_weighting(self, weight_func):
+        """Perform common tests for message weighting."""
+        weights = weight_func(source=self.source, target=self.target)
+
+        # check shape
+        assert weights.shape == self.source.shape
+
+        # check dtype
+        assert weights.dtype == torch.float32
+
+        # check finite values (e.g. due to division by zero)
+        assert torch.isfinite(weights).all()
+
+        # check non-negativity
+        assert (weights >= 0.).all()
+
+    def test_inverse_indegree_edge_weights(self):
+        """Test inverse_indegree_edge_weights."""
+        self._test_message_weighting(weight_func=inverse_indegree_edge_weights)
+
+    def test_inverse_outdegree_edge_weights(self):
+        """Test inverse_outdegree_edge_weights."""
+        self._test_message_weighting(weight_func=inverse_outdegree_edge_weights)
+
+    def test_symmetric_edge_weights(self):
+        """Test symmetric_edge_weights."""
+        self._test_message_weighting(weight_func=symmetric_edge_weights)

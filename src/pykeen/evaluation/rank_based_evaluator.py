@@ -5,14 +5,16 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import torch
 from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
+from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     'compute_rank_from_scores',
@@ -27,6 +29,7 @@ RANK_WORST = 'worst'
 RANK_AVERAGE = 'avg'
 RANK_TYPES = {RANK_BEST, RANK_WORST, RANK_AVERAGE}
 RANK_AVERAGE_ADJUSTED = 'adj'
+SIDES = {'head', 'tail', 'both'}
 
 
 def compute_rank_from_scores(
@@ -95,6 +98,7 @@ def compute_rank_from_scores(
     }
 
 
+@fix_dataclass_init_docs
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):
@@ -109,45 +113,59 @@ class RankBasedMetricResults(MetricResults):
     """
 
     #: The mean over all ranks: mean_i r_i. Lower is better.
-    mean_rank: Dict[str, float] = field(metadata=dict(doc='The mean over all ranks: mean_i r_i. Lower is better.'))
+    mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        doc='The mean over all ranks: mean_i r_i. Lower is better.',
+    ))
 
     #: The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.
-    mean_reciprocal_rank: Dict[str, float] = field(metadata=dict(
+    mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         doc='The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.',
     ))
 
     #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.
     #: Higher is better.
-    hits_at_k: Dict[str, Dict[int, float]] = field(metadata=dict(
+    hits_at_k: Dict[str, Dict[str, Dict[int, float]]] = field(metadata=dict(
         doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.'
             ' Higher is better.',
     ))
 
     #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.
     #: Described by [berrendorf2020]_.
-    adjusted_mean_rank: float = field(metadata=dict(
+    adjusted_mean_rank: Dict[str, float] = field(metadata=dict(
         doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.',
     ))
 
     def get_metric(self, name: str) -> float:  # noqa: D102
-        if name == 'adjusted_mean_rank':
-            return self.adjusted_mean_rank
-
         dot_count = name.count('.')
         if 0 == dot_count:  # assume average by default
-            rank_type, metric = 'avg', name
+            side, rank_type, metric = 'both', 'avg', name
         elif 1 == dot_count:
-            rank_type, metric = name.split('.')
+            # Check if it a side or rank type
+            side_or_ranktype, metric = name.split('.')
+            if side_or_ranktype in SIDES:
+                side = side_or_ranktype
+                rank_type = 'avg'
+            else:
+                side = 'both'
+                rank_type = side_or_ranktype
+        elif 2 == dot_count:
+            side, rank_type, metric = name.split('.')
         else:
             raise ValueError(f'Malformed metric name: {name}')
 
-        if rank_type not in RANK_TYPES:
-            raise ValueError(f'Invalid rank type: {rank_type}')
+        if side not in SIDES:
+            raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
+        if rank_type not in RANK_AVERAGE and metric in {'adjusted_mean_rank'}:
+            raise ValueError(f'Invalid rank type for adjusted mean rank: {rank_type}. Allowed type: {RANK_AVERAGE}')
+        elif rank_type not in RANK_TYPES:
+            raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
         if metric in {'mean_rank', 'mean_reciprocal_rank'}:
-            return getattr(self, metric)[rank_type]
+            return getattr(self, metric)[side][rank_type]
+        elif metric in {'adjusted_mean_rank'}:
+            return getattr(self, metric)[side]
 
-        rank_type_hits_at_k = self.hits_at_k[rank_type]
+        rank_type_hits_at_k = self.hits_at_k[side][rank_type]
         for prefix in ('hits_at_', 'hits@'):
             if not metric.startswith(prefix):
                 continue
@@ -159,14 +177,30 @@ class RankBasedMetricResults(MetricResults):
 
     def to_flat_dict(self):  # noqa: D102
         r = {
-            'avg.adjusted_mean_rank': self.adjusted_mean_rank,
+            f'{side}.avg.adjusted_mean_rank': self.adjusted_mean_rank[side]
+            for side in SIDES
         }
-        for rank_type in RANK_TYPES:
-            r[f'{rank_type}.mean_rank'] = self.mean_rank[rank_type]
-            r[f'{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[rank_type]
-            for k, v in self.hits_at_k[rank_type].items():
-                r[f'{rank_type}.hits_at_{k}'] = v
+        for side in SIDES:
+            for rank_type in RANK_TYPES:
+                r[f'{side}.{rank_type}.mean_rank'] = self.mean_rank[side][rank_type]
+                r[f'{side}.{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[side][rank_type]
+                for k, v in self.hits_at_k[side][rank_type].items():
+                    r[f'{side}.{rank_type}.hits_at_{k}'] = v
         return r
+
+    def to_df(self) -> pd.DataFrame:
+        """Output the metrics as a pandas dataframe."""
+        rows = [
+            (side, 'avg', 'adjusted_mean_rank', self.adjusted_mean_rank[side])
+            for side in SIDES
+        ]
+        for side in SIDES:
+            for rank_type in RANK_TYPES:
+                rows.append((side, rank_type, 'mean_rank', self.mean_rank[side][rank_type]))
+                rows.append((side, rank_type, 'mean_reciprocal_rank', self.mean_reciprocal_rank[side][rank_type]))
+                for k, v in self.hits_at_k[side][rank_type].items():
+                    rows.append((side, rank_type, f'hits_at_{k}', v))
+        return pd.DataFrame(rows, columns=['Side', 'Type', 'Metric', 'Value'])
 
 
 class RankBasedEvaluator(Evaluator):
@@ -182,7 +216,7 @@ class RankBasedEvaluator(Evaluator):
 
     def __init__(
         self,
-        ks: Optional[Iterable[int]] = None,
+        ks: Optional[Iterable[Union[int, float]]] = None,
         filtered: bool = True,
     ):
         """Initialize rank-based evaluator.
@@ -195,12 +229,19 @@ class RankBasedEvaluator(Evaluator):
         """
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
-        self.ranks: Dict[str, List[float]] = defaultdict(list)
+        for k in self.ks:
+            if isinstance(k, float) and not (0 < k < 1):
+                raise ValueError(
+                    'If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)'
+                )
+        self.ranks: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+        self.num_entities = None
 
     def _update_ranks_(
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
+        side: str,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
 
@@ -211,8 +252,9 @@ class RankBasedEvaluator(Evaluator):
             true_score=true_scores,
             all_scores=all_scores,
         )
+        self.num_entities = all_scores.shape[1]
         for k, v in batch_ranks.items():
-            self.ranks[k].extend(v.detach().cpu().tolist())
+            self.ranks[side, k].extend(v.detach().cpu().tolist())
 
     def process_tail_scores_(
         self,
@@ -221,7 +263,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side='tail')
 
     def process_head_scores_(
         self,
@@ -230,31 +272,44 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side='head')
+
+    def _get_ranks(self, side, rank_type) -> np.ndarray:
+        if side == 'both':
+            values = sum((self.ranks.get((_side, rank_type), []) for _side in ('head', 'tail')), [])
+        else:
+            values = self.ranks.get((side, rank_type), [])
+        return np.asarray(values, dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        mean_rank = {}
-        mean_reciprocal_rank = {}
-        hits_at_k = {}
+        mean_rank = defaultdict(dict)
+        mean_reciprocal_rank = defaultdict(dict)
+        hits_at_k = defaultdict(dict)
+        adjusted_mean_rank = {}
 
-        for rank_type in RANK_TYPES:
-            ranks = np.asarray(self.ranks.get(rank_type), dtype=np.float64)
-            hits_at_k[rank_type] = {
-                k: np.mean(ranks <= k)
-                for k in self.ks
-            }
-            mean_rank[rank_type] = np.mean(ranks)
-            mean_reciprocal_rank[rank_type] = np.mean(np.reciprocal(ranks))
+        for side in SIDES:
+            for rank_type in RANK_TYPES:
+                ranks = self._get_ranks(side=side, rank_type=rank_type)
+                if len(ranks) < 1:
+                    continue
+                hits_at_k[side][rank_type] = {
+                    k: np.mean(ranks <= k) if isinstance(k, int) else np.mean(ranks <= int(self.num_entities * k))
+                    for k in self.ks
+                }
+                mean_rank[side][rank_type] = np.mean(ranks)
+                mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
 
-        adjusted_ranks = np.asarray(self.ranks.get(RANK_AVERAGE_ADJUSTED), dtype=np.float64)
-        adjusted_mean_rank = np.mean(adjusted_ranks)
+            adjusted_ranks = self._get_ranks(side=side, rank_type=RANK_AVERAGE_ADJUSTED)
+            if len(adjusted_ranks) < 1:
+                continue
+            adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
 
         # Clear buffers
         self.ranks.clear()
 
         return RankBasedMetricResults(
-            mean_rank=mean_rank,
-            mean_reciprocal_rank=mean_reciprocal_rank,
-            hits_at_k=hits_at_k,
+            mean_rank=dict(mean_rank),
+            mean_reciprocal_rank=dict(mean_reciprocal_rank),
+            hits_at_k=dict(hits_at_k),
             adjusted_mean_rank=adjusted_mean_rank
         )

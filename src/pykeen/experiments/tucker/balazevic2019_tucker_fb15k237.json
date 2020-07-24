@@ -1,10 +1,10 @@
 {
   "metadata": {
     "title": "Learn FB15K-237 Data Set with TuckER as described by Balazevic et al., 2019",
-    "comments": "No label smoothing has been used for FB15k. Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs. In the code 500 was the default value for all datasets, that's why we assume that this is the number of epochs."
+    "comments": "No label smoothing has been used for FB15k. Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs. In the code 500 was the default value for all datasets, that's why we assume that this is the number of epochs. For evaluation, the non-deterministic rank is used, cf. https://github.com/ibalazevic/TuckER/blob/63dbba8751670db0d807579303679c0a2c266130/main.py#L78 ."
   },
   "pipeline": {
-    "dataset": "fb15k",
+    "dataset": "fb15k237",
     "dataset_kwargs": {
       "create_inverse_triples": true
     },
@@ -34,6 +34,18 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.266,
+        "3": 0.394,
+        "10": 0.544
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.358
     }
   }
 }

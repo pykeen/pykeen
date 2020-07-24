@@ -6,15 +6,14 @@ import logging
 import os
 import re
 from collections import Counter, defaultdict
-from copy import deepcopy
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import torch
-from tqdm import tqdm
 
-from .instances import LCWAInstances, OWAInstances
+from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
+from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, slice_triples
 
@@ -39,7 +38,7 @@ def _create_multi_label_tails_instance(
 
     '''
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
-    https://github.com/mali-git/POEM_develop/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
+    https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
     '''
     mapped_triples = mapped_triples.cpu().detach().numpy()
 
@@ -326,9 +325,9 @@ class TriplesFactory:
 
         return False
 
-    def create_owa_instances(self) -> OWAInstances:
-        """Create OWA instances for this factory's triples."""
-        return OWAInstances(
+    def create_slcwa_instances(self) -> SLCWAInstances:
+        """Create sLCWA instances for this factory's triples."""
+        return SLCWAInstances(
             mapped_triples=self.mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
@@ -372,6 +371,7 @@ class TriplesFactory:
         ratios: Union[float, Sequence[float]] = 0.8,
         *,
         random_state: Union[None, int, np.random.RandomState] = None,
+        randomize_cleanup: bool = False,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
@@ -381,6 +381,8 @@ class TriplesFactory:
          The final ratio can be omitted because that can be calculated. Third, all ratios can be explicitly set in
          order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is 1.0.
         :param random_state: The random state used to shuffle and split the triples in this factory.
+        :param randomize_cleanup: If true, uses the non-deterministic method for moving triples to the training set.
+         This has the advantage that it doesn't necessarily have to move all of them, but it might be slower.
 
         .. code-block:: python
 
@@ -414,23 +416,36 @@ class TriplesFactory:
         elif ratio_sum > 1.0:
             raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
 
-        split_idxs = [
+        sizes = [
             int(split_ratio * n_triples)
             for split_ratio in ratios
         ]
         # Take cumulative sum so the get separated properly
-        split_idxs = np.cumsum(split_idxs)
+        split_idxs = np.cumsum(sizes)
 
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
         logger.info(f'split triples to groups of sizes {[triples.shape[0] for triples in triples_groups]}')
 
+        # Make sure that the first element has all the right stuff in it
+        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+            actual_size = triples.shape[0]
+            actual_ratio = actual_size / exp_size * exp_ratio
+            if actual_size != exp_size:
+                logger.warning(
+                    f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
+                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.'
+                )
+
         # Make new triples factories for each group
         return [
             TriplesFactory(
                 triples=triples,
-                entity_to_id=deepcopy(self.entity_to_id),
-                relation_to_id=deepcopy(self.relation_to_id),
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
+                compact_id=False,
             )
             for triples in triples_groups
         ]
@@ -480,6 +495,127 @@ class TriplesFactory:
         logger.info(f'removing {len(relations)}/{self.num_relations} relations'
                     f' and {idx.sum()}/{self.num_triples} triples')
         return TriplesFactory(triples=self.triples[idx])
+
+    def entity_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
+
+        :param top: The number of top entities to show. Defaults to 100.
+
+        .. warning::
+
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+        """
+        text = [f'{h} {t}' for h, _, t in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def relation_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
+
+        :param top: The number of top relations to show. Defaults to 100.
+
+        .. warning::
+
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+        """
+        text = [r for _, r, _ in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def _word_cloud(self, *, text: List[str], top: int):
+        try:
+            from word_cloud.word_cloud_generator import WordCloud
+        except ImportError:
+            logger.warning(
+                'Could not import module `word_cloud`. '
+                'Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`',
+            )
+            return
+
+        from IPython.core.display import HTML
+        word_cloud = WordCloud()
+        return HTML(word_cloud.get_embed_code(text=text, topn=top))
+
+
+def _tf_cleanup_all(
+    triples_groups: List[np.ndarray],
+    *,
+    random_state: Union[None, int, np.random.RandomState] = None,
+) -> List[np.ndarray]:
+    """Cleanup a list of triples array with respect to the first array."""
+    reference, *others = triples_groups
+    rv = []
+    for other in others:
+        if random_state is not None:
+            reference, other = _tf_cleanup_randomized(reference, other, random_state)
+        else:
+            reference, other = _tf_cleanup_deterministic(reference, other)
+        rv.append(other)
+    return [reference, *rv]
+
+
+def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Cleanup a triples array (testing) with respect to another (training)."""
+    move_id_mask = _prepare_cleanup(training, testing)
+
+    training = np.concatenate([training, testing[move_id_mask]])
+    testing = testing[~move_id_mask]
+
+    return training, testing
+
+
+def _tf_cleanup_randomized(
+    training: np.ndarray,
+    testing: np.ndarray,
+    random_state: Union[None, int, np.random.RandomState] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
+
+    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
+    2. Choose a triple to move, recalculate move_id_mask
+    3. Continue until move_id_mask has no true bits
+    """
+    if random_state is None:
+        random_state = np.random.randint(0, 2 ** 32 - 1)
+        logger.warning('Using random_state=%s', random_state)
+    if isinstance(random_state, int):
+        random_state = np.random.RandomState(random_state)
+
+    move_id_mask = _prepare_cleanup(training, testing)
+
+    # While there are still triples that should be moved to the training set
+    while move_id_mask.any():
+        # Pick a random triple to move over to the training triples
+        idx = random_state.choice(move_id_mask.nonzero()[0])
+        training = np.concatenate([training, testing[idx].reshape(1, -1)])
+
+        # Recalculate the testing triples without that index
+        testing_mask = np.ones_like(move_id_mask)
+        testing_mask[idx] = False
+        testing = testing[testing_mask]
+
+        # Recalculate the training entities, testing entities, to_move, and move_id_mask
+        move_id_mask = _prepare_cleanup(training, testing)
+
+    return training, testing
+
+
+def _prepare_cleanup(training: np.ndarray, testing: np.ndarray) -> np.ndarray:
+    to_move_mask = None
+    for col in [[0, 2], 1]:
+        training_ids, test_ids = [np.unique(triples[:, col]) for triples in [training, testing]]
+        to_move = test_ids[~np.isin(test_ids, training_ids)]
+        this_to_move_mask = np.isin(testing[:, col], to_move)
+        if this_to_move_mask.ndim > 1:
+            this_to_move_mask = this_to_move_mask.any(axis=1)
+        if to_move_mask is None:
+            to_move_mask = this_to_move_mask
+        else:
+            to_move_mask = this_to_move_mask | to_move_mask
+
+    return to_move_mask
 
     def new_with_restriction(
         self,

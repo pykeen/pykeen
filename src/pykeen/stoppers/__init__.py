@@ -15,7 +15,7 @@ The following code will create a scenario in which training will stop
 ...     optimizer_kwargs=dict(lr=0.01),
 ...     loss='marginranking',
 ...     loss_kwargs=dict(margin=1),
-...     training_loop='owa',
+...     training_loop='slcwa',
 ...     training_kwargs=dict(num_epochs=100, batch_size=128),
 ...     negative_sampler='basic',
 ...     negative_sampler_kwargs=dict(num_negs_per_pos=1),
@@ -36,8 +36,6 @@ __all__ = [
     'Stopper',
     'NopStopper',
     'EarlyStopper',
-    'StopperCallback',
-    'stoppers',
     'get_stopper_cls',
 ]
 
@@ -47,7 +45,7 @@ _STOPPERS: Collection[Type[Stopper]] = {
     EarlyStopper,
 }
 
-#: A mapping of training loops' names to their implementations
+#: A mapping of stoppers' names to their implementations
 stoppers: Mapping[str, Type[Stopper]] = {
     normalize_string(cls.__name__, suffix=_STOPPER_SUFFIX): cls
     for cls in _STOPPERS
@@ -55,7 +53,11 @@ stoppers: Mapping[str, Type[Stopper]] = {
 
 
 def get_stopper_cls(query: Union[None, str, Type[Stopper]]) -> Type[Stopper]:
-    """Get the training loop class."""
+    """Look up a stopper class by name (case/punctuation insensitive) in :data:`pykeen.stoppers.stoppers`.
+
+    :param query: The name of the stopper (case insensitive, punctuation insensitive).
+    :return: The stopper class
+    """
     return get_cls(
         query,
         base=Stopper,

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Learn WN18RR Data Set with RotatE as described by Sun et al., 2019; https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/best_config.sh",
-    "comments": "Could not find number of epochs since early stopping has been applied."
+    "comments": "Could not find number of epochs. The evaluation uses the non-deterministic rank, cf. https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/a0a3cf75e8e324ef113472489a16927c39c997b2/codes/model.py#L406 ."
   },
   "pipeline": {
     "dataset": "wn18rr",
@@ -19,7 +19,7 @@
       "adversarial_temperature": 0.5,
       "margin": 6
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1024
@@ -30,6 +30,21 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 3340
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.428,
+        "3": 0.492,
+        "10": 0.571
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.476
     }
   }
 }

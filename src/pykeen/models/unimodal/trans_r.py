@@ -22,16 +22,27 @@ __all__ = [
 
 
 class TransR(EntityRelationEmbeddingModel):
-    """An implementation of TransR from [lin2015]_.
+    r"""An implementation of TransR from [lin2015]_.
 
-    This model extends TransE and TransH by considering different vector spaces for entities and relations.
+    TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
+    different objects and therefore represents them in different vector spaces.
 
-    Constraints:
-     * $||h||_2 <= 1$: Done
-     * $||r||_2 <= 1$: Done
-     * $||t||_2 <= 1$: Done
-     * $||h*M_r||_2 <= 1$: Done
-     * $||t*M_r||_2 <= 1$: Done
+    For a triple $(h,r,t) \in \mathbb{K}$, the entity embeddings, $\textbf{e}_h, \textbf{e}_t \in \mathbb{R}^d$,
+    are first projected into the relation space by means of a relation-specific projection matrix
+    $\textbf{M}_{r} \in \mathbb{R}^{k \times d}$. With relation embedding $\textbf{r}_r \in \mathbb{R}^k$, the
+    interaction model is defined similarly to TransE with:
+
+    .. math::
+
+        f(h,r,t) = -\|\textbf{M}_{r}\textbf{e}_h + \textbf{r}_r - \textbf{M}_{r}\textbf{e}_t\|_{p}^2
+
+    The following constraints are applied:
+
+     * $\|\textbf{e}_h\|_2 \leq 1$
+     * $\|\textbf{r}_r\|_2 \leq 1$
+     * $\|\textbf{e}_t\|_2 \leq 1$
+     * $\|\textbf{M}_{r}\textbf{e}_h\|_2 \leq 1$
+     * $\|\textbf{M}_{r}\textbf{e}_t\|_2 \leq 1$
 
     .. seealso::
 

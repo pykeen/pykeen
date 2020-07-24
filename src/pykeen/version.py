@@ -11,11 +11,16 @@ __all__ = [
     'get_git_hash',
 ]
 
-VERSION = '0.1.2-dev'
+VERSION = '1.0.3-dev'
 
 
 def get_git_hash() -> str:
-    """Get the PyKEEN git hash."""
+    """Get the PyKEEN git hash.
+
+    :return:
+        The git hash, equals 'UNHASHED' if encountered CalledProcessError, signifying that the
+        code is not installed in development mode.
+    """
     with open(os.devnull, 'w') as devnull:
         try:
             ret = check_output(  # noqa: S603,S607
@@ -29,8 +34,13 @@ def get_git_hash() -> str:
             return ret.strip().decode('utf-8')[:8]
 
 
-def get_version(with_git_hash: bool = False):
-    """Get the PyKEEN version string, including a git hash."""
+def get_version(with_git_hash: bool = False) -> str:
+    """Get the PyKEEN version string, including a git hash.
+
+    :param with_git_hash:
+        If set to True, the git hash will be appended to the version.
+    :return: The PyKEEN version as well as the git hash, if the parameter with_git_hash was set to true.
+    """
     return f'{VERSION}-{get_git_hash()}' if with_git_hash else VERSION
 
 

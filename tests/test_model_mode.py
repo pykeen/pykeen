@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 
-from pykeen.datasets.nations import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.triples import TriplesFactory
@@ -27,7 +27,7 @@ class TestBaseModel(unittest.TestCase):
         """Set up the test case with a triples factory and TransE as an example model."""
         self.batch_size = 16
         self.embedding_dim = 8
-        self.factory = NationsTrainingTriplesFactory()
+        self.factory = Nations().training
         self.model = TransE(self.factory, embedding_dim=self.embedding_dim).to_device_()
 
     def _check_scores(self, scores) -> None:

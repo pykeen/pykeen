@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Learn WN18 Data Set with HolE as described by Nickel et al., 2016",
-    "comments": "Based on https://github.com/mnick/holographic-embeddings/blob/master/run_hole_wn18.sh, however it is not sure whether this is the correct setting"
+    "comments": "Based on https://github.com/mnick/holographic-embeddings/blob/master/run_hole_wn18.sh, however it is not sure whether this is the correct setting. The evaluation uses the non-deterministic rank, as seen from https://github.com/mnick/holographic-embeddings/blob/c2db6e1554e671ab8e6acace78ec1fd91d6a4b90/kg/base.py#L198."
   },
   "pipeline": {
     "dataset": "wn18",
@@ -18,7 +18,7 @@
       "reduction": "mean",
       "margin": 0.2
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
@@ -29,6 +29,18 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.930,
+        "3": 0.945,
+        "10": 0.949
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.938
     }
   }
 }

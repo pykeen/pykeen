@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Learn WN18RR Data Set with ConvKB as described by Nguyen et al., 2018",
-    "comments": "regularization weight is set to 0.0005, because in the paper the regularization term is multiplied with (regularization weight)/2"
+    "comments": "regularization weight is set to 0.0005, because in the paper the regularization term is multiplied with (regularization weight)/2. The evaluation is done with the optimistic rank, cf. https://github.com/daiquocnguyen/ConvKB/blob/ba02c0665a80751676289a8d5570dc420465a9ff/eval.py#L207-L236."
   },
   "pipeline": {
     "dataset": "wn18rr",
@@ -26,7 +26,7 @@
     "loss_kwargs": {
       "reduction": "mean"
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "bernoulli",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
@@ -37,6 +37,19 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "best": 2554
+    },
+    "hits_at_k": {
+      "best": {
+        "10": 0.525
+      }
+    },
+    "mean_reciprocal_rank": {
+      "best": 0.248
     }
   }
 }

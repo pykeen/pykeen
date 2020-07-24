@@ -23,7 +23,7 @@
       "reduction": "mean",
       "margin": 1
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "bernoulli",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
@@ -34,6 +34,16 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "unknown": {
+        "10": 0.823
+      }
+    },
+    "mean_rank": {
+      "unknown": 388
     }
   }
 }

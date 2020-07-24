@@ -1,4 +1,4 @@
-sudo: true
+os: linux
 cache: pip
 dist: xenial
 language: python
@@ -13,6 +13,8 @@ jobs:
       env: TOXENV=manifest
     - name: "Check code style"
       env: TOXENV=flake8
+    - name: "Check documentation with darglint"
+      env: TOXENV=darglint
     # docs stage
     - name: "Check RST documentation style"
       stage: docs
@@ -28,11 +30,11 @@ jobs:
     - name: "Test slow unit tests"
       stage: slow_tests
       env: TOXENV=integration
-matrix:
   allow_failures:
-    - env: TOXENV=xenon
+    - env: TOXENV=darglint
 install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
+  - sh -c 'if [ "$TOXENV" = "docs" ]; then sudo apt-get install graphviz; fi'
 script:
   - tox
 after_success:

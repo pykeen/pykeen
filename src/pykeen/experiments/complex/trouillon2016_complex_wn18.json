@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Learn WN18 Data Set with ComplEx as described by Trouillon et al., 2016",
-    "comments": "In the paper it is not mentioned that they compute the mean of the vector norms as done in the published code base."
+    "comments": "In the paper it is not mentioned that they compute the mean of the vector norms as done in the published code base.  The rank type can be found at https://github.com/ttrouill/complex/blob/67fef2324d5a7695f7b932b5606d2e4b6de09a41/efe/evaluation.py#L295."
   },
   "pipeline": {
     "dataset": "wn18",
@@ -24,7 +24,7 @@
     "loss_kwargs": {
       "reduction": "mean"
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
@@ -35,6 +35,18 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "mean_reciprocal_rank": {
+      "best": 0.941
+    },
+    "hits_at_k": {
+      "best": {
+        "1": 0.936,
+        "3": 0.945,
+        "10": 0.947
+      }
     }
   }
 }

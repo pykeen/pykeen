@@ -7,7 +7,11 @@ PyKEEN
    :name: quickstart
    :maxdepth: 2
 
-   first_steps
+   tutorial/first_steps
+   tutorial/byod
+   tutorial/understanding_evaluation
+   tutorial/running_hpo
+   tutorial/using_mlflow
 
 .. toctree::
    :caption: Reference
@@ -21,9 +25,12 @@ PyKEEN
    reference/training
    reference/stoppers
    reference/losses
+   reference/regularizers
+   reference/trackers
    reference/evaluation/index
-   reference/sampling
+   reference/negative_sampling
    reference/hpo
+   reference/lookup
 
 .. toctree::
    :caption: Appendix

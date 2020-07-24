@@ -9,10 +9,10 @@ from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import torch
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
-from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
+from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
@@ -50,7 +50,7 @@ class _AbstractEvaluatorTests:
         self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
 
         # Use small test dataset
-        self.factory = NationsTrainingTriplesFactory()
+        self.factory = Nations().training
 
         # Use small model (untrained)
         self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
@@ -154,16 +154,27 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, RankBasedMetricResults)
 
         # Check value ranges
-        for mr in result.mean_rank.values():
-            assert isinstance(mr, float)
-            assert 1 <= mr <= self.factory.num_entities
-        for mrr in result.mean_reciprocal_rank.values():
-            assert isinstance(mrr, float)
-            assert 0 < mrr <= 1
-        for hits_at_k in result.hits_at_k.values():
-            for h in hits_at_k.values():
-                assert isinstance(h, float)
-                assert 0 <= h <= 1
+        for side, all_type_mr in result.mean_rank.items():
+            assert side in SIDES
+            for rank_type, mr in all_type_mr.items():
+                assert rank_type in RANK_TYPES
+                assert isinstance(mr, float)
+                assert 1 <= mr <= self.factory.num_entities
+        for side, all_type_mrr in result.mean_reciprocal_rank.items():
+            assert side in SIDES
+            for rank_type, mrr in all_type_mrr.items():
+                assert rank_type in RANK_TYPES
+                assert isinstance(mrr, float)
+                assert 0 < mrr <= 1
+        for side, all_type_hits_at_k in result.hits_at_k.items():
+            assert side in SIDES
+            for rank_type, hits_at_k in all_type_hits_at_k.items():
+                assert rank_type in RANK_TYPES
+                for k, h in hits_at_k.items():
+                    assert isinstance(k, int)
+                    assert 0 < k < self.factory.num_entities
+                    assert isinstance(h, float)
+                    assert 0 <= h <= 1
 
         # TODO: Validate with data?
 
@@ -242,7 +253,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
         batch_size = 4
-        factory = NationsTrainingTriplesFactory()
+        factory = Nations().training
         all_triples = factory.mapped_triples
         batch = all_triples[:batch_size, :]
 
@@ -452,7 +463,7 @@ class TestEvaluationStructure(unittest.TestCase):
         """Prepare for testing the evaluation structure."""
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.model = DummyModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
 
     def test_evaluation_structure(self):

@@ -12,8 +12,9 @@ import numpy
 from .stopper import Stopper
 from ..evaluation import Evaluator
 from ..models.base import Model
+from ..trackers import ResultTracker
 from ..triples import TriplesFactory
-from ..utils import ResultTracker
+from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     'smaller_than_any_buffer_element',
@@ -64,6 +65,7 @@ def larger_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: 
 StopperCallback = Callable[[Stopper, Union[int, float]], None]
 
 
+@fix_dataclass_init_docs
 @dataclass
 class EarlyStopper(Stopper):
     """A harness for early stopping."""
@@ -151,7 +153,7 @@ class EarlyStopper(Stopper):
         self.evaluation_slice_size = self.evaluator.slice_size
 
         self.result_tracker.log_metrics(
-            metrics=metric_results.to_json(),
+            metrics=metric_results.to_flat_dict(),
             step=self.number_evaluations,
             prefix='validation',
         )

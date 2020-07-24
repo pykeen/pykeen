@@ -2,6 +2,7 @@
 
 """Training loops for KGE models using multi-modal information."""
 
+import gc
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
@@ -9,20 +10,21 @@ from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
-from tqdm import tqdm, trange
 
 from ..losses import Loss
 from ..models.base import Model
 from ..stoppers import Stopper
+from ..tqdmw import tqdm, trange
+from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import ResultTracker, is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string
 
 __all__ = [
     'TrainingLoop',
     'NonFiniteLossError',
-    'AssumptionLossMismatchError',
+    'TrainingApproachLossMismatchError',
     'SubBatchingNotSupportedError',
 ]
 
@@ -33,8 +35,8 @@ class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
 
 
-class AssumptionLossMismatchError(TypeError):
-    """An exception when an illegal loss function is used with a given training assumption."""
+class TrainingApproachLossMismatchError(TypeError):
+    """An exception when an illegal loss function is used with a given training approach."""
 
 
 class SubBatchingNotSupportedError(NotImplementedError):
@@ -87,9 +89,9 @@ class TrainingLoop(ABC):
         self.losses_per_epochs = []
 
         if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
-            raise AssumptionLossMismatchError(
+            raise TrainingApproachLossMismatchError(
                 f'Can not use loss {self.model.loss.__class__.__name__}'
-                f' with training assumption {self.__class__.__name__}',
+                f' with training approach {self.__class__.__name__}',
             )
 
         if self.model.is_mr_loss:
@@ -143,7 +145,7 @@ class TrainingLoop(ABC):
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
-            The type of sampler to use. At the moment OWA in R-GCN is the only user of schlichtkrull sampling.
+            The type of sampler to use. At the moment sLCWA in R-GCN is the only user of schlichtkrull sampling.
         :param continue_training:
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:
@@ -188,6 +190,9 @@ class TrainingLoop(ABC):
             num_workers=num_workers,
         )
 
+        # Ensure the release of memory
+        torch.cuda.empty_cache()
+
         # Clear optimizer
         if clear_optimizer:
             self.optimizer = None
@@ -222,7 +227,7 @@ class TrainingLoop(ABC):
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
-            The type of sampler to use. At the moment OWA in R-GCN is the only user of schlichtkrull sampling.
+            The type of sampler to use. At the moment sLCWA in R-GCN is the only user of schlichtkrull sampling.
         :param continue_training:
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:
@@ -268,9 +273,6 @@ class TrainingLoop(ABC):
         if self.model.is_mr_loss and label_smoothing > 0.:
             raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
 
-        # Ensure the model is on the correct device
-        self.model: Model = self.model.to(self.device)
-
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
             # Reset the weights
@@ -285,6 +287,9 @@ class TrainingLoop(ABC):
         elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
 
+        # Ensure the model is on the correct device
+        self.model: Model = self.model.to(self.device)
+
         # Create Sampler
         if sampler == 'schlichtkrull':
             sampler = GraphSampler(self.triples_factory, num_samples=sub_batch_size)
@@ -295,14 +300,6 @@ class TrainingLoop(ABC):
 
         if num_workers is None:
             num_workers = 0
-
-        train_data_loader = DataLoader(
-            sampler=sampler,
-            dataset=self.training_instances,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers,
-        )
 
         # Bind
         num_training_instances = self.training_instances.num_instances
@@ -318,6 +315,14 @@ class TrainingLoop(ABC):
         else:
             epochs = range(1, 1 + num_epochs)
             logger.debug(f'using stopper: {stopper}')
+
+        train_data_loader = DataLoader(
+            sampler=sampler,
+            dataset=self.training_instances,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers,
+        )
 
         # Training Loop
         for epoch in epochs:
@@ -349,30 +354,15 @@ class TrainingLoop(ABC):
                 for start in range(0, current_batch_size, sub_batch_size):
                     stop = min(start + sub_batch_size, current_batch_size)
 
-                    # forward pass
-                    loss = self._process_batch(
-                        batch=batch,
-                        start=start,
-                        stop=stop,
-                        label_smoothing=label_smoothing,
-                        slice_size=slice_size
+                    # forward pass call
+                    current_epoch_loss += self._forward_pass(
+                        batch,
+                        start,
+                        stop,
+                        current_batch_size,
+                        label_smoothing,
+                        slice_size,
                     )
-
-                    # raise error when non-finite loss occurs (NaN, +/-inf)
-                    if not torch.isfinite(loss):
-                        raise NonFiniteLossError('Loss is non-finite.')
-
-                    # correction for loss reduction
-                    if self.model.loss.reduction == 'mean':
-                        this_sub_batch_size = stop - start
-                        loss *= (this_sub_batch_size / current_batch_size)
-
-                    # backward pass
-                    loss.backward()
-                    current_epoch_loss += loss.item()
-
-                    # reset the regularizer to free the computational graph
-                    self.model.regularizer.reset()
 
                 # when called by batch_size_search(), the parameter update should not be applied.
                 if not only_size_probing:
@@ -389,22 +379,59 @@ class TrainingLoop(ABC):
 
                 evaluated_once = True
 
-            if not only_size_probing:
-                # Track epoch loss
-                epoch_loss = current_epoch_loss / num_training_instances
-                self.losses_per_epochs.append(epoch_loss)
-                result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+            del batch
+            del batches
+            gc.collect()
+            self.optimizer.zero_grad()
+            self._free_graph_and_cache()
 
-                # Print loss information to console
-                epochs.set_postfix({
-                    'loss': self.losses_per_epochs[-1],
-                    'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
-                })
+            # When size probing we don't need the losses
+            if only_size_probing:
+                return None
+
+            # Track epoch loss
+            epoch_loss = current_epoch_loss / num_training_instances
+            self.losses_per_epochs.append(epoch_loss)
+            result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+
+            # Print loss information to console
+            epochs.set_postfix({
+                'loss': self.losses_per_epochs[-1],
+                'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
+            })
 
             if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop():
                 return self.losses_per_epochs
 
         return self.losses_per_epochs
+
+    def _forward_pass(self, batch, start, stop, current_batch_size, label_smoothing, slice_size):
+        # forward pass
+        loss = self._process_batch(
+            batch=batch,
+            start=start,
+            stop=stop,
+            label_smoothing=label_smoothing,
+            slice_size=slice_size
+        )
+
+        # raise error when non-finite loss occurs (NaN, +/-inf)
+        if not torch.isfinite(loss):
+            raise NonFiniteLossError('Loss is non-finite.')
+
+        # correction for loss reduction
+        if self.model.loss.reduction == 'mean':
+            this_sub_batch_size = stop - start
+            loss *= (this_sub_batch_size / current_batch_size)
+
+        # backward pass
+        loss.backward()
+        current_epoch_loss = loss.item()
+
+        # reset the regularizer to free the computational graph
+        self.model.regularizer.reset()
+
+        return current_epoch_loss
 
     @staticmethod
     @abstractmethod
@@ -459,6 +486,7 @@ class TrainingLoop(ABC):
         while True:
             logger.debug(f'Trying batch_size={batch_size}.')
             try:
+                self._free_graph_and_cache()
                 self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=None, only_size_probing=True)
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
@@ -468,26 +496,22 @@ class TrainingLoop(ABC):
                     logger.debug(f"batch_size={batch_size} does not fit into your memory with these parameters.")
                     break
 
+                reached_max = True
+                batch_size //= 2
+
                 if evaluated_once:
-                    # Weird error requiring to half the batch size to avoid OOM
-                    batch_size //= 2
                     logger.info(f'Concluded batch_size search with batch_size={batch_size}.')
                     break
 
                 logger.debug(f'batch_size={batch_size} was too big, trying less now.')
-                reached_max = True
-                batch_size //= 2
             else:
                 self._free_graph_and_cache()
                 if not reached_max and batch_size <= self.triples_factory.num_triples:
                     batch_size *= 2
                 else:
-                    # Weird error requiring to half the batch size to avoid OOM
-                    batch_size //= 2
                     logger.info(f'Concluded batch_size search with batch_size={batch_size}.')
+                    evaluated_once = True
                     break
-
-                evaluated_once = True
 
         return batch_size, evaluated_once
 
@@ -548,9 +572,9 @@ class TrainingLoop(ABC):
         supports_sub_batching = True
 
         try:
+            # The cache of the previous run has to be freed to allow accurate memory availability estimates
+            self._free_graph_and_cache()
             logger.debug(f'Trying batch_size {batch_size} for training now.')
-            self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
-            # A second run simulates the grow in Pytorch cache due to outside bindings of the results
             self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
@@ -572,13 +596,7 @@ class TrainingLoop(ABC):
                 while True:
                     logger.debug(f'Trying sub_batch_size {sub_batch_size} now.')
                     try:
-                        self._train(
-                            num_epochs=1,
-                            batch_size=batch_size,
-                            sub_batch_size=sub_batch_size,
-                            only_size_probing=True
-                        )
-                        # A second run simulates the grow in Pytorch cache due to outside bindings of the results
+                        self._free_graph_and_cache()
                         self._train(
                             num_epochs=1,
                             batch_size=batch_size,
@@ -597,8 +615,6 @@ class TrainingLoop(ABC):
                         sub_batch_size //= 2
                     else:
                         finished_search = True
-                        # Weird error requiring to half the batch size to avoid OOM
-                        sub_batch_size //= 2
                         logger.info(f'Concluded search with sub_batch_size {sub_batch_size}.')
                         break
 

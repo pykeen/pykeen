@@ -2,13 +2,16 @@
 
 """Utilities for PyKEEN."""
 
+import ftplib
+import json
 import logging
 import random
+from io import BytesIO
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
-import mlflow
 import numpy
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 
@@ -27,15 +30,15 @@ __all__ = [
     'split_list_in_batches_iter',
     'split_list_in_batches',
     'normalize_string',
+    'normalized_lookup',
     'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
-    'ResultTracker',
-    'MLFlowResultTracker',
     'get_embedding_in_canonical_shape',
     'set_random_seed',
     'NoRandomSeedNecessary',
     'Result',
+    'fix_dataclass_init_docs',
 ]
 
 logger = logging.getLogger(__name__)
@@ -122,6 +125,14 @@ def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     return s
 
 
+def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
+    """Make a normalized lookup dict."""
+    return {
+        normalize_string(cls.__name__): cls
+        for cls in classes
+    }
+
+
 def get_cls(
     query: Union[None, str, Type[X]],
     base: Type[X],
@@ -168,7 +179,7 @@ def flatten_dictionary(
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
-    return {sep.join(k): v for k, v in partial_result.items()}
+    return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
 
 def _flatten_dictionary(
@@ -184,58 +195,6 @@ def _flatten_dictionary(
         else:
             result[new_prefix] = v
     return result
-
-
-class ResultTracker:
-    """A class that tracks the results from a pipeline run."""
-
-    def start_run(self, run_name: Optional[str] = None) -> None:
-        """Start a run with an optional name."""
-
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:
-        """Log parameters to result store."""
-
-    def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None, prefix: Optional[str] = None) -> None:
-        """Log metrics to result store.
-
-        :param metrics: The metrics to log.
-        :param step: An optional step to attach the metrics to (e.g. the epoch).
-        :param prefix: An optional prefix to prepend to every key in metrics.
-        """
-
-    def end_run(self) -> None:
-        """End a run.
-
-        HAS to be called after the experiment is finished.
-        """
-
-
-class MLFlowResultTracker(ResultTracker):
-    """A tracker for MLFlow."""
-
-    def __init__(self, tracking_uri: Optional[str] = None):
-        if tracking_uri is None:
-            tracking_uri = 'localhost:5000'
-        mlflow.set_tracking_uri(tracking_uri)
-
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
-        mlflow.start_run(run_name=run_name)
-
-    def log_metrics(
-        self,
-        metrics: Dict[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
-    ) -> None:  # noqa: D102
-        metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
-        mlflow.log_metrics(metrics=metrics, step=step)
-
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
-        params = flatten_dictionary(dictionary=params, prefix=prefix)
-        mlflow.log_params(params=params)
-
-    def end_run(self) -> None:  # noqa: D102
-        mlflow.end_run()
 
 
 def get_embedding_in_canonical_shape(
@@ -365,6 +324,19 @@ class Result:
         """Save the results to the directory."""
         raise NotImplementedError
 
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save the results to the directory in an FTP server."""
+        raise NotImplementedError
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: A client from :func:`boto3.client`, if already instantiated
+        """
+        raise NotImplementedError
+
 
 def get_embedding(
     num_embeddings: int,
@@ -428,3 +400,46 @@ def imag_part(
     """Get the imaginary part from a complex tensor."""
     dim = x.shape[-1] // 2
     return x[..., dim:]
+
+
+def fix_dataclass_init_docs(cls: Type) -> Type:
+    """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
+
+    :param cls: The class whose docstring needs fixing
+    :returns: The class that was passed so this function can be used as a decorator
+
+    .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
+    """
+    cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
+    return cls
+
+
+def get_model_io(model) -> BytesIO:
+    """Get the model as bytes."""
+    model_io = BytesIO()
+    torch.save(model, model_io)
+    model_io.seek(0)
+    return model_io
+
+
+def get_json_bytes_io(obj) -> BytesIO:
+    """Get the JSON as bytes."""
+    obj_str = json.dumps(obj, indent=2)
+    obj_bytes = obj_str.encode('utf-8')
+    return BytesIO(obj_bytes)
+
+
+def get_df_io(df: pd.DataFrame) -> BytesIO:
+    """Get the dataframe as bytes."""
+    df_io = BytesIO()
+    df.to_csv(df_io, sep='\t', index=False)
+    df_io.seek(0)
+    return df_io
+
+
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+    """Ensure the directory exists on the FTP server."""
+    try:
+        ftp.mkd(directory)
+    except ftplib.error_perm:
+        pass  # its fine...

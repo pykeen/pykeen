@@ -24,9 +24,9 @@ executed with one of the previous examples.
     from torch.optim import Adam
     optimizer = Adam(params=model.get_grad_params())
 
-    # Pick a training assumption (OWA or LCWA)
-    from pykeen.training import OWATrainingLoop
-    training_loop = OWATrainingLoop(model=model, optimizer=optimizer)
+    # Pick a training approach (sLCWA or LCWA)
+    from pykeen.training import SLCWATrainingLoop
+    training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
 
     # Train like Cristiano Ronaldo
     training_loop.train(num_epochs=5, batch_size=256)
@@ -41,8 +41,3 @@ executed with one of the previous examples.
     # Evaluate
     results = evaluator.evaluate(mapped_triples, batch_size=1024)
     print(results)
-
-Optimizing a Model
-------------------
-.. automodule:: pykeen.hpo
-    :noindex:
