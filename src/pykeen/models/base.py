@@ -572,7 +572,7 @@ class Model(nn.Module):
                 hs,
                 hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
             ], dim=-1)
-            scores[r, e:e + batch_size, :] = self.predict_scores_all_tails(hr_batch=hr_batch)
+            scores[r, e:e + batch_size, :] = self.predict_scores_all_tails(hr_batch=hr_batch).to(scores.device)
 
         # Explicitly create triples
         triples = torch.stack([
