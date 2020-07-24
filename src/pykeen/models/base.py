@@ -607,58 +607,63 @@ class Model(nn.Module):
         :return: shape: (k, 3)
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
         """
-        logger.warning(
-            f'score_all_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
-            f'score evaluations.'
-        )
+        # set model to evaluation mode
+        self.eval()
 
-        if k is None:
+        # Do not track gradients
+        with torch.no_grad():
             logger.warning(
-                'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
-                'knowledge graphs.'
+                f'score_all_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
+                f'score evaluations.'
             )
-            return self._score_all_triples(batch_size=batch_size)
 
-        # initialize buffer on device
-        result = torch.ones(0, 3, dtype=torch.long, device=self.device)
-        scores = torch.empty(0, dtype=torch.float32, device=self.device)
+            if k is None:
+                logger.warning(
+                    'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
+                    'knowledge graphs.'
+                )
+                return self._score_all_triples(batch_size=batch_size)
 
-        for r, e in itt.product(
-            range(self.num_relations),
-            range(0, self.num_entities, batch_size),
-        ):
-            # calculate batch scores
-            hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
-            hr_batch = torch.stack([
-                hs,
-                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
-            ], dim=-1)
-            top_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
+            # initialize buffer on device
+            result = torch.ones(0, 3, dtype=torch.long, device=self.device)
+            scores = torch.empty(0, dtype=torch.float32, device=self.device)
 
-            # get top scores within batch
-            top_scores, top_indices = top_scores.view(-1).topk(k=k, largest=True, sorted=False)
-            top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
-            top_triples = torch.stack([
-                top_heads,
-                top_heads.new_empty(top_heads.shape).fill_(value=r),
-                top_tails,
-            ], dim=-1)
+            for r, e in itt.product(
+                range(self.num_relations),
+                range(0, self.num_entities, batch_size),
+            ):
+                # calculate batch scores
+                hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
+                hr_batch = torch.stack([
+                    hs,
+                    hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
+                ], dim=-1)
+                top_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
 
-            # append to global top scores
-            scores = torch.cat([scores, top_scores])
-            result = torch.cat([result, top_triples])
+                # get top scores within batch
+                top_scores, top_indices = top_scores.view(-1).topk(k=k, largest=True, sorted=False)
+                top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
+                top_triples = torch.stack([
+                    top_heads,
+                    top_heads.new_empty(top_heads.shape).fill_(value=r),
+                    top_tails,
+                ], dim=-1)
 
-            # reduce size if necessary
-            if result.shape[0] > k:
-                scores, ind = scores.topk(k=k, largest=True, sorted=False)
-                result = result[ind]
+                # append to global top scores
+                scores = torch.cat([scores, top_scores])
+                result = torch.cat([result, top_triples])
 
-        # Sort final result
-        ind = scores.argsort(descending=True)
-        result = result[ind]
-        # scores = scores[ind]
+                # reduce size if necessary
+                if result.shape[0] > k:
+                    scores, ind = scores.topk(k=k, largest=True, sorted=False)
+                    result = result[ind]
 
-        return result
+            # Sort final result
+            ind = scores.argsort(descending=True)
+            result = result[ind]
+            # scores = scores[ind]
+
+            return result
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
