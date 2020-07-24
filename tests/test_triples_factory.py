@@ -118,6 +118,7 @@ class TestTriplesFactory(unittest.TestCase):
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
 
     def test_new_with_restriction(self):
+        """Test new_with_restriction()."""
         example_relation_restriction = {
             'economicaid',
             'dependent',
@@ -128,9 +129,9 @@ class TestTriplesFactory(unittest.TestCase):
             'china',
         }
         for inverse_triples in (True, False):
-            original_triples_factory = NationsTrainingTriplesFactory(
+            original_triples_factory = Nations(
                 create_inverse_triples=inverse_triples,
-            )
+            ).training
             for entity_restriction in (None, example_entity_restriction):
                 for relation_restriction in (None, example_relation_restriction):
                     # apply restriction
