@@ -556,6 +556,34 @@ class Model(nn.Module):
             scores = torch.sigmoid(scores)
         return scores
 
+    def _score_all_triples(self, batch_size: int = 1) -> torch.LongTensor:
+        """Compute and store scores for all triples."""
+        # initialize buffer on cpu
+        scores = torch.empty(self.num_relations, self.num_entities, self.num_entities, dtype=torch.float32)
+        assert self.num_entities ** 2 * self.num_relations < (2 ** 63 - 1)
+
+        for r, e in itt.product(
+            range(self.num_relations),
+            range(0, self.num_entities, batch_size),
+        ):
+            # calculate batch scores
+            hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
+            hr_batch = torch.stack([
+                hs,
+                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
+            ], dim=-1)
+            scores[r, e:e + batch_size, :] = self.predict_scores_all_tails(hr_batch=hr_batch)
+
+        # Explicitly create triples
+        triples = torch.stack([
+            torch.arange(self.num_relations).view(-1, 1, 1).repeat(1, self.num_entities, self.num_entities),
+            torch.arange(self.num_entities).view(1, -1, 1).repeat(self.num_relations, 1, self.num_entities),
+            torch.arange(self.num_entities).view(1, 1, -1).repeat(self.num_relations, self.num_entities, 1),
+        ], dim=-1).view(-1, 3)[:, [1, 0, 2]]
+        ind = scores.flatten().argsort(descending=True)
+
+        return triples[ind]
+
     def score_all_triples(
         self,
         k: Optional[int] = None,
@@ -565,14 +593,13 @@ class Model(nn.Module):
         Compute scores for all triples, optionally returning only the k highest scoring.
 
         .. note ::
-            This operation is very expensive for reasonably-sized knowledge graphs.
+            This operation is computationally very expensive for reasonably-sized knowledge graphs.
+
+        .. warning ::
+                Setting k=None may lead to huge memory requirements.
 
         :param k:
             The number of triples to return. Set to None, to keep all.
-
-            .. warning ::
-                Setting k=None may lead to huge memory requirements.
-
 
         :param batch_size:
             The batch size to use for calculating scores.
@@ -585,11 +612,12 @@ class Model(nn.Module):
             f'score evaluations.'
         )
 
-        if k is not None:
+        if k is None:
             logger.warning(
                 'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
                 'knowledge graphs.'
             )
+            return self._score_all_triples(batch_size=batch_size)
 
         # initialize buffer on device
         result = torch.ones(0, 3, dtype=torch.long, device=self.device)
@@ -608,27 +636,20 @@ class Model(nn.Module):
             top_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
 
             # get top scores within batch
-            if k is not None:
-                top_scores, top_indices = top_scores.view(-1).topk(k=k, largest=True, sorted=False)
-                top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
-                top_triples = torch.stack([
-                    top_heads,
-                    top_heads.new_empty(top_heads.shape).fill_(value=r),
-                    top_tails,
-                ], dim=-1)
-            else:
-                top_scores = top_scores.flatten()
-                top_triples = torch.cat([
-                    hr_batch.unsqueeze(dim=1).repeat(1, self.num_entities, 1),
-                    torch.arange(self.num_entities).view(1, self.num_entities, 1).repeat(hr_batch.shape[0], 1, 1)
-                ], dim=-1).view(-1, 3)
+            top_scores, top_indices = top_scores.view(-1).topk(k=k, largest=True, sorted=False)
+            top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
+            top_triples = torch.stack([
+                top_heads,
+                top_heads.new_empty(top_heads.shape).fill_(value=r),
+                top_tails,
+            ], dim=-1)
 
             # append to global top scores
             scores = torch.cat([scores, top_scores])
             result = torch.cat([result, top_triples])
 
             # reduce size if necessary
-            if k is not None and result.shape[0] > k:
+            if result.shape[0] > k:
                 scores, ind = scores.topk(k=k, largest=True, sorted=False)
                 result = result[ind]
 

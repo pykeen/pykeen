@@ -510,29 +510,37 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
+    def _test_score_all_triples(self, k: Optional[int]):
+        """Test score_all_triples."""
+        batch_size = 16
+        top_triples = self.model.score_all_triples(k=k, batch_size=batch_size)
+
+        # check type
+        assert torch.is_tensor(top_triples)
+        assert top_triples.dtype == torch.long
+
+        # check shape
+        actual_k, n_cols = top_triples.shape
+        assert n_cols == 3
+        if k is None:
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
+        else:
+            assert actual_k == min(k, self.factory.num_triples)
+
+        # check ID ranges
+        assert (top_triples >= 0).all()
+        assert top_triples[:, [0, 2]].max() < self.model.num_entities
+        assert top_triples[:, 1].max() < self.model.num_relations
+
     def test_score_all_triples(self):
         """Test score_all_triples."""
         # this is only done in one of the models
-        batch_size = 16
-        for k in [10, None]:
-            top_triples = self.model.score_all_triples(k=k, batch_size=batch_size)
+        self._test_score_all_triples(k=10)
 
-            # check type
-            assert torch.is_tensor(top_triples)
-            assert top_triples.dtype == torch.long
-
-            # check shape
-            actual_k, n_cols = top_triples.shape
-            assert n_cols == 3
-            if k is None:
-                assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
-            else:
-                assert actual_k == min(k, self.factory.num_triples)
-
-            # check ID ranges
-            assert (top_triples >= 0).all()
-            assert top_triples[:, [0, 2]].max() < self.model.num_entities
-            assert top_triples[:, 1].max() < self.model.num_relations
+    def test_score_all_triples_keep_all(self):
+        """Test score_all_triples(k=None)."""
+        # this is only done in one of the models
+        self._test_score_all_triples(k=None)
 
 
 class TestERMLP(_ModelTestCase, unittest.TestCase):
