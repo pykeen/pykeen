@@ -164,12 +164,7 @@ def _map_triples_elements_to_ids(
 
 
 def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
-    for relation in relations:
-        if relation.endswith(INVERSE_SUFFIX):
-            # We can terminate the search after finding the first inverse occurrence
-            return True
-
-    return False
+    return any(relation.endswith(INVERSE_SUFFIX) for relation in relations)
 
 
 class TriplesFactory:
