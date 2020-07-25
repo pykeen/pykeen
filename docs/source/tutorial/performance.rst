@@ -3,17 +3,20 @@ Performance Tricks
 PyKEEN uses a combination of techniques under the hood that ensure efficient calculations during both training and
 evaluation as well as try to maximize the utilization of the hardware at hand (currently focused on single GPU usage).
 
-Aligned entity/relation ID and embeddings vector position
+Entity and relation IDs
 ---------------------------------------------------------
-The foundation of the PyKEEN performance optimization is laid by a consistent and continuous numbering of all entities
-that is strictly aligned with the position in the embedding tensor. When working with knowledge graphs (KG) the entities
-and relations contained in triples are usually stored as strings. In PyKEEN KGs are handled by the TriplesFactory
-:class:`pykeen.triples.TriplesFactory`. Inside the TriplesFactory sets are created for the entities and relations
-contained in the KG. Consequently, the entities and relations are numbered uniquely from 0 to _num_unique_entities_ and
-0 to _num_unique_relations_ respectively. These numbers always correspond to the position in the embedding tensor, i.e.
-the entity with the ID 10 has the 10th position in the embedding tensor. Subsequently, the TriplesFactory translates the
-entire KG using these unique IDs to a tensor called mapped_triples, which is the only data used within PyKEEN. This
-allows PyKEEN to perform all calculations and functions without expensive string lookups and/or comparisons.
+When working with knowledge graphs (KG) the entities and relations contained in triples are usually stored as strings.
+In knowledge graph embeddings models (KGEM) we aim at learning vector representations for them, such that the chosen
+interaction function learns a useful scoring on top of them. We thus need a mapping from the string representations 
+to vectors. Moreover, for computational efficiency, we would like to store all entity/relation embeddings in matrices.
+Thus, the mapping process comprises two parts: Mapping strings to IDs, and using the IDs to access the embeddings 
+(=row indices).
+
+In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains 
+the sets of unique entity and relation labels and ensures that they are mapped to unique IDs ranging from 0 to 
+`num_unique_entities` / `num_unique_relations`. The mappings are accessible via the attributes `entity_label_to_id`
+/ `relation_label_to_id`. To improve the performance, the mapping process takes place only once, and the ID-based
+triples are stored in a tensor `mapped_triples`.
 
 Tuple broadcasting
 ------------------
