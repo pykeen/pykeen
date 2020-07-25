@@ -531,14 +531,14 @@ class TriplesFactory:
         idx = self.get_idx_for_relations(relations)
         logger.info(f'keeping {len(relations)}/{self.num_relations} relations'
                     f' and {idx.sum()}/{self.num_triples} triples in {self}')
-        return TriplesFactory(triples=self.triples[idx])
+        return TriplesFactory.from_triples(triples=self.triples[idx])
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
         idx = self.get_idx_for_relations(relations, invert=True)
         logger.info(f'removing {len(relations)}/{self.num_relations} relations'
                     f' and {idx.sum()}/{self.num_triples} triples')
-        return TriplesFactory(triples=self.triples[idx])
+        return TriplesFactory.from_triples(triples=self.triples[idx])
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
