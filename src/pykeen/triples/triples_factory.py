@@ -486,9 +486,12 @@ class TriplesFactory:
         # Make sure that the first element has all the right stuff in it
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
 
+        # TODO: We do not really need to re-map the triples, but could perform the same split as done for the
+        #       triples also for the mapped_triples
+
         # Make new triples factories for each group
         return [
-            TriplesFactory(
+            TriplesFactory.from_triples(
                 triples=triples,
                 entity_to_id=deepcopy(self.entity_to_id),
                 relation_to_id=deepcopy(self.relation_to_id),
