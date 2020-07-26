@@ -51,7 +51,7 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual({'poland', 'cuba'}, testing_tails)
 
     def test_predict_heads_with_novelties(self):
-        """Test scoring heads with labeling as novel w.r.t. training and testing"""
+        """Test scoring heads with labeling as novel w.r.t. training and testing."""
         heads_df = self.model.predict_heads('conferences', 'brazil', testing=self.testing_mapped_triples)
         self.assertEqual(['head_id', 'head_label', 'score', 'in_training', 'in_testing'], list(heads_df.columns))
         self.assertEqual(len(self.model.triples_factory.entity_to_id), len(heads_df.index))
