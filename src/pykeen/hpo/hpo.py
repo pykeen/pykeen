@@ -407,11 +407,11 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, Type[DataSet]] = None,
+    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Union[None, TriplesFactory, str] = None,
-    testing_triples_factory: Union[None, TriplesFactory, str] = None,
-    validation_triples_factory: Union[None, TriplesFactory, str] = None,
+    training_triples_factory: Union[None, str, TriplesFactory] = None,
+    testing_triples_factory: Union[None, str, TriplesFactory] = None,
+    validation_triples_factory: Union[None, str, TriplesFactory] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -582,6 +582,7 @@ def hpo_pipeline(
     study.set_user_attr('pykeen_version', get_version())
     study.set_user_attr('pykeen_git_hash', get_git_hash())
     # 1. Dataset
+    # FIXME must be addressed before merging https://github.com/pykeen/pykeen/pull/54
     # FIXME difference between dataset class and string
     # FIXME how to handle if dataset or factories were set? Should have been
     #  part of https://github.com/mali-git/POEM_develop/pull/483
