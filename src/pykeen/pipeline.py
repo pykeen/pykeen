@@ -532,7 +532,7 @@ def pipeline_from_config(
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
-    dataset: Union[None, str, Type[DataSet]] = None,
+    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training_triples_factory: Union[None, TriplesFactory, str] = None,
     testing_triples_factory: Union[None, TriplesFactory, str] = None,
