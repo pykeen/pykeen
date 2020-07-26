@@ -6,15 +6,10 @@ Models
 
 Base Classes
 ------------
-.. currentmodule:: pykeen.models.base
-.. autosummary::
-    :toctree: generated/
-
-    Model
-    EntityEmbeddingModel
-    EntityRelationEmbeddingModel
-    MultimodalModel
-
+.. automodapi:: pykeen.models.base
+    :no-inheritance-diagram:
+    :no-heading:
+    :headings: ~~
 
 Initialization
 --------------
