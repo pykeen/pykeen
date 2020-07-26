@@ -1,7 +1,7 @@
 Bring Your Own Data
 ===================
-As an alternative to using a pre-packaged dataset, the training and testing can be set
-explicitly with instances of :class:`pykeen.triples.TriplesFactory`.
+As an alternative to using a pre-packaged dataset, the training and testing can be set explicitly
+by file path or with instances of :class:`pykeen.triples.TriplesFactory`.
 
 Pre-stratified Dataset
 ----------------------
@@ -17,7 +17,7 @@ pipeline like this:
     training_path: str = ...
     testing_path: str = ...
 
-    pipeline_result = pipeline(
+    result = pipeline(
         training_triples_factory=training_path,
         testing_triples_factory=testing_path,
         model='TransE',
@@ -27,6 +27,28 @@ pipeline like this:
 PyKEEN will take care of making sure that the entities are mapped from their labels to appropriate integer
 (technically, 0-dimensional :class:`torch.LongTensor`) indexes and that the different sets of triples
 share the same mapping.
+
+This is equally applicable for the :func:`pykeen.hpo.hpo_pipeline`, which has a similar interface to
+the :func:`pykeen.pipeline.pipeline` as in:
+
+.. code-block:: python
+
+    from pykeen.triples import TriplesFactory
+    from pykeen.hpo import hpo_pipeline
+
+    training_path: str = ...
+    testing_path: str = ...
+
+    result = hpo_pipeline(
+        n_trials=30,
+        training_triples_factory=training_path,
+        testing_triples_factory=testing_path,
+        model='TransE',
+    )
+    result.save_to_directory('test_hpo_pre_stratified_transe')
+
+The remainder of the examples will be for :func:`pykeen.pipeline.pipeline`, but all work exactly the same
+for :func:`pykeen.hpo.hpo_pipeline`.
 
 If you want to add dataset-wide arguments, you can use the ``dataset_kwargs`` argument
 to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse_triples=True``.
@@ -39,7 +61,7 @@ to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse
     training_path: str = ...
     testing_path: str = ...
 
-    pipeline_result = pipeline(
+    result = pipeline(
         training_triples_factory=training_path,
         testing_triples_factory=testing_path,
         dataset_kwargs={'create_inverse_triples': True},
@@ -65,7 +87,7 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
         relation_to_id=training.relation_to_id,
     )
 
-    pipeline_result = pipeline(
+    result = pipeline(
         training_triples_factory=training,
         testing_triples_factory=testing,
         model='TransE',
@@ -103,7 +125,7 @@ desired behavior as in:
         create_inverse_triples=True,
     )
 
-    pipeline_result = pipeline(
+    result = pipeline(
         training_triples_factory=training,
         testing_triples_factory=testing,
         model='TransE',
@@ -127,7 +149,7 @@ a stratified dataset.
     tf = TriplesFactory(path=...)
     training, testing = tf.split()
 
-    pipeline_result = pipeline(
+    result = pipeline(
         training_triples_factory=training,
         testing_triples_factory=testing,
         model='TransE',
@@ -145,7 +167,7 @@ you should specify the splits:
     tf = TriplesFactory(path=...)
     training, testing, validation = tf.split([.8, .1, .1])
 
-    pipeline_result = pipeline(
+    result = pipeline(
         training_triples_factory=training,
         testing_triples_factory=testing,
         validation_triples_factory=validation,

@@ -8,8 +8,8 @@ PyKEEN
    :maxdepth: 2
 
    tutorial/first_steps
-   tutorial/byod
    tutorial/running_hpo
+   tutorial/byod
    tutorial/using_mlflow
 
 .. toctree::
