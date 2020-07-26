@@ -671,15 +671,18 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params(dict(dataset=dataset))
-
-    training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
+    dataset_instance = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training_triples_factory=training_triples_factory,
         testing_triples_factory=testing_triples_factory,
         validation_triples_factory=validation_triples_factory,
     )
+
+    if dataset is not None:
+        result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
+    else:  # means that dataset was defined by triples factories
+        result_tracker.log_params(dict(dataset='<user defined>'))
 
     if model_kwargs is None:
         model_kwargs = {}
@@ -707,7 +710,7 @@ def pipeline(  # noqa: C901
 
     model = get_model_cls(model)
     model_instance: Model = model(
-        triples_factory=training_triples_factory,
+        triples_factory=dataset_instance.training,
         **model_kwargs,
     )
     # Log model parameters
@@ -776,7 +779,7 @@ def pipeline(  # noqa: C901
     stopper: Stopper = stopper_cls(
         model=model_instance,
         evaluator=evaluator_instance,
-        evaluation_triples_factory=validation_triples_factory,
+        evaluation_triples_factory=dataset_instance.validation,
         result_tracker=result_tracker,
         **stopper_kwargs,
     )
@@ -787,8 +790,14 @@ def pipeline(  # noqa: C901
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")
-    logging.debug(f"dataset: {dataset}")
-    logging.debug(f"dataset_kwargs: {dataset_kwargs}")
+    if dataset is not None:
+        logging.debug(f"dataset: {dataset}")
+        logging.debug(f"dataset_kwargs: {dataset_kwargs}")
+    else:
+        logging.debug('training: %s', dataset_instance.training.path)
+        logging.debug('testing: %s', dataset_instance.testing.path)
+        if dataset_instance.validation:
+            logging.debug('validation: %s', dataset_instance.validation.path)
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
@@ -817,9 +826,9 @@ def pipeline(  # noqa: C901
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
-        mapped_triples = testing_triples_factory.mapped_triples
+        mapped_triples = dataset_instance.testing.mapped_triples
     else:
-        mapped_triples = validation_triples_factory.mapped_triples
+        mapped_triples = dataset_instance.validation.mapped_triples
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available
