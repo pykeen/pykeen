@@ -510,9 +510,12 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
-    def _test_score_all_triples(self, k: Optional[int]):
-        """Test score_all_triples."""
-        batch_size = 16
+    def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
+        """Test score_all_triples.
+
+        :param k: The number of triples to return. Set to None, to keep all.
+        :param batch_size: The batch size to use for calculating scores.
+        """
         top_triples = self.model.score_all_triples(k=k, batch_size=batch_size)
 
         # check type
@@ -533,9 +536,17 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         assert top_triples[:, 1].max() < self.model.num_relations
 
     def test_score_all_triples(self):
-        """Test score_all_triples."""
+        """Test score_all_triples with a large batch size."""
         # this is only done in one of the models
-        self._test_score_all_triples(k=10)
+        self._test_score_all_triples(k=15, batch_size=16)
+
+    def test_score_all_triples_singleton_batch(self):
+        """Test score_all_triples with a batch size of 1."""
+        self._test_score_all_triples(k=15, batch_size=1)
+
+    def test_score_all_triples_large_batch(self):
+        """Test score_all_triples with a batch size larger than k."""
+        self._test_score_all_triples(k=10, batch_size=16)
 
     def test_score_all_triples_keep_all(self):
         """Test score_all_triples(k=None)."""
