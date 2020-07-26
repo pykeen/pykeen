@@ -4,61 +4,82 @@
 
 import unittest
 
+import pykeen.regularizers
 from pykeen.datasets import Nations
-from pykeen.models import TransE
 from pykeen.models.base import Model
 from pykeen.pipeline import PipelineResult, pipeline
-from pykeen.regularizers import NoRegularizer, PowerSumRegularizer
+from pykeen.regularizers import NoRegularizer
 
 
 class TestPipeline(unittest.TestCase):
     """Test the pipeline."""
 
-    def test_pipeline(self):
-        """Test the pipeline on TransE and nations."""
-        pipeline_result = pipeline(
+    @classmethod
+    def setUpClass(cls):
+        """Set up a shared result."""
+        cls.result = pipeline(
             model='TransE',
             dataset='nations',
+            training_kwargs=dict(num_epochs=5),
         )
-        self.assertIsInstance(pipeline_result, PipelineResult)
-        self.assertIsInstance(pipeline_result.model, Model)
-        self.assertIsInstance(pipeline_result.model.regularizer, NoRegularizer)
-
-        model = pipeline_result.model
+        cls.model = cls.result.model
         nations = Nations()
-        testing_mapped_triples = nations.testing.mapped_triples.to(model.device)
+        cls.testing_mapped_triples = nations.testing.mapped_triples.to(cls.model.device)
 
-        tails_df = model.predict_tails('brazil', 'intergovorgs', testing=testing_mapped_triples, add_novelties=False)
+    def test_predict_tails_no_novelties(self):
+        """Test scoring tails without labeling as novel w.r.t. training and testing."""
+        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples,
+                                            add_novelties=False)
         self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
-        self.assertEqual(len(model.triples_factory.entity_to_id), len(tails_df.index))
+        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
 
-        tails_df = model.predict_tails('brazil', 'intergovorgs', testing=testing_mapped_triples, remove_known=True)
+    def test_predict_tails_remove_known(self):
+        """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
+        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples,
+                                            remove_known=True)
         self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
         self.assertEqual({'jordan', 'brazil', 'ussr', 'burma', 'china'}, set(tails_df['tail_label']))
 
-        tails_df = model.predict_tails('brazil', 'intergovorgs', testing=testing_mapped_triples)
+    def test_predict_tails_with_novelties(self):
+        """Test scoring tails with labeling as novel w.r.t. training and testing."""
+        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples)
         self.assertEqual(['tail_id', 'tail_label', 'score', 'in_training', 'in_testing'], list(tails_df.columns))
-        self.assertEqual(len(model.triples_factory.entity_to_id), len(tails_df.index))
+        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
         training_tails = set(tails_df.loc[tails_df['in_training'], 'tail_label'])
         self.assertEqual({'usa', 'uk', 'netherlands', 'egypt', 'india', 'israel', 'indonesia'}, training_tails)
         testing_tails = set(tails_df.loc[tails_df['in_testing'], 'tail_label'])
         self.assertEqual({'poland', 'cuba'}, testing_tails)
 
-        heads_df = model.predict_heads('conferences', 'brazil', testing=testing_mapped_triples)
+    def test_predict_heads_with_novelties(self):
+        """Test scoring heads with labeling as novel w.r.t. training and testing"""
+        heads_df = self.model.predict_heads('conferences', 'brazil', testing=self.testing_mapped_triples)
         self.assertEqual(['head_id', 'head_label', 'score', 'in_training', 'in_testing'], list(heads_df.columns))
-        self.assertEqual(len(model.triples_factory.entity_to_id), len(heads_df.index))
+        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(heads_df.index))
         training_heads = set(heads_df.loc[heads_df['in_training'], 'head_label'])
         self.assertEqual({'usa', 'india', 'ussr', 'poland', 'cuba'}, training_heads)
         testing_heads = set(heads_df.loc[heads_df['in_testing'], 'head_label'])
         self.assertEqual(set(), testing_heads)
 
+
+class TestAttributes(unittest.TestCase):
+    """Test that the keywords given to the pipeline make it through."""
+
     def test_specify_regularizer(self):
         """Test a pipeline that uses a regularizer."""
-        pipeline_result = pipeline(
-            model=TransE,
-            dataset='nations',
-            regularizer='powersum',
-        )
-        self.assertIsInstance(pipeline_result, PipelineResult)
-        self.assertIsInstance(pipeline_result.model, Model)
-        self.assertIsInstance(pipeline_result.model.regularizer, PowerSumRegularizer)
+        for regularizer, cls in [
+            (None, pykeen.regularizers.NoRegularizer),
+            ('no', pykeen.regularizers.NoRegularizer),
+            (NoRegularizer, pykeen.regularizers.NoRegularizer),
+            ('powersum', pykeen.regularizers.PowerSumRegularizer),
+            ('lp', pykeen.regularizers.LpRegularizer),
+        ]:
+            with self.subTest(regularizer=regularizer):
+                pipeline_result = pipeline(
+                    model='TransE',
+                    dataset='Nations',
+                    regularizer=regularizer,
+                    training_kwargs=dict(num_epochs=1),
+                )
+                self.assertIsInstance(pipeline_result, PipelineResult)
+                self.assertIsInstance(pipeline_result.model, Model)
+                self.assertIsInstance(pipeline_result.model.regularizer, cls)
