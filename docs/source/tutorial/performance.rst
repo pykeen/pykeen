@@ -9,13 +9,13 @@ Entity and Relation IDs
 -----------------------
 When working with knowledge graphs (KG) the entities and relations contained in triples are usually stored as strings.
 In knowledge graph embeddings models (KGEM) we aim at learning vector representations for them, such that the chosen
-interaction function learns a useful scoring on top of them. We thus need a mapping from the string representations 
+interaction function learns a useful scoring on top of them. We thus need a mapping from the string representations
 to vectors. Moreover, for computational efficiency, we would like to store all entity/relation embeddings in matrices.
-Thus, the mapping process comprises two parts: Mapping strings to IDs, and using the IDs to access the embeddings 
+Thus, the mapping process comprises two parts: Mapping strings to IDs, and using the IDs to access the embeddings
 (=row indices).
 
-In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains 
-the sets of unique entity and relation labels and ensures that they are mapped to unique IDs ranging from 0 to 
+In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains
+the sets of unique entity and relation labels and ensures that they are mapped to unique IDs ranging from 0 to
 ``num_unique_entities`` / ``num_unique_relations``. The mappings are accessible via the attributes
 ``entity_label_to_id`` / ``relation_label_to_id``. To improve the performance, the mapping process takes place only
 once, and the ID-based triples are stored in a tensor `mapped_triples`.
@@ -52,17 +52,17 @@ additional modifications. Providing these methods is completely optional and not
 
 Filtering with Index-based Masking
 ----------------------------------
-In a standard evaluation setting of a KGEM for each triple $(h, r, t)$ in the test/validation dataset two calculations are
-performed:
+In a standard evaluation setting of a KGEM for each triple $(h, r, t)$ in the test/validation dataset two calculations
+are performed:
 
  - the tuple $(h, r)$ is combined with all possible tail entities $t*$
  - the tuple $(r, t)$ is combined with all possible head entities $h*$
 
 Afterwards the rank of $(h, r, t)$ is compared to all possible $(h, r, t^*)$ as well as $(h^*, r, t)$ triples.
 
-In the filtered setting, $t*$ is not allowed to contain tail entities that would lead to $(h, r, t*)$ triples already found
-in the train dataset. Analogue to that, h* is not allowed to contain head entities leading to $(h*, r, t)$ triples found
-in the train dataset. This leads to the computational challenge that all new possible triples $(h, r, t*)$ and
+In the filtered setting, $t*$ is not allowed to contain tail entities that would lead to $(h, r, t*)$ triples already
+found in the train dataset. Analogue to that, h* is not allowed to contain head entities leading to $(h*, r, t)$ triples
+found in the train dataset. This leads to the computational challenge that all new possible triples $(h, r, t*)$ and
 $(h*, r, t)$ have to be checked against their existence in the train dataset. Considering a dataset like
 :class:`pykeen.datasets.FB15k237`, with almost 15,000 entities, each test triples leads to 30,000 possible new
 triples, which have to be checked against the train dataset. After removing all possible entities found in the train
