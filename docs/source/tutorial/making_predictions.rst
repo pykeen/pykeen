@@ -14,9 +14,9 @@ After training a model, there are three high-level interfaces for making predict
 
 1. :func:`pykeen.models.Model.predict_tails` for a given head/relation pair
 2. :func:`pykeen.models.Model.predict_heads` for a given relation/tail pair
-3. :func:`pykeen.models.Model.predict_top_k_triples` for prioritizing links
+3. :func:`pykeen.models.Model.score_all_triples` for prioritizing links
 
-Scientifically, :func:`pykeen.models.Model.predict_top_k_triples` is the most interesting in a scenario where
+Scientifically, :func:`pykeen.models.Model.score_all_triples` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.
 
 .. code-block:: python
