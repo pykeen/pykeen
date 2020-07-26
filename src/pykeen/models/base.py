@@ -589,14 +589,10 @@ class Model(nn.Module):
         k: Optional[int] = None,
         batch_size: int = 1,
     ) -> torch.LongTensor:
-        """
-        Compute scores for all triples, optionally returning only the k highest scoring.
+        """Compute scores for all triples, optionally returning only the k highest scoring.
 
-        .. note ::
-            This operation is computationally very expensive for reasonably-sized knowledge graphs.
-
-        .. warning ::
-                Setting k=None may lead to huge memory requirements.
+        .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
+        .. warning:: Setting k=None may lead to huge memory requirements.
 
         :param k:
             The number of triples to return. Set to None, to keep all.
@@ -606,6 +602,24 @@ class Model(nn.Module):
 
         :return: shape: (k, 3)
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
+
+        Example usage:
+
+        .. code-block:: python
+
+            from pykeen.pipeline import pipeline
+
+            # Train a model (quickly)
+            result = pipeline(model='RotatE', dataset='Nations', training_kwargs=dict(num_epochs=5))
+            model = result.model
+
+            # Get scores for *all* triples
+            tensor = model.score_all_triples()
+            df = model.make_labeled_df(tensor)
+
+            # Get scores for top 15 triples
+            top_tensor = model.score_all_triples(k=15)
+            top_df = model.make_labeled_df(tensor)
         """
         # set model to evaluation mode
         self.eval()
@@ -664,6 +678,10 @@ class Model(nn.Module):
             # scores = scores[ind]
 
             return result
+
+    def make_labeled_df(self, tensor: torch.LongTensor) -> pd.DataFrame:
+        """Take a tensor of triples and make a pandas dataframe with labels."""
+        return self.triples_factory.tensor_to_df(tensor)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""

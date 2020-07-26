@@ -10,6 +10,7 @@ from copy import deepcopy
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import torch
 
 from .instances import LCWAInstances, SLCWAInstances
@@ -519,6 +520,18 @@ class TriplesFactory:
         from IPython.core.display import HTML
         word_cloud = WordCloud()
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
+
+    def tensor_to_df(self, tensor: torch.LongTensor) -> pd.DataFrame:
+        """Take a tensor of triples and make a pandas dataframe with labels."""
+        id_to_entity = {v: k for k, v in self.entity_to_id.items()}
+        id_to_rel = {v: k for k, v in self.relation_to_id.items()}
+        rows = [
+            (h, id_to_entity[h], r, id_to_rel[r], t, id_to_entity[t])
+            for h, r, t in tensor.tolist()
+        ]
+        columns = ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label']
+        rv = pd.DataFrame(rows, columns=columns)
+        return rv
 
 
 def _tf_cleanup_all(
