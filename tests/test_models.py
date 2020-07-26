@@ -549,7 +549,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         self._test_score_all_triples(k=10, batch_size=16)
 
     def test_score_all_triples_keep_all(self):
-        """Test score_all_triples(k=None)."""
+        """Test score_all_triples with k=None."""
         # this is only done in one of the models
         self._test_score_all_triples(k=None)
 
