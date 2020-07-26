@@ -3,7 +3,7 @@ Performance Tricks
 PyKEEN uses a combination of techniques under the hood that ensure efficient calculations during both training and
 evaluation as well as try to maximize the utilization of the hardware at hand (currently focused on single GPU usage).
 
-.. _entity_and_relation_ids
+.. _entity_and_relation_ids:
 
 Entity and Relation IDs
 -----------------------
@@ -20,7 +20,7 @@ the sets of unique entity and relation labels and ensures that they are mapped t
 ``entity_label_to_id`` / ``relation_label_to_id``. To improve the performance, the mapping process takes place only
 once, and the ID-based triples are stored in a tensor `mapped_triples`.
 
-.. _tuple_broadcasting
+.. _tuple_broadcasting:
 
 Tuple Broadcasting
 ------------------
@@ -70,38 +70,38 @@ dataset from $h*$ and $t*$, new sets h** and t** are obtained that allow to cons
 and $(h, r, t**)$ not found in the train dataset.
 
 To obtain very fast filtering PyKEEN combines the technique presented above in
-:ref:`_entity_and_relation_ids` and :ref:`_tuple_broadcasting` together with the
+:ref:`entity_and_relation_ids` and :ref:`tuple_broadcasting` together with the
 mechanism described below, which in our case has led up to 600,000 fold increase in speed for the filtered evaluation
 compared to the mechanisms used in previous versions.
 
 As a starting point, PyKEEN will always compute all possible scores also in the filtered setting. This is due to the
 fact that the number of positive triples in average is very low and thus, few results have to be removed as well as the
-fact that due to the technique presented in :ref:`_tuple_broadcasting` any additionally scored entity has a marginally
+fact that due to the technique presented in :ref:`tuple_broadcasting` any additionally scored entity has a marginally
 low additional cost. Therefore, we start with the score vectors *score_t* for all possible triples $(h, r, t*)$ and
 *score_h* for all possible triples $(h*, r, t)$.
 
 Following, the sparse filters t' and h' are created, which state which of the entities would lead to triples found in
 the train dataset. To achieve this we will rely on the technique presented in
-:ref:`_entity_and_relation_ids`, i.e. all entity/relation IDs correspond to their
+:ref:`entity_and_relation_ids`, i.e. all entity/relation IDs correspond to their
 exact position in the respective embedding tensor.
 As an example we take the tuple $(h, r)$ from the test triple $(h, r, t)$ and are interested in all tail entities $t'$
 that should be removed from $(h, r, t*)$ in order to obtain $(h, r, t**)$.
 This is achieved by performing the following steps:
 
-- Take r and compare it to the relations of all triples in the train dataset, leading to a boolean vector of the
-  size of number of triples contained in the train dataset, being true where any triple had the relation $r$
-- Take h and compare it to the head entities of all triples in the train dataset, leading to a boolean vector of the
-  size of number of triples contained in the train dataset, being true where any triple had the head entity $h$
-- Combine both boolean vectors, leading to a boolean vector of the size of number of triples contained in the train
-  dataset, being true where any triple had both the head entity h and the relation $r$
-- Convert the boolean vector to a non-zero index vector, stating at which indices the train dataset contains triples
-  that contain both the head entity h and the relation $r$, having the size of the number of non-zero elements
-- The index vector is now applied on the tail entity column of the train dataset, returning all tail entity IDs $t'$
-  that combined with $h$ and $r$ lead to triples contained in the train dataset
-- Finally, the $t'$ tail entity ID index vector is applied on the initially mentioned *score_t* vector for all possible
-  triples $(h, r, t*)$ and all affected scores are set to ``float('nan')`` following the IEEE-754 specification, which
-  makes these scores non-comparable, effectively leading to the score vector for all possible novel triples
-  $(h, r, t**)$.
+1. Take $r$ and compare it to the relations of all triples in the train dataset, leading to a boolean vector of the
+   size of number of triples contained in the train dataset, being true where any triple had the relation $r$
+2. Take $h$ and compare it to the head entities of all triples in the train dataset, leading to a boolean vector of the
+   size of number of triples contained in the train dataset, being true where any triple had the head entity $h$
+3. Combine both boolean vectors, leading to a boolean vector of the size of number of triples contained in the train
+   dataset, being true where any triple had both the head entity $h$ and the relation $r$
+4. Convert the boolean vector to a non-zero index vector, stating at which indices the train dataset contains triples
+   that contain both the head entity h and the relation $r$, having the size of the number of non-zero elements
+5. The index vector is now applied on the tail entity column of the train dataset, returning all tail entity IDs $t'$
+   that combined with $h$ and $r$ lead to triples contained in the train dataset
+6. Finally, the $t'$ tail entity ID index vector is applied on the initially mentioned *score_t* vector for all possible
+   triples $(h, r, t*)$ and all affected scores are set to ``float('nan')`` following the IEEE-754 specification, which
+   makes these scores non-comparable, effectively leading to the score vector for all possible novel triples
+   $(h, r, t**)$.
 
 In an analogue fashion $h'$ is obtained and filtered from $(h*, r, t)$ to obtain $(h**, r, t)$.
 
@@ -127,7 +127,6 @@ a large set of heterogeneous experiments are run. Therefore, PyKEEN has an autom
 computes the maximum possible training and evaluation batch sizes for the current model configuration and available
 hardware before the actual calculation starts. If the user-provided batch size is too large for the used hardware, the
 automatic memory optimization determines the maximum sub-batch size for training and accumulates the gradients with the
-above described process :ref:`_sub_batching`. The batch sizes are determined using binary search taking into
-consideration the CUDA architecture,
-`<https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9926-tensor-core-performance-the-ultimate-guide.pdf>`
+above described process :ref:`sub_batching`. The batch sizes are determined using binary search taking into
+consideration the `CUDA architecture <https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9926-tensor-core-performance-the-ultimate-guide.pdf>`_
 which ensures that the chosen batch size is the most CUDA efficient one.
