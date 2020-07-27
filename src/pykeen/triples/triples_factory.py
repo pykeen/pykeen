@@ -232,7 +232,7 @@ class LabelMapping:
         )
 
     def map_triples(self, triples: LabeledTriples) -> MappedTriples:
-        """Apply label-to-id mapping."""
+        """Convert label-based triples to ID-based triples."""
         return _map_triples_elements_to_ids(
             triples=triples,
             entity_to_id=self.entity_label_to_id,
@@ -240,7 +240,7 @@ class LabelMapping:
         )
 
     def label_triples(self, mapped_triples: MappedTriples, unknown_label: str = 'UNKNOWN') -> LabeledTriples:
-        """Apply ID to label mapping."""
+        """Convert ID-based triples to label-based triples."""
         entity_labeler = np.vectorize(self.entity_id_to_label.get)
         relation_labeler = np.vectorize(self.relation_id_to_label.get)
         return np.stack([
