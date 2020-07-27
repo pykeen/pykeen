@@ -516,11 +516,13 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         :param k: The number of triples to return. Set to None, to keep all.
         :param batch_size: The batch size to use for calculating scores.
         """
-        top_triples = self.model.score_all_triples(k=k, batch_size=batch_size)
+        top_triples, top_scores = self.model.score_all_triples(k=k, batch_size=batch_size)
 
         # check type
         assert torch.is_tensor(top_triples)
+        assert torch.is_tensor(top_scores)
         assert top_triples.dtype == torch.long
+        assert top_scores.dtype == torch.float32
 
         # check shape
         actual_k, n_cols = top_triples.shape
@@ -529,6 +531,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
             assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
+        assert top_scores.shape == (actual_k,)
 
         # check ID ranges
         assert (top_triples >= 0).all()
