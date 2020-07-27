@@ -8,7 +8,7 @@ import re
 from collections import Counter, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Any, Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import torch
@@ -86,37 +86,42 @@ def _create_multi_label_instances(
     return instance_to_multi_label_new
 
 
+def create_mapping(
+    labels: Union[np.ndarray, Collection[str]],
+    sort_key: Optional[Callable[[str], Any]] = None,
+) -> Mapping[str, int]:
+    """Create a mapping from unique labels to consecutive IDs from a given collection of labels."""
+    if isinstance(labels, np.ndarray):
+        labels = np.unique(labels).tolist()
+
+    # Sorting ensures consistent results when the input is permuted
+    labels = sorted(set(labels), key=sort_key)
+
+    return {
+        str(label): id_
+        for id_, label in enumerate(labels)
+    }
+
+
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
     :param triples: shape: (n, 3), dtype: str
     """
-    # Split triples
-    heads, tails = triples[:, 0], triples[:, 2]
-    # Sorting ensures consistent results when the triples are permuted
-    entity_labels = sorted(set(heads).union(tails))
-    # Create mapping
-    return {
-        str(label): i
-        for (i, label) in enumerate(entity_labels)
-    }
+    return create_mapping(triples[:, [0, 2]])
+
+
+def _relation_sort_key(relation_label: str) -> Tuple[str, bool]:
+    """The sort key for relation-labels collating inverse relations."""
+    return (
+        re.sub(f'{INVERSE_SUFFIX}$', '', relation_label),
+        relation_label.endswith(f'{INVERSE_SUFFIX}'),
+    )
 
 
 def create_relation_mapping(relations: Union[np.ndarray, Collection[str]]) -> RelationMapping:
     """Create mapping from relation labels to IDs."""
-    if isinstance(relations, np.ndarray):
-        relations = np.unique(relations).tolist()
-
-    # Sorting ensures consistent results when the triples are permuted
-    relation_labels = sorted(
-        set(relations),
-        key=lambda x: (re.sub(f'{INVERSE_SUFFIX}$', '', x), x.endswith(f'{INVERSE_SUFFIX}')),
-    )
-    # Create mapping
-    return {
-        str(label): i
-        for (i, label) in enumerate(relation_labels)
-    }
+    return create_mapping(labels=relations, sort_key=_relation_sort_key)
 
 
 def _map_triples_elements_to_ids(
