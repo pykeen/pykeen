@@ -7,6 +7,7 @@ import os
 import re
 from collections import Counter, defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
@@ -16,7 +17,7 @@ from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, slice_triples
+from ..utils import compact_mapping, invert_mapping, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -165,6 +166,86 @@ def _map_triples_elements_to_ids(
 
 def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
     return any(relation.endswith(INVERSE_SUFFIX) for relation in relations)
+
+
+@dataclass
+class LabelMapping:
+    """A mapping from labels to IDs."""
+
+    #: The mapping for entities
+    entity_label_to_id: EntityMapping
+
+    #: The mapping for relations
+    relation_label_to_id: RelationMapping
+
+    @staticmethod
+    def from_labeled_triples(triples: LabeledTriples) -> 'LabelMapping':
+        """Create a mapping from labeled triples."""
+        return LabelMapping(
+            entity_label_to_id=create_entity_mapping(triples=triples),
+            relation_label_to_id=create_relation_mapping(relations=triples[:, 1])
+        )
+
+    @property
+    def entity_id_to_label(self) -> Mapping[int, str]:
+        """The mapping from entity IDs to labels."""
+        return invert_mapping(mapping=self.entity_label_to_id)
+
+    @property
+    def relation_id_to_label(self) -> Mapping[int, str]:
+        """The mapping from relation IDs to labels."""
+        return invert_mapping(mapping=self.relation_label_to_id)
+
+    @property
+    def max_entity_id(self) -> int:
+        """Return the maximum entity ID plus 1."""
+        return max(self.entity_label_to_id.values()) + 1
+
+    @property
+    def max_relation_id(self) -> int:
+        """Return the maximum relation ID plus 1."""
+        return max(self.relation_label_to_id.values()) + 1
+
+    @property
+    def is_compact(self) -> bool:
+        """Whether the mapping is compact, i.e. the IDs are consecutive from 0 to num_choices - 1."""
+        return all(
+            set(mapping.values()) == set(range(len(mapping)))
+            for mapping in (self.entity_label_to_id, self.relation_label_to_id)
+        )
+
+    def compact(self) -> 'LabelMapping':
+        """Return a compact version of the label mapping."""
+        # No need for compaction
+        if self.is_compact:
+            return self
+
+        # TODO: Return compaction?
+        return LabelMapping(
+            entity_label_to_id=compact_mapping(mapping=self.entity_label_to_id)[0],
+            relation_label_to_id=compact_mapping(mapping=self.relation_label_to_id)[0],
+        )
+
+    def map_triples(self, triples: LabeledTriples) -> MappedTriples:
+        """Apply label-to-id mapping."""
+        return _map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=self.entity_label_to_id,
+            relation_to_id=self.relation_label_to_id,
+        )
+
+    def label_triples(self, mapped_triples: MappedTriples, unknown_label: str = 'UNKNOWN') -> LabeledTriples:
+        """Apply ID to label mapping."""
+        entity_labeler = np.vectorize(self.entity_id_to_label.get)
+        relation_labeler = np.vectorize(self.relation_id_to_label.get)
+        return np.stack([
+            labeler(mapped_triples[:, col], [unknown_label])
+            for col, labeler in enumerate([
+                entity_labeler,
+                relation_labeler,
+                entity_labeler
+            ])
+        ], axis=-1)
 
 
 class TriplesFactory:
