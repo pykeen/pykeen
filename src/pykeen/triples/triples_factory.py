@@ -236,6 +236,9 @@ class LabelMapping:
     #: The mapping for relations
     relation_label_to_id: RelationMapping
 
+    #: A dictionary mapping each relation to its inverse, if inverse triples were created
+    relation_to_inverse: Optional[Mapping[str, str]] = None
+
     @staticmethod
     def from_labeled_triples(triples: LabeledTriples) -> 'LabelMapping':
         """Create a mapping from labeled triples."""
@@ -288,16 +291,51 @@ class LabelMapping:
     def _vectorized_relation_labeler(self) -> Callable[[np.ndarray, Tuple[str]], np.ndarray]:
         return np.vectorize(self.relation_id_to_label.get)
 
+    @property
+    def contains_inverse_relations(self) -> bool:
+        """Whether the mapping contains inverse relations."""
+        return self.relation_to_inverse is not None
+
     def compact(self) -> 'LabelMapping':
         """Return a compact version of the label mapping."""
         # No need for compaction
         if self.is_compact:
+            logger.debug('Label mapping is already compact.')
             return self
 
         # TODO: Return compaction?
         return LabelMapping(
             entity_label_to_id=compact_mapping(mapping=self.entity_label_to_id)[0],
             relation_label_to_id=compact_mapping(mapping=self.relation_label_to_id)[0],
+        )
+
+    def with_inverse_relations(self) -> 'LabelMapping':
+        """Return the mapping with inverse relations."""
+        if self.contains_inverse_relations:
+            logger.info('Label mapping contains already inverse relations.')
+            return self
+
+        # Extend relation mapping by inverse relations
+        relation_label_to_id = {
+            relation: 2 * relation_id
+            for relation, relation_id in self.relation_label_to_id.items()
+        }
+        relation_label_to_id.update({
+            f"{relation}{INVERSE_SUFFIX}": 2 * relation_id + 1
+            for relation, relation_id in self.relation_label_to_id.items()
+        })
+
+        # store mapping between a relation and it's inverse
+        relation_to_inverse = {
+            relation: f"{relation}{INVERSE_SUFFIX}"
+            for relation in self.relation_label_to_id.keys()
+        }
+
+        # create new mapping
+        return LabelMapping(
+            entity_label_to_id=self.entity_label_to_id,
+            relation_label_to_id=relation_label_to_id,
+            relation_to_inverse=relation_to_inverse,
         )
 
     def map_entities(
