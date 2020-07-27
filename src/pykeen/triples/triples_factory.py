@@ -253,7 +253,7 @@ class LabelMapping:
         mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray],
         unknown_id: int = -1,
     ) -> torch.LongTensor:
-        """Apply a vectorized mapped to a column of labels.
+        """Apply a vectorized mapping to a column of labels.
 
         :param labeled_column:
             The column of labels.
