@@ -11,7 +11,7 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES
+from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
@@ -69,18 +69,30 @@ class MockEvaluator(Evaluator):
         hits = next(self.losses_iter)
         return RankBasedMetricResults(
             mean_rank={
-                rank_type: 10
-                for rank_type in RANK_TYPES
+                side: {
+                    rank_type: 10
+                    for rank_type in RANK_TYPES
+                }
+                for side in SIDES
             },
             mean_reciprocal_rank={
-                rank_type: 1.0
-                for rank_type in RANK_TYPES
+                side: {
+                    rank_type: 1.0
+                    for rank_type in RANK_TYPES
+                }
+                for side in SIDES
             },
-            adjusted_mean_rank=1.0,
+            adjusted_mean_rank={
+                side: 1.0
+                for side in SIDES
+            },
             hits_at_k={
-                rank_type: {
-                    10: hits,
-                } for rank_type in RANK_TYPES
+                side: {
+                    rank_type: {
+                        10: hits,
+                    } for rank_type in RANK_TYPES
+                }
+                for side in SIDES
             },
         )
 

@@ -8,6 +8,7 @@ PyKEEN
    :maxdepth: 2
 
    tutorial/first_steps
+   tutorial/understanding_evaluation
    tutorial/running_hpo
    tutorial/byod
    tutorial/using_mlflow

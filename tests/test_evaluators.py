@@ -12,7 +12,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
-from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
+from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
@@ -154,16 +154,27 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, RankBasedMetricResults)
 
         # Check value ranges
-        for mr in result.mean_rank.values():
-            assert isinstance(mr, float)
-            assert 1 <= mr <= self.factory.num_entities
-        for mrr in result.mean_reciprocal_rank.values():
-            assert isinstance(mrr, float)
-            assert 0 < mrr <= 1
-        for hits_at_k in result.hits_at_k.values():
-            for h in hits_at_k.values():
-                assert isinstance(h, float)
-                assert 0 <= h <= 1
+        for side, all_type_mr in result.mean_rank.items():
+            assert side in SIDES
+            for rank_type, mr in all_type_mr.items():
+                assert rank_type in RANK_TYPES
+                assert isinstance(mr, float)
+                assert 1 <= mr <= self.factory.num_entities
+        for side, all_type_mrr in result.mean_reciprocal_rank.items():
+            assert side in SIDES
+            for rank_type, mrr in all_type_mrr.items():
+                assert rank_type in RANK_TYPES
+                assert isinstance(mrr, float)
+                assert 0 < mrr <= 1
+        for side, all_type_hits_at_k in result.hits_at_k.items():
+            assert side in SIDES
+            for rank_type, hits_at_k in all_type_hits_at_k.items():
+                assert rank_type in RANK_TYPES
+                for k, h in hits_at_k.items():
+                    assert isinstance(k, int)
+                    assert 0 < k < self.factory.num_entities
+                    assert isinstance(h, float)
+                    assert 0 <= h <= 1
 
         # TODO: Validate with data?
 
