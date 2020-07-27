@@ -588,7 +588,7 @@ class Model(nn.Module):
         self,
         k: Optional[int] = None,
         batch_size: int = 1,
-    ) -> torch.LongTensor:
+    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
         """Compute scores for all triples, optionally returning only the k highest scoring.
 
         .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
@@ -677,7 +677,7 @@ class Model(nn.Module):
             result = result[ind]
             # scores = scores[ind]
 
-            return result
+            return result, scores
 
     def make_labeled_df(self, tensor: torch.LongTensor) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels."""
