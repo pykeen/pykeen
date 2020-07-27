@@ -173,6 +173,59 @@ def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
     return any(relation.endswith(INVERSE_SUFFIX) for relation in relations)
 
 
+def _map_column(
+    labeled_column: Union[np.ndarray, Sequence[str], str],
+    mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray],
+    unknown_id: int = -1,
+) -> torch.LongTensor:
+    """Apply a vectorized mapping to a column of labels.
+
+    :param labeled_column:
+        The column of labels.
+    :param mapper:
+        The vectorized label-to-id mapper.
+    :param unknown_id:
+        An ID to use for unknown labels.
+
+    :return:
+        An array of IDs.
+    """
+    # Input normalization
+    if isinstance(labeled_column, str):
+        labeled_column = [labeled_column]
+    labeled_column = np.asanyarray(labeled_column)
+    mapped_column = mapper(labeled_column, (unknown_id,))
+    return torch.as_tensor(data=mapped_column, dtype=torch.long)
+
+
+def _label_column(
+    mapped_column: Union[np.ndarray, Sequence[int], torch.LongTensor, int],
+    vectorized_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray],
+    unknown_label: str,
+) -> np.ndarray:
+    """Apply vectorized labeler to an array of IDs.
+
+    :param mapped_column:
+        The IDs.
+    :param vectorized_labeler:
+        The vectorized labeler.
+    :param unknown_label:
+        A label to use for unknown IDs.
+
+    :return:
+        An array of labels, same shape as mapped_column.
+    """
+    # Input normalization
+    if isinstance(mapped_column, int):
+        mapped_column = [mapped_column]
+    if torch.is_tensor(mapped_column):
+        mapped_column = mapped_column.cpu().numpy()
+    mapped_column = np.asanyarray(mapped_column)
+
+    # Actual labeling
+    return vectorized_labeler(mapped_column, (unknown_label,))
+
+
 @dataclass
 class LabelMapping:
     """A mapping from labels to IDs."""
@@ -247,31 +300,6 @@ class LabelMapping:
             relation_label_to_id=compact_mapping(mapping=self.relation_label_to_id)[0],
         )
 
-    def _map_column(
-        self,
-        labeled_column: Union[np.ndarray, Sequence[str], str],
-        mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray],
-        unknown_id: int = -1,
-    ) -> torch.LongTensor:
-        """Apply a vectorized mapping to a column of labels.
-
-        :param labeled_column:
-            The column of labels.
-        :param mapper:
-            The vectorized label-to-id mapper.
-        :param unknown_id:
-            An ID to use for unknown labels.
-
-        :return:
-            An array of IDs.
-        """
-        # Input normalization
-        if isinstance(labeled_column, str):
-            labeled_column = [labeled_column]
-        labeled_column = np.asanyarray(labeled_column)
-        mapped_column = mapper(labeled_column, (unknown_id,))
-        return torch.as_tensor(data=mapped_column, dtype=torch.long)
-
     def map_entities(
         self,
         entities: Union[np.ndarray, Sequence[str], str],
@@ -280,7 +308,7 @@ class LabelMapping:
         """Convert entity labels to the corresponding IDs."""
         if unknown_id in self.entity_label_to_id.values():
             raise ValueError(f'unknown_id={unknown_id} is used as entity ID!')
-        return self._map_column(labeled_column=entities, mapper=self._vectorized_entity_mapper, unknown_id=unknown_id)
+        return _map_column(labeled_column=entities, mapper=self._vectorized_entity_mapper, unknown_id=unknown_id)
 
     def map_relations(
         self,
@@ -290,7 +318,7 @@ class LabelMapping:
         """Convert entity labels to the corresponding IDs."""
         if unknown_id in self.relation_label_to_id.values():
             raise ValueError(f'unknown_id={unknown_id} is used as relation ID!')
-        return self._map_column(labeled_column=relations, mapper=self._vectorized_relation_mapper, unknown_id=unknown_id)
+        return _map_column(labeled_column=relations, mapper=self._vectorized_relation_mapper, unknown_id=unknown_id)
 
     def map_triples(
         self,
@@ -344,41 +372,13 @@ class LabelMapping:
 
         return mapped_triples
 
-    def _label_column(
-        self,
-        mapped_column: Union[np.ndarray, Sequence[int], torch.LongTensor, int],
-        vectorized_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray],
-        unknown_label: str,
-    ) -> np.ndarray:
-        """Apply vectorized labeler to an array of IDs.
-
-        :param mapped_column:
-            The IDs.
-        :param vectorized_labeler:
-            The vectorized labeler.
-        :param unknown_label:
-            A label to use for unknown IDs.
-
-        :return:
-            An array of labels, same shape as mapped_column.
-        """
-        # Input normalization
-        if isinstance(mapped_column, int):
-            mapped_column = [mapped_column]
-        if torch.is_tensor(mapped_column):
-            mapped_column = mapped_column.cpu().numpy()
-        mapped_column = np.asanyarray(mapped_column)
-
-        # Actual labeling
-        return vectorized_labeler(mapped_column, (unknown_label,))
-
     def label_entities(
         self,
         mapped_entities: Union[np.ndarray, Sequence[int], torch.LongTensor, int],
         unknown_label: Optional[str] = None,
     ) -> np.ndarray:
         """Convert entity IDs to labels."""
-        return self._label_column(
+        return _label_column(
             mapped_column=mapped_entities,
             vectorized_labeler=self._vectorized_entity_labeler,
             unknown_label=unknown_label or 'UNKNOWN_ENTITY',
@@ -390,7 +390,7 @@ class LabelMapping:
         unknown_label: Optional[str] = None,
     ) -> np.ndarray:
         """Convert relation IDs to labels."""
-        return self._label_column(
+        return _label_column(
             mapped_column=mapped_relations,
             vectorized_labeler=self._vectorized_entity_labeler,
             unknown_label=unknown_label or 'UNKNOWN_RELATION',
