@@ -29,6 +29,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 INVERSE_SUFFIX = '_inverse'
+TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
 
 
 def _create_multi_label_tails_instance(
@@ -531,8 +532,30 @@ class TriplesFactory:
         word_cloud = WordCloud()
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
 
-    def tensor_to_df(self, tensor: torch.LongTensor, **kwargs) -> pd.DataFrame:
-        """Take a tensor of triples and make a pandas dataframe with labels."""
+    def tensor_to_df(
+        self,
+        tensor: torch.LongTensor,
+        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+    ) -> pd.DataFrame:
+        """Take a tensor of triples and make a pandas dataframe with labels.
+
+        :param tensor: shape: (n, 3)
+            The triples, ID-based and in format (head_id, relation_id, tail_id).
+        :param kwargs:
+            Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
+            {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
+        :return:
+            A dataframe with n rows, and 6 + len(kwargs) columns.
+        """
+        # Input validation
+        additional_columns = set(kwargs.keys())
+        forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
+        if len(forbidden) > 0:
+            raise ValueError(
+                f'The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were '
+                f'used.'
+            )
+
         # convert to numpy
         tensor = tensor.cpu().numpy()
         data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
@@ -558,8 +581,7 @@ class TriplesFactory:
         rv = pd.DataFrame(data=data)
 
         # Re-order columns
-        first_columns = ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label']
-        columns = first_columns + sorted(set(rv.columns).difference(first_columns))
+        columns = TRIPLES_DF_COLUMNS + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
         return rv.loc[:, columns]
 
 

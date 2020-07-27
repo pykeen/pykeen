@@ -7,7 +7,7 @@ import itertools as itt
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -686,8 +686,21 @@ class Model(nn.Module):
 
             return result, scores
 
-    def make_labeled_df(self, tensor: torch.LongTensor, **kwargs) -> pd.DataFrame:
-        """Take a tensor of triples and make a pandas dataframe with labels."""
+    def make_labeled_df(
+        self,
+        tensor: torch.LongTensor,
+        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+    ) -> pd.DataFrame:
+        """Take a tensor of triples and make a pandas dataframe with labels.
+
+        :param tensor: shape: (n, 3)
+            The triples, ID-based and in format (head_id, relation_id, tail_id).
+        :param kwargs:
+            Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
+            {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
+        :return:
+            A dataframe with n rows, and 6 + len(kwargs) columns.
+        """
         return self.triples_factory.tensor_to_df(tensor, **kwargs)
 
     def post_parameter_update(self) -> None:
