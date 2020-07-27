@@ -148,9 +148,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             model_kwargs=model_kwargs,
             regularizer=regularizer,
             dataset=dataset,
-            training_triples_factory=training_triples_factory,
-            testing_triples_factory=testing_triples_factory or training_triples_factory,
-            validation_triples_factory=validation_triples_factory,
+            training=training_triples_factory,
+            testing=testing_triples_factory or training_triples_factory,
+            validation=validation_triples_factory,
             optimizer=optimizer,
             optimizer_kwargs=dict(
                 lr=learning_rate,

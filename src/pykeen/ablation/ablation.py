@@ -154,9 +154,9 @@ def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save
             hpo_config['dataset'] = dataset
         elif isinstance(dataset, dict):
             # Training, test, and validation paths are provided
-            hpo_config['training_triples_factory'] = dataset['training_triples_factory']
-            hpo_config['testing_triples_factory'] = dataset['testing_triples_factory']
-            hpo_config['validation_triples_factory'] = dataset['validation_triples_factory']
+            hpo_config['training'] = dataset['training']
+            hpo_config['testing'] = dataset['testing']
+            hpo_config['validation'] = dataset['validation']
         else:
             TypeError("Dataset must be either the dataset name, i.e., of type str, or a dictionary containing\n"
                       "the paths to the training, testing, and validation data.")

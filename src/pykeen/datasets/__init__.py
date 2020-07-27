@@ -64,19 +64,19 @@ def get_dataset(
     *,
     dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Union[None, str, TriplesFactory] = None,
-    testing_triples_factory: Union[None, str, TriplesFactory] = None,
-    validation_triples_factory: Union[None, str, TriplesFactory] = None,
+    training: Union[None, str, TriplesFactory] = None,
+    testing: Union[None, str, TriplesFactory] = None,
+    validation: Union[None, str, TriplesFactory] = None,
 ) -> DataSet:
     """Get the dataset.
 
     :raises ValueError:
     :raises TypeError:
     """
-    if dataset is None and (training_triples_factory is None or testing_triples_factory is None):
+    if dataset is None and (training is None or testing is None):
         raise ValueError('Must specify either dataset or both training/testing triples factories')
 
-    if dataset is not None and (training_triples_factory is not None or testing_triples_factory is not None):
+    if dataset is not None and (training is not None or testing is not None):
         raise ValueError('Can not specify both dataset and training/testing triples factories.')
 
     if isinstance(dataset, DataSet):
@@ -99,25 +99,25 @@ def get_dataset(
     if dataset is not None:
         raise TypeError(f'Data set is invalid type: {type(dataset)}')
 
-    if isinstance(training_triples_factory, str) and isinstance(testing_triples_factory, str):
-        if validation_triples_factory is not None and not isinstance(validation_triples_factory, str):
-            raise TypeError(f'Validation is invalid type: {type(validation_triples_factory)}')
+    if isinstance(training, str) and isinstance(testing, str):
+        if validation is not None and not isinstance(validation, str):
+            raise TypeError(f'Validation is invalid type: {type(validation)}')
         return PathDataSet(
-            training_path=training_triples_factory,
-            testing_path=testing_triples_factory,
-            validation_path=validation_triples_factory,
+            training_path=training,
+            testing_path=testing,
+            validation_path=validation,
             **(dataset_kwargs or {}),
         )
 
-    if isinstance(training_triples_factory, TriplesFactory) and isinstance(testing_triples_factory, TriplesFactory):
-        if validation_triples_factory is not None and not isinstance(validation_triples_factory, TriplesFactory):
-            raise TypeError(f'Validation is invalid type: {type(validation_triples_factory)}')
+    if isinstance(training, TriplesFactory) and isinstance(testing, TriplesFactory):
+        if validation is not None and not isinstance(validation, TriplesFactory):
+            raise TypeError(f'Validation is invalid type: {type(validation)}')
         if dataset_kwargs:
             logger.warning('dataset_kwargs are disregarded when passing pre-instantiated triples factories')
         return EagerDataset(
-            training=training_triples_factory,
-            testing=testing_triples_factory,
-            validation=validation_triples_factory,
+            training=training,
+            testing=testing,
+            validation=validation,
         )
 
     raise TypeError('Training and testing must both be given as strings or Triples Factories')

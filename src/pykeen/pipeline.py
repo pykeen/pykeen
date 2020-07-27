@@ -534,9 +534,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Union[None, TriplesFactory, str] = None,
-    testing_triples_factory: Union[None, TriplesFactory, str] = None,
-    validation_triples_factory: Union[None, TriplesFactory, str] = None,
+    training: Union[None, TriplesFactory, str] = None,
+    testing: Union[None, TriplesFactory, str] = None,
+    validation: Union[None, TriplesFactory, str] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -579,12 +579,12 @@ def pipeline(  # noqa: C901
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
-    :param training_triples_factory:
-        A triples factory with training instances if a a dataset was not specified
-    :param testing_triples_factory:
-        A triples factory with training instances if a dataset was not specified
-    :param validation_triples_factory:
-        A triples factory with validation instances if a dataset was not specified
+    :param training:
+        A triples factory with training instances or path to the training file if a a dataset was not specified
+    :param testing:
+        A triples factory with training instances or path to the test file if a dataset was not specified
+    :param validation:
+        A triples factory with validation instances or path to the validation file if a dataset was not specified
 
     :param model:
         The name of the model or the model class
@@ -674,9 +674,9 @@ def pipeline(  # noqa: C901
     dataset_instance = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
-        training_triples_factory=training_triples_factory,
-        testing_triples_factory=testing_triples_factory,
-        validation_triples_factory=validation_triples_factory,
+        training=training,
+        testing=testing,
+        validation=validation,
     )
 
     if dataset is not None:

@@ -186,9 +186,9 @@ class Objective:
                 # 1. Dataset
                 dataset=self.dataset,
                 dataset_kwargs=self.dataset_kwargs,
-                training_triples_factory=self.training_triples_factory,
-                testing_triples_factory=self.testing_triples_factory,
-                validation_triples_factory=self.validation_triples_factory,
+                training=self.training_triples_factory,
+                testing=self.testing_triples_factory,
+                validation=self.validation_triples_factory,
                 # 2. Model
                 model=self.model,
                 model_kwargs=_model_kwargs,
@@ -409,9 +409,9 @@ def hpo_pipeline(
     # 1. Dataset
     dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Union[None, str, TriplesFactory] = None,
-    testing_triples_factory: Union[None, str, TriplesFactory] = None,
-    validation_triples_factory: Union[None, str, TriplesFactory] = None,
+    training: Union[None, str, TriplesFactory] = None,
+    testing: Union[None, str, TriplesFactory] = None,
+    validation: Union[None, str, TriplesFactory] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -471,12 +471,12 @@ def hpo_pipeline(
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
-    :param training_triples_factory:
-        A triples factory with training instances if a a dataset was not specified
-    :param testing_triples_factory:
-        A triples factory with training instances if a dataset was not specified
-    :param validation_triples_factory:
-        A triples factory with validation instances if a dataset was not specified
+    :param training:
+        A triples factory with training instances or path to the training file if a a dataset was not specified
+    :param testing:
+        A triples factory with test instances or path to the test file if a dataset was not specified
+    :param validation:
+        A triples factory with validation instances or path to the validation file if a dataset was not specified
 
     :param model:
         The name of the model or the model class to pass to :func:`pykeen.pipeline.pipeline`
@@ -636,9 +636,9 @@ def hpo_pipeline(
         # 1. Dataset
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
-        training_triples_factory=training_triples_factory,
-        testing_triples_factory=testing_triples_factory,
-        validation_triples_factory=validation_triples_factory,
+        training_triples_factory=training,
+        testing_triples_factory=testing,
+        validation_triples_factory=validation,
         # 2. Model
         model=model,
         model_kwargs=model_kwargs,
