@@ -306,9 +306,9 @@ class LabelMapping:
         mapped_triples = torch.as_tensor(
             data=np.stack(
                 [
-                    self._map_column(labeled_column=triples[:, 0], mapper=self._vectorized_entity_mapper),
-                    self._map_column(labeled_column=triples[:, 1], mapper=self._vectorized_relation_mapper),
-                    self._map_column(labeled_column=triples[:, 2], mapper=self._vectorized_entity_mapper),
+                    self.map_entities(entities=triples[:, 0]),
+                    self.map_relations(relations=triples[:, 1]),
+                    self.map_entities(entities=triples[:, 2]),
                 ],
                 axis=-1,
             ),
