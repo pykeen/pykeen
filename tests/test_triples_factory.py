@@ -5,6 +5,7 @@
 import unittest
 
 import numpy as np
+import torch
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
@@ -135,10 +136,12 @@ class TestTriplesFactory(unittest.TestCase):
     def test_tensor_to_df(self):
         """Test tensor_to_df()."""
         # check correct translation
-        labeled_triples = self.factory.triples[:10]
-        tensor = self.factory.mapped_triples[:10]
-        df = self.factory.tensor_to_df(tensor=tensor)
-        assert np.testing.assert_equal(df[['head_label', 'relation_label', 'tail_label']].values, labeled_triples)
+        labeled_triples = set(tuple(row) for row in self.factory.triples.tolist())
+        tensor = self.factory.mapped_triples
+        scores = torch.rand(tensor.shape[0])
+        df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
+        re_labeled_triples = set(tuple(row) for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist())
+        assert labeled_triples == re_labeled_triples
 
 
 class TestSplit(unittest.TestCase):
