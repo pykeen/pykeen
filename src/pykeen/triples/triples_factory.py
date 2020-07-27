@@ -101,11 +101,11 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     }
 
 
-def create_relation_mapping(relations: set) -> RelationMapping:
-    """Create mapping from relation labels to IDs.
+def create_relation_mapping(relations: Union[np.ndarray, Collection[str]]) -> RelationMapping:
+    """Create mapping from relation labels to IDs."""
+    if isinstance(relations, np.ndarray):
+        relations = np.unique(relations).tolist()
 
-    :param relations: set
-    """
     # Sorting ensures consistent results when the triples are permuted
     relation_labels = sorted(
         set(relations),
@@ -311,7 +311,7 @@ class TriplesFactory:
 
         # Generate relation mapping if necessary
         if relation_to_id is None:
-            relation_to_id = create_relation_mapping(relations=np.unique(triples[:, 1]))
+            relation_to_id = create_relation_mapping(relations=triples[:, 1])
         if compact_id:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
 
