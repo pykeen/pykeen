@@ -17,7 +17,7 @@ from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, slice_triples
+from ..utils import compact_mapping, invert_mapping, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -304,6 +304,16 @@ class TriplesFactory:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
+    @property
+    def entity_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
+        """The mapping from entity IDs to their labels."""
+        return invert_mapping(mapping=self.entity_to_id)
+
+    @property
+    def relation_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
+        """The mapping from relation IDs to their labels."""
+        return invert_mapping(mapping=self.relation_to_id)
+
     def get_inverse_relation_id(self, relation: str) -> int:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
@@ -523,10 +533,8 @@ class TriplesFactory:
 
     def tensor_to_df(self, tensor: torch.LongTensor) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels."""
-        id_to_entity = {v: k for k, v in self.entity_to_id.items()}
-        id_to_rel = {v: k for k, v in self.relation_to_id.items()}
         rows = [
-            (h, id_to_entity[h], r, id_to_rel[r], t, id_to_entity[t])
+            (h, self.entity_id_to_label[h], r, self.relation_id_to_label[r], t, self.entity_id_to_label[t])
             for h, r, t in tensor.tolist()
         ]
         columns = ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label']
