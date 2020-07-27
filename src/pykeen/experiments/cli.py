@@ -194,8 +194,11 @@ def ablation(
     """
     from pykeen.ablation import ablation_pipeline
 
+    with open(path) as file:
+        config = json.load(file)
+
     ablation_pipeline(
-        config=json.load(path),
+        config=config,
         directory=directory,
         dry_run=dry_run,
         best_replicates=best_replicates,
