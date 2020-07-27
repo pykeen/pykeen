@@ -21,14 +21,22 @@ logger = logging.getLogger(__name__)
 
 
 def prepare_ablation(path: str, directory: str, save_artifacts: bool):
-    """Prepare a set of ablation study directories."""
+    """Prepare a set of ablation study directories.
+
+    TODO @mehdi documentation of parameters
+    TODO @mehdi type annotation for return type
+    """
     with open(path) as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 
 
 def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save_artifacts: bool):
-    """Prepare a set of ablation study directories."""
+    """Prepare a set of ablation study directories.
+
+    TODO @mehdi documentation of parameters
+    TODO @mehdi type annotation for return type
+    """
     metadata = config['metadata']
     optuna_config = config['optuna']
     ablation_config = config['ablation']

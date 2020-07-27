@@ -10,6 +10,7 @@ PyKEEN
    tutorial/first_steps
    tutorial/understanding_evaluation
    tutorial/running_hpo
+   tutorial/running_ablation
    tutorial/byod
    tutorial/using_mlflow
 

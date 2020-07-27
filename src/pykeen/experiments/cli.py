@@ -192,6 +192,8 @@ def ablation(
 
     A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
     """
+    # TODO this should be a function pykeen.ablation.ablation_pipeline
+
     from pykeen.ablation import prepare_ablation
 
     datetime = time.strftime('%Y-%m-%d-%H-%M')
