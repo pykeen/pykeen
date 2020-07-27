@@ -3,7 +3,7 @@
 """Ablation studies in PyKEEN.
 
   "If :func:`pykeen.pipeline.pipeline` were making a maze, :func:`pykeen.hpo.hpo_pipeline` were getting
-  killed by your dead wife, then :func:`pykeen.ablation.prepare_ablation_from_config` is washing up on
+  killed by your dead wife, then :func:`pykeen.ablation.ablation_pipeline` is washing up on
   a beach." -Christopher Nolan
 
 TODO for Mehdi!
@@ -22,9 +22,10 @@ TODO for Mehdi!
 
 """
 
-from .ablation import prepare_ablation, prepare_ablation_from_config
+from .ablation import ablation_pipeline, prepare_ablation, prepare_ablation_from_config
 
 __all__ = [
+    'ablation_pipeline',
     'prepare_ablation_from_config',
     'prepare_ablation',
 ]

@@ -6,18 +6,62 @@ import itertools as itt
 import json
 import logging
 import os
+import sys
+import time
 from copy import deepcopy
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
+from uuid import uuid4
 
 from ..training import _TRAINING_LOOP_SUFFIX
 from ..utils import normalize_string
 
 __all__ = [
+    'ablation_pipeline',
     'prepare_ablation_from_config',
     'prepare_ablation',
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def ablation_pipeline(
+    config: Mapping[str, Any],
+    directory: Optional[str],
+    dry_run: bool,
+    best_replicates: int,
+    save_artifacts: bool,
+    move_to_cpu: bool,
+    discard_replicates: bool,
+) -> None:
+    """Generate a set of HPO configurations.
+
+    A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
+    """
+    datetime = time.strftime('%Y-%m-%d-%H-%M')
+    directory = os.path.join(directory, f'{datetime}_{uuid4()}')
+
+    directories = prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
+    if dry_run:
+        return sys.exit(0)
+
+    from pykeen.hpo import hpo_pipeline_from_path
+
+    for output_directory, rv_config_path in directories:
+        hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
+        hpo_pipeline_result.save_to_directory(output_directory)
+
+        if not best_replicates:
+            continue
+
+        best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
+        os.makedirs(best_pipeline_dir, exist_ok=True)
+        logger.info('Re-training best pipeline and saving artifacts in %s', best_pipeline_dir)
+        hpo_pipeline_result.replicate_best_pipeline(
+            replicates=best_replicates,
+            move_to_cpu=move_to_cpu,
+            save_replicates=not discard_replicates,
+            directory=best_pipeline_dir,
+        )
 
 
 def prepare_ablation(path: str, directory: str, save_artifacts: bool):

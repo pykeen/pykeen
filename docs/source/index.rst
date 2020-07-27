@@ -31,6 +31,7 @@ PyKEEN
    reference/evaluation/index
    reference/negative_sampling
    reference/hpo
+   reference/ablation
    reference/lookup
 
 .. toctree::
