@@ -143,6 +143,9 @@ class TestTriplesFactory(unittest.TestCase):
         re_labeled_triples = set(tuple(row) for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist())
         assert labeled_triples == re_labeled_triples
 
+        # check column order
+        assert list(df.columns) == ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'scores']
+
 
 class TestSplit(unittest.TestCase):
     """Test splitting."""
