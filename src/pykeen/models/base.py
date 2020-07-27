@@ -648,15 +648,22 @@ class Model(nn.Module):
             ):
                 # calculate batch scores
                 hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
+                real_batch_size = hs.shape[0]
                 hr_batch = torch.stack([
                     hs,
-                    hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
+                    hs.new_empty(1).fill_(value=r).repeat(real_batch_size)
                 ], dim=-1)
-                top_scores = self.predict_scores_all_tails(hr_batch=hr_batch)
+                top_scores = self.predict_scores_all_tails(hr_batch=hr_batch).view(-1)
 
                 # get top scores within batch
-                top_scores, top_indices = top_scores.view(-1).topk(k=k, largest=True, sorted=False)
-                top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
+                if top_scores.numel() >= k:
+                    top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
+                    top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
+                else:
+                    top_heads = hs.view(-1, 1).repeat(1, self.num_entities).view(-1)
+                    top_tails = torch.arange(self.num_entities, device=hs.device).view(1, -1).repeat(
+                        real_batch_size, 1).view(-1)
+
                 top_triples = torch.stack([
                     top_heads,
                     top_heads.new_empty(top_heads.shape).fill_(value=r),
