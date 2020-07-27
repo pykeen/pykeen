@@ -29,6 +29,11 @@ logger = logging.getLogger(__name__)
 INVERSE_SUFFIX = '_inverse'
 
 
+def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> torch.LongTensor:
+    """Return the unique entity IDs used in a tensor of triples."""
+    return mapped_triples[:, [0, 2]].unique()
+
+
 def _create_multi_label_tails_instance(
     mapped_triples: MappedTriples,
     use_tqdm: Optional[bool] = None
@@ -473,7 +478,7 @@ class TriplesFactory:
         """Get an np.array index for triples with the given entities."""
         entities = np.asanyarray(entities, dtype=self.triples.dtype)
         return np.isin(self.triples[:, 0], entities, invert=invert) \
-            & np.isin(self.triples[:, 2], entities, invert=invert)
+               & np.isin(self.triples[:, 2], entities, invert=invert)
 
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
         """Get an np.array index for triples with the given relations."""
