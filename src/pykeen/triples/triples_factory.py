@@ -315,6 +315,10 @@ class LabelMapping:
             logger.info('Label mapping contains already inverse relations.')
             return self
 
+        if _check_already_inverted_relations(self.relation_label_to_id.keys()):
+            raise ValueError('relation_label_to_id contains relations with inverse suffix, but there is no mapping for '
+                             'inverse relations. This is likely due to manually changing the mappings.')
+
         # Extend relation mapping by inverse relations
         relation_label_to_id = {
             relation: 2 * relation_id
