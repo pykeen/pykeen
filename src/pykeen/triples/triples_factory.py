@@ -531,15 +531,36 @@ class TriplesFactory:
         word_cloud = WordCloud()
         return HTML(word_cloud.get_embed_code(text=text, topn=top))
 
-    def tensor_to_df(self, tensor: torch.LongTensor) -> pd.DataFrame:
+    def tensor_to_df(self, tensor: torch.LongTensor, **kwargs) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels."""
-        rows = [
-            (h, self.entity_id_to_label[h], r, self.relation_id_to_label[r], t, self.entity_id_to_label[t])
-            for h, r, t in tensor.tolist()
-        ]
-        columns = ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label']
-        rv = pd.DataFrame(rows, columns=columns)
-        return rv
+        # convert to numpy
+        tensor = tensor.cpu().numpy()
+        data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
+
+        # vectorized label lookup
+        entity_id_to_label = np.vectorize(self.entity_id_to_label.__getitem__)
+        relation_id_to_label = np.vectorize(self.relation_id_to_label.__getitem__)
+        for column, id_to_label in dict(
+            head=entity_id_to_label,
+            relation=relation_id_to_label,
+            tail=entity_id_to_label,
+        ).items():
+            data[f'{column}_label'] = id_to_label(data[f'{column}_id'])
+
+        # Additional columns
+        for key, values in kwargs.items():
+            # convert PyTorch tensors to numpy
+            if torch.is_tensor(values):
+                values = values.cpu().numpy()
+            data[key] = values
+
+        # convert to dataframe
+        rv = pd.DataFrame(data=data)
+
+        # Re-order columns
+        first_columns = ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label']
+        columns = first_columns + sorted(set(rv.columns).difference(first_columns))
+        return rv.loc[:, columns]
 
 
 def _tf_cleanup_all(

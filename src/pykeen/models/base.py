@@ -679,9 +679,9 @@ class Model(nn.Module):
 
             return result, scores
 
-    def make_labeled_df(self, tensor: torch.LongTensor) -> pd.DataFrame:
+    def make_labeled_df(self, tensor: torch.LongTensor, **kwargs) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels."""
-        return self.triples_factory.tensor_to_df(tensor)
+        return self.triples_factory.tensor_to_df(tensor, **kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
