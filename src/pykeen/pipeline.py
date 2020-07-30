@@ -582,11 +582,11 @@ def pipeline(  # noqa: C901
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training_triples_factory:
-        A triples factory with training instances if a dataset was not specified.
+        A triples factory with training instances if a dataset was not specified
     :param testing_triples_factory:
-        A triples factory with training instances if a dataset was not specified.
+        A triples factory with training instances if a dataset was not specified
     :param validation_triples_factory:
-        A triples factory with validation instances if a dataset was not specified.
+        A triples factory with validation instances if a dataset was not specified
     :param restrict_evaluation_to_entities:
         Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
         is only interested in certain entities, but the relational patterns with other entities improve the entitiy
