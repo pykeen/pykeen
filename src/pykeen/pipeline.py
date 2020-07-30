@@ -653,9 +653,10 @@ def pipeline(  # noqa: C901
         The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
         create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
 
-    :param metadata: A JSON dictionary to store with the experiment
-    :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
-     Defaults to true - use testing triples.
+    :param metadata:
+        A JSON dictionary to store with the experiment
+    :param use_testing_data:
+        If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
         random_seed = random.randint(0, 2 ** 32 - 1)
