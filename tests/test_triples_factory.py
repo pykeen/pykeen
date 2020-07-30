@@ -10,7 +10,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
 
 triples = np.array(
@@ -140,11 +140,14 @@ class TestTriplesFactory(unittest.TestCase):
         tensor = self.factory.mapped_triples
         scores = torch.rand(tensor.shape[0])
         df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
-        re_labeled_triples = set(tuple(row) for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist())
+        re_labeled_triples = set(
+            tuple(row)
+            for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist()
+        )
         assert labeled_triples == re_labeled_triples
 
         # check column order
-        assert list(df.columns) == ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'scores']
+        assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ('scores',)
 
 
 class TestSplit(unittest.TestCase):
