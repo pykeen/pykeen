@@ -697,6 +697,8 @@ def pipeline(  # noqa: C901
             entities=restrict_evaluation_to_entities,
             relations=restrict_evaluation_to_relations,
         )
+        if factory is not None
+        else None
         for factory in (testing_triples_factory, validation_triples_factory)
     ]
 
