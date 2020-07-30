@@ -62,9 +62,9 @@ class Objective:
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
-    training_triples_factory: Optional[TriplesFactory] = None
-    testing_triples_factory: Optional[TriplesFactory] = None
-    validation_triples_factory: Optional[TriplesFactory] = None
+    training: Union[None, TriplesFactory, str] = None
+    testing: Union[None, TriplesFactory, str] = None
+    validation: Union[None, TriplesFactory, str] = None
     # 2. Model
     model_kwargs: Optional[Mapping[str, Any]] = None
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -186,9 +186,9 @@ class Objective:
                 # 1. Dataset
                 dataset=self.dataset,
                 dataset_kwargs=self.dataset_kwargs,
-                training=self.training_triples_factory,
-                testing=self.testing_triples_factory,
-                validation=self.validation_triples_factory,
+                training=self.training,
+                testing=self.testing,
+                validation=self.validation,
                 # 2. Model
                 model=self.model,
                 model_kwargs=_model_kwargs,
@@ -267,9 +267,9 @@ class HpoPipelineResult(Result):
 
         for field in dataclasses.fields(self.objective):
             if (not field.name.endswith('_kwargs') and field.name not in {
-                'training_triples_factory',
-                'testing_triples_factory',
-                'validation_triples_factory'
+                'training',
+                'testing',
+                'validation'
             }) or field.name in {'metric'}:
                 continue
             field_kwargs = getattr(self.objective, field.name)
@@ -636,9 +636,9 @@ def hpo_pipeline(
         # 1. Dataset
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
-        training_triples_factory=training,
-        testing_triples_factory=testing,
-        validation_triples_factory=validation,
+        training=training,
+        testing=testing,
+        validation=validation,
         # 2. Model
         model=model,
         model_kwargs=model_kwargs,
