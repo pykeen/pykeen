@@ -589,7 +589,7 @@ def pipeline(  # noqa: C901
         A triples factory with validation instances if a dataset was not specified
     :param restrict_evaluation_to_entities:
         Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
-        is only interested in certain entities, but the relational patterns with other entities improve the entitiy
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
         embedding quality.
     :param restrict_evaluation_to_relations:
         Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
