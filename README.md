@@ -229,10 +229,11 @@ in ``pykeen``.
 
 ## Hyper-parameter Optimization
 
-### Samplers (2)
+### Samplers (3)
 
 | Name   | Reference                       | Description                                                     |
 |--------|---------------------------------|-----------------------------------------------------------------|
+| grid   | `optuna.samplers.GridSampler`   | Sampler using grid search.                                      |
 | random | `optuna.samplers.RandomSampler` | Sampler using random sampling.                                  |
 | tpe    | `optuna.samplers.TPESampler`    | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
 
