@@ -169,11 +169,11 @@ class PathDataSet(LazyDataSet):
             self._load_validation()
 
     def _load(self) -> None:
-        self._training = TriplesFactory(
+        self._training = TriplesFactory.from_path(
             path=self.training_path,
             create_inverse_triples=self.create_inverse_triples,
         )
-        self._testing = TriplesFactory(
+        self._testing = TriplesFactory.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
@@ -182,7 +182,7 @@ class PathDataSet(LazyDataSet):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
-        self._validation = TriplesFactory(
+        self._validation = TriplesFactory.from_path(
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
