@@ -1,24 +1,27 @@
 Performance Tricks
 ==================
-PyKEEN uses a combination of techniques under the hood that ensure efficient calculations during both training and
-evaluation as well as try to maximize the utilization of the hardware at hand (currently focused on single GPU usage).
+PyKEEN uses a combination of techniques to promote efficient calculations during training/evaluation
+and tries to maximize the utilization of the available hardware (currently focused on single GPU usage).
 
 .. _entity_and_relation_ids:
 
 Entity and Relation IDs
 -----------------------
-When working with knowledge graphs (KG) the entities and relations contained in triples are usually stored as strings.
-In knowledge graph embeddings models (KGEM) we aim at learning vector representations for them, such that the chosen
-interaction function learns a useful scoring on top of them. We thus need a mapping from the string representations
+Entities and relations in triples are usually stored as strings.
+Because KGEMs aim at learning vector representations for these entities and relations such that the chosen
+interaction function learns a useful scoring on top of them, we need a mapping from the string representations
 to vectors. Moreover, for computational efficiency, we would like to store all entity/relation embeddings in matrices.
 Thus, the mapping process comprises two parts: Mapping strings to IDs, and using the IDs to access the embeddings
 (=row indices).
 
 In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains
-the sets of unique entity and relation labels and ensures that they are mapped to unique IDs ranging from 0 to
-``num_unique_entities`` / ``num_unique_relations``. The mappings are accessible via the attributes
-``entity_label_to_id`` / ``relation_label_to_id``. To improve the performance, the mapping process takes place only
-once, and the ID-based triples are stored in a tensor `mapped_triples`.
+the sets of unique entity and relation labels and ensures that they are mapped to unique integer IDs on
+$[0,\text{num_unique_entities})$ for entities and $[0, \text{num_unique_relations})$. The mappings are respectively
+accessible via the attributes :data:``pykeen.triples.TriplesFactory.entity_label_to_id`` and
+:data:``pykeen.triples.TriplesFactory.relation_label_to_id``.
+
+To improve the performance, the mapping process takes place only once, and the ID-based
+triples are stored in a tensor :data:``pykeen.triples.TriplesFactory.mapped_triples``.
 
 .. _tuple_broadcasting:
 
@@ -27,18 +30,18 @@ Tuple Broadcasting
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
 is in PyKEEN implemented in the :func:`pykeen.models.Model.score_hrt` method of each model, e.g.
 :func:`pykeen.models.DistMult.score_hrt` for :class:`pykeen.models.DistMult`. When training under the local closed
-world assumption (LCWA) or evaluating a model as well as performing link prediction tasks the goal is to score all
+world assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used
 many times for different entities/relations.
 
-E.g. we want to rank all entities for a single tuple (h, r) with :class:`pykeen.models.DistMult` for the
-:class:`pykeen.datasets.FB15k237`. This dataset contains 14,505 entities, which means that we have 14,505 $(h, r, t)$
-combinations, whereas _h_ and _r_ are constant. Looking at the interaction function of :class:`pykeen.models.DistMult`,
-we can observe that the :math:`h*r` part causes half of the mathematical operations to calculate :math:`h*r*t`.
-Therefore, calculating the :math:`h*r` part only once and reusing it spares us half of the mathematical operations for
-the other 14,504 remaining entities, making the calculations roughly twice as fast in total. The speed-up might be
-significantly higher in cases where the broadcasted part has a high relative complexity compared to the overall
-interaction function, e.g. :class:`pykeen.models.ConvE`.
+For example, we want to rank all entities for a single tuple $(h, r)$ with :class:`pykeen.models.DistMult` for the
+:class:`pykeen.datasets.FB15k237`. This dataset contains 14,505 entities, which means that there are 14,505 $(h, r, t)$
+combinations, whereas $h$ and $r$ are constant. Looking at the interaction function of :class:`pykeen.models.DistMult`,
+we can observe that the :math:`h \odot r` part causes half of the mathematical operations to calculate
+:math:`h \odot r \odot t`. Therefore, calculating the :math:`h \odot r` part only once and reusing it spares us
+half of the mathematical operations for the other 14,504 remaining entities, making the calculations roughly
+twice as fast in total. The speed-up might be significantly higher in cases where the broadcasted part has a high
+relative complexity compared to the overall interaction function, e.g. :class:`pykeen.models.ConvE`.
 
 To make this technique possible, PyKEEN models have to provide an explicit broadcasting function via following methods
 in the model class:
@@ -52,40 +55,54 @@ additional modifications. Providing these methods is completely optional and not
 
 Filtering with Index-based Masking
 ----------------------------------
-In a standard evaluation setting of a KGEM for each triple $(h, r, t)$ in the test/validation dataset two calculations
-are performed:
+In this example, it is given a knowledge graph $\mathcal{K} \subseteq \mathcal{E} \times \mathcal{R} \times \mathcal{E}$
+and disjoint union of $\mathcal{K}$ into training triples $\mathcal{K}_{train}$, testing triples $\mathcal{K}_{test}$,
+and validation triples $\mathcal{K}_{val}$. The same operations are performed on $\mathcal{K}_{test}$ and
+$\mathcal{K}_{val}$, but only $\mathcal{K}_{test}$ will be given as examples in this section.
 
- - the tuple $(h, r)$ is combined with all possible tail entities $t*$
- - the tuple $(r, t)$ is combined with all possible head entities $h*$
+Two calculations are performed for each test triple $(h, r, t) \in \mathcal{K}_{test}$ during standard evaluation of
+a knowledge graph embedding model with interaction function
+$f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}$ for the link prediction task:
 
-Afterwards the rank of $(h, r, t)$ is compared to all possible $(h, r, t^*)$ as well as $(h^*, r, t)$ triples.
+1. $(h, r)$ is combined with all possible tail entities $t' \in \mathcal{E}$ to make triples $T_{h,r} = \{(h,r,t') \mid t' \in \mathcal{E}\}$
+2. $(r, t)$ is combined with all possible head entities $h' \in \mathcal{E}$ to make triples $H_{r,t} = \{(h',r,t) \mid h' \in \mathcal{E}\}$
 
-In the filtered setting, $t*$ is not allowed to contain tail entities that would lead to $(h, r, t*)$ triples already
-found in the train dataset. Analogue to that, h* is not allowed to contain head entities leading to $(h*, r, t)$ triples
-found in the train dataset. This leads to the computational challenge that all new possible triples $(h, r, t*)$ and
-$(h*, r, t)$ have to be checked against their existence in the train dataset. Considering a dataset like
-:class:`pykeen.datasets.FB15k237`, with almost 15,000 entities, each test triples leads to 30,000 possible new
-triples, which have to be checked against the train dataset. After removing all possible entities found in the train
-dataset from $h*$ and $t*$, new sets h** and t** are obtained that allow to construct purely novel triples $(h**, r, t)$
-and $(h, r, t**)$ not found in the train dataset.
+Finally, the ranking of $(h, r, t)$ is calculated against all $(h, r, t') \in T_{h,r}$
+and $(h', r, t) \in H_{r,t}$ triples with respect to the interaction function $f$.
 
-To obtain very fast filtering PyKEEN combines the technique presented above in
-:ref:`entity_and_relation_ids` and :ref:`tuple_broadcasting` together with the
-mechanism described below, which in our case has led up to 600,000 fold increase in speed for the filtered evaluation
+In the filtered setting, $T_{h,r}$ is not allowed to contain tail entities $(h, r, t') \in \mathcal{K}_{train}$
+and $H_{r,t}$ is not allowed to contain head entities leading to $(h', r, t) \in \mathcal{K}_{train}$ triples
+found in the train dataset. Therefore, their definitions could be amended like:
+
+- $T^{\text{filtered}}_{h,r} = \{(h,r,t') \mid t' \in \mathcal{E}\} \setminus \mathcal{K}_{train}$
+- $H^{\text{filtered}}_{r,t} = \{(h',r,t) \mid h' \in \mathcal{E}\} \setminus \mathcal{K}_{train}$
+
+While this easily defined theoretically, it poses several practical challenges.
+For example, it leads to the computational challenge that all new possible triples $(h, r, t') \in T_{h,r}$ and
+$(h', r, t) \in H_{r,t}$ must be enumerated then checked for existence in $\mathcal{K}_{train}$.
+Considering a dataset like :class:`pykeen.datasets.FB15k237` that has almost 15,000 entities, each test triple
+$(h,r,t) \in \mathcal{K}_{test}$ leads to $2 * | \mathcal{E} | = 30,000$ possible new triples, which have to be
+checked against the train dataset and then removed.
+
+To obtain very fast filtering, PyKEEN combines the technique presented above in
+:ref:`entity_and_relation_ids` and :ref:`tuple_broadcasting` together with the following
+mechanism, which in our case has led to a 600,000 fold increase in speed for the filtered evaluation
 compared to the mechanisms used in previous versions.
 
-As a starting point, PyKEEN will always compute all possible scores also in the filtered setting. This is due to the
-fact that the number of positive triples in average is very low and thus, few results have to be removed as well as the
-fact that due to the technique presented in :ref:`tuple_broadcasting` any additionally scored entity has a marginally
-low additional cost. Therefore, we start with the score vectors *score_t* for all possible triples $(h, r, t*)$ and
-*score_h* for all possible triples $(h*, r, t)$.
+As a starting point, PyKEEN will always compute scores for all triples in $H_{r,t}$ and $T_{h,r}$, even in
+the filtered setting. Because the number of positive triples on average is very low, few results have to be removed.
+Additionally, due to the technique presented in :ref:`tuple_broadcasting`, scoring extra entities has a
+marginally low cost. Therefore, we start with the score vectors from :func:`pykeen.models.Model.score_t`
+for all triples $(h, r, t') \in H_{r,t}$ and from :func:`pykeen.models.Model.score_h`
+for all triples $(h', r, t) \in T_{h,r}$.
 
-Following, the sparse filters t' and h' are created, which state which of the entities would lead to triples found in
+Following, the sparse filters $\mathbf{f}_t \in \mathbb{B}^{| \mathcal{E}|}$ and
+$\mathbf{f}_h \in \mathbb{B}^{| \mathcal{E}|}$ are created, which state which of the entities would lead to triples found in
 the train dataset. To achieve this we will rely on the technique presented in
 :ref:`entity_and_relation_ids`, i.e. all entity/relation IDs correspond to their
 exact position in the respective embedding tensor.
-As an example we take the tuple $(h, r)$ from the test triple $(h, r, t)$ and are interested in all tail entities $t'$
-that should be removed from $(h, r, t*)$ in order to obtain $(h, r, t**)$.
+As an example we take the tuple $(h, r)$ from the test triple $(h, r, t) \in \mathcal{K}_{test}$ and are interested
+in all tail entities $t'$ that should be removed from $T_{h,r}$ in order to obtain $T^{\text{filtered}}_{h,r}$.
 This is achieved by performing the following steps:
 
 1. Take $r$ and compare it to the relations of all triples in the train dataset, leading to a boolean vector of the
@@ -98,12 +115,13 @@ This is achieved by performing the following steps:
    that contain both the head entity h and the relation $r$, having the size of the number of non-zero elements
 5. The index vector is now applied on the tail entity column of the train dataset, returning all tail entity IDs $t'$
    that combined with $h$ and $r$ lead to triples contained in the train dataset
-6. Finally, the $t'$ tail entity ID index vector is applied on the initially mentioned *score_t* vector for all possible
-   triples $(h, r, t*)$ and all affected scores are set to ``float('nan')`` following the IEEE-754 specification, which
+6. Finally, the $t'$ tail entity ID index vector is applied on the initially mentioned vector returned by
+   :func:`pykeen.models.Model.score_t` for all possible
+   triples $(h, r, t')$ and all affected scores are set to ``float('nan')`` following the IEEE-754 specification, which
    makes these scores non-comparable, effectively leading to the score vector for all possible novel triples
-   $(h, r, t**)$.
+   $(h, r, t') \in T^{\text{filtered}}_{h,r}$.
 
-In an analogue fashion $h'$ is obtained and filtered from $(h*, r, t)$ to obtain $(h**, r, t)$.
+$H^{\text{filtered}}_{r,t}$ is obtained from $H_{r,t}$ in a similar fashion.
 
 .. _sub_batching:
 
