@@ -239,6 +239,24 @@ class LabelMapping:
     #: A dictionary mapping each relation to its inverse, if inverse triples were created
     relation_to_inverse: Optional[Mapping[str, str]] = None
 
+    #: The inverse mapping for entity_label_to_id; initialized automatically
+    entity_id_to_label: Mapping[int, str] = None
+
+    #: The inverse mapping for relation_label_to_id; initialized automatically
+    relation_id_to_label: Mapping[int, str] = None
+
+    #: A vectorized version of entity_label_to_id; initialized automatically
+    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = None
+
+    #: A vectorized version of relation_label_to_id; initialized automatically
+    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = None
+
+    #: A vectorized version of entity_id_to_label; initialized automatically
+    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = None
+
+    #: A vectorized version of relation_id_to_label; initialized automatically
+    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = None
+
     @staticmethod
     def from_labeled_triples(triples: LabeledTriples) -> 'LabelMapping':
         """Create a mapping from labeled triples."""
@@ -247,15 +265,17 @@ class LabelMapping:
             relation_label_to_id=create_relation_mapping(relations=triples[:, 1])
         )
 
-    @property
-    def entity_id_to_label(self) -> Mapping[int, str]:
-        """The mapping from entity IDs to labels."""
-        return invert_mapping(mapping=self.entity_label_to_id)
+    def __post_init__(self):
+        """Pre-compute derived mappings."""
+        # ID to label mapping
+        self.entity_id_to_label = invert_mapping(mapping=self.entity_label_to_id)
+        self.relation_id_to_label = invert_mapping(mapping=self.relation_label_to_id)
 
-    @property
-    def relation_id_to_label(self) -> Mapping[int, str]:
-        """The mapping from relation IDs to labels."""
-        return invert_mapping(mapping=self.relation_label_to_id)
+        # vectorized versions
+        self._vectorized_entity_mapper = np.vectorize(self.entity_label_to_id.get)
+        self._vectorized_relation_mapper = np.vectorize(self.relation_label_to_id.get)
+        self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
+        self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
 
     @property
     def max_entity_id(self) -> int:
@@ -274,22 +294,6 @@ class LabelMapping:
             set(mapping.values()) == set(range(len(mapping)))
             for mapping in (self.entity_label_to_id, self.relation_label_to_id)
         )
-
-    @property
-    def _vectorized_entity_mapper(self) -> Callable[[np.ndarray, Tuple[int]], np.ndarray]:
-        return np.vectorize(self.entity_label_to_id.get)
-
-    @property
-    def _vectorized_relation_mapper(self) -> Callable[[np.ndarray, Tuple[int]], np.ndarray]:
-        return np.vectorize(self.relation_label_to_id.get)
-
-    @property
-    def _vectorized_entity_labeler(self) -> Callable[[np.ndarray, Tuple[str]], np.ndarray]:
-        return np.vectorize(self.entity_id_to_label.get)
-
-    @property
-    def _vectorized_relation_labeler(self) -> Callable[[np.ndarray, Tuple[str]], np.ndarray]:
-        return np.vectorize(self.relation_id_to_label.get)
 
     @property
     def contains_inverse_relations(self) -> bool:
