@@ -227,7 +227,16 @@ def _label_column(
 
 @dataclass
 class LabelMapping:
-    """A mapping from labels to IDs."""
+    """
+    A mapping between labels to IDs.
+
+    Within this class we use the following terminology:
+
+    * mapping:
+        A conversion from labels to IDs.
+    * labeling:
+        A conversion from IDs to labels.
+    """
 
     #: The mapping for entities
     entity_label_to_id: EntityMapping
