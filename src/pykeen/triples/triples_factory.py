@@ -390,7 +390,7 @@ class LabelMapping:
         )
 
         # drop unknowns
-        unknown = (mapped_triples < 0)
+        unknown: torch.BoolTensor = (mapped_triples < 0)
         num_unknown_entities = unknown[[0, 2]].sum()
         num_unknown_relations = unknown[1]
         if num_unknown_entities > 0 or num_unknown_relations > 0:
