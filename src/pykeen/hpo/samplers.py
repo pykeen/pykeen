@@ -5,6 +5,7 @@
 ======  ======================================
 Name    Reference
 ======  ======================================
+grid    :class:`optuna.samplers.GridSampler`
 random  :class:`optuna.samplers.RandomSampler`
 tpe     :class:`optuna.samplers.TPESampler`
 ======  ======================================
@@ -16,7 +17,7 @@ tpe     :class:`optuna.samplers.TPESampler`
 
 from typing import Mapping, Set, Type, Union
 
-from optuna.samplers import BaseSampler, RandomSampler, TPESampler
+from optuna.samplers import BaseSampler, GridSampler, RandomSampler, TPESampler
 
 from ..utils import get_cls, normalize_string
 
@@ -28,7 +29,8 @@ __all__ = [
 _SAMPLER_SUFFIX = 'Sampler'
 _SAMPLERS: Set[Type[BaseSampler]] = {
     RandomSampler,
-    TPESampler
+    TPESampler,
+    GridSampler,
 }
 
 #: A mapping of HPO samplers' names to their implementations
