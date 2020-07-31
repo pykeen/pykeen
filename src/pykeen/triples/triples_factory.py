@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
-
+import dataclasses
 import logging
 import os
 import re
 from collections import Counter, defaultdict
-from dataclasses import dataclass
 from typing import Any, Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
@@ -225,7 +224,7 @@ def _label_column(
     return vectorized_labeler(mapped_column, (unknown_label,))
 
 
-@dataclass
+@dataclasses.dataclass
 class LabelMapping:
     """
     A mapping between labels to IDs.
@@ -248,22 +247,22 @@ class LabelMapping:
     relation_to_inverse: Optional[Mapping[str, str]] = None
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
-    entity_id_to_label: Mapping[int, str] = None
+    entity_id_to_label: Mapping[int, str] = dataclasses.Field(init=False)
 
     #: The inverse mapping for relation_label_to_id; initialized automatically
-    relation_id_to_label: Mapping[int, str] = None
+    relation_id_to_label: Mapping[int, str] = dataclasses.Field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = None
+    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.Field(init=False)
 
     #: A vectorized version of relation_label_to_id; initialized automatically
-    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = None
+    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.Field(init=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = None
+    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.Field(init=False)
 
     #: A vectorized version of relation_id_to_label; initialized automatically
-    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = None
+    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.Field(init=False)
 
     @staticmethod
     def from_labeled_triples(triples: LabeledTriples) -> 'LabelMapping':
