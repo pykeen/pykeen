@@ -6,7 +6,21 @@ import logging
 import os
 import re
 from collections import Counter, defaultdict
-from typing import Any, Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import torch
@@ -110,7 +124,7 @@ def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
 
 
 def _relation_sort_key(relation_label: str) -> Tuple[str, bool]:
-    """The sort key for relation-labels collating inverse relations."""
+    """Return the sort key for relation-labels collating inverse relations."""
     return (
         re.sub(f'{INVERSE_SUFFIX}$', '', relation_label),
         relation_label.endswith(f'{INVERSE_SUFFIX}'),
@@ -599,7 +613,6 @@ class TriplesFactory:
 
         else:
             relation_to_inverse = None
-            _num_relations = len(unique_relations)
 
         # Generate entity mapping if necessary
         if entity_to_id is None:
@@ -635,6 +648,7 @@ class TriplesFactory:
         relation_to_id: RelationMapping,
         relation_to_inverse: Optional[Mapping[str, str]] = None,
     ) -> 'TriplesFactory':
+        """Create a triples factory from ID-based triples."""
         # translate to labeled triples, since the triples factory needs also the labeled triples
         triples = np.asanyarray(
             [entity_to_id[h], relation_to_id[r], entity_to_id[t]]
