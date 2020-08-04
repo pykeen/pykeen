@@ -6,33 +6,32 @@
   killed by your dead wife, then :func:`pykeen.ablation.ablation_pipeline` is washing up on
   a beach." -Christopher Nolan
 
-TODO for Mehdi!
+An ablation study is an experiment in which components of a machine learning system are removed/replaced in order
+to measure the impact of these components on the system's performance.
+In PyKEEN, a user could for instance measure the impact of explicitly modeling inverse relations on the model's
+performance.
 
-1. What is an ablation study?
-2. Why would a user want to run an ablation study?
-   1. Give example from benchmarking paper
-3. How can a user run an ablation study?
-   1. Minimal Example (written in python code embedded in this RST document)
-   2. More complicated usage, step-by-step. See the Pipeline Tutorial as an example on how this might look
+An ablation study is defined based on a dictionary containing three sub-dictionaries: 1.) metadata,
+2.) ablation, and 3.) optuna, which we will define below.
+In the following, we have to define in several cases the dictionaries 'kwargs' and 'kwargs_ranges.
+'kwargs' defines for a specific component (e.g., interaction model or loss function) single hyper-parameter values
+such as a fixed embedding dimension of 50, whereas 'kwargs_ranges' define ranges of values.
+Note that we always have to define both dictionaries, and in cases where do not have entries for
+'kwargs' or 'kwargs_ranges', we define empty dictionaries.
 
-# In the following, we define an ablation study. Entries defined in 'kwargs' define fixed values, whereas
-# entries in 'kwargs_ranges' define ranges of values. Note that we have always to define both dictionaries.
-# In cases where do not have entries for 'kwargs' or 'kwargs_ranges', we define empty dictionaries.
-
-# This dictionary should contain three sub-dictionaries: 1.) metadata, 2.) ablation, and 3.) optuna.
 >>> configuration = {}
 
-# ----------------Define Metadata Dictionary----------------
+----------------Define Metadata Dictionary----------------
 >>> metadata = dict(
 ...    title="HPO over MyData"
 ... )
 
-configuration['metadata'] = metadata
+>>> configuration['metadata'] = metadata
 
-# ----------------Define Ablation Dictionary----------------
+----------------Define Ablation Dictionary----------------
 >>> ablation = {}
 
-# Step 1: define data. Here, we use our own data.
+# Step 1: define dataset. Here, we use our own data.
 >>> datasets = [
 ...    dict(
 ...        training='/path/to/my/train.txt',
@@ -43,7 +42,8 @@ configuration['metadata'] = metadata
 
 >>> ablation['datasets'] = datasets
 
-# Step 2: define model. Several models can be defined.
+Step 2: define model (several models can be defined).
+Note the structure of 'model_kwargs': model_kwargs{InteractionModel:{parameter={range}}}.
 >>> models = ['RotatE']
 >>> model_kwargs = dict(
 ...    RotatE=dict(automatic_memory_optimization=True)
@@ -59,13 +59,13 @@ configuration['metadata'] = metadata
 ...     )
 ... )
 
-# Define, whether mode should explicitly be trained with inverse relations. If set to True, the number of
-# relations are doubled, and the task of predicting the head entities of (r,t)-pairs, becomes the task
-# of predicting tail entities of (t,r_inv)-pairs.
-create_inverse_triples = [True, False]
+Define, whether interaction model should explicitly be trained with inverse relations. If set to 'True',
+the number of relations are doubled, and the task of predicting the head entities of (r,t)-pairs, becomes the task
+of predicting tail entities of (t,r_inv)-pairs.
+>>> create_inverse_triples = [True, False]
 
-# Define regularizer. Several regularizers can be defined. Here we use 'NoRegularizer' to indicate that
-# we do not regularize our model.
+Define regularize (several regularizers can be defined). Here we use 'NoRegularizer' to indicate that
+we do not regularize our model.
 >>> regularizers = ['NoRegularizer']
 >>> regularizer_kwargs = dict(RotatE=dict(NoRegularizer=dict()))
 >>> regularizer_kwargs_ranges = dict(RotatE=dict(NoRegularizer=dict()))
@@ -78,10 +78,10 @@ create_inverse_triples = [True, False]
 >>> ablation['regularizer_kwargs'] = regularizer_kwargs
 >>> ablation['regularizer_kwargs_ranges'] = regularizer_kwargs_ranges
 
-# Step 3: define loss function. Several loss functions can be defined. Here focus on the negative sampling
-# self adversarial loss.
+Step 3: define loss function (several loss functions can be defined). Here focus on the negative sampling
+self adversarial loss.
 >>> loss_functions = ['NSSALoss']
-# Define that we do not have 'loss_kwargs' for NSSALoss.
+Define that we do not have 'loss_kwargs' for NSSALoss.
 >>> loss_kwargs = dict(RotatE=dict(NSSALoss=dict()))
 >>> loss_kwargs_ranges = dict(
 ...    RotatE=dict(
@@ -106,13 +106,13 @@ create_inverse_triples = [True, False]
 >>> ablation['loss_kwargs'] = loss_kwargs
 >>> ablation['loss_kwargs_ranges'] = loss_kwargs_ranges
 
-# Step 4: define training approach: sLCWA and/or LCWA
+Step 4: define training approach: sLCWA and/or LCWA
 >>> training_loops = ['sLCWA']
 >>> ablation['training_loops'] = training_loops
 
-# Define negative sampler since we are using the sLCWA training approach. Several negative samplers can be defined.
+Define negative sampler. Since we are using the sLCWA training approach, we define a negative sampler.
 >>> negative_sampler = 'BasicNegativeSampler'
-# Define that we do not have 'negative_sampler_kwargs'
+Define that we do not have 'negative_sampler_kwargs'.
 >>> negative_sampler_kwargs = dict(RotatE=dict(BasicNegativeSampler=dict()))
 >>> negative_sampler_kwargs_ranges = dict(
 ...    RotatE=dict(
@@ -131,7 +131,7 @@ create_inverse_triples = [True, False]
 >>> ablation['negative_sampler_kwargs'] = negative_sampler_kwargs
 >>> ablation['negative_sampler_kwargs_ranges'] = negative_sampler_kwargs_ranges
 
-# Step 5: define optimizer. Several optimizers can be defined.
+Step 5: define optimizer (several optimizers can be defined).
 >>> optimizers = ['adam']
 >>> optimizer_kwargs = dict(
 ...    RotatE=dict(
@@ -157,7 +157,7 @@ create_inverse_triples = [True, False]
 >>> ablation['optimizer_kwargs'] = optimizer_kwargs
 >>> ablation['optimizer_kwargs_ranges'] = optimizer_kwargs_ranges
 
-# Step 6: define training parameters.
+Step 6: define training parameters.
 >>> training_kwargs = dict(
 ...    RotatE=dict(
 ...        sLCWA=dict(
@@ -182,7 +182,7 @@ create_inverse_triples = [True, False]
 >>> ablation['training_kwargs'] = training_kwargs
 >>> ablation['training_kwargs_ranges'] = training_kwargs_ranges
 
-# Step 7: define evaluator.
+Step 7: define evaluator.
 >>> evaluator = 'RankBasedEvaluator'
 >>> evaluator_kwargs = dict(
 ...    filtered=True,
@@ -195,7 +195,7 @@ create_inverse_triples = [True, False]
 >>> ablation['evaluator_kwargs'] = evaluator_kwargs
 >>> ablation['evaluation_kwargs'] = evaluation_kwargs
 
-# Step 8: Define early stopper.
+Step 8: define early stopper.
 >>> stopper = 'early'
 >>> stopper_kwargs = dict(
 ...    frequency=50,
@@ -208,37 +208,37 @@ create_inverse_triples = [True, False]
 
 >>> configuration['ablation'] = ablation
 
-# ----------------Define Optuna Dictionary----------------
+----------------Define Optuna Dictionary----------------
 
-# Define Optuna related parameters.
+Define Optuna related parameters.
 >>> optuna = {}
-# Define the number of HPO iterations, where in each iteration new hyper-parameters will be sampled.
+Define the number of HPO iterations, where in each iteration new hyper-parameters will be sampled.
 >>> optuna['n_trials'] = 2
-# Define the ablation study's timeout. An ablation study will not be terminated after the timeout is reached
-# independently of the defined number of 'n_trials'. Note: Every HPO iteration that has been started before
-# the timeout has been reached, will be finished, and afterwards the ablation study will be terminated.
+Define the ablation study's timeout. An ablation study will be terminated after the timeout is reached
+independently of the defined number of 'n_trials.' Note: every HPO iteration that has been started before
+the timeout has been reached, will be finished before terminating the current ablation study.
 >>> optuna['timeout'] = 10
-# Define the metric to optimize.
+Define the metric to optimize.
 >>> optuna['metric'] = 'hits@10'
-# Define whether to 'maximize' or 'minimize' the metric.
+Define whether to 'maximize' or 'minimize' the metric.
 >>> optuna['direction'] = 'maximize'
-# Define the HPO sampler. Here, we use random search.
+Define the HPO sampler. Here, we use random search.
 >>> optuna['sampler'] = 'random'
-# Define which Optuna pruner should be used. We indicate that we do not use an pruner.
+Define which Optuna pruner should be used. We indicate that we do not use an pruner.
 >>> optuna['pruner'] = 'nop'
 
 >>> configuration['optuna'] = optuna
 
 >>> output_directory = '/Users/mali/PycharmProjects/pykeen_1_0/data'
-# Defines how should the model with best hyper-parameters re-trained and evaluated
-# to measure the variance in performance
+Defines how often the model should be re-trained and evaluated based on the best hyper-parameters which
+enables us to measure the variance in performance.
 >>> best_replicates = 2
-# Defines, whether each trained model that is sampled during HPO should be saved.
+Defines, whether each trained model sampled during HPO should be saved.
 >>> save_artifacts = False
-# Defines, whether best model should be discarded after training and evaluation
+Defines, whether the best model should be discarded after training and evaluation.
 >>> discard_replicates = False
-# Defines, whether a replicate of the best model should be moved to CPU.
-# We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
+Defines, whether a replicate of the best model should be moved to CPU.
+We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
 >>> move_to_cpu = True
 
 >>> ablation_pipeline(
