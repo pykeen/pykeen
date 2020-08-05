@@ -25,7 +25,7 @@
   </a>
 
   <a href="https://optuna.org">
-    <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="18">
+    <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
   </a>
 </p>
 
