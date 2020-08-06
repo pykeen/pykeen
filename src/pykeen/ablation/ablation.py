@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from copy import deepcopy
-from typing import Any, Mapping, Optional
+from typing import Any, List, Mapping, Optional, Tuple
 from uuid import uuid4
 
 from ..training import _TRAINING_LOOP_SUFFIX
@@ -34,8 +34,18 @@ def ablation_pipeline(
     discard_replicates: bool,
 ) -> None:
     """Generate a set of HPO configurations.
-
     A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
+
+    :param config: Dictionary defining the ablation studies.
+    :param directory: The directory in which the experimental artifacts will be saved.
+    :param dry_run: Defines whether only the configurations for the single experiments should be created without
+    running them.
+    :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
+    hyper-parameters enabling to measure the variance in performance.
+    :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
+    :param move_to_cpu: Defines, whether a replicate of the best model should be moved to CPU.
+    We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
+    :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     """
     datetime = time.strftime('%Y-%m-%d-%H-%M')
     directory = os.path.join(directory, f'{datetime}_{uuid4()}')
@@ -64,22 +74,30 @@ def ablation_pipeline(
         )
 
 
-def prepare_ablation(path: str, directory: str, save_artifacts: bool):
-    """Prepare a set of ablation study directories.
+def prepare_ablation(path: str, directory: str, save_artifacts: bool) -> List[Tuple[str, str]]:
+    """
+    Prepare a set of ablation study directories.
 
-    TODO @mehdi documentation of parameters
-    TODO @mehdi type annotation for return type
+    :param path: Path to configuration file defining the ablation studies.
+    :param directory: The directory in which the experimental artifacts (including the ablation configurations)
+    will be saved.
+    :param save_artifacts: Defines, whether the output directories for the trained models sampled during HPO should be
+    created.
     """
     with open(path) as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 
 
-def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save_artifacts: bool):
+def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save_artifacts: bool) -> List[
+    Tuple[str, str]]:
     """Prepare a set of ablation study directories.
 
-    TODO @mehdi documentation of parameters
-    TODO @mehdi type annotation for return type
+    :param config: Dictionary defining the ablation studies.
+    :param directory: The directory in which the experimental artifacts (including the ablation configurations)
+    will be saved.
+    :param save_artifacts: Defines, whether the output directories for the trained models sampled during HPO should be
+    created.
     """
     metadata = config['metadata']
     optuna_config = config['optuna']
