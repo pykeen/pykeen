@@ -64,8 +64,10 @@ Two calculations are performed for each test triple $(h, r, t) \in \mathcal{K}_{
 a knowledge graph embedding model with interaction function
 $f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}$ for the link prediction task:
 
-1. $(h, r)$ is combined with all possible tail entities $t' \in \mathcal{E}$ to make triples $T_{h,r} = \{(h,r,t') \mid t' \in \mathcal{E}\}$
-2. $(r, t)$ is combined with all possible head entities $h' \in \mathcal{E}$ to make triples $H_{r,t} = \{(h',r,t) \mid h' \in \mathcal{E}\}$
+1. $(h, r)$ is combined with all possible tail entities $t' \in \mathcal{E}$ to make triples
+   $T_{h,r} = \{(h,r,t') \mid t' \in \mathcal{E}\}$
+2. $(r, t)$ is combined with all possible head entities $h' \in \mathcal{E}$ to make triples
+   $H_{r,t} = \{(h',r,t) \mid h' \in \mathcal{E}\}$
 
 Finally, the ranking of $(h, r, t)$ is calculated against all $(h, r, t') \in T_{h,r}$
 and $(h', r, t) \in H_{r,t}$ triples with respect to the interaction function $f$.
@@ -97,8 +99,8 @@ for all triples $(h, r, t') \in H_{r,t}$ and from :func:`pykeen.models.Model.sco
 for all triples $(h', r, t) \in T_{h,r}$.
 
 Following, the sparse filters $\mathbf{f}_t \in \mathbb{B}^{| \mathcal{E}|}$ and
-$\mathbf{f}_h \in \mathbb{B}^{| \mathcal{E}|}$ are created, which state which of the entities would lead to triples found in
-the train dataset. To achieve this we will rely on the technique presented in
+$\mathbf{f}_h \in \mathbb{B}^{| \mathcal{E}|}$ are created, which state which of the entities would lead to triples
+found in the train dataset. To achieve this we will rely on the technique presented in
 :ref:`entity_and_relation_ids`, i.e. all entity/relation IDs correspond to their
 exact position in the respective embedding tensor.
 As an example we take the tuple $(h, r)$ from the test triple $(h, r, t) \in \mathcal{K}_{test}$ and are interested
