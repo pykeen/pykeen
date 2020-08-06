@@ -23,6 +23,10 @@
   <a href="https://badge.fury.io/py/pykeen">
     <img src="https://badge.fury.io/py/pykeen.svg" alt="PyPI version" height="18">
   </a>
+
+  <a href="https://optuna.org">
+    <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
+  </a>
 </p>
 
 <p align="center">
