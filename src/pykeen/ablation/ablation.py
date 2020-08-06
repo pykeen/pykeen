@@ -34,7 +34,8 @@ def ablation_pipeline(
     discard_replicates: bool,
 ) -> None:
     """Generate a set of HPO configurations.
-    A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
+
+    A sample file can be run with``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
 
     :param config: Dictionary defining the ablation studies.
     :param directory: The directory in which the experimental artifacts will be saved.
@@ -75,8 +76,7 @@ def ablation_pipeline(
 
 
 def prepare_ablation(path: str, directory: str, save_artifacts: bool) -> List[Tuple[str, str]]:
-    """
-    Prepare a set of ablation study directories.
+    """Prepare a set of ablation study directories.
 
     :param path: Path to configuration file defining the ablation studies.
     :param directory: The directory in which the experimental artifacts (including the ablation configurations)
@@ -90,7 +90,7 @@ def prepare_ablation(path: str, directory: str, save_artifacts: bool) -> List[Tu
 
 
 def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save_artifacts: bool) -> List[
-    Tuple[str, str]]:
+        Tuple[str, str]]:
     """Prepare a set of ablation study directories.
 
     :param config: Dictionary defining the ablation studies.
