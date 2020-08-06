@@ -40,7 +40,8 @@
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-13">Datasets</a> •
   <a href="#models-23">Models</a> •
-  <a href="#supporters">Support</a>
+  <a href="#supporters">Support</a> •
+  <a href="#citation">Citation</a>
 </p>
 
 ## Installation

@@ -40,7 +40,8 @@
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-{{ n_datasets }}">Datasets</a> •
   <a href="#models-{{ n_models }}">Models</a> •
-  <a href="#supporters">Support</a>
+  <a href="#supporters">Support</a> •
+  <a href="#citation">Citation</a>
 </p>
 
 ## Installation
