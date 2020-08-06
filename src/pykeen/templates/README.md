@@ -204,3 +204,16 @@ This project has been supported by several organizations (in alphabetical order)
 ### Logo
 
 The PyKEEN logo was designed by Carina Steinborn.
+
+## Citation
+
+If you have found PyKEEN useful in your work, please consider citing the following article:
+
+```bibtex
+@article{ali2020pykeen,
+  title={PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Emebddings},
+  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
+  journal={arXiv preprint arXiv:2007.14175},
+  year={2020}
+}
+```
