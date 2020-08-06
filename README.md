@@ -289,7 +289,7 @@ The PyKEEN logo was designed by Carina Steinborn.
 
 ## Citation
 
-If you have found PyKEEN useful in your work, please consider citing the following article:
+If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
 
 ```bibtex
 @article{ali2020pykeen,
