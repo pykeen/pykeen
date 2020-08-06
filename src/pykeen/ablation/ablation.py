@@ -89,8 +89,11 @@ def prepare_ablation(path: str, directory: str, save_artifacts: bool) -> List[Tu
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 
 
-def prepare_ablation_from_config(config: Mapping[str, Any], directory: str, save_artifacts: bool) -> List[
-        Tuple[str, str]]:
+def prepare_ablation_from_config(
+    config: Mapping[str, Any],
+    directory: str,
+    save_artifacts: bool
+) -> List[Tuple[str, str]]:
     """Prepare a set of ablation study directories.
 
     :param config: Dictionary defining the ablation studies.
