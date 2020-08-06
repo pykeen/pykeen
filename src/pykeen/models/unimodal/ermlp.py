@@ -105,22 +105,36 @@ class ERMLP(EntityRelationEmbeddingModel):
         # Compute scores
         return self.mlp(x_s)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+    def score_hrt(
+        self,
+        hrt_batch: torch.LongTensor,
+        h: Optional[torch.FloatTensor]=None,
+        r: Optional[torch.FloatTensor]=None,
+        t: Optional[torch.FloatTensor]=None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if h is None and r is None and t is None:
+            # Get embeddings
+            h = self.entity_embeddings(hrt_batch[:, 0])
+            r = self.relation_embeddings(hrt_batch[:, 1])
+            t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
         return self.interaction_function(h, r, t)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0])
-        r = self.relation_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
+    def score_t(
+        self,
+        hr_batch: torch.LongTensor,
+        h: Optional[torch.FloatTensor] = None,
+        r: Optional[torch.FloatTensor] = None,
+        t: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if h is None and r is None and t is None:
+            # Get embeddings
+            h = self.entity_embeddings(hr_batch[:, 0])
+            r = self.relation_embeddings(hr_batch[:, 1])
+            t = self.entity_embeddings.weight
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -142,11 +156,18 @@ class ERMLP(EntityRelationEmbeddingModel):
         scores = scores.view(-1, self.num_entities)
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0])
-        t = self.entity_embeddings(rt_batch[:, 1])
+    def score_h(
+        self,
+        rt_batch: torch.LongTensor,
+        h: Optional[torch.FloatTensor] = None,
+        r: Optional[torch.FloatTensor] = None,
+        t: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if h is None and r is None and t is None:
+            # Get embeddings
+            h = self.entity_embeddings.weight
+            r = self.relation_embeddings(rt_batch[:, 0])
+            t = self.entity_embeddings(rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
