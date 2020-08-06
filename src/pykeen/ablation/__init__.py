@@ -21,17 +21,19 @@ Note that we always have to define both dictionaries, and in cases where do not 
 
 >>> configuration = {}
 
-----------------Define Metadata Dictionary----------------
+Define Metadata Dictionary
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 >>> metadata = dict(
 ...    title="HPO over MyData"
 ... )
 
 >>> configuration['metadata'] = metadata
 
-----------------Define Ablation Dictionary----------------
+Define Ablation Dictionary
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 >>> ablation = {}
 
-# Step 1: define dataset. Here, we use our own data.
+Step 1: define dataset. Here, we use our own data.
 >>> datasets = [
 ...    dict(
 ...        training='/path/to/my/train.txt',
@@ -208,7 +210,8 @@ Step 8: define early stopper.
 
 >>> configuration['ablation'] = ablation
 
-----------------Define Optuna Dictionary----------------
+Define Optuna Dictionary
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Define Optuna related parameters.
 >>> optuna = {}
