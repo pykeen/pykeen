@@ -232,7 +232,7 @@ Define which Optuna pruner should be used. We indicate that we do not use an pru
 
 >>> configuration['optuna'] = optuna
 
->>> output_directory = '/Users/mali/PycharmProjects/pykeen_1_0/data'
+>>> output_directory = '/path/to/output/directory'
 Defines how often the model should be re-trained and evaluated based on the best hyper-parameters which
 enables us to measure the variance in performance.
 >>> best_replicates = 2
