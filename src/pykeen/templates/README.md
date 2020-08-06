@@ -20,10 +20,6 @@
     <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
   </a>
 
-  <a href="https://pypi.org/project/pykeen/">
-    <img alt="PyPI" src="https://img.shields.io/pypi/v/pykeen">
-  </a>
-
   <a href="https://optuna.org">
     <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
   </a>
@@ -43,17 +39,17 @@
   <a href="#citation">Citation</a>
 </p>
 
-## Installation
+## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
 The development version of PyKEEN can be downloaded and installed from
-[PyPI](https://pypi.org/project/pykeen/) on Python 3.7+ with:
+[PyPI](https://pypi.org/project/pykeen/) on Python 3.6+ with:
 
 ```bash
 $ pip install pykeen
 ```
 
 The development version of PyKEEN can be downloaded and installed from
-[GitHub](https://github.com/pykeen/pykeen) on Python 3.7+ with:
+[GitHub](https://github.com/pykeen/pykeen) on Python 3.6+ with:
 
 ```bash
 $ git clone https://github.com/pykeen/pykeeen.git pykeen
