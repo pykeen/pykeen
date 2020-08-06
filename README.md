@@ -20,8 +20,8 @@
     <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
   </a>
 
-  <a href="https://badge.fury.io/py/pykeen">
-    <img src="https://badge.fury.io/py/pykeen.svg" alt="PyPI version" height="18">
+  <a href="https://pypi.org/project/pykeen/">
+    <img alt="PyPI" src="https://img.shields.io/pypi/v/pykeen">
   </a>
 
   <a href="https://optuna.org">
