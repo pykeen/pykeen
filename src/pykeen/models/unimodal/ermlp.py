@@ -91,20 +91,6 @@ class ERMLP(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.linear2.bias)
         nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
 
-    def interaction_function(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """."""
-
-        # Concatenate them
-        x_s = torch.cat([h, r, t], dim=-1)
-
-        # Compute scores
-        return self.mlp(x_s)
-
     def score_hrt(
         self,
         hrt_batch: torch.LongTensor,
@@ -121,7 +107,11 @@ class ERMLP(EntityRelationEmbeddingModel):
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        return self.interaction_function(h, r, t)
+        # Concatenate them
+        x_s = torch.cat([h, r, t], dim=-1)
+
+        # Compute scores
+        return self.mlp(x_s)
 
     def score_t(
         self,
