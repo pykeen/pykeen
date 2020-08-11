@@ -489,32 +489,27 @@ def save_pipeline_results_to_directory(
 
 def pipeline_from_path(
     path: str,
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
     :param path: The path to an experiment JSON file
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     with open(path) as file:
         config = json.load(file)
     return pipeline_from_config(
         config=config,
-        mlflow_tracking_uri=mlflow_tracking_uri,
         **kwargs,
     )
 
 
 def pipeline_from_config(
     config: Mapping[str, Any],
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
 
     :param config: The experiment configuration dictionary
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
@@ -522,7 +517,6 @@ def pipeline_from_config(
         logger.info(f'Running: {title}')
 
     return pipeline(
-        mlflow_tracking_uri=mlflow_tracking_uri,
         metadata=metadata,
         **pipeline_kwargs,
         **kwargs,
