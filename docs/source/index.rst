@@ -9,6 +9,7 @@ PyKEEN
 
    tutorial/first_steps
    tutorial/byod
+   tutorial/understanding_evaluation
    tutorial/running_hpo
    tutorial/using_mlflow
    tutorial/making_predictions

@@ -20,15 +20,14 @@
     <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
   </a>
 
-  <a href="https://badge.fury.io/py/pykeen">
-    <img src="https://badge.fury.io/py/pykeen.svg" alt="PyPI version" height="18">
+  <a href="https://optuna.org">
+    <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
   </a>
 </p>
 
 <p align="center">
     <b>PyKEEN</b> (<b>P</b>ython <b>K</b>nowl<b>E</b>dge <b>E</b>mbeddi<b>N</b>gs) is a Python package designed to
-    train and evaluate knowledge graph embedding models (incorporating multi-modal information). It is part of the
-    <a href="https://github.com/pykeen">KEEN Universe</a>.
+    train and evaluate knowledge graph embedding models (incorporating multi-modal information).
 </p>
 
 <p align="center">
@@ -36,20 +35,21 @@
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-13">Datasets</a> •
   <a href="#models-23">Models</a> •
-  <a href="#supporters">Support</a>
+  <a href="#supporters">Support</a> •
+  <a href="#citation">Citation</a>
 </p>
 
-## Installation
+## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
 The development version of PyKEEN can be downloaded and installed from
-[PyPI](https://pypi.org/project/pykeen/) on Python 3.7+ with:
+[PyPI](https://pypi.org/project/pykeen/) on Python 3.6+ with:
 
 ```bash
 $ pip install pykeen
 ```
 
 The development version of PyKEEN can be downloaded and installed from
-[GitHub](https://github.com/pykeen/pykeen) on Python 3.7+ with:
+[GitHub](https://github.com/pykeen/pykeen) on Python 3.6+ with:
 
 ```bash
 $ git clone https://github.com/pykeen/pykeeen.git pykeen
@@ -229,10 +229,11 @@ in ``pykeen``.
 
 ## Hyper-parameter Optimization
 
-### Samplers (2)
+### Samplers (3)
 
 | Name   | Reference                       | Description                                                     |
 |--------|---------------------------------|-----------------------------------------------------------------|
+| grid   | `optuna.samplers.GridSampler`   | Sampler using grid search.                                      |
 | random | `optuna.samplers.RandomSampler` | Sampler using random sampling.                                  |
 | tpe    | `optuna.samplers.TPESampler`    | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
 
@@ -281,3 +282,16 @@ This project has been supported by several organizations (in alphabetical order)
 ### Logo
 
 The PyKEEN logo was designed by Carina Steinborn.
+
+## Citation
+
+If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
+
+```bibtex
+@article{ali2020pykeen,
+  title={PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Emebddings},
+  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
+  journal={arXiv preprint arXiv:2007.14175},
+  year={2020}
+}
+```

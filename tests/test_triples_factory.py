@@ -160,30 +160,49 @@ class TestSplit(unittest.TestCase):
         self.triples_factory = Nations().training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
+    def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
+        """Test invariants for result of triples factory splitting."""
+        # verify that all entities and relations are present in the training factory
+        assert training_triples_factory.num_entities == self.triples_factory.num_entities
+        assert training_triples_factory.num_relations == self.triples_factory.num_relations
+
+        all_factories = (training_triples_factory,) + other_factories
+
+        # verify that no triple got lost
+        self.assertEqual(sum(t.num_triples for t in all_factories), self.triples_factory.num_triples)
+
+        # verify that the label-to-id mappings match
+        self.assertSetEqual({
+            id(factory.entity_to_id)
+            for factory in all_factories
+        }, {
+            id(self.triples_factory.entity_to_id)
+        })
+        self.assertSetEqual({
+            id(factory.relation_to_id)
+            for factory in all_factories
+        }, {
+            id(self.triples_factory.relation_to_id)
+        })
+
     def test_split_naive(self):
         """Test splitting a factory in two with a given ratio."""
         ratio = 0.8
         train_triples_factory, test_triples_factory = self.triples_factory.split(ratio)
-        expected_train_triples = int(self.triples_factory.num_triples * ratio)
-        self.assertEqual(expected_train_triples, train_triples_factory.num_triples)
-        self.assertEqual(self.triples_factory.num_triples - expected_train_triples, test_triples_factory.num_triples)
+        self._test_invariants(train_triples_factory, test_triples_factory)
 
     def test_split_multi(self):
         """Test splitting a factory in three."""
-        ratios = r0, r1 = 0.80, 0.10
+        ratios = 0.80, 0.10
         t0, t1, t2 = self.triples_factory.split(ratios)
-        expected_0_triples = int(self.triples_factory.num_triples * r0)
-        expected_1_triples = int(self.triples_factory.num_triples * r1)
-        expected_2_triples = self.triples_factory.num_triples - expected_0_triples - expected_1_triples
-        self.assertEqual(expected_0_triples, t0.num_triples)
-        self.assertEqual(expected_1_triples, t1.num_triples)
-        self.assertEqual(expected_2_triples, t2.num_triples)
+        self._test_invariants(t0, t1, t2)
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
         training = np.array([
             [1, 1000, 2],
             [1, 1000, 3],
+            [1, 1001, 3],
         ])
         testing = np.array([
             [2, 1001, 3],
@@ -192,6 +211,7 @@ class TestSplit(unittest.TestCase):
         expected_training = [
             [1, 1000, 2],
             [1, 1000, 3],
+            [1, 1001, 3],
             [1, 1002, 4],
         ]
         expected_testing = [
@@ -213,36 +233,42 @@ class TestSplit(unittest.TestCase):
             [1, 1000, 3],
         ])
         testing = np.array([
-            [2, 1001, 3],
-            [1, 1002, 4],
-            [1, 1003, 4],
+            [2, 1000, 3],
+            [1, 1000, 4],
+            [2, 1000, 4],
+            [1, 1001, 3],
         ])
-        expected_training_1 = [
-            [1, 1000, 2],
-            [1, 1000, 3],
-            [1, 1002, 4],
-        ]
-        expected_testing_1 = [
-            [2, 1001, 3],
-            [1, 1003, 4],
+        expected_training_1 = {
+            (1, 1000, 2),
+            (1, 1000, 3),
+            (1, 1000, 4),
+            (1, 1001, 3),
+        }
+        expected_testing_1 = {
+            (2, 1000, 3),
+            (2, 1000, 4),
+        }
+
+        expected_training_2 = {
+            (1, 1000, 2),
+            (1, 1000, 3),
+            (2, 1000, 4),
+            (1, 1001, 3),
+        }
+        expected_testing_2 = {
+            (2, 1000, 3),
+            (1, 1000, 4),
+        }
+
+        new_training, new_testing = [
+            set(tuple(row) for row in arr.tolist())
+            for arr in _tf_cleanup_randomized(training, testing)
         ]
 
-        expected_training_2 = [
-            [1, 1000, 2],
-            [1, 1000, 3],
-            [1, 1003, 4],
-        ]
-        expected_testing_2 = [
-            [2, 1001, 3],
-            [1, 1002, 4],
-        ]
-
-        new_training, new_testing = _tf_cleanup_randomized(training, testing)
-
-        if expected_training_1 == new_training.tolist():
-            self.assertEqual(expected_testing_1, new_testing.tolist())
-        elif expected_training_2 == new_training.tolist():
-            self.assertEqual(expected_testing_2, new_testing.tolist())
+        if expected_training_1 == new_training:
+            self.assertEqual(expected_testing_1, new_testing)
+        elif expected_training_2 == new_training:
+            self.assertEqual(expected_testing_2, new_testing)
         else:
             self.fail('training was not correct')
 
