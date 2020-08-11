@@ -35,6 +35,7 @@ from .optimizers import optimizers as optimizers_dict
 from .regularizers import regularizers as regularizers_dict
 from .sampling import negative_samplers as negative_samplers_dict
 from .stoppers import stoppers as stoppers_dict
+from .trackers import trackers as trackers_dict
 from .training import training_loops as training_dict
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
@@ -281,6 +282,22 @@ def _help_metrics(tablefmt):
 
 @ls.command()
 @tablefmt_option
+def trackers(tablefmt: str):
+    """List trackers."""
+    click.echo(_help_trackers(tablefmt))
+
+
+def _help_trackers(tablefmt):
+    lines = _get_lines(trackers_dict, tablefmt, 'trackers')
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
+    )
+
+
+@ls.command()
+@tablefmt_option
 def hpo_samplers(tablefmt: str):
     """List HPO samplers."""
     click.echo(_help_hpo_samplers(tablefmt))
@@ -388,6 +405,8 @@ def get_readme() -> str:
         n_evaluators=len(evaluators_dict),
         metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
+        trackers=_help_trackers(tablefmt),
+        n_trackers=len(trackers_dict),
         hpo_samplers=_help_hpo_samplers(tablefmt),
         n_hpo_samplers=len(hpo_samplers_dict),
     )
