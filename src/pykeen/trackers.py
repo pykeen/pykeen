@@ -9,6 +9,7 @@ from .utils import flatten_dictionary
 __all__ = [
     'ResultTracker',
     'MLFlowResultTracker',
+    'WANDBResultTracker',
 ]
 
 
@@ -85,3 +86,52 @@ class MLFlowResultTracker(ResultTracker):
 
     def end_run(self) -> None:  # noqa: D102
         self.mlflow.end_run()
+
+
+class WANDBResultTracker(ResultTracker):
+    """A tracker for Weights & Biases. Note that you have to perform wandb login beforehand"""
+
+    def __init__(
+            self,
+            project_name: str,
+            experiment_name: Optional[str] = None,
+    ):
+        """
+        Initialize result tracking via WANDB.
+
+        :param project_name:
+            project name your wandb login has access to.
+        :param experiment_name:
+            The experiment name to appear on the website. If not given, WANDB will generate a random name.
+        """
+        import wandb as _wandb
+        self.wandb = _wandb
+        assert project_name is not None, "Project name is required"
+        self.project_name = project_name
+
+        if experiment_name is not None:
+            self.wandb.init(project=self.project_name, name=experiment_name)
+        else:
+            self.wandb.init(project=self.project_name)
+
+    # def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    #     pass
+
+    def log_metrics(
+        self,
+        metrics: Dict[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
+        metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
+        self.wandb.log(metrics)
+
+    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+        params = flatten_dictionary(dictionary=params, prefix=prefix)
+        for k, v in params.items():
+            self.wandb.config[k] = v
+
+    # def end_run(self) -> None:  # noqa: D102
+    #     pass
+
+
