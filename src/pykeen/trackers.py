@@ -106,7 +106,7 @@ class WANDBResultTracker(ResultTracker):
         """
         import wandb as _wandb
         self.wandb = _wandb
-        assert project_name is not None, "Project name is required"
+        assert project_name is not None, "Project name is required."
         self.project_name = project_name
 
         if experiment_name is not None:
