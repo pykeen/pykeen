@@ -89,7 +89,7 @@ class MLFlowResultTracker(ResultTracker):
 
 
 class WANDBResultTracker(ResultTracker):
-    """A tracker for Weights & Biases. Note that you have to perform wandb login beforehand"""
+    """A tracker for Weights & Biases. Note that you have to perform wandb login beforehand."""
 
     def __init__(
             self,
@@ -114,9 +114,6 @@ class WANDBResultTracker(ResultTracker):
         else:
             self.wandb.init(project=self.project_name)
 
-    # def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
-    #     pass
-
     def log_metrics(
         self,
         metrics: Dict[str, float],
@@ -130,8 +127,3 @@ class WANDBResultTracker(ResultTracker):
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         for k, v in params.items():
             self.wandb.config[k] = v
-
-    # def end_run(self) -> None:  # noqa: D102
-    #     pass
-
-
