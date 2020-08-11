@@ -659,6 +659,9 @@ def pipeline(  # noqa: C901
             experiment_id=mlflow_experiment_id,
             experiment_name=mlflow_experiment_name,
         )
+
+    # TODO add additional logic for wandb tracking
+
     else:
         result_tracker = ResultTracker()
 
