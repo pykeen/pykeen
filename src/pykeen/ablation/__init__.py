@@ -16,23 +16,25 @@ Note that we always have to define both dictionaries, and in cases where do not 
 'kwargs' or 'kwargs_ranges', we define empty dictionaries.
 
 Add metadata to the configuration.
+
 .. code-block:: python
+
     configuration = {}
     metadata = dict(
         title="HPO over MyData"
     )
     configuration['metadata'] = metadata
 
-
-
 Define Ablation Dictionary
 
 .. code-block:: python
+
     ablation = {}
 
 Step 1: define dataset. Here, we use our own data.
 
 .. code-block:: python
+
     datasets = [
         dict(
             training='/path/to/my/train.txt',
@@ -47,6 +49,7 @@ Step 2: define model (several models can be defined).
 Note the structure of 'model_kwargs': model_kwargs{InteractionModel:{parameter={range}}}.
 
 .. code-block:: python
+
     models = ['RotatE']
     model_kwargs = dict(
         RotatE=dict(automatic_memory_optimization=True)
@@ -67,12 +70,14 @@ the number of relations are doubled, and the task of predicting the head entitie
 of predicting tail entities of (t,r_inv)-pairs.
 
 .. code-block:: python
+
     create_inverse_triples = [True, False]
 
 Define regularize (several regularizers can be defined). Here we use 'NoRegularizer' to indicate that
 we do not regularize our model.
 
 .. code-block:: python
+
     regularizers = ['NoRegularizer']
     regularizer_kwargs = dict(RotatE=dict(NoRegularizer=dict()))
     regularizer_kwargs_ranges = dict(RotatE=dict(NoRegularizer=dict()))
@@ -89,6 +94,7 @@ Step 3: define loss function (several loss functions can be defined). Here focus
 self adversarial loss.
 
 .. code-block:: python
+
     loss_functions = ['NSSALoss']
     loss_kwargs = dict(RotatE=dict(NSSALoss=dict()))
     loss_kwargs_ranges = dict(
@@ -117,12 +123,14 @@ self adversarial loss.
 Step 4: define training approach: sLCWA and/or LCWA
 
 .. code-block:: python
+
     training_loops = ['sLCWA']
     ablation['training_loops'] = training_loops
 
 Define negative sampler. Since we are using the sLCWA training approach, we define a negative sampler.
 
 .. code-block:: python
+
     negative_sampler = 'BasicNegativeSampler'
     negative_sampler_kwargs = dict(RotatE=dict(BasicNegativeSampler=dict()))
     negative_sampler_kwargs_ranges = dict(
@@ -145,6 +153,7 @@ Define negative sampler. Since we are using the sLCWA training approach, we defi
 Step 5: define optimizer (several optimizers can be defined).
 
 .. code-block:: python
+
     optimizers = ['adam']
     optimizer_kwargs = dict(
         RotatE=dict(
@@ -173,6 +182,7 @@ Step 5: define optimizer (several optimizers can be defined).
 Step 6: define training parameters.
 
 .. code-block:: python
+
     training_kwargs = dict(
         RotatE=dict(
             sLCWA=dict(
@@ -200,6 +210,7 @@ Step 6: define training parameters.
 Step 7: define evaluator.
 
 .. code-block:: python
+
     evaluator = 'RankBasedEvaluator'
     evaluator_kwargs = dict(
         filtered=True,
@@ -215,6 +226,7 @@ Step 7: define evaluator.
 Step 8: define early stopper.
 
 .. code-block:: python
+
     stopper = 'early'
     stopper_kwargs = dict(
         frequency=50,
@@ -239,6 +251,7 @@ Fourth, define the HPO algorithm, i.e., random (random search), tpe (tree-struct
 grid (grid search).
 
 .. code-block:: python
+
     optuna = {}
     optuna['n_trials'] = 2
     optuna['timeout'] = 10
@@ -253,33 +266,39 @@ grid (grid search).
 Define directory in which artifacts will be safed.
 
 .. code-block:: python
+
     output_directory = '/path/to/output/directory'
 
 Defines how often the model should be re-trained and evaluated based on the best hyper-parameters which
 enables us to measure the variance in performance.
 
 .. code-block:: python
+
     best_replicates = 2
 
 Defines, whether each trained model sampled during HPO should be saved.
 
 .. code-block:: python
+
     save_artifacts = False
 
 Defines, whether the best model should be discarded after training and evaluation.
 
 .. code-block:: python
+
     discard_replicates = False
 
 Defines, whether a replicate of the best model should be moved to CPU.
 We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
 
 .. code-block:: python
+
     move_to_cpu = True
 
 Start ablation studies.
 
 .. code-block:: python
+
     ablation_pipeline(
         config=configuration,
         directory=output_directory,
