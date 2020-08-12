@@ -581,6 +581,9 @@ class Model(nn.Module):
             torch.arange(self.num_entities).view(1, 1, -1).repeat(self.num_relations, self.num_entities, 1),
         ], dim=-1).view(-1, 3)[:, [1, 0, 2]]
         ind = scores.flatten().argsort(descending=True)
+        triples = triples[ind]
+        scores = scores.flatten()[ind]
+
 
         return triples[ind]
 
@@ -682,7 +685,7 @@ class Model(nn.Module):
             # Sort final result
             ind = scores.argsort(descending=True)
             result = result[ind]
-            # scores = scores[ind]
+            scores = scores[ind]
 
             return result, scores
 
