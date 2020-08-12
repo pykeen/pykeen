@@ -579,6 +579,7 @@ class RGCN(EntityRelationEmbeddingModel):
         ] = inverse_indegree_edge_weights,
         decomposition: Type[RelationSpecificMessagePassing] = BasesDecomposition,
         buffer_messages: bool = True,
+        memory_intense: bool = False,
     ):
         """Initialize the model.
 
@@ -629,6 +630,9 @@ class RGCN(EntityRelationEmbeddingModel):
         :param buffer_messages:
             Whether to buffer messages. Useful for instance in evaluation mode, when the parameters remain unchanged,
             but many forward passes are requested.
+        :param memory_intense:
+            Enable memory-intense forward pass which may be faster, in particular if the number of different relations
+            is small.
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -680,6 +684,7 @@ class RGCN(EntityRelationEmbeddingModel):
         )
         if decomposition is BasesDecomposition:
             message_passing_kwargs['num_bases'] = num_bases
+            message_passing_kwargs['memory_intense'] = memory_intense
         elif decomposition is BlockDecomposition:
             message_passing_kwargs['num_blocks'] = num_blocks
         for _ in range(num_layers):
