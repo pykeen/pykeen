@@ -2,11 +2,12 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional, Type, Union
 
-from .utils import flatten_dictionary
+from .utils import flatten_dictionary, get_cls, normalize_string
 
 __all__ = [
+    'get_result_tracker_cls',
     'ResultTracker',
     'MLFlowResultTracker',
     'WANDBResultTracker',
@@ -127,3 +128,20 @@ class WANDBResultTracker(ResultTracker):
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         for k, v in params.items():
             self.wandb.config[k] = v
+
+
+#: A mapping of trackers' names to their implementations
+trackers: Mapping[str, Type[ResultTracker]] = {
+    normalize_string(tracker.__name__, suffix='ResultTracker'): tracker
+    for tracker in ResultTracker.__subclasses__()
+}
+
+
+def get_result_tracker_cls(query: Union[None, str, Type[ResultTracker]]) -> Type[ResultTracker]:
+    """Get the tracker class."""
+    return get_cls(
+        query,
+        base=ResultTracker,
+        lookup_dict=trackers,
+        default=ResultTracker,
+    )
