@@ -248,7 +248,9 @@ class TrainingLoop(ABC):
             A pair of the KGE model and the losses per epoch.
         """
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
-            logger.warning('Using RGCN without graph-based sampling!')
+            logger.warning(
+                f'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of {sampler}.'
+            )
 
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
