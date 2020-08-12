@@ -5,11 +5,12 @@
 import unittest
 
 import numpy as np
+import torch
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
 
 triples = np.array(
@@ -52,6 +53,10 @@ numeric_triples = np.array(
 
 class TestTriplesFactory(unittest.TestCase):
     """Class for testing triples factories."""
+
+    def setUp(self) -> None:
+        """Instantiate test instance."""
+        self.factory = Nations().training
 
     def test_correct_inverse_creation(self):
         """Test if the triples and the corresponding inverses are created and sorted correctly."""
@@ -116,6 +121,33 @@ class TestTriplesFactory(unittest.TestCase):
             f'abc{INVERSE_SUFFIX}': 7,
         }
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
+
+    def test_id_to_label(self):
+        """Test ID-to-label conversion."""
+        for label_to_id, id_to_label in [
+            (self.factory.entity_to_id, self.factory.entity_id_to_label),
+            (self.factory.relation_to_id, self.factory.relation_id_to_label),
+        ]:
+            for k in label_to_id.keys():
+                assert id_to_label[label_to_id[k]] == k
+            for k in id_to_label.keys():
+                assert label_to_id[id_to_label[k]] == k
+
+    def test_tensor_to_df(self):
+        """Test tensor_to_df()."""
+        # check correct translation
+        labeled_triples = set(tuple(row) for row in self.factory.triples.tolist())
+        tensor = self.factory.mapped_triples
+        scores = torch.rand(tensor.shape[0])
+        df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
+        re_labeled_triples = set(
+            tuple(row)
+            for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist()
+        )
+        assert labeled_triples == re_labeled_triples
+
+        # check column order
+        assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ('scores',)
 
 
 class TestSplit(unittest.TestCase):
