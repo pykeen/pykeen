@@ -82,8 +82,9 @@ class TestPipeline(unittest.TestCase):
             list(all_df.columns),
         )
         possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
-        known = self.model.triples_factory.num_triples + self.testing_mapped_triples.shape[1]
-        self.assertIsInstance(possible - known, len(all_df.index))
+        known = self.model.triples_factory.num_triples + self.testing_mapped_triples.shape[0]
+        self.assertNotEqual(possible, known, msg='testing and training triples cover all possible triples')
+        self.assertEqual(possible - known, len(all_df.index))
 
     def test_predict_all_with_novelties(self):
         """Test scoring all triples with labeling as novel w.r.t. training and testing."""
@@ -98,6 +99,8 @@ class TestPipeline(unittest.TestCase):
         )
         possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
         self.assertEqual(possible, len(all_df.index))
+        self.assertEqual(self.model.triples_factory.num_triples, all_df['in_training'].sum())
+        self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
 
 
 class TestAttributes(unittest.TestCase):
