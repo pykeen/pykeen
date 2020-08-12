@@ -556,8 +556,15 @@ class Model(nn.Module):
             scores = torch.sigmoid(scores)
         return scores
 
-    def _score_all_triples(self, batch_size: int = 1) -> torch.LongTensor:
-        """Compute and store scores for all triples."""
+    def _score_all_triples(
+        self,
+        batch_size: int = 1,
+        return_tensors: bool = False,
+    ) -> Union[Tuple[torch.LongTensor, torch.FloatTensor], pd.DataFrame]:
+        """Compute and store scores for all triples.
+
+        :return: Parallel arrays of triples and scores
+        """
         # initialize buffer on cpu
         scores = torch.empty(self.num_relations, self.num_entities, self.num_entities, dtype=torch.float32)
         assert self.num_entities ** 2 * self.num_relations < (2 ** 63 - 1)
@@ -580,18 +587,22 @@ class Model(nn.Module):
             torch.arange(self.num_entities).view(1, -1, 1).repeat(self.num_relations, 1, self.num_entities),
             torch.arange(self.num_entities).view(1, 1, -1).repeat(self.num_relations, self.num_entities, 1),
         ], dim=-1).view(-1, 3)[:, [1, 0, 2]]
+
+        # Sort final result
         ind = scores.flatten().argsort(descending=True)
         triples = triples[ind]
         scores = scores.flatten()[ind]
 
-
-        return triples[ind]
+        if return_tensors:
+            return triples, scores
+        return self.make_labeled_df(triples, score=scores)
 
     def score_all_triples(
         self,
         k: Optional[int] = None,
         batch_size: int = 1,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+        return_tensors: bool = False,
+    ) -> Union[Tuple[torch.LongTensor, torch.FloatTensor], pd.DataFrame]:
         """Compute scores for all triples, optionally returning only the k highest scoring.
 
         .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
@@ -639,7 +650,7 @@ class Model(nn.Module):
                     'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
                     'knowledge graphs.'
                 )
-                return self._score_all_triples(batch_size=batch_size)
+                return self._score_all_triples(batch_size=batch_size, return_tensors=return_tensors)
 
             # initialize buffer on device
             result = torch.ones(0, 3, dtype=torch.long, device=self.device)
@@ -687,7 +698,9 @@ class Model(nn.Module):
             result = result[ind]
             scores = scores[ind]
 
+        if return_tensors:
             return result, scores
+        return self.make_labeled_df(result, score=scores)
 
     def make_labeled_df(
         self,
