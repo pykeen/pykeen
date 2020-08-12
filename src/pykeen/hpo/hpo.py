@@ -28,6 +28,7 @@ from ..pipeline import pipeline, replicate_pipeline_from_config
 from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
+from ..trackers import ResultTracker, get_result_tracker_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
 from ..utils import (
@@ -59,6 +60,7 @@ class Objective:
     optimizer: Type[Optimizer]  # 5.
     training_loop: Type[TrainingLoop]  # 6.
     evaluator: Type[Evaluator]  # 8.
+    result_tracker: Type[ResultTracker]  # 9.
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
@@ -89,10 +91,8 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
-    # 9. MLFlow
-    mlflow_tracking_uri: Optional[str] = None
-    mlflow_experiment_id: Optional[int] = None
-    mlflow_experiment_name: Optional[str] = None
+    # 9. Trackers
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
@@ -109,7 +109,7 @@ class Objective:
         def _stopped_callback(early_stopper: EarlyStopper, result: Union[float, int]) -> None:
             current_epoch = (1 + early_stopper.number_results) * early_stopper.frequency
             trial.set_user_attr(STOPPED_EPOCH_KEY, int(current_epoch))
-            trial.report(result)  # don't include a step because it's over
+            trial.report(result, current_epoch)  # don't include a step because it's over
 
         for key, callback in zip(('continue_callbacks', 'stopped_callbacks'), (_continue_callback, _stopped_callback)):
             stopper_kwargs.setdefault(key, []).append(callback)
@@ -214,10 +214,9 @@ class Objective:
                 evaluator=self.evaluator,
                 evaluator_kwargs=self.evaluator_kwargs,
                 evaluation_kwargs=self.evaluation_kwargs,
-                # 9. MLFlow
-                mlflow_tracking_uri=self.mlflow_tracking_uri,
-                mlflow_experiment_id=self.mlflow_experiment_id,
-                mlflow_experiment_name=self.mlflow_experiment_name,
+                # 9. Tracker
+                result_tracker=self.result_tracker,
+                result_tracker_kwargs=self.result_tracker_kwargs,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
@@ -440,10 +439,9 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
-    # MLFlow
-    mlflow_tracking_uri: Optional[str] = None,
-    mlflow_experiment_id: Optional[int] = None,
-    mlflow_experiment_name: Optional[str] = None,
+    # 9. Tracking
+    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Misc
     device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
@@ -537,14 +535,10 @@ def hpo_pipeline(
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
-    :param mlflow_tracking_uri:
-        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
-    :param mlflow_experiment_id:
-        The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
-        experiment_name. Only effective if mlflow_tracking_uri is not None.
-    :param mlflow_experiment_name:
-        The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
-        create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
+    :param result_tracker:
+        The ResultsTracker class or name
+    :param result_tracker_kwargs:
+        The keyword arguments passed to the results tracker on instantiation
 
     :param metric:
         The metric to optimize over. Defaults to ``adjusted_mean_rank``.
@@ -628,6 +622,9 @@ def hpo_pipeline(
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
 
+    # 9. Tracking
+    result_tracker: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+
     objective = Objective(
         # 1. Dataset
         dataset=dataset,
@@ -665,10 +662,9 @@ def hpo_pipeline(
         evaluator=evaluator,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
-        # 9. MLFlow
-        mlflow_tracking_uri=mlflow_tracking_uri,
-        mlflow_experiment_id=mlflow_experiment_id,
-        mlflow_experiment_name=mlflow_experiment_name,
+        # 9. Tracker
+        result_tracker=result_tracker,
+        result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,
         save_model_directory=save_model_directory,
