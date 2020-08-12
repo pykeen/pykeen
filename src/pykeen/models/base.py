@@ -113,7 +113,7 @@ def get_novelty_all_mask(
 ) -> np.ndarray:
     known = {tuple(triple) for triple in mapped_triples.tolist()}
     return np.asarray(
-        [(tuple(triple) in known) for triple in query],
+        [tuple(triple) in known for triple in query],
         dtype=np.bool,
     )
 
