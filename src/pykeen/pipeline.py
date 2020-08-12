@@ -666,7 +666,7 @@ def pipeline(  # noqa: C901
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs.update(preferred_device=device)
-    model_kwargs.setdefault('random_seed', NoRandomSeedNecessary)
+    model_kwargs.setdefault('random_seed', random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
