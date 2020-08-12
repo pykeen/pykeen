@@ -214,6 +214,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         num_relations: int,
         num_bases: Optional[int],
         output_dim: Optional[int] = None,
+        memory_intense: bool = False,
     ):
         """Initialize the layer.
 
@@ -225,6 +226,9 @@ class BasesDecomposition(RelationSpecificMessagePassing):
             The number of bases to use.
         :param output_dim: >0
             The output dimension. If None is given, defaults to input_dim.
+        :param memory_intense:
+            Enable memory-intense forward pass which may be faster, in particular if the number of different relations
+            is small.
         """
         super().__init__(
             input_dim=input_dim,
@@ -253,6 +257,8 @@ class BasesDecomposition(RelationSpecificMessagePassing):
                 num_bases,
             ), requires_grad=True)
 
+        self.memory_intense = memory_intense
+
     def reset_parameters(self):  # noqa: D102
         nn.init.xavier_normal_(self.bases)
         # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
@@ -272,7 +278,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         """
         return torch.einsum('bij,b->ij', self.bases, self.relation_base_weights[relation_id])
 
-    def forward(
+    def _forward_memory_intense(
         self,
         x: torch.FloatTensor,
         node_keep_mask: Optional[torch.BoolTensor],
@@ -280,10 +286,20 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> torch.FloatTensor:
         # TODO: Make this a choice (more memory-intense, but faster)
         # trans_x = torch.einsum('bij,ni->nbj', self.bases, x)
+        raise NotImplementedError
 
+    def _forward_memory_light(
+        self,
+        x: torch.FloatTensor,
+        node_keep_mask: Optional[torch.BoolTensor],
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:
         # self-loops first
         # the last relation_id refers to the self-loop
         w = self._get_weight(relation_id=self.num_relations)
@@ -333,6 +349,28 @@ class BasesDecomposition(RelationSpecificMessagePassing):
             out = out.index_add(dim=0, index=target_r, source=m)
 
         return out
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        node_keep_mask: Optional[torch.BoolTensor],
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if self.memory_intense:
+            _forward = self._forward_memory_intense
+        else:
+            _forward = self._forward_memory_light
+        return _forward(
+            x=x,
+            node_keep_mask=node_keep_mask,
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+        )
 
 
 class BlockDecomposition(RelationSpecificMessagePassing):
