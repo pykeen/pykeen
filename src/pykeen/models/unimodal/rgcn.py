@@ -281,36 +281,32 @@ class BasesDecomposition(RelationSpecificMessagePassing):
     def _forward_memory_intense(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
+        out: torch.FloatTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
-        # TODO: Make this a choice (more memory-intense, but faster)
-        # trans_x = torch.einsum('bij,ni->nbj', self.bases, x)
-        raise NotImplementedError
+        # other relations
+        m = torch.einsum(
+            'mi,mb,bij->mj',
+            x.index_select(dim=0, index=source),
+            self.relation_base_weights.index_select(dim=0, index=edge_type),
+            self.bases,
+        )
+        if edge_weights is not None:
+            m = m * edge_weights.unsqueeze(dim=-1)
+        return out.index_add(dim=0, index=target, source=m)
 
     def _forward_memory_light(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
+        out: torch.FloatTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
-        # self-loops first
-        # the last relation_id refers to the self-loop
-        w = self._get_weight(relation_id=self.num_relations)
-        if node_keep_mask is not None:
-            assert node_keep_mask.shape == x.shape[:1]
-            out = torch.empty_like(x)
-            out[node_keep_mask] = x[node_keep_mask] @ w
-            out[~node_keep_mask] = 0.0
-        else:
-            out = x @ w
-
         # other relations
         for r in range(self.num_relations):
             # Select source and target indices as well as edge weights for the
@@ -359,16 +355,28 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # self-loops first
+        # the last relation_id refers to the self-loop
+        w = self._get_weight(relation_id=self.num_relations)
+        if node_keep_mask is not None:
+            assert node_keep_mask.shape == x.shape[:1]
+            out = torch.empty_like(x)
+            out[node_keep_mask] = x[node_keep_mask] @ w
+            out[~node_keep_mask] = 0.0
+        else:
+            out = x @ w
+
         if self.memory_intense:
             _forward = self._forward_memory_intense
         else:
             _forward = self._forward_memory_light
+
         return _forward(
             x=x,
-            node_keep_mask=node_keep_mask,
             source=source,
             target=target,
             edge_type=edge_type,
+            out=out,
             edge_weights=edge_weights,
         )
 
