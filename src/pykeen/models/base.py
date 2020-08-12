@@ -107,7 +107,17 @@ def get_novelty_mask(
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
 
-def _update_prediction_df(rv, *, col, add_novelties, remove_known, training, testing, query_ids_key, other_col_ids):
+def _postprocess_prediction_df(
+    rv: pd.DataFrame,
+    *,
+    col: int,
+    add_novelties: bool,
+    remove_known: bool,
+    training: Optional[torch.LongTensor],
+    testing: Optional[torch.LongTensor],
+    query_ids_key: str,
+    other_col_ids: Tuple[int, int],
+) -> pd.DataFrame:
     if add_novelties or remove_known:
         rv['in_training'] = ~get_novelty_mask(
             mapped_triples=training,
@@ -128,6 +138,7 @@ def _update_prediction_df(rv, *, col, add_novelties, remove_known, training, tes
         if testing is not None:
             rv = rv[~rv['in_testing']]
             del rv['in_testing']
+    return rv
 
 
 class Model(nn.Module):
@@ -402,7 +413,7 @@ class Model(nn.Module):
             columns=['head_id', 'head_label', 'score'],
         ).sort_values('score', ascending=False)
 
-        _update_prediction_df(
+        return _postprocess_prediction_df(
             rv=rv,
             add_novelties=add_novelties,
             remove_known=remove_known,
@@ -412,7 +423,6 @@ class Model(nn.Module):
             col=0,
             other_col_ids=(relation_id, tail_id),
         )
-        return rv
 
     def predict_tails(
         self,
@@ -458,7 +468,7 @@ class Model(nn.Module):
             columns=['tail_id', 'tail_label', 'score'],
         ).sort_values('score', ascending=False)
 
-        _update_prediction_df(
+        return _postprocess_prediction_df(
             rv,
             add_novelties=add_novelties,
             remove_known=remove_known,
@@ -468,7 +478,6 @@ class Model(nn.Module):
             col=2,
             other_col_ids=(head_id, relation_id),
         )
-        return rv
 
     def predict_scores_all_relations(
         self,

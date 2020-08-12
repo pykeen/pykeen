@@ -516,7 +516,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         :param k: The number of triples to return. Set to None, to keep all.
         :param batch_size: The batch size to use for calculating scores.
         """
-        top_triples, top_scores = self.model.score_all_triples(k=k, batch_size=batch_size)
+        top_triples, top_scores = self.model.score_all_triples(k=k, batch_size=batch_size, return_tensors=True)
 
         # check type
         assert torch.is_tensor(top_triples)
