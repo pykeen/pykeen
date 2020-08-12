@@ -110,7 +110,8 @@ class WANDBResultTracker(ResultTracker):
         """
         import wandb as _wandb
         self.wandb = _wandb
-        assert project_name is not None, "Weights & Biases requires a project name."
+        if project_name is None:
+            raise Exception('Weights & Biases requires a project name.')
         self.project_name = project_name
 
         if experiment_name is not None:
