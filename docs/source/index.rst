@@ -14,6 +14,7 @@ PyKEEN
    tutorial/using_mlflow
    tutorial/using_wandb
    tutorial/making_predictions
+   tutorial/performance
 
 .. toctree::
    :caption: Reference
