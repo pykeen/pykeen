@@ -107,6 +107,13 @@ def get_novelty_mask(
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
 
+def get_novelty_all_mask(
+    mapped_triples: MappedTriples,
+    query: torch.LongTensor,
+) -> np.ndarray:
+    raise NotImplementedError  # TODO @mberr
+
+
 def _postprocess_prediction_df(
     rv: pd.DataFrame,
     *,
@@ -132,13 +139,42 @@ def _postprocess_prediction_df(
             col=col,
             other_col_ids=other_col_ids,
         )
-    if remove_known:
-        rv = rv[~rv['in_training']]
-        del rv['in_training']
-        if testing is not None:
-            rv = rv[~rv['in_testing']]
-            del rv['in_testing']
-    return rv
+    return _process_remove_known(rv, remove_known, testing)
+
+
+def _postprocess_prediction_all_df(
+    df: pd.DataFrame,
+    *,
+    add_novelties: bool,
+    remove_known: bool,
+    training: Optional[torch.LongTensor],
+    testing: Optional[torch.LongTensor],
+) -> pd.DataFrame:
+    if add_novelties or remove_known:
+        df['in_training'] = ~get_novelty_all_mask(
+            mapped_triples=training,
+            query=df[['head_id', 'relation_id', 'tail_id']],
+        )
+    if add_novelties and testing is not None:
+        df['in_testing'] = ~get_novelty_all_mask(
+            mapped_triples=testing,
+            query=df[['head_id', 'relation_id', 'tail_id']],
+        )
+    return _process_remove_known(df, remove_known, testing)
+
+
+def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optional[torch.LongTensor]) -> pd.DataFrame:
+    if not remove_known:
+        return df
+
+    df = df[~df['in_training']]
+    del df['in_training']
+    if testing is None:
+        return df
+
+    df = df[~df['in_testing']]
+    del df['in_testing']
+    return df
 
 
 class Model(nn.Module):
@@ -614,6 +650,9 @@ class Model(nn.Module):
         k: Optional[int] = None,
         batch_size: int = 1,
         return_tensors: bool = False,
+        add_novelties: bool = True,
+        remove_known: bool = False,
+        testing: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple[torch.LongTensor, torch.FloatTensor], pd.DataFrame]:
         """Compute scores for all triples, optionally returning only the k highest scoring.
 
@@ -644,8 +683,7 @@ class Model(nn.Module):
             df = model.make_labeled_df(tensor)
 
             # Get scores for top 15 triples
-            top_tensor = model.score_all_triples(k=15)
-            top_df = model.make_labeled_df(tensor)
+            top_df = model.score_all_triples(k=15)
         """
         # set model to evaluation mode
         self.eval()
@@ -662,7 +700,14 @@ class Model(nn.Module):
                     'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
                     'knowledge graphs.'
                 )
-                return self._score_all_triples(batch_size=batch_size, return_tensors=return_tensors)
+                rv = self._score_all_triples(batch_size=batch_size, return_tensors=return_tensors)
+                return _postprocess_prediction_all_df(
+                    df=rv,
+                    add_novelties=add_novelties,
+                    remove_known=remove_known,
+                    training=self.triples_factory.mapped_triples,
+                    testing=testing,
+                )
 
             # initialize buffer on device
             result = torch.ones(0, 3, dtype=torch.long, device=self.device)
@@ -711,7 +756,15 @@ class Model(nn.Module):
 
         if return_tensors:
             return result, scores
-        return self.make_labeled_df(result, score=scores)
+
+        rv = self.make_labeled_df(result, score=scores)
+        return _postprocess_prediction_all_df(
+            df=rv,
+            add_novelties=add_novelties,
+            remove_known=remove_known,
+            training=self.triples_factory.mapped_triples,
+            testing=testing,
+        )
 
     def make_labeled_df(
         self,

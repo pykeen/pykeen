@@ -4,6 +4,8 @@
 
 import unittest
 
+import pandas as pd
+
 import pykeen.regularizers
 from pykeen.datasets import Nations
 from pykeen.models.base import Model
@@ -59,6 +61,43 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual({'usa', 'india', 'ussr', 'poland', 'cuba'}, training_heads)
         testing_heads = set(heads_df.loc[heads_df['in_testing'], 'head_label'])
         self.assertEqual(set(), testing_heads)
+
+    def test_predict_all_no_novelties(self):
+        """Test scoring all triples without labeling as novel w.r.t. training and testing."""
+        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples, add_novelties=False)
+        self.assertIsInstance(all_df, pd.DataFrame)
+        self.assertEqual(
+            ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
+            list(all_df.columns),
+        )
+        possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
+        self.assertEqual(possible, len(all_df.index))
+
+    def test_predict_all_remove_known(self):
+        """Test scoring all triples while removing non-novel triples w.r.t. training and testing."""
+        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples, remove_known=True)
+        self.assertIsInstance(all_df, pd.DataFrame)
+        self.assertEqual(
+            ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
+            list(all_df.columns),
+        )
+        possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
+        known = self.model.triples_factory.num_triples + self.testing_mapped_triples.shape[1]
+        self.assertIsInstance(possible - known, len(all_df.index))
+
+    def test_predict_all_with_novelties(self):
+        """Test scoring all triples with labeling as novel w.r.t. training and testing."""
+        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples)
+        self.assertIsInstance(all_df, pd.DataFrame)
+        self.assertEqual(
+            [
+                'head_id', 'head_label', 'relation_id', 'relation_label',
+                'tail_id', 'tail_label', 'score', 'in_training', 'in_testing',
+            ],
+            list(all_df.columns),
+        )
+        possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
+        self.assertEqual(possible, len(all_df.index))
 
 
 class TestAttributes(unittest.TestCase):
