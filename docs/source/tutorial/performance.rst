@@ -56,9 +56,9 @@ additional modifications. Providing these methods is completely optional and not
 Filtering with Index-based Masking
 ----------------------------------
 In this example, it is given a knowledge graph $\mathcal{K} \subseteq \mathcal{E} \times \mathcal{R} \times \mathcal{E}$
-and disjoint union of $\mathcal{K}$ into training triples $\mathcal{K}_{train}$, testing triples $\mathcal{K}_{test}$,
+and disjoint unions of $\mathcal{K}$ in training triples $\mathcal{K}_{train}$, testing triples $\mathcal{K}_{test}$,
 and validation triples $\mathcal{K}_{val}$. The same operations are performed on $\mathcal{K}_{test}$ and
-$\mathcal{K}_{val}$, but only $\mathcal{K}_{test}$ will be given as examples in this section.
+$\mathcal{K}_{val}$, but only $\mathcal{K}_{test}$ will be given as example in this section.
 
 Two calculations are performed for each test triple $(h, r, t) \in \mathcal{K}_{test}$ during standard evaluation of
 a knowledge graph embedding model with interaction function
@@ -81,7 +81,7 @@ found in the train dataset. Therefore, their definitions could be amended like:
 
 While this easily defined theoretically, it poses several practical challenges.
 For example, it leads to the computational challenge that all new possible triples $(h, r, t') \in T_{h,r}$ and
-$(h', r, t) \in H_{r,t}$ must be enumerated then checked for existence in $\mathcal{K}_{train}$.
+$(h', r, t) \in H_{r,t}$ must be enumerated and then checked for existence in $\mathcal{K}_{train}$.
 Considering a dataset like :class:`pykeen.datasets.FB15k237` that has almost 15,000 entities, each test triple
 $(h,r,t) \in \mathcal{K}_{test}$ leads to $2 * | \mathcal{E} | = 30,000$ possible new triples, which have to be
 checked against the train dataset and then removed.
@@ -133,7 +133,7 @@ With growing model and dataset sizes the KGEM at hand is likely to exceed the me
 training it might be desired to train using a certain batch size. When this batch size is too big for the hardware at
 hand, PyKEEN allows to set a sub-batch size in the range of :math:`[1, {batch size}]`. When the sub-batch size is set,
 PyKEEN automatically accumulates the gradients after each sub-batch and clears the computational graph during training.
-This allows to train KGEM on GPU that otherwise would be too big for the hardware at hand, while the obtained results
+This allows to train KGEMs on GPU that otherwise would be too big for the hardware at hand, while the obtained results
 are identical to training without sub-batching. Note: In order to guarantee this, not all models support sub-batching,
 since certain components, e.g. batch normalization, require the entire batch to be calculated in one pass to avoid
 altering statistics.
