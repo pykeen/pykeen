@@ -29,7 +29,11 @@ predictions could be tested and validated experimentally.
     predicted_tails_df = model.predict_tails('brazil', 'intergovorgs')
 
     # Predict heads
-    prediced_heads_df = model.predict_heads('conferences', 'brazil')
+    predicted_heads_df = model.predict_heads('conferences', 'brazil')
+
+    # Score All triples
+    predictions_df = model.score_all_triples()
+
 
 Potential Caveats
 -----------------
