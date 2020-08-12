@@ -107,6 +107,29 @@ def get_novelty_mask(
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
 
+def _update_prediction_df(rv, *, col, add_novelties, remove_known, training, testing, query_ids_key, other_col_ids):
+    if add_novelties or remove_known:
+        rv['in_training'] = ~get_novelty_mask(
+            mapped_triples=training,
+            query_ids=rv[query_ids_key],
+            col=col,
+            other_col_ids=other_col_ids,
+        )
+    if add_novelties and testing is not None:
+        rv['in_testing'] = ~get_novelty_mask(
+            mapped_triples=testing,
+            query_ids=rv[query_ids_key],
+            col=col,
+            other_col_ids=other_col_ids,
+        )
+    if remove_known:
+        rv = rv[~rv['in_training']]
+        del rv['in_training']
+        if testing is not None:
+            rv = rv[~rv['in_testing']]
+            del rv['in_testing']
+
+
 class Model(nn.Module):
     """A base module for all of the KGE models."""
 
@@ -378,26 +401,17 @@ class Model(nn.Module):
             ],
             columns=['head_id', 'head_label', 'score'],
         ).sort_values('score', ascending=False)
-        if add_novelties or remove_known:
-            rv['in_training'] = ~get_novelty_mask(
-                mapped_triples=self.triples_factory.mapped_triples,
-                query_ids=rv['head_id'],
-                col=0,
-                other_col_ids=(relation_id, tail_id),
-            )
-        if add_novelties and testing is not None:
-            rv['in_testing'] = ~get_novelty_mask(
-                mapped_triples=testing,
-                query_ids=rv['head_id'],
-                col=0,
-                other_col_ids=(relation_id, tail_id),
-            )
-        if remove_known:
-            rv = rv[~rv['in_training']]
-            del rv['in_training']
-            if testing is not None:
-                rv = rv[~rv['in_testing']]
-                del rv['in_testing']
+
+        _update_prediction_df(
+            rv=rv,
+            add_novelties=add_novelties,
+            remove_known=remove_known,
+            training=self.triples_factory.mapped_triples,
+            testing=testing,
+            query_ids_key='head_id',
+            col=0,
+            other_col_ids=(relation_id, tail_id),
+        )
         return rv
 
     def predict_tails(
@@ -443,26 +457,17 @@ class Model(nn.Module):
             ],
             columns=['tail_id', 'tail_label', 'score'],
         ).sort_values('score', ascending=False)
-        if add_novelties or remove_known:
-            rv['in_training'] = ~get_novelty_mask(
-                mapped_triples=self.triples_factory.mapped_triples,
-                query_ids=rv['tail_id'],
-                col=2,
-                other_col_ids=(head_id, relation_id),
-            )
-        if add_novelties and testing is not None:
-            rv['in_testing'] = ~get_novelty_mask(
-                mapped_triples=testing,
-                query_ids=rv['tail_id'],
-                col=2,
-                other_col_ids=(head_id, relation_id),
-            )
-        if remove_known:
-            rv = rv[~rv['in_training']]
-            del rv['in_training']
-            if testing is not None:
-                rv = rv[~rv['in_testing']]
-                del rv['in_testing']
+
+        _update_prediction_df(
+            rv,
+            add_novelties=add_novelties,
+            remove_known=remove_known,
+            testing=testing,
+            training=self.triples_factory.mapped_triples,
+            query_ids_key='tail_id',
+            col=2,
+            other_col_ids=(head_id, relation_id),
+        )
         return rv
 
     def predict_scores_all_relations(
