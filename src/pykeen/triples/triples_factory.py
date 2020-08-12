@@ -590,7 +590,7 @@ class TriplesFactory:
         rv = pd.DataFrame(data=data)
 
         # Re-order columns
-        columns = TRIPLES_DF_COLUMNS + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
+        columns = list(TRIPLES_DF_COLUMNS) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
         return rv.loc[:, columns]
 
 
