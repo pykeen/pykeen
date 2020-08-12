@@ -593,9 +593,8 @@ class Model(nn.Module):
         ], dim=-1).view(-1, 3)[:, [1, 0, 2]]
 
         # Sort final result
-        ind = scores.flatten().argsort(descending=True)
+        scores, ind = torch.sort(scores.flatten(), descending=True)
         triples = triples[ind]
-        scores = scores.flatten()[ind]
 
         if return_tensors:
             return triples, scores
@@ -698,9 +697,8 @@ class Model(nn.Module):
                     result = result[ind]
 
             # Sort final result
-            ind = scores.argsort(descending=True)
+            scores, ind = torch.sort(scores, descending=True)
             result = result[ind]
-            scores = scores[ind]
 
         if return_tensors:
             return result, scores
