@@ -283,7 +283,7 @@ class LabelMapping:
         """Create a mapping from labeled triples."""
         return LabelMapping(
             entity_label_to_id=create_entity_mapping(triples=triples),
-            relation_label_to_id=create_relation_mapping(relations=triples[:, 1])
+            relation_label_to_id=create_relation_mapping(relations=triples[:, 1]),
         )
 
     def __post_init__(self):
