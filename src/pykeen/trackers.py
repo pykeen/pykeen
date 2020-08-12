@@ -113,11 +113,7 @@ class WANDBResultTracker(ResultTracker):
         if project_name is None:
             raise Exception('Weights & Biases requires a project name.')
         self.project_name = project_name
-
-        if experiment_name is not None:
-            self.wandb.init(project=self.project_name, name=experiment_name)
-        else:
-            self.wandb.init(project=self.project_name)
+        self.wandb.init(project=self.project_name, name=experiment_name)
 
     def log_metrics(
         self,
