@@ -187,7 +187,7 @@ from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
-from .trackers import MLFlowResultTracker, ResultTracker
+from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
@@ -489,32 +489,27 @@ def save_pipeline_results_to_directory(
 
 def pipeline_from_path(
     path: str,
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
     :param path: The path to an experiment JSON file
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     with open(path) as file:
         config = json.load(file)
     return pipeline_from_config(
         config=config,
-        mlflow_tracking_uri=mlflow_tracking_uri,
         **kwargs,
     )
 
 
 def pipeline_from_config(
     config: Mapping[str, Any],
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
 
     :param config: The experiment configuration dictionary
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
@@ -522,7 +517,6 @@ def pipeline_from_config(
         logger.info(f'Running: {title}')
 
     return pipeline(
-        mlflow_tracking_uri=mlflow_tracking_uri,
         metadata=metadata,
         **pipeline_kwargs,
         **kwargs,
@@ -562,10 +556,9 @@ def pipeline(  # noqa: C901
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    # 9. MLFlow
-    mlflow_tracking_uri: Optional[str] = None,
-    mlflow_experiment_id: Optional[int] = None,
-    mlflow_experiment_name: Optional[str] = None,
+    # 9. Tracking
+    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
@@ -634,14 +627,10 @@ def pipeline(  # noqa: C901
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
-    :param mlflow_tracking_uri:
-        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
-    :param mlflow_experiment_id:
-        The experiment ID. If given, this has to be the ID of an existing experiment in MFLow. Has priority over
-        experiment_name. Only effective if mlflow_tracking_uri is not None.
-    :param mlflow_experiment_name:
-        The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
-        create an experiment of the given name. Only effective if mlflow_tracking_uri is not None.
+    :param result_tracker:
+        The ResultsTracker class or name
+    :param result_tracker_kwargs:
+        The keyword arguments passed to the results tracker on instantiation
 
     :param metadata: A JSON dictionary to store with the experiment
     :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
@@ -652,15 +641,8 @@ def pipeline(  # noqa: C901
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
-    # Create result store
-    if mlflow_tracking_uri is not None:
-        result_tracker = MLFlowResultTracker(
-            tracking_uri=mlflow_tracking_uri,
-            experiment_id=mlflow_experiment_id,
-            experiment_name=mlflow_experiment_name,
-        )
-    else:
-        result_tracker = ResultTracker()
+    result_tracker: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+    result_tracker = result_tracker(**(result_tracker_kwargs or {}))
 
     if not metadata:
         metadata = {}

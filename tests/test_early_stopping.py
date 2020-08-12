@@ -268,5 +268,5 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             batch_size=self.batch_size,
             stopper=stopper,
         )
-        assert stopper.number_results == len(losses) // stopper.frequency
+        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
         self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')
