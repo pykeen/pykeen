@@ -111,7 +111,8 @@ def get_novelty_all_mask(
     mapped_triples: MappedTriples,
     query: np.ndarray,
 ) -> np.ndarray:
-    raise NotImplementedError  # TODO @mberr
+    known = set(tuple(triple) for triple in mapped_triples.tolist())
+    return np.asarray([(q in known) for q in query], dtype=np.bool)
 
 
 def _postprocess_prediction_df(
