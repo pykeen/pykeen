@@ -90,7 +90,10 @@ class MLFlowResultTracker(ResultTracker):
 
 
 class WANDBResultTracker(ResultTracker):
-    """A tracker for Weights & Biases. Note that you have to perform wandb login beforehand."""
+    """A tracker for Weights and Biases.
+
+    Note that you have to perform wandb login beforehand.
+    """
 
     def __init__(
             self,
