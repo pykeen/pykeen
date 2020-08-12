@@ -151,14 +151,16 @@ def _postprocess_prediction_all_df(
     testing: Optional[torch.LongTensor],
 ) -> pd.DataFrame:
     if add_novelties or remove_known:
+        assert training is not None
         df['in_training'] = ~get_novelty_all_mask(
             mapped_triples=training,
-            query=df[['head_id', 'relation_id', 'tail_id']],
+            query=df[['head_id', 'relation_id', 'tail_id']].values,
         )
     if add_novelties and testing is not None:
+        assert testing is not None
         df['in_testing'] = ~get_novelty_all_mask(
             mapped_triples=testing,
-            query=df[['head_id', 'relation_id', 'tail_id']],
+            query=df[['head_id', 'relation_id', 'tail_id']].values,
         )
     return _process_remove_known(df, remove_known, testing)
 
