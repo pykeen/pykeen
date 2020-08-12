@@ -187,17 +187,26 @@ def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
 
 def _map_column(
     labeled_column: Union[np.ndarray, Sequence[str], str],
-    mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray],
+    label_to_id: Mapping[str, int],
+    name: str,
+    vectorized_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray],
     unknown_id: int = -1,
+    raise_on_unknown: bool = True,
 ) -> torch.LongTensor:
     """Apply a vectorized mapping to a column of labels.
 
     :param labeled_column:
         The column of labels.
-    :param mapper:
+    :param label_to_id:
+        The mapping from label to ID.
+    :param name:
+        The name used for log and error messages.
+    :param vectorized_mapper:
         The vectorized label-to-id mapper.
     :param unknown_id:
         An ID to use for unknown labels.
+    :param raise_on_unknown:
+        Whether to raise a ValueError when encountering unknown labels.
 
     :return:
         An array of IDs.
@@ -206,7 +215,20 @@ def _map_column(
     if isinstance(labeled_column, str):
         labeled_column = [labeled_column]
     labeled_column = np.asanyarray(labeled_column)
-    mapped_column = mapper(labeled_column, (unknown_id,))
+
+    if unknown_id is None:
+        unknown_id = min(label_to_id.values()) - 1
+        logger.info(f'Inferred unknown_id={unknown_id} for {name} ID.')
+    if unknown_id in label_to_id.values():
+        raise ValueError(f'unknown_id={unknown_id} is used as {name} ID!')
+
+    mapped_column = vectorized_mapper(labeled_column, (unknown_id,))
+
+    # check for unknown
+    if raise_on_unknown and (unknown_id == mapped_column).any():
+        raise ValueError(f'Input contains unknown {name}!')
+
+    # convert to tensor
     return torch.as_tensor(data=mapped_column, dtype=torch.long)
 
 
@@ -371,26 +393,41 @@ class LabelMapping:
         self,
         entities: Union[np.ndarray, Sequence[str], str],
         unknown_id: int = -1,
+        raise_on_unknown: bool = True,
     ) -> torch.LongTensor:
         """Convert entity labels to the corresponding IDs."""
-        if unknown_id in self.entity_label_to_id.values():
-            raise ValueError(f'unknown_id={unknown_id} is used as entity ID!')
-        return _map_column(labeled_column=entities, mapper=self._vectorized_entity_mapper, unknown_id=unknown_id)
+        return _map_column(
+            labeled_column=entities,
+            label_to_id=self.entity_label_to_id,
+            name='entity',
+            vectorized_mapper=self._vectorized_entity_mapper,
+            unknown_id=unknown_id,
+            raise_on_unknown=raise_on_unknown,
+        )
 
     def map_relations(
         self,
         relations: Union[np.ndarray, Sequence[str], str],
         unknown_id: int = -1,
+        raise_on_unknown: bool = True,
     ) -> torch.LongTensor:
         """Convert entity labels to the corresponding IDs."""
-        if unknown_id in self.relation_label_to_id.values():
-            raise ValueError(f'unknown_id={unknown_id} is used as relation ID!')
-        return _map_column(labeled_column=relations, mapper=self._vectorized_relation_mapper, unknown_id=unknown_id)
+        return _map_column(
+            labeled_column=relations,
+            label_to_id=self.relation_label_to_id,
+            name='relation',
+            vectorized_mapper=self._vectorized_relation_mapper,
+            unknown_id=unknown_id,
+            raise_on_unknown=raise_on_unknown,
+        )
 
     def map_triples(
         self,
         triples: Union[LabeledTriples, Sequence[Tuple[str, str, str]], Tuple[str, str, str]],
         drop_duplicates: bool = True,
+        raise_on_unknown: bool = False,
+        drop_unknown: bool = True,
+        unknown_id: Optional[int] = -1,
     ) -> MappedTriples:
         """Convert label-based triples to ID-based triples."""
         # Input normalization
@@ -401,9 +438,21 @@ class LabelMapping:
         mapped_triples = torch.as_tensor(
             data=np.stack(
                 [
-                    self.map_entities(entities=triples[:, 0]),
-                    self.map_relations(relations=triples[:, 1]),
-                    self.map_entities(entities=triples[:, 2]),
+                    self.map_entities(
+                        entities=triples[:, 0],
+                        unknown_id=unknown_id,
+                        raise_on_unknown=raise_on_unknown,
+                    ),
+                    self.map_relations(
+                        relations=triples[:, 1],
+                        unknown_id=unknown_id,
+                        raise_on_unknown=raise_on_unknown,
+                    ),
+                    self.map_entities(
+                        entities=triples[:, 2],
+                        unknown_id=unknown_id,
+                        raise_on_unknown=raise_on_unknown,
+                    ),
                 ],
                 axis=-1,
             ),
@@ -414,15 +463,19 @@ class LabelMapping:
         unknown: torch.BoolTensor = (mapped_triples < 0)
         num_unknown_entities = unknown[[0, 2]].sum()
         num_unknown_relations = unknown[1]
-        if num_unknown_entities > 0 or num_unknown_relations > 0:
-            drop_mask = unknown.any(dim=-1)
-            num_dropped_triples = drop_mask.sum()
-            logger.warning(
-                f"You're trying to map triples with {num_unknown_entities} entities and {num_unknown_relations} "
-                f"relations that are not in the training set. These triples will be excluded from the mapping. In "
-                f"total {num_dropped_triples}/{triples.shape[0]} triples are dropped."
-            )
-            mapped_triples = mapped_triples[~drop_mask, :]
+        if drop_unknown:
+            if num_unknown_entities > 0 or num_unknown_relations > 0:
+                drop_mask = unknown.any(dim=-1)
+                num_dropped_triples = drop_mask.sum()
+                logger.warning(
+                    f"You're trying to map triples with {num_unknown_entities} entities and {num_unknown_relations} "
+                    f"relations that are not in the training set. These triples will be excluded from the mapping. In "
+                    f"total {num_dropped_triples}/{triples.shape[0]} triples are dropped."
+                )
+                mapped_triples = mapped_triples[~drop_mask, :]
+        else:
+            num_triples_with_unknown = unknown.sum(axis=-1)
+            logger.warning(f'Keeping {num_triples_with_unknown} triples with at least one unknown entity/relation.')
 
         # drop duplicates
         if drop_duplicates:
