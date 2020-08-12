@@ -79,10 +79,9 @@ def get_novelty_mask(
     col: int,
     other_col_ids: Tuple[int, int],
 ) -> np.ndarray:
-    r"""
-    Calculate for each query ID whether it is novel.
+    r"""Calculate for each query ID whether it is novel.
 
-    In particular computes
+    In particular, computes:
 
     .. math ::
         q \notin \{t[col] in T \mid t[\neg col] = p\}
