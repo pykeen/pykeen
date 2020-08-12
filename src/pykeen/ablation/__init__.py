@@ -2,20 +2,16 @@
 
 """Ablation studies in PyKEEN.
 
-  "If :func:`pykeen.pipeline.pipeline` were making a maze, :func:`pykeen.hpo.hpo_pipeline` were getting
-  killed by your dead wife, then :func:`pykeen.ablation.ablation_pipeline` is washing up on
-  a beach." -Christopher Nolan
-
 An ablation study is an experiment in which components of a machine learning system are removed/replaced in order
 to measure the impact of these components on the system's performance.
 In PyKEEN, a user could for instance measure the impact of explicitly modeling inverse relations on the model's
 performance.
 
-An ablation study is defined based on a dictionary that in the following is named 'cinfiguration' containing three
-sub-dictionaries: 1.) metadata, 2.) ablation, and 3.) optuna, which we will define below.
-In several parts of configuration of the ablation sudy, we have to define the dictionaries 'kwargs' and 'kwargs_ranges.
-'kwargs' defines for a specific component (e.g., interaction model or loss function) single hyper-parameter values
-such as a fixed embedding dimension of 50, whereas 'kwargs_ranges' define ranges of values.
+An ablation study is defined based on a dictionary that in the following is named 'configuration' containing three
+sub-dictionaries: 'metadata',  'ablation', and 'optuna', which we will define below.
+In several parts of the configuration of the ablation study, we have to define the dictionaries 'kwargs' and
+'kwargs_ranges. 'kwargs' defines for a specific component (e.g., interaction model or loss function) single
+hyper-parameter values such as a fixed embedding dimension of 50, whereas 'kwargs_ranges' define ranges of values.
 Note that we always have to define both dictionaries, and in cases where do not have entries for
 'kwargs' or 'kwargs_ranges', we define empty dictionaries.
 
