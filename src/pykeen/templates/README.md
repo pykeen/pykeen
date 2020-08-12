@@ -149,6 +149,10 @@ in ``pykeen``.
 
 {{ metrics }}
 
+### Trackers ({{ n_trackers }})
+
+{{ trackers }}
+
 ## Hyper-parameter Optimization
 
 ### Samplers ({{ n_hpo_samplers }})
