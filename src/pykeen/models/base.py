@@ -612,6 +612,10 @@ class Model(nn.Module):
         self,
         batch_size: int = 1,
         return_tensors: bool = False,
+        *,
+        add_novelties: bool = True,
+        remove_known: bool = False,
+        testing: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple[torch.LongTensor, torch.FloatTensor], pd.DataFrame]:
         """Compute and store scores for all triples.
 
@@ -646,7 +650,15 @@ class Model(nn.Module):
 
         if return_tensors:
             return triples, scores
-        return self.make_labeled_df(triples, score=scores)
+
+        rv = self.make_labeled_df(triples, score=scores)
+        return _postprocess_prediction_all_df(
+            df=rv,
+            add_novelties=add_novelties,
+            remove_known=remove_known,
+            training=self.triples_factory.mapped_triples,
+            testing=testing,
+        )
 
     def score_all_triples(
         self,
@@ -703,13 +715,12 @@ class Model(nn.Module):
                     'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
                     'knowledge graphs.'
                 )
-                rv = self._score_all_triples(batch_size=batch_size, return_tensors=return_tensors)
-                return _postprocess_prediction_all_df(
-                    df=rv,
+                return self._score_all_triples(
+                    batch_size=batch_size,
+                    return_tensors=return_tensors,
+                    testing=testing,
                     add_novelties=add_novelties,
                     remove_known=remove_known,
-                    training=self.triples_factory.mapped_triples,
-                    testing=testing,
                 )
 
             # initialize buffer on device
