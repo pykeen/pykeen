@@ -109,7 +109,7 @@ def get_novelty_mask(
 
 def get_novelty_all_mask(
     mapped_triples: MappedTriples,
-    query: torch.LongTensor,
+    query: np.ndarray,
 ) -> np.ndarray:
     raise NotImplementedError  # TODO @mberr
 
