@@ -289,12 +289,6 @@ Start ablation studies.
         move_to_cpu=move_to_cpu,
         dry_run=False,
     )
-
-.. warning::
-
-  do not use JSON files for examples. All usage should be through the python dictionary interface. If we
-  forgot to make a python dictionary interface, then we must add one for this PR
-
 """
 
 from .ablation import ablation_pipeline, prepare_ablation, prepare_ablation_from_config
