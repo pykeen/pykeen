@@ -13,6 +13,7 @@ PyKEEN
    tutorial/running_hpo
    tutorial/using_mlflow
    tutorial/making_predictions
+   tutorial/performance
 
 .. toctree::
    :caption: Reference
