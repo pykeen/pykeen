@@ -97,23 +97,22 @@ class WANDBResultTracker(ResultTracker):
 
     def __init__(
         self,
-        project_name: str,
-        experiment_name: Optional[str] = None,
+        project: str,
+        experiment: Optional[str] = None,
     ):
-        """
-        Initialize result tracking via WANDB.
+        """Initialize result tracking via WANDB.
 
-        :param project_name:
-            project name your wandb login has access to.
-        :param experiment_name:
+        :param project:
+            project name your WANDB login has access to.
+        :param experiment:
             The experiment name to appear on the website. If not given, WANDB will generate a random name.
         """
         import wandb as _wandb
         self.wandb = _wandb
-        if project_name is None:
-            raise Exception('Weights & Biases requires a project name.')
-        self.project_name = project_name
-        self.wandb.init(project=self.project_name, name=experiment_name)
+        if project is None:
+            raise ValueError('Weights & Biases requires a project name.')
+        self.project = project
+        self.wandb.init(project=self.project, name=experiment)
 
     def log_metrics(
         self,
