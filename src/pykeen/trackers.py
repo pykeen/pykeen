@@ -126,8 +126,7 @@ class WANDBResultTracker(ResultTracker):
 
     def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
-        for k, v in params.items():
-            self.wandb.config[k] = v
+        self.wandb.config.update(params)
 
 
 #: A mapping of trackers' names to their implementations
