@@ -96,9 +96,9 @@ class WANDBResultTracker(ResultTracker):
     """
 
     def __init__(
-            self,
-            project_name: str,
-            experiment_name: Optional[str] = None,
+        self,
+        project_name: str,
+        experiment_name: Optional[str] = None,
     ):
         """
         Initialize result tracking via WANDB.
