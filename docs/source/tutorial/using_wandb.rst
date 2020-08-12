@@ -1,15 +1,19 @@
 Using Weights and Biases
 ========================
-`Weights and Biases <http://wandb.ai/>`_ (WANDB) is a service for tracking experimental results and various artifacts appearing
-whn training ML models.
+`Weights and Biases <http://wandb.ai/>`_ (WANDB) is a service for tracking experimental results and various artifacts
+appearing whn training ML models.
 
-Below are the necessary steps to start using WANDB in PyKEEN:
 
-* To use WANDB, you first need to register on the website
-* Obtain your ``api_key`` which can be found in profile Settings.
-* Install WANDB ``pip install wandb``
-* Perform login with your unique api key ``wandb login <api_key>``
-* Create a project in WANDB, for example, with a name ``pykeen_experiments``
+After `registering <https://app.wandb.ai/login?signup=true>`_ for WANDB, do the following:
+
+1. Create a project in WANDB, for example, with the name ``pykeen_project`` at
+   ``https://app.wandb.ai/<your username>/new``
+2. Install WANDB on your machine with ``pip install wandb``
+3. Setup your computer for use with WANDB by using either of the following two instructions from
+   https://github.com/wandb/client#running-your-script:
+
+   1. Navigate to https://app.wandb.ai/settings, copy your API key, and set the ``WANDB_API_KEY`` environment variable
+   2. Interactively run ``wandb login``
 
 Now you can simply specify this project name when initializing a pipeline, and everything else will work automatically!
 
@@ -24,15 +28,16 @@ This example shows using WANDB with the :func:`pykeen.pipeline.pipeline` functio
     results = pipeline(
         model='RotatE',
         dataset='Kinships',
-        result_tracker='wandb'
+        result_tracker='wandb',
         result_tracker_kwargs=dict(
-            project_name='pykeen_experiments',
+            project='pykeen_project',
         ),
     )
 
 
 You can navigate to the created project in WANDB and observe a running experiment.
-Further tweaking of appearance, charts, and other settings is described in the official `documentation <https://docs.wandb.com/>`_
+Further tweaking of appearance, charts, and other settings is described in the official
+`documentation <https://docs.wandb.com/>`_
 
 HPO Example
 -----------
@@ -45,16 +50,15 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
     results = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
-        result_tracker='mlflow'
+        result_tracker='wandb',
         result_tracker_kwargs=dict(
-            project_name='pykeen_experiments',
-            experiment_name='new run'
+            project='pykeen_project',
+            experiment='new run',
         ),
     )
 
-
-You can also specify an optional ``experiment_name`` which will appear on the website instead of randomly generated labels.
-
+You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
+labels.
 
 Additional documentation of the valid keyword arguments can be found
 under :class:`pykeen.trackers.WANDBResultTracker`.
