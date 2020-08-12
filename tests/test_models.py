@@ -1081,7 +1081,7 @@ class MessageWeightingTests(unittest.TestCase):
         self._test_message_weighting(weight_func=symmetric_edge_weights)
 
 
-class _MessagePassingTests(unittest.TestCase):
+class _MessagePassingTests:
     cls: Type[RelationSpecificMessagePassing]
     kwargs: Optional[Mapping[str, Any]] = None
     input_dim: int = 3
@@ -1109,14 +1109,27 @@ class _MessagePassingTests(unittest.TestCase):
                 assert y.shape == (self.x.shape[0], self.output_dim)
 
 
-class BlockDecompositionTests(_MessagePassingTests):
+class BlockDecompositionTests(_MessagePassingTests, unittest.TestCase):
     """unittest for BlockDecomposition"""
     cls = BlockDecomposition
 
 
-class BasesDecompositionTests(_MessagePassingTests):
+class _BasesDecompositionTests(_MessagePassingTests):
     """unittest for BasesDecomposition"""
     cls = BasesDecomposition
+
+
+class LowMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):
+    """Tests for BasesDecomposition with low memory requirement."""
     kwargs = dict(
         num_bases=4,
+        memory_intense=False,
+    )
+
+
+class HighMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):
+    """Tests for BasesDecomposition with high memory requirement."""
+    kwargs = dict(
+        num_bases=4,
+        memory_intense=True,
     )
