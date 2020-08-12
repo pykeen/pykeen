@@ -69,6 +69,7 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 |------|-------------|
 | ``plotting`` | Plotting with ``seaborn`` and generation of word clouds  |
 | ``mlflow`` | Tracking of results with ``mlflow`` |
+| ``wandb`` | Tracking of results with ``wandb`` |
 | ``docs`` | Building of the documentation |
 | ``templating`` | Building of templated documentation, like the README |
 
