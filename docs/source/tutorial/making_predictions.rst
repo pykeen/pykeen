@@ -12,16 +12,17 @@ However, for most models, these scores do not have obvious statistical interpret
 
 After training a model, there are three high-level interfaces for making predictions:
 
-1. :func:`pykeen.models.Model.predict_tails` for a given head/relation pair
-2. :func:`pykeen.models.Model.predict_heads` for a given relation/tail pair
-3. :func:`pykeen.models.Model.score_all_triples` for prioritizing links
+1. :func:`pykeen.models.base.Model.predict_tails` for a given head/relation pair
+2. :func:`pykeen.models.base.Model.predict_heads` for a given relation/tail pair
+3. :func:`pykeen.models.base.Model.score_all_triples` for prioritizing links
 
-Scientifically, :func:`pykeen.models.Model.score_all_triples` is the most interesting in a scenario where
+Scientifically, :func:`pykeen.models.base.Model.score_all_triples` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     results = pipeline(dataset='Nations', model='RotatE')
     model = results.model
 
@@ -33,7 +34,6 @@ predictions could be tested and validated experimentally.
 
     # Score All triples
     predictions_df = model.score_all_triples()
-
 
 Potential Caveats
 -----------------
