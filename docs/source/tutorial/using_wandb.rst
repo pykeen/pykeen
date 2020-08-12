@@ -34,10 +34,27 @@ This example shows using WANDB with the :func:`pykeen.pipeline.pipeline` functio
         ),
     )
 
-
 You can navigate to the created project in WANDB and observe a running experiment.
 Further tweaking of appearance, charts, and other settings is described in the official
 `documentation <https://docs.wandb.com/>`_
+
+You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
+labels.
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    results = pipeline(
+        model='RotatE',
+        dataset='Kinships',
+        result_tracker='wandb',
+        result_tracker_kwargs=dict(
+            project='pykeen_project',
+            experiment='experiment-1',
+        ),
+    )
+
 
 HPO Example
 -----------
@@ -57,8 +74,9 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
         ),
     )
 
-You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
-labels.
+It's safe to specify the experiment name during HPO. Several runs will be sent to the same experiment
+under different hashes. However, specifying the experiment name is advisable more for single runs and
+not for batches of multiple runs.
 
 Additional documentation of the valid keyword arguments can be found
 under :class:`pykeen.trackers.WANDBResultTracker`.
