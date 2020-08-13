@@ -67,7 +67,7 @@ provides a high-level entry into the extensible functionality of this package.
 The following example shows how to train and evaluate the [TransE](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html#pykeen.models.TransE)
 model on the [Nations](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html#pykeen.datasets.Nations)
 dataset. By default, the training loop uses the [stochastic local closed world assumption (sLCWA)](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop)
-training approach and evaluates with rank-based evaluation.
+training approach and evaluates with [rank-based evaluation](https://pykeen.readthedocs.io/en/latest/reference/evaluation/rank_based.html#pykeen.evaluation.RankBasedEvaluator).
 
 ```python
 from pykeen.pipeline import pipeline
@@ -78,8 +78,8 @@ result = pipeline(
 )
 ```
 
-The results are returned in a dataclass that has attributes for the trained
-model, the training loop, and the evaluation. See the tutorials on
+The results are returned in an instance of the [RankBasedMetricResults](https://pykeen.readthedocs.io/en/latest/reference/evaluation/rank_based.html#pykeen.evaluation.RankBasedMetricResults)
+dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials on
 [understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
