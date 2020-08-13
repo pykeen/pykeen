@@ -58,11 +58,6 @@ pip install git+https://github.com/pykeen/pykeen.git
 More information about installation extras can be found in the
 [installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
 
-## Contributing
-
-Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
-See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
-
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
 This example shows how to train a model on a data set and test on another data set.
@@ -82,7 +77,9 @@ result = pipeline(
 ```
 
 The results are returned in a dataclass that has attributes for the trained
-model, the training loop, and the evaluation.
+model, the training loop, and the evaluation. See the tutorials on
+[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
+and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
 PyKEEN is extensible such that:
 
@@ -167,6 +164,11 @@ hyper-parameter optimization module. They can be run like:
 ```bash
 pykeen experiments ablation ~/path/to/config.json
 ```
+
+## Contributing
+
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
+See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
 ## Acknowledgements
 
