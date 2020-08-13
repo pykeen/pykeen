@@ -7,6 +7,20 @@ to measure the impact of these components on the system's performance.
 In PyKEEN, a user could for instance measure the impact of explicitly modeling inverse relations on the model's
 performance.
 
+.. code-block:: python
+
+    from pykeen.ablation import ablation_pipeline
+
+    result = ablation_pipeline(
+        # What is the minimum number of things the user has to set to make this not give an error?
+    )
+
+
+
+
+TODO: this following paragraph is too much information at once. You have to introduce someone to this stuff
+one at a time. Each one of these should have reasonable defaults.
+
 An ablation study is defined based on a dictionary that in the following is named 'configuration' containing three
 sub-dictionaries: 'metadata',  'ablation', and 'optuna', which we will define below.
 In several parts of the configuration of the ablation study, we have to define the dictionaries 'kwargs' and
@@ -14,6 +28,11 @@ In several parts of the configuration of the ablation study, we have to define t
 hyper-parameter values such as a fixed embedding dimension of 50, whereas 'kwargs_ranges' define ranges of values.
 Note that we always have to define both dictionaries, and in cases where do not have entries for
 'kwargs' or 'kwargs_ranges', we define empty dictionaries.
+
+The Firehose
+------------
+This part of the tutorial shows what happens if you want to configure everything yourself. It is
+**not** the place to start.
 
 Add metadata to the configuration.
 
