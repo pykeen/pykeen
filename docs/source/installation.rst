@@ -24,10 +24,10 @@ with:
     $ pip install -e .
 
 If you're interested in making contributions, please see our
-`contributing guide <https://github.com/pykeen/pykeen/blob/master/CONTRIBUTING.md>`_
-We're very picky about code style, so please install pre-commit hooks using the following
-code block from in the same directory such that you don't accidentally push code that does
-not comply with our style guide.
+`contributing guide <https://github.com/pykeen/pykeen/blob/master/CONTRIBUTING.md>`_.
+
+To automatically ensure compliance to our style guide, please install pre-commit
+hooks using the following code block from in the same directory.
 
 .. code-block:: bash
 
