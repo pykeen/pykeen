@@ -37,7 +37,7 @@ hooks using the following code block from in the same directory.
 Extras
 ------
 PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section
-of the ``setup.cfg``. They can be included with installation using the bracket notation like in 
+of the ``setup.cfg``. They can be included with installation using the bracket notation like in
 ``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
 ``pip install pykeen[docs,plotting]``.
 
