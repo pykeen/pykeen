@@ -191,7 +191,7 @@ from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
-    NoRandomSeedNecessary, Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
     resolve_device, set_random_seed,
 )
 from .version import get_git_hash, get_version
@@ -641,8 +641,8 @@ def pipeline(  # noqa: C901
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
-    result_tracker: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
-    result_tracker = result_tracker(**(result_tracker_kwargs or {}))
+    result_tracker_cls: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+    result_tracker = result_tracker_cls(**(result_tracker_kwargs or {}))
 
     if not metadata:
         metadata = {}
@@ -666,7 +666,7 @@ def pipeline(  # noqa: C901
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs.update(preferred_device=device)
-    model_kwargs.setdefault('random_seed', NoRandomSeedNecessary)
+    model_kwargs.setdefault('random_seed', random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.

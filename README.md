@@ -69,6 +69,7 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 |------|-------------|
 | ``plotting`` | Plotting with ``seaborn`` and generation of word clouds  |
 | ``mlflow`` | Tracking of results with ``mlflow`` |
+| ``wandb`` | Tracking of results with ``wandb`` |
 | ``docs`` | Building of the documentation |
 | ``templating`` | Building of templated documentation, like the README |
 
@@ -227,11 +228,12 @@ in ``pykeen``.
 | Mean Reciprocal Rank    | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
 
-### Trackers (1)
+### Trackers (2)
 
-| Name   | Reference                             | Description           |
-|--------|---------------------------------------|-----------------------|
-| mlflow | `pykeen.trackers.MLFlowResultTracker` | A tracker for MLFlow. |
+| Name   | Reference                             | Description                       |
+|--------|---------------------------------------|-----------------------------------|
+| mlflow | `pykeen.trackers.MLFlowResultTracker` | A tracker for MLFlow.             |
+| wandb  | `pykeen.trackers.WANDBResultTracker`  | A tracker for Weights and Biases. |
 
 ## Hyper-parameter Optimization
 
