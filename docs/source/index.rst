@@ -13,7 +13,9 @@ PyKEEN
    tutorial/running_ablation
    tutorial/byod
    tutorial/using_mlflow
+   tutorial/using_wandb
    tutorial/making_predictions
+   tutorial/performance
 
 .. toctree::
    :caption: Reference

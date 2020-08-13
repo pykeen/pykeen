@@ -19,7 +19,7 @@ This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` functi
     results = pipeline(
         model='RotatE',
         dataset='Kinships',
-        result_tracker='mlflow'
+        result_tracker='mlflow',
         result_tracker_kwargs=dict(
             tracking_uri='http://localhost:5000',
             experiment_name='Tutorial Training of RotatE on Kinships',
@@ -48,7 +48,7 @@ This example shows using MLflow with the :func:`pykeen.hpo.hpo_pipeline` functio
     results = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
-        result_tracker='mlflow'
+        result_tracker='mlflow',
         result_tracker_kwargs=dict(
             tracking_uri='http://localhost:5000',
             experiment_name='Tutorial HPO Training of RotatE on Kinships',
