@@ -41,37 +41,22 @@
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The development version of PyKEEN can be downloaded and installed from
-[PyPI](https://pypi.org/project/pykeen/) on Python 3.6+ with:
+The latest stable version of PyKEEN can be downloaded and installed from
+[PyPI](https://pypi.org/project/pykeen) with:
 
 ```bash
 $ pip install pykeen
 ```
 
-The development version of PyKEEN can be downloaded and installed from
-[GitHub](https://github.com/pykeen/pykeen) on Python 3.6+ with:
+The latest version of PyKEEN can be installed directly from the
+source on [GitHub](https://github.com/pykeen/pykeen) with:
 
 ```bash
-$ git clone https://github.com/pykeen/pykeeen.git pykeen
-$ cd pykeen
-$ pip install -e .
-$ # Install pre-commit
-$ pip install pre-commit
-$ pre-commit install
+pip install git+https://github.com/pykeen/pykeen.git
 ```
 
-PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section
-of the ``setup.cfg``. They can be included with installation using the bracket notation like in 
-``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
-``pip install pykeen[docs,plotting]``.
-
-| Name | Description |
-|------|-------------|
-| ``plotting`` | Plotting with ``seaborn`` and generation of word clouds  |
-| ``mlflow`` | Tracking of results with ``mlflow`` |
-| ``wandb`` | Tracking of results with ``wandb`` |
-| ``docs`` | Building of the documentation |
-| ``templating`` | Building of templated documentation, like the README |
+More information about installation extras can be found in the
+[installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
 
 ## Contributing
 
