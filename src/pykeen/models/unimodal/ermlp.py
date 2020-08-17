@@ -18,6 +18,38 @@ __all__ = [
 ]
 
 
+def score(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    mlp: nn.Module,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the ER-MLP interaction function.
+
+    .. math::
+
+        f(h,r,t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}]),
+
+    :param h: shape: (b, d)
+        The head entity embeddings.
+    :param r: shape: (b, d)
+        The relation embeddings.
+    :param t: shape: (b, d)
+        The tail entity embeddings.
+    :param mlp:
+        The MLP.
+
+    :return: shape: (b,)
+        The scores.
+    """
+    # Concatenate them
+    x_s = torch.cat([h, r, t], dim=-1)
+
+    # Compute scores
+    return mlp(x_s)
+
+
 class ERMLP(EntityRelationEmbeddingModel):
     r"""An implementation of ERMLP from [dong2014]_.
 
