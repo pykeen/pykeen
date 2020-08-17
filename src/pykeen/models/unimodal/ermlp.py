@@ -126,24 +126,17 @@ class ERMLP(EntityRelationEmbeddingModel):
     def score_hrt(
         self,
         hrt_batch: torch.LongTensor,
-        h: Optional[torch.FloatTensor]=None,
-        r: Optional[torch.FloatTensor]=None,
-        t: Optional[torch.FloatTensor]=None,
     ) -> torch.FloatTensor:  # noqa: D102
-        if h is None and r is None and t is None:
-            # Get embeddings
-            h = self.entity_embeddings(hrt_batch[:, 0])
-            r = self.relation_embeddings(hrt_batch[:, 1])
-            t = self.entity_embeddings(hrt_batch[:, 2])
+        # Get embeddings
+        h = self.entity_embeddings(hrt_batch[:, 0])
+        r = self.relation_embeddings(hrt_batch[:, 1])
+        t = self.entity_embeddings(hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        # Concatenate them
-        x_s = torch.cat([h, r, t], dim=-1)
-
-        # Compute scores
-        return self.mlp(x_s)
+        # Apply interaction function
+        return score(h=h, r=r, t=t, mlp=self.mlp)
 
     def score_t(
         self,
