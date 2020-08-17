@@ -43,11 +43,7 @@ def score(
     :return: shape: (b,)
         The scores.
     """
-    # Concatenate them
-    x_s = torch.cat([h, r, t], dim=-1)
-
-    # Compute scores
-    return mlp(x_s)
+    return mlp(torch.cat([h, r, t], dim=-1))
 
 
 class ERMLP(EntityRelationEmbeddingModel):
