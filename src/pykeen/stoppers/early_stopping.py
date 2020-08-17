@@ -152,7 +152,7 @@ class EarlyStopper(Stopper):
 
         self.result_tracker.log_metrics(
             metrics=metric_results.to_flat_dict(),
-            step=self.number_evaluations,
+            step=(self.number_evaluations * self.frequency) + 1,
             prefix='validation',
         )
         result = metric_results.get_metric(self.metric)
