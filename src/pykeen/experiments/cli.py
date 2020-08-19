@@ -142,10 +142,12 @@ def _help_reproduce(
     click.echo(f'Running configuration at {path}')
 
     # Create directory in which all experimental artifacts are saved
+    datetime = time.strftime('%Y-%m-%d-%H-%M-%S')
+    experiment_id = f'{datetime}_{uuid4()}'
     if file_name is not None:
-        output_directory = os.path.join(directory, time.strftime(f"%Y-%m-%d-%H-%M-%S_{file_name}"))
-    else:
-        output_directory = os.path.join(directory, time.strftime("%Y-%m-%d-%H-%M-%S"))
+        experiment_id = f'{experiment_id}_{file_name}'
+    output_directory = os.path.join(directory, experiment_id)
+
     os.makedirs(output_directory, exist_ok=True)
 
     replicate_pipeline_from_path(
