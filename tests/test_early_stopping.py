@@ -14,29 +14,31 @@ from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, Rank
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
-from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
+from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
 
-class TestImprovementChecking(unittest.TestCase):
-    """Tests for checking improvement."""
-
-    def test_smaller_than_any_buffer_element(self):
-        """Test ``smaller_than_any_buffer_element``."""
-        buffer = numpy.asarray([1.0, 0.9, 0.8])
-        assert not smaller_than_any_buffer_element(buffer=buffer, result=1.0)
-        assert smaller_than_any_buffer_element(buffer=buffer, result=0.9)
-        assert not smaller_than_any_buffer_element(buffer=buffer, result=0.9, delta=0.1)
-
-    def test_larger_than_any_buffer_element(self):
-        """Test ``smaller_than_any_buffer_element``."""
-        buffer = numpy.asarray([1.0, 0.9, 0.8])
-        assert larger_than_any_buffer_element(buffer=buffer, result=1.0)
-        assert larger_than_any_buffer_element(buffer=buffer, result=1.0, delta=0.1)
-        assert not larger_than_any_buffer_element(buffer=buffer, result=0.9, delta=0.1)
+def test_is_improvement():
+    """Test is_improvement()."""
+    for best_value, current_value, larger_is_better, absolute_delta, is_better in [
+        # equal value; larger is better
+        (1.0, 1.0, True, 0.0, False),
+        # equal value; smaller is better
+        (1.0, 1.0, False, 0.0, False),
+        # larger is better; improvement
+        (1.0, 1.1, True, 0.0, True),
+        # larger is better; improvement; but not significant
+        (1.0, 1.1, True, 0.1, False),
+    ]:
+        assert is_better == is_improvement(
+            best_value=best_value,
+            current_value=current_value,
+            larger_is_better=larger_is_better,
+            absolute_delta=absolute_delta,
+        )
 
 
 class MockEvaluator(Evaluator):
@@ -160,6 +162,8 @@ class TestEarlyStopping(unittest.TestCase):
     stop_constant: int = 4
     #: The minimum improvement
     delta: float = 0.0
+    #: The best results
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
     def setUp(self):
         """Prepare for testing the early stopper."""
@@ -185,17 +189,17 @@ class TestEarlyStopping(unittest.TestCase):
 
     def test_result_processing(self):
         """Test that the mock evaluation of the early stopper always gives the right loss."""
-        for stop in range(1, 1 + len(self.mock_losses)):
+        for stop in range(len(self.mock_losses)):
             # Step early stopper
             should_stop = self.stopper.should_stop()
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:stop]
+                assert self.stopper.results == self.mock_losses[:stop + 1]
 
                 # check ring buffer
                 if stop >= self.patience:
-                    assert set(self.stopper.buffer) == set(self.mock_losses[stop - self.patience:stop])
+                    assert self.stopper.best_result == self.best_results[stop]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
@@ -219,6 +223,7 @@ class TestDeltaEarlyStopping(TestEarlyStopping):
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
     delta: float = 0.1
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStoppingRealWorld(unittest.TestCase):
@@ -235,7 +240,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
     #: The maximum number of epochs to train. Should be large enough to allow for early stopping.
     max_num_epochs: int = 1000
     #: The epoch at which the stop should happen. Depends on the choice of random seed.
-    stop_epoch: int = 21
+    stop_epoch: int = 30
     #: The batch size to use.
     batch_size: int = 128
 
