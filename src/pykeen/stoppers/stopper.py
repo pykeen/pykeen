@@ -21,7 +21,7 @@ class Stopper(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def should_stop(self) -> bool:
+    def should_stop(self, epoch: int) -> bool:
         """Validate on validation set and check for termination condition."""
         raise NotImplementedError
 
@@ -33,6 +33,6 @@ class NopStopper(Stopper):
         """Return false; should never evaluate."""
         return False
 
-    def should_stop(self) -> bool:
+    def should_stop(self, epoch: int) -> bool:
         """Return false; should never stop."""
         return False

@@ -62,7 +62,7 @@ def larger_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: 
     return result > baseline
 
 
-StopperCallback = Callable[[Stopper, Union[int, float]], None]
+StopperCallback = Callable[[Stopper, Union[int, float], int], None]
 
 
 @fix_dataclass_init_docs
