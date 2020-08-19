@@ -7,8 +7,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, List, Mapping, Optional, Union
 
-import numpy
-
 from .stopper import Stopper
 from ..evaluation import Evaluator
 from ..models.base import Model
