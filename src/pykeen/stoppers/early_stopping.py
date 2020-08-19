@@ -165,7 +165,7 @@ class EarlyStopper(Stopper):
             if not self.improvement_criterion(buffer=self.buffer, result=result, delta=self.delta):
                 logger.info(f'Stopping early after {self.number_evaluations} evaluations with {self.metric}={result}')
                 for stopped_callback in self.stopped_callbacks:
-                    stopped_callback(self, result,epoch)
+                    stopped_callback(self, result, epoch)
                 self.stopped = True
                 return True
 
