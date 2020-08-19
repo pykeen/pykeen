@@ -76,8 +76,6 @@ class EarlyStopper(Stopper):
     evaluator: Evaluator
     #: The triples to use for evaluation
     evaluation_triples_factory: Optional[TriplesFactory]
-    #: Current epoch
-    current_epoch: Optional[int] = None
     #: Size of the evaluation batches
     evaluation_batch_size: Optional[int] = None
     #: Slice size of the evaluation batches
