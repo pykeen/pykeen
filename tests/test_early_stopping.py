@@ -178,24 +178,24 @@ class TestEarlyStopping(unittest.TestCase):
 
     def test_initialization(self):
         """Test warm-up phase."""
-        for it in range(self.patience):
-            should_stop = self.stopper.should_stop(epoch=it)
-            assert self.stopper.number_evaluations == it + 1
+        for epoch in range(self.patience):
+            should_stop = self.stopper.should_stop(epoch=epoch)
+            assert self.stopper.number_evaluations == epoch + 1
             assert not should_stop
 
     def test_result_processing(self):
         """Test that the mock evaluation of the early stopper always gives the right loss."""
-        for stop in range(1, 1 + len(self.mock_losses)):
+        for epoch in range(1, 1 + len(self.mock_losses)):
             # Step early stopper
-            should_stop = self.stopper.should_stop(epoch=stop)
+            should_stop = self.stopper.should_stop(epoch=epoch)
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:stop]
+                assert self.stopper.results == self.mock_losses[:epoch]
 
                 # check ring buffer
-                if stop >= self.patience:
-                    assert set(self.stopper.buffer) == set(self.mock_losses[stop - self.patience:stop])
+                if epoch >= self.patience:
+                    assert set(self.stopper.buffer) == set(self.mock_losses[epoch - self.patience:epoch])
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
