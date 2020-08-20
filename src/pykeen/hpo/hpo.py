@@ -107,7 +107,7 @@ class Objective:
 
         def _stopped_callback(early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
-            trial.report(result, epoch)
+            trial.report(result, step=epoch)
 
         for key, callback in zip(('continue_callbacks', 'stopped_callbacks'), (_continue_callback, _stopped_callback)):
             stopper_kwargs.setdefault(key, []).append(callback)
