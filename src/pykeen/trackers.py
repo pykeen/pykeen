@@ -121,7 +121,7 @@ class WANDBResultTracker(ResultTracker):
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
-        self.wandb.log(metrics)
+        self.wandb.log(metrics, step=step)
 
     def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)

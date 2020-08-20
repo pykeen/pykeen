@@ -178,30 +178,30 @@ class TestEarlyStopping(unittest.TestCase):
 
     def test_initialization(self):
         """Test warm-up phase."""
-        for it in range(self.patience):
-            should_stop = self.stopper.should_stop()
-            assert self.stopper.number_evaluations == it + 1
+        for epoch in range(self.patience):
+            should_stop = self.stopper.should_stop(epoch=epoch)
+            assert self.stopper.number_evaluations == epoch + 1
             assert not should_stop
 
     def test_result_processing(self):
         """Test that the mock evaluation of the early stopper always gives the right loss."""
-        for stop in range(1, 1 + len(self.mock_losses)):
+        for epoch in range(1, 1 + len(self.mock_losses)):
             # Step early stopper
-            should_stop = self.stopper.should_stop()
+            should_stop = self.stopper.should_stop(epoch=epoch)
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:stop]
+                assert self.stopper.results == self.mock_losses[:epoch]
 
                 # check ring buffer
-                if stop >= self.patience:
-                    assert set(self.stopper.buffer) == set(self.mock_losses[stop - self.patience:stop])
+                if epoch >= self.patience:
+                    assert set(self.stopper.buffer) == set(self.mock_losses[epoch - self.patience:epoch])
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
-        for _ in range(self.stop_constant):
-            self.assertFalse(self.stopper.should_stop())
-        self.assertTrue(self.stopper.should_stop())
+        for epoch in range(self.stop_constant):
+            self.assertFalse(self.stopper.should_stop(epoch=epoch))
+        self.assertTrue(self.stopper.should_stop(epoch=epoch))
 
     def test_result_logging_with_mlflow(self):
         """Test whether the MLFLow result logger works."""
@@ -209,7 +209,7 @@ class TestEarlyStopping(unittest.TestCase):
         wrapper = LogCallWrapper()
         real_log_metrics = self.stopper.result_tracker.mlflow.log_metrics
         self.stopper.result_tracker.mlflow.log_metrics = wrapper.wrap(real_log_metrics)
-        self.stopper.should_stop()
+        self.stopper.should_stop(epoch=0)
         assert wrapper.was_called(real_log_metrics)
 
 
