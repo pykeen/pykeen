@@ -199,7 +199,7 @@ class TestEarlyStopping(unittest.TestCase):
 
                 # check ring buffer
                 if epoch >= self.patience:
-                    assert self.stopper.best_result == self.best_results[epoch]
+                    assert self.stopper.best_metric == self.best_results[epoch]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""

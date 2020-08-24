@@ -79,7 +79,7 @@ class EarlyStopper(Stopper):
     #: The minimum improvement between two iterations
     delta: float = 0.005
     #: The best result so far
-    best_result: Optional[float] = None
+    best_metric: Optional[float] = None
     #: The epoch at which the best result occurred
     best_epoch: Optional[int] = None
     #: The remaining patience
@@ -148,14 +148,14 @@ class EarlyStopper(Stopper):
         self.number_evaluations += 1
 
         # check for improvement
-        if self.best_result is None or is_improvement(
-            best_value=self.best_result,
+        if self.best_metric is None or is_improvement(
+            best_value=self.best_metric,
             current_value=result,
             larger_is_better=self.larger_is_better,
             absolute_delta=self.delta,
         ):
             self.best_epoch = epoch
-            self.best_result = result
+            self.best_metric = result
             self.remaining_patience = self.patience
         else:
             self.remaining_patience -= 1
@@ -182,4 +182,6 @@ class EarlyStopper(Stopper):
             larger_is_better=self.larger_is_better,
             results=self.results,
             stopped=self.stopped,
+            best_epoch=self.best_epoch,
+            best_metric=self.best_metric,
         )
