@@ -195,7 +195,7 @@ class TestEarlyStopping(unittest.TestCase):
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:epoch]
+                assert self.stopper.results == self.mock_losses[:epoch + 1]
 
                 # check ring buffer
                 if epoch >= self.patience:
