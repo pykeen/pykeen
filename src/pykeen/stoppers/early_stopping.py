@@ -136,7 +136,7 @@ class EarlyStopper(Stopper):
 
         self.result_tracker.log_metrics(
             metrics=metric_results.to_flat_dict(),
-            step=epoch,  # TODO: Replace by number of epochs
+            step=epoch,
             prefix='validation',
         )
         result = metric_results.get_metric(self.metric)
