@@ -400,7 +400,7 @@ class TrainingLoop(ABC):
                 'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
             })
 
-            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop():
+            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                 return self.losses_per_epochs
 
         return self.losses_per_epochs

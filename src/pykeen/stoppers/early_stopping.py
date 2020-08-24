@@ -120,7 +120,7 @@ class EarlyStopper(Stopper):
         """Count the number of results stored in the early stopper."""
         return len(self.results)
 
-    def should_stop(self) -> bool:
+    def should_stop(self, epoch: int) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # Evaluate
         metric_results = self.evaluator.evaluate(
@@ -136,7 +136,7 @@ class EarlyStopper(Stopper):
 
         self.result_tracker.log_metrics(
             metrics=metric_results.to_flat_dict(),
-            step=self.number_evaluations,  # TODO: Replace by number of epochs
+            step=epoch,  # TODO: Replace by number of epochs
             prefix='validation',
         )
         result = metric_results.get_metric(self.metric)
@@ -162,12 +162,12 @@ class EarlyStopper(Stopper):
         if self.remaining_patience <= 0:
             logger.info(f'Stopping early after {self.number_evaluations} evaluations with {self.metric}={result}')
             for stopped_callback in self.stopped_callbacks:
-                stopped_callback(self, result)
+                stopped_callback(self, result, epoch)
             self.stopped = True
             return True
 
         for continue_callback in self.continue_callbacks:
-            continue_callback(self, result)
+            continue_callback(self, result, epoch)
         return False
 
     def get_summary_dict(self) -> Mapping[str, Any]:
