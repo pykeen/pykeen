@@ -44,7 +44,7 @@ def is_improvement(
         A minimum absolute improvement until it is considered as an improvement.
 
     :return:
-         Whether the current value is better.
+        Whether the current value is better.
     """
     if larger_is_better:
         best_value = -best_value
