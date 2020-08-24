@@ -80,6 +80,8 @@ class EarlyStopper(Stopper):
     delta: float = 0.005
     #: The best result so far
     best_result: Optional[float] = None
+    #: The epoch at which the best result occurred
+    best_epoch: Optional[int] = None
     #: The remaining patience
     remaining_patience: int = dataclasses.field(init=False)
     #: The metric results from all evaluations
@@ -152,9 +154,9 @@ class EarlyStopper(Stopper):
             larger_is_better=self.larger_is_better,
             absolute_delta=self.delta,
         ):
+            self.best_epoch = epoch
             self.best_result = result
             self.remaining_patience = self.patience
-            # TODO: Save best epoch
         else:
             self.remaining_patience -= 1
 
