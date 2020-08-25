@@ -145,7 +145,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         if mlflow_tracking_uri:
             result_tracker = 'mlflow'
             result_tracker_kwargs = {
-                'tracking_uri': mlflow_tracking_uri
+                'tracking_uri': mlflow_tracking_uri,
             }
         else:
             result_tracker = None

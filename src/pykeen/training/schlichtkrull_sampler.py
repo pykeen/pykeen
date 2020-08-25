@@ -62,11 +62,13 @@ class GraphSampler(Sampler):
             num_samples = triples_factory.num_triples // 10
             logging.info(f'Did not specify number of samples. Using {num_samples}.')
         elif num_samples > triples_factory.num_triples:
-            raise ValueError('num_samples cannot be larger than the number of triples, but '
-                             f'{num_samples} > {triples_factory.num_triples}.')
+            raise ValueError(
+                'num_samples cannot be larger than the number of triples, but '
+                f'{num_samples} > {triples_factory.num_triples}.',
+            )
         if not isinstance(num_samples, int) or num_samples <= 0:
-            raise ValueError("num_samples should be a positive integer "
-                             "value, but got num_samples={}".format(num_samples))
+            raise ValueError(f"num_samples should be a positive integer value, but got num_samples={num_samples}")
+
         self.num_samples = num_samples
         self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
 

@@ -106,7 +106,7 @@ class _ModelTestCase:
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
-            **(self.model_kwargs or {})
+            **(self.model_kwargs or {}),
         ).to_device_()
 
     def test_get_grad_parameters(self):
@@ -145,7 +145,8 @@ class _ModelTestCase:
             if (np.data == old_content[id(np)]).all()
         )
         assert num_equal_weights_after_re_init == self.num_constant_init, (
-            num_equal_weights_after_re_init, self.num_constant_init)
+            num_equal_weights_after_re_init, self.num_constant_init,
+        )
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -253,14 +254,14 @@ class _ModelTestCase:
             self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=42,
-            **(self.model_kwargs or {})
+            **(self.model_kwargs or {}),
         ).to_device_()
 
         loaded_model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=21,
-            **(self.model_kwargs or {})
+            **(self.model_kwargs or {}),
         ).to_device_()
 
         if isinstance(original_model, EntityEmbeddingModel):
@@ -287,7 +288,7 @@ class _ModelTestCase:
         extras += [
             '--number-epochs', self.train_num_epochs,
             '--embedding-dim', self.embedding_dim,
-            '--batch-size', self.train_batch_size
+            '--batch-size', self.train_batch_size,
         ]
         extras = [str(e) for e in extras]
         return extras
@@ -447,7 +448,7 @@ Traceback
             self.model.__init__(
                 self.factory,
                 embedding_dim=self.embedding_dim,
-                **(self.model_kwargs or {})
+                **(self.model_kwargs or {}),
             )
         except TypeError as error:
             assert error.args == ("'NoneType' object is not callable",)

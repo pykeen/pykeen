@@ -324,7 +324,7 @@ def _get_metrics_lines(tablefmt: str):
                     name, f'`pykeen.evaluation.{value.__name__}`',
                 )
             else:
-                yield field.name, field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}',
+                yield field.name, field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
 
 
 def _get_lines(d, tablefmt, submodule):

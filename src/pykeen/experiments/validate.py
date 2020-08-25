@@ -105,7 +105,7 @@ def get_configuration_errors(path: str):  # noqa: C901
                 for name in extraneous_kwargs
             )
             errors.append(
-                f'''Extraneous keys in {kwargs_key} for {choice}:\n{_x}'''
+                f'''Extraneous keys in {kwargs_key} for {choice}:\n{_x}''',
             )
 
         if allowed_missing_kwargs and required_kwargs:

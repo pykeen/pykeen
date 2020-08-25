@@ -636,7 +636,7 @@ class Model(nn.Module):
             hs = torch.arange(e, min(e + batch_size, self.num_entities), device=self.device)
             hr_batch = torch.stack([
                 hs,
-                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0])
+                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0]),
             ], dim=-1)
             scores[r, e:e + batch_size, :] = self.predict_scores_all_tails(hr_batch=hr_batch).to(scores.device)
 
@@ -710,13 +710,13 @@ class Model(nn.Module):
         with torch.no_grad():
             logger.warning(
                 f'score_all_triples is an expensive operation, involving {self.num_entities ** 2 * self.num_relations} '
-                f'score evaluations.'
+                f'score evaluations.',
             )
 
             if k is None:
                 logger.warning(
                     'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
-                    'knowledge graphs.'
+                    'knowledge graphs.',
                 )
                 return self._score_all_triples(
                     batch_size=batch_size,
@@ -739,7 +739,7 @@ class Model(nn.Module):
                 real_batch_size = hs.shape[0]
                 hr_batch = torch.stack([
                     hs,
-                    hs.new_empty(1).fill_(value=r).repeat(real_batch_size)
+                    hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
                 ], dim=-1)
                 top_scores = self.predict_scores_all_tails(hr_batch=hr_batch).view(-1)
 
@@ -831,7 +831,7 @@ class Model(nn.Module):
         if not self.is_mr_loss:
             raise RuntimeError(
                 'The chosen loss does not allow the calculation of margin ranking'
-                ' losses. Please use the compute_loss method instead.'
+                ' losses. Please use the compute_loss method instead.',
             )
         y = torch.ones_like(negative_scores, device=self.device)
         return self.loss(positive_scores, negative_scores, y) + self.regularizer.term
@@ -872,7 +872,7 @@ class Model(nn.Module):
         if not self.is_nssa_loss:
             raise RuntimeError(
                 'The chosen loss does not allow the calculation of self adversarial negative sampling'
-                ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.'
+                ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.',
             )
         return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
 
@@ -895,7 +895,7 @@ class Model(nn.Module):
         if self.is_mr_loss:
             raise RuntimeError(
                 'The chosen loss does not allow the calculation of margin label'
-                ' losses. Please use the compute_mr_loss method instead.'
+                ' losses. Please use the compute_mr_loss method instead.',
             )
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
@@ -927,7 +927,7 @@ class Model(nn.Module):
         """
         logger.warning(
             'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_t function. This might cause the calculations to take longer than necessary.'
+            'score_t function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
         hrt_batch = _extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.entity_to_id.values()), dim=2)
@@ -950,7 +950,7 @@ class Model(nn.Module):
         """
         logger.warning(
             'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_h function. This might cause the calculations to take longer than necessary.'
+            'score_h function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
         hrt_batch = _extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.entity_to_id.values()), dim=0)
@@ -973,7 +973,7 @@ class Model(nn.Module):
         """
         logger.warning(
             'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_r function. This might cause the calculations to take longer than necessary.'
+            'score_r function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
         hrt_batch = _extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.relation_to_id.values()), dim=1)

@@ -184,7 +184,7 @@ class RGCN(Model):
         self_loop_dropout: float = 0.2,
         edge_weighting: Callable[
             [torch.LongTensor, torch.LongTensor],
-            torch.FloatTensor
+            torch.FloatTensor,
         ] = inverse_indegree_edge_weights,
         decomposition: str = 'basis',
         buffer_messages: bool = True,
@@ -238,7 +238,7 @@ class RGCN(Model):
             if embedding_dim % num_bases_or_blocks != 0:
                 raise ValueError(
                     'With block decomposition, the embedding dimension has to be divisible by the number of'
-                    f' blocks, but {embedding_dim} % {num_bases_or_blocks} != 0.'
+                    f' blocks, but {embedding_dim} % {num_bases_or_blocks} != 0.',
                 )
         else:
             raise ValueError(f'Unknown decomposition: "{decomposition}". Please use either "basis" or "block".')
@@ -282,36 +282,36 @@ class RGCN(Model):
         if self.decomposition == 'basis':
             self.att = nn.ParameterList()
             for _ in range(self.num_layers):
-                self.bases.append(
-                    nn.Parameter(
-                        torch.empty(
-                            self.num_bases,
-                            self.embedding_dim,
-                            self.embedding_dim,
-                            device=self.device,
-                        ), requires_grad=True)
-                )
-                self.att.append(
-                    nn.Parameter(
-                        torch.empty(
-                            self.num_relations + 1,
-                            self.num_bases,
-                            device=self.device,
-                        ), requires_grad=True)
-                )
+                self.bases.append(nn.Parameter(
+                    data=torch.empty(
+                        self.num_bases,
+                        self.embedding_dim,
+                        self.embedding_dim,
+                        device=self.device,
+                    ),
+                    requires_grad=True,
+                ))
+                self.att.append(nn.Parameter(
+                    data=torch.empty(
+                        self.num_relations + 1,
+                        self.num_bases,
+                        device=self.device,
+                    ),
+                    requires_grad=True,
+                ))
         elif self.decomposition == 'block':
             block_size = self.embedding_dim // self.num_bases
             for _ in range(self.num_layers):
-                self.bases.append(
-                    nn.Parameter(
-                        data=torch.empty(
-                            self.num_relations + 1,
-                            self.num_bases,
-                            block_size,
-                            block_size,
-                            device=self.device,
-                        ), requires_grad=True)
-                )
+                self.bases.append(nn.Parameter(
+                    data=torch.empty(
+                        self.num_relations + 1,
+                        self.num_bases,
+                        block_size,
+                        block_size,
+                        device=self.device,
+                    ),
+                    requires_grad=True,
+                ))
 
             self.att = None
         else:

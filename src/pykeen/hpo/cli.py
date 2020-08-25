@@ -15,8 +15,10 @@ from .samplers import samplers
 @click.argument('model')
 @click.argument('dataset')
 @click.option('-l', '--loss')
-@click.option('--sampler', help="Which sampler should be used?", type=click.Choice(list(samplers)), default='tpe',
-              show_default=True)
+@click.option(
+    '--sampler', help="Which sampler should be used?", type=click.Choice(list(samplers)), default='tpe',
+    show_default=True,
+)
 @click.option('--storage', help="Where to output trials dataframe")
 @click.option('--n-trials', type=int, help="Number of trials to run")
 @click.option('--timeout', type=int, help="Number of trials to run")

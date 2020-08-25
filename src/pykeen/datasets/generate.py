@@ -54,7 +54,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
             training_path=os.path.join(directory, 'train.txt'),
             testing_path=os.path.join(directory, 'test.txt'),
             validation_path=os.path.join(directory, 'valid.txt'),
-            eager=True
+            eager=True,
         )
         print(d)
 

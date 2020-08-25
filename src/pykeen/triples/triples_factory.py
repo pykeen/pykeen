@@ -38,7 +38,7 @@ def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> 
 
 def _create_multi_label_tails_instance(
     mapped_triples: MappedTriples,
-    use_tqdm: Optional[bool] = None
+    use_tqdm: Optional[bool] = None,
 ) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (h,r) pair the multi tail label."""
     logger.debug('Creating multi label tails instance')
@@ -54,7 +54,7 @@ def _create_multi_label_tails_instance(
         element_1_index=0,
         element_2_index=1,
         label_index=2,
-        use_tqdm=use_tqdm
+        use_tqdm=use_tqdm,
     )
 
     logger.debug('Created multi label tails instance')
@@ -244,7 +244,8 @@ class TriplesFactory:
             if relations_already_inverted:
                 logger.info(
                     f'Some triples already have suffix {INVERSE_SUFFIX}. '
-                    f'Creating TriplesFactory based on inverse triples')
+                    f'Creating TriplesFactory based on inverse triples',
+                )
                 self.relation_to_inverse = {
                     re.sub('_inverse$', '', relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
                     for relation in unique_relations
@@ -453,7 +454,7 @@ class TriplesFactory:
             if actual_size != exp_size:
                 logger.warning(
                     f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
-                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.'
+                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.',
                 )
 
         # Make new triples factories for each group
@@ -505,15 +506,19 @@ class TriplesFactory:
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
         idx = self.get_idx_for_relations(relations)
-        logger.info(f'keeping {len(relations)}/{self.num_relations} relations'
-                    f' and {idx.sum()}/{self.num_triples} triples in {self}')
+        logger.info(
+            f'keeping {len(relations)}/{self.num_relations} relations'
+            f' and {idx.sum()}/{self.num_triples} triples in {self}',
+        )
         return TriplesFactory(triples=self.triples[idx])
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
         idx = self.get_idx_for_relations(relations, invert=True)
-        logger.info(f'removing {len(relations)}/{self.num_relations} relations'
-                    f' and {idx.sum()}/{self.num_triples} triples')
+        logger.info(
+            f'removing {len(relations)}/{self.num_relations} relations'
+            f' and {idx.sum()}/{self.num_triples} triples',
+        )
         return TriplesFactory(triples=self.triples[idx])
 
     def entity_word_cloud(self, top: Optional[int] = None):
@@ -579,7 +584,7 @@ class TriplesFactory:
         if len(forbidden) > 0:
             raise ValueError(
                 f'The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were '
-                f'used.'
+                f'used.',
             )
 
         # convert to numpy
