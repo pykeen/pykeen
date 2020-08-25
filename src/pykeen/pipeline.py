@@ -675,15 +675,16 @@ def pipeline(  # noqa: C901
     )
 
     # evaluation restriction to a subset of entities/relations
-    testing_triples_factory, validation_triples_factory = [
-        factory.new_with_restriction(
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing_triples_factory = testing_triples_factory.new_with_restriction(
             entities=evaluation_entity_whitelist,
             relations=evaluation_relation_whitelist,
         )
-        if factory is not None
-        else None
-        for factory in (testing_triples_factory, validation_triples_factory)
-    ]
+        if validation_triples_factory is not None:
+            validation_triples_factory = validation_triples_factory.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
 
     if model_kwargs is None:
         model_kwargs = {}
