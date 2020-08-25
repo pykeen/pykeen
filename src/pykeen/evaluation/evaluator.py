@@ -706,8 +706,7 @@ def _evaluate_batch(
 
         # Restrict to entities of interest
         if restrict_entities_to is not None:
-            batch_filtered_scores_of_corrupted = \
-                batch_filtered_scores_of_corrupted[:, restrict_entities_to]
+            batch_filtered_scores_of_corrupted = batch_filtered_scores_of_corrupted[:, restrict_entities_to]
 
         # Evaluate metrics on these *filtered* scores
         for filtered_evaluator in filtered_evaluators:
