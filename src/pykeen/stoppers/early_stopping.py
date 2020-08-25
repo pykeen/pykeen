@@ -29,7 +29,6 @@ def is_improvement(
     best_value: float,
     current_value: float,
     larger_is_better: bool,
-    absolute_delta: float = 0.0,
     relative_delta: float = 0.0,
 ) -> bool:
     """
@@ -41,8 +40,6 @@ def is_improvement(
         The current value.
     :param larger_is_better:
         Whether a larger value is better.
-    :param absolute_delta:
-        A minimum absolute improvement until it is considered as an improvement.
     :param relative_delta:
         A minimum relative improvement until it is considered as an improvement.
 
@@ -50,10 +47,10 @@ def is_improvement(
         Whether the current value is better.
     """
     if larger_is_better:
-        return current_value > (1.0 + relative_delta) * best_value + absolute_delta
+        return current_value > (1.0 + relative_delta) * best_value
 
     # now: smaller is better
-    return current_value < (1.0 - relative_delta) * best_value - absolute_delta
+    return current_value < (1.0 - relative_delta) * best_value
 
 
 @fix_dataclass_init_docs

@@ -23,7 +23,7 @@ from pykeen.typing import MappedTriples
 
 def test_is_improvement():
     """Test is_improvement()."""
-    for best_value, current_value, larger_is_better, absolute_delta, is_better in [
+    for best_value, current_value, larger_is_better, relative_delta, is_better in [
         # equal value; larger is better
         (1.0, 1.0, True, 0.0, False),
         # equal value; smaller is better
@@ -37,7 +37,7 @@ def test_is_improvement():
             best_value=best_value,
             current_value=current_value,
             larger_is_better=larger_is_better,
-            absolute_delta=absolute_delta,
+            relative_delta=relative_delta,
         )
 
 
