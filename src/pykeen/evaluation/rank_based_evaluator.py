@@ -219,6 +219,14 @@ class RankBasedEvaluator(Evaluator):
         ks: Optional[Iterable[Union[int, float]]] = None,
         filtered: bool = True,
     ):
+        """Initialize rank-based evaluator.
+
+        :param ks:
+            The values for which to calculate hits@k. Defaults to {1,3,5,10}.
+        :param filtered:
+            Whether to use the filtered evaluation protocol. If enabled, ranking another true triple higher than the
+            currently considered one will not decrease the score.
+        """
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         for k in self.ks:
