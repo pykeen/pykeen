@@ -88,8 +88,6 @@ class EarlyStopper(Stopper):
     remaining_patience: int = dataclasses.field(init=False)
     #: The metric results from all evaluations
     results: List[float] = dataclasses.field(default_factory=list, repr=False)
-    #: A counter for the ring buffer
-    number_evaluations: int = 0
     #: Whether a larger value is better, or a smaller
     larger_is_better: bool = True
     #: The result tracker
@@ -147,7 +145,6 @@ class EarlyStopper(Stopper):
 
         # Append to history
         self.results.append(result)
-        self.number_evaluations += 1
 
         # check for improvement
         if self.best_metric is None or is_improvement(
@@ -164,7 +161,7 @@ class EarlyStopper(Stopper):
 
         # Stop if the result did not improve more than delta for patience evaluations
         if self.remaining_patience <= 0:
-            logger.info(f'Stopping early after {self.number_evaluations} evaluations with {self.metric}={result}')
+            logger.info(f'Stopping early after {self.number_results} evaluations with {self.metric}={result}')
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
             self.stopped = True

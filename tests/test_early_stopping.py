@@ -184,7 +184,6 @@ class TestEarlyStopping(unittest.TestCase):
         """Test warm-up phase."""
         for epoch in range(self.patience):
             should_stop = self.stopper.should_stop(epoch=epoch)
-            assert self.stopper.number_evaluations == epoch + 1
             assert not should_stop
 
     def test_result_processing(self):
