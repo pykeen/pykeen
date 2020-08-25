@@ -171,7 +171,7 @@ import os
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -531,6 +531,8 @@ def pipeline(  # noqa: C901
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -573,11 +575,19 @@ def pipeline(  # noqa: C901
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training_triples_factory:
-        A triples factory with training instances if a a dataset was not specified
+        A triples factory with training instances if a dataset was not specified
     :param testing_triples_factory:
         A triples factory with training instances if a dataset was not specified
     :param validation_triples_factory:
         A triples factory with validation instances if a dataset was not specified
+    :param evaluation_entity_whitelist:
+        Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
+        embedding quality.
+    :param evaluation_relation_whitelist:
+        Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
+        is only interested in certain relation, but the relational patterns with other relations improve the entity
+        embedding quality.
 
     :param model:
         The name of the model or the model class
@@ -632,9 +642,10 @@ def pipeline(  # noqa: C901
     :param result_tracker_kwargs:
         The keyword arguments passed to the results tracker on instantiation
 
-    :param metadata: A JSON dictionary to store with the experiment
-    :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
-     Defaults to true - use testing triples.
+    :param metadata:
+        A JSON dictionary to store with the experiment
+    :param use_testing_data:
+        If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
         random_seed = random.randint(0, 2 ** 32 - 1)
@@ -662,6 +673,18 @@ def pipeline(  # noqa: C901
         testing_triples_factory=testing_triples_factory,
         validation_triples_factory=validation_triples_factory,
     )
+
+    # evaluation restriction to a subset of entities/relations
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing_triples_factory = testing_triples_factory.new_with_restriction(
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
+        )
+        if validation_triples_factory is not None:
+            validation_triples_factory = validation_triples_factory.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
 
     if model_kwargs is None:
         model_kwargs = {}
