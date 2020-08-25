@@ -114,7 +114,8 @@ class TransR(EntityRelationEmbeddingModel):
         # Initialise relation embeddings to unit length
         functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
         nn.init.xavier_uniform_(self.relation_projections.weight.view(
-            self.num_relations, self.embedding_dim, self.relation_dim))
+            self.num_relations, self.embedding_dim, self.relation_dim,
+        ))
 
     @staticmethod
     def interaction_function(

@@ -408,7 +408,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 )
                 rv = TriplesFactory(
                     triples=df.values,
-                    create_inverse_triples=self.create_inverse_triples
+                    create_inverse_triples=self.create_inverse_triples,
                 )
                 rv.path = relative_path
                 return rv

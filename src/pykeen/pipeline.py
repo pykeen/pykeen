@@ -746,7 +746,7 @@ def pipeline(  # noqa: C901
         negative_sampler = get_negative_sampler_cls(negative_sampler)
         result_tracker.log_params(
             params=dict(cls=negative_sampler.__name__, kwargs=negative_sampler_kwargs),
-            prefix='negative_sampler'
+            prefix='negative_sampler',
         )
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,

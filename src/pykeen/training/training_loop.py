@@ -284,7 +284,7 @@ class TrainingLoop(ABC):
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
             self.optimizer = self.optimizer.__class__(
                 params=self.model.get_grad_params(),
-                **optimizer_kwargs
+                **optimizer_kwargs,
             )
         elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
@@ -414,7 +414,7 @@ class TrainingLoop(ABC):
             start=start,
             stop=stop,
             label_smoothing=label_smoothing,
-            slice_size=slice_size
+            slice_size=slice_size,
         )
 
         # raise error when non-finite loss occurs (NaN, +/-inf)
@@ -603,7 +603,7 @@ class TrainingLoop(ABC):
                             num_epochs=1,
                             batch_size=batch_size,
                             sub_batch_size=sub_batch_size,
-                            only_size_probing=True
+                            only_size_probing=True,
                         )
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
@@ -611,7 +611,8 @@ class TrainingLoop(ABC):
                             raise runtime_error
                         if sub_batch_size == 1:
                             logger.info(
-                                f"Even sub_batch_size={sub_batch_size} does not fit in memory with these parameters")
+                                f"Even sub_batch_size={sub_batch_size} does not fit in memory with these parameters",
+                            )
                             break
                         logger.debug(f'The sub_batch_size {sub_batch_size} was too big, trying less now.')
                         sub_batch_size //= 2
