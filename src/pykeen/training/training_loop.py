@@ -47,8 +47,10 @@ class SubBatchingNotSupportedError(NotImplementedError):
         self.model = model
 
     def __str__(self):  # noqa: D105
-        return f'No sub-batching support for {self.model.__class__.__name__} due to modules ' \
-               f'{self.model.modules_not_supporting_sub_batching}.'
+        return (
+            f'No sub-batching support for {self.model.__class__.__name__} due to modules '
+            f'{self.model.modules_not_supporting_sub_batching}.'
+        )
 
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
