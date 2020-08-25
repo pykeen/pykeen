@@ -22,7 +22,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-StopperCallback = Callable[[Stopper, Union[int, float]], None]
+StopperCallback = Callable[[Stopper, Union[int, float], int], None]
 
 
 def is_improvement(
@@ -92,6 +92,8 @@ class EarlyStopper(Stopper):
     larger_is_better: bool = True
     #: The result tracker
     result_tracker: Optional[ResultTracker] = None
+    #: Callbacks when after results are calculated
+    result_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training gets continued
     continue_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training is stopped early
@@ -145,6 +147,9 @@ class EarlyStopper(Stopper):
 
         # Append to history
         self.results.append(result)
+
+        for result_callback in self.result_callbacks:
+            result_callback(self, result, epoch)
 
         # check for improvement
         if self.best_metric is None or is_improvement(
