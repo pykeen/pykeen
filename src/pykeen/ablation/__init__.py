@@ -11,12 +11,17 @@ performance.
 
     from pykeen.ablation import ablation_pipeline
 
-    result = ablation_pipeline(
-        # What is the minimum number of things the user has to set to make this not give an error?
+    ablation_result = ablation_pipeline(
+        datasets='kinships',
+        models=['RotatE', 'TransE'],
+        losses=['BCE', 'NSSA'],
+        optimizers='Adam',
+        training_loops=['sLCWA', 'LCWA'],
+        optuna_config={
+            'n_trials': 5,
+        },
+        directory='~/Desktop/simple_ablation_study',
     )
-
-
-
 
 TODO: this following paragraph is too much information at once. You have to introduce someone to this stuff
 one at a time. Each one of these should have reasonable defaults.
@@ -44,25 +49,18 @@ Add metadata to the configuration.
     )
     configuration['metadata'] = metadata
 
-Define Ablation Dictionary
+    # Define Ablation Dictionary
 
-.. code-block:: python
-
-    ablation = {}
-
-Step 1: define dataset. Here, we use our own data.
-
-.. code-block:: python
-
-    datasets = [
-        dict(
-            training='/path/to/my/train.txt',
-            testing='/path/to/my/test.txt',
-            validation='/path/to/my/valid.txt',
-        )
-    ]
-
-    ablation['datasets'] = datasets
+    # Step 1: define dataset. Here, we use our own data.
+    ablation = {
+        "datasets": [
+            {
+                "training": "/path/to/my/train.txt",
+                "testing": "/path/to/my/test.txt",
+                "validation": "/path/to/my/valid.txt"
+            }
+        ]
+    }
 
 Step 2: define model (several models can be defined).
 Note the structure of 'model_kwargs': model_kwargs{InteractionModel:{parameter={range}}}.
@@ -329,10 +327,15 @@ Start ablation studies.
     )
 """
 
-from .ablation import ablation_pipeline, prepare_ablation, prepare_ablation_from_config
+from .ablation import (
+    ablation_pipeline, ablation_pipeline_from_config, prepare_ablation, prepare_ablation_from_config,
+    prepare_ablation_from_path,
+)
 
 __all__ = [
     'ablation_pipeline',
+    'ablation_pipeline_from_config',
     'prepare_ablation_from_config',
+    'prepare_ablation_from_path',
     'prepare_ablation',
 ]
