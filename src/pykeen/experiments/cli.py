@@ -9,6 +9,7 @@ import shutil
 import sys
 import time
 from typing import Optional
+from uuid import uuid4
 
 import click
 

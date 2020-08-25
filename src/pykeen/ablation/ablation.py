@@ -161,7 +161,7 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
 def prepare_ablation_from_config(
     config: Mapping[str, Any],
     directory: str,
-    save_artifacts: bool
+    save_artifacts: bool,
 ) -> List[Tuple[str, str]]:
     """Prepare a set of ablation study directories.
 
@@ -205,7 +205,7 @@ def prepare_ablation_from_config(
     )
 
 
-def prepare_ablation(
+def prepare_ablation(  # noqa:C901
     datasets: Union[str, List[str]],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
@@ -226,6 +226,7 @@ def prepare_ablation(
     directory: Optional[str] = None,
     save_artifacts: bool = True,
 ) -> List[Tuple[str, str]]:
+    """Prepare an ablation directory."""
     if isinstance(datasets, str):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):

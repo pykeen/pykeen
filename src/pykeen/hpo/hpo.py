@@ -265,7 +265,7 @@ class HpoPipelineResult(Result):
             if (not field.name.endswith('_kwargs') and field.name not in {
                 'training',
                 'testing',
-                'validation'
+                'validation',
             }) or field.name in {'metric'}:
                 continue
             field_kwargs = getattr(self.objective, field.name)
