@@ -96,3 +96,29 @@ In order to restrict the evaluation, we proceed as follows:
 2. During tail prediction/evaluation for a triple :math:`(h, r, t)`, we restrict the candidate tail
    entity :math:`t'` to :math:`t' \in \mathcal{E}_{eval}`. Similarly for head prediction/evaluation,
    we restrict the candidate head entity :math:`h'` to :math:`h' \in \mathcal{E}_{eval}`
+
+Example
+*******
+The :class:`pykeen.datasets.Hetionet` is a biomedical knowledge graph containing drugs, genes, diseases, other
+biological entities, and their interrelations. It was described by Himmelstein *et al.* in `Systematic integration
+of biomedical knowledge prioritizes drugs for repurposing <https://doi.org/10.7554/eLife.26726>`_ to support
+drug repositioning, which translates to the link prediction task between drug and disease nodes.
+
+The edges in the graph are listed `here <https://github.com/hetio/hetionet/blob/master/describe/edges/metaedges.tsv>`_,
+but we will focus on only the compound treat disease (CtD) and compound palliates disease (CpD) relations during
+evaluation. This can be done with the following:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    evaluation_relation_whitelist = {'CtD', 'CpD'}
+    pipeline_result = pipeline(
+        dataset='Hetionet',
+        model='RotatE',
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
+    )
+
+By restricting evaluation to the edges of interest, models more appropriate for drug repositioning can
+be identified during hyper-parameter optimization instead of models that are good at predicting all
+types of relations.
