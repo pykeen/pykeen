@@ -531,8 +531,8 @@ def pipeline(  # noqa: C901
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
-    restrict_evaluation_to_entities: Optional[Collection[str]] = None,
-    restrict_evaluation_to_relations: Optional[Collection[str]] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -580,11 +580,11 @@ def pipeline(  # noqa: C901
         A triples factory with training instances if a dataset was not specified
     :param validation_triples_factory:
         A triples factory with validation instances if a dataset was not specified
-    :param restrict_evaluation_to_entities:
+    :param evaluation_entity_whitelist:
         Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
         is only interested in certain entities, but the relational patterns with other entities improve the entity
         embedding quality.
-    :param restrict_evaluation_to_relations:
+    :param evaluation_relation_whitelist:
         Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
         is only interested in certain relation, but the relational patterns with other relations improve the entity
         embedding quality.
@@ -677,8 +677,8 @@ def pipeline(  # noqa: C901
     # evaluation restriction to a subset of entities/relations
     testing_triples_factory, validation_triples_factory = [
         factory.new_with_restriction(
-            entities=restrict_evaluation_to_entities,
-            relations=restrict_evaluation_to_relations,
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
         )
         if factory is not None
         else None
