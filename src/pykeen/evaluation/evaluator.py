@@ -295,7 +295,7 @@ class Evaluator(ABC):
                     raise runtime_error
                 if values_dict[key] == 1:
                     logger.debug(
-                        f"Even {key} {values_dict[key]} does not fit into your memory with these parameters."
+                        f"Even {key} {values_dict[key]} does not fit into your memory with these parameters.",
                     )
                     break
 
@@ -563,7 +563,7 @@ def evaluate(
                     relation_filter=relation_filter,
                     restrict_entities_to=restrict_entities_to,
                     positive_masks_required=positive_masks_required,
-                    filtering_necessary=filtering_necessary
+                    filtering_necessary=filtering_necessary,
                 )
 
             # If we only probe sizes we do not need more than one batch
