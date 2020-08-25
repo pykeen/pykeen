@@ -161,7 +161,10 @@ class EarlyStopper(Stopper):
 
         # Stop if the result did not improve more than delta for patience evaluations
         if self.remaining_patience <= 0:
-            logger.info(f'Stopping early after {self.number_results} evaluations with {self.metric}={result}')
+            logger.info(
+                f'Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result '
+                f'{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.'
+            )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
             self.stopped = True
