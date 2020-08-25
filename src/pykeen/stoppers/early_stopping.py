@@ -7,8 +7,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, List, Mapping, Optional, Union
 
-import numpy
-
 from .stopper import Stopper
 from ..evaluation import Evaluator
 from ..models.base import Model
@@ -17,52 +15,42 @@ from ..triples import TriplesFactory
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    'smaller_than_any_buffer_element',
-    'larger_than_any_buffer_element',
+    'is_improvement',
     'EarlyStopper',
     'StopperCallback',
 ]
 
 logger = logging.getLogger(__name__)
 
+StopperCallback = Callable[[Stopper, Union[int, float], int], None]
 
-def smaller_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: float = 0.) -> bool:
-    """Decide if a result is better than at least one buffer element, where smaller is better.
 
-    :param buffer:
-        The last results to compare against (excluding the current result).
-    :param result:
-        The current result.
-    :param delta:
-        The minimum improvement.
+def is_improvement(
+    best_value: float,
+    current_value: float,
+    larger_is_better: bool,
+    relative_delta: float = 0.0,
+) -> bool:
+    """
+    Decide whether the current value is an improvement over the best value.
+
+    :param best_value:
+        The best value so far.
+    :param current_value:
+        The current value.
+    :param larger_is_better:
+        Whether a larger value is better.
+    :param relative_delta:
+        A minimum relative improvement until it is considered as an improvement.
 
     :return:
-        Whether the result is at least delta better than at least one value in the buffer.
+        Whether the current value is better.
     """
-    worst_in_window = buffer.max()
-    baseline = worst_in_window - delta
-    return result < baseline
+    if larger_is_better:
+        return current_value > (1.0 + relative_delta) * best_value
 
-
-def larger_than_any_buffer_element(buffer: numpy.ndarray, result: float, delta: float = 0.) -> bool:
-    """Decide if a result is better than at least one buffer element, where larger is better.
-
-    :param buffer:
-        The last results to compare against (excluding the current result).
-    :param result:
-        The current result.
-    :param delta:
-        The minimum improvement.
-
-    :return:
-        Whether the result is at least delta better than at least one value in the buffer.
-    """
-    worst_in_window = buffer.min()
-    baseline = worst_in_window + delta
-    return result > baseline
-
-
-StopperCallback = Callable[[Stopper, Union[int, float]], None]
+    # now: smaller is better
+    return current_value < (1.0 - relative_delta) * best_value
 
 
 @fix_dataclass_init_docs
@@ -87,20 +75,22 @@ class EarlyStopper(Stopper):
     patience: int = 2
     #: The name of the metric to use
     metric: str = 'hits_at_k'
-    #: The minimum improvement between two iterations
-    delta: float = 0.005
+    #: The minimum relative improvement necessary to consider it an improved result
+    relative_delta: float = 0.01
+    #: The best result so far
+    best_metric: Optional[float] = None
+    #: The epoch at which the best result occurred
+    best_epoch: Optional[int] = None
+    #: The remaining patience
+    remaining_patience: int = dataclasses.field(init=False)
     #: The metric results from all evaluations
     results: List[float] = dataclasses.field(default_factory=list, repr=False)
-    #: A ring buffer to store the recent results
-    buffer: numpy.ndarray = dataclasses.field(init=False)
-    #: A counter for the ring buffer
-    number_evaluations: int = 0
     #: Whether a larger value is better, or a smaller
     larger_is_better: bool = True
-    #: The criterion. Set in the constructor based on larger_is_better
-    improvement_criterion: Callable[[numpy.ndarray, float, float], bool] = None
     #: The result tracker
     result_tracker: Optional[ResultTracker] = None
+    #: Callbacks when after results are calculated
+    result_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training gets continued
     continue_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Callbacks when training is stopped early
@@ -116,12 +106,7 @@ class EarlyStopper(Stopper):
         if self.evaluation_triples_factory is None:
             raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
 
-        if self.larger_is_better:
-            self.improvement_criterion = larger_than_any_buffer_element
-        else:
-            self.improvement_criterion = smaller_than_any_buffer_element
-
-        self.buffer = numpy.empty(shape=(self.patience,))
+        self.remaining_patience = self.patience
 
         # Dummy result tracker
         if self.result_tracker is None:
@@ -129,14 +114,14 @@ class EarlyStopper(Stopper):
 
     def should_evaluate(self, epoch: int) -> bool:
         """Decide if evaluation should be done based on the current epoch and the internal frequency."""
-        return 0 == ((epoch - 1) % self.frequency)
+        return epoch > 0 and epoch % self.frequency == 0
 
     @property
     def number_results(self) -> int:
         """Count the number of results stored in the early stopper."""
         return len(self.results)
 
-    def should_stop(self) -> bool:
+    def should_stop(self, epoch: int) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # Evaluate
         metric_results = self.evaluator.evaluate(
@@ -145,6 +130,8 @@ class EarlyStopper(Stopper):
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
+            # Only perform time consuming checks for the first call.
+            do_time_consuming_checks=self.evaluation_batch_size is None,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size
@@ -152,30 +139,43 @@ class EarlyStopper(Stopper):
 
         self.result_tracker.log_metrics(
             metrics=metric_results.to_flat_dict(),
-            step=self.number_evaluations,
+            step=epoch,
             prefix='validation',
         )
         result = metric_results.get_metric(self.metric)
 
-        # Only check if enough values are already collected
-        if self.number_evaluations >= self.patience:
-            # Stop if the result did not improve more than delta for patience epochs.
-            if not self.improvement_criterion(buffer=self.buffer, result=result, delta=self.delta):
-                logger.info(f'Stopping early after {self.number_evaluations} evaluations with {self.metric}={result}')
-                for stopped_callback in self.stopped_callbacks:
-                    stopped_callback(self, result)
-                self.stopped = True
-                return True
-
-        # Update ring buffer
-        self.buffer[self.number_evaluations % self.patience] = result
-        self.number_evaluations += 1
-
         # Append to history
         self.results.append(result)
 
+        for result_callback in self.result_callbacks:
+            result_callback(self, result, epoch)
+
+        # check for improvement
+        if self.best_metric is None or is_improvement(
+            best_value=self.best_metric,
+            current_value=result,
+            larger_is_better=self.larger_is_better,
+            relative_delta=self.relative_delta,
+        ):
+            self.best_epoch = epoch
+            self.best_metric = result
+            self.remaining_patience = self.patience
+        else:
+            self.remaining_patience -= 1
+
+        # Stop if the result did not improve more than delta for patience evaluations
+        if self.remaining_patience <= 0:
+            logger.info(
+                f'Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result '
+                f'{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.'
+            )
+            for stopped_callback in self.stopped_callbacks:
+                stopped_callback(self, result, epoch)
+            self.stopped = True
+            return True
+
         for continue_callback in self.continue_callbacks:
-            continue_callback(self, result)
+            continue_callback(self, result, epoch)
         return False
 
     def get_summary_dict(self) -> Mapping[str, Any]:
@@ -183,9 +183,11 @@ class EarlyStopper(Stopper):
         return dict(
             frequency=self.frequency,
             patience=self.patience,
-            delta=self.delta,
+            relative_delta=self.relative_delta,
             metric=self.metric,
             larger_is_better=self.larger_is_better,
             results=self.results,
             stopped=self.stopped,
+            best_epoch=self.best_epoch,
+            best_metric=self.best_metric,
         )

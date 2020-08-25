@@ -171,7 +171,7 @@ import os
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -531,6 +531,8 @@ def pipeline(  # noqa: C901
     training: Union[None, TriplesFactory, str] = None,
     testing: Union[None, TriplesFactory, str] = None,
     validation: Union[None, TriplesFactory, str] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -578,6 +580,14 @@ def pipeline(  # noqa: C901
         A triples factory with training instances or path to the test file if a dataset was not specified
     :param validation:
         A triples factory with validation instances or path to the validation file if a dataset was not specified
+    :param evaluation_entity_whitelist:
+        Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
+        embedding quality.
+    :param evaluation_relation_whitelist:
+        Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
+        is only interested in certain relation, but the relational patterns with other relations improve the entity
+        embedding quality.
 
     :param model:
         The name of the model or the model class
@@ -632,9 +642,10 @@ def pipeline(  # noqa: C901
     :param result_tracker_kwargs:
         The keyword arguments passed to the results tracker on instantiation
 
-    :param metadata: A JSON dictionary to store with the experiment
-    :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
-     Defaults to true - use testing triples.
+    :param metadata:
+        A JSON dictionary to store with the experiment
+    :param use_testing_data:
+        If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
         random_seed = random.randint(0, 2 ** 32 - 1)
@@ -653,18 +664,30 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    dataset_instance = get_dataset(
+    dataset_instance: DataSet = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
         testing=testing,
         validation=validation,
     )
-
     if dataset is not None:
         result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
         result_tracker.log_params(dict(dataset='<user defined>'))
+
+    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
+    # evaluation restriction to a subset of entities/relations
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing = testing.new_with_restriction(
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
+        )
+        if validation is not None:
+            validation = validation.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
 
     if model_kwargs is None:
         model_kwargs = {}
@@ -692,7 +715,7 @@ def pipeline(  # noqa: C901
 
     model = get_model_cls(model)
     model_instance: Model = model(
-        triples_factory=dataset_instance.training,
+        triples_factory=training,
         **model_kwargs,
     )
     # Log model parameters
@@ -761,7 +784,7 @@ def pipeline(  # noqa: C901
     stopper: Stopper = stopper_cls(
         model=model_instance,
         evaluator=evaluator_instance,
-        evaluation_triples_factory=dataset_instance.validation,
+        evaluation_triples_factory=validation,
         result_tracker=result_tracker,
         **stopper_kwargs,
     )
@@ -776,10 +799,10 @@ def pipeline(  # noqa: C901
         logging.debug(f"dataset: {dataset}")
         logging.debug(f"dataset_kwargs: {dataset_kwargs}")
     else:
-        logging.debug('training: %s', dataset_instance.training.path)
-        logging.debug('testing: %s', dataset_instance.testing.path)
-        if dataset_instance.validation:
-            logging.debug('validation: %s', dataset_instance.validation.path)
+        logging.debug('training: %s', training.path)
+        logging.debug('testing: %s', testing.path)
+        if validation:
+            logging.debug('validation: %s', validation.path)
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
@@ -808,9 +831,9 @@ def pipeline(  # noqa: C901
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
-        mapped_triples = dataset_instance.testing.mapped_triples
+        mapped_triples = testing.mapped_triples
     else:
-        mapped_triples = dataset_instance.validation.mapped_triples
+        mapped_triples = validation.mapped_triples
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available

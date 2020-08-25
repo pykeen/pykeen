@@ -70,10 +70,55 @@ incapability to solve of one the tasks.
 
 Filtering
 ~~~~~~~~~
-Finally, the rank-based evaluation allows using the "filtered setting", which is enabled by default. When evaluating
+The rank-based evaluation allows using the "filtered setting", which is enabled by default. When evaluating
 the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there may be
 additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
 :math:`(h, r, t')`, the rank will increase, and hence the measured model performance will decrease. However, giving
 :math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
+
+Entity and Relation Restriction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sometimes, we are only interested in a certain set of entities and/or relations,
+:math:`\mathcal{E}_I \subset \mathcal{E}` and :math:`\mathcal{R}_I \subset \mathcal{R}` respectively,
+but have additional information available in form of triples with other entities/relations.
+As example, we would like to predict whether an actor stars in a movie. Thus, we are only interested in the relation
+`stars_in` between entities which are actors/movies. However, we may have additional information available, e.g.
+who directed the movie, or the movie's language, which may help in the prediction task. Thus, we would like to train the
+model on the full dataset including all available relations and entities, but restrict the evaluation to the task we
+are aiming at.
+
+In order to restrict the evaluation, we proceed as follows:
+
+1. We filter the evaluation triples :math:`\mathcal{T}_{eval}` to contain only those triples which are of interest, i.e.
+   :math:`\mathcal{T}_{eval}' = \{(h, r, t) \in \mathcal{T}_{eval} \mid h, t \in \mathcal{E}_I, r \in \mathcal{R}_I\}`
+2. During tail prediction/evaluation for a triple :math:`(h, r, t)`, we restrict the candidate tail
+   entity :math:`t'` to :math:`t' \in \mathcal{E}_{eval}`. Similarly for head prediction/evaluation,
+   we restrict the candidate head entity :math:`h'` to :math:`h' \in \mathcal{E}_{eval}`
+
+Example
+*******
+The :class:`pykeen.datasets.Hetionet` is a biomedical knowledge graph containing drugs, genes, diseases, other
+biological entities, and their interrelations. It was described by Himmelstein *et al.* in `Systematic integration
+of biomedical knowledge prioritizes drugs for repurposing <https://doi.org/10.7554/eLife.26726>`_ to support
+drug repositioning, which translates to the link prediction task between drug and disease nodes.
+
+The edges in the graph are listed `here <https://github.com/hetio/hetionet/blob/master/describe/edges/metaedges.tsv>`_,
+but we will focus on only the compound treat disease (CtD) and compound palliates disease (CpD) relations during
+evaluation. This can be done with the following:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    evaluation_relation_whitelist = {'CtD', 'CpD'}
+    pipeline_result = pipeline(
+        dataset='Hetionet',
+        model='RotatE',
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
+    )
+
+By restricting evaluation to the edges of interest, models more appropriate for drug repositioning can
+be identified during hyper-parameter optimization instead of models that are good at predicting all
+types of relations.

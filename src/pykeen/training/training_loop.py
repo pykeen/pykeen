@@ -47,8 +47,10 @@ class SubBatchingNotSupportedError(NotImplementedError):
         self.model = model
 
     def __str__(self):  # noqa: D105
-        return f'No sub-batching support for {self.model.__class__.__name__} due to modules ' \
-               f'{self.model.modules_not_supporting_sub_batching}.'
+        return (
+            f'No sub-batching support for {self.model.__class__.__name__} due to modules '
+            f'{self.model.modules_not_supporting_sub_batching}.'
+        )
 
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
@@ -400,7 +402,7 @@ class TrainingLoop(ABC):
                 'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
             })
 
-            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop():
+            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                 return self.losses_per_epochs
 
         return self.losses_per_epochs

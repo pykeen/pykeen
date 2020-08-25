@@ -7,6 +7,7 @@ PyKEEN
    :name: quickstart
    :maxdepth: 2
 
+   installation
    tutorial/first_steps
    tutorial/understanding_evaluation
    tutorial/running_hpo
