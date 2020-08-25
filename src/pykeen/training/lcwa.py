@@ -149,11 +149,11 @@ class LCWATrainingLoop(TrainingLoop):
                 if slice_size == 1:
                     raise MemoryError(
                         f"Even slice_size={slice_size} doesn't fit into your memory with these"
-                        f" parameters."
+                        f" parameters.",
                     ) from e
 
                 logger.debug(
-                    f'The slice_size {slice_size} was too big, trying less now.'
+                    f'The slice_size {slice_size} was too big, trying less now.',
                 )
                 slice_size //= 2
                 reached_max = True

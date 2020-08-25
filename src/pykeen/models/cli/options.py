@@ -109,7 +109,7 @@ CLI_OPTIONS = {
         type=bool,
         default=True,
         show_default=True,
-    )
+    ),
 }
 
 device_option = click.option(

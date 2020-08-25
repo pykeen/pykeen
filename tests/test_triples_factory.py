@@ -176,13 +176,13 @@ class TestSplit(unittest.TestCase):
             id(factory.entity_to_id)
             for factory in all_factories
         }, {
-            id(self.triples_factory.entity_to_id)
+            id(self.triples_factory.entity_to_id),
         })
         self.assertSetEqual({
             id(factory.relation_to_id)
             for factory in all_factories
         }, {
-            id(self.triples_factory.relation_to_id)
+            id(self.triples_factory.relation_to_id),
         })
 
     def test_split_naive(self):

@@ -165,7 +165,7 @@ class EarlyStopper(Stopper):
         if self.remaining_patience <= 0:
             logger.info(
                 f'Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result '
-                f'{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.'
+                f'{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.',
             )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)

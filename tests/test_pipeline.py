@@ -30,15 +30,19 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_no_novelties(self):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
-        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples,
-                                            add_novelties=False)
+        tails_df = self.model.predict_tails(
+            'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
+            add_novelties=False,
+        )
         self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
         self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
 
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
-        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples,
-                                            remove_known=True)
+        tails_df = self.model.predict_tails(
+            'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
+            remove_known=True,
+        )
         self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
         self.assertEqual({'jordan', 'brazil', 'ussr', 'burma', 'china'}, set(tails_df['tail_label']))
 

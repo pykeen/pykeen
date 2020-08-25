@@ -214,7 +214,7 @@ class TransHRegularizer(Regularizer):
         # Orthogonality soft constraint
         d_r_n = functional.normalize(relation_embeddings, dim=-1)
         self.regularization_term += torch.sum(
-            functional.relu(torch.sum((normal_vector_embeddings * d_r_n) ** 2, dim=-1) - self.epsilon)
+            functional.relu(torch.sum((normal_vector_embeddings * d_r_n) ** 2, dim=-1) - self.epsilon),
         )
 
         self.updated = True
@@ -239,7 +239,7 @@ class CombinedRegularizer(Regularizer):
             if isinstance(r, NoRegularizer):
                 raise TypeError('Can not combine a no-op regularizer')
         self.register_buffer(name='normalization_factor', tensor=torch.as_tensor(
-            sum(r.weight for r in self.regularizers), device=device
+            sum(r.weight for r in self.regularizers), device=device,
         ).reciprocal())
 
     @property

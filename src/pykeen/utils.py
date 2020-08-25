@@ -52,7 +52,7 @@ _CUDA_OOM_ERROR = 'CUDA out of memory.'
 
 def l2_regularization(
     *xs: torch.Tensor,
-    normalize: bool = False
+    normalize: bool = False,
 ) -> torch.Tensor:
     """
     Compute squared L2-regularization term.
@@ -297,7 +297,7 @@ def is_cudnn_error(runtime_error: RuntimeError) -> bool:
 
 
 def compact_mapping(
-    mapping: Mapping[X, int]
+    mapping: Mapping[X, int],
 ) -> Tuple[Mapping[X, int], Mapping[int, int]]:
     """Update a mapping (key -> id) such that the IDs range from 0 to len(mappings) - 1.
 

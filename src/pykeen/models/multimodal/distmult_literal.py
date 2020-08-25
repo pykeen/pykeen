@@ -140,7 +140,7 @@ class DistMultLiteral(MultimodalModel):
         if not self.compute_mr_loss:
             raise RuntimeError(
                 'The chosen loss does not allow the calculation of Margin Ranking losses. '
-                'Please use the compute_label_loss method instead'
+                'Please use the compute_label_loss method instead',
             )
         y = torch.ones_like(negative_scores, device=self.device) * -1
         loss = self.loss(positive_scores, negative_scores, y)

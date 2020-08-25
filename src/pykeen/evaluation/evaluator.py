@@ -276,7 +276,7 @@ class Evaluator(ABC):
                     raise runtime_error
                 if values_dict[key] == 1:
                     logger.debug(
-                        f"Even {key} {values_dict[key]} does not fit into your memory with these parameters."
+                        f"Even {key} {values_dict[key]} does not fit into your memory with these parameters.",
                     )
                     break
 
@@ -304,13 +304,17 @@ class Evaluator(ABC):
         # Test if slicing is implemented for the required functions of this model
         if model.triples_factory.create_inverse_triples:
             if not model.can_slice_t:
-                raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
-                                  f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
-                                  f"this model yet.")
+                raise MemoryError(
+                    f"The current model can't be evaluated on this hardware with these parameters, as "
+                    f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
+                    f"this model yet.",
+                )
         elif not model.can_slice_t or not model.can_slice_h:
-            raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
-                              f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
-                              f"model yet.")
+            raise MemoryError(
+                f"The current model can't be evaluated on this hardware with these parameters, as "
+                f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
+                f"model yet.",
+            )
 
 
 def create_sparse_positive_filter_(
@@ -609,7 +613,7 @@ def evaluate(
                 assert relation_filter is not None
                 filtered_scores_of_corrupted_heads_batch = filter_scores_(
                     scores=scores_of_corrupted_heads_batch,
-                    filter_batch=positive_filter_heads
+                    filter_batch=positive_filter_heads,
                 )
 
                 # The scores for the true triples have to be rewritten to the scores tensor
