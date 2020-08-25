@@ -78,8 +78,8 @@ class EarlyStopper(Stopper):
     patience: int = 2
     #: The name of the metric to use
     metric: str = 'hits_at_k'
-    #: The minimum improvement between two iterations
-    delta: float = 0.005
+    #: The minimum relative improvement necessary to consider it an improved result
+    relative_delta: float = 0.01
     #: The best result so far
     best_metric: Optional[float] = None
     #: The epoch at which the best result occurred
@@ -154,7 +154,7 @@ class EarlyStopper(Stopper):
             best_value=self.best_metric,
             current_value=result,
             larger_is_better=self.larger_is_better,
-            absolute_delta=self.delta,
+            relative_delta=self.relative_delta,
         ):
             self.best_epoch = epoch
             self.best_metric = result
@@ -179,7 +179,7 @@ class EarlyStopper(Stopper):
         return dict(
             frequency=self.frequency,
             patience=self.patience,
-            delta=self.delta,
+            delta=self.relative_delta,
             metric=self.metric,
             larger_is_better=self.larger_is_better,
             results=self.results,
