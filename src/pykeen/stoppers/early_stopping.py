@@ -22,7 +22,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-StopperCallback = Callable[[Stopper, Union[int, float]], None]
+StopperCallback = Callable[[Stopper, Union[int, float], int], None]
 
 
 def is_improvement(
