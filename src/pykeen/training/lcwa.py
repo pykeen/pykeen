@@ -171,10 +171,14 @@ class LCWATrainingLoop(TrainingLoop):
         if self.model.can_slice_t:
             return
         elif supports_sub_batching:
-            report = "This model supports sub-batching, but it also requires slicing," \
-                     " which is not implemented for this model yet."
+            report = (
+                "This model supports sub-batching, but it also requires slicing,"
+                " which is not implemented for this model yet."
+            )
         else:
-            report = "This model doesn't support sub-batching and slicing is not" \
-                     " implemented for this model yet."
+            report = (
+                "This model doesn't support sub-batching and slicing is not"
+                " implemented for this model yet."
+            )
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")

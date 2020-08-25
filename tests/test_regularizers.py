@@ -11,8 +11,10 @@ from torch.nn import functional
 
 from pykeen.datasets import Nations
 from pykeen.models import ConvKB, RESCAL, TransH
-from pykeen.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, \
-    TransHRegularizer
+from pykeen.regularizers import (
+    CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer,
+    TransHRegularizer,
+)
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 from pykeen.utils import resolve_device
