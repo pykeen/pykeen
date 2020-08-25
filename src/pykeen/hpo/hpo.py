@@ -102,14 +102,13 @@ class Objective:
     def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
-        def _continue_callback(early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
+        def _result_callback(_early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
             trial.report(result, step=epoch)
 
-        def _stopped_callback(early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
+        def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
-            trial.report(result, step=epoch)
 
-        for key, callback in zip(('continue_callbacks', 'stopped_callbacks'), (_continue_callback, _stopped_callback)):
+        for key, callback in zip(('result_callbacks', 'stopped_callbacks'), (_result_callback, _stopped_callback)):
             stopper_kwargs.setdefault(key, []).append(callback)
 
     def __call__(self, trial: Trial) -> Optional[float]:
