@@ -176,7 +176,7 @@ class TestEarlyStopping(unittest.TestCase):
             evaluator=self.mock_evaluator,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
-            delta=self.delta,
+            relative_delta=self.delta,
             larger_is_better=False,
         )
 
@@ -233,7 +233,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
-    delta: float = 0.1
+    relative_delta: float = 0.1
     #: The random seed to use for reproducibility
     seed: int = 42
     #: The maximum number of epochs to train. Should be large enough to allow for early stopping.
@@ -260,7 +260,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             evaluator=evaluator,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
-            delta=self.delta,
+            relative_delta=self.relative_delta,
             metric='mean_rank',
         )
         training_loop = SLCWATrainingLoop(
