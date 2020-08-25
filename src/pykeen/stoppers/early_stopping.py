@@ -181,7 +181,7 @@ class EarlyStopper(Stopper):
         return dict(
             frequency=self.frequency,
             patience=self.patience,
-            delta=self.relative_delta,
+            relative_delta=self.relative_delta,
             metric=self.metric,
             larger_is_better=self.larger_is_better,
             results=self.results,
