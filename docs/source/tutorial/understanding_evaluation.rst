@@ -93,4 +93,6 @@ In order to restrict the evaluation, we proceed as follows:
 
 1. We filter the evaluation triples :math:`\mathcal{T}_{eval}` to contain only those triples which are of interest, i.e.
    :math:`\mathcal{T}_{eval}' = \{(h, r, t) \in \mathcal{T}_{eval} \mid h, t \in \mathcal{E}_I, r \in \mathcal{R}_I\}`
-2. We restrict the candidate entities :math:`h'/t'` for a triple :math:`(h, r, t)` to :math:`h',t' \in \mathcal{E}_{eval}`.
+2. During tail prediction/evaluation for a triple :math:`(h, r, t)`, we restrict the candidate tail
+   entity :math:`t'` to :math:`t' \in \mathcal{E}_{eval}`. Similarly for head prediction/evaluation,
+   we restrict the candidate head entity :math:`h'` to :math:`h' \in \mathcal{E}_{eval}`
