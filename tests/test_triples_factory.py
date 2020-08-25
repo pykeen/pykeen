@@ -177,8 +177,10 @@ class TestTriplesFactory(unittest.TestCase):
                     assert no_restriction_to_apply == equal_factory_object
 
                     # check that inverse_triples is correctly carried over
-                    assert original_triples_factory.create_inverse_triples \
-                           == restricted_triples_factory.create_inverse_triples
+                    assert (
+                        original_triples_factory.create_inverse_triples
+                        == restricted_triples_factory.create_inverse_triples
+                    )
 
                     # verify that the label-to-ID mapping has not been changed
                     assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
