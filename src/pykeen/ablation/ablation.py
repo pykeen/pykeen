@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def ablation_pipeline(
-    datasets: Union[str, List[str]],
+    datasets: Union[str, List[Union[str, Mapping[str, str]]]],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
