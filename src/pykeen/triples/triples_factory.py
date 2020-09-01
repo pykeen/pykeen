@@ -723,7 +723,7 @@ def _tf_cleanup_randomized(
     # While there are still triples that should be moved to the training set
     while move_id_mask.any():
         # Pick a random triple to move over to the training triples
-        idx = random_state.choice(move_id_mask.nonzero()[0])
+        idx = random_state.choice(move_id_mask.nonzero(as_tuple=False)[0])
         training = np.concatenate([training, testing[idx].reshape(1, -1)])
 
         # Recalculate the testing triples without that index
