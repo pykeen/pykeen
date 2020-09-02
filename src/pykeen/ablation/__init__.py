@@ -14,7 +14,7 @@ performance.
     ablation_result = ablation_pipeline(
         datasets='kinships',
         models=['RotatE', 'TransE'],
-        losses=['BCE', 'NSSA'],
+        losses=['BCEAfterSigmoidLoss', 'NSSA'],
         optimizers='Adam',
         training_loops=['sLCWA', 'LCWA'],
         optuna_config={
