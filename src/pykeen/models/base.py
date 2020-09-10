@@ -860,7 +860,7 @@ class InteractionFunction(nn.Module):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         all_entities: torch.FloatTensor,
-    ):
+    ) -> torch.FloatTensor:
         """
         Score all tail entities.
 
