@@ -886,3 +886,15 @@ class InteractionFunction(nn.Module):
         scores = scores.squeeze(dim=2).squeeze(dim=1)
 
         return scores
+
+
+class DistMultInteractionFunction(InteractionFunction):
+    """Interaction function of DistMult."""
+
+    def score(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return torch.einsum('bhd,brd,btd->bhrt', h, r, t)
