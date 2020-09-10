@@ -831,7 +831,7 @@ class MultimodalModel(EntityRelationEmbeddingModel):
     """A multimodal KGE model."""
 
 
-class InteractionFunction:
+class InteractionFunction(nn.Module):
     """Base class for interaction functions."""
 
     def score(
