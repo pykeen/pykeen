@@ -829,3 +829,60 @@ def _can_slice(fn) -> bool:
 
 class MultimodalModel(EntityRelationEmbeddingModel):
     """A multimodal KGE model."""
+
+
+class InteractionFunction:
+    """Base class for interaction functions."""
+
+    def score(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """
+        Generic interaction function.
+
+        :param h: shape: (batch_size, num_heads, d_e)
+            The head representations.
+        :param r: shape: (batch_size, num_relations, d_r)
+            The relation representations.
+        :param t: shape: (batch_size, num_tails, d_e)
+            The tail representations.
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The scores.
+        """
+        raise NotImplementedError
+
+    def score_t(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        all_entities: torch.FloatTensor,
+    ):
+        """
+        Score all tail entities.
+
+        :param h: shape: (batch_size, d_e)
+            The head representations.
+        :param r: shape: (batch_size, d_r)
+            The relation representations.
+        :param all_entities: shape: (num_entities, d_e)
+            The tail representations.
+
+        :return: shape: (batch_size, num_entities)
+            The scores.
+        """
+        # prepare input to generic score function
+        h = h.unsqueeze(dim=1)
+        r = r.unsqueeze(dim=1)
+        t = all_entities.unsqueeze(dim=0)
+
+        # get scores
+        scores = self.score(h=h, r=r, t=t)
+
+        # prepare output shape
+        scores = scores.squeeze(dim=2).squeeze(dim=1)
+
+        return scores
