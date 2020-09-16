@@ -898,3 +898,46 @@ class DistMultInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         return torch.einsum('bhd,brd,btd->bhrt', h, r, t)
+
+
+class ERMLPInteractionFunction(InteractionFunction):
+    """
+    Interaction function of ER-MLP.
+
+    .. math ::
+        f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+    """
+
+    def __init__(
+        self,
+        embedding_dim: int,
+        hidden_dim: int,
+    ):
+        """
+        Initialize the interaction function.
+
+        :param embedding_dim:
+            The embedding vector dimension.
+        :param hidden_dim:
+            The hidden dimension of the MLP.
+        """
+        super().__init__()
+        self.head_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
+        self.rel_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=True)
+        self.tail_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
+        self.activation = nn.ReLU()
+        self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self.head_to_hidden(h)
+        r = self.rel_to_hidden(r)
+        t = self.tail_to_hidden(t)
+        # TODO: Choosing which to combine first, h/r, h/t or r/t, depending on the shape might further improve
+        #       performance in a 1:n scenario.
+        x = self.activation(h[:, :, None, None, :] + r[:, None, :, None, :] + t[:, None, None, :, :])
+        return self.hidden_to_score(x).squeeze(dim=-1)
