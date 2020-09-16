@@ -880,7 +880,7 @@ class InteractionFunction(nn.Module):
         t = all_entities.unsqueeze(dim=0)
 
         # get scores
-        scores = self.forward(h=h, r=r, t=t)
+        scores = self(h=h, r=r, t=t)
 
         # prepare output shape
         scores = scores.squeeze(dim=2).squeeze(dim=1)
