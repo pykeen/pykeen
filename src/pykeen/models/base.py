@@ -887,6 +887,14 @@ class InteractionFunction(nn.Module):
 
         return scores
 
+    def reset_parameters(self):
+        """Reset parameters the interaction function may have."""
+        for mod in self.modules():
+            if mod is self:
+                continue
+            if hasattr(mod, 'reset_parameters'):
+                mod.reset_parameters()
+
 
 def _normalize_for_einsum(
     x: torch.FloatTensor,
@@ -958,13 +966,6 @@ class ERMLPInteractionFunction(InteractionFunction):
         self.tail_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
-
-    def reset_parameters(self):
-        for mod in self.modules():
-            if mod is self:
-                continue
-            if hasattr(mod, 'reset_parameters'):
-                mod.reset_parameters()
 
     def forward(
         self,
