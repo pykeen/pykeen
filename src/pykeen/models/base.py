@@ -949,6 +949,10 @@ class ERMLPInteractionFunction(InteractionFunction):
             The hidden dimension of the MLP.
         """
         super().__init__()
+        """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
+           with self.embedding_dim neurons and output layer with one neuron.
+           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
+        """
         self.head_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
         self.rel_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=True)
         self.tail_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
@@ -957,6 +961,8 @@ class ERMLPInteractionFunction(InteractionFunction):
 
     def reset_parameters(self):
         for mod in self.modules():
+            if mod is self:
+                continue
             if hasattr(mod, 'reset_parameters'):
                 mod.reset_parameters()
 
