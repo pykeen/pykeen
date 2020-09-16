@@ -834,7 +834,7 @@ class MultimodalModel(EntityRelationEmbeddingModel):
 class InteractionFunction(nn.Module):
     """Base class for interaction functions."""
 
-    def score(
+    def forward(
         self,
         h: torch.FloatTensor,
         r: torch.FloatTensor,
@@ -880,7 +880,7 @@ class InteractionFunction(nn.Module):
         t = all_entities.unsqueeze(dim=0)
 
         # get scores
-        scores = self.score(h=h, r=r, t=t)
+        scores = self.forward(h=h, r=r, t=t)
 
         # prepare output shape
         scores = scores.squeeze(dim=2).squeeze(dim=1)
@@ -891,7 +891,7 @@ class InteractionFunction(nn.Module):
 class DistMultInteractionFunction(InteractionFunction):
     """Interaction function of DistMult."""
 
-    def score(
+    def forward(
         self,
         h: torch.FloatTensor,
         r: torch.FloatTensor,
