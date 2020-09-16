@@ -149,11 +149,11 @@ class LCWATrainingLoop(TrainingLoop):
                 if slice_size == 1:
                     raise MemoryError(
                         f"Even slice_size={slice_size} doesn't fit into your memory with these"
-                        f" parameters."
+                        f" parameters.",
                     ) from e
 
                 logger.debug(
-                    f'The slice_size {slice_size} was too big, trying less now.'
+                    f'The slice_size {slice_size} was too big, trying less now.',
                 )
                 slice_size //= 2
                 reached_max = True
@@ -171,10 +171,14 @@ class LCWATrainingLoop(TrainingLoop):
         if self.model.can_slice_t:
             return
         elif supports_sub_batching:
-            report = "This model supports sub-batching, but it also requires slicing," \
-                     " which is not implemented for this model yet."
+            report = (
+                "This model supports sub-batching, but it also requires slicing,"
+                " which is not implemented for this model yet."
+            )
         else:
-            report = "This model doesn't support sub-batching and slicing is not" \
-                     " implemented for this model yet."
+            report = (
+                "This model doesn't support sub-batching and slicing is not"
+                " implemented for this model yet."
+            )
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")

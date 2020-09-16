@@ -162,31 +162,6 @@ can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
 the :class:`pykeen.dataset.Nations`
-
-Bring Your Own Data
-~~~~~~~~~~~~~~~~~~~
-As an alternative to using a pre-packaged dataset, the training and testing can be set
-explicitly with instances of :class:`pykeen.triples.TriplesFactory`. For convenience,
-the default data sets are also provided as subclasses of :class:`pykeen.triples.TriplesFactory`.
-
-.. warning ::
-
-    Make sure they are mapped to the same entities.
-
->>> from pykeen.datasets import Nations
->>> from pykeen.triples import TriplesFactory
->>> from pykeen.pipeline import pipeline
->>> nations = Nations()
->>> training: TriplesFactory = nations.training
->>> testing: TriplesFactory = nations.testing
->>> pipeline_result = pipeline(
-...     training_triples_factory=training,
-...     testing_triples_factory=testing,
-...     model='TransE',
-... )
->>> result.save_to_directory('nations_transe')
-
-.. todo:: Example with creation of triples factory
 """
 
 import ftplib
@@ -196,7 +171,7 @@ import os
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -212,11 +187,11 @@ from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
-from .trackers import MLFlowResultTracker, ResultTracker
+from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
-    NoRandomSeedNecessary, Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
     resolve_device, set_random_seed,
 )
 from .version import get_git_hash, get_version
@@ -287,8 +262,11 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def save_model(self, path) -> None:
+    def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
+
+        :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
+         like `*.pkl` or `*.pickle`.
 
         The model contains within it the triples factory that was used for training.
         """
@@ -377,7 +355,7 @@ class PipelineResult(Result):
 
         :param directory: The directory in the S3 bucket
         :param bucket: The name of the S3 bucket
-        :param s3: The boto3.client, if already instantiated
+        :param s3: A client from :func:`boto3.client`, if already instantiated
 
         .. note:: Need to have ``~/.aws/credentials`` file set up. Read: https://realpython.com/python-boto3-aws-s3/
 
@@ -424,6 +402,7 @@ def replicate_pipeline_from_path(
     :param replicates: The number of replicates to run.
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
     """
     pipeline_results = (
         pipeline_from_path(path, **kwargs)
@@ -452,6 +431,7 @@ def replicate_pipeline_from_config(
     :param replicates: The number of replicates to run
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
     """
     pipeline_results = (
         pipeline_from_config(config, **kwargs)
@@ -509,32 +489,27 @@ def save_pipeline_results_to_directory(
 
 def pipeline_from_path(
     path: str,
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
     :param path: The path to an experiment JSON file
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     with open(path) as file:
         config = json.load(file)
     return pipeline_from_config(
         config=config,
-        mlflow_tracking_uri=mlflow_tracking_uri,
         **kwargs,
     )
 
 
 def pipeline_from_config(
     config: Mapping[str, Any],
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
 
     :param config: The experiment configuration dictionary
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
@@ -542,7 +517,6 @@ def pipeline_from_config(
         logger.info(f'Running: {title}')
 
     return pipeline(
-        mlflow_tracking_uri=mlflow_tracking_uri,
         metadata=metadata,
         **pipeline_kwargs,
         **kwargs,
@@ -557,6 +531,8 @@ def pipeline(  # noqa: C901
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -582,8 +558,10 @@ def pipeline(  # noqa: C901
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    # 9. Tracking
+    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
-    mlflow_tracking_uri: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -597,11 +575,19 @@ def pipeline(  # noqa: C901
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training_triples_factory:
-        A triples factory with training instances if a a dataset was not specified
+        A triples factory with training instances if a dataset was not specified
     :param testing_triples_factory:
         A triples factory with training instances if a dataset was not specified
     :param validation_triples_factory:
         A triples factory with validation instances if a dataset was not specified
+    :param evaluation_entity_whitelist:
+        Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
+        embedding quality.
+    :param evaluation_relation_whitelist:
+        Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
+        is only interested in certain relation, but the relational patterns with other relations improve the entity
+        embedding quality.
 
     :param model:
         The name of the model or the model class
@@ -651,22 +637,23 @@ def pipeline(  # noqa: C901
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
-    :param mlflow_tracking_uri:
-        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
-    :param metadata: A JSON dictionary to store with the experiment
-    :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
-     Defaults to true - use testing triples.
+    :param result_tracker:
+        The ResultsTracker class or name
+    :param result_tracker_kwargs:
+        The keyword arguments passed to the results tracker on instantiation
+
+    :param metadata:
+        A JSON dictionary to store with the experiment
+    :param use_testing_data:
+        If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
         random_seed = random.randint(0, 2 ** 32 - 1)
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
-    # Create result store
-    if mlflow_tracking_uri is not None:
-        result_tracker = MLFlowResultTracker(tracking_uri=mlflow_tracking_uri)
-    else:
-        result_tracker = ResultTracker()
+    result_tracker_cls: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+    result_tracker = result_tracker_cls(**(result_tracker_kwargs or {}))
 
     if not metadata:
         metadata = {}
@@ -677,7 +664,7 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params({'dataset': dataset})
+    result_tracker.log_params(dict(dataset=dataset))
 
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
         dataset=dataset,
@@ -687,10 +674,22 @@ def pipeline(  # noqa: C901
         validation_triples_factory=validation_triples_factory,
     )
 
+    # evaluation restriction to a subset of entities/relations
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing_triples_factory = testing_triples_factory.new_with_restriction(
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
+        )
+        if validation_triples_factory is not None:
+            validation_triples_factory = validation_triples_factory.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
+
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs.update(preferred_device=device)
-    model_kwargs.setdefault('random_seed', NoRandomSeedNecessary)
+    model_kwargs.setdefault('random_seed', random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
@@ -711,14 +710,13 @@ def pipeline(  # noqa: C901
         _loss = loss_cls(**(loss_kwargs or {}))
         model_kwargs.setdefault('loss', _loss)
 
-    # Log model parameters
-    result_tracker.log_params(model_kwargs, prefix='model')
-
     model = get_model_cls(model)
     model_instance: Model = model(
         triples_factory=training_triples_factory,
         **model_kwargs,
     )
+    # Log model parameters
+    result_tracker.log_params(params=dict(cls=model.__name__, kwargs=model_kwargs), prefix='model')
 
     optimizer = get_optimizer_cls(optimizer)
     training_loop = get_training_loop_cls(training_loop)
@@ -727,12 +725,13 @@ def pipeline(  # noqa: C901
         optimizer_kwargs = {}
 
     # Log optimizer parameters
-    result_tracker.log_params({'class': optimizer, 'kwargs': optimizer_kwargs}, prefix='optimizer')
+    result_tracker.log_params(params=dict(cls=optimizer.__name__, kwargs=optimizer_kwargs), prefix='optimizer')
     optimizer_instance = optimizer(
         params=model_instance.get_grad_params(),
         **optimizer_kwargs,
     )
 
+    result_tracker.log_params(params=dict(cls=training_loop.__name__), prefix='training_loop')
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
@@ -742,6 +741,10 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
+        result_tracker.log_params(
+            params=dict(cls=negative_sampler.__name__, kwargs=negative_sampler_kwargs),
+            prefix='negative_sampler',
+        )
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
@@ -785,6 +788,7 @@ def pipeline(  # noqa: C901
 
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
+    result_tracker.log_params(params=training_kwargs, prefix='training')
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")

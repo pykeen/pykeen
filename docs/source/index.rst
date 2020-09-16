@@ -7,7 +7,15 @@ PyKEEN
    :name: quickstart
    :maxdepth: 2
 
-   first_steps
+   installation
+   tutorial/first_steps
+   tutorial/byod
+   tutorial/understanding_evaluation
+   tutorial/running_hpo
+   tutorial/using_mlflow
+   tutorial/using_wandb
+   tutorial/making_predictions
+   tutorial/performance
 
 .. toctree::
    :caption: Reference

@@ -170,8 +170,7 @@ class SLCWATrainingLoop(TrainingLoop):
     ) -> None:  # noqa: D102
         # Slicing is not possible for sLCWA
         if supports_sub_batching:
-            report = "This model supports sub-batching, but it also requires slicing," \
-                     " which is not possible for sLCWA"
+            report = "This model supports sub-batching, but it also requires slicing, which is not possible for sLCWA"
         else:
             report = "This model doesn't support sub-batching and slicing is not possible for sLCWA"
         logger.warning(report)

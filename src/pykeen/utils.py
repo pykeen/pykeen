@@ -21,6 +21,7 @@ __all__ = [
     'get_all_subclasses',
     'get_embedding',
     'imag_part',
+    'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
     'kwargs_or_empty',
@@ -53,7 +54,7 @@ _CUDA_OOM_ERROR = 'CUDA out of memory.'
 
 def l2_regularization(
     *xs: torch.Tensor,
-    normalize: bool = False
+    normalize: bool = False,
 ) -> torch.Tensor:
     """
     Compute squared L2-regularization term.
@@ -181,7 +182,7 @@ def flatten_dictionary(
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
-    return {sep.join(k): v for k, v in partial_result.items()}
+    return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
 
 def _flatten_dictionary(
@@ -298,7 +299,7 @@ def is_cudnn_error(runtime_error: RuntimeError) -> bool:
 
 
 def compact_mapping(
-    mapping: Mapping[X, int]
+    mapping: Mapping[X, int],
 ) -> Tuple[Mapping[X, int], Mapping[int, int]]:
     """Update a mapping (key -> id) such that the IDs range from 0 to len(mappings) - 1.
 
@@ -335,7 +336,7 @@ class Result:
 
         :param directory: The directory in the S3 bucket
         :param bucket: The name of the S3 bucket
-        :param s3: The boto3.client, if already instantiated
+        :param s3: A client from :func:`boto3.client`, if already instantiated
         """
         raise NotImplementedError
 
@@ -404,8 +405,11 @@ def imag_part(
     return x[..., dim:]
 
 
-def fix_dataclass_init_docs(cls: Type):
-    """Fix the __init__ doumentation for dataclasses.
+def fix_dataclass_init_docs(cls: Type) -> Type:
+    """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
+
+    :param cls: The class whose docstring needs fixing
+    :returns: The class that was passed so this function can be used as a decorator
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
@@ -442,6 +446,26 @@ def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
         ftp.mkd(directory)
     except ftplib.error_perm:
         pass  # its fine...
+
+
+def invert_mapping(mapping: Mapping[str, int]) -> Mapping[int, str]:
+    """
+    Invert a mapping.
+
+    :param mapping:
+        The mapping, key -> value.
+
+    :return:
+        The inverse mapping, value -> key.
+    """
+    num_unique_values = len(set(mapping.values()))
+    num_keys = len(mapping)
+    if num_unique_values < num_keys:
+        raise ValueError(f'Mapping is not bijective! Only {num_unique_values}/{num_keys} are unique.')
+    return {
+        value: key
+        for key, value in mapping.items()
+    }
 
 
 def get_all_subclasses(base_class: Type[X]) -> Set[Type[X]]:

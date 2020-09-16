@@ -21,7 +21,7 @@ class TestInvalidConfigurations(unittest.TestCase):
                 dataset='kinships',
                 model='transe',
                 stopper='early',
-                training_kwargs_ranges=dict(epochs=...)
+                training_kwargs_ranges=dict(epochs=...),
             )
 
 
