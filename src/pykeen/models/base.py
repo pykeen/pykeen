@@ -6,7 +6,7 @@ import inspect
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, Union
 
 import pandas as pd
 import torch
@@ -888,6 +888,29 @@ class InteractionFunction(nn.Module):
         return scores
 
 
+def _normalize_for_einsum(
+    x: torch.FloatTensor,
+    batch_size: int,
+    symbol: str,
+) -> Tuple[str, torch.FloatTensor]:
+    """
+    Normalize tensor for broadcasting along batch-dimension in einsum.
+
+    :param x:
+        The tensor.
+    :param batch_size:
+        The batch_size
+    :param symbol:
+        The symbol for the einsum term.
+
+    :return:
+        A tuple (reshaped_tensor, term).
+    """
+    if x.shape[0] == batch_size:
+        return f'b{symbol}d', x
+    return f'{symbol}d', x.squeeze(dim=0)
+
+
 class DistMultInteractionFunction(InteractionFunction):
     """Interaction function of DistMult."""
 
@@ -897,7 +920,11 @@ class DistMultInteractionFunction(InteractionFunction):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        return torch.einsum('bhd,brd,btd->bhrt', h, r, t)
+        batch_size = max(h.shape[0], r.shape[0], t.shape[0])
+        h_term, h = _normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
+        r_term, r = _normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
+        t_term, t = _normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
+        return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
 
 
 class ERMLPInteractionFunction(InteractionFunction):

@@ -4,12 +4,11 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import DistMultInteractionFunction, EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -17,6 +16,8 @@ from ...triples import TriplesFactory
 __all__ = [
     'DistMult',
 ]
+
+from ...utils import get_embedding_in_canonical_shape
 
 
 class DistMult(EntityRelationEmbeddingModel):
@@ -88,6 +89,7 @@ class DistMult(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
+        self.interaction_function = DistMultInteractionFunction()
         # Finalize initialization
         self.reset_parameters_()
 
@@ -106,70 +108,30 @@ class DistMult(EntityRelationEmbeddingModel):
         # Normalize embeddings of entities
         functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
+    def _score(
+        self,
+        h_ind: Optional[torch.LongTensor] = None,
+        r_ind: Optional[torch.LongTensor] = None,
+        t_ind: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        WARNING: Does not ensure forward constraints.
-
-        :param h: shape: (..., e)
-            Head embeddings.
-        :param r: shape: (..., e)
-            Relation embeddings.
-        :param t: shape: (..., e)
-            Tail embeddings.
-
-        :return: shape: (...)
-            The scores.
-        """
-        # Bilinear product
-        # *: Elementwise multiplication
-        return torch.sum(h * r * t, dim=-1)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
 
         # Compute score
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
+        scores = self.interaction_function(h=h, r=r, t=t)
 
         # Only regularize relation embeddings
         self.regularize_if_necessary(r)
 
         return scores
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-
-        # Rank against all entities
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-
-        # Rank against all entities
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
+        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
