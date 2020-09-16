@@ -955,6 +955,11 @@ class ERMLPInteractionFunction(InteractionFunction):
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
+    def reset_parameters(self):
+        for mod in self.modules():
+            if hasattr(mod, 'reset_parameters'):
+                mod.reset_parameters()
+
     def forward(
         self,
         h: torch.FloatTensor,
