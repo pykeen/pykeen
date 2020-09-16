@@ -4,46 +4,17 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
-from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import ERMLPInteractionFunction, EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'ERMLP',
 ]
-
-
-def score(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    mlp: nn.Module,
-) -> torch.FloatTensor:
-    r"""
-    Evaluate the ER-MLP interaction function.
-
-    .. math::
-
-        f(h,r,t) = \textbf{w}^{T} g(\textbf{W} [\textbf{h}; \textbf{r}; \textbf{t}]),
-
-    :param h: shape: (b, d)
-        The head entity embeddings.
-    :param r: shape: (b, d)
-        The relation embeddings.
-    :param t: shape: (b, d)
-        The tail entity embeddings.
-    :param mlp:
-        The MLP.
-
-    :return: shape: (b,)
-        The scores.
-    """
-    return mlp(torch.cat([h, r, t], dim=-1))
 
 
 class ERMLP(EntityRelationEmbeddingModel):
@@ -89,20 +60,11 @@ class ERMLP(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
         if hidden_dim is None:
             hidden_dim = embedding_dim
-        self.hidden_dim = hidden_dim
-        """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
-           with self.embedding_dim neurons and output layer with one neuron.
-           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
-        """
-        self.linear1 = nn.Linear(3 * self.embedding_dim, self.hidden_dim)
-        self.linear2 = nn.Linear(self.hidden_dim, 1)
-        self.mlp = nn.Sequential(
-            self.linear1,
-            nn.ReLU(),
-            self.linear2,
+        self.interaction_function = ERMLPInteractionFunction(
+            embedding_dim=embedding_dim,
+            hidden_dim=hidden_dim,
         )
 
         # Finalize initialization
@@ -112,91 +74,32 @@ class ERMLP(EntityRelationEmbeddingModel):
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
+        self.interaction_function.reset_parameters()
 
-        # weight initialization
-        nn.init.zeros_(self.linear1.bias)
-        nn.init.xavier_uniform_(self.linear1.weight)
-        nn.init.zeros_(self.linear2.bias)
-        nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
-
-    def score_hrt(
+    def _score(
         self,
-        hrt_batch: torch.LongTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
+        h_ind: Optional[torch.LongTensor] = None,
+        r_ind: Optional[torch.LongTensor] = None,
+        t_ind: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
 
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
+        # Compute score
+        scores = self.interaction_function(h=h, r=r, t=t)
 
-        # Apply interaction function
-        return score(h=h, r=r, t=t, mlp=self.mlp)
-
-    def score_t(
-        self,
-        hr_batch: torch.LongTensor,
-        h: Optional[torch.FloatTensor] = None,
-        r: Optional[torch.FloatTensor] = None,
-        t: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        if h is None and r is None and t is None:
-            # Get embeddings
-            h = self.entity_embeddings(hr_batch[:, 0])
-            r = self.relation_embeddings(hr_batch[:, 1])
-            t = self.entity_embeddings.weight
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # First layer can be unrolled
-        layers = self.mlp.children()
-        first_layer = next(layers)
-        w = first_layer.weight
-        i = 2 * self.embedding_dim
-        w_hr = w[None, :, :i] @ torch.cat([h, r], dim=-1).unsqueeze(-1)
-        w_t = w[None, :, i:] @ t.unsqueeze(-1)
-        b = first_layer.bias
-        scores = (b[None, None, :] + w_hr[:, None, :, 0]) + w_t[None, :, :, 0]
-
-        # Send scores through rest of the network
-        scores = scores.view(-1, self.hidden_dim)
-        for remaining_layer in layers:
-            scores = remaining_layer(scores)
-        scores = scores.view(-1, self.num_entities)
-        return scores
-
-    def score_h(
-        self,
-        rt_batch: torch.LongTensor,
-        h: Optional[torch.FloatTensor] = None,
-        r: Optional[torch.FloatTensor] = None,
-        t: Optional[torch.FloatTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        if h is None and r is None and t is None:
-            # Get embeddings
-            h = self.entity_embeddings.weight
-            r = self.relation_embeddings(rt_batch[:, 0])
-            t = self.entity_embeddings(rt_batch[:, 1])
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # First layer can be unrolled
-        layers = self.mlp.children()
-        first_layer = next(layers)
-        w = first_layer.weight
-        i = self.embedding_dim
-        w_h = w[None, :, :i] @ h.unsqueeze(-1)
-        w_rt = w[None, :, i:] @ torch.cat([r, t], dim=-1).unsqueeze(-1)
-        b = first_layer.bias
-        scores = (b[None, None, :] + w_rt[:, None, :, 0]) + w_h[None, :, :, 0]
-
-        # Send scores through rest of the network
-        scores = scores.view(-1, self.hidden_dim)
-        for remaining_layer in layers:
-            scores = remaining_layer(scores)
-        scores = scores.view(-1, self.num_entities)
+        # Only regularize relation embeddings
+        self.regularize_if_necessary(r)
 
         return scores
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
