@@ -23,8 +23,8 @@ predictions could be tested and validated experimentally.
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(dataset='Nations', model='RotatE')
-    model = results.model
+    pipeline_result = pipeline(dataset='Nations', model='RotatE')
+    model = pipeline_result.model
 
     # Predict tails
     predicted_tails_df = model.predict_tails('brazil', 'intergovorgs')
