@@ -386,6 +386,78 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 return rv
 
 
+
+
+
+class SingleDataset(LazyDataSet):
+    """"""
+
+    ratios = (0.8, 0.1, 0.1)
+    _triples_factory: Optional[TriplesFactory]
+
+    def __init__(
+        self,
+        url: Optional[str] = None,
+        name: Optional[str] = None,
+        cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        random_state: Union[None, int, np.random.RandomState] = None,
+    ):
+        """Initialize dataset.
+
+        :param url:
+            The url where to download the dataset from
+        :param name:
+            The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        """
+        if cache_root is None:
+            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
+        self.cache_root = cache_root
+        os.makedirs(cache_root, exist_ok=True)
+        logger.debug('using cache root at %s', cache_root)
+
+        if name is None:
+            parse_result = urlparse(url)
+            name = os.path.basename(parse_result.path)
+            logger.info('parsed name from URL: %s', name)
+        self.name = name
+        self.path = os.path.join(self.cache_root, self.name)
+        logger.debug('file path at %s', self.path)
+
+        self._triples_factory = None
+        self.random_state = random_state
+
+        self.url = url
+        if not os.path.exists(self.path) and not self.url:
+            raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
+
+        self.create_inverse_triples = create_inverse_triples
+        self._training = None
+        self._testing = None
+        self._validation = None
+
+        if eager:
+            self._load()
+
+    def _load(self) -> None:
+        if not os.path.exists(self.path):
+            logger.info('downloading data from %s to %s', self.url, self.path)
+            _urlretrieve(self.url, self.path)  # noqa:S310
+        df = pd.read_csv(self.path, sep='\t')
+        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf.path = self.path
+        self._training, self._testing, self._validation = tf.split(
+            ratios=self.ratios,
+            random_state=self.random_state,
+        )
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
 class SingleTabbedDataset(LazyDataSet):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
