@@ -45,8 +45,10 @@ which will already be in memory.
 
 Loading a Model
 ~~~~~~~~~~~~~~~
-This example shows how to reload a previously trained model. The ``save_to_directory`` function
-makes a file named ``trained_model.pkl``, so we will use the one from the previous example.
+This example shows how to reload a previously trained model. The
+:meth:`pykeen.pipeline.PipelineResult.save_to_directory` function makes
+a file named ``trained_model.pkl``, so we will use the one from the
+previous example.
 
 .. code-block:: python
 

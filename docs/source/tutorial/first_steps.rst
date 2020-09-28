@@ -7,7 +7,7 @@ Loading a pre-trained Model
 Many of the previous examples ended with saving the results using the
 :meth:`pykeen.pipeline.PipelineResult.save_to_directory`. One of the
 artifacts written to the given directory is the ``trained_model.pkl``
-file. Because all PyKEEN models inherit from :class:`torch.nn.Module``,
+file. Because all PyKEEN models inherit from :class:`torch.nn.Module`,
 we use the PyTorch mechanisms for saving and loading them. This means
 that you can use :func:`torch.load` to load a model like:
 
@@ -18,7 +18,7 @@ that you can use :func:`torch.load` to load a model like:
     my_pykeen_model = torch.load('trained_model.pkl')
 
 More information on PyTorch's model persistence can be found at:
-https://pytorch.org/tutorials/beginner/saving_loading_models.html
+https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 
 Beyond the Pipeline
 -------------------
