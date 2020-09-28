@@ -19,6 +19,11 @@ After training a model, there are three high-level interfaces for making predict
 Scientifically, :func:`pykeen.models.base.Model.score_all_triples` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.
 
+After Training a Model
+~~~~~~~~~~~~~~~~~~~~~~
+This example shows using the :func:`pykeen.pipeline.pipeline` to train a model
+which will already be in memory.
+
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
@@ -34,6 +39,29 @@ predictions could be tested and validated experimentally.
 
     # Score All triples
     predictions_df = model.score_all_triples()
+
+    # save the model
+    pipeline_result.save_to_directory('nations_rotate')
+
+Loading a Model
+~~~~~~~~~~~~~~~
+This example shows how to reload a previously trained model. The ``save_to_directory`` function
+makes a file named ``trained_model.pkl``, so we will use the one from the previous example.
+
+.. code-block:: python
+
+    import torch
+
+    model = torch.load('nations_rotate/trained_model.pkl')
+
+    # Predict tails
+    predicted_tails_df = model.predict_tails('brazil', 'intergovorgs')
+
+    # everything else is the same as above
+
+There's an example model available at
+https://github.com/pykeen/pykeen/blob/master/notebooks/hello_world/nations_transe/trained_model.pkl
+from the "Hello World" notebook for you to try.
 
 Potential Caveats
 -----------------
