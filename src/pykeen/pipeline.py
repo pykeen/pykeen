@@ -262,24 +262,42 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def plot_er_2d(self):
+    def plot_er_2d(self, model='PCA', kernel=None):
         """Plot the reduced entities and relation vectors in 2D."""
         import matplotlib.pyplot as plt
-        from sklearn.decomposition import PCA
+
+        if model.upper() == 'PCA':
+            from sklearn.decomposition import PCA
+            entity_reduction_model = PCA(n_components=2)
+            relation_reduction_model = PCA(n_components=2)
+        elif model.upper() == 'KPCA':
+            from sklearn.decomposition import KernelPCA
+            if kernel is None:
+                kernel = 'linear'
+            entity_reduction_model = KernelPCA(n_components=2, kernel=kernel)
+            relation_reduction_model = KernelPCA(n_components=2, kernel=kernel)
+        elif model.upper() == 'GRP':
+            from sklearn.random_projection import GaussianRandomProjection
+            entity_reduction_model = GaussianRandomProjection(n_components=2)
+            relation_reduction_model = GaussianRandomProjection(n_components=2)
+        elif model.upper() == 'SRP':
+            from sklearn.random_projection import SparseRandomProjection
+            entity_reduction_model = SparseRandomProjection(n_components=2)
+            relation_reduction_model = SparseRandomProjection(n_components=2)
+        else:
+            raise ValueError(f'invalid dimensionality reduction model: {model}')
 
         # draw entities
-        entity_pca = PCA(n_components=2)
         e_emb = self.model.entity_embeddings.weight.detach().numpy()
-        e_emb_red = entity_pca.fit_transform(e_emb)
+        e_emb_red = entity_reduction_model.fit_transform(e_emb)
         entity_id_to_label = self.model.triples_factory.entity_id_to_label
         for entity_id, entity_embedding in enumerate(e_emb_red):
             plt.scatter(*entity_embedding, color='black')
             plt.annotate(entity_id_to_label[entity_id], entity_embedding)
 
         # draw relations
-        relation_pca = PCA(n_components=2)
         r_emb = self.model.relation_embeddings.weight.detach().numpy()
-        r_emb_red = relation_pca.fit_transform(r_emb)
+        r_emb_red = relation_reduction_model.fit_transform(r_emb)
         r_id_to_label = self.model.triples_factory.relation_id_to_label
         for relation_id, relation_embedding in enumerate(r_emb_red):
             plt.arrow(0, 0, *relation_embedding)
