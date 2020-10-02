@@ -418,7 +418,7 @@ class TriplesFactory:
         # Prepare shuffle index
         idx = np.arange(n_triples)
         if random_state is None:
-            random_state = np.random.randint(0, 2 ** 32 - 1)
+            random_state = np.random.randint(0, np.iinfo(np.int_).max)
             logger.warning(f'Using random_state={random_state} to split {self}')
         if isinstance(random_state, int):
             random_state = np.random.RandomState(random_state)
