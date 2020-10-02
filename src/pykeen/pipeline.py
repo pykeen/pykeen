@@ -262,7 +262,7 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def plot_er_2d(self, model='PCA', kernel=None):
+    def plot_er_2d(self, model='PCA', kernel=None, width: float = 0.4):
         """Plot the reduced entities and relation vectors in 2D."""
         import matplotlib.pyplot as plt
 
@@ -302,6 +302,14 @@ class PipelineResult(Result):
         for relation_id, relation_embedding in enumerate(r_emb_red):
             plt.arrow(0, 0, *relation_embedding)
             plt.annotate(r_id_to_label[relation_id], relation_embedding)
+
+        xmax = max(r_emb_red[:, 0].max(), e_emb_red[:, 0].max()) + width
+        xmin = min(r_emb_red[:, 0].min(), e_emb_red[:, 0].min()) - width
+        ymax = max(r_emb_red[:, 1].max(), e_emb_red[:, 1].max()) + width
+        ymin = min(r_emb_red[:, 1].min(), e_emb_red[:, 1].min()) - width
+
+        plt.xlim([xmin, xmax])
+        plt.ylim([ymin, ymax])
 
     def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
