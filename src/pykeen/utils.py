@@ -23,6 +23,7 @@ __all__ = [
     'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
+    'random_non_negative_int',
     'real_part',
     'resolve_device',
     'slice_triples',
@@ -464,3 +465,8 @@ def invert_mapping(mapping: Mapping[str, int]) -> Mapping[int, str]:
         value: key
         for key, value in mapping.items()
     }
+
+
+def random_non_negative_int() -> int:
+    """Generate a random positive integer."""
+    return np.random.randint(0, np.iinfo(np.int_).max)

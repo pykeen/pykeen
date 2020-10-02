@@ -16,7 +16,7 @@ from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, invert_mapping, slice_triples
+from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -418,7 +418,7 @@ class TriplesFactory:
         # Prepare shuffle index
         idx = np.arange(n_triples)
         if random_state is None:
-            random_state = np.random.randint(0, np.iinfo(np.int_).max)
+            random_state = random_non_negative_int()
             logger.warning(f'Using random_state={random_state} to split {self}')
         if isinstance(random_state, int):
             random_state = np.random.RandomState(random_state)
