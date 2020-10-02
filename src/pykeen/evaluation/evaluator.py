@@ -376,7 +376,7 @@ def create_sparse_positive_filter_(
     entities = hrt_batch[:, other_col:other_col + 1]
 
     entity_filter_test = (all_pos_triples[:, other_col:other_col + 1]).view(1, -1) == entities
-    filter_batch = (entity_filter_test & relation_filter).nonzero()
+    filter_batch = (entity_filter_test & relation_filter).nonzero(as_tuple=False)
     filter_batch[:, 1] = all_pos_triples[:, filter_col:filter_col + 1].view(1, -1)[:, filter_batch[:, 1]]
 
     return filter_batch, relation_filter

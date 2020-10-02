@@ -83,14 +83,14 @@ class LCWATrainingLoop(TrainingLoop):
         _label_smoothing=None,
     ) -> torch.FloatTensor:
         # This shows how often one row has to be repeated
-        repeat_rows = (labels == 1).nonzero()[:, 0]
+        repeat_rows = (labels == 1).nonzero(as_tuple=False)[:, 0]
         # Create boolean indices for negative labels in the repeated rows
         labels_negative = labels[repeat_rows] == 0
         # Repeat the predictions and filter for negative labels
         negative_scores = predictions[repeat_rows][labels_negative]
 
         # This tells us how often each true label should be repeated
-        repeat_true_labels = (labels[repeat_rows] == 0).nonzero()[:, 0]
+        repeat_true_labels = (labels[repeat_rows] == 0).nonzero(as_tuple=False)[:, 0]
         # First filter the predictions for true labels and then repeat them based on the repeat vector
         positive_scores = predictions[labels == 1][repeat_true_labels]
 
