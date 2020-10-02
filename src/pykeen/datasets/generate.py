@@ -8,9 +8,9 @@ import os
 import click
 import numpy as np
 
-from pykeen.utils import random_non_negative_int
 from .base import PathDataSet
 from ..triples import TriplesFactory
+from ..utils import random_non_negative_int
 
 LABELS = ['train', 'test', 'valid']
 

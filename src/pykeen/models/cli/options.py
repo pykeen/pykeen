@@ -2,7 +2,6 @@
 
 """Click options for building magical KGE model CLIs."""
 
-import random
 from typing import Optional
 
 import click
