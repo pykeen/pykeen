@@ -8,6 +8,7 @@ import os
 import click
 import numpy as np
 
+from pykeen.utils import random_non_negative_int
 from .base import PathDataSet
 from ..triples import TriplesFactory
 
@@ -30,7 +31,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     ratios = test_ratios if no_validation else validation_ratios
 
     if seed is None:
-        seed = np.random.randint(0, 2 ** 32 - 1)
+        seed = random_non_negative_int()
     sub_triples_factories = triples_factory.split(ratios, random_state=seed)
 
     for subset_name, subset_tf in zip(LABELS, sub_triples_factories):

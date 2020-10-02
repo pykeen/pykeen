@@ -713,7 +713,7 @@ def _tf_cleanup_randomized(
     3. Continue until move_id_mask has no true bits
     """
     if random_state is None:
-        random_state = np.random.randint(0, 2 ** 32 - 1)
+        random_state = random_non_negative_int()
         logger.warning('Using random_state=%s', random_state)
     if isinstance(random_state, int):
         random_state = np.random.RandomState(random_state)
