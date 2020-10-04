@@ -278,7 +278,8 @@ class ConvE(EntityRelationEmbeddingModel):
             self.bn2,
             self.fc,
         ]:
-            module.reset_parameters()
+            if not isinstance(module, nn.BatchNorm1d) and not isinstance(module, nn.BatchNorm2d):
+                module.reset_parameters()
 
     def _convolve_entity_relation(self, h: torch.LongTensor, r: torch.LongTensor) -> torch.FloatTensor:
         """Perform the main calculations of the ConvE model."""
