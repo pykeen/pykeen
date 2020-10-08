@@ -1,6 +1,7 @@
 graft src
 graft tests
 
+prune docs/source/api
 prune notebooks
 
 recursive-include docs/source *.py
