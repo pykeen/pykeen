@@ -8,6 +8,7 @@ import unittest
 from typing import Type, Union
 
 import pytest
+from requests.exceptions import ConnectionError
 
 from pykeen.datasets import FB15k, FB15k237, Kinships, Nations, UMLS, WN18, WN18RR, YAGO310
 from pykeen.datasets.base import DataSet
@@ -50,7 +51,11 @@ class _DataSetTestCase:
         assert not self.dataset._loaded_validation
 
         # Load
-        self.dataset._load()
+        try:
+            self.dataset._load()
+        except (ConnectionError, EOFError):
+            self.skipTest('Problem with connection. Try this test again later.')
+
         assert isinstance(self.dataset.training, TriplesFactory)
         assert isinstance(self.dataset.testing, TriplesFactory)
         assert self.dataset._loaded
