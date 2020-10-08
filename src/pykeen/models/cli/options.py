@@ -2,7 +2,6 @@
 
 """Click options for building magical KGE model CLIs."""
 
-import random
 from typing import Optional
 
 import click
@@ -14,7 +13,7 @@ from ...optimizers import get_optimizer_cls, optimizers
 from ...stoppers import _STOPPER_SUFFIX, get_stopper_cls, stoppers
 from ...training import _TRAINING_LOOP_SUFFIX, get_training_loop_cls, training_loops
 from ...triples import TriplesFactory
-from ...utils import normalize_string, resolve_device
+from ...utils import normalize_string, random_non_negative_int, resolve_device
 
 
 def _make_callback(f):
@@ -197,7 +196,7 @@ num_workers_option = click.option(
 random_seed_option = click.option(
     '--random-seed',
     type=int,
-    default=random.randint(0, 2 ** 32 - 1),
+    default=random_non_negative_int(),
     show_default=True,
     help='Random seed for PyTorch, NumPy, and Python.',
 )
