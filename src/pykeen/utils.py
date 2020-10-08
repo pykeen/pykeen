@@ -470,4 +470,4 @@ def invert_mapping(mapping: Mapping[str, int]) -> Mapping[int, str]:
 def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
-    return sq.generate_state(1)[0]
+    return int(sq.generate_state(1)[0])
