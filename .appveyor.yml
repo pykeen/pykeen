@@ -20,7 +20,7 @@ install:
   # No need to install miniconda because appveyor comes with it.
   - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
   - cmd: conda config --set always_yes true
-  - cmd: conda update pip setuptools wheel tox
+  - cmd: conda install pip setuptools wheel tox
   - cmd: conda update --quiet conda
   - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
 
