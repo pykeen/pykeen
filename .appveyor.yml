@@ -1,16 +1,32 @@
-# See: https://packaging.python.org/guides/supporting-windows-using-appveyor/
+# Configuration for AppVeyor builds
+
 environment:
+  # Appveyor machines come with miniconda already installed.
+  CONDA_INSTALL_LOCN: "C:\\Miniconda-x64"
   matrix:
-    - PYTHON: "C:\\Python37"
-    - PYTHON: "C:\\Python37-x64"
+    - TARGET_ARCH: "x64"
+      PYTHON_BUILD_RESTRICTIONS: "3.7*"
+      CONDA_PY: "37"
+
+# We always use a 64-bit machine, but can build x86 distributions
+# with the TARGET_ARCH variable.
+platform:
+    - x64
 
 # See: https://help.appveyor.com/discussions/problems/12705-custom-build-script-script-mode
 build: off
 
 install:
-  - "%PYTHON%\\python.exe -m pip install -U pip"
-  - "%PYTHON%\\python.exe -m pip install -U --force-reinstall setuptools tox"
-  - "%PYTHON%\\python.exe -m pip install torch==1.6.0+cpu --find-links https://download.pytorch.org/whl/torch_stable.html"
+  # No need to install miniconda because appveyor comes with it.
+  - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
+  - cmd: conda config --set always_yes true
+  - cmd: conda update pip setuptools wheel tox
+  - cmd: conda update --quiet conda
+  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
 
 test_script:
-  - "%PYTHON%\\python.exe -m tox -e py,integration"
+  - "%CMD_IN_ENV% tox"
+
+
+# References:
+# 1. https://github.com/astropy/conda-build-tools/blob/master/appveyor.yml
