@@ -20,6 +20,8 @@ build: off
 install:
   # No need to install miniconda because appveyor comes with it.
   - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
+  # Check that we have the expected version and architecture for Python
+  - cmd: python --version"
   - cmd: conda config --set always_yes true
   - cmd: conda install pip setuptools wheel
   - cmd: pip install tox
