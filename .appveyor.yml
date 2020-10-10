@@ -31,6 +31,9 @@ install:
 #  - cmd: pip install -e .
 
 test_script:
+  - echo %PATH%
+  - conda activate
+  - echo %PATH%
   - dir %CONDA_INSTALL_LOCN%\DLLs
   - python -c "import sqlite3; print(sqlite3.version)"
 #  - coverage run -p -m pytest --durations=20 tests -m slow
