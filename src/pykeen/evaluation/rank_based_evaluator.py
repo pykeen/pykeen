@@ -219,12 +219,20 @@ class RankBasedEvaluator(Evaluator):
         ks: Optional[Iterable[Union[int, float]]] = None,
         filtered: bool = True,
     ):
+        """Initialize rank-based evaluator.
+
+        :param ks:
+            The values for which to calculate hits@k. Defaults to {1,3,5,10}.
+        :param filtered:
+            Whether to use the filtered evaluation protocol. If enabled, ranking another true triple higher than the
+            currently considered one will not decrease the score.
+        """
         super().__init__(filtered=filtered)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         for k in self.ks:
             if isinstance(k, float) and not (0 < k < 1):
                 raise ValueError(
-                    'If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)'
+                    'If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)',
                 )
         self.ranks: Dict[Tuple[str, str], List[float]] = defaultdict(list)
         self.num_entities = None
@@ -303,5 +311,5 @@ class RankBasedEvaluator(Evaluator):
             mean_rank=dict(mean_rank),
             mean_reciprocal_rank=dict(mean_reciprocal_rank),
             hits_at_k=dict(hits_at_k),
-            adjusted_mean_rank=adjusted_mean_rank
+            adjusted_mean_rank=adjusted_mean_rank,
         )

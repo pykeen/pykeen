@@ -79,8 +79,10 @@ class TestLeakage(unittest.TestCase):
         expected_forwards_frequency = n / (n + len(forwards_extras))
         expected_inverse_frequency = n / (n + len(inverse_extras))
         self.assertGreater(len(forwards_extras), len(inverse_extras))
-        self.assertLess(expected_forwards_frequency, expected_inverse_frequency,
-                        msg='Forwards frequency should be higher than inverse frequency')
+        self.assertLess(
+            expected_forwards_frequency, expected_inverse_frequency,
+            msg='Forwards frequency should be higher than inverse frequency',
+        )
         self.assertEqual(
             {
                 (test_relation, test_relation_inverse): expected_forwards_frequency,

@@ -254,10 +254,11 @@ class ConvE(EntityRelationEmbeddingModel):
             self.bn0 = None
             self.bn1 = None
             self.bn2 = None
-        num_in_features = \
-            output_channels \
-            * (2 * self.embedding_height - kernel_height + 1) \
+        num_in_features = (
+            output_channels
+            * (2 * self.embedding_height - kernel_height + 1)
             * (self.embedding_width - kernel_width + 1)
+        )
         self.fc = nn.Linear(num_in_features, self.embedding_dim)
 
         # Finalize initialization
@@ -277,6 +278,8 @@ class ConvE(EntityRelationEmbeddingModel):
             self.bn2,
             self.fc,
         ]:
+            if module is None:
+                continue
             module.reset_parameters()
 
     def _convolve_entity_relation(self, h: torch.LongTensor, r: torch.LongTensor) -> torch.FloatTensor:

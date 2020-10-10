@@ -97,7 +97,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
             self.right_relation_embeddings,
         ]:
             nn.init.uniform_(emb.weight, a=-init_bound, b=+init_bound)
-            functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data, )
+            functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data)
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

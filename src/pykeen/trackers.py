@@ -2,13 +2,15 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional, Type, Union
 
-from .utils import flatten_dictionary
+from .utils import flatten_dictionary, get_cls, normalize_string
 
 __all__ = [
+    'get_result_tracker_cls',
     'ResultTracker',
     'MLFlowResultTracker',
+    'WANDBResultTracker',
 ]
 
 
@@ -85,3 +87,59 @@ class MLFlowResultTracker(ResultTracker):
 
     def end_run(self) -> None:  # noqa: D102
         self.mlflow.end_run()
+
+
+class WANDBResultTracker(ResultTracker):
+    """A tracker for Weights and Biases.
+
+    Note that you have to perform wandb login beforehand.
+    """
+
+    def __init__(
+        self,
+        project: str,
+        experiment: Optional[str] = None,
+    ):
+        """Initialize result tracking via WANDB.
+
+        :param project:
+            project name your WANDB login has access to.
+        :param experiment:
+            The experiment name to appear on the website. If not given, WANDB will generate a random name.
+        """
+        import wandb as _wandb
+        self.wandb = _wandb
+        if project is None:
+            raise ValueError('Weights & Biases requires a project name.')
+        self.project = project
+        self.wandb.init(project=self.project, name=experiment)
+
+    def log_metrics(
+        self,
+        metrics: Dict[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
+        metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
+        self.wandb.log(metrics, step=step)
+
+    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+        params = flatten_dictionary(dictionary=params, prefix=prefix)
+        self.wandb.config.update(params)
+
+
+#: A mapping of trackers' names to their implementations
+trackers: Mapping[str, Type[ResultTracker]] = {
+    normalize_string(tracker.__name__, suffix='ResultTracker'): tracker
+    for tracker in ResultTracker.__subclasses__()
+}
+
+
+def get_result_tracker_cls(query: Union[None, str, Type[ResultTracker]]) -> Type[ResultTracker]:
+    """Get the tracker class."""
+    return get_cls(
+        query,
+        base=ResultTracker,
+        lookup_dict=trackers,
+        default=ResultTracker,
+    )
