@@ -113,3 +113,7 @@ venv.bak/
 docs/source/reference/generated/*
 docs/source/api/*
 .DS_Store
+
+scratch/*
+wandb/*
+mlruns

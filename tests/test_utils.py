@@ -53,10 +53,10 @@ class FlattenDictionaryTest(unittest.TestCase):
             'a': {
                 'b': {
                     'c': 1,
-                    'd': 2
+                    'd': 2,
                 },
                 'e': 3,
-            }
+            },
         }
         expected_output = {
             'a.b.c': 1,
@@ -72,10 +72,10 @@ class FlattenDictionaryTest(unittest.TestCase):
             'a': {
                 5: {
                     'c': 1,
-                    'd': 2
+                    'd': 2,
                 },
                 'e': 3,
-            }
+            },
         }
         expected_output = {
             'a.5.c': 1,
@@ -91,10 +91,10 @@ class FlattenDictionaryTest(unittest.TestCase):
             'a': {
                 'b': {
                     'c': 1,
-                    'd': 2
+                    'd': 2,
                 },
                 'e': 3,
-            }
+            },
         }
         expected_output = {
             'Test.a.b.c': 1,

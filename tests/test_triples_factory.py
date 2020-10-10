@@ -5,11 +5,12 @@
 import unittest
 
 import numpy as np
+import torch
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
 
 triples = np.array(
@@ -36,6 +37,7 @@ instance_labels = np.array(
         np.array([0, 4]),
         np.array([3]),
     ],
+    dtype=object,
 )
 
 numeric_triples = np.array(
@@ -52,6 +54,10 @@ numeric_triples = np.array(
 
 class TestTriplesFactory(unittest.TestCase):
     """Class for testing triples factories."""
+
+    def setUp(self) -> None:
+        """Instantiate test instance."""
+        self.factory = Nations().training
 
     def test_correct_inverse_creation(self):
         """Test if the triples and the corresponding inverses are created and sorted correctly."""
@@ -117,6 +123,84 @@ class TestTriplesFactory(unittest.TestCase):
         }
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
 
+    def test_id_to_label(self):
+        """Test ID-to-label conversion."""
+        for label_to_id, id_to_label in [
+            (self.factory.entity_to_id, self.factory.entity_id_to_label),
+            (self.factory.relation_to_id, self.factory.relation_id_to_label),
+        ]:
+            for k in label_to_id.keys():
+                assert id_to_label[label_to_id[k]] == k
+            for k in id_to_label.keys():
+                assert label_to_id[id_to_label[k]] == k
+
+    def test_tensor_to_df(self):
+        """Test tensor_to_df()."""
+        # check correct translation
+        labeled_triples = set(tuple(row) for row in self.factory.triples.tolist())
+        tensor = self.factory.mapped_triples
+        scores = torch.rand(tensor.shape[0])
+        df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
+        re_labeled_triples = set(
+            tuple(row)
+            for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist()
+        )
+        assert labeled_triples == re_labeled_triples
+
+        # check column order
+        assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ('scores',)
+
+    def test_new_with_restriction(self):
+        """Test new_with_restriction()."""
+        example_relation_restriction = {
+            'economicaid',
+            'dependent',
+        }
+        example_entity_restriction = {
+            'brazil',
+            'burma',
+            'china',
+        }
+        for inverse_triples in (True, False):
+            original_triples_factory = Nations(
+                create_inverse_triples=inverse_triples,
+            ).training
+            for entity_restriction in (None, example_entity_restriction):
+                for relation_restriction in (None, example_relation_restriction):
+                    # apply restriction
+                    restricted_triples_factory = original_triples_factory.new_with_restriction(
+                        entities=entity_restriction,
+                        relations=relation_restriction,
+                    )
+                    # check that the triples factory is returned as is, if and only if no restriction is to apply
+                    no_restriction_to_apply = (entity_restriction is None and relation_restriction is None)
+                    equal_factory_object = (id(restricted_triples_factory) == id(original_triples_factory))
+                    assert no_restriction_to_apply == equal_factory_object
+
+                    # check that inverse_triples is correctly carried over
+                    assert (
+                        original_triples_factory.create_inverse_triples
+                        == restricted_triples_factory.create_inverse_triples
+                    )
+
+                    # verify that the label-to-ID mapping has not been changed
+                    assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
+                    assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
+
+                    # verify that triples have been filtered
+                    if entity_restriction is not None:
+                        present_relations = set(restricted_triples_factory.triples[:, 0]).union(
+                            restricted_triples_factory.triples[:, 2])
+                        assert set(entity_restriction).issuperset(present_relations)
+
+                    if relation_restriction is not None:
+                        present_relations = set(restricted_triples_factory.triples[:, 1])
+                        exp_relations = set(relation_restriction)
+                        if original_triples_factory.create_inverse_triples:
+                            exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
+                                                                    exp_relations))
+                        assert exp_relations.issuperset(present_relations)
+
 
 class TestSplit(unittest.TestCase):
     """Test splitting."""
@@ -144,13 +228,13 @@ class TestSplit(unittest.TestCase):
             id(factory.entity_to_id)
             for factory in all_factories
         }, {
-            id(self.triples_factory.entity_to_id)
+            id(self.triples_factory.entity_to_id),
         })
         self.assertSetEqual({
             id(factory.relation_to_id)
             for factory in all_factories
         }, {
-            id(self.triples_factory.relation_to_id)
+            id(self.triples_factory.relation_to_id),
         })
 
     def test_split_naive(self):

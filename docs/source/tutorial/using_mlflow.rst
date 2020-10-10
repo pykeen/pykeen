@@ -16,11 +16,14 @@ This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` functi
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
-        mlflow_tracking_uri='http://localhost:5000',
-        mlflow_experiment_name='Tutorial Training of RotatE on Kinships',
+        result_tracker='mlflow',
+        result_tracker_kwargs=dict(
+            tracking_uri='http://localhost:5000',
+            experiment_name='Tutorial Training of RotatE on Kinships',
+        ),
     )
 
 If you navigate to the MLflow UI at http://localhost:5000, you'll see the experiment appeared
@@ -42,11 +45,14 @@ This example shows using MLflow with the :func:`pykeen.hpo.hpo_pipeline` functio
 
     from pykeen.hpo import hpo_pipeline
 
-    results = hpo_pipeline(
+    pipeline_result = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
-        mlflow_tracking_uri='http://localhost:5000',
-        mlflow_experiment_name='Tutorial HPO Training of RotatE on Kinships',
+        result_tracker='mlflow',
+        result_tracker_kwargs=dict(
+            tracking_uri='http://localhost:5000',
+            experiment_name='Tutorial HPO Training of RotatE on Kinships',
+        ),
     )
 
 The same navigation through MLflow can be done for this example.
@@ -54,17 +60,23 @@ The same navigation through MLflow can be done for this example.
 Reusing Experiments
 -------------------
 In the MLflow UI, you'll see that experiments are assigned an ID. This means you can re-use the same ID to group
-different sub-experiments together using the ``mlflow_experiment_id`` keyword argument instead of
-``mlflow_experiment_name``.
+different sub-experiments together using the ``experiment_id`` keyword argument instead of
+``experiment_name``.
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
 
     experiment_id = 4  # if doesn't already exist, will throw an error!
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
-        mlflow_tracking_uri='http://localhost:5000',
-        mlflow_experiment_id=4,
+        result_tracker='mlflow'
+        result_tracker_kwargs=dict(
+            tracking_uri='http://localhost:5000',
+            experiment_id=4,
+        ),
     )
+
+Additional documentation of the valid keyword arguments can be found
+under :class:`pykeen.trackers.MLFlowResultTracker`.

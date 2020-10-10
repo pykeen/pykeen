@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+`1.0.4 <https://github.com/pykeen/pykeen/compare/v1.0.3...v1.0.4>`_ - 2020-08-25
+--------------------------------------------------------------------------------
+Added
+~~~~~
+- Enable restricted evaluation on a subset of entities/relations (https://github.com/pykeen/pykeen/pull/62,
+  https://github.com/pykeen/pykeen/pull/83)
+
+Changed
+~~~~~~~
+- Use number of epochs as step instead of number of checks (https://github.com/pykeen/pykeen/pull/72)
+
+Fixed
+~~~~~
+- Fix bug in early stopping (https://github.com/pykeen/pykeen/pull/77)
+
+`1.0.3 <https://github.com/pykeen/pykeen/compare/v1.0.2...v1.0.3>`_ - 2020-08-13
+--------------------------------------------------------------------------------
+Added
+~~~~~
+- Side-specific evaluation (https://github.com/pykeen/pykeen/pull/44)
+- Grid Sampler (https://github.com/pykeen/pykeen/pull/52)
+- Weights & Biases Tracker (https://github.com/pykeen/pykeen/pull/68), thanks @migalkin!
+
+Changed
+~~~~~~~
+- Update to Optuna 2.0 (https://github.com/pykeen/pykeen/pull/52)
+- Generalize specification of tracker (https://github.com/pykeen/pykeen/pull/39)
+
+Fixed
+~~~~~
+- Fix bug in triples factory splitter (https://github.com/pykeen/pykeen/pull/59)
+- Device mismatch bug (https://github.com/pykeen/pykeen/pull/50)
+
 `1.0.2 <https://github.com/pykeen/pykeen/compare/v1.0.1...v1.0.2>`_ - 2020-07-10
 --------------------------------------------------------------------------------
 Added

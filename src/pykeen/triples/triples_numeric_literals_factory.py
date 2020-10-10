@@ -85,8 +85,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self._create_numeric_literals()
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(path="{self.path}", ' \
-               f'path_to_numeric_triples="{self.path_to_numeric_triples}")'
+        return (
+            f'{self.__class__.__name__}(path="{self.path}", '
+            f'path_to_numeric_triples="{self.path_to_numeric_triples}")'
+        )
 
     def _create_numeric_literals(self) -> None:
         self.numeric_literals, self.literals_to_id = create_matrix_of_literals(

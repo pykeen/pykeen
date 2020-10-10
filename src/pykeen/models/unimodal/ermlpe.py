@@ -90,7 +90,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
             self.linear2,
             nn.Dropout(hidden_dropout),
             self.bn2,
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         # Finalize initialization
