@@ -12,6 +12,11 @@
          alt="Travis CI">
   </a>
 
+  <a href="https://ci.appveyor.com/project/pykeen/pykeen/branch/master">
+    <img src="https://ci.appveyor.com/api/projects/status/lwp9cfnsa8d5yx62/branch/master?svg=true"
+         alt="AppVeyor">
+  </a>
+
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
@@ -55,8 +60,8 @@ source on [GitHub](https://github.com/pykeen/pykeen) with:
 pip install git+https://github.com/pykeen/pykeen.git
 ```
 
-More information about installation extras can be found in the
-[installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
+More information about installation (e.g., development mode, Windows installation, extras)
+can be found in the [installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 

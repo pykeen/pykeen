@@ -24,6 +24,7 @@ __all__ = [
     'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
+    'random_non_negative_int',
     'kwargs_or_empty',
     'real_part',
     'resolve_device',
@@ -478,3 +479,9 @@ def kwargs_or_empty(kwargs: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
     if kwargs is None:
         kwargs = {}
     return kwargs
+
+
+def random_non_negative_int() -> int:
+    """Generate a random positive integer."""
+    sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
+    return int(sq.generate_state(1)[0])

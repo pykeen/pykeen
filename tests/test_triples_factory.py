@@ -37,6 +37,7 @@ instance_labels = np.array(
         np.array([0, 4]),
         np.array([3]),
     ],
+    dtype=object,
 )
 
 numeric_triples = np.array(

@@ -26,7 +26,7 @@ pipeline like this:
         testing_triples_factory=testing,
         model='TransE',
     )
-    result.save_to_directory('test_pre_stratified_transe')
+    pipeline_result.save_to_directory('test_pre_stratified_transe')
 
 Note that in the instantiation of the testing factory, we used the ``entity_to_id`` and ``relation_to_id``
 keyword arguments. This is because PyKEEN automatically assigns numeric identifiers to all entities and relations
@@ -56,7 +56,7 @@ a stratified dataset.
         testing_triples_factory=testing,
         model='TransE',
     )
-    result.save_to_directory('test_unstratified_transe')
+    pipeline_result.save_to_directory('test_unstratified_transe')
 
 By default, this is an 80/20 split. If you want to use early stopping, you'll also need a validation set, so
 you should specify the splits:
@@ -76,4 +76,4 @@ you should specify the splits:
         model='TransE',
         stopper='early',
     )
-    result.save_to_directory('test_unstratified_stopped_transe')
+    pipeline_result.save_to_directory('test_unstratified_stopped_transe')
