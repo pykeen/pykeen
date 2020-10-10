@@ -7,12 +7,16 @@ PyKEEN
    :name: quickstart
    :maxdepth: 2
 
+   installation
    tutorial/first_steps
    tutorial/byod
    tutorial/understanding_evaluation
    tutorial/running_hpo
    tutorial/using_mlflow
    tutorial/bring_your_own_embeddings
+   tutorial/using_wandb
+   tutorial/making_predictions
+   tutorial/performance
 
 .. toctree::
    :caption: Reference

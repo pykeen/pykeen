@@ -129,7 +129,7 @@ class _AbstractEvaluatorTests:
 
         self._validate_result(
             result=result,
-            data={'batch': hrt_batch, 'scores': scores, 'mask': mask}
+            data={'batch': hrt_batch, 'scores': scores, 'mask': mask},
         )
 
     def _validate_result(
@@ -262,7 +262,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
             hrt_batch=batch,
             all_pos_triples=all_triples,
             relation_filter=None,
-            filter_col=0
+            filter_col=0,
         )
 
         # preprocessing for faster lookup
