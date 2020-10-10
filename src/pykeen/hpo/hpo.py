@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
 
 import torch
 from optuna import Study, Trial, create_study
@@ -28,6 +28,7 @@ from ..pipeline import pipeline, replicate_pipeline_from_config
 from ..regularizers import Regularizer, get_regularizer_cls
 from ..sampling import NegativeSampler, get_negative_sampler_cls
 from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
+from ..trackers import ResultTracker, get_result_tracker_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
 from ..utils import (
@@ -59,12 +60,15 @@ class Objective:
     optimizer: Type[Optimizer]  # 5.
     training_loop: Type[TrainingLoop]  # 6.
     evaluator: Type[Evaluator]  # 8.
+    result_tracker: Type[ResultTracker]  # 9.
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
     training_triples_factory: Optional[TriplesFactory] = None
     testing_triples_factory: Optional[TriplesFactory] = None
     validation_triples_factory: Optional[TriplesFactory] = None
+    evaluation_entity_whitelist: Optional[Collection[str]] = None
+    evaluation_relation_whitelist: Optional[Collection[str]] = None
     # 2. Model
     model_kwargs: Optional[Mapping[str, Any]] = None
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -89,6 +93,8 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
+    # 9. Trackers
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
@@ -98,16 +104,13 @@ class Objective:
     def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
-        def _continue_callback(early_stopper: EarlyStopper, result: Union[float, int]) -> None:
-            last_epoch = early_stopper.number_results * early_stopper.frequency
-            trial.report(result, step=last_epoch)
+        def _result_callback(_early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
+            trial.report(result, step=epoch)
 
-        def _stopped_callback(early_stopper: EarlyStopper, result: Union[float, int]) -> None:
-            current_epoch = (1 + early_stopper.number_results) * early_stopper.frequency
-            trial.set_user_attr(STOPPED_EPOCH_KEY, int(current_epoch))
-            trial.report(result)  # don't include a step because it's over
+        def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
+            trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
 
-        for key, callback in zip(('continue_callbacks', 'stopped_callbacks'), (_continue_callback, _stopped_callback)):
+        for key, callback in zip(('result_callbacks', 'stopped_callbacks'), (_result_callback, _stopped_callback)):
             stopper_kwargs.setdefault(key, []).append(callback)
 
     def __call__(self, trial: Trial) -> Optional[float]:
@@ -185,6 +188,8 @@ class Objective:
                 training_triples_factory=self.training_triples_factory,
                 testing_triples_factory=self.testing_triples_factory,
                 validation_triples_factory=self.validation_triples_factory,
+                evaluation_entity_whitelist=self.evaluation_entity_whitelist,
+                evaluation_relation_whitelist=self.evaluation_relation_whitelist,
                 # 2. Model
                 model=self.model,
                 model_kwargs=_model_kwargs,
@@ -210,6 +215,9 @@ class Objective:
                 evaluator=self.evaluator,
                 evaluator_kwargs=self.evaluator_kwargs,
                 evaluation_kwargs=self.evaluation_kwargs,
+                # 9. Tracker
+                result_tracker=self.result_tracker,
+                result_tracker_kwargs=self.result_tracker_kwargs,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
@@ -332,7 +340,7 @@ class HpoPipelineResult(Result):
 
         :param directory: The directory in the S3 bucket
         :param bucket: The name of the S3 bucket
-        :param s3: The boto3.client, if already instantiated
+        :param s3: A client from :func:`boto3.client`, if already instantiated
         """
         if s3 is None:
             import boto3
@@ -432,6 +440,9 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
+    # 9. Tracking
+    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Misc
     device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
@@ -525,6 +536,11 @@ def hpo_pipeline(
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
+    :param result_tracker:
+        The ResultsTracker class or name
+    :param result_tracker_kwargs:
+        The keyword arguments passed to the results tracker on instantiation
+
     :param metric:
         The metric to optimize over. Defaults to ``adjusted_mean_rank``.
     :param direction:
@@ -607,6 +623,9 @@ def hpo_pipeline(
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
 
+    # 9. Tracking
+    result_tracker: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+
     objective = Objective(
         # 1. Dataset
         dataset=dataset,
@@ -644,6 +663,9 @@ def hpo_pipeline(
         evaluator=evaluator,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
+        # 9. Tracker
+        result_tracker=result_tracker,
+        result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,
         save_model_directory=save_model_directory,

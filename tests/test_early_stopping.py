@@ -11,31 +11,34 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_AVERAGE
+from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
-from pykeen.stoppers.early_stopping import EarlyStopper, larger_than_any_buffer_element, smaller_than_any_buffer_element
+from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
+from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
 
-class TestImprovementChecking(unittest.TestCase):
-    """Tests for checking improvement."""
-
-    def test_smaller_than_any_buffer_element(self):
-        """Test ``smaller_than_any_buffer_element``."""
-        buffer = numpy.asarray([1.0, 0.9, 0.8])
-        assert not smaller_than_any_buffer_element(buffer=buffer, result=1.0)
-        assert smaller_than_any_buffer_element(buffer=buffer, result=0.9)
-        assert not smaller_than_any_buffer_element(buffer=buffer, result=0.9, delta=0.1)
-
-    def test_larger_than_any_buffer_element(self):
-        """Test ``smaller_than_any_buffer_element``."""
-        buffer = numpy.asarray([1.0, 0.9, 0.8])
-        assert larger_than_any_buffer_element(buffer=buffer, result=1.0)
-        assert larger_than_any_buffer_element(buffer=buffer, result=1.0, delta=0.1)
-        assert not larger_than_any_buffer_element(buffer=buffer, result=0.9, delta=0.1)
+def test_is_improvement():
+    """Test is_improvement()."""
+    for best_value, current_value, larger_is_better, relative_delta, is_better in [
+        # equal value; larger is better
+        (1.0, 1.0, True, 0.0, False),
+        # equal value; smaller is better
+        (1.0, 1.0, False, 0.0, False),
+        # larger is better; improvement
+        (1.0, 1.1, True, 0.0, True),
+        # larger is better; improvement; but not significant
+        (1.0, 1.1, True, 0.1, False),
+    ]:
+        assert is_better == is_improvement(
+            best_value=best_value,
+            current_value=current_value,
+            larger_is_better=larger_is_better,
+            relative_delta=relative_delta,
+        )
 
 
 class MockEvaluator(Evaluator):
@@ -65,14 +68,33 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
+        hits = next(self.losses_iter)
         return RankBasedMetricResults(
-            mean_rank=None,
-            mean_reciprocal_rank=None,
-            adjusted_mean_rank=None,
+            mean_rank={
+                side: {
+                    rank_type: 10
+                    for rank_type in RANK_TYPES
+                }
+                for side in SIDES
+            },
+            mean_reciprocal_rank={
+                side: {
+                    rank_type: 1.0
+                    for rank_type in RANK_TYPES
+                }
+                for side in SIDES
+            },
+            adjusted_mean_rank={
+                side: 1.0
+                for side in SIDES
+            },
             hits_at_k={
-                RANK_AVERAGE: {
-                    10: next(self.losses_iter),
-                },
+                side: {
+                    rank_type: {
+                        10: hits,
+                    } for rank_type in RANK_TYPES
+                }
+                for side in SIDES
             },
         )
 
@@ -108,6 +130,27 @@ class MockModel(EntityRelationEmbeddingModel):
         raise NotImplementedError('Not needed for unittest')
 
 
+class LogCallWrapper:
+    """An object which wraps functions and checks whether they have been called."""
+
+    def __init__(self):
+        self.called = set()
+
+    def wrap(self, func):
+        """Wrap the function."""
+        id_func = id(func)
+
+        def wrapped(*args, **kwargs):
+            self.called.add(id_func)
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    def was_called(self, func) -> bool:
+        """Report whether the previously wrapped function has been called."""
+        return id(func) in self.called
+
+
 class TestEarlyStopping(unittest.TestCase):
     """Tests for early stopping."""
 
@@ -119,6 +162,8 @@ class TestEarlyStopping(unittest.TestCase):
     stop_constant: int = 4
     #: The minimum improvement
     delta: float = 0.0
+    #: The best results
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
     def setUp(self):
         """Prepare for testing the early stopper."""
@@ -131,36 +176,44 @@ class TestEarlyStopping(unittest.TestCase):
             evaluator=self.mock_evaluator,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
-            delta=self.delta,
+            relative_delta=self.delta,
             larger_is_better=False,
         )
 
     def test_initialization(self):
         """Test warm-up phase."""
-        for it in range(self.patience):
-            should_stop = self.stopper.should_stop()
-            assert self.stopper.number_evaluations == it + 1
+        for epoch in range(self.patience):
+            should_stop = self.stopper.should_stop(epoch=epoch)
             assert not should_stop
 
     def test_result_processing(self):
         """Test that the mock evaluation of the early stopper always gives the right loss."""
-        for stop in range(1, 1 + len(self.mock_losses)):
+        for epoch in range(len(self.mock_losses)):
             # Step early stopper
-            should_stop = self.stopper.should_stop()
+            should_stop = self.stopper.should_stop(epoch=epoch)
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:stop]
+                assert self.stopper.results == self.mock_losses[:epoch + 1]
 
                 # check ring buffer
-                if stop >= self.patience:
-                    assert set(self.stopper.buffer) == set(self.mock_losses[stop - self.patience:stop])
+                if epoch >= self.patience:
+                    assert self.stopper.best_metric == self.best_results[epoch]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
-        for _ in range(self.stop_constant):
-            self.assertFalse(self.stopper.should_stop())
-        self.assertTrue(self.stopper.should_stop())
+        for epoch in range(self.stop_constant):
+            self.assertFalse(self.stopper.should_stop(epoch=epoch))
+        self.assertTrue(self.stopper.should_stop(epoch=epoch))
+
+    def test_result_logging_with_mlflow(self):
+        """Test whether the MLFLow result logger works."""
+        self.stopper.result_tracker = MLFlowResultTracker()
+        wrapper = LogCallWrapper()
+        real_log_metrics = self.stopper.result_tracker.mlflow.log_metrics
+        self.stopper.result_tracker.mlflow.log_metrics = wrapper.wrap(real_log_metrics)
+        self.stopper.should_stop(epoch=0)
+        assert wrapper.was_called(real_log_metrics)
 
 
 class TestDeltaEarlyStopping(TestEarlyStopping):
@@ -169,6 +222,7 @@ class TestDeltaEarlyStopping(TestEarlyStopping):
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
     delta: float = 0.1
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStoppingRealWorld(unittest.TestCase):
@@ -179,13 +233,13 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
-    delta: float = 0.1
+    relative_delta: float = 0.1
     #: The random seed to use for reproducibility
     seed: int = 42
     #: The maximum number of epochs to train. Should be large enough to allow for early stopping.
     max_num_epochs: int = 1000
     #: The epoch at which the stop should happen. Depends on the choice of random seed.
-    stop_epoch: int = 21
+    stop_epoch: int = 30
     #: The batch size to use.
     batch_size: int = 128
 
@@ -206,7 +260,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             evaluator=evaluator,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
-            delta=self.delta,
+            relative_delta=self.relative_delta,
             metric='mean_rank',
         )
         training_loop = SLCWATrainingLoop(
@@ -218,5 +272,5 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             batch_size=self.batch_size,
             stopper=stopper,
         )
-        assert stopper.number_results == len(losses) // stopper.frequency
+        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
         self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')

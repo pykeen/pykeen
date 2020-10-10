@@ -198,8 +198,10 @@ class PathDataSet(LazyDataSet):
         )
 
     def __repr__(self) -> str:  # noqa: D105
-        return f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",' \
-               f' validation_path="{self.validation_path}")'
+        return (
+            f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",'
+            f' validation_path="{self.validation_path}")'
+        )
 
 
 def _urlretrieve(url, path, clean_on_failure: bool = True) -> None:
@@ -387,7 +389,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 )
                 rv = TriplesFactory(
                     triples=df.values,
-                    create_inverse_triples=self.create_inverse_triples
+                    create_inverse_triples=self.create_inverse_triples,
                 )
                 rv.path = relative_path
                 return rv

@@ -78,7 +78,7 @@ class _NegativeSamplingTestCase:
 
         # Generate scaled negative sample
         scaled_negative_batch = self.scaling_negative_sampler.sample(
-            positive_batch=self.positive_batch
+            positive_batch=self.positive_batch,
         )
 
         assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos

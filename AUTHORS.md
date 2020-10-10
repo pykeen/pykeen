@@ -13,3 +13,4 @@
 - [Daniel Domingo Fernández](https://github.com/ddomingof)
 - [Michael F. Schönitzer](https://github.com/Nudin)
 - [Maximilian Hünemörder](https://github.com/huenemoerder)
+- [Michael Galkin](https://github.com/migalkin)
