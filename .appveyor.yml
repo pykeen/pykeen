@@ -19,7 +19,7 @@ build: off
 
 install:
   # No need to install miniconda because appveyor comes with it.
-  - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
+  - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%CONDA_INSTALL_LOCN%\DLLs;%PATH%
   # Check that we have the expected version and architecture for Python
   - cmd: python --version
   - cmd: conda info
@@ -31,8 +31,6 @@ install:
 #  - cmd: pip install -e .
 
 test_script:
-  - python -c "import sqlite3; print(sqlite3.version)"
-  - conda activate
   - python -c "import sqlite3; print(sqlite3.version)"
 #  - coverage run -p -m pytest --durations=20 tests -m slow
 #  - coverage run -p -m pytest --durations=20 {posargs:tests} -m slow
