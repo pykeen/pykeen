@@ -278,6 +278,8 @@ class ConvE(EntityRelationEmbeddingModel):
             self.bn2,
             self.fc,
         ]:
+            if module is None:
+                continue
             module.reset_parameters()
 
     def _convolve_entity_relation(self, h: torch.LongTensor, r: torch.LongTensor) -> torch.FloatTensor:

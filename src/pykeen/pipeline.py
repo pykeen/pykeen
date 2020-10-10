@@ -168,7 +168,6 @@ import ftplib
 import json
 import logging
 import os
-import random
 import time
 from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
@@ -192,7 +191,7 @@ from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
-    resolve_device, set_random_seed,
+    random_non_negative_int, resolve_device, set_random_seed,
 )
 from .version import get_git_hash, get_version
 
@@ -697,7 +696,7 @@ def pipeline(  # noqa: C901
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
-        random_seed = random.randint(0, 2 ** 32 - 1)
+        random_seed = random_non_negative_int()
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
