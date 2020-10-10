@@ -49,4 +49,5 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t') -> LabeledTrip
         dtype=str,
         comments='@Comment@ Head Relation Tail',
         delimiter=delimiter,
+        encoding='utf-8',
     )
