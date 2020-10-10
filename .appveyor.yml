@@ -28,7 +28,6 @@ install:
   - cmd: pip install tox
   - cmd: conda update --quiet conda
   - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-  - cmd: "%cd%"
   - cmd: pip install -e .
 
 test_script:
