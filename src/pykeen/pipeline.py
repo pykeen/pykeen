@@ -261,30 +261,24 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def plot_er_2d(self, model='PCA', kernel=None, width: float = 0.4):
+    def plot_er_2d(self, model='PCA', width: float = 0.4, **kwargs):
         """Plot the reduced entities and relation vectors in 2D."""
         import matplotlib.pyplot as plt
 
         if model.upper() == 'PCA':
-            from sklearn.decomposition import PCA
-            entity_reduction_model = PCA(n_components=2)
-            relation_reduction_model = PCA(n_components=2)
+            from sklearn.decomposition import PCA as reducer
         elif model.upper() == 'KPCA':
-            from sklearn.decomposition import KernelPCA
-            if kernel is None:
-                kernel = 'linear'
-            entity_reduction_model = KernelPCA(n_components=2, kernel=kernel)
-            relation_reduction_model = KernelPCA(n_components=2, kernel=kernel)
+            kwargs.setdefault('kernel', 'linear')
+            from sklearn.decomposition import KernelPCA as reducer
         elif model.upper() == 'GRP':
-            from sklearn.random_projection import GaussianRandomProjection
-            entity_reduction_model = GaussianRandomProjection(n_components=2)
-            relation_reduction_model = GaussianRandomProjection(n_components=2)
+            from sklearn.random_projection import GaussianRandomProjection as reducer
         elif model.upper() == 'SRP':
-            from sklearn.random_projection import SparseRandomProjection
-            entity_reduction_model = SparseRandomProjection(n_components=2)
-            relation_reduction_model = SparseRandomProjection(n_components=2)
+            from sklearn.random_projection import SparseRandomProjection as reducer
         else:
             raise ValueError(f'invalid dimensionality reduction model: {model}')
+
+        entity_reduction_model = reducer(n_components=2, **_kwargs)
+        relation_reduction_model = reducer(n_components=2, **_kwargs)
 
         # draw entities
         e_emb = self.model.entity_embeddings.weight.detach().numpy()
