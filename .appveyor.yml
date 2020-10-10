@@ -2,7 +2,7 @@
 
 environment:
   # Appveyor machines come with miniconda already installed.
-  CONDA_INSTALL_LOCN: "C:\\Miniconda-x64"
+  CONDA_INSTALL_LOCN: "C:\\Miniconda37-x64"
   CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\continuous-integration\\appveyor\\run_with_env.cmd"
   matrix:
     - TARGET_ARCH: "x64"
@@ -21,15 +21,18 @@ install:
   # No need to install miniconda because appveyor comes with it.
   - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
   # Check that we have the expected version and architecture for Python
-  - cmd: python --version"
-  - cmd: conda config --set always_yes true
-  - cmd: conda install pip setuptools wheel
-  - cmd: pip install tox
-  - cmd: conda update --quiet conda
-  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+  - cmd: python --version
+  - cmd: conda info
+#  - cmd: conda config --set always_yes true
+#  - cmd: conda install pip setuptools wheel
+#  - cmd: pip install tox
+#  - cmd: conda update --quiet conda
+#  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
 
+#test_script:
+#  - "%CMD_IN_ENV% tox -e py,integration"
 test_script:
-  - "%CMD_IN_ENV% tox -e py,integration"
+  - "%CMD_IN_ENV% pip show pykeen tox"
 
 
 # References:
