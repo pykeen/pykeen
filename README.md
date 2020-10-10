@@ -12,6 +12,11 @@
          alt="Travis CI">
   </a>
 
+  <a href="https://ci.appveyor.com/project/cthoyt/pykeen/branch/master">
+    <img src="https://ci.appveyor.com/api/projects/status/c35rlorj03h790ai/branch/master?svg=true"
+         alt="AppVeyor">
+  </a>
+
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
