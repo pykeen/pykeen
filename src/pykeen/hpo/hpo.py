@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
 
 import torch
 from optuna import Study, Trial, create_study
@@ -67,6 +67,8 @@ class Objective:
     training: Union[None, TriplesFactory, str] = None
     testing: Union[None, TriplesFactory, str] = None
     validation: Union[None, TriplesFactory, str] = None
+    evaluation_entity_whitelist: Optional[Collection[str]] = None
+    evaluation_relation_whitelist: Optional[Collection[str]] = None
     # 2. Model
     model_kwargs: Optional[Mapping[str, Any]] = None
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -186,6 +188,8 @@ class Objective:
                 training=self.training,
                 testing=self.testing,
                 validation=self.validation,
+                evaluation_entity_whitelist=self.evaluation_entity_whitelist,
+                evaluation_relation_whitelist=self.evaluation_relation_whitelist,
                 # 2. Model
                 model=self.model,
                 model_kwargs=_model_kwargs,

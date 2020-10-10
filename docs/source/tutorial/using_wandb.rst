@@ -25,7 +25,7 @@ This example shows using WANDB with the :func:`pykeen.pipeline.pipeline` functio
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='wandb',
@@ -45,7 +45,7 @@ labels.
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='wandb',
@@ -64,7 +64,7 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
 
     from pykeen.hpo import hpo_pipeline
 
-    results = hpo_pipeline(
+    pipeline_result = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='wandb',

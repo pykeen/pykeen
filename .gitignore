@@ -116,3 +116,4 @@ docs/source/api/*
 
 scratch/*
 wandb/*
+mlruns

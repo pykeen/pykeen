@@ -14,11 +14,11 @@ about each and see the reference on how to use them specifically. Don't worry, i
 the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of everything for you.
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 The results are returned in a :class:`pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
@@ -29,11 +29,11 @@ could be used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model=TransE,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the data set was given as a string. A list of available data sets can be found in
 :mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.DataSet` could be
@@ -42,47 +42,47 @@ used as in:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
 >>> from pykeen.datasets import Nations
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset=Nations,
 ...     model=TransE,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
 This can be explicitly given as a string:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
 approaches.
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='LCWA',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler='basic',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
@@ -90,13 +90,13 @@ of the negative sampler could be used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.sampling import BasicNegativeSampler
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 .. warning ::
 
@@ -107,12 +107,12 @@ The type of evaluation perfomed can be specified with the ``evaluator`` keyword.
 rank-based evaluation is used. It can be given explictly as in:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     evaluator='RankBasedEvaluator',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
@@ -120,23 +120,23 @@ of the evaluator could be used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.evaluation import RankBasedEvaluator
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     evaluator=RankBasedEvaluator,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     stopper='early',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
@@ -150,7 +150,7 @@ Arguments for the model can be given as a dictionary using ``model_kwargs``.
 ...         scoring_fct_norm=2,
 ...     ),
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
@@ -168,7 +168,6 @@ import ftplib
 import json
 import logging
 import os
-import random
 import time
 from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
@@ -192,7 +191,7 @@ from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
-    resolve_device, set_random_seed,
+    random_non_negative_int, resolve_device, set_random_seed,
 )
 from .version import get_git_hash, get_version
 
@@ -648,7 +647,7 @@ def pipeline(  # noqa: C901
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
-        random_seed = random.randint(0, 2 ** 32 - 1)
+        random_seed = random_non_negative_int()
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 

@@ -92,7 +92,7 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
         testing_triples_factory=testing,
         model='TransE',
     )
-    result.save_to_directory('test_pre_stratified_transe')
+    pipeline_result.save_to_directory('test_pre_stratified_transe')
 
 .. warning::
 
@@ -154,7 +154,7 @@ a stratified dataset.
         testing_triples_factory=testing,
         model='TransE',
     )
-    result.save_to_directory('test_unstratified_transe')
+    pipeline_result.save_to_directory('test_unstratified_transe')
 
 By default, this is an 80/20 split. If you want to use early stopping, you'll also need a validation set, so
 you should specify the splits:
@@ -174,4 +174,4 @@ you should specify the splits:
         model='TransE',
         stopper='early',
     )
-    result.save_to_directory('test_unstratified_stopped_transe')
+    pipeline_result.save_to_directory('test_unstratified_stopped_transe')

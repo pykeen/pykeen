@@ -16,7 +16,7 @@ This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` functi
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='mlflow',
@@ -45,7 +45,7 @@ This example shows using MLflow with the :func:`pykeen.hpo.hpo_pipeline` functio
 
     from pykeen.hpo import hpo_pipeline
 
-    results = hpo_pipeline(
+    pipeline_result = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='mlflow',
@@ -68,7 +68,7 @@ different sub-experiments together using the ``experiment_id`` keyword argument 
     from pykeen.pipeline import pipeline
 
     experiment_id = 4  # if doesn't already exist, will throw an error!
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='mlflow'

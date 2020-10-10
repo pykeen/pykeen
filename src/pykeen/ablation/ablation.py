@@ -298,7 +298,7 @@ def prepare_ablation(  # noqa:C901
 
         # TODO incorporate setting of random seed
         # pipeline_kwargs=dict(
-        #    random_seed=random.randint(1, 2 ** 32 - 1),
+        #    random_seed=random_non_negative_int(),
         # ),
 
         def _set_arguments(key: str, value: str) -> None:

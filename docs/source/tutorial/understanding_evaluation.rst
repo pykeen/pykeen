@@ -121,4 +121,16 @@ evaluation. This can be done with the following:
 
 By restricting evaluation to the edges of interest, models more appropriate for drug repositioning can
 be identified during hyper-parameter optimization instead of models that are good at predicting all
-types of relations.
+types of relations. The HPO pipeline accepts the same arguments:
+
+.. code-block:: python
+
+    from pykeen.hpo import hpo_pipeline
+
+    evaluation_relation_whitelist = {'CtD', 'CpD'}
+    hpo_pipeline_result = hpo_pipeline(
+        n_trials=30,
+        dataset='Hetionet',
+        model='RotatE',
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
+    )
