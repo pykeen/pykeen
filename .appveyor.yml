@@ -19,7 +19,7 @@ build: off
 
 install:
   # No need to install miniconda because appveyor comes with it.
-  - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%CONDA_INSTALL_LOCN%\DLLs;%PATH%
+  - cmd: SET PATH=%CONDA_INSTALL_LOCN%;%CONDA_INSTALL_LOCN%\Scripts;%PATH%
   # Check that we have the expected version and architecture for Python
   - cmd: python --version
   - cmd: conda info
