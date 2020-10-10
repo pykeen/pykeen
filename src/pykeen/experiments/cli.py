@@ -129,7 +129,10 @@ def _help_reproduce(
     :param directory: Output directory
     :param path: Path to configuration JSON file
     :param replicates: How many times the experiment should be run
+    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
+    :param save_replicates: Should the artifacts of the replicates be saved?
     :param file_name: Name of JSON file (optional)
+    :return: None
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
@@ -139,10 +142,13 @@ def _help_reproduce(
     click.echo(f'Running configuration at {path}')
 
     # Create directory in which all experimental artifacts are saved
+    datetime = time.strftime('%Y-%m-%d-%H-%M-%S')
     if file_name is not None:
-        output_directory = os.path.join(directory, time.strftime(f"%Y-%m-%d-%H-%M-%S_{file_name}"))
+        experiment_id = f'{datetime}_{uuid4()}_{file_name}'
     else:
-        output_directory = os.path.join(directory, time.strftime("%Y-%m-%d-%H-%M-%S"))
+        experiment_id = f'{datetime}_{uuid4()}'
+    output_directory = os.path.join(directory, experiment_id)
+
     os.makedirs(output_directory, exist_ok=True)
 
     replicate_pipeline_from_path(

@@ -81,7 +81,7 @@ def get_dataset(
             raise TypeError(f'Data set is wrong type: {type(dataset)}')
 
         dataset_instance = dataset(
-            **(dataset_kwargs or {})
+            **(dataset_kwargs or {}),
         )
         return dataset_instance.factories
 

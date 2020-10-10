@@ -2,12 +2,16 @@
 
 """Utilities for PyKEEN."""
 
+import ftplib
+import json
 import logging
 import random
+from io import BytesIO
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 
@@ -16,8 +20,10 @@ __all__ = [
     'compact_mapping',
     'get_embedding',
     'imag_part',
+    'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
+    'random_non_negative_int',
     'real_part',
     'resolve_device',
     'slice_triples',
@@ -47,7 +53,7 @@ _CUDA_OOM_ERROR = 'CUDA out of memory.'
 
 def l2_regularization(
     *xs: torch.Tensor,
-    normalize: bool = False
+    normalize: bool = False,
 ) -> torch.Tensor:
     """
     Compute squared L2-regularization term.
@@ -175,7 +181,7 @@ def flatten_dictionary(
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
-    return {sep.join(k): v for k, v in partial_result.items()}
+    return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
 
 def _flatten_dictionary(
@@ -317,7 +323,7 @@ def is_cudnn_error(runtime_error: RuntimeError) -> bool:
 
 
 def compact_mapping(
-    mapping: Mapping[X, int]
+    mapping: Mapping[X, int],
 ) -> Tuple[Mapping[X, int], Mapping[int, int]]:
     """Update a mapping (key -> id) such that the IDs range from 0 to len(mappings) - 1.
 
@@ -343,6 +349,19 @@ class Result:
 
     def save_to_directory(self, directory: str, **kwargs) -> None:
         """Save the results to the directory."""
+        raise NotImplementedError
+
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save the results to the directory in an FTP server."""
+        raise NotImplementedError
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: A client from :func:`boto3.client`, if already instantiated
+        """
         raise NotImplementedError
 
 
@@ -410,10 +429,70 @@ def imag_part(
     return x[..., dim:]
 
 
-def fix_dataclass_init_docs(cls: Type):
-    """Fix the __init__ doumentation for dataclasses.
+def fix_dataclass_init_docs(cls: Type) -> Type:
+    """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
+
+    :param cls: The class whose docstring needs fixing
+    :returns: The class that was passed so this function can be used as a decorator
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
     cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
     return cls
+
+
+def get_model_io(model) -> BytesIO:
+    """Get the model as bytes."""
+    model_io = BytesIO()
+    torch.save(model, model_io)
+    model_io.seek(0)
+    return model_io
+
+
+def get_json_bytes_io(obj) -> BytesIO:
+    """Get the JSON as bytes."""
+    obj_str = json.dumps(obj, indent=2)
+    obj_bytes = obj_str.encode('utf-8')
+    return BytesIO(obj_bytes)
+
+
+def get_df_io(df: pd.DataFrame) -> BytesIO:
+    """Get the dataframe as bytes."""
+    df_io = BytesIO()
+    df.to_csv(df_io, sep='\t', index=False)
+    df_io.seek(0)
+    return df_io
+
+
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+    """Ensure the directory exists on the FTP server."""
+    try:
+        ftp.mkd(directory)
+    except ftplib.error_perm:
+        pass  # its fine...
+
+
+def invert_mapping(mapping: Mapping[str, int]) -> Mapping[int, str]:
+    """
+    Invert a mapping.
+
+    :param mapping:
+        The mapping, key -> value.
+
+    :return:
+        The inverse mapping, value -> key.
+    """
+    num_unique_values = len(set(mapping.values()))
+    num_keys = len(mapping)
+    if num_unique_values < num_keys:
+        raise ValueError(f'Mapping is not bijective! Only {num_unique_values}/{num_keys} are unique.')
+    return {
+        value: key
+        for key, value in mapping.items()
+    }
+
+
+def random_non_negative_int() -> int:
+    """Generate a random positive integer."""
+    sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
+    return int(sq.generate_state(1)[0])

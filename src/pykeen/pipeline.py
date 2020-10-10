@@ -14,11 +14,11 @@ about each and see the reference on how to use them specifically. Don't worry, i
 the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of everything for you.
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 The results are returned in a :class:`pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
@@ -29,11 +29,11 @@ could be used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model=TransE,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the data set was given as a string. A list of available data sets can be found in
 :mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.DataSet` could be
@@ -42,47 +42,47 @@ used as in:
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.models import TransE
 >>> from pykeen.datasets import Nations
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset=Nations,
 ...     model=TransE,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
 This can be explicitly given as a string:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
 approaches.
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='LCWA',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler='basic',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
@@ -90,13 +90,13 @@ of the negative sampler could be used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.sampling import BasicNegativeSampler
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler=BasicNegativeSampler,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 .. warning ::
 
@@ -107,12 +107,12 @@ The type of evaluation perfomed can be specified with the ``evaluator`` keyword.
 rank-based evaluation is used. It can be given explictly as in:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     evaluator='RankBasedEvaluator',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
@@ -120,23 +120,23 @@ of the evaluator could be used as in:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.evaluation import RankBasedEvaluator
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     evaluator=RankBasedEvaluator,
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
 >>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> pipeline_result = pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     stopper='early',
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
@@ -150,7 +150,7 @@ Arguments for the model can be given as a dictionary using ``model_kwargs``.
 ...         scoring_fct_norm=2,
 ...     ),
 ... )
->>> result.save_to_directory('nations_transe')
+>>> pipeline_result.save_to_directory('nations_transe')
 
 The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
@@ -162,40 +162,15 @@ can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
 the :class:`pykeen.dataset.Nations`
-
-Bring Your Own Data
-~~~~~~~~~~~~~~~~~~~
-As an alternative to using a pre-packaged dataset, the training and testing can be set
-explicitly with instances of :class:`pykeen.triples.TriplesFactory`. For convenience,
-the default data sets are also provided as subclasses of :class:`pykeen.triples.TriplesFactory`.
-
-.. warning ::
-
-    Make sure they are mapped to the same entities.
-
->>> from pykeen.datasets import Nations
->>> from pykeen.triples import TriplesFactory
->>> from pykeen.pipeline import pipeline
->>> nations = Nations()
->>> training: TriplesFactory = nations.training
->>> testing: TriplesFactory = nations.testing
->>> pipeline_result = pipeline(
-...     training_triples_factory=training,
-...     testing_triples_factory=testing,
-...     model='TransE',
-... )
->>> result.save_to_directory('nations_transe')
-
-.. todo:: Example with creation of triples factory
 """
 
+import ftplib
 import json
 import logging
 import os
-import random
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -211,10 +186,13 @@ from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
-from .trackers import MLFlowResultTracker, ResultTracker
+from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
-from .utils import NoRandomSeedNecessary, Result, fix_dataclass_init_docs, resolve_device, set_random_seed
+from .utils import (
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    random_non_negative_int, resolve_device, set_random_seed,
+)
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -283,8 +261,11 @@ class PipelineResult(Result):
             plt.title(self.title)
         return sns.lineplot(x=range(len(self.losses)), y=self.losses)
 
-    def save_model(self, path) -> None:
+    def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
+
+        :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
+         like `*.pkl` or `*.pickle`.
 
         The model contains within it the triples factory that was used for training.
         """
@@ -314,6 +295,96 @@ class PipelineResult(Result):
         if save_replicates:
             self.save_model(os.path.join(directory, 'trained_model.pkl'))
 
+    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+        """Save all artifacts to the given directory in the FTP server.
+
+        :param directory: The directory in the FTP server to save to
+        :param ftp: A connection to the FTP server
+
+        The following code will train a model and upload it to FTP using Python's builtin
+        :class:`ftplib.FTP`:
+
+        .. code-block:: python
+
+            import ftplib
+            from pykeen.pipeline import pipeline
+
+            directory = 'test/test'
+            pipeline_result = pipeline(
+                model='TransE',
+                dataset='Kinships',
+            )
+            with ftplib.FTP(host='0.0.0.0', user='user', passwd='12345') as ftp:
+                pipeline_result.save_to_ftp(directory, ftp)
+
+        If you want to try this with your own local server, run this code based on the
+        example from Giampaolo Rodola's excellent library,
+        `pyftpdlib <https://github.com/giampaolo/pyftpdlib#quick-start>`_.
+
+        .. code-block:: python
+
+            import os
+            from pyftpdlib.authorizers import DummyAuthorizer
+            from pyftpdlib.handlers import FTPHandler
+            from pyftpdlib.servers import FTPServer
+
+            authorizer = DummyAuthorizer()
+            authorizer.add_user("user", "12345", homedir=os.path.expanduser('~/ftp'), perm="elradfmwMT")
+
+            handler = FTPHandler
+            handler.authorizer = authorizer
+
+            address = '0.0.0.0', 21
+            server = FTPServer(address, handler)
+            server.serve_forever()
+        """
+        ensure_ftp_directory(ftp=ftp, directory=directory)
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        ftp.storbinary(f'STOR {metadata_path}', get_json_bytes_io(self.metadata))
+
+        results_path = os.path.join(directory, 'results.json')
+        ftp.storbinary(f'STOR {results_path}', get_json_bytes_io(self._get_results()))
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
+
+    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+        """Save all artifacts to the given directory in an S3 Bucket.
+
+        :param directory: The directory in the S3 bucket
+        :param bucket: The name of the S3 bucket
+        :param s3: A client from :func:`boto3.client`, if already instantiated
+
+        .. note:: Need to have ``~/.aws/credentials`` file set up. Read: https://realpython.com/python-boto3-aws-s3/
+
+        The following code will train a model and upload it to S3 using :mod:`boto3`:
+
+        .. code-block:: python
+
+            import time
+            from pykeen.pipeline import pipeline
+            pipeline_result = pipeline(
+                dataset='Kinships',
+                model='TransE',
+            )
+            directory = f'tests/{time.strftime("%Y-%m-%d-%H%M%S")}'
+            bucket = 'pykeen'
+            pipeline_result.save_to_s3(directory, bucket=bucket)
+        """
+        if s3 is None:
+            import boto3
+            s3 = boto3.client('s3')
+
+        metadata_path = os.path.join(directory, 'metadata.json')
+        s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
+
+        results_path = os.path.join(directory, 'results.json')
+        s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
+
+        model_path = os.path.join(directory, 'trained_model.pkl')
+        s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
+
 
 def replicate_pipeline_from_path(
     path: str,
@@ -330,6 +401,7 @@ def replicate_pipeline_from_path(
     :param replicates: The number of replicates to run.
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
     """
     pipeline_results = (
         pipeline_from_path(path, **kwargs)
@@ -358,6 +430,7 @@ def replicate_pipeline_from_config(
     :param replicates: The number of replicates to run
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
     """
     pipeline_results = (
         pipeline_from_config(config, **kwargs)
@@ -415,32 +488,27 @@ def save_pipeline_results_to_directory(
 
 def pipeline_from_path(
     path: str,
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
     :param path: The path to an experiment JSON file
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     with open(path) as file:
         config = json.load(file)
     return pipeline_from_config(
         config=config,
-        mlflow_tracking_uri=mlflow_tracking_uri,
         **kwargs,
     )
 
 
 def pipeline_from_config(
     config: Mapping[str, Any],
-    mlflow_tracking_uri: Optional[str] = None,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
 
     :param config: The experiment configuration dictionary
-    :param mlflow_tracking_uri: The URL of the MLFlow tracking server. If None, do not use MLFlow for result tracking.
     """
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
@@ -448,7 +516,6 @@ def pipeline_from_config(
         logger.info(f'Running: {title}')
 
     return pipeline(
-        mlflow_tracking_uri=mlflow_tracking_uri,
         metadata=metadata,
         **pipeline_kwargs,
         **kwargs,
@@ -463,6 +530,8 @@ def pipeline(  # noqa: C901
     training_triples_factory: Optional[TriplesFactory] = None,
     testing_triples_factory: Optional[TriplesFactory] = None,
     validation_triples_factory: Optional[TriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -488,8 +557,10 @@ def pipeline(  # noqa: C901
     evaluator: Union[None, str, Type[Evaluator]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    # 9. Tracking
+    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
-    mlflow_tracking_uri: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -503,11 +574,19 @@ def pipeline(  # noqa: C901
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training_triples_factory:
-        A triples factory with training instances if a a dataset was not specified
+        A triples factory with training instances if a dataset was not specified
     :param testing_triples_factory:
         A triples factory with training instances if a dataset was not specified
     :param validation_triples_factory:
         A triples factory with validation instances if a dataset was not specified
+    :param evaluation_entity_whitelist:
+        Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
+        embedding quality.
+    :param evaluation_relation_whitelist:
+        Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
+        is only interested in certain relation, but the relational patterns with other relations improve the entity
+        embedding quality.
 
     :param model:
         The name of the model or the model class
@@ -557,22 +636,23 @@ def pipeline(  # noqa: C901
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
-    :param mlflow_tracking_uri:
-        The MLFlow tracking URL. If None is given, MLFlow is not used to track results.
-    :param metadata: A JSON dictionary to store with the experiment
-    :param use_testing_data: If true, use the testing triples. Otherwise, use the validation triples.
-     Defaults to true - use testing triples.
+    :param result_tracker:
+        The ResultsTracker class or name
+    :param result_tracker_kwargs:
+        The keyword arguments passed to the results tracker on instantiation
+
+    :param metadata:
+        A JSON dictionary to store with the experiment
+    :param use_testing_data:
+        If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
     if random_seed is None:
-        random_seed = random.randint(0, 2 ** 32 - 1)
+        random_seed = random_non_negative_int()
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
-    # Create result store
-    if mlflow_tracking_uri is not None:
-        result_tracker = MLFlowResultTracker(tracking_uri=mlflow_tracking_uri)
-    else:
-        result_tracker = ResultTracker()
+    result_tracker_cls: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+    result_tracker = result_tracker_cls(**(result_tracker_kwargs or {}))
 
     if not metadata:
         metadata = {}
@@ -583,7 +663,7 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params({'dataset': dataset})
+    result_tracker.log_params(dict(dataset=dataset))
 
     training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
         dataset=dataset,
@@ -593,10 +673,22 @@ def pipeline(  # noqa: C901
         validation_triples_factory=validation_triples_factory,
     )
 
+    # evaluation restriction to a subset of entities/relations
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        testing_triples_factory = testing_triples_factory.new_with_restriction(
+            entities=evaluation_entity_whitelist,
+            relations=evaluation_relation_whitelist,
+        )
+        if validation_triples_factory is not None:
+            validation_triples_factory = validation_triples_factory.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
+
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs.update(preferred_device=device)
-    model_kwargs.setdefault('random_seed', NoRandomSeedNecessary)
+    model_kwargs.setdefault('random_seed', random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
@@ -617,14 +709,13 @@ def pipeline(  # noqa: C901
         _loss = loss_cls(**(loss_kwargs or {}))
         model_kwargs.setdefault('loss', _loss)
 
-    # Log model parameters
-    result_tracker.log_params(model_kwargs, prefix='model')
-
     model = get_model_cls(model)
     model_instance: Model = model(
         triples_factory=training_triples_factory,
         **model_kwargs,
     )
+    # Log model parameters
+    result_tracker.log_params(params=dict(cls=model.__name__, kwargs=model_kwargs), prefix='model')
 
     optimizer = get_optimizer_cls(optimizer)
     training_loop = get_training_loop_cls(training_loop)
@@ -633,12 +724,13 @@ def pipeline(  # noqa: C901
         optimizer_kwargs = {}
 
     # Log optimizer parameters
-    result_tracker.log_params({'class': optimizer, 'kwargs': optimizer_kwargs}, prefix='optimizer')
+    result_tracker.log_params(params=dict(cls=optimizer.__name__, kwargs=optimizer_kwargs), prefix='optimizer')
     optimizer_instance = optimizer(
         params=model_instance.get_grad_params(),
         **optimizer_kwargs,
     )
 
+    result_tracker.log_params(params=dict(cls=training_loop.__name__), prefix='training_loop')
     if negative_sampler is None:
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
@@ -648,6 +740,10 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler = get_negative_sampler_cls(negative_sampler)
+        result_tracker.log_params(
+            params=dict(cls=negative_sampler.__name__, kwargs=negative_sampler_kwargs),
+            prefix='negative_sampler',
+        )
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
@@ -691,6 +787,7 @@ def pipeline(  # noqa: C901
 
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
+    result_tracker.log_params(params=training_kwargs, prefix='training')
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")

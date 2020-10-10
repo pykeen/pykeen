@@ -9,6 +9,7 @@ import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
 
+import numpy
 import pytest
 import torch
 from click.testing import CliRunner, Result
@@ -20,7 +21,14 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _extend_batch
+from pykeen.models.base import (
+    EntityEmbeddingModel,
+    EntityRelationEmbeddingModel,
+    Model,
+    MultimodalModel,
+    _extend_batch,
+    get_novelty_mask,
+)
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
@@ -98,7 +106,7 @@ class _ModelTestCase:
         self.model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
-            **(self.model_kwargs or {})
+            **(self.model_kwargs or {}),
         ).to_device_()
 
     def test_get_grad_parameters(self):
@@ -137,7 +145,8 @@ class _ModelTestCase:
             if (np.data == old_content[id(np)]).all()
         )
         assert num_equal_weights_after_re_init == self.num_constant_init, (
-            num_equal_weights_after_re_init, self.num_constant_init)
+            num_equal_weights_after_re_init, self.num_constant_init,
+        )
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -245,14 +254,14 @@ class _ModelTestCase:
             self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=42,
-            **(self.model_kwargs or {})
+            **(self.model_kwargs or {}),
         ).to_device_()
 
         loaded_model = self.model_cls(
             self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=21,
-            **(self.model_kwargs or {})
+            **(self.model_kwargs or {}),
         ).to_device_()
 
         if isinstance(original_model, EntityEmbeddingModel):
@@ -279,7 +288,7 @@ class _ModelTestCase:
         extras += [
             '--number-epochs', self.train_num_epochs,
             '--embedding-dim', self.embedding_dim,
-            '--batch-size', self.train_batch_size
+            '--batch-size', self.train_batch_size,
         ]
         extras = [str(e) for e in extras]
         return extras
@@ -439,7 +448,7 @@ Traceback
             self.model.__init__(
                 self.factory,
                 embedding_dim=self.embedding_dim,
-                **(self.model_kwargs or {})
+                **(self.model_kwargs or {}),
             )
         except TypeError as error:
             assert error.args == ("'NoneType' object is not callable",)
@@ -502,6 +511,52 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
+    def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
+        """Test score_all_triples.
+
+        :param k: The number of triples to return. Set to None, to keep all.
+        :param batch_size: The batch size to use for calculating scores.
+        """
+        top_triples, top_scores = self.model.score_all_triples(k=k, batch_size=batch_size, return_tensors=True)
+
+        # check type
+        assert torch.is_tensor(top_triples)
+        assert torch.is_tensor(top_scores)
+        assert top_triples.dtype == torch.long
+        assert top_scores.dtype == torch.float32
+
+        # check shape
+        actual_k, n_cols = top_triples.shape
+        assert n_cols == 3
+        if k is None:
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
+        else:
+            assert actual_k == min(k, self.factory.num_triples)
+        assert top_scores.shape == (actual_k,)
+
+        # check ID ranges
+        assert (top_triples >= 0).all()
+        assert top_triples[:, [0, 2]].max() < self.model.num_entities
+        assert top_triples[:, 1].max() < self.model.num_relations
+
+    def test_score_all_triples(self):
+        """Test score_all_triples with a large batch size."""
+        # this is only done in one of the models
+        self._test_score_all_triples(k=15, batch_size=16)
+
+    def test_score_all_triples_singleton_batch(self):
+        """Test score_all_triples with a batch size of 1."""
+        self._test_score_all_triples(k=15, batch_size=1)
+
+    def test_score_all_triples_large_batch(self):
+        """Test score_all_triples with a batch size larger than k."""
+        self._test_score_all_triples(k=10, batch_size=16)
+
+    def test_score_all_triples_keep_all(self):
+        """Test score_all_triples with k=None."""
+        # this is only done in one of the models
+        self._test_score_all_triples(k=None)
+
 
 class TestERMLP(_ModelTestCase, unittest.TestCase):
     """Test the ERMLP model."""
@@ -544,7 +599,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1.)
+        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
 
 
 class _TestKG2E(_ModelTestCase):
@@ -1091,3 +1146,22 @@ class MessageWeightingTests(unittest.TestCase):
     def test_symmetric_edge_weights(self):
         """Test symmetric_edge_weights."""
         self._test_message_weighting(weight_func=symmetric_edge_weights)
+
+
+def test_get_novelty_mask():
+    """Test `get_novelty_mask()`."""
+    num_triples = 7
+    base = torch.arange(num_triples)
+    mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
+    query_ids = torch.randperm(num_triples).numpy()[:num_triples // 2]
+    exp_novel = query_ids != 0
+    col = 2
+    other_col_ids = numpy.asarray([0, 0])
+    mask = get_novelty_mask(
+        mapped_triples=mapped_triples,
+        query_ids=query_ids,
+        col=col,
+        other_col_ids=other_col_ids,
+    )
+    assert mask.shape == query_ids.shape
+    assert (mask == exp_novel).all()

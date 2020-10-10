@@ -14,6 +14,8 @@ ignore =
     W503
     # Missing docstring in __init__
     D107
+    # FTP related stuff
+    S402
 exclude =
     .tox,
     .git,
