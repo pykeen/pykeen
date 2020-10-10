@@ -24,8 +24,8 @@ install:
   - cmd: python --version
   - cmd: conda info
   - cmd: conda config --set always_yes true
-  - cmd: conda install pip setuptools wheel pytest coverage mlflow
-  - cmd: pip install tox
+  - cmd: conda install pip setuptools wheel pytest coverage
+  - cmd: pip install tox mlflow
   - cmd: conda update --quiet conda
   - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
   - cmd: pip install -e .
