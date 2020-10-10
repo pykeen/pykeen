@@ -2,12 +2,12 @@
 
 environment:
   # Appveyor machines come with miniconda already installed.
-  CONDA_INSTALL_LOCN: "C:\\Miniconda37-x64"
   CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\continuous-integration\\appveyor\\run_with_env.cmd"
   matrix:
     - TARGET_ARCH: "x64"
       PYTHON_BUILD_RESTRICTIONS: "3.7*"
       CONDA_PY: "37"
+      CONDA_INSTALL_LOCN: "C:\\Miniconda37-x64"
 
 # We always use a 64-bit machine, but can build x86 distributions
 # with the TARGET_ARCH variable.
@@ -32,7 +32,7 @@ install:
 #test_script:
 #  - "%CMD_IN_ENV% tox -e py,integration"
 test_script:
-  - "%CMD_IN_ENV% pip show pykeen tox"
+  - pip show pykeen tox
 
 
 # References:
