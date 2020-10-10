@@ -12,8 +12,8 @@
          alt="Travis CI">
   </a>
 
-  <a href="https://ci.appveyor.com/project/cthoyt/pykeen/branch/master">
-    <img src="https://ci.appveyor.com/api/projects/status/c35rlorj03h790ai/branch/master?svg=true"
+  <a href="https://ci.appveyor.com/project/lvermue/pykeen/branch/master">
+    <img src="https://ci.appveyor.com/api/projects/status/yow5ihwy3yigsv5c/branch/master?svg=true"
          alt="AppVeyor">
   </a>
 
