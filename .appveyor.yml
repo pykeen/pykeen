@@ -31,8 +31,7 @@ install:
   - cmd: pip install -e .
 
 test_script:
-  - conda info
-  - pip show tox pykeen torch
+  - tox -e py,integration
 
 # References:
 # 1. https://github.com/astropy/conda-build-tools/blob/master/appveyor.yml
