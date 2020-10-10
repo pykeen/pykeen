@@ -31,8 +31,9 @@ install:
 #  - cmd: pip install -e .
 
 test_script:
-  - conda env list
-  - pip show sqlite3
+  - python -c "import sqlite3; print(sqlite3.version)"
+  - conda activate
+  - python -c "import sqlite3; print(sqlite3.version)"
 #  - coverage run -p -m pytest --durations=20 tests -m slow
 #  - coverage run -p -m pytest --durations=20 {posargs:tests} -m slow
 
