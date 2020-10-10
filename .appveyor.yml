@@ -27,8 +27,8 @@ install:
   - cmd: conda install pip setuptools wheel pytest coverage sqlite
   - cmd: pip install tox mlflow
   - cmd: conda update --quiet conda
-#  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-#  - cmd: pip install -e .
+  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+  - cmd: pip install -e .
 
 test_script:
   # We have to activate the conda environment explicitly
