@@ -23,16 +23,16 @@ install:
   # Check that we have the expected version and architecture for Python
   - cmd: python --version
   - cmd: conda info
-#  - cmd: conda config --set always_yes true
-#  - cmd: conda install pip setuptools wheel
-#  - cmd: pip install tox
-#  - cmd: conda update --quiet conda
-#  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+  - cmd: conda config --set always_yes true
+  - cmd: conda install pip setuptools wheel
+  - cmd: pip install tox
+  - cmd: conda update --quiet conda
+  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
 
 #test_script:
 #  - "%CMD_IN_ENV% tox -e py,integration"
-test_script:
-  - pip show pykeen tox
+#test_script:
+#  - pip show pykeen tox
 
 
 # References:
