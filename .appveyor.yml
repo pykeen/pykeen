@@ -27,12 +27,14 @@ install:
   - cmd: conda install pip setuptools wheel pytest coverage sqlite
   - cmd: pip install tox mlflow
   - cmd: conda update --quiet conda
-  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-  - cmd: pip install -e .
+#  - cmd: conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+#  - cmd: pip install -e .
 
 test_script:
-  - coverage run -p -m pytest --durations=20 tests -m slow
-  - coverage run -p -m pytest --durations=20 {posargs:tests} -m slow
+  - conda env list
+  - pip show sqlite3
+#  - coverage run -p -m pytest --durations=20 tests -m slow
+#  - coverage run -p -m pytest --durations=20 {posargs:tests} -m slow
 
 # References:
 # 1. https://github.com/astropy/conda-build-tools/blob/master/appveyor.yml
