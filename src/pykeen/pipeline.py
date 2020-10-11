@@ -179,7 +179,7 @@ from torch.optim.optimizer import Optimizer
 from .datasets import get_dataset
 from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
-from .losses import Loss, get_loss_cls
+from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
 from .models.base import Model
 from .optimizers import get_optimizer_cls
@@ -190,7 +190,7 @@ from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
-    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, normalize_string,
     random_non_negative_int, resolve_device, set_random_seed,
 )
 from .version import get_git_hash, get_version
@@ -256,7 +256,9 @@ class PipelineResult(Result):
         sns.set_style('darkgrid')
 
         rv = sns.lineplot(x=range(len(self.losses)), y=self.losses, ax=ax)
-        ax.set_ylabel('Loss')
+
+        loss_name = normalize_string(self.model.loss.__class__.__name__, suffix=_LOSS_SUFFIX)
+        ax.set_ylabel(f'{loss_name} Loss')
         ax.set_xlabel('Epoch')
         ax.set_title(self.title if self.title is not None else 'Losses')
         return rv
