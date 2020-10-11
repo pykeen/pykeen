@@ -170,7 +170,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import pandas as pd
 import torch
@@ -250,59 +250,108 @@ class PipelineResult(Result):
         """The title of the experiment."""
         return self.metadata.get('title')
 
-    def plot_losses(self):
+    def plot_losses(self, ax=None):
         """Plot the losses per epoch."""
-        import matplotlib.pyplot as plt
         import seaborn as sns
-        sns.set()
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        if self.title is not None:
-            plt.title(self.title)
-        return sns.lineplot(x=range(len(self.losses)), y=self.losses)
+        sns.set_style('darkgrid')
 
-    def plot_er_2d(self, model='PCA', width: float = 0.4, **kwargs):
+        rv = sns.lineplot(x=range(len(self.losses)), y=self.losses, ax=ax)
+        ax.set_ylabel('Loss')
+        ax.set_xlabel('Epoch')
+        ax.set_title(self.title if self.title is not None else 'Losses')
+        return rv
+
+    def plot_er(
+        self,
+        model: Optional[str] = None,
+        width: float = 0.4,
+        ax=None,
+        entities: Optional[Set[str]] = None,
+        relations: Optional[Set[str]] = None,
+        **kwargs,
+    ):
         """Plot the reduced entities and relation vectors in 2D."""
-        import matplotlib.pyplot as plt
-
+        if model is None:
+            model = 'PCA'
         if model.upper() == 'PCA':
-            from sklearn.decomposition import PCA as reducer
+            from sklearn.decomposition import PCA as Reducer  # noqa:N811
         elif model.upper() == 'KPCA':
-            kwargs.setdefault('kernel', 'linear')
-            from sklearn.decomposition import KernelPCA as reducer
+            kwargs.setdefault('kernel', 'rbf')
+            from sklearn.decomposition import KernelPCA as Reducer
         elif model.upper() == 'GRP':
-            from sklearn.random_projection import GaussianRandomProjection as reducer
+            from sklearn.random_projection import GaussianRandomProjection as Reducer
         elif model.upper() == 'SRP':
-            from sklearn.random_projection import SparseRandomProjection as reducer
+            from sklearn.random_projection import SparseRandomProjection as Reducer
         else:
             raise ValueError(f'invalid dimensionality reduction model: {model}')
 
-        entity_reduction_model = reducer(n_components=2, **_kwargs)
-        relation_reduction_model = reducer(n_components=2, **_kwargs)
+        e_emb = self.model.entity_embeddings.weight.detach().numpy()
+        if e_emb.shape[1] != 2:
+            entity_reduction_model = Reducer(n_components=2, **kwargs)
+            e_emb_red = entity_reduction_model.fit_transform(e_emb)
+        else:
+            logger.debug('not reducing entity embeddings, already dim=2')
+            e_emb_red = e_emb
+
+        r_emb = self.model.relation_embeddings.weight.detach().numpy()
+        if r_emb.shape[1] != 2:
+            relation_reduction_model = Reducer(n_components=2, **kwargs)
+            r_emb_red = relation_reduction_model.fit_transform(r_emb)
+        else:
+            logger.debug('not reducing relation embeddings, already dim=2')
+            r_emb_red = r_emb
+
+        if ax is None:
+            import matplotlib.pyplot as plt
+            ax = plt.gca()
+
+        import seaborn as sns
+        sns.set_style('whitegrid')
 
         # draw entities
-        e_emb = self.model.entity_embeddings.weight.detach().numpy()
-        e_emb_red = entity_reduction_model.fit_transform(e_emb)
         entity_id_to_label = self.model.triples_factory.entity_id_to_label
-        for entity_id, entity_embedding in enumerate(e_emb_red):
-            plt.scatter(*entity_embedding, color='black')
-            plt.annotate(entity_id_to_label[entity_id], entity_embedding)
+        for entity_id, entity_reduced_embedding in enumerate(e_emb_red):
+            entity_label = entity_id_to_label[entity_id]
+            if entities and entity_label not in entities:
+                continue
+            ax.scatter(*entity_reduced_embedding, color='black')
+            ax.annotate(entity_label, entity_reduced_embedding)
 
         # draw relations
-        r_emb = self.model.relation_embeddings.weight.detach().numpy()
-        r_emb_red = relation_reduction_model.fit_transform(r_emb)
-        r_id_to_label = self.model.triples_factory.relation_id_to_label
-        for relation_id, relation_embedding in enumerate(r_emb_red):
-            plt.arrow(0, 0, *relation_embedding)
-            plt.annotate(r_id_to_label[relation_id], relation_embedding)
+        relation_id_to_label = self.model.triples_factory.relation_id_to_label
+        for relation_id, relation_reduced_embedding in enumerate(r_emb_red):
+            relation_label = relation_id_to_label[relation_id]
+            if relations and relation_label not in relations:
+                continue
+            ax.arrow(0, 0, *relation_reduced_embedding, color='black')
+            ax.annotate(relation_label, relation_reduced_embedding)
 
         xmax = max(r_emb_red[:, 0].max(), e_emb_red[:, 0].max()) + width
         xmin = min(r_emb_red[:, 0].min(), e_emb_red[:, 0].min()) - width
         ymax = max(r_emb_red[:, 1].max(), e_emb_red[:, 1].max()) + width
         ymin = min(r_emb_red[:, 1].min(), e_emb_red[:, 1].min()) - width
 
-        plt.xlim([xmin, xmax])
-        plt.ylim([ymin, ymax])
+        if kwargs:
+            subtitle = ", ".join("=".join(item) for item in kwargs.items())
+            subtitle = f'({subtitle})'
+        else:
+            subtitle = ''
+
+        ax.set_title(f'Entity/Relation Plot using {model} {subtitle}')
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
+
+        return ax
+
+    def plot(self, er_kwargs: Optional[Mapping[str, str]] = None):
+        """Plot all plots."""
+        import matplotlib.pyplot as plt
+        fig, (lax, rax) = plt.subplots(1, 2, figsize=(14, 4))
+
+        self.plot_losses(ax=lax)
+        self.plot_er(ax=rax, **(er_kwargs or {}))
+
+        plt.tight_layout()
 
     def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.

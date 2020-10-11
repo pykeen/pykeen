@@ -127,6 +127,7 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
+        tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
     ) -> MetricResults:
@@ -160,6 +161,7 @@ class Evaluator(ABC):
             device=device,
             squeeze=True,
             use_tqdm=use_tqdm,
+            tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
         )
@@ -263,7 +265,7 @@ class Evaluator(ABC):
             raise AttributeError(f'The parameter {key} is unknown.')
         reached_max = False
         evaluated_once = False
-        logger.info(f'Starting {key} search for evaluation now...')
+        logger.debug(f'Starting {key} search for evaluation now...')
         while True:
             logger.debug(f'Trying {key}={values_dict[key]}')
             try:
@@ -302,7 +304,7 @@ class Evaluator(ABC):
                 values_dict[key] //= 2
                 reached_max = True
                 if evaluated_once:
-                    logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
+                    logger.debug(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
                 else:
                     logger.debug(f'The {key} {values_dict[key]} was too big, trying less now')
@@ -313,7 +315,7 @@ class Evaluator(ABC):
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
                     values_dict[key] *= 2
                 else:
-                    logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
+                    logger.debug(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
 
         return values_dict[key], evaluated_once
@@ -441,6 +443,7 @@ def evaluate(
     device: Optional[torch.device] = None,
     squeeze: bool = True,
     use_tqdm: bool = True,
+    tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
@@ -536,17 +539,17 @@ def evaluate(
     evaluated_once = False
 
     # Disable gradient tracking
-    with optional_context_manager(
-        use_tqdm,
-        tqdm(
-            desc=f'Evaluating on {model.device}',
-            total=num_triples,
-            unit='triple',
-            unit_scale=True,
-            # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
-            disable=not use_tqdm,
-        ),
-    ) as progress_bar, torch.no_grad():
+    _tqdm_kwargs = dict(
+        desc=f'Evaluating on {model.device}',
+        total=num_triples,
+        unit='triple',
+        unit_scale=True,
+        # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
+        disable=not use_tqdm,
+    )
+    if tqdm_kwargs:
+        _tqdm_kwargs.update(tqdm_kwargs)
+    with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]
@@ -579,7 +582,7 @@ def evaluate(
         results = [evaluator.finalize() for evaluator in evaluators]
 
     stop = timeit.default_timer()
-    if only_size_probing:
+    if only_size_probing or use_tqdm:
         logger.debug("Evaluation took %.2fs seconds", stop - start)
     else:
         logger.info("Evaluation took %.2fs seconds", stop - start)

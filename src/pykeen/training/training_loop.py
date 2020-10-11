@@ -313,10 +313,10 @@ class TrainingLoop(ABC):
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(1, 1 + num_epochs, **_tqdm_kwargs)
-            logger.info(f'using stopper: {stopper}')
         else:
             epochs = range(1, 1 + num_epochs)
-            logger.debug(f'using stopper: {stopper}')
+
+        logger.debug(f'using stopper: {stopper}')
 
         train_data_loader = DataLoader(
             sampler=sampler,
