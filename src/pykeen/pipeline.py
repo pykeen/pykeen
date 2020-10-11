@@ -260,7 +260,7 @@ class PipelineResult(Result):
         loss_name = normalize_string(self.model.loss.__class__.__name__, suffix=_LOSS_SUFFIX)
         ax.set_ylabel(f'{loss_name} Loss')
         ax.set_xlabel('Epoch')
-        ax.set_title(self.title if self.title is not None else 'Losses')
+        ax.set_title(self.title if self.title is not None else 'Losses Plot')
         return rv
 
     def plot_er(
