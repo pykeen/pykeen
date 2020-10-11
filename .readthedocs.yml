@@ -7,6 +7,10 @@ version: 2
 sphinx:
   configuration: docs/source/conf.py
 
+# Build HTML only
+formats:
+  - htmlzip
+
 python:
   version: 3.7
   pip_install: true
