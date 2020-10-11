@@ -1,4 +1,12 @@
-# See: https://docs.readthedocs.io/en/latest/yaml-config.html
+# See: https://docs.readthedocs.io/en/stable/config-file/v2.html#formats
+
+# Required
+version: 2
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+  configuration: docs/source/conf.py
+
 python:
   version: 3.7
   pip_install: true
