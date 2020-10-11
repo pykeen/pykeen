@@ -331,13 +331,15 @@ class PipelineResult(Result):
         ymax = max(r_emb_red[:, 1].max(), e_emb_red[:, 1].max()) + width
         ymin = min(r_emb_red[:, 1].min(), e_emb_red[:, 1].min()) - width
 
-        if kwargs:
-            subtitle = ", ".join("=".join(item) for item in kwargs.items())
-            subtitle = f'({subtitle})'
-        else:
+        if r_emb.shape[1] == 2 and e_emb.shape[1] == 2:
             subtitle = ''
+        elif kwargs:
+            subtitle = ", ".join("=".join(item) for item in kwargs.items())
+            subtitle = f' using {model} ({subtitle})'
+        else:
+            subtitle = f' using {model}'
 
-        ax.set_title(f'Entity/Relation Plot using {model} {subtitle}')
+        ax.set_title(f'Entity/Relation Plot{subtitle}')
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
 
