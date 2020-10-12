@@ -582,10 +582,7 @@ def evaluate(
         results = [evaluator.finalize() for evaluator in evaluators]
 
     stop = timeit.default_timer()
-    if only_size_probing or use_tqdm:
-        logger.debug("Evaluation took %.2fs seconds", stop - start)
-    else:
-        logger.info("Evaluation took %.2fs seconds", stop - start)
+    logger.debug("Evaluation took %.2fs seconds", stop - start)
 
     if squeeze and len(results) == 1:
         return results[0]

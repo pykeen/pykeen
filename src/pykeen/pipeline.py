@@ -266,13 +266,21 @@ class PipelineResult(Result):
     def plot_er(
         self,
         model: Optional[str] = None,
-        width: float = 0.4,
+        margin: float = 0.4,
         ax=None,
         entities: Optional[Set[str]] = None,
         relations: Optional[Set[str]] = None,
+        apply_limits: bool = True,
+        plot_entities: bool = True,
+        plot_relations: bool = True,
+        annotation_x_offset: float = 0.02,
+        annotation_y_offset: float = 0.03,
         **kwargs,
     ):
         """Plot the reduced entities and relation vectors in 2D."""
+        if not plot_entities and not plot_relations:
+            raise ValueError
+
         if model is None:
             model = 'PCA'
         if model.upper() == 'PCA':
@@ -287,6 +295,14 @@ class PipelineResult(Result):
         else:
             raise ValueError(f'invalid dimensionality reduction model: {model}')
 
+        if ax is None:
+            import matplotlib.pyplot as plt
+            ax = plt.gca()
+
+        import seaborn as sns
+        sns.set_style('whitegrid')
+
+        # reduce entity embedding dimensionality
         e_emb = self.model.entity_embeddings.weight.detach().numpy()
         if e_emb.shape[1] != 2:
             entity_reduction_model = Reducer(n_components=2, **kwargs)
@@ -295,6 +311,7 @@ class PipelineResult(Result):
             logger.debug('not reducing entity embeddings, already dim=2')
             e_emb_red = e_emb
 
+        # reduce relation embedding dimensionality
         r_emb = self.model.relation_embeddings.weight.detach().numpy()
         if r_emb.shape[1] != 2:
             relation_reduction_model = Reducer(n_components=2, **kwargs)
@@ -303,35 +320,43 @@ class PipelineResult(Result):
             logger.debug('not reducing relation embeddings, already dim=2')
             r_emb_red = r_emb
 
-        if ax is None:
-            import matplotlib.pyplot as plt
-            ax = plt.gca()
+        if plot_relations and plot_entities:
+            xmax = max(r_emb_red[:, 0].max(), e_emb_red[:, 0].max()) + margin
+            xmin = min(r_emb_red[:, 0].min(), e_emb_red[:, 0].min()) - margin
+            ymax = max(r_emb_red[:, 1].max(), e_emb_red[:, 1].max()) + margin
+            ymin = min(r_emb_red[:, 1].min(), e_emb_red[:, 1].min()) - margin
+        elif plot_relations:
+            xmax = r_emb_red[:, 0].max() + margin
+            xmin = r_emb_red[:, 0].min() - margin
+            ymax = r_emb_red[:, 1].max() + margin
+            ymin = r_emb_red[:, 1].min() - margin
+        elif plot_entities:
+            xmax = e_emb_red[:, 0].max() + margin
+            xmin = e_emb_red[:, 0].min() - margin
+            ymax = e_emb_red[:, 1].max() + margin
+            ymin = e_emb_red[:, 1].min() - margin
+        else:
+            raise ValueError  # not even possible
 
-        import seaborn as sns
-        sns.set_style('whitegrid')
+        if plot_entities:
+            entity_id_to_label = self.model.triples_factory.entity_id_to_label
+            for entity_id, entity_reduced_embedding in enumerate(e_emb_red):
+                entity_label = entity_id_to_label[entity_id]
+                if entities and entity_label not in entities:
+                    continue
+                x, y = entity_reduced_embedding
+                ax.scatter(x, y, color='black')
+                ax.annotate(entity_label, (x + annotation_x_offset, y + annotation_y_offset))
 
-        # draw entities
-        entity_id_to_label = self.model.triples_factory.entity_id_to_label
-        for entity_id, entity_reduced_embedding in enumerate(e_emb_red):
-            entity_label = entity_id_to_label[entity_id]
-            if entities and entity_label not in entities:
-                continue
-            ax.scatter(*entity_reduced_embedding, color='black')
-            ax.annotate(entity_label, entity_reduced_embedding)
-
-        # draw relations
-        relation_id_to_label = self.model.triples_factory.relation_id_to_label
-        for relation_id, relation_reduced_embedding in enumerate(r_emb_red):
-            relation_label = relation_id_to_label[relation_id]
-            if relations and relation_label not in relations:
-                continue
-            ax.arrow(0, 0, *relation_reduced_embedding, color='black')
-            ax.annotate(relation_label, relation_reduced_embedding)
-
-        xmax = max(r_emb_red[:, 0].max(), e_emb_red[:, 0].max()) + width
-        xmin = min(r_emb_red[:, 0].min(), e_emb_red[:, 0].min()) - width
-        ymax = max(r_emb_red[:, 1].max(), e_emb_red[:, 1].max()) + width
-        ymin = min(r_emb_red[:, 1].min(), e_emb_red[:, 1].min()) - width
+        if plot_relations:
+            relation_id_to_label = self.model.triples_factory.relation_id_to_label
+            for relation_id, relation_reduced_embedding in enumerate(r_emb_red):
+                relation_label = relation_id_to_label[relation_id]
+                if relations and relation_label not in relations:
+                    continue
+                x, y = relation_reduced_embedding
+                ax.arrow(0, 0, x, y, color='black')
+                ax.annotate(relation_label, (x + annotation_x_offset, y + annotation_y_offset))
 
         if r_emb.shape[1] == 2 and e_emb.shape[1] == 2:
             subtitle = ''
@@ -340,17 +365,18 @@ class PipelineResult(Result):
             subtitle = f' using {model} ({subtitle})'
         else:
             subtitle = f' using {model}'
-
         ax.set_title(f'Entity/Relation Plot{subtitle}')
-        ax.set_xlim([xmin, xmax])
-        ax.set_ylim([ymin, ymax])
+
+        if apply_limits:
+            ax.set_xlim([xmin, xmax])
+            ax.set_ylim([ymin, ymax])
 
         return ax
 
-    def plot(self, er_kwargs: Optional[Mapping[str, str]] = None):
+    def plot(self, er_kwargs: Optional[Mapping[str, str]] = None, figsize=(10, 4)):
         """Plot all plots."""
         import matplotlib.pyplot as plt
-        fig, (lax, rax) = plt.subplots(1, 2, figsize=(14, 4))
+        fig, (lax, rax) = plt.subplots(1, 2, figsize=figsize)
 
         self.plot_losses(ax=lax)
         self.plot_er(ax=rax, **(er_kwargs or {}))
