@@ -1,7 +1,8 @@
 Toy Example with Translational Distance Models
 ==============================================
 The following tutorial is based on a question originally posed by Prof.
-Heiko Paulheim at `#97 <https://github.com/pykeen/pykeen/issues/97>`_.
+Heiko Paulheim on the PyKEEN Issue Tracker
+`#97 <https://github.com/pykeen/pykeen/issues/97>`_.
 
 Given the following toy example comprising three entities in a triangle,
 a translational distance model like :class:`pykeen.models.TransE` should
