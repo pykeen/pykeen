@@ -18,9 +18,6 @@ be able to exactly learn the geometric structure.
 | EU       | hasCapital | Brussels |
 +----------+------------+----------+
 
-Initial Attempt
----------------
-
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
