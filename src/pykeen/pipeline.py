@@ -263,7 +263,7 @@ class PipelineResult(Result):
         ax.set_title(self.title if self.title is not None else 'Losses Plot')
         return rv
 
-    def plot_er(
+    def plot_er(  # noqa: C901
         self,
         model: Optional[str] = None,
         margin: float = 0.4,
