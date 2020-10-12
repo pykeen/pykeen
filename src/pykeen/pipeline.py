@@ -252,6 +252,10 @@ class PipelineResult(Result):
 
     def plot_losses(self, ax=None):
         """Plot the losses per epoch."""
+        if ax is None:
+            import matplotlib.pyplot as plt
+            ax = plt.gca()
+
         import seaborn as sns
         sns.set_style('darkgrid')
 

@@ -11,6 +11,7 @@ PyKEEN
    tutorial/first_steps
    tutorial/byod
    tutorial/understanding_evaluation
+   tutorial/translational_toy_example
    tutorial/running_hpo
    tutorial/using_mlflow
    tutorial/using_wandb
