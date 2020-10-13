@@ -35,6 +35,7 @@ PyKEEN
    reference/negative_sampling
    reference/hpo
    reference/lookup
+   reference/sealant
 
 .. toctree::
    :caption: Appendix

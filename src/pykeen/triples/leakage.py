@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Tools for removing the leakage from datasets."""
+"""Tools for removing the leakage from datasets.
+
+Leakage is when the inverse of a given training triple appears in either
+the testing or validation set. This scenario generally leads to inflated
+and misleading evaluation because predicting an inverse triple is usually
+very easy and not a sign of the generalizability of a model to predict
+novel triples.
+"""
 
 import itertools as itt
 import logging
