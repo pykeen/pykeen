@@ -1205,3 +1205,26 @@ class InteractionFunction(nn.Module):
                 continue
             if hasattr(mod, 'reset_parameters'):
                 mod.reset_parameters()
+
+
+def normalize_for_einsum(
+    x: torch.FloatTensor,
+    batch_size: int,
+    symbol: str,
+) -> Tuple[str, torch.FloatTensor]:
+    """
+    Normalize tensor for broadcasting along batch-dimension in einsum.
+
+    :param x:
+        The tensor.
+    :param batch_size:
+        The batch_size
+    :param symbol:
+        The symbol for the einsum term.
+
+    :return:
+        A tuple (reshaped_tensor, term).
+    """
+    if x.shape[0] == batch_size:
+        return f'b{symbol}d', x
+    return f'{symbol}d', x.squeeze(dim=0)

@@ -8,7 +8,7 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction
+from ..base import EntityRelationEmbeddingModel, InteractionFunction, normalize_for_einsum
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -18,29 +18,6 @@ __all__ = [
     'DistMult',
     'DistMultInteractionFunction',
 ]
-
-
-def _normalize_for_einsum(
-    x: torch.FloatTensor,
-    batch_size: int,
-    symbol: str,
-) -> Tuple[str, torch.FloatTensor]:
-    """
-    Normalize tensor for broadcasting along batch-dimension in einsum.
-
-    :param x:
-        The tensor.
-    :param batch_size:
-        The batch_size
-    :param symbol:
-        The symbol for the einsum term.
-
-    :return:
-        A tuple (reshaped_tensor, term).
-    """
-    if x.shape[0] == batch_size:
-        return f'b{symbol}d', x
-    return f'{symbol}d', x.squeeze(dim=0)
 
 
 class DistMultInteractionFunction(InteractionFunction):
@@ -53,9 +30,9 @@ class DistMultInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         batch_size = max(h.shape[0], r.shape[0], t.shape[0])
-        h_term, h = _normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
-        r_term, r = _normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
-        t_term, t = _normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
+        h_term, h = normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
+        r_term, r = normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
+        t_term, t = normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
         return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
 
 
