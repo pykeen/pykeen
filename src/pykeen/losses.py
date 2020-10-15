@@ -46,7 +46,7 @@ class SetwiseLoss(Loss):
 
 
 class BCEWithLogits(PointwiseLoss, nn.BCEWithLogits):
-    r"""A wrapper around the stable version of the PyTorch binary cross entropy loss.
+    r"""A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
     function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
