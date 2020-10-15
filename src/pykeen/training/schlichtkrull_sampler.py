@@ -91,13 +91,10 @@ class GraphSamplerCompressed(Sampler):
             # determine weights
             weights = node_weights * node_picked
 
-            # only happens at first iteration
+            # only happens at first iteration; or if there are multiple disconnected components!
             if torch.sum(weights) == 0:
                 weights = torch.ones_like(weights)
                 weights[node_weights == 0] = 0
-                assert i == 0
-            else:
-                assert i > 0
 
             # normalize to probabilities
             probabilities = weights.float() / weights.sum().float()
@@ -193,7 +190,7 @@ class GraphSamplerSchlichtkrull(Sampler):
             sample_counts = sample_counts.clip(min=0)
             seen[other_vertex] = True
         end = timeit.default_timer()
-        print("Sampling took", end - start, "seconds.")
+        logging.debug(f"Sampling took {end - start} seconds.")
         return iter(edges)
 
 
