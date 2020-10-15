@@ -4,7 +4,7 @@
 
 import logging
 from os import path
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Collection, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import torch
 from torch import nn
@@ -12,13 +12,14 @@ from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityRelationEmbeddingModel
-from ..base import Model
 from ...losses import Loss
 from ...triples import TriplesFactory
 
 __all__ = [
     'RGCN',
 ]
+
+from ...utils import get_cls, normalize_string
 
 logger = logging.getLogger(name=path.basename(__file__))
 
@@ -516,6 +517,28 @@ class Bias(nn.Module):
         return x + self.bias.unsqueeze(dim=0)
 
 
+_DECOMPOSITION_SUFFIX = "Decomposition"
+_DECOMPOSITIONS: Collection[Type[RelationSpecificMessagePassing]] = {
+    BasesDecomposition,
+    BlockDecomposition,
+}
+
+decompositions: Mapping[str, Type[RelationSpecificMessagePassing]] = {
+    normalize_string(cls.__name__, suffix=_DECOMPOSITION_SUFFIX): cls
+    for cls in _DECOMPOSITIONS
+}
+
+
+def get_decomposition_cls(query: Union[str, Type[RelationSpecificMessagePassing]]) -> Type[RelationSpecificMessagePassing]:
+    """Get the decomposition class."""
+    return get_cls(
+        query,
+        base=RelationSpecificMessagePassing,
+        lookup_dict=decompositions,
+        suffix=_DECOMPOSITION_SUFFIX,
+    )
+
+
 class RGCN(EntityRelationEmbeddingModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
@@ -576,7 +599,7 @@ class RGCN(EntityRelationEmbeddingModel):
             [torch.LongTensor, torch.LongTensor],
             torch.FloatTensor
         ] = inverse_indegree_edge_weights,
-        decomposition: Type[RelationSpecificMessagePassing] = BasesDecomposition,
+        decomposition: Union[str, Type[RelationSpecificMessagePassing]] = BasesDecomposition,
         buffer_messages: bool = True,
         memory_intense: bool = False,
     ):
@@ -679,6 +702,7 @@ class RGCN(EntityRelationEmbeddingModel):
             input_dim=self.embedding_dim,
             num_relations=self.num_relations,
         )
+        decomposition = get_decomposition_cls(query=decomposition)
         if decomposition is BasesDecomposition:
             message_passing_kwargs['num_bases'] = num_bases
             message_passing_kwargs['memory_intense'] = memory_intense
