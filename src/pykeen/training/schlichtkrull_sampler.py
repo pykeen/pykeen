@@ -140,11 +140,13 @@ class GraphSamplerCompressed(Sampler):
 
 
 class GraphSamplerSchlichtkrull(Sampler):
+    """Schlichtkrull sampler."""
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
         num_samples: Optional[int] = None,
-    ):
+    ):  # noqa:D105
         super().__init__(data_source=triples_factory.mapped_triples)
         if num_samples < 0 or num_samples > triples_factory.num_triples:
             raise ValueError(f"invalid num_samples={num_samples}")
@@ -158,9 +160,9 @@ class GraphSamplerSchlichtkrull(Sampler):
         self.degrees = numpy.asarray([len(a) for a in adj_list], dtype=numpy.int64)
         self.num_triples = triples_factory.num_triples
 
-    def __iter__(self):
+    def __iter__(self):  # noqa:D105
         start = timeit.default_timer()
-        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/train.py#L161-L198
+        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/train.py#L161-L198  # noqa:E501
         edges = numpy.zeros(shape=(self.num_samples,), dtype=numpy.int32)
 
         # initialize
@@ -200,11 +202,13 @@ class GraphSamplerSchlichtkrull(Sampler):
 
 
 class GraphSamplerPython(Sampler):
+    """Python sampler."""
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
         num_samples: Optional[int] = None,
-    ):
+    ):  # noqa:D105
         super().__init__(data_source=triples_factory.mapped_triples)
         if num_samples < 0 or num_samples > triples_factory.num_triples:
             raise ValueError(f"invalid num_samples={num_samples}")
@@ -222,14 +226,14 @@ class GraphSamplerPython(Sampler):
             self.degree[v] += 1
         logging.debug('finished')
 
-    def __iter__(self):
+    def __iter__(self):  # noqa:D105
         logging.debug('sampling...')
         start = timeit.default_timer()
         edges = set()
         # choose random start node
         node = numpy.random.choice(list(self.adjacency.keys()))
         weight = {
-            node: self.degree[node]
+            node: self.degree[node],
         }
         for i in range(self.num_samples):
             if i % 1000 == 0:

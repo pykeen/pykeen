@@ -416,7 +416,7 @@ class BlockDecomposition(RelationSpecificMessagePassing):
         if remainder != 0:
             raise NotImplementedError(
                 'With block decomposition, the embedding dimension has to be divisible by the number of'
-                f' blocks, but {input_dim} % {num_blocks} != 0.'
+                f' blocks, but {input_dim} % {num_blocks} != 0.',
             )
 
         self.blocks = nn.Parameter(
@@ -496,7 +496,7 @@ class Bias(nn.Module):
             The dimension of the input.
         """
         super().__init__()
-        self.bias = nn.Parameter(torch.empty(dim, ), requires_grad=True)
+        self.bias = nn.Parameter(torch.empty(dim), requires_grad=True)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -528,7 +528,9 @@ decompositions: Mapping[str, Type[RelationSpecificMessagePassing]] = {
 }
 
 
-def get_decomposition_cls(query: Union[str, Type[RelationSpecificMessagePassing]]) -> Type[RelationSpecificMessagePassing]:
+def get_decomposition_cls(
+    query: Union[str, Type[RelationSpecificMessagePassing]],
+) -> Type[RelationSpecificMessagePassing]:
     """Get the decomposition class."""
     return get_cls(
         query,

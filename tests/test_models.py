@@ -1163,20 +1163,22 @@ def test_get_novelty_mask():
 
 
 class _MessagePassingTests:
+
     cls: Type[RelationSpecificMessagePassing]
     kwargs: Optional[Mapping[str, Any]] = None
     input_dim: int = 3
+    instance: RelationSpecificMessagePassing
 
     def setUp(self) -> None:
         self.output_dim = self.input_dim
-        self.factory = NationsTrainingTriplesFactory()
+        self.factory = Nations().training
         self.x = torch.rand(self.factory.num_entities, self.input_dim)
         self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
         kwargs = self.kwargs or {}
         self.instance = self.cls(input_dim=self.input_dim, num_relations=self.factory.num_relations, **kwargs)
 
     def test_forward(self):
-        """unittest for forward."""
+        """Test the :meth:`RelationSpecificMessagePassing.forward` function."""
         for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
             for edge_weights in [None, inverse_indegree_edge_weights(source=self.source, target=self.target)]:
                 y = self.instance(
@@ -1191,17 +1193,20 @@ class _MessagePassingTests:
 
 
 class BlockDecompositionTests(_MessagePassingTests, unittest.TestCase):
-    """unittest for BlockDecomposition"""
+    """Tests for Block Decomposition."""
+
     cls = BlockDecomposition
 
 
 class _BasesDecompositionTests(_MessagePassingTests):
-    """unittest for BasesDecomposition"""
+    """Tests for Bases Decomposition."""
+
     cls = BasesDecomposition
 
 
 class LowMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):
     """Tests for BasesDecomposition with low memory requirement."""
+
     kwargs = dict(
         num_bases=4,
         memory_intense=False,
@@ -1210,6 +1215,7 @@ class LowMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCa
 
 class HighMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):
     """Tests for BasesDecomposition with high memory requirement."""
+
     kwargs = dict(
         num_bases=4,
         memory_intense=True,

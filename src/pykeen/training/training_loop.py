@@ -252,7 +252,8 @@ class TrainingLoop(ABC):
         """
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
             logger.warning(
-                f'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of {sampler}.'
+                'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
+                sampler,
             )
 
         # Take the biggest possible training batch_size, if batch_size not set
