@@ -26,6 +26,7 @@ __all__ = [
     'Model',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
+    'InteractionFunction',
     'MultimodalModel',
 ]
 
