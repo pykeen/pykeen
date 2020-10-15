@@ -20,6 +20,8 @@ __all__ = [
 
 
 class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
+    """A base class for embedding models which store a single vector for each entity and relation."""
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -31,7 +33,7 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize ComplEx.
+        """Initialize embedding model.
 
         :param triples_factory: TriplesFactory
             The triple factory connected to the model.
@@ -43,7 +45,7 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
             Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
             regards to the hardware at hand.
         :param loss: OptionalLoss (optional)
-            The loss to use. Defaults to SoftplusLoss.
+            The loss to use.
         :param preferred_device: str (optional)
             The default device where to model is located.
         :param random_seed: int (optional)
