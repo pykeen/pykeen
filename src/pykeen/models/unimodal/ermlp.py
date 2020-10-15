@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of ERMLP."""
-
+import math
 from typing import Optional
 
 import torch
@@ -64,6 +64,26 @@ class ERMLPInteractionFunction(InteractionFunction):
         #       performance in a 1:n scenario.
         x = self.activation(h[:, :, None, None, :] + r[:, None, :, None, :] + t[:, None, None, :, :])
         return self.hidden_to_score(x).squeeze(dim=-1)
+
+    def reset_parameters(self):
+        # Initialize biases with zero
+        nn.init.zeros_(self.rel_to_hidden.bias)
+        nn.init.zeros_(self.hidden_to_score.bias)
+        # In the original formulation,
+        #   W_2 sigma(W_1 cat([h, r, t]) + b_1) + b_2
+        # W_1 would be initialized with nn.init.xavier_uniform, i.e. with a samples from uniform(-a, a) with
+        # a = math.sqrt(3.0) * gain * math.sqrt(2.0 / float(fan_in + fan_out))
+        # we have:
+        # fan_out = hidden_dim
+        # fan_in = 3 * embedding_dim
+        bound = math.sqrt(3.0) * 1 * math.sqrt(2.0 / float(sum(self.head_to_hidden.weight.shape)))
+        for mod in [
+            self.head_to_hidden,
+            self.rel_to_hidden,
+            self.tail_to_hidden,
+        ]:
+            nn.init.uniform_(mod.weight, -bound, bound)
+        nn.init.xavier_uniform_(self.hidden_to_score.weight, gain=nn.init.calculate_gain('relu'))
 
 
 class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
