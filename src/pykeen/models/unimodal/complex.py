@@ -19,6 +19,82 @@ __all__ = [
 ]
 
 
+class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction,
+        embedding_dim: int = 200,
+        automatic_memory_optimization: Optional[bool] = None,
+        loss: Optional[Loss] = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        """Initialize ComplEx.
+
+        :param triples_factory: TriplesFactory
+            The triple factory connected to the model.
+        :param interaction_function:
+            The interaction function used to compute scores.
+        :param embedding_dim:
+            The embedding dimensionality of the entity embeddings.
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
+            regards to the hardware at hand.
+        :param loss: OptionalLoss (optional)
+            The loss to use. Defaults to SoftplusLoss.
+        :param preferred_device: str (optional)
+            The default device where to model is located.
+        :param random_seed: int (optional)
+            An optional random seed to set before the initialization of weights.
+        :param regularizer: BaseRegularizer
+            The regularizer to use.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+        )
+
+        self.interaction_function = interaction_function
+
+        # Finalize initialization
+        self.reset_parameters_()
+
+    def _score(
+        self,
+        h_ind: Optional[torch.LongTensor] = None,
+        r_ind: Optional[torch.LongTensor] = None,
+        t_ind: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        # Get embeddings
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+
+        # Compute score
+        scores = self.interaction_function(h=h, r=r, t=t)
+
+        # Only regularize relation embeddings
+        self.regularize_if_necessary(r)
+
+        return scores
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
+
+
 class ComplexInteractionFunction(InteractionFunction):
     """Interaction function of Complex."""
 
@@ -44,7 +120,7 @@ class ComplexInteractionFunction(InteractionFunction):
         )
 
 
-class ComplEx(EntityRelationEmbeddingModel):
+class ComplEx(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 
     ComplEx is an extension of :class:`pykeen.models.DistMult` that uses complex valued representations for the
@@ -121,6 +197,7 @@ class ComplEx(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=ComplexInteractionFunction(),
             embedding_dim=2 * embedding_dim,  # complex embeddings
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
@@ -129,41 +206,8 @@ class ComplEx(EntityRelationEmbeddingModel):
             regularizer=regularizer,
         )
 
-        self.interaction_function = ComplexInteractionFunction()
-
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         nn.init.normal_(tensor=self.entity_embeddings.weight, mean=0., std=1.)
         nn.init.normal_(tensor=self.relation_embeddings.weight, mean=0., std=1.)
-
-    def _score(
-        self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        # Get embeddings
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-
-        # Compute score
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)

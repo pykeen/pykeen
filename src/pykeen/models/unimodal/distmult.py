@@ -8,11 +8,11 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction, normalize_for_einsum
+from .complex import SimpleVectorEntityRelationEmbeddingModel
+from ..base import InteractionFunction, normalize_for_einsum
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'DistMult',
@@ -36,7 +36,7 @@ class DistMultInteractionFunction(InteractionFunction):
         return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
 
 
-class DistMult(EntityRelationEmbeddingModel):
+class DistMult(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
@@ -98,6 +98,7 @@ class DistMult(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=DistMultInteractionFunction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
@@ -105,9 +106,6 @@ class DistMult(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.interaction_function = DistMultInteractionFunction()
-        # Finalize initialization
-        self.reset_parameters_()
 
     def _reset_parameters_(self):  # noqa: D102
         # xavier uniform, cf.
@@ -123,31 +121,3 @@ class DistMult(EntityRelationEmbeddingModel):
 
         # Normalize embeddings of entities
         functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
-
-    def _score(
-        self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        # Get embeddings
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-
-        # Compute score
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        self.regularize_if_necessary(r)
-
-        return scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
