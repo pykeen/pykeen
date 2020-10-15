@@ -7,7 +7,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction, normalize_for_einsum
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -15,7 +15,33 @@ from ...utils import get_embedding_in_canonical_shape, split_complex
 
 __all__ = [
     'ComplEx',
+    'ComplexInteractionFunction',
 ]
+
+
+class ComplexInteractionFunction(InteractionFunction):
+    """Interaction function of Complex."""
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        batch_size = max(h.shape[0], r.shape[0], t.shape[0])
+        h_term, h = normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
+        r_term, r = normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
+        t_term, t = normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
+        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+        return sum(
+            torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', hh, rr, tt)
+            for hh, rr, tt in [
+                (h_re, r_re, t_re),
+                (h_re, r_im, t_im),
+                (h_im, r_re, t_im),
+                (h_im, r_im, t_re),
+            ]
+        )
 
 
 class ComplEx(EntityRelationEmbeddingModel):
@@ -103,6 +129,8 @@ class ComplEx(EntityRelationEmbeddingModel):
             regularizer=regularizer,
         )
 
+        self.interaction_function = ComplexInteractionFunction()
+
         # Finalize initialization
         self.reset_parameters_()
 
@@ -112,56 +140,30 @@ class ComplEx(EntityRelationEmbeddingModel):
         nn.init.normal_(tensor=self.entity_embeddings.weight, mean=0., std=1.)
         nn.init.normal_(tensor=self.relation_embeddings.weight, mean=0., std=1.)
 
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
+    def _score(
+        self,
+        h_ind: Optional[torch.LongTensor] = None,
+        r_ind: Optional[torch.LongTensor] = None,
+        t_ind: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
-        """Evaluate the interaction function of ComplEx for given embeddings.
+        # Get embeddings
+        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
+        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
+        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
 
-        The embeddings have to be in a broadcastable shape.
-
-        :param h:
-            Head embeddings.
-        :param r:
-            Relation embeddings.
-        :param t:
-            Tail embeddings.
-
-        :return: shape: (...)
-            The scores.
-        """
-        # split into real and imaginary part
-        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-
-        # ComplEx space bilinear product
-        # *: Elementwise multiplication
-        return sum(
-            (hh * rr * tt).sum(dim=-1)
-            for hh, rr, tt in [
-                (h_re, r_re, t_re),
-                (h_re, r_im, t_im),
-                (h_im, r_re, t_im),
-                (h_im, r_im, t_re),
-            ]
-        )
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # get embeddings
-        h, r, t = [
-            get_embedding_in_canonical_shape(embedding=e, ind=ind)
-            for e, ind in [
-                (self.entity_embeddings, hrt_batch[:, 0]),
-                (self.relation_embeddings, hrt_batch[:, 1]),
-                (self.entity_embeddings, hrt_batch[:, 2]),
-            ]
-        ]
-
-        # Compute scores
+        # Compute score
         scores = self.interaction_function(h=h, r=r, t=t)
 
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
+        # Only regularize relation embeddings
+        self.regularize_if_necessary(r)
 
         return scores
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
