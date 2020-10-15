@@ -13,12 +13,11 @@ from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'DistMult',
 ]
-
-from ...utils import get_embedding_in_canonical_shape
 
 
 class DistMult(EntityRelationEmbeddingModel):
