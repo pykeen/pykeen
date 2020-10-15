@@ -16,6 +16,7 @@ from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'DistMult',
+    'DistMultInteractionFunction',
 ]
 
 
