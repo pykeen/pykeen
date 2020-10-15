@@ -8,8 +8,7 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from .complex import SimpleVectorEntityRelationEmbeddingModel
-from ..base import InteractionFunction, normalize_for_einsum
+from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel, normalize_for_einsum
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory

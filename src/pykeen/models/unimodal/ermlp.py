@@ -7,8 +7,7 @@ from typing import Optional
 import torch
 from torch import nn
 
-from .complex import SimpleVectorEntityRelationEmbeddingModel
-from ..base import InteractionFunction
+from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
