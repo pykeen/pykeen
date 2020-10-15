@@ -2,13 +2,14 @@
 
 """Implementation of DistMult."""
 
-from typing import Optional
+from typing import Optional, Tuple
 
+import torch
 import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import DistMultInteractionFunction, EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -135,3 +136,42 @@ class DistMult(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
+
+
+def _normalize_for_einsum(
+    x: torch.FloatTensor,
+    batch_size: int,
+    symbol: str,
+) -> Tuple[str, torch.FloatTensor]:
+    """
+    Normalize tensor for broadcasting along batch-dimension in einsum.
+
+    :param x:
+        The tensor.
+    :param batch_size:
+        The batch_size
+    :param symbol:
+        The symbol for the einsum term.
+
+    :return:
+        A tuple (reshaped_tensor, term).
+    """
+    if x.shape[0] == batch_size:
+        return f'b{symbol}d', x
+    return f'{symbol}d', x.squeeze(dim=0)
+
+
+class DistMultInteractionFunction(InteractionFunction):
+    """Interaction function of DistMult."""
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        batch_size = max(h.shape[0], r.shape[0], t.shape[0])
+        h_term, h = _normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
+        r_term, r = _normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
+        t_term, t = _normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
+        return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)

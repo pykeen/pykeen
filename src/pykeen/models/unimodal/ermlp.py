@@ -5,8 +5,9 @@
 from typing import Optional
 
 import torch.autograd
+from torch import nn
 
-from ..base import ERMLPInteractionFunction, EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -103,3 +104,50 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
+
+
+class ERMLPInteractionFunction(InteractionFunction):
+    """
+    Interaction function of ER-MLP.
+
+    .. math ::
+        f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+    """
+
+    def __init__(
+        self,
+        embedding_dim: int,
+        hidden_dim: int,
+    ):
+        """
+        Initialize the interaction function.
+
+        :param embedding_dim:
+            The embedding vector dimension.
+        :param hidden_dim:
+            The hidden dimension of the MLP.
+        """
+        super().__init__()
+        """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
+           with self.embedding_dim neurons and output layer with one neuron.
+           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
+        """
+        self.head_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
+        self.rel_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=True)
+        self.tail_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
+        self.activation = nn.ReLU()
+        self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self.head_to_hidden(h)
+        r = self.rel_to_hidden(r)
+        t = self.tail_to_hidden(t)
+        # TODO: Choosing which to combine first, h/r, h/t or r/t, depending on the shape might further improve
+        #       performance in a 1:n scenario.
+        x = self.activation(h[:, :, None, None, :] + r[:, None, :, None, :] + t[:, None, None, :, :])
+        return self.hidden_to_score(x).squeeze(dim=-1)
