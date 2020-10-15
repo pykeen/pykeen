@@ -33,7 +33,8 @@ from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
     BasesDecomposition,
     BlockDecomposition,
-    RelationSpecificMessagePassing, inverse_indegree_edge_weights,
+    RelationSpecificMessagePassing,
+    inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
