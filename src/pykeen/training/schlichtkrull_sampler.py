@@ -45,7 +45,7 @@ def _compute_compressed_adjacency_list(
     return degrees, offset, compressed_adj_lists
 
 
-class GraphSampler2(Sampler):
+class GraphSamplerCompressed(Sampler):
     r"""Samples edges based on the proposed method in Schlichtkrull et al.
 
     .. seealso::
@@ -138,7 +138,7 @@ class GraphSampler2(Sampler):
         return self.num_batches_per_epoch
 
 
-class GraphSampler3(Sampler):
+class GraphSamplerSchlichtkrull(Sampler):
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -168,25 +168,22 @@ class GraphSampler3(Sampler):
 
         for i in range(0, self.num_samples):
             weights = sample_counts * seen
-
-            if numpy.sum(weights) == 0:
+            weight_sum = numpy.sum(weights)
+            if weight_sum == 0:
                 weights = numpy.ones_like(weights)
                 weights[numpy.where(sample_counts == 0)] = 0
-
-            probabilities = weights / numpy.sum(weights)
+                weight_sum = numpy.sum(weights)
+            probabilities = weights / weight_sum
             chosen_vertex = numpy.random.choice(numpy.arange(self.degrees.shape[0]), p=probabilities)
             chosen_adj_list = self.adj_list[chosen_vertex]
             seen[chosen_vertex] = True
-
             chosen_edge = numpy.random.choice(numpy.arange(chosen_adj_list.shape[0]))
             chosen_edge = chosen_adj_list[chosen_edge]
             edge_number = chosen_edge[0]
-
             while picked[edge_number]:
                 chosen_edge = numpy.random.choice(numpy.arange(chosen_adj_list.shape[0]))
                 chosen_edge = chosen_adj_list[chosen_edge]
                 edge_number = chosen_edge[0]
-
             edges[i] = edge_number
             other_vertex = chosen_edge[1]
             picked[edge_number] = True
@@ -195,14 +192,12 @@ class GraphSampler3(Sampler):
             # TODO: Why is this necessary?
             sample_counts = sample_counts.clip(min=0)
             seen[other_vertex] = True
-
         end = timeit.default_timer()
         print("Sampling took", end - start, "seconds.")
-
         return iter(edges)
 
 
-class GraphSampler(Sampler):
+class GraphSamplerPython(Sampler):
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -265,5 +260,8 @@ class GraphSampler(Sampler):
                     weight.pop(node)
         edges = numpy.asarray(list(edges))
         end = timeit.default_timer()
-        logging.debug("Sampling took", end - start, "seconds.")
+        logging.debug(f"Sampling took {end - start} seconds.")
         return iter(edges)
+
+
+GraphSampler = GraphSamplerSchlichtkrull
