@@ -8,8 +8,7 @@
     "model": "R-GCN",
     "model_kwargs": {
       "embedding_dim": 500,
-      "num_bases_or_blocks": 5,
-      "decomposition": "basis"
+      "num_bases": 5
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
@@ -27,7 +26,8 @@
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 30000,
-      "sub_batch_size": 1000
+      "sub_batch_size": 1000,
+      "sampler": "schlichtkrull"
     },
     "evaluator_kwargs": {
       "filtered": true
