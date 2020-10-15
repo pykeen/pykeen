@@ -149,13 +149,14 @@ class GraphSamplerSchlichtkrull(Sampler):
         if num_samples < 0 or num_samples > triples_factory.num_triples:
             raise ValueError(f"invalid num_samples={num_samples}")
         self.num_samples = num_samples
-        self.mapped_triples = triples_factory.mapped_triples
+        mapped_triples = triples_factory.mapped_triples
         adj_list = [[] for _ in range(triples_factory.num_entities)]
-        for i, triplet in enumerate(self.mapped_triples):
-            adj_list[triplet[0]].append([i, triplet[2]])
-            adj_list[triplet[2]].append([i, triplet[0]])
+        for i, (h, t) in enumerate(mapped_triples[:, [0, 2]]):
+            adj_list[h].append([i, t])
+            adj_list[t].append([i, h])
         self.adj_list = [numpy.asarray(a) for a in adj_list]
         self.degrees = numpy.asarray([len(a) for a in adj_list], dtype=numpy.int64)
+        self.num_triples = triples_factory.num_triples
 
     def __iter__(self):
         start = timeit.default_timer()
@@ -164,7 +165,7 @@ class GraphSamplerSchlichtkrull(Sampler):
 
         # initialize
         sample_counts = numpy.asarray(self.degrees)
-        picked = numpy.zeros(shape=(self.mapped_triples.shape[0],), dtype=numpy.bool)
+        picked = numpy.zeros(shape=(self.num_triples,), dtype=numpy.bool)
         seen = numpy.zeros(shape=(self.degrees.shape[0],), dtype=numpy.bool)
 
         for i in range(0, self.num_samples):
