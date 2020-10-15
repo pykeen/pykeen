@@ -2,7 +2,7 @@
 
 """Loss functions integrated in PyKEEN."""
 
-from typing import Any, Mapping, Set, Type, Union
+from typing import Any, Dict, Mapping, Optional, Set, Type, Union
 
 import torch
 from torch import nn
@@ -31,6 +31,8 @@ _REDUCTION_METHODS = dict(
 
 class Loss(nn.Module):
     """A loss function."""
+
+    synonyms: Optional[Set[str]] = None
 
 
 class PointwiseLoss(Loss):
@@ -70,6 +72,8 @@ class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
         This loss is not well-suited for translational distance models because these models produce
         a negative distance as score and cannot produce positive model outputs.
     """
+
+    synonyms = {'bce'}
 
 
 class MSELoss(PointwiseLoss, nn.MSELoss):
@@ -202,10 +206,17 @@ _LOSSES: Set[Type[Loss]] = {
 
 
 #: A mapping of losses' names to their implementations
-losses: Mapping[str, Type[Loss]] = {
+losses: Dict[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
+losses.update({
+    normalize_string(synonym): cls
+    for cls in _LOSSES
+    if cls.synonyms is not None
+    for synonym in cls.synonyms
+})
+
 
 #: HPO Defaults for losses
 losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
