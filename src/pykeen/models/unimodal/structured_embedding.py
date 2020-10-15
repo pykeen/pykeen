@@ -23,9 +23,19 @@ __all__ = [
 
 
 class StructuredEmbedding(EntityEmbeddingModel):
-    """An implementation of Structured Embedding (SE) from [bordes2011]_.
+    r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 
-    This model projects different matrices for each relation head and tail entity.
+    SE applies role- and relation-specific projection matrices
+    $\textbf{M}_{r}^{h}, \textbf{M}_{r}^{t} \in \mathbb{R}^{d \times d}$ to the head and tail
+    entities' embeddings before computing their differences. Then, the $l_p$ norm is applied
+    and the result is negated such that smaller differences are considered better.
+
+    .. math::
+
+        f(h, r, t) = - \|\textbf{M}_{r}^{h} \textbf{e}_h  - \textbf{M}_{r}^{t} \textbf{e}_t\|_p
+
+    By employing different projections for the embeddings of the head and tail entities, SE explicitly differentiates
+    the role of an entity as either the subject or object.
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -45,6 +55,11 @@ class StructuredEmbedding(EntityEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        r"""Initialize SE.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param scoring_fct_norm: The $l_p$ norm. Usually 1 for SE.
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -82,7 +97,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
             self.right_relation_embeddings,
         ]:
             nn.init.uniform_(emb.weight, a=-init_bound, b=+init_bound)
-            functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data, )
+            functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data)
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

@@ -9,10 +9,12 @@ from typing import Any, ClassVar, Dict, Optional, Type
 import torch
 from torch.nn import functional
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.models import ConvKB, RESCAL, TransH
-from pykeen.regularizers import CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, \
-    TransHRegularizer
+from pykeen.regularizers import (
+    CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer,
+    TransHRegularizer,
+)
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 from pykeen.utils import resolve_device
@@ -40,7 +42,7 @@ class _RegularizerTestCase:
         """Set up the test case with a triples factory and model."""
         self.generator = torch.random.manual_seed(seed=42)
         self.batch_size = 16
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.device = resolve_device()
         self.regularizer = self.regularizer_cls(
             device=self.device,
@@ -168,7 +170,7 @@ class CombinedRegularizerTest(_RegularizerTestCase, unittest.TestCase):
         'regularizers': [
             LpRegularizer(weight=0.1, p=1, device=resolve_device()),
             LpRegularizer(weight=0.7, p=2, device=resolve_device()),
-        ]
+        ],
     }
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -227,7 +229,7 @@ class TransHRegularizerTest(unittest.TestCase):
                 self.entities_weight,
                 self.normal_vector_weight,
                 self.relations_weight,
-                torch.rand(self.num_entities, 10, device=self.device, generator=self.generator)
+                torch.rand(self.num_entities, 10, device=self.device, generator=self.generator),
             )
             self.assertTrue('Expects exactly three tensors' in context.exception)
 
@@ -251,7 +253,7 @@ class TransHRegularizerTest(unittest.TestCase):
         # Orthogonality soft constraint
         d_r_n = functional.normalize(self.relations_weight, dim=-1)
         regularization_term += torch.sum(
-            functional.relu(torch.sum((self.normal_vector_weight * d_r_n) ** 2, dim=-1) - epsilon)
+            functional.relu(torch.sum((self.normal_vector_weight * d_r_n) ** 2, dim=-1) - epsilon),
         )
 
         return regularization_term

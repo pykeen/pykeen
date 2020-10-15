@@ -12,9 +12,11 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+
 import os
 import re
 import sys
+from datetime import date
 
 sys.path.insert(0, os.path.abspath('../../src'))
 # sys.path.insert(0, os.path.abspath('..'))
@@ -46,11 +48,11 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'pykeen'
-copyright = '2020, PyKEEN Project Team'
+copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '0.1.2-dev'
+release = '1.0.5-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -68,17 +70,32 @@ if parsed_version.group('release'):
 #
 # needs_sphinx = '1.0'
 
+# If true, the current module name will be prepended to all description
+# unit titles (such as .. function::).
+add_module_names = False
+
+# A list of prefixes that are ignored when creating the module index. (new in Sphinx 0.6)
+modindex_common_prefix = ["pykeen."]
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autosummary',
     'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
+    'sphinx.ext.intersphinx',
+    "sphinx.ext.todo",
+    'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx_autodoc_typehints',
     'sphinx_click.ext',
+    'sphinx_automodapi.automodapi',
+    'texext',
 ]
+
+# generate autosummary pages
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -105,7 +122,7 @@ language = None
 exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = 'sphinx'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -147,36 +164,36 @@ htmlhelp_basename = 'PyKEENdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-}
+# latex_elements = {
+#     The paper size ('letterpaper' or 'a4paper').
+#
+#     'papersize': 'letterpaper',
+#
+#     The font size ('10pt', '11pt' or '12pt').
+#
+#     'pointsize': '10pt',
+#
+#     Additional stuff for the LaTeX preamble.
+#
+#     'preamble': '',
+#
+#     Latex figure (float) alignment
+#
+#     'figure_align': 'htbp',
+# }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (
-        master_doc,
-        'pykeen.tex',
-        'PyKEEN Documentation',
-        author,
-        'manual',
-    ),
-]
+# latex_documents = [
+#     (
+#         master_doc,
+#         'pykeen.tex',
+#         'PyKEEN Documentation',
+#         author,
+#         'manual',
+#     ),
+# ]
 
 # -- Options for manual page output ------------------------------------------
 
@@ -212,7 +229,7 @@ texinfo_documents = [
 # -- Options for Epub output -------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = project
+# epub_title = project
 
 # The unique identifier of the text. This can be a ISBN number
 # or the project homepage.
@@ -224,7 +241,7 @@ epub_title = project
 # epub_uid = ''
 
 # A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
+# epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
 
@@ -238,6 +255,7 @@ intersphinx_mapping = {
     'optuna': ('https://optuna.readthedocs.io/en/latest', None),
     'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
+    'boto3': ('https://boto3.amazonaws.com/v1/documentation/api/latest/', None),
 }
 
 autoclass_content = 'both'

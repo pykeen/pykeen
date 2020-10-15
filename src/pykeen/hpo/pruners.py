@@ -21,6 +21,7 @@ _PRUNERS: Set[Type[BasePruner]] = {
     SuccessiveHalvingPruner,
 }
 
+#: A mapping of HPO pruners' names to their implementations
 pruners: Mapping[str, Type[BasePruner]] = {
     normalize_string(cls.__name__, suffix=_PRUNER_SUFFIX): cls
     for cls in _PRUNERS

@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from .base_module import MultimodalModel
+from ..base import MultimodalModel
 from ...losses import Loss
 from ...triples import TriplesNumericLiteralsFactory
 from ...utils import slice_triples
@@ -137,8 +137,11 @@ class DistMultLiteral(MultimodalModel):
         """Compute the mean ranking loss for the positive and negative scores."""
         # Choose y = -1 since a smaller score is better.
         # In TransE for example, the scores represent distances
-        assert self.compute_mr_loss, 'The chosen loss does not allow the calculation of Margin Ranking losses. ' \
-                                     'Please use the compute_label_loss method instead'
+        if not self.compute_mr_loss:
+            raise RuntimeError(
+                'The chosen loss does not allow the calculation of Margin Ranking losses. '
+                'Please use the compute_label_loss method instead',
+            )
         y = torch.ones_like(negative_scores, device=self.device) * -1
         loss = self.loss(positive_scores, negative_scores, y)
         return loss

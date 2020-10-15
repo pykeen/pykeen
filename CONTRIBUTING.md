@@ -83,7 +83,7 @@ ready to make a release, do the following:
 1. Make sure there are no uncommitted changes.
 2. Run `tox -e bumpversion release`
 3. Push to GitHub
-4. Draft a new release at https://github.com/mali-git/POEM_develop/releases/new.
+4. Draft a new release at https://github.com/pykeen/pykeen/releases/new.
    Name the release based on the version that was just bumped to with the form
    vX.Y.Z where X is major release, Y is minor release, and Z is patch. By default,
    there's a box that says `Target: master`. If you're not 100% sure the last commit

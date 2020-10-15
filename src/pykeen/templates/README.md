@@ -7,20 +7,32 @@
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/mali-git/POEM_develop">
-    <img src="https://travis-ci.com/mali-git/POEM_develop.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
+  <a href="https://travis-ci.com/pykeen/pykeen">
+    <img src="https://travis-ci.com/pykeen/pykeen.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
          alt="Travis CI">
+  </a>
+
+  <a href="https://ci.appveyor.com/project/pykeen/pykeen/branch/master">
+    <img src="https://ci.appveyor.com/api/projects/status/lwp9cfnsa8d5yx62/branch/master?svg=true"
+         alt="AppVeyor">
   </a>
 
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
+
+  <a href="https://zenodo.org/badge/latestdoi/242672435">
+    <img src="https://zenodo.org/badge/242672435.svg" alt="DOI">
+  </a>
+
+  <a href="https://optuna.org">
+    <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
+  </a>
 </p>
 
 <p align="center">
     <b>PyKEEN</b> (<b>P</b>ython <b>K</b>nowl<b>E</b>dge <b>E</b>mbeddi<b>N</b>gs) is a Python package designed to
-    train and evaluate knowledge graph embedding models (incorporating multi-modal information). It is part of the
-    <a href="https://github.com/SmartDataAnalytics/PyKEEN">KEEN Universe</a>.
+    train and evaluate knowledge graph embedding models (incorporating multi-modal information).
 </p>
 
 <p align="center">
@@ -28,55 +40,61 @@
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-{{ n_datasets }}">Datasets</a> •
   <a href="#models-{{ n_models }}">Models</a> •
-  <a href="#supporters">Support</a>
+  <a href="#supporters">Support</a> •
+  <a href="#citation">Citation</a>
 </p>
 
+## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-## Installation
-
-The development version of PyKEEN can be downloaded and installed from
-[GitHub](https://github.com/mali-git/POEM_develop) on Python 3.7+ with:
+The latest stable version of PyKEEN can be downloaded and installed from
+[PyPI](https://pypi.org/project/pykeen) with:
 
 ```bash
-$ git clone https://github.com/mali-git/POEM_develop.git pykeen
-$ cd pykeen
-$ pip install -e .
-$ # Install pre-commit
-$ pip install pre-commit
-$ pre-commit install
+$ pip install pykeen
 ```
 
-## Contributing
+The latest version of PyKEEN can be installed directly from the
+source on [GitHub](https://github.com/pykeen/pykeen) with:
 
-Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
-See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
+```bash
+pip install git+https://github.com/pykeen/pykeen.git
+```
 
-## Quickstart
+More information about installation (e.g., development mode, Windows installation, extras)
+can be found in the [installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
+
+## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
 This example shows how to train a model on a data set and test on another data set.
 
 The fastest way to get up and running is to use the pipeline function. It
 provides a high-level entry into the extensible functionality of this package.
-The following example shows how to train and evaluate the TransE model on the
-Nations dataset. By default, the training loop uses the stochastic local closed world assumption (sLCWA) training
-approach and evaluates with rank-based evaluation.
+The following example shows how to train and evaluate the [TransE](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html#pykeen.models.TransE)
+model on the [Nations](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html#pykeen.datasets.Nations)
+dataset. By default, the training loop uses the [stochastic local closed world assumption (sLCWA)](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop)
+training approach and evaluates with [rank-based evaluation](https://pykeen.readthedocs.io/en/latest/reference/evaluation/rank_based.html#pykeen.evaluation.RankBasedEvaluator).
 
 ```python
 from pykeen.pipeline import pipeline
+
 result = pipeline(
     model='TransE',
     dataset='nations',
 )
 ```
 
-The results are returned in a dataclass that has attributes for the trained
-model, the training loop, and the evaluation.
+The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
+dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials on
+[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
+and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
 PyKEEN is extensible such that:
 
 - Each model has the same API, so anything from ``pykeen.models`` can be dropped in
 - Each training loop has the same API, so ``pykeen.training.LCWATrainingLoop`` can be dropped in
 - Triples factories can be generated by the user with ``from pykeen.triples.TriplesFactory``
+
+The full documentation can be found at https://pykeen.readthedocs.io.
 
 ## Implementation
 
@@ -123,6 +141,10 @@ in ``pykeen``.
 
 {{ metrics }}
 
+### Trackers ({{ n_trackers }})
+
+{{ trackers }}
+
 ## Hyper-parameter Optimization
 
 ### Samplers ({{ n_hpo_samplers }})
@@ -152,21 +174,43 @@ hyper-parameter optimization module. They can be run like:
 pykeen experiments ablation ~/path/to/config.json
 ```
 
+## Contributing
+
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
+See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
+
 ## Acknowledgements
 
 ### Supporters
 
-This project has been supported by several organizations:
+This project has been supported by several organizations (in alphabetical order):
 
-- [Smart Data Analytics (University of Bonn)](http://sda.cs.uni-bonn.de)
-- [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
-- [Bonn Aachen International Center for IT (University of Bonn)](http://www.b-it-center.de)
+- [Bayer](https://www.bayer.com/)
+- [Enveda Therapeutics](https://envedatherapeutics.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
+- [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
+- [Ludwig-Maximilians-Universität München](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
+- [Siemens](https://new.siemens.com/global/en.html)
+- [Smart Data Analytics Research Group (University of Bonn & Fraunhofer IAIS)](https://sda.tech)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
+- [University of Bonn](https://www.uni-bonn.de/)
 
 ### Logo
 
 The PyKEEN logo was designed by Carina Steinborn.
+
+## Citation
+
+If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
+
+```bibtex
+@article{ali2020pykeen,
+  title={PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Emebddings},
+  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
+  journal={arXiv preprint arXiv:2007.14175},
+  year={2020}
+}
+```

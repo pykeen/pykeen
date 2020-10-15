@@ -31,14 +31,35 @@ def _apply_bn_to_tensor(
 
 
 class TuckER(EntityRelationEmbeddingModel):
-    """An implementation of TuckEr from [balazevic2019]_.
+    r"""An implementation of TuckEr from [balazevic2019]_.
 
-    This model uses the Tucker tensor factorization.
+    TuckER is a linear model that is based on the tensor factorization method Tucker in which a three-mode tensor
+    $\mathfrak{X} \in \mathbb{R}^{I \times J \times K}$ is decomposed into a set of factor matrices
+    $\textbf{A} \in \mathbb{R}^{I \times P}$, $\textbf{B} \in \mathbb{R}^{J \times Q}$, and
+    $\textbf{C} \in \mathbb{R}^{K \times R}$ and a core tensor
+    $\mathfrak{Z} \in \mathbb{R}^{P \times Q \times R}$ (of lower rank):
+
+    .. math::
+
+        \mathfrak{X} \approx \mathfrak{Z} \times_1 \textbf{A} \times_2 \textbf{B} \times_3 \textbf{C}
+
+    where $\times_n$ is the tensor product, with $n$ denoting along which mode the tensor product is computed.
+    In TuckER, a knowledge graph is considered as a binary tensor which is factorized using the Tucker factorization
+    where $\textbf{E} = \textbf{A} = \textbf{C} \in \mathbb{R}^{n_{e} \times d_e}$ denotes the entity embedding
+    matrix, $\textbf{R} = \textbf{B} \in \mathbb{R}^{n_{r} \times d_r}$ represents the relation embedding matrix,
+    and $\mathfrak{W} = \mathfrak{Z} \in \mathbb{R}^{d_e \times d_r \times d_e}$ is the *core tensor* that
+    indicates the extent of interaction between the different factors. The interaction model is defined as:
+
+    .. math::
+
+        f(h,r,t) = \mathfrak{W} \times_1 \textbf{h} \times_2 \textbf{r} \times_3 \textbf{t}
+
+    where $\textbf{h},\textbf{t}$ correspond to rows of $\textbf{E}$ and $\textbf{r}$ to a row of $\textbf{R}$.
 
     .. seealso::
 
-       - Official implementation: <https://github.com/ibalazevic/TuckER>
-       - pykg2vec implementation of TuckEr  <https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py>
+       - Official implementation: https://github.com/ibalazevic/TuckER
+       - pykg2vec implementation of TuckEr https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

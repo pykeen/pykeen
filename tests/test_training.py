@@ -8,7 +8,7 @@ from typing import Optional
 import torch
 from torch import optim
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model
@@ -85,7 +85,7 @@ class TrainingLoopTests(unittest.TestCase):
 
     def setUp(self) -> None:
         """Instantiate triples factory and model."""
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""

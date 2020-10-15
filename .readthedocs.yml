@@ -1,0 +1,21 @@
+# See: https://docs.readthedocs.io/en/stable/config-file/v2.html#formats
+
+# Required
+version: 2
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+  configuration: docs/source/conf.py
+
+# Build HTML only
+formats:
+  - htmlzip
+
+python:
+  version: 3.7
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
+  system_packages: true

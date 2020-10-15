@@ -6,17 +6,17 @@ import logging
 import os
 import re
 from collections import Counter, defaultdict
-from copy import deepcopy
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import torch
-from tqdm import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
+from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, slice_triples
+from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -28,18 +28,24 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 INVERSE_SUFFIX = '_inverse'
+TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
+
+
+def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> torch.LongTensor:
+    """Return the unique entity IDs used in a tensor of triples."""
+    return mapped_triples[:, [0, 2]].unique()
 
 
 def _create_multi_label_tails_instance(
     mapped_triples: MappedTriples,
-    use_tqdm: Optional[bool] = None
+    use_tqdm: Optional[bool] = None,
 ) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (h,r) pair the multi tail label."""
     logger.debug('Creating multi label tails instance')
 
     '''
     The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
-    https://github.com/mali-git/POEM_develop/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
+    https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
     '''
     mapped_triples = mapped_triples.cpu().detach().numpy()
 
@@ -48,7 +54,7 @@ def _create_multi_label_tails_instance(
         element_1_index=0,
         element_2_index=1,
         label_index=2,
-        use_tqdm=use_tqdm
+        use_tqdm=use_tqdm,
     )
 
     logger.debug('Created multi label tails instance')
@@ -124,6 +130,10 @@ def _map_triples_elements_to_ids(
     relation_to_id: RelationMapping,
 ) -> MappedTriples:
     """Map entities and relations to pre-defined ids."""
+    if triples.size == 0:
+        logger.warning('Provided empty triples to map.')
+        return torch.empty(0, 3, dtype=torch.long)
+
     heads, relations, tails = slice_triples(triples)
 
     # When triples that don't exist are trying to be mapped, they get the id "-1"
@@ -234,7 +244,8 @@ class TriplesFactory:
             if relations_already_inverted:
                 logger.info(
                     f'Some triples already have suffix {INVERSE_SUFFIX}. '
-                    f'Creating TriplesFactory based on inverse triples')
+                    f'Creating TriplesFactory based on inverse triples',
+                )
                 self.relation_to_inverse = {
                     re.sub('_inverse$', '', relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
                     for relation in unique_relations
@@ -303,6 +314,16 @@ class TriplesFactory:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
+    @property
+    def entity_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
+        """The mapping from entity IDs to their labels."""
+        return invert_mapping(mapping=self.entity_to_id)
+
+    @property
+    def relation_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
+        """The mapping from relation IDs to their labels."""
+        return invert_mapping(mapping=self.relation_to_id)
+
     def get_inverse_relation_id(self, relation: str) -> int:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
@@ -338,7 +359,7 @@ class TriplesFactory:
         )
         sp, multi_o = zip(*s_p_to_multi_tails.items())
         mapped_triples: torch.LongTensor = torch.tensor(sp, dtype=torch.long)
-        labels = np.array([np.array(item) for item in multi_o])
+        labels = np.array([np.array(item) for item in multi_o], dtype=object)
 
         return LCWAInstances(
             mapped_triples=mapped_triples,
@@ -368,6 +389,7 @@ class TriplesFactory:
         ratios: Union[float, Sequence[float]] = 0.8,
         *,
         random_state: Union[None, int, np.random.RandomState] = None,
+        randomize_cleanup: bool = False,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
@@ -377,6 +399,8 @@ class TriplesFactory:
          The final ratio can be omitted because that can be calculated. Third, all ratios can be explicitly set in
          order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is 1.0.
         :param random_state: The random state used to shuffle and split the triples in this factory.
+        :param randomize_cleanup: If true, uses the non-deterministic method for moving triples to the training set.
+         This has the advantage that it doesn't necessarily have to move all of them, but it might be slower.
 
         .. code-block:: python
 
@@ -394,7 +418,7 @@ class TriplesFactory:
         # Prepare shuffle index
         idx = np.arange(n_triples)
         if random_state is None:
-            random_state = np.random.randint(0, 2 ** 32 - 1)
+            random_state = random_non_negative_int()
             logger.warning(f'Using random_state={random_state} to split {self}')
         if isinstance(random_state, int):
             random_state = np.random.RandomState(random_state)
@@ -410,23 +434,36 @@ class TriplesFactory:
         elif ratio_sum > 1.0:
             raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
 
-        split_idxs = [
+        sizes = [
             int(split_ratio * n_triples)
             for split_ratio in ratios
         ]
         # Take cumulative sum so the get separated properly
-        split_idxs = np.cumsum(split_idxs)
+        split_idxs = np.cumsum(sizes)
 
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
         logger.info(f'split triples to groups of sizes {[triples.shape[0] for triples in triples_groups]}')
 
+        # Make sure that the first element has all the right stuff in it
+        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+            actual_size = triples.shape[0]
+            actual_ratio = actual_size / exp_size * exp_ratio
+            if actual_size != exp_size:
+                logger.warning(
+                    f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
+                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.',
+                )
+
         # Make new triples factories for each group
         return [
             TriplesFactory(
                 triples=triples,
-                entity_to_id=deepcopy(self.entity_to_id),
-                relation_to_id=deepcopy(self.relation_to_id),
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
+                compact_id=False,
             )
             for triples in triples_groups
         ]
@@ -450,6 +487,14 @@ class TriplesFactory:
             for relation, _ in counter.most_common(n)
         }
 
+    def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
+        """Get an np.array index for triples with the given entities."""
+        entities = np.asanyarray(entities, dtype=self.triples.dtype)
+        return (
+            np.isin(self.triples[:, 0], entities, invert=invert)
+            & np.isin(self.triples[:, 2], entities, invert=invert)
+        )
+
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
         """Get an np.array index for triples with the given relations."""
         return np.isin(self.triples[:, 1], list(relations), invert=invert)
@@ -461,13 +506,248 @@ class TriplesFactory:
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
         idx = self.get_idx_for_relations(relations)
-        logger.info(f'keeping {len(relations)}/{self.num_relations} relations'
-                    f' and {idx.sum()}/{self.num_triples} triples in {self}')
+        logger.info(
+            f'keeping {len(relations)}/{self.num_relations} relations'
+            f' and {idx.sum()}/{self.num_triples} triples in {self}',
+        )
         return TriplesFactory(triples=self.triples[idx])
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
         idx = self.get_idx_for_relations(relations, invert=True)
-        logger.info(f'removing {len(relations)}/{self.num_relations} relations'
-                    f' and {idx.sum()}/{self.num_triples} triples')
+        logger.info(
+            f'removing {len(relations)}/{self.num_relations} relations'
+            f' and {idx.sum()}/{self.num_triples} triples',
+        )
         return TriplesFactory(triples=self.triples[idx])
+
+    def entity_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
+
+        :param top: The number of top entities to show. Defaults to 100.
+
+        .. warning::
+
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+        """
+        text = [f'{h} {t}' for h, _, t in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def relation_word_cloud(self, top: Optional[int] = None):
+        """Make a word cloud based on the frequency of occurrence of each relation in a Jupyter notebook.
+
+        :param top: The number of top relations to show. Defaults to 100.
+
+        .. warning::
+
+            This function requires the ``word_cloud`` package. Use ``pip install pykeen[plotting]`` to
+            install it automatically, or install it yourself with
+            ``pip install git+https://github.com/kavgan/word_cloud.git``.
+        """
+        text = [r for _, r, _ in self.triples]
+        return self._word_cloud(text=text, top=top or 100)
+
+    def _word_cloud(self, *, text: List[str], top: int):
+        try:
+            from word_cloud.word_cloud_generator import WordCloud
+        except ImportError:
+            logger.warning(
+                'Could not import module `word_cloud`. '
+                'Try installing it with `pip install git+https://github.com/kavgan/word_cloud.git`',
+            )
+            return
+
+        from IPython.core.display import HTML
+        word_cloud = WordCloud()
+        return HTML(word_cloud.get_embed_code(text=text, topn=top))
+
+    def tensor_to_df(
+        self,
+        tensor: torch.LongTensor,
+        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+    ) -> pd.DataFrame:
+        """Take a tensor of triples and make a pandas dataframe with labels.
+
+        :param tensor: shape: (n, 3)
+            The triples, ID-based and in format (head_id, relation_id, tail_id).
+        :param kwargs:
+            Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
+            {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
+        :return:
+            A dataframe with n rows, and 6 + len(kwargs) columns.
+        """
+        # Input validation
+        additional_columns = set(kwargs.keys())
+        forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
+        if len(forbidden) > 0:
+            raise ValueError(
+                f'The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were '
+                f'used.',
+            )
+
+        # convert to numpy
+        tensor = tensor.cpu().numpy()
+        data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
+
+        # vectorized label lookup
+        entity_id_to_label = np.vectorize(self.entity_id_to_label.__getitem__)
+        relation_id_to_label = np.vectorize(self.relation_id_to_label.__getitem__)
+        for column, id_to_label in dict(
+            head=entity_id_to_label,
+            relation=relation_id_to_label,
+            tail=entity_id_to_label,
+        ).items():
+            data[f'{column}_label'] = id_to_label(data[f'{column}_id'])
+
+        # Additional columns
+        for key, values in kwargs.items():
+            # convert PyTorch tensors to numpy
+            if torch.is_tensor(values):
+                values = values.cpu().numpy()
+            data[key] = values
+
+        # convert to dataframe
+        rv = pd.DataFrame(data=data)
+
+        # Re-order columns
+        columns = list(TRIPLES_DF_COLUMNS) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
+        return rv.loc[:, columns]
+
+    def new_with_restriction(
+        self,
+        entities: Optional[Collection[str]] = None,
+        relations: Optional[Collection[str]] = None,
+    ) -> 'TriplesFactory':
+        """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
+
+        :param entities:
+            The entities of interest. If None, defaults to all entities.
+        :param relations:
+            The relations of interest. If None, defaults to all relations.
+
+        :return:
+            A new triples factory, which has only a subset of the triples containing the entities and relations of
+            interest. The label-to-ID mapping is *not* modified.
+        """
+        if self.create_inverse_triples and relations is not None:
+            logger.info(
+                'Since %s already contain inverse relations, the relation filter is expanded to contain the inverse '
+                'relations as well.',
+                str(self),
+            )
+            relations = list(relations) + list(map(self.relation_to_inverse.__getitem__, relations))
+
+        keep_mask = None
+
+        # Filter for entities
+        if entities is not None:
+            keep_mask = self.get_idx_for_entities(entities=entities)
+            logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
+
+        # Filter for relations
+        if relations is not None:
+            relation_mask = self.get_idx_for_relations(relations=relations)
+            logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
+            keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
+        # No filtering happened
+        if keep_mask is None:
+            return self
+
+        logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
+        factory = TriplesFactory(
+            triples=self.triples[keep_mask],
+            create_inverse_triples=False,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            compact_id=False,
+        )
+
+        # manually copy the inverse relation mappings
+        if self.create_inverse_triples:
+            factory.create_inverse_triples = True
+            factory.relation_to_inverse = self.relation_to_inverse
+            factory._num_relations = self._num_relations
+
+        return factory
+
+
+def _tf_cleanup_all(
+    triples_groups: List[np.ndarray],
+    *,
+    random_state: Union[None, int, np.random.RandomState] = None,
+) -> List[np.ndarray]:
+    """Cleanup a list of triples array with respect to the first array."""
+    reference, *others = triples_groups
+    rv = []
+    for other in others:
+        if random_state is not None:
+            reference, other = _tf_cleanup_randomized(reference, other, random_state)
+        else:
+            reference, other = _tf_cleanup_deterministic(reference, other)
+        rv.append(other)
+    return [reference, *rv]
+
+
+def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Cleanup a triples array (testing) with respect to another (training)."""
+    move_id_mask = _prepare_cleanup(training, testing)
+
+    training = np.concatenate([training, testing[move_id_mask]])
+    testing = testing[~move_id_mask]
+
+    return training, testing
+
+
+def _tf_cleanup_randomized(
+    training: np.ndarray,
+    testing: np.ndarray,
+    random_state: Union[None, int, np.random.RandomState] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
+
+    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
+    2. Choose a triple to move, recalculate move_id_mask
+    3. Continue until move_id_mask has no true bits
+    """
+    if random_state is None:
+        random_state = random_non_negative_int()
+        logger.warning('Using random_state=%s', random_state)
+    if isinstance(random_state, int):
+        random_state = np.random.RandomState(random_state)
+
+    move_id_mask = _prepare_cleanup(training, testing)
+
+    # While there are still triples that should be moved to the training set
+    while move_id_mask.any():
+        # Pick a random triple to move over to the training triples
+        idx = random_state.choice(move_id_mask.nonzero()[0])
+        training = np.concatenate([training, testing[idx].reshape(1, -1)])
+
+        # Recalculate the testing triples without that index
+        testing_mask = np.ones_like(move_id_mask)
+        testing_mask[idx] = False
+        testing = testing[testing_mask]
+
+        # Recalculate the training entities, testing entities, to_move, and move_id_mask
+        move_id_mask = _prepare_cleanup(training, testing)
+
+    return training, testing
+
+
+def _prepare_cleanup(training: np.ndarray, testing: np.ndarray) -> np.ndarray:
+    to_move_mask = None
+    for col in [[0, 2], 1]:
+        training_ids, test_ids = [np.unique(triples[:, col]) for triples in [training, testing]]
+        to_move = test_ids[~np.isin(test_ids, training_ids)]
+        this_to_move_mask = np.isin(testing[:, col], to_move)
+        if this_to_move_mask.ndim > 1:
+            this_to_move_mask = this_to_move_mask.any(axis=1)
+        if to_move_mask is None:
+            to_move_mask = this_to_move_mask
+        else:
+            to_move_mask = this_to_move_mask | to_move_mask
+
+    return to_move_mask

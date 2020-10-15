@@ -14,12 +14,11 @@ from . import ComplEx, DistMult, ERMLP
 from .. import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...triples import TriplesFactory
+from ...utils import get_cls, normalize_string
 
 __all__ = [
     'RGCN',
 ]
-
-from ...utils import get_cls, normalize_string
 
 logger = logging.getLogger(name=path.basename(__file__))
 
@@ -597,7 +596,7 @@ class RGCN(EntityRelationEmbeddingModel):
         self_loop_dropout: float = 0.2,
         edge_weighting: Callable[
             [torch.LongTensor, torch.LongTensor],
-            torch.FloatTensor
+            torch.FloatTensor,
         ] = inverse_indegree_edge_weights,
         decomposition: Union[str, Type[RelationSpecificMessagePassing]] = BasesDecomposition,
         buffer_messages: bool = True,

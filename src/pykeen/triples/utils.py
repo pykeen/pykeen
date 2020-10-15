@@ -2,7 +2,7 @@
 
 """Instance creation utilities."""
 
-from typing import Callable, Mapping, TextIO, Union
+from typing import Callable, Mapping, Optional, TextIO, Union
 
 import numpy as np
 from pkg_resources import iter_entry_points
@@ -27,7 +27,7 @@ PREFIX_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importer
 EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers('extension_importer')
 
 
-def load_triples(path: Union[str, TextIO], delimiter: str = '\t') -> LabeledTriples:
+def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Optional[str] = None) -> LabeledTriples:
     """Load triples saved as tab separated values.
 
     Besides TSV handling, PyKEEN does not come with any importers pre-installed. A few can be found at:
@@ -44,9 +44,13 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t') -> LabeledTrip
             if path.startswith(f'{prefix}:'):
                 return handler(path[len(f'{prefix}:'):])
 
+    if encoding is None:
+        encoding = 'utf-8'
+
     return np.loadtxt(
         fname=path,
         dtype=str,
         comments='@Comment@ Head Relation Tail',
         delimiter=delimiter,
+        encoding=encoding,
     )

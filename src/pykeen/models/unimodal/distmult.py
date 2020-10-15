@@ -20,9 +20,26 @@ __all__ = [
 
 
 class DistMult(EntityRelationEmbeddingModel):
-    """An implementation of DistMult from [yang2014]_.
+    r"""An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
+
+    DistMult is a simplification of :class:`pykeen.models.RESCAL` where the relation matrices
+    $\textbf{W}_{r} \in \mathbb{R}^{d \times d}$ are restricted to diagonal matrices:
+
+    .. math::
+
+        f(h,r,t) = \textbf{e}_h^{T} \textbf{W}_r \textbf{e}_t = \sum_{i=1}^{d}(\textbf{e}_h)_i \cdot
+        diag(\textbf{W}_r)_i \cdot (\textbf{e}_t)_i
+
+    Because of its restriction to diagonal matrices, DistMult is more computationally than RESCAL, but at the same
+    time it is less expressive. For instance, it is not able to model anti-symmetric relations,
+    since $f(h,r, t) = f(t,r,h)$. This can alternatively be formulated with relation vectors
+    $\textbf{r}_r \in \mathbb{R}^d$ and the Hadamard operator and the $l_1$ norm.
+
+    .. math::
+
+        f(h,r,t) = \|\textbf{e}_h \odot \textbf{r}_r \odot \textbf{e}_t\|_1
 
     Note:
       - For FB15k, Yang *et al.* report 2 negatives per each positive.
@@ -30,7 +47,6 @@ class DistMult(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
-
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -59,7 +75,10 @@ class DistMult(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the model."""
+        r"""Initialize DistMult.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        """
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,

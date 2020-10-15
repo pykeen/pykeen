@@ -1,6 +1,9 @@
 graft src
 graft tests
 
+prune docs/source/api
+prune notebooks
+
 recursive-include docs/source *.py
 recursive-include docs/source *.rst
 recursive-include docs/source *.png
@@ -10,5 +13,5 @@ include config/config.ini
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib .DS_Store *.gpickle
 
-exclude .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml tox.ini .pre-commit-config.yaml
-include LICENSE *.md
+exclude .appveyor.yml .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml tox.ini .pre-commit-config.yaml
+include LICENSE *.md *.rst

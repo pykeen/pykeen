@@ -8,7 +8,7 @@ from typing import ClassVar, Type
 import numpy
 import torch
 
-from pykeen.datasets import NationsTrainingTriplesFactory
+from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory
@@ -46,7 +46,7 @@ class _NegativeSamplingTestCase:
         self.batch_size = 16
         self.seed = 42
         self.num_negs_per_pos = 10
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.slcwa_instances = self.triples_factory.create_slcwa_instances()
         self.negative_sampler = self.negative_sampling_cls(triples_factory=self.triples_factory)
         self.scaling_negative_sampler = self.negative_sampling_cls(
@@ -78,7 +78,7 @@ class _NegativeSamplingTestCase:
 
         # Generate scaled negative sample
         scaled_negative_batch = self.scaling_negative_sampler.sample(
-            positive_batch=self.positive_batch
+            positive_batch=self.positive_batch,
         )
 
         assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
@@ -127,7 +127,7 @@ class GraphSamplerTest(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory."""
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
         self.num_samples = 20
         self.num_epochs = 10
         self.graph_sampler = GraphSampler(triples_factory=self.triples_factory, num_samples=self.num_samples)
@@ -178,7 +178,7 @@ class AdjacencyListCompressionTest(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory."""
-        self.triples_factory = NationsTrainingTriplesFactory()
+        self.triples_factory = Nations().training
 
     def test_compute_compressed_adjacency_list(self):
         """Test method _compute_compressed_adjacency_list ."""

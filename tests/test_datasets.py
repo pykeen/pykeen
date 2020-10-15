@@ -8,8 +8,10 @@ import unittest
 from typing import Type, Union
 
 import pytest
+from requests.exceptions import ConnectionError
 
-from pykeen.datasets import DataSet, FB15k, FB15k237, WN18, WN18RR, YAGO310, kinships, nations, umls
+from pykeen.datasets import FB15k, FB15k237, Kinships, Nations, UMLS, WN18, WN18RR, YAGO310
+from pykeen.datasets.base import DataSet
 from pykeen.triples import TriplesFactory
 
 
@@ -49,7 +51,11 @@ class _DataSetTestCase:
         assert not self.dataset._loaded_validation
 
         # Load
-        self.dataset._load()
+        try:
+            self.dataset._load()
+        except (ConnectionError, EOFError):
+            self.skipTest('Problem with connection. Try this test again later.')
+
         assert isinstance(self.dataset.training, TriplesFactory)
         assert isinstance(self.dataset.testing, TriplesFactory)
         assert self.dataset._loaded
@@ -79,7 +85,7 @@ class TestNations(_DataSetTestCase, unittest.TestCase):
 
     exp_num_entities = 14
     exp_num_relations = 55
-    dataset = nations
+    dataset = Nations()
 
 
 class TestKinships(_DataSetTestCase, unittest.TestCase):
@@ -87,7 +93,7 @@ class TestKinships(_DataSetTestCase, unittest.TestCase):
 
     exp_num_entities = 104
     exp_num_relations = 25
-    dataset = kinships
+    dataset = Kinships()
 
 
 class TestUMLS(_DataSetTestCase, unittest.TestCase):
@@ -95,7 +101,7 @@ class TestUMLS(_DataSetTestCase, unittest.TestCase):
 
     exp_num_entities = 135
     exp_num_relations = 46
-    dataset = umls
+    dataset = UMLS()
 
 
 @pytest.mark.slow

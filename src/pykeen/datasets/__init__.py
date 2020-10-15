@@ -1,86 +1,45 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
-
-=============  ======================================
-Name           Reference
-=============  ======================================
-fb15k          :class:`pykeen.datasets.FB15k`
-fb15k237       :class:`pykeen.datasets.FB15k237`
-hetionet       :class:`pykeen.datasets.Hetionet`
-kinships       :class:`pykeen.datasets.Kinships`
-nations        :class:`pykeen.datasets.Nations`
-openbiolink    :class:`pykeen.datasets.OpenBioLink`
-openbiolinkf1  :class:`pykeen.datasets.OpenBioLinkF1`
-openbiolinkf2  :class:`pykeen.datasets.OpenBioLinkF2`
-openbiolinklq  :class:`pykeen.datasets.OpenBioLinkLQ`
-umls           :class:`pykeen.datasets.Umls`
-wn18           :class:`pykeen.datasets.WN18`
-wn18rr         :class:`pykeen.datasets.WN18RR`
-yago310        :class:`pykeen.datasets.YAGO310`
-=============  ======================================
-
-.. note:: This table can be re-generated with ``pykeen ls datasets -f rst | pbcopy``
-"""
+"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets."""
 
 from typing import Any, Mapping, Optional, Set, Tuple, Type, Union
 
-from .dataset import DataSet
-from .freebase import FB15k, FB15k237, fb15k, fb15k237
+from .base import (  # noqa:F401
+    DataSet, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset, TarFileRemoteDataSet,
+    ZipFileRemoteDataSet,
+)
+from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
-from .kinships import (
-    Kinships, KinshipsTestingTriplesFactory, KinshipsTrainingTriplesFactory, KinshipsValidationTriplesFactory, kinships,
-)
-from .nations import (
-    Nations, NationsTestingTriplesFactory, NationsTrainingTriplesFactory, NationsValidationTriplesFactory, nations,
-)
+from .kinships import Kinships
+from .nations import Nations
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
-from .umls import Umls, UmlsTestingTriplesFactory, UmlsTrainingTriplesFactory, UmlsValidationTriplesFactory, umls
-from .wordnet import WN18, WN18RR, wn18, wn18rr
-from .yago import YAGO310, yago310
+from .umls import UMLS
+from .wordnet import WN18, WN18RR
+from .yago import YAGO310
 from ..triples import TriplesFactory
-from ..utils import normalize_string
+from ..utils import normalize_string, normalized_lookup
 
 __all__ = [
-    'DataSet',
-    'datasets',
     'Hetionet',
-    'kinships',
     'Kinships',
-    'KinshipsTrainingTriplesFactory',
-    'KinshipsTestingTriplesFactory',
-    'KinshipsValidationTriplesFactory',
-    'nations',
     'Nations',
-    'NationsTrainingTriplesFactory',
-    'NationsValidationTriplesFactory',
-    'NationsTestingTriplesFactory',
     'OpenBioLink',
     'OpenBioLinkF1',
     'OpenBioLinkF2',
     'OpenBioLinkLQ',
-    'umls',
-    'Umls',
-    'UmlsTrainingTriplesFactory',
-    'UmlsTestingTriplesFactory',
-    'UmlsValidationTriplesFactory',
+    'UMLS',
     'FB15k',
-    'fb15k',
     'FB15k237',
-    'fb15k237',
     'WN18',
-    'wn18',
     'WN18RR',
-    'wn18rr',
     'YAGO310',
-    'yago310',
     'get_dataset',
 ]
 
 _DATASETS: Set[Type[DataSet]] = {
     Nations,
     Kinships,
-    Umls,
+    UMLS,
     FB15k,
     FB15k237,
     Hetionet,
@@ -93,11 +52,8 @@ _DATASETS: Set[Type[DataSet]] = {
     YAGO310,
 }
 
-#: A mapping of data sets' names to their classes
-datasets: Mapping[str, Type[DataSet]] = {
-    normalize_string(cls.__name__): cls
-    for cls in _DATASETS
-}
+#: A mapping of datasets' names to their classes
+datasets: Mapping[str, Type[DataSet]] = normalized_lookup(_DATASETS)
 
 
 def get_dataset(
@@ -125,7 +81,7 @@ def get_dataset(
             raise TypeError(f'Data set is wrong type: {type(dataset)}')
 
         dataset_instance = dataset(
-            **(dataset_kwargs or {})
+            **(dataset_kwargs or {}),
         )
         return dataset_instance.factories
 

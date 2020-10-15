@@ -142,6 +142,15 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         )
         from ...pipeline import pipeline
 
+        if mlflow_tracking_uri:
+            result_tracker = 'mlflow'
+            result_tracker_kwargs = {
+                'tracking_uri': mlflow_tracking_uri,
+            }
+        else:
+            result_tracker = None
+            result_tracker_kwargs = None
+
         pipeline_result = pipeline(
             device=device,
             model=model,
@@ -163,7 +172,8 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 num_workers=num_workers,
             ),
             stopper=stopper,
-            mlflow_tracking_uri=mlflow_tracking_uri,
+            result_tracker=result_tracker,
+            result_tracker_kwargs=result_tracker_kwargs,
             metadata=dict(
                 title=title,
             ),

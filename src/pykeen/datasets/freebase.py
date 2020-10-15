@@ -9,13 +9,11 @@
 import os
 from typing import Optional
 
-from .dataset import TarFileRemoteDataSet, ZipFileRemoteDataSet
+from .base import TarFileRemoteDataSet, ZipFileRemoteDataSet
 
 __all__ = [
     'FB15k',
-    'fb15k',
     'FB15k237',
-    'fb15k237',
 ]
 
 
@@ -45,7 +43,3 @@ class FB15k237(ZipFileRemoteDataSet):
             cache_root=cache_root,
             **kwargs,
         )
-
-
-fb15k = FB15k()
-fb15k237 = FB15k237()
