@@ -80,6 +80,8 @@ class GraphSamplerCompressed(Sampler):
         self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(triples_factory=triples_factory)
 
     def __iter__(self):  # noqa: D105
+        start_time = timeit.default_timer()
+
         # initialize
         chosen_edges = torch.empty(self.num_samples, dtype=torch.long)
         node_weights = self.degrees.detach().clone()
@@ -128,6 +130,8 @@ class GraphSamplerCompressed(Sampler):
             node_weights[chosen_vertex] -= 1
             node_weights[other_vertex] -= 1
 
+        end_time = timeit.default_timer()
+        logging.debug(f"Sampling took {end_time - start_time} seconds.")
         # return chosen edges
         return iter(chosen_edges)
 
