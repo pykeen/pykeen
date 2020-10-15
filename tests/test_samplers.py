@@ -138,7 +138,7 @@ class GraphSamplerTest(unittest.TestCase):
             # sample a batch
             batch_indices = []
             for j in self.graph_sampler:
-                batch_indices.append(j)
+                batch_indices.append(torch.as_tensor(j))
             batch = torch.stack(batch_indices)
 
             # check shape
