@@ -139,6 +139,7 @@ def get_cls(
     query: Union[None, str, Type[X]],
     base: Type[X],
     lookup_dict: Mapping[str, Type[X]],
+    lookup_dict_synonyms: Optional[Mapping[str, Type[X]]] = None,
     default: Optional[Type[X]] = None,
     suffix: Optional[str] = None,
 ) -> Type[X]:
@@ -150,10 +151,12 @@ def get_cls(
     elif not isinstance(query, (str, type)):
         raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
     elif isinstance(query, str):
-        try:
-            return lookup_dict[normalize_string(query, suffix=suffix)]
-        except KeyError:
-            raise ValueError(f'Invalid {base.__name__} name: {query}')
+        key = normalize_string(query, suffix=suffix)
+        if key in lookup_dict:
+            return lookup_dict[key]
+        if lookup_dict_synonyms is not None and key in lookup_dict_synonyms:
+            return lookup_dict_synonyms[key]
+        raise ValueError(f'Invalid {base.__name__} name: {query}')
     elif issubclass(query, base):
         return query
     raise TypeError(f'Not subclass of {base.__name__}: {query}')

@@ -2,7 +2,7 @@
 
 """Loss functions integrated in PyKEEN."""
 
-from typing import Any, Dict, Mapping, Optional, Set, Type, Union
+from typing import Any, Mapping, Optional, Set, Type, Union
 
 import torch
 from torch import nn
@@ -206,16 +206,16 @@ _LOSSES: Set[Type[Loss]] = {
 
 
 #: A mapping of losses' names to their implementations
-losses: Dict[str, Type[Loss]] = {
+losses: Mapping[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
-losses.update({
+losses_synonyms: Mapping[str, Type[Loss]] = {
     normalize_string(synonym): cls
     for cls in _LOSSES
     if cls.synonyms is not None
     for synonym in cls.synonyms
-})
+}
 
 
 #: HPO Defaults for losses
@@ -240,6 +240,7 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
         query,
         base=Loss,
         lookup_dict=losses,
+        lookup_dict_synonyms=losses_synonyms,
         default=MarginRankingLoss,
         suffix=_LOSS_SUFFIX,
     )
