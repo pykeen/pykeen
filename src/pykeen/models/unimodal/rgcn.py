@@ -569,7 +569,6 @@ class RGCN(EntityRelationEmbeddingModel):
         use_batch_norm: bool = False,
         activation_cls: Optional[Type[nn.Module]] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
-        base_model: Optional[Model] = None,
         sparse_messages_slcwa: bool = True,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
@@ -611,8 +610,6 @@ class RGCN(EntityRelationEmbeddingModel):
             The activation function to use.
         :param activation_kwargs:
             Additional key-word based parameters used to instantiate the activation layer.
-        :param base_model:
-            The base model, i.e. which interaction function to use as a decoder.
         :param sparse_messages_owa:
             Whether to use sparse messages when training with OWA, i.e. do not compute representations for all nodes,
             but only those in a neighborhood of the currently considered ones. Theoretically improves memory
