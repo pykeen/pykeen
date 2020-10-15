@@ -18,7 +18,7 @@ __all__ = [
     'CrossEntropyLoss',
     'MarginRankingLoss',
     'MSELoss',
-    'BCEWithLogits',
+    'BCEWithLogitsLoss',
     'losses_hpo_defaults',
     'get_loss_cls',
 ]
@@ -45,7 +45,7 @@ class SetwiseLoss(Loss):
     """Setwise loss functions compare the scores of several triples."""
 
 
-class BCEWithLogits(PointwiseLoss, nn.BCEWithLogits):
+class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
     r"""A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
@@ -186,7 +186,7 @@ class NSSALoss(SetwiseLoss):
 _LOSS_SUFFIX = 'Loss'
 _LOSSES: Set[Type[Loss]] = {
     MarginRankingLoss,
-    BCEWithLogits,
+    BCEWithLogitsLoss,
     SoftplusLoss,
     BCEAfterSigmoidLoss,
     CrossEntropyLoss,

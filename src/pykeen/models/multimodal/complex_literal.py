@@ -28,7 +28,7 @@ class ComplExLiteral(MultimodalModel):
         },
     )
     #: The default loss function class
-    loss_default = nn.BCEWithLogits
+    loss_default = nn.BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
