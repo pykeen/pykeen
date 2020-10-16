@@ -364,7 +364,7 @@ class BlockDecomposition(RelationSpecificMessagePassing):
 
         # other relations
         for r in range(self.num_relations):
-            specific = _reduce_relation_specific(
+            source_r, target_r, weights_r = _reduce_relation_specific(
                 relation=r,
                 source=source,
                 target=target,
@@ -373,10 +373,8 @@ class BlockDecomposition(RelationSpecificMessagePassing):
             )
 
             # skip relations without edges
-            if specific is None:
+            if source_r is None:
                 continue
-
-            source_r, target_r, weights_r = specific
 
             # compute message, shape: (num_edges_of_type, num_blocks, block_size)
             uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
