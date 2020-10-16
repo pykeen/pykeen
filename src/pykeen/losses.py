@@ -73,15 +73,17 @@ class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
         a negative distance as score and cannot produce positive model outputs.
     """
 
-    synonyms = {'bce'}
-
 
 class MSELoss(PointwiseLoss, nn.MSELoss):
     """A wrapper around the PyTorch mean square error loss."""
 
+    synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
+
 
 class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
     """A wrapper around the PyTorch margin ranking loss."""
+
+    synonyms = {"Pairwise Hinge Loss"}
 
 
 class SoftplusLoss(PointwiseLoss):
@@ -150,6 +152,8 @@ class CrossEntropyLoss(SetwiseLoss):
 class NSSALoss(SetwiseLoss):
     """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
 
+    synonyms = {'Self-Adversarial Negative Sampling Loss', 'Negative Sampling Self-Adversarial Loss'}
+
     def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
         """Initialize the NSSA loss.
 
@@ -211,7 +215,7 @@ losses: Mapping[str, Type[Loss]] = {
     for cls in _LOSSES
 }
 losses_synonyms: Mapping[str, Type[Loss]] = {
-    normalize_string(synonym): cls
+    normalize_string(synonym, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
     if cls.synonyms is not None
     for synonym in cls.synonyms
