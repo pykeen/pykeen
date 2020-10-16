@@ -103,6 +103,8 @@ class RGCN(EntityRelationEmbeddingModel):
     #: The layers
     layers: Sequence[nn.Module]
 
+    edge_weighting: Optional[EdgeWeighting]
+
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=1000, q=50),
@@ -138,7 +140,7 @@ class RGCN(EntityRelationEmbeddingModel):
         sparse_messages_slcwa: bool = True,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
-        edge_weighting: Union[None, str, EdgeWeighting] = None,
+        edge_weighting: Union[None, str, EdgeWeighting] = 'inverse_indegree',
         _decomposition: Union[None, str, Type[RelationSpecificMessagePassing]] = None,
         buffer_messages: bool = True,
         memory_intense: bool = False,
@@ -213,7 +215,8 @@ class RGCN(EntityRelationEmbeddingModel):
         self.buffer_messages = buffer_messages
         self.enriched_embeddings = None
 
-        self.edge_weighting = get_edge_weighting(edge_weighting)
+        # if edge weighting is None, keep it as none. otherwise look it up
+        self.edge_weighting = edge_weightings and get_edge_weighting(edge_weighting)
         self.edge_dropout = edge_dropout
         if self_loop_dropout is None:
             self_loop_dropout = edge_dropout
@@ -237,21 +240,22 @@ class RGCN(EntityRelationEmbeddingModel):
         self.register_buffer('targets', t)
         self.register_buffer('edge_types', r)
 
-        layers = []
-        message_passing_kwargs = dict(
-            input_dim=self.embedding_dim,
-            num_relations=self.num_relations,
-        )
+        decomposition_cls: Type[RelationSpecificMessagePassing] = get_decomposition_cls(_decomposition)
 
-        decomposition_cls = get_decomposition_cls(_decomposition)
+        message_passing_kwargs = {}
         if decomposition_cls is BasesDecomposition:
             message_passing_kwargs['num_bases'] = num_bases
             message_passing_kwargs['memory_intense'] = memory_intense
         elif decomposition_cls is BlockDecomposition:
             message_passing_kwargs['num_blocks'] = num_blocks
 
+        layers = []
         for _ in range(num_layers):
-            layers.append(decomposition_cls(**message_passing_kwargs))
+            layers.append(decomposition_cls(
+                input_dim=self.embedding_dim,
+                num_relations=self.num_relations,
+                **message_passing_kwargs,
+            ))
             if self.use_bias:
                 layers.append(Bias(dim=self.embedding_dim))
             if self.use_batch_norm:
@@ -319,7 +323,7 @@ class RGCN(EntityRelationEmbeddingModel):
             for r in range(self.num_relations):
                 mask = edge_types == r
                 if mask.any():
-                    edge_weights[mask] = self.edge_weighting(source=sources[mask], target=targets[mask])
+                    edge_weights[mask] = self.edge_weighting(sources[mask], targets[mask])
         else:
             edge_weights = None
 

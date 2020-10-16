@@ -14,6 +14,7 @@ __all__ = [
     'inverse_outdegree_edge_weights',
     'symmetric_edge_weights',
     'edge_weightings',
+    'get_edge_weighting',
 ]
 
 EdgeWeighting = Callable[
