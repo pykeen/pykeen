@@ -2,9 +2,11 @@
 
 """Various edge weighting implementations for R-GCN."""
 
-from typing import Callable, Collection
+from typing import Callable, Collection, Mapping, Union
 
 import torch
+
+from ....utils import get_fn, normalize_string
 
 __all__ = [
     'EdgeWeighting',
@@ -70,8 +72,24 @@ def symmetric_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -
 
 
 #: A list of all implemented edge weightings for usage in HPO
-edge_weightings: Collection[EdgeWeighting] = [
+_EDGE_WEIGHTINGS: Collection[EdgeWeighting] = [
     inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 ]
+_EDGE_WEIGHTINGS_SUFFIX = 'edge_weights'
+
+edge_weightings: Mapping[str, EdgeWeighting] = {
+    normalize_string(edge_weighting.__name__, suffix=_EDGE_WEIGHTINGS_SUFFIX): edge_weighting
+    for edge_weighting in _EDGE_WEIGHTINGS
+}
+
+
+def get_edge_weighting(query: Union[None, str, EdgeWeighting]) -> EdgeWeighting:
+    """Get the edge weighting."""
+    return get_fn(
+        query=query,
+        default=inverse_indegree_edge_weights,
+        lookup_dict=edge_weightings,
+        suffix=_EDGE_WEIGHTINGS_SUFFIX,
+    )

@@ -3,6 +3,7 @@
 """Utilities for PyKEEN."""
 
 import ftplib
+import inspect
 import json
 import logging
 import random
@@ -34,6 +35,7 @@ __all__ = [
     'normalize_string',
     'normalized_lookup',
     'get_cls',
+    'get_fn',
     'get_until_first_blank',
     'flatten_dictionary',
     'get_embedding_in_canonical_shape',
@@ -157,6 +159,27 @@ def get_cls(
     elif issubclass(query, base):
         return query
     raise TypeError(f'Not subclass of {base.__name__}: {query}')
+
+
+def get_fn(
+    query: Union[None, str, X],
+    lookup_dict: Mapping[str, X],
+    default: Optional[X] = None,
+    suffix: Optional[str] = None,
+) -> X:
+    """Get a function by string, default, or implementation."""
+    if query is None:
+        if default is None:
+            raise ValueError('No default set')
+        return default
+    elif isinstance(query, str):
+        try:
+            return lookup_dict[normalize_string(query, suffix=suffix)]
+        except KeyError:
+            raise ValueError(f'Invalid function name: {query}')
+    elif inspect.isfunction(query):
+        return query
+    raise TypeError(f'Not a function or valid funcion name: {query}')
 
 
 def get_until_first_blank(s: str) -> str:
