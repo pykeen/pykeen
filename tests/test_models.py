@@ -30,12 +30,12 @@ from pykeen.models.base import (
     get_novelty_mask,
 )
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.unimodal.rgcn import (
-    BasesDecomposition,
-    BlockDecomposition,
+from pykeen.models.unimodal.rgcn.decompositions import (
+    BasesDecomposition, BlockDecomposition,
     RelationSpecificMessagePassing,
-    inverse_indegree_edge_weights,
-    inverse_outdegree_edge_weights,
+)
+from pykeen.models.unimodal.rgcn.weightings import (
+    inverse_indegree_edge_weights, inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
