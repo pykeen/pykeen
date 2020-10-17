@@ -2,7 +2,7 @@
 
 """Loss functions integrated in PyKEEN."""
 
-from typing import Any, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Mapping, Optional, Set, Type, Union
 
 import torch
 from torch import nn
@@ -19,7 +19,6 @@ __all__ = [
     'MarginRankingLoss',
     'MSELoss',
     'BCEWithLogitsLoss',
-    'losses_hpo_defaults',
     'get_loss_cls',
 ]
 
@@ -32,7 +31,10 @@ _REDUCTION_METHODS = dict(
 class Loss(nn.Module):
     """A loss function."""
 
-    synonyms: Optional[Set[str]] = None
+    synonyms: ClassVar[Optional[Set[str]]] = None
+
+    #: The default strategy for optimizing the model's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
 
 
 class PointwiseLoss(Loss):
@@ -84,6 +86,10 @@ class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
     """A wrapper around the PyTorch margin ranking loss."""
 
     synonyms = {"Pairwise Hinge Loss"}
+
+    hpo_default = dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    )
 
 
 class SoftplusLoss(PointwiseLoss):
@@ -154,6 +160,11 @@ class NSSALoss(SetwiseLoss):
 
     synonyms = {'Self-Adversarial Negative Sampling Loss', 'Negative Sampling Self-Adversarial Loss'}
 
+    hpo_default = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+
     def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
         """Initialize the NSSA loss.
 
@@ -220,22 +231,6 @@ losses_synonyms: Mapping[str, Type[Loss]] = {
     if cls.synonyms is not None
     for synonym in cls.synonyms
 }
-
-
-#: HPO Defaults for losses
-losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
-    MarginRankingLoss: dict(
-        margin=dict(type=int, low=0, high=3, q=1),
-    ),
-    NSSALoss: dict(
-        margin=dict(type=int, low=3, high=30, q=3),
-        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
-    ),
-}
-# Add empty dictionaries as defaults for all remaining losses
-for cls in _LOSSES:
-    if cls not in losses_hpo_defaults:
-        losses_hpo_defaults[cls] = {}
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:

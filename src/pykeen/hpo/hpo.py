@@ -20,7 +20,7 @@ from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
 from ..datasets.base import DataSet
 from ..evaluation import Evaluator, get_evaluator_cls
-from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
+from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from ..models import get_model_cls
 from ..models.base import Model
 from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
@@ -136,7 +136,7 @@ class Objective:
         _loss_kwargs = _get_kwargs(
             trial=trial,
             prefix='loss',
-            default_kwargs_ranges=losses_hpo_defaults[self.loss],
+            default_kwargs_ranges=self.loss.hpo_default,
             kwargs=self.loss_kwargs,
             kwargs_ranges=self.loss_kwargs_ranges,
         )
