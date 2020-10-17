@@ -132,11 +132,18 @@ class Objective:
             kwargs=self.model_kwargs,
             kwargs_ranges=self.model_kwargs_ranges,
         )
+
+        try:
+            loss_default_kwargs_ranges = self.loss.hpo_default
+        except AttributeError:
+            logger.warning('using a loss function with no hpo_default field: %s', self.loss)
+            loss_default_kwargs_ranges = {}
+
         # 3. Loss
         _loss_kwargs = _get_kwargs(
             trial=trial,
             prefix='loss',
-            default_kwargs_ranges=self.loss.hpo_default,
+            default_kwargs_ranges=loss_default_kwargs_ranges,
             kwargs=self.loss_kwargs,
             kwargs_ranges=self.loss_kwargs_ranges,
         )
