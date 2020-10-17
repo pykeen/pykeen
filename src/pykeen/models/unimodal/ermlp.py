@@ -64,7 +64,7 @@ class ERMLPInteractionFunction(InteractionFunction):
         x = self.activation(h[:, :, None, None, :] + r[:, None, :, None, :] + t[:, None, None, :, :])
         return self.hidden_to_score(x).squeeze(dim=-1)
 
-    def reset_parameters(self):
+    def reset_parameters(self):  # noqa: D102
         # Initialize biases with zero
         nn.init.zeros_(self.rel_to_hidden.bias)
         nn.init.zeros_(self.hidden_to_score.bias)

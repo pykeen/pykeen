@@ -19,7 +19,10 @@ from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import NoRandomSeedNecessary, get_embedding, get_embedding_in_canonical_shape, resolve_device, set_random_seed
+from ..utils import (
+    NoRandomSeedNecessary, get_embedding, get_embedding_in_canonical_shape, resolve_device,
+    set_random_seed,
+)
 from ..version import get_version
 
 __all__ = [
@@ -1151,8 +1154,7 @@ class InteractionFunction(nn.Module):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """
-        Generic interaction function.
+        """Score the given triples.
 
         :param h: shape: (batch_size, num_heads, d_e)
             The head representations.
