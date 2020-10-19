@@ -18,6 +18,7 @@ from optuna.storages import BaseStorage
 
 from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
+from ..datasets import get_dataset, has_dataset
 from ..datasets.base import DataSet
 from ..evaluation import Evaluator, get_evaluator_cls
 from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls
@@ -584,11 +585,14 @@ def hpo_pipeline(
     study.set_user_attr('pykeen_version', get_version())
     study.set_user_attr('pykeen_git_hash', get_git_hash())
     # 1. Dataset
-    # FIXME must be addressed before merging https://github.com/pykeen/pykeen/pull/54
-    # FIXME difference between dataset class and string
-    # FIXME how to handle if dataset or factories were set? Should have been
-    #  part of https://github.com/mali-git/POEM_develop/pull/483
-    study.set_user_attr('dataset', dataset)
+    study.set_user_attr('dataset', _get_dataset_name(
+        dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
+        training=training,
+        testing=testing,
+        validation=validation,
+    ))
+
     # 2. Model
     model: Type[Model] = get_model_cls(model)
     study.set_user_attr('model', normalize_string(model.__name__))
@@ -783,3 +787,23 @@ def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [2 ** i for i in range(low, high + 1)]
     return trial.suggest_categorical(name=name, choices=choices)
+
+
+def _get_dataset_name(
+    *,
+    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    training: Union[None, str, TriplesFactory] = None,
+    testing: Union[None, str, TriplesFactory] = None,
+    validation: Union[None, str, TriplesFactory] = None,
+) -> str:
+    """Make a useful name for the dataset for storage in HPO."""
+    if (
+        (isinstance(dataset, str) and has_dataset(dataset))
+        or isinstance(dataset, DataSet)
+        or (isinstance(dataset, type) and issubclass(dataset, DataSet))
+    ):
+        return get_dataset(dataset=dataset).get_normalized_name()
+
+    # TODO make more informative
+    return '<user defined>'

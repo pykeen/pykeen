@@ -43,6 +43,7 @@ __all__ = [
     'WN18RR',
     'YAGO310',
     'get_dataset',
+    'has_dataset',
 ]
 
 logger = logging.getLogger(__name__)
@@ -81,9 +82,8 @@ def get_dataset(
         return dataset
 
     if isinstance(dataset, str):
-        normalized_dataset = normalize_string(dataset)
-        if normalized_dataset in datasets:
-            dataset: Type[DataSet] = datasets[normalized_dataset]
+        if has_dataset(dataset):
+            dataset: Type[DataSet] = datasets[normalize_string(dataset)]
         elif not os.path.exists(dataset):
             raise ValueError('dataset is neither a pre-defined dataset string nor a filepath')
         else:
@@ -117,3 +117,8 @@ def get_dataset(
         )
 
     raise TypeError('Training and testing must both be given as strings or Triples Factories')
+
+
+def has_dataset(key: str) -> bool:
+    """Return if the dataset is registered in PyKEEN."""
+    return normalize_string(key) in datasets
