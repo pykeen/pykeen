@@ -8,7 +8,7 @@ from typing import ClassVar, Type
 import numpy
 import torch
 
-from pykeen.datasets.nations import Nations
+from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory

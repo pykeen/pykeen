@@ -8,7 +8,7 @@ from typing import Optional
 import torch
 from torch import optim
 
-from pykeen.datasets.nations import Nations
+from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model

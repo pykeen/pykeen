@@ -15,10 +15,31 @@ from .base import (  # noqa:F401
     DataSet, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset, TarFileRemoteDataSet,
     ZipFileRemoteDataSet,
 )
+from .freebase import FB15k, FB15k237
+from .hetionet import Hetionet
+from .kinships import Kinships
+from .nations import Nations
+from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
+from .umls import UMLS
+from .wordnet import WN18, WN18RR
+from .yago import YAGO310
 from ..triples import TriplesFactory
 from ..utils import normalize_string, normalized_lookup
 
 __all__ = [
+    'Hetionet',
+    'Kinships',
+    'Nations',
+    'OpenBioLink',
+    'OpenBioLinkF1',
+    'OpenBioLinkF2',
+    'OpenBioLinkLQ',
+    'UMLS',
+    'FB15k',
+    'FB15k237',
+    'WN18',
+    'WN18RR',
+    'YAGO310',
     'get_dataset',
 ]
 

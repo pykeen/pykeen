@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Dict, Optional, Type
 import torch
 from torch.nn import functional
 
-from pykeen.datasets.nations import Nations
+from pykeen.datasets import Nations
 from pykeen.models import ConvKB, RESCAL, TransH
 from pykeen.regularizers import (
     CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer,
