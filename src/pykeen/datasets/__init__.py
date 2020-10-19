@@ -2,7 +2,7 @@
 
 """Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
-New datasets (inheriting from :class:`DataSet`) can be registered with PyKEEN using the
+New datasets (inheriting from :class:`pykeen.datasets.base.DataSet`) can be registered with PyKEEN using the
 `pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
