@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 
-from pykeen.datasets import Nations
+from pykeen.datasets.nations import Nations
 from pykeen.models import TransE
 from pykeen.models.base import EntityRelationEmbeddingModel, Model
 from pykeen.triples import TriplesFactory

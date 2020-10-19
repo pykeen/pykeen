@@ -1,55 +1,30 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets."""
+"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
+
+New datasets (inheriting from :class:`DataSet`) can be registered with PyKEEN using the
+`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
+They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
+"""
 
 from typing import Any, Mapping, Optional, Set, Tuple, Type, Union
+
+from pkg_resources import iter_entry_points
 
 from .base import (  # noqa:F401
     DataSet, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset, TarFileRemoteDataSet,
     ZipFileRemoteDataSet,
 )
-from .freebase import FB15k, FB15k237
-from .hetionet import Hetionet
-from .kinships import Kinships
-from .nations import Nations
-from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
-from .umls import UMLS
-from .wordnet import WN18, WN18RR
-from .yago import YAGO310
 from ..triples import TriplesFactory
 from ..utils import normalize_string, normalized_lookup
 
 __all__ = [
-    'Hetionet',
-    'Kinships',
-    'Nations',
-    'OpenBioLink',
-    'OpenBioLinkF1',
-    'OpenBioLinkF2',
-    'OpenBioLinkLQ',
-    'UMLS',
-    'FB15k',
-    'FB15k237',
-    'WN18',
-    'WN18RR',
-    'YAGO310',
     'get_dataset',
 ]
 
 _DATASETS: Set[Type[DataSet]] = {
-    Nations,
-    Kinships,
-    UMLS,
-    FB15k,
-    FB15k237,
-    Hetionet,
-    OpenBioLink,
-    OpenBioLinkF1,
-    OpenBioLinkF2,
-    OpenBioLinkLQ,
-    WN18,
-    WN18RR,
-    YAGO310,
+    entry.load()
+    for entry in iter_entry_points(group='pykeen.datasets')
 }
 
 #: A mapping of datasets' names to their classes

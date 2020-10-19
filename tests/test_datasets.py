@@ -10,8 +10,13 @@ from typing import Type, Union
 import pytest
 from requests.exceptions import ConnectionError
 
-from pykeen.datasets import FB15k, FB15k237, Kinships, Nations, UMLS, WN18, WN18RR, YAGO310
 from pykeen.datasets.base import DataSet
+from pykeen.datasets.freebase import FB15k, FB15k237
+from pykeen.datasets.kinships import Kinships
+from pykeen.datasets.nations import Nations
+from pykeen.datasets.umls import UMLS
+from pykeen.datasets.wordnet import WN18, WN18RR
+from pykeen.datasets.yago import YAGO310
 from pykeen.triples import TriplesFactory
 
 

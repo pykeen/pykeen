@@ -9,7 +9,7 @@ import numpy
 import torch
 from torch.optim import Adam
 
-from pykeen.datasets import Nations
+from pykeen.datasets.nations import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import TransE
