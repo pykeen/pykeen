@@ -2,6 +2,7 @@
 
 """Result trackers in PyKEEN."""
 
+import os
 from typing import Any, Dict, Mapping, Optional, Type, Union
 
 from .utils import flatten_dictionary, get_cls, normalize_string
@@ -99,6 +100,8 @@ class WANDBResultTracker(ResultTracker):
         self,
         project: str,
         experiment: Optional[str] = None,
+        offline: bool = False,
+        **kwargs,
     ):
         """Initialize result tracking via WANDB.
 
@@ -112,7 +115,11 @@ class WANDBResultTracker(ResultTracker):
         if project is None:
             raise ValueError('Weights & Biases requires a project name.')
         self.project = project
-        self.wandb.init(project=self.project, name=experiment)
+
+        if offline:
+            os.environ['WANDB_MODE'] = 'dryrun'
+
+        self.wandb.init(project=self.project, name=experiment, **kwargs)
 
     def log_metrics(
         self,
