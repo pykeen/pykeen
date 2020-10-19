@@ -37,6 +37,7 @@ PyKEEN
    reference/hpo
    reference/ablation
    reference/lookup
+   reference/sealant
 
 .. toctree::
    :caption: Appendix

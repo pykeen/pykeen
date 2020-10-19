@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
-from ...losses import Loss
+from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
 from ...utils import slice_doubles
 
@@ -28,7 +28,7 @@ class ComplExLiteral(MultimodalModel):
         },
     )
     #: The default loss function class
-    loss_default = nn.BCELoss
+    loss_default = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 

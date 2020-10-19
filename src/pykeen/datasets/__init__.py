@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets."""
+"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
+
+New datasets (inheriting from :class:`pykeen.datasets.base.DataSet`) can be registered with PyKEEN using the
+`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
+They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
+"""
 
 import logging
 import os
 from typing import Any, Mapping, Optional, Set, Type, Union
+
+from pkg_resources import iter_entry_points
 
 from .base import (  # noqa:F401
     DataSet, EagerDataset, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset,
@@ -41,19 +48,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _DATASETS: Set[Type[DataSet]] = {
-    Nations,
-    Kinships,
-    UMLS,
-    FB15k,
-    FB15k237,
-    Hetionet,
-    OpenBioLink,
-    OpenBioLinkF1,
-    OpenBioLinkF2,
-    OpenBioLinkLQ,
-    WN18,
-    WN18RR,
-    YAGO310,
+    entry.load()
+    for entry in iter_entry_points(group='pykeen.datasets')
 }
 
 #: A mapping of datasets' names to their classes
