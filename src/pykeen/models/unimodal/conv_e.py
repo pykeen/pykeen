@@ -291,7 +291,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         try:
             # batch_size, num_input_channels, 2*height, width
-            if self.apply_batch_normalization:
+            if self.apply_batch_normalization and batch_size > 1:
                 x = self.bn0(x)
 
             # batch_size, num_input_channels, 2*height, width
@@ -299,7 +299,7 @@ class ConvE(EntityRelationEmbeddingModel):
             # (N,C_out,H_out,W_out)
             x = self.conv1(x)
 
-            if self.apply_batch_normalization:
+            if self.apply_batch_normalization and batch_size > 1:
                 x = self.bn1(x)
             x = F.relu(x)
             x = self.feature_map_drop(x)
@@ -308,7 +308,7 @@ class ConvE(EntityRelationEmbeddingModel):
             x = self.fc(x)
             x = self.hidden_drop(x)
 
-            if self.apply_batch_normalization:
+            if self.apply_batch_normalization and batch_size > 1:
                 x = self.bn2(x)
             x = F.relu(x)
         except RuntimeError as e:
