@@ -15,6 +15,7 @@ from ..training import _TRAINING_LOOP_SUFFIX
 from ..utils import normalize_string
 
 __all__ = [
+    'ablation_pipeline',
     'ablation_pipeline_from_config',
     'prepare_ablation_from_config',
     'prepare_ablation_from_path',
