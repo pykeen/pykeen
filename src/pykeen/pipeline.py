@@ -276,12 +276,18 @@ class PipelineResult(Result):
         relations: Optional[Set[str]] = None,
         apply_limits: bool = True,
         plot_entities: bool = True,
-        plot_relations: bool = True,
+        plot_relations: bool = False,
         annotation_x_offset: float = 0.02,
         annotation_y_offset: float = 0.03,
         **kwargs,
     ):
-        """Plot the reduced entities and relation vectors in 2D."""
+        """Plot the reduced entities and relation vectors in 2D.
+
+        .. warning::
+
+            Plotting relations and entities on the same plot is only
+            meaningful for translational distance models like TransE.
+        """
         if not plot_entities and not plot_relations:
             raise ValueError
 
