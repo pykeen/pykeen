@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
-    import wandb.sdk.wandb_run
+    import wandb.wandb_run
 
 
 class ResultTracker:
@@ -100,7 +100,7 @@ class WANDBResultTracker(ResultTracker):
     """
 
     #: The WANDB run
-    run: 'wandb.sdk.wandb_run.Run'
+    run: 'wandb.wandb_run.Run'
 
     def __init__(
         self,
