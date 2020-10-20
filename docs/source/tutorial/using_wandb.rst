@@ -39,7 +39,7 @@ Further tweaking of appearance, charts, and other settings is described in the o
 `documentation <https://docs.wandb.com/>`_
 
 You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
-labels.
+labels. All further keyword arguments are passed on to the :func:`init` function of WANDB.
 
 .. code-block:: python
 
@@ -71,6 +71,7 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
         result_tracker_kwargs=dict(
             project='pykeen_project',
             experiment='new run',
+            reinit=True,
         ),
     )
 
