@@ -1,6 +1,6 @@
 Toy Example with Translational Distance Models
 ==============================================
-The following tutorial is based on a question originally posed by Prof.
+The following tutorial is based on a question originally posed by
 Heiko Paulheim on the PyKEEN Issue Tracker
 `#97 <https://github.com/pykeen/pykeen/issues/97>`_.
 
