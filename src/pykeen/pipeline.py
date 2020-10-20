@@ -302,6 +302,16 @@ class PipelineResult(Result):
             from sklearn.random_projection import GaussianRandomProjection as Reducer
         elif model.upper() == 'SRP':
             from sklearn.random_projection import SparseRandomProjection as Reducer
+        elif model.upper() in {'T-SNE', 'TSNE'}:
+            from sklearn.manifold import TSNE as Reducer  # noqa:N811
+        elif model.upper() == 'LLE':
+            from sklearn.manifold import LocallyLinearEmbedding as Reducer
+        elif model.upper() == 'ISOMAP':
+            from sklearn.manifold import Isomap as Reducer
+        elif model.upper() == 'MDS':
+            from sklearn.manifold import MDS as Reducer  # noqa:N811
+        elif model.upper() in {'SPECTRAL', 'SPECTRALEMBEDDING'}:
+            from sklearn.manifold import SpectralEmbedding as Reducer
         else:
             raise ValueError(f'invalid dimensionality reduction model: {model}')
 
