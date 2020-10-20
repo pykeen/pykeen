@@ -3,7 +3,7 @@
 """Result trackers in PyKEEN."""
 
 import os
-from typing import Any, Dict, Mapping, Optional, Type, Union
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type, Union
 
 from .utils import flatten_dictionary, get_cls, normalize_string
 
@@ -13,6 +13,9 @@ __all__ = [
     'MLFlowResultTracker',
     'WANDBResultTracker',
 ]
+
+if TYPE_CHECKING:
+    import wandb.sdk.wandb_run
 
 
 class ResultTracker:
