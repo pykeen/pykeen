@@ -265,7 +265,7 @@ class Evaluator(ABC):
             raise AttributeError(f'The parameter {key} is unknown.')
         reached_max = False
         evaluated_once = False
-        logger.debug(f'Starting {key} search for evaluation now...')
+        logger.info(f'Starting {key} search for evaluation now...')
         while True:
             logger.debug(f'Trying {key}={values_dict[key]}')
             try:
@@ -304,7 +304,7 @@ class Evaluator(ABC):
                 values_dict[key] //= 2
                 reached_max = True
                 if evaluated_once:
-                    logger.debug(f'Concluded {key} search with batch_size={values_dict[key]}.')
+                    logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
                 else:
                     logger.debug(f'The {key} {values_dict[key]} was too big, trying less now')
@@ -315,7 +315,7 @@ class Evaluator(ABC):
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
                     values_dict[key] *= 2
                 else:
-                    logger.debug(f'Concluded {key} search with batch_size={values_dict[key]}.')
+                    logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
 
         return values_dict[key], evaluated_once
@@ -582,7 +582,10 @@ def evaluate(
         results = [evaluator.finalize() for evaluator in evaluators]
 
     stop = timeit.default_timer()
-    logger.debug("Evaluation took %.2fs seconds", stop - start)
+    if only_size_probing:
+        logger.debug("Evaluation took %.2fs seconds", stop - start)
+    else:
+        logger.info("Evaluation took %.2fs seconds", stop - start)
 
     if squeeze and len(results) == 1:
         return results[0]
