@@ -125,7 +125,7 @@ class WANDBResultTracker(ResultTracker):
         if offline:
             os.environ[self.wandb.env.MODE] = 'dryrun'
 
-        self.wandb_run = self.wandb.init(project=self.project, name=experiment, **kwargs)
+        self.run = self.wandb.init(project=self.project, name=experiment, **kwargs)
 
     def log_metrics(
         self,
