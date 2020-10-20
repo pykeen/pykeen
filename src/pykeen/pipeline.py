@@ -207,6 +207,9 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+REDUCER_RELATION_WHITELIST = {'PCA'}
+
+
 @fix_dataclass_init_docs
 @dataclass
 class PipelineResult(Result):
@@ -300,6 +303,9 @@ class PipelineResult(Result):
             model = 'PCA'
 
         reducer, reducer_kwargs = _get_reducer_cls(model, **kwargs)
+
+        if plot_relations and reducer.__name__ not in REDUCER_RELATION_WHITELIST:
+            raise ValueError(f'Can not use reducer {reducer} when projecting relations. Will result in nonsense')
 
         if ax is None:
             import matplotlib.pyplot as plt
