@@ -12,8 +12,7 @@ PyKEEN
    tutorial/byod
    tutorial/understanding_evaluation
    tutorial/running_hpo
-   tutorial/using_mlflow
-   tutorial/using_wandb
+   tutorial/trackers/index
    tutorial/making_predictions
    tutorial/performance
 
