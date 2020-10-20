@@ -2,7 +2,8 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Dict, Mapping, Optional, Type, Union
+import os
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type, Union
 
 from .utils import flatten_dictionary, get_cls, normalize_string
 
@@ -12,6 +13,9 @@ __all__ = [
     'MLFlowResultTracker',
     'WANDBResultTracker',
 ]
+
+if TYPE_CHECKING:
+    import wandb.wandb_run
 
 
 class ResultTracker:
@@ -95,10 +99,15 @@ class WANDBResultTracker(ResultTracker):
     Note that you have to perform wandb login beforehand.
     """
 
+    #: The WANDB run
+    run: 'wandb.wandb_run.Run'
+
     def __init__(
         self,
         project: str,
         experiment: Optional[str] = None,
+        offline: bool = False,
+        **kwargs,
     ):
         """Initialize result tracking via WANDB.
 
@@ -112,7 +121,11 @@ class WANDBResultTracker(ResultTracker):
         if project is None:
             raise ValueError('Weights & Biases requires a project name.')
         self.project = project
-        self.wandb.init(project=self.project, name=experiment)
+
+        if offline:
+            os.environ[self.wandb.env.MODE] = 'dryrun'
+
+        self.run = self.wandb.init(project=self.project, name=experiment, **kwargs)
 
     def log_metrics(
         self,
