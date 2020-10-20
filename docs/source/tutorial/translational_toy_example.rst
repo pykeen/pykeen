@@ -96,3 +96,13 @@ loss. You can do this by passing ``loss="softplus"`` to the pipeline.
 
 .. image:: ../img/toy_3.png
   :alt: Troubleshooting Image 3
+
+There was a lot of interesting follow-up discussion at `!99 <https://github.com/pykeen/pykeen/pull/99>`_
+during which this code was implemented for re-use. One of the interesting points is that the relation
+plot is only applicable for translational distance models like TransE. Further, when models whose
+embeddings are higher than 2, a dimensionality reduction method must be used. For this, one of many
+of the tools from scikit-learn can be chosen. However, to make sure that the entities and relations
+are projected on the same axis, the dimensionality reduction model is first trained on the entity
+embeddings, then applied on both the entity embeddings and relation embeddings. Further, non-linear
+models like KPCA should not be used when plotting relations, since these _should_ correspond to linear
+transformations in embedding space.

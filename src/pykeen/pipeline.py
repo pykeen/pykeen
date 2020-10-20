@@ -289,6 +289,8 @@ class PipelineResult(Result):
             Can also use KPCA, GRP, SRP, TSNE, LLE, ISOMAP, MDS, or SE.
         :param kwargs: The keyword arguments passed to `__init__()` of
             the reducer class (e.g., PCA, TSNE)
+        :param plot_relations: By default, this is only enabled on translational distance models
+            like :class:`pykeen.models.TransE`.
 
         .. warning::
 
