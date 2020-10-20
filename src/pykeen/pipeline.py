@@ -523,13 +523,13 @@ def _get_model(model=None, **kwargs):
         from sklearn.random_projection import SparseRandomProjection as Reducer
     elif model.upper() in {'T-SNE', 'TSNE'}:
         from sklearn.manifold import TSNE as Reducer  # noqa:N811
-    elif model.upper() == 'LLE':
+    elif model.upper() in {'LLE', 'LOCALLYLINEAREMBEDDING'}:
         from sklearn.manifold import LocallyLinearEmbedding as Reducer
     elif model.upper() == 'ISOMAP':
         from sklearn.manifold import Isomap as Reducer
-    elif model.upper() == 'MDS':
+    elif model.upper() in {'MDS', 'MULTIDIMENSIONALSCALING'}:
         from sklearn.manifold import MDS as Reducer  # noqa:N811
-    elif model.upper() in {'SPECTRAL', 'SPECTRALEMBEDDING'}:
+    elif model.upper() in {'SE', 'SPECTRAL', 'SPECTRALEMBEDDING'}:
         from sklearn.manifold import SpectralEmbedding as Reducer
     else:
         raise ValueError(f'invalid dimensionality reduction model: {model}')
