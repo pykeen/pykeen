@@ -283,6 +283,8 @@ class PipelineResult(Result):
     ):
         """Plot the reduced entities and relation vectors in 2D.
 
+        :param model: The dimensionality reduction model from :mod:`sklearn`. Defaults to PCA.
+            Can also use KPCA, GRP, SRP, TSNE, LLE, ISOMAP, MDS, or SE.
         :param kwargs: The keyword arguments passed to `__init__()` of
             the reducer class (e.g., PCA, TSNE)
 
@@ -293,6 +295,9 @@ class PipelineResult(Result):
         """
         if not plot_entities and not plot_relations:
             raise ValueError
+
+        if model is None:
+            model = 'PCA'
 
         reducer, reducer_kwargs = _get_model(model, **kwargs)
 
@@ -509,9 +514,14 @@ class PipelineResult(Result):
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
-def _get_model(model=None, **kwargs):
-    if model is None:
-        model = 'PCA'
+def _get_model(model: str, **kwargs):
+    """Get the model class by name and default kwargs.
+
+    :param model: The name of the model. Can choose from: PCA, KPCA, GRP,
+        SRP, TSNE, LLE, ISOMAP, MDS, or SE.
+    :param kwargs:
+    :return:
+    """
     if model.upper() == 'PCA':
         from sklearn.decomposition import PCA as Reducer  # noqa:N811
     elif model.upper() == 'KPCA':
