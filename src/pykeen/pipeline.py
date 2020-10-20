@@ -299,7 +299,7 @@ class PipelineResult(Result):
         if model is None:
             model = 'PCA'
 
-        reducer, reducer_kwargs = _get_model(model, **kwargs)
+        reducer, reducer_kwargs = _get_reducer_cls(model, **kwargs)
 
         if ax is None:
             import matplotlib.pyplot as plt
@@ -520,7 +520,7 @@ class PipelineResult(Result):
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
-def _get_model(model: str, **kwargs):
+def _get_reducer_cls(model: str, **kwargs):
     """Get the model class by name and default kwargs.
 
     :param model: The name of the model. Can choose from: PCA, KPCA, GRP,
