@@ -206,7 +206,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-
 REDUCER_RELATION_WHITELIST = {'PCA'}
 
 
@@ -279,7 +278,7 @@ class PipelineResult(Result):
         relations: Optional[Set[str]] = None,
         apply_limits: bool = True,
         plot_entities: bool = True,
-        plot_relations: bool = False,
+        plot_relations: Optional[bool] = None,
         annotation_x_offset: float = 0.02,
         annotation_y_offset: float = 0.03,
         **kwargs,
@@ -299,13 +298,15 @@ class PipelineResult(Result):
         if not plot_entities and not plot_relations:
             raise ValueError
 
+        if plot_relations is None:  # automatically set to true for translational models, false otherwise
+            plot_relations = self.model.__class__.__name__.lower().startswith('trans')
+
         if model is None:
             model = 'PCA'
-
-        reducer, reducer_kwargs = _get_reducer_cls(model, **kwargs)
-
-        if plot_relations and reducer.__name__ not in REDUCER_RELATION_WHITELIST:
-            raise ValueError(f'Can not use reducer {reducer} when projecting relations. Will result in nonsense')
+        reducer_cls, reducer_kwargs = _get_reducer_cls(model, **kwargs)
+        if plot_relations and reducer_cls.__name__ not in REDUCER_RELATION_WHITELIST:
+            raise ValueError(f'Can not use reducer {reducer_cls} when projecting relations. Will result in nonsense')
+        reducer = reducer_cls(n_components=2, **reducer_kwargs)
 
         if ax is None:
             import matplotlib.pyplot as plt
@@ -314,45 +315,44 @@ class PipelineResult(Result):
         import seaborn as sns
         sns.set_style('whitegrid')
 
-        # reduce entity embedding dimensionality
-        e_emb = self.model.entity_embeddings.weight.detach().numpy()
-        if e_emb.shape[1] != 2:
-            entity_reduction_model = reducer(n_components=2, **reducer_kwargs)
-            e_emb_red = entity_reduction_model.fit_transform(e_emb)
-        else:
-            logger.debug('not reducing entity embeddings, already dim=2')
-            e_emb_red = e_emb
-
-        # reduce relation embedding dimensionality
-        r_emb = self.model.relation_embeddings.weight.detach().numpy()
-        if r_emb.shape[1] != 2:
-            relation_reduction_model = reducer(n_components=2, **reducer_kwargs)
-            r_emb_red = relation_reduction_model.fit_transform(r_emb)
-        else:
-            logger.debug('not reducing relation embeddings, already dim=2')
-            r_emb_red = r_emb
-
         if plot_relations and plot_entities:
-            xmax = max(r_emb_red[:, 0].max(), e_emb_red[:, 0].max()) + margin
-            xmin = min(r_emb_red[:, 0].min(), e_emb_red[:, 0].min()) - margin
-            ymax = max(r_emb_red[:, 1].max(), e_emb_red[:, 1].max()) + margin
-            ymin = min(r_emb_red[:, 1].min(), e_emb_red[:, 1].min()) - margin
+            e_embeddings, e_reduced = _reduce_embeddings(self.model.entity_embeddings, reducer, fit=True)
+            r_embeddings, r_reduced = _reduce_embeddings(self.model.relation_embeddings, reducer, fit=False)
+
+            xmax = max(r_embeddings[:, 0].max(), e_embeddings[:, 0].max()) + margin
+            xmin = min(r_embeddings[:, 0].min(), e_embeddings[:, 0].min()) - margin
+            ymax = max(r_embeddings[:, 1].max(), e_embeddings[:, 1].max()) + margin
+            ymin = min(r_embeddings[:, 1].min(), e_embeddings[:, 1].min()) - margin
         elif plot_relations:
-            xmax = r_emb_red[:, 0].max() + margin
-            xmin = r_emb_red[:, 0].min() - margin
-            ymax = r_emb_red[:, 1].max() + margin
-            ymin = r_emb_red[:, 1].min() - margin
+            e_embeddings, e_reduced = None, False
+            r_embeddings, r_reduced = _reduce_embeddings(self.model.relation_embeddings, reducer, fit=True)
+
+            xmax = r_embeddings[:, 0].max() + margin
+            xmin = r_embeddings[:, 0].min() - margin
+            ymax = r_embeddings[:, 1].max() + margin
+            ymin = r_embeddings[:, 1].min() - margin
         elif plot_entities:
-            xmax = e_emb_red[:, 0].max() + margin
-            xmin = e_emb_red[:, 0].min() - margin
-            ymax = e_emb_red[:, 1].max() + margin
-            ymin = e_emb_red[:, 1].min() - margin
+            e_embeddings, e_reduced = _reduce_embeddings(self.model.entity_embeddings, reducer, fit=True)
+            r_embeddings, r_reduced = None, False
+
+            xmax = e_embeddings[:, 0].max() + margin
+            xmin = e_embeddings[:, 0].min() - margin
+            ymax = e_embeddings[:, 1].max() + margin
+            ymin = e_embeddings[:, 1].min() - margin
         else:
             raise ValueError  # not even possible
 
+        if not e_reduced and not r_reduced:
+            subtitle = ''
+        elif reducer_kwargs:
+            subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
+            subtitle = f' using {reducer_cls.__name__} ({subtitle})'
+        else:
+            subtitle = f' using {reducer_cls.__name__}'
+
         if plot_entities:
             entity_id_to_label = self.model.triples_factory.entity_id_to_label
-            for entity_id, entity_reduced_embedding in enumerate(e_emb_red):
+            for entity_id, entity_reduced_embedding in enumerate(e_embeddings):
                 entity_label = entity_id_to_label[entity_id]
                 if entities and entity_label not in entities:
                     continue
@@ -362,21 +362,13 @@ class PipelineResult(Result):
 
         if plot_relations:
             relation_id_to_label = self.model.triples_factory.relation_id_to_label
-            for relation_id, relation_reduced_embedding in enumerate(r_emb_red):
+            for relation_id, relation_reduced_embedding in enumerate(r_embeddings):
                 relation_label = relation_id_to_label[relation_id]
                 if relations and relation_label not in relations:
                     continue
                 x, y = relation_reduced_embedding
                 ax.arrow(0, 0, x, y, color='black')
                 ax.annotate(relation_label, (x + annotation_x_offset, y + annotation_y_offset))
-
-        if r_emb.shape[1] == 2 and e_emb.shape[1] == 2:
-            subtitle = ''
-        elif reducer_kwargs:
-            subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
-            subtitle = f' using {reducer.__name__} ({subtitle})'
-        else:
-            subtitle = f' using {reducer.__name__}'
 
         if plot_entities and plot_relations:
             ax.set_title(f'Entity/Relation Plot{subtitle}')
@@ -524,6 +516,17 @@ class PipelineResult(Result):
 
         model_path = os.path.join(directory, 'trained_model.pkl')
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
+
+
+def _reduce_embeddings(embeddings, reducer, fit: bool = False):
+    embeddings_numpy = embeddings.weight.detach().numpy()
+    if embeddings_numpy.shape[1] == 2:
+        logger.debug('not reducing entity embeddings, already dim=2')
+        return embeddings_numpy, False
+    elif fit:
+        return reducer.fit_transform(embeddings_numpy), True
+    else:
+        return reducer.transform(embeddings_numpy), True
 
 
 def _get_reducer_cls(model: str, **kwargs):
