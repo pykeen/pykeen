@@ -13,8 +13,7 @@ PyKEEN
    tutorial/running_hpo
    tutorial/running_ablation
    tutorial/byod
-   tutorial/using_mlflow
-   tutorial/using_wandb
+   tutorial/trackers/index
    tutorial/making_predictions
    tutorial/performance
 
