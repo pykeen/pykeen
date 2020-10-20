@@ -368,10 +368,16 @@ class PipelineResult(Result):
             subtitle = ''
         elif reducer_kwargs:
             subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
-            subtitle = f' using {model} ({subtitle})'
+            subtitle = f' using {reducer.__name__} ({subtitle})'
         else:
-            subtitle = f' using {model}'
-        ax.set_title(f'Entity/Relation Plot{subtitle}')
+            subtitle = f' using {reducer.__name__}'
+
+        if plot_entities and plot_relations:
+            ax.set_title(f'Entity/Relation Plot{subtitle}')
+        elif plot_entities:
+            ax.set_title(f'Entity Plot{subtitle}')
+        elif plot_relations:
+            ax.set_title(f'Relation Plot{subtitle}')
 
         if apply_limits:
             ax.set_xlim([xmin, xmax])
