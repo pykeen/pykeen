@@ -5,7 +5,7 @@
 An ablation study is an experiment in which components of a machine learning system are removed/replaced in order
 to measure the impact of these components on the system's performance.
 In PyKEEN, a user could for instance measure the impact of explicitly modeling inverse relations on the model's
-performance.
+performance. This can be done with the :func:`pykeen.ablation.ablation_pipeline` function.
 
 .. code-block:: python
 
@@ -22,6 +22,8 @@ performance.
         },
         directory='~/Desktop/simple_ablation_study',
     )
+
+.. note:: This tutorial will be improved with `pykeen/pykeen#116 <https://github.com/pykeen/pykeen/issues/116>`_.
 """
 
 from .ablation import (

@@ -24,24 +24,28 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+Mapping2D = Mapping[str, Mapping[str, Any]]
+Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
+
 
 def ablation_pipeline(
-    datasets: Union[str, List[Union[str, Mapping[str, str]]]],
+    datasets: Union[str, List[str]],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
-    ablation_config=None,
+    *,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
-    model_to_model_kwargs=None,
-    model_to_model_kwargs_ranges=None,
-    model_to_trainer_to_training_kwargs=None,
-    model_to_trainer_to_training_kwargs_ranges=None,
-    evaluator=None,
-    optuna_config=None,
-    evaluator_kwargs=None,
-    evaluation_kwargs=None,
+    model_to_model_kwargs: Optional[Mapping2D] = None,
+    model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
+    model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
+    model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
+    ablation_config: Optional[Mapping3D] = None,
+    evaluator: Optional[str] = None,
+    optuna_config: Optional[Mapping[str, Any]] = None,
+    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     directory: Optional[str] = None,
     dry_run: bool = False,
     best_replicates: Optional[int] = None,
@@ -53,6 +57,32 @@ def ablation_pipeline(
 
     A sample file can be run with``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
 
+    :param datasets: A dataset name or list of dataset names
+    :param models: A model name or list of model names
+    :param losses: A loss function name or list of loss function names
+    :param optimizers: An optimizer name or list of optimizer names
+    :param training_loops: A training loop name or list of training loop names
+    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans
+    :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
+        Defaults to None.
+
+    :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
+    :param evaluator_kwargs: The keyword arguments passed to the evaluator (in the pipeline)
+    :param evaluation_kwargs: The keyword arguments passed during evaluation (in the pipeline)
+
+    :param model_to_model_kwargs: A mapping from model name to dictionaries of default keyword arguments for
+        the instantiation of that model
+    :param model_to_model_kwargs_ranges: A mapping from model name to dictionaries of keyword argument
+        ranges for that model to be used in HPO.
+    :param model_to_trainer_to_training_kwargs: A mapping from model name to a mapping of trainer name to a mapping
+        of default keyword arguments for the instantiation of that trainer. This is useful becuase for some models,
+        you might want to set the number of epochs differently.
+    :param model_to_trainer_to_training_kwargs_ranges: A mapping from model name to a mapping of trainer name
+        to a mapping of keyword arguments for that trainer to be used in HPO.
+    :param ablation_config: Additional third-order and fourth-order ablation configuration for all other ablation
+        keys to models to either kwargs or kwarg ranges
+
+    :param optuna_config: Configuration passed to optuna for HPO over all ablation studies
     :param directory: The directory in which the experimental artifacts will be saved.
     :param dry_run: Defines whether only the configurations for the single experiments should be created without
      running them.
@@ -171,6 +201,8 @@ def prepare_ablation_from_config(
      will be saved.
     :param save_artifacts: Defines, whether the output directories for the trained models sampled during HPO should be
      created.
+
+    :return: pairs of output directories and HPO config paths inside those directories
     """
     metadata = config['metadata']
     optuna_config = config['optuna']
@@ -212,22 +244,26 @@ def prepare_ablation(  # noqa:C901
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
-    ablation_config=None,
+    *,
+    ablation_config: Optional[Mapping3D] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
-    model_to_model_kwargs=None,
-    model_to_model_kwargs_ranges=None,
-    model_to_trainer_to_training_kwargs=None,
-    model_to_trainer_to_training_kwargs_ranges=None,
-    evaluator=None,
-    optuna_config=None,
-    evaluator_kwargs=None,
-    evaluation_kwargs=None,
+    model_to_model_kwargs: Optional[Mapping2D] = None,
+    model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
+    model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
+    model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
+    evaluator: Optional[str] = None,
+    optuna_config: Optional[Mapping[str, Any]] = None,
+    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metadata=None,
     directory: Optional[str] = None,
     save_artifacts: bool = True,
 ) -> List[Tuple[str, str]]:
-    """Prepare an ablation directory."""
+    """Prepare an ablation directory.
+
+    :return: pairs of output directories and HPO config paths inside those directories
+    """
     if isinstance(datasets, str):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):
