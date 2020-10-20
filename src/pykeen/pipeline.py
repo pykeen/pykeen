@@ -283,6 +283,9 @@ class PipelineResult(Result):
     ):
         """Plot the reduced entities and relation vectors in 2D.
 
+        :param kwargs: The keyword arguments passed to `__init__()` of
+            the reducer class (e.g., PCA, TSNE)
+
         .. warning::
 
             Plotting relations and entities on the same plot is only
@@ -291,29 +294,7 @@ class PipelineResult(Result):
         if not plot_entities and not plot_relations:
             raise ValueError
 
-        if model is None:
-            model = 'PCA'
-        if model.upper() == 'PCA':
-            from sklearn.decomposition import PCA as Reducer  # noqa:N811
-        elif model.upper() == 'KPCA':
-            kwargs.setdefault('kernel', 'rbf')
-            from sklearn.decomposition import KernelPCA as Reducer
-        elif model.upper() == 'GRP':
-            from sklearn.random_projection import GaussianRandomProjection as Reducer
-        elif model.upper() == 'SRP':
-            from sklearn.random_projection import SparseRandomProjection as Reducer
-        elif model.upper() in {'T-SNE', 'TSNE'}:
-            from sklearn.manifold import TSNE as Reducer  # noqa:N811
-        elif model.upper() == 'LLE':
-            from sklearn.manifold import LocallyLinearEmbedding as Reducer
-        elif model.upper() == 'ISOMAP':
-            from sklearn.manifold import Isomap as Reducer
-        elif model.upper() == 'MDS':
-            from sklearn.manifold import MDS as Reducer  # noqa:N811
-        elif model.upper() in {'SPECTRAL', 'SPECTRALEMBEDDING'}:
-            from sklearn.manifold import SpectralEmbedding as Reducer
-        else:
-            raise ValueError(f'invalid dimensionality reduction model: {model}')
+        reducer, reducer_kwargs = _get_model(model, **kwargs)
 
         if ax is None:
             import matplotlib.pyplot as plt
@@ -325,7 +306,7 @@ class PipelineResult(Result):
         # reduce entity embedding dimensionality
         e_emb = self.model.entity_embeddings.weight.detach().numpy()
         if e_emb.shape[1] != 2:
-            entity_reduction_model = Reducer(n_components=2, **kwargs)
+            entity_reduction_model = reducer(n_components=2, **reducer_kwargs)
             e_emb_red = entity_reduction_model.fit_transform(e_emb)
         else:
             logger.debug('not reducing entity embeddings, already dim=2')
@@ -334,7 +315,7 @@ class PipelineResult(Result):
         # reduce relation embedding dimensionality
         r_emb = self.model.relation_embeddings.weight.detach().numpy()
         if r_emb.shape[1] != 2:
-            relation_reduction_model = Reducer(n_components=2, **kwargs)
+            relation_reduction_model = reducer(n_components=2, **reducer_kwargs)
             r_emb_red = relation_reduction_model.fit_transform(r_emb)
         else:
             logger.debug('not reducing relation embeddings, already dim=2')
@@ -380,8 +361,8 @@ class PipelineResult(Result):
 
         if r_emb.shape[1] == 2 and e_emb.shape[1] == 2:
             subtitle = ''
-        elif kwargs:
-            subtitle = ", ".join("=".join(item) for item in kwargs.items())
+        elif reducer_kwargs:
+            subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
             subtitle = f' using {model} ({subtitle})'
         else:
             subtitle = f' using {model}'
@@ -526,6 +507,33 @@ class PipelineResult(Result):
 
         model_path = os.path.join(directory, 'trained_model.pkl')
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
+
+
+def _get_model(model=None, **kwargs):
+    if model is None:
+        model = 'PCA'
+    if model.upper() == 'PCA':
+        from sklearn.decomposition import PCA as Reducer  # noqa:N811
+    elif model.upper() == 'KPCA':
+        kwargs.setdefault('kernel', 'rbf')
+        from sklearn.decomposition import KernelPCA as Reducer
+    elif model.upper() == 'GRP':
+        from sklearn.random_projection import GaussianRandomProjection as Reducer
+    elif model.upper() == 'SRP':
+        from sklearn.random_projection import SparseRandomProjection as Reducer
+    elif model.upper() in {'T-SNE', 'TSNE'}:
+        from sklearn.manifold import TSNE as Reducer  # noqa:N811
+    elif model.upper() == 'LLE':
+        from sklearn.manifold import LocallyLinearEmbedding as Reducer
+    elif model.upper() == 'ISOMAP':
+        from sklearn.manifold import Isomap as Reducer
+    elif model.upper() == 'MDS':
+        from sklearn.manifold import MDS as Reducer  # noqa:N811
+    elif model.upper() in {'SPECTRAL', 'SPECTRALEMBEDDING'}:
+        from sklearn.manifold import SpectralEmbedding as Reducer
+    else:
+        raise ValueError(f'invalid dimensionality reduction model: {model}')
+    return Reducer, kwargs
 
 
 def replicate_pipeline_from_path(
