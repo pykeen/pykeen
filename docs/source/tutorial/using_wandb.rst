@@ -39,7 +39,7 @@ Further tweaking of appearance, charts, and other settings is described in the o
 `documentation <https://docs.wandb.com/>`_
 
 You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
-labels. All further keyword arguments are passed on to the :func:`init` function of WANDB.
+labels. All further keyword arguments are passed to :func:`wandb.init`.
 
 .. code-block:: python
 
