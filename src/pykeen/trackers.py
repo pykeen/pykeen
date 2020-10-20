@@ -96,9 +96,8 @@ class WANDBResultTracker(ResultTracker):
     Note that you have to perform wandb login beforehand.
     """
 
-    @property
-    def wandb_run(self):  # -> wandb.sdk.wandb_run.Run
-        return self._wandb_run
+    #: The WANDB run
+    run: 'wandb.sdk.wandb_run.Run'
 
     def __init__(
         self,
@@ -123,7 +122,7 @@ class WANDBResultTracker(ResultTracker):
         if offline:
             os.environ['WANDB_MODE'] = 'dryrun'
 
-        self._wandb_run = self.wandb.init(project=self.project, name=experiment, **kwargs)
+        self.wandb_run = self.wandb.init(project=self.project, name=experiment, **kwargs)
 
     def log_metrics(
         self,
