@@ -2,7 +2,7 @@
 
 """Loss functions integrated in PyKEEN."""
 
-from typing import Any, Mapping, Set, Type, Union
+from typing import Any, ClassVar, Mapping, Optional, Set, Type, Union
 
 import torch
 from torch import nn
@@ -18,8 +18,7 @@ __all__ = [
     'CrossEntropyLoss',
     'MarginRankingLoss',
     'MSELoss',
-    'BCELoss',
-    'losses_hpo_defaults',
+    'BCEWithLogitsLoss',
     'get_loss_cls',
 ]
 
@@ -31,6 +30,11 @@ _REDUCTION_METHODS = dict(
 
 class Loss(nn.Module):
     """A loss function."""
+
+    synonyms: ClassVar[Optional[Set[str]]] = None
+
+    #: The default strategy for optimizing the model's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
 
 
 class PointwiseLoss(Loss):
@@ -45,8 +49,8 @@ class SetwiseLoss(Loss):
     """Setwise loss functions compare the scores of several triples."""
 
 
-class BCELoss(PointwiseLoss, nn.BCELoss):
-    r"""A wrapper around the PyTorch binary cross entropy loss.
+class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
+    r"""A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
     function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
@@ -75,9 +79,17 @@ class BCELoss(PointwiseLoss, nn.BCELoss):
 class MSELoss(PointwiseLoss, nn.MSELoss):
     """A wrapper around the PyTorch mean square error loss."""
 
+    synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
+
 
 class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
     """A wrapper around the PyTorch margin ranking loss."""
+
+    synonyms = {"Pairwise Hinge Loss"}
+
+    hpo_default = dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    )
 
 
 class SoftplusLoss(PointwiseLoss):
@@ -146,6 +158,13 @@ class CrossEntropyLoss(SetwiseLoss):
 class NSSALoss(SetwiseLoss):
     """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
 
+    synonyms = {'Self-Adversarial Negative Sampling Loss', 'Negative Sampling Self-Adversarial Loss'}
+
+    hpo_default = dict(
+        margin=dict(type=int, low=3, high=30, q=3),
+        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
+    )
+
     def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
         """Initialize the NSSA loss.
 
@@ -186,7 +205,7 @@ class NSSALoss(SetwiseLoss):
 _LOSS_SUFFIX = 'Loss'
 _LOSSES: Set[Type[Loss]] = {
     MarginRankingLoss,
-    BCELoss,
+    BCEWithLogitsLoss,
     SoftplusLoss,
     BCEAfterSigmoidLoss,
     CrossEntropyLoss,
@@ -206,21 +225,12 @@ losses: Mapping[str, Type[Loss]] = {
     normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
 }
-
-#: HPO Defaults for losses
-losses_hpo_defaults: Mapping[Type[Loss], Mapping[str, Any]] = {
-    MarginRankingLoss: dict(
-        margin=dict(type=int, low=0, high=3, q=1),
-    ),
-    NSSALoss: dict(
-        margin=dict(type=int, low=3, high=30, q=3),
-        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
-    ),
+losses_synonyms: Mapping[str, Type[Loss]] = {
+    normalize_string(synonym, suffix=_LOSS_SUFFIX): cls
+    for cls in _LOSSES
+    if cls.synonyms is not None
+    for synonym in cls.synonyms
 }
-# Add empty dictionaries as defaults for all remaining losses
-for cls in _LOSSES:
-    if cls not in losses_hpo_defaults:
-        losses_hpo_defaults[cls] = {}
 
 
 def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
@@ -229,6 +239,7 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
         query,
         base=Loss,
         lookup_dict=losses,
+        lookup_dict_synonyms=losses_synonyms,
         default=MarginRankingLoss,
         suffix=_LOSS_SUFFIX,
     )

@@ -700,11 +700,11 @@ def pipeline_from_config(
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
-    dataset: Union[None, str, Type[DataSet]] = None,
+    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Optional[TriplesFactory] = None,
-    testing_triples_factory: Optional[TriplesFactory] = None,
-    validation_triples_factory: Optional[TriplesFactory] = None,
+    training: Union[None, TriplesFactory, str] = None,
+    testing: Union[None, TriplesFactory, str] = None,
+    validation: Union[None, TriplesFactory, str] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -748,12 +748,12 @@ def pipeline(  # noqa: C901
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
-    :param training_triples_factory:
-        A triples factory with training instances if a dataset was not specified
-    :param testing_triples_factory:
-        A triples factory with training instances if a dataset was not specified
-    :param validation_triples_factory:
-        A triples factory with validation instances if a dataset was not specified
+    :param training:
+        A triples factory with training instances or path to the training file if a a dataset was not specified
+    :param testing:
+        A triples factory with training instances or path to the test file if a dataset was not specified
+    :param validation:
+        A triples factory with validation instances or path to the validation file if a dataset was not specified
     :param evaluation_entity_whitelist:
         Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
         is only interested in certain entities, but the relational patterns with other entities improve the entity
@@ -838,24 +838,27 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    result_tracker.log_params(dict(dataset=dataset))
-
-    training_triples_factory, testing_triples_factory, validation_triples_factory = get_dataset(
+    dataset_instance: DataSet = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
-        training_triples_factory=training_triples_factory,
-        testing_triples_factory=testing_triples_factory,
-        validation_triples_factory=validation_triples_factory,
+        training=training,
+        testing=testing,
+        validation=validation,
     )
+    if dataset is not None:
+        result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
+    else:  # means that dataset was defined by triples factories
+        result_tracker.log_params(dict(dataset='<user defined>'))
 
+    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
     # evaluation restriction to a subset of entities/relations
     if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing_triples_factory = testing_triples_factory.new_with_restriction(
+        testing = testing.new_with_restriction(
             entities=evaluation_entity_whitelist,
             relations=evaluation_relation_whitelist,
         )
-        if validation_triples_factory is not None:
-            validation_triples_factory = validation_triples_factory.new_with_restriction(
+        if validation is not None:
+            validation = validation.new_with_restriction(
                 entities=evaluation_entity_whitelist,
                 relations=evaluation_relation_whitelist,
             )
@@ -886,7 +889,7 @@ def pipeline(  # noqa: C901
 
     model = get_model_cls(model)
     model_instance: Model = model(
-        triples_factory=training_triples_factory,
+        triples_factory=training,
         **model_kwargs,
     )
     # Log model parameters
@@ -955,7 +958,7 @@ def pipeline(  # noqa: C901
     stopper: Stopper = stopper_cls(
         model=model_instance,
         evaluator=evaluator_instance,
-        evaluation_triples_factory=validation_triples_factory,
+        evaluation_triples_factory=validation,
         result_tracker=result_tracker,
         **stopper_kwargs,
     )
@@ -966,8 +969,14 @@ def pipeline(  # noqa: C901
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")
-    logging.debug(f"dataset: {dataset}")
-    logging.debug(f"dataset_kwargs: {dataset_kwargs}")
+    if dataset is not None:
+        logging.debug(f"dataset: {dataset}")
+        logging.debug(f"dataset_kwargs: {dataset_kwargs}")
+    else:
+        logging.debug('training: %s', training.path)
+        logging.debug('testing: %s', testing.path)
+        if validation:
+            logging.debug('validation: %s', validation.path)
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
@@ -996,9 +1005,9 @@ def pipeline(  # noqa: C901
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
-        mapped_triples = testing_triples_factory.mapped_triples
+        mapped_triples = testing.mapped_triples
     else:
-        mapped_triples = validation_triples_factory.mapped_triples
+        mapped_triples = validation.mapped_triples
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available

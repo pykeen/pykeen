@@ -96,8 +96,7 @@ explicitly sets the margin to `0.0` in  :py:attr:`pykeen.models.DistMultLiteral.
 
 Unlike the model's hyper-parameters, the models don't store the strategies for
 optimizing the loss functions' hyper-parameters. The pre-configured strategies
-are stored in :py:attr:`pykeen.losses.losses_hpo_defaults`. Currently, this
-list only has a strategy for optimizing margin raking loss.
+are stored in the loss function's class variable :py:attr:`pykeen.models.Loss.hpo_default`.
 
 However, similarily to how you would specify ``model_kwargs_ranges``, you can
 specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
@@ -112,8 +111,6 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 ...        margin=dict(type=float, low=1.0, high=2.0),
 ...    ),
 ... )
-
-.. warning:: In the future, all losses will be re-implemented and the strategies will be stored the same as models.
 
 Optimizing the Regularizer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

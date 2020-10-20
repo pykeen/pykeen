@@ -223,7 +223,7 @@ class Model(nn.Module):
         :param predict_with_sigmoid:
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
-            applying sigmoid (or using BCEWithLogits), the scores are not calibrated to perform well with sigmoid.
+            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
         :param automatic_memory_optimization:
             If set to `True`, the model derives the maximum possible batch sizes for the scoring of triples during
             evaluation and also training (if no batch size was given). This allows to fully utilize the hardware at hand
