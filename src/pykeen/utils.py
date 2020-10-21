@@ -124,8 +124,10 @@ def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable
 def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     """Normalize a string for lookup."""
     s = s.lower().replace('-', '').replace('_', '')
-    if suffix is not None and s.endswith(suffix.lower()):
-        return s[:-len(suffix)]
+    if suffix is not None:
+        suffix = suffix.lower().replace('-', '').replace('_', '')
+        if s.endswith(suffix.lower()):
+            return s[:-len(suffix)]
     return s
 
 
