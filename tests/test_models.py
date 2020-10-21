@@ -689,7 +689,7 @@ class TestRGCNBasis(_TestRGCN, unittest.TestCase):
     """Test the R-GCN model."""
 
     model_kwargs = {
-        'decomposition': BasesDecomposition,
+        '_decomposition': BasesDecomposition,
         'num_bases': 3,
     }
     #: one bias per layer
@@ -701,7 +701,7 @@ class TestRGCNBlock(_TestRGCN, unittest.TestCase):
 
     embedding_dim = 6
     model_kwargs = {
-        'decomposition': BlockDecomposition,
+        '_decomposition': BlockDecomposition,
         'num_blocks': 3,
         'edge_weighting': symmetric_edge_weights,
         'use_batch_norm': True,
