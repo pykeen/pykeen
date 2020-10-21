@@ -216,7 +216,7 @@ class RGCN(EntityRelationEmbeddingModel):
         self.enriched_embeddings = None
 
         # if edge weighting is None, keep it as none. otherwise look it up
-        self.edge_weighting = edge_weightings and get_edge_weighting(edge_weighting)
+        self.edge_weighting = edge_weighting and get_edge_weighting(edge_weighting)
         self.edge_dropout = edge_dropout
         if self_loop_dropout is None:
             self_loop_dropout = edge_dropout
