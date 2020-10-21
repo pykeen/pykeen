@@ -9,7 +9,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Optional, TextIO, Tuple, Union
+from typing import List, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
 
 import numpy as np
@@ -19,9 +19,11 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_HOME
 from ..triples import TriplesFactory
+from ..utils import normalize_string
 
 __all__ = [
     'DataSet',
+    'EagerDataset',
     'LazyDataSet',
     'PathDataSet',
     'RemoteDataSet',
@@ -45,11 +47,6 @@ class DataSet:
     validation: TriplesFactory
     #: All data sets should take care of inverse triple creation
     create_inverse_triples: bool
-
-    @property
-    def factories(self) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
-        """Return a tuple of three factories in order (training, testing, validation)."""
-        return self.training, self.testing, self.validation
 
     @property
     def entity_to_id(self):  # noqa: D401
@@ -89,6 +86,37 @@ class DataSet:
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
+
+    @classmethod
+    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'DataSet':
+        """Create a dataset from a single triples factory by splitting it in 3."""
+        tf = TriplesFactory(path=path)
+        return cls.from_tf(tf=tf, ratios=ratios)
+
+    @staticmethod
+    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'DataSet':
+        """Create a dataset from a single triples factory by splitting it in 3."""
+        training, testing, validation = tf.split(ratios or [0.8, 0.1, 0.1])
+        return EagerDataset(training=training, testing=testing, validation=validation)
+
+    @classmethod
+    def get_normalized_name(cls) -> str:
+        """Get the normalized name of the dataset."""
+        return normalize_string(cls.__name__)
+
+
+class EagerDataset(DataSet):
+    """A dataset that has already been loaded."""
+
+    def __init__(self, training: TriplesFactory, testing: TriplesFactory, validation: TriplesFactory) -> None:
+        self.training = training
+        self.testing = testing
+        self.validation = validation
+        self.create_inverse_triples = (
+            training.create_inverse_triples
+            and testing.create_inverse_triples
+            and self.validation.create_inverse_triples
+        )
 
 
 class LazyDataSet(DataSet):
