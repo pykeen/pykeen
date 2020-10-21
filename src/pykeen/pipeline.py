@@ -170,7 +170,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import pandas as pd
 import torch
@@ -179,7 +179,7 @@ from torch.optim.optimizer import Optimizer
 from .datasets import get_dataset
 from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
-from .losses import Loss, get_loss_cls
+from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
 from .models.base import Model
 from .optimizers import get_optimizer_cls
@@ -190,7 +190,7 @@ from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
 from .utils import (
-    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io,
+    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, normalize_string,
     random_non_negative_int, resolve_device, set_random_seed,
 )
 from .version import get_git_hash, get_version
@@ -205,6 +205,8 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+REDUCER_RELATION_WHITELIST = {'PCA'}
 
 
 @fix_dataclass_init_docs
@@ -250,16 +252,148 @@ class PipelineResult(Result):
         """The title of the experiment."""
         return self.metadata.get('title')
 
-    def plot_losses(self):
+    def plot_losses(self, ax=None):
         """Plot the losses per epoch."""
-        import matplotlib.pyplot as plt
+        if ax is None:
+            import matplotlib.pyplot as plt
+            ax = plt.gca()
+
         import seaborn as sns
-        sns.set()
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        if self.title is not None:
-            plt.title(self.title)
-        return sns.lineplot(x=range(len(self.losses)), y=self.losses)
+        sns.set_style('darkgrid')
+
+        rv = sns.lineplot(x=range(len(self.losses)), y=self.losses, ax=ax)
+
+        loss_name = normalize_string(self.model.loss.__class__.__name__, suffix=_LOSS_SUFFIX)
+        ax.set_ylabel(f'{loss_name} Loss')
+        ax.set_xlabel('Epoch')
+        ax.set_title(self.title if self.title is not None else 'Losses Plot')
+        return rv
+
+    def plot_er(  # noqa: C901
+        self,
+        model: Optional[str] = None,
+        margin: float = 0.4,
+        ax=None,
+        entities: Optional[Set[str]] = None,
+        relations: Optional[Set[str]] = None,
+        apply_limits: bool = True,
+        plot_entities: bool = True,
+        plot_relations: Optional[bool] = None,
+        annotation_x_offset: float = 0.02,
+        annotation_y_offset: float = 0.03,
+        **kwargs,
+    ):
+        """Plot the reduced entities and relation vectors in 2D.
+
+        :param model: The dimensionality reduction model from :mod:`sklearn`. Defaults to PCA.
+            Can also use KPCA, GRP, SRP, TSNE, LLE, ISOMAP, MDS, or SE.
+        :param kwargs: The keyword arguments passed to `__init__()` of
+            the reducer class (e.g., PCA, TSNE)
+        :param plot_relations: By default, this is only enabled on translational distance models
+            like :class:`pykeen.models.TransE`.
+
+        .. warning::
+
+            Plotting relations and entities on the same plot is only
+            meaningful for translational distance models like TransE.
+        """
+        if not plot_entities and not plot_relations:
+            raise ValueError
+
+        if plot_relations is None:  # automatically set to true for translational models, false otherwise
+            plot_relations = self.model.__class__.__name__.lower().startswith('trans')
+
+        if model is None:
+            model = 'PCA'
+        reducer_cls, reducer_kwargs = _get_reducer_cls(model, **kwargs)
+        if plot_relations and reducer_cls.__name__ not in REDUCER_RELATION_WHITELIST:
+            raise ValueError(f'Can not use reducer {reducer_cls} when projecting relations. Will result in nonsense')
+        reducer = reducer_cls(n_components=2, **reducer_kwargs)
+
+        if ax is None:
+            import matplotlib.pyplot as plt
+            ax = plt.gca()
+
+        import seaborn as sns
+        sns.set_style('whitegrid')
+
+        if plot_relations and plot_entities:
+            e_embeddings, e_reduced = _reduce_embeddings(self.model.entity_embeddings, reducer, fit=True)
+            r_embeddings, r_reduced = _reduce_embeddings(self.model.relation_embeddings, reducer, fit=False)
+
+            xmax = max(r_embeddings[:, 0].max(), e_embeddings[:, 0].max()) + margin
+            xmin = min(r_embeddings[:, 0].min(), e_embeddings[:, 0].min()) - margin
+            ymax = max(r_embeddings[:, 1].max(), e_embeddings[:, 1].max()) + margin
+            ymin = min(r_embeddings[:, 1].min(), e_embeddings[:, 1].min()) - margin
+        elif plot_relations:
+            e_embeddings, e_reduced = None, False
+            r_embeddings, r_reduced = _reduce_embeddings(self.model.relation_embeddings, reducer, fit=True)
+
+            xmax = r_embeddings[:, 0].max() + margin
+            xmin = r_embeddings[:, 0].min() - margin
+            ymax = r_embeddings[:, 1].max() + margin
+            ymin = r_embeddings[:, 1].min() - margin
+        elif plot_entities:
+            e_embeddings, e_reduced = _reduce_embeddings(self.model.entity_embeddings, reducer, fit=True)
+            r_embeddings, r_reduced = None, False
+
+            xmax = e_embeddings[:, 0].max() + margin
+            xmin = e_embeddings[:, 0].min() - margin
+            ymax = e_embeddings[:, 1].max() + margin
+            ymin = e_embeddings[:, 1].min() - margin
+        else:
+            raise ValueError  # not even possible
+
+        if not e_reduced and not r_reduced:
+            subtitle = ''
+        elif reducer_kwargs:
+            subtitle = ", ".join("=".join(item) for item in reducer_kwargs.items())
+            subtitle = f' using {reducer_cls.__name__} ({subtitle})'
+        else:
+            subtitle = f' using {reducer_cls.__name__}'
+
+        if plot_entities:
+            entity_id_to_label = self.model.triples_factory.entity_id_to_label
+            for entity_id, entity_reduced_embedding in enumerate(e_embeddings):
+                entity_label = entity_id_to_label[entity_id]
+                if entities and entity_label not in entities:
+                    continue
+                x, y = entity_reduced_embedding
+                ax.scatter(x, y, color='black')
+                ax.annotate(entity_label, (x + annotation_x_offset, y + annotation_y_offset))
+
+        if plot_relations:
+            relation_id_to_label = self.model.triples_factory.relation_id_to_label
+            for relation_id, relation_reduced_embedding in enumerate(r_embeddings):
+                relation_label = relation_id_to_label[relation_id]
+                if relations and relation_label not in relations:
+                    continue
+                x, y = relation_reduced_embedding
+                ax.arrow(0, 0, x, y, color='black')
+                ax.annotate(relation_label, (x + annotation_x_offset, y + annotation_y_offset))
+
+        if plot_entities and plot_relations:
+            ax.set_title(f'Entity/Relation Plot{subtitle}')
+        elif plot_entities:
+            ax.set_title(f'Entity Plot{subtitle}')
+        elif plot_relations:
+            ax.set_title(f'Relation Plot{subtitle}')
+
+        if apply_limits:
+            ax.set_xlim([xmin, xmax])
+            ax.set_ylim([ymin, ymax])
+
+        return ax
+
+    def plot(self, er_kwargs: Optional[Mapping[str, str]] = None, figsize=(10, 4)):
+        """Plot all plots."""
+        import matplotlib.pyplot as plt
+        fig, (lax, rax) = plt.subplots(1, 2, figsize=figsize)
+
+        self.plot_losses(ax=lax)
+        self.plot_er(ax=rax, **(er_kwargs or {}))
+
+        plt.tight_layout()
 
     def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
@@ -384,6 +518,49 @@ class PipelineResult(Result):
 
         model_path = os.path.join(directory, 'trained_model.pkl')
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
+
+
+def _reduce_embeddings(embeddings, reducer, fit: bool = False):
+    embeddings_numpy = embeddings.weight.detach().numpy()
+    if embeddings_numpy.shape[1] == 2:
+        logger.debug('not reducing entity embeddings, already dim=2')
+        return embeddings_numpy, False
+    elif fit:
+        return reducer.fit_transform(embeddings_numpy), True
+    else:
+        return reducer.transform(embeddings_numpy), True
+
+
+def _get_reducer_cls(model: str, **kwargs):
+    """Get the model class by name and default kwargs.
+
+    :param model: The name of the model. Can choose from: PCA, KPCA, GRP,
+        SRP, TSNE, LLE, ISOMAP, MDS, or SE.
+    :param kwargs:
+    :return:
+    """
+    if model.upper() == 'PCA':
+        from sklearn.decomposition import PCA as Reducer  # noqa:N811
+    elif model.upper() == 'KPCA':
+        kwargs.setdefault('kernel', 'rbf')
+        from sklearn.decomposition import KernelPCA as Reducer
+    elif model.upper() == 'GRP':
+        from sklearn.random_projection import GaussianRandomProjection as Reducer
+    elif model.upper() == 'SRP':
+        from sklearn.random_projection import SparseRandomProjection as Reducer
+    elif model.upper() in {'T-SNE', 'TSNE'}:
+        from sklearn.manifold import TSNE as Reducer  # noqa:N811
+    elif model.upper() in {'LLE', 'LOCALLYLINEAREMBEDDING'}:
+        from sklearn.manifold import LocallyLinearEmbedding as Reducer
+    elif model.upper() == 'ISOMAP':
+        from sklearn.manifold import Isomap as Reducer
+    elif model.upper() in {'MDS', 'MULTIDIMENSIONALSCALING'}:
+        from sklearn.manifold import MDS as Reducer  # noqa:N811
+    elif model.upper() in {'SE', 'SPECTRAL', 'SPECTRALEMBEDDING'}:
+        from sklearn.manifold import SpectralEmbedding as Reducer
+    else:
+        raise ValueError(f'invalid dimensionality reduction model: {model}')
+    return Reducer, kwargs
 
 
 def replicate_pipeline_from_path(

@@ -127,6 +127,8 @@ class TrainingLoop(ABC):
         sampler: Optional[str] = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
+        use_tqdm: bool = True,
+        use_tqdm_batch: bool = True,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         stopper: Optional[Stopper] = None,
         result_tracker: Optional[ResultTracker] = None,
@@ -185,6 +187,8 @@ class TrainingLoop(ABC):
             sampler=sampler,
             continue_training=continue_training,
             only_size_probing=only_size_probing,
+            use_tqdm=use_tqdm,
+            use_tqdm_batch=use_tqdm_batch,
             tqdm_kwargs=tqdm_kwargs,
             stopper=stopper,
             result_tracker=result_tracker,
@@ -210,6 +214,8 @@ class TrainingLoop(ABC):
         sampler: Optional[str] = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
+        use_tqdm: bool = True,
+        use_tqdm_batch: bool = True,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         stopper: Optional[Stopper] = None,
         result_tracker: Optional[ResultTracker] = None,
@@ -234,6 +240,10 @@ class TrainingLoop(ABC):
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:
             The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
+        :param use_tqdm:
+            Turn on the progress bar for epochs
+        :param use_tqdm_batch:
+            Turn on the progress bar for batches (sub-progress bar for epochs)
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
         :param stopper:
@@ -307,16 +317,16 @@ class TrainingLoop(ABC):
         num_training_instances = self.training_instances.num_instances
 
         # When size probing, we don't want progress bars
-        if not only_size_probing:
+        if not only_size_probing and use_tqdm:
             # Create progress bar
             _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(1, 1 + num_epochs, **_tqdm_kwargs)
-            logger.info(f'using stopper: {stopper}')
         else:
             epochs = range(1, 1 + num_epochs)
-            logger.debug(f'using stopper: {stopper}')
+
+        logger.debug(f'using stopper: {stopper}')
 
         train_data_loader = DataLoader(
             sampler=sampler,
@@ -336,7 +346,7 @@ class TrainingLoop(ABC):
 
             # Batching
             # Only create a progress bar when not in size probing mode
-            if not only_size_probing:
+            if not only_size_probing and use_tqdm_batch:
                 batches = tqdm(train_data_loader, desc=f'Training batches on {self.device}', leave=False, unit='batch')
             else:
                 batches = train_data_loader
