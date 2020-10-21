@@ -52,6 +52,8 @@ _DATASETS: Set[Type[DataSet]] = {
     entry.load()
     for entry in iter_entry_points(group='pykeen.datasets')
 }
+if not _DATASETS:
+    raise RuntimeError('Datasets have been loaded with entrypoints since PyKEEN v1.0.5. Please reinstall.')
 
 #: A mapping of datasets' names to their classes
 datasets: Mapping[str, Type[DataSet]] = normalized_lookup(_DATASETS)
