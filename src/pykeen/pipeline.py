@@ -1006,6 +1006,7 @@ def pipeline(  # noqa: C901
             **training_kwargs,
         )
     except MemoryError as e:
+        # When the training failed due to OOM on the GPU, the training is reverted to CPU training.
         if training_loop_instance.device.type == 'cuda':
             logging.warning("You tried to train the current model on GPU, but the model is too big for the GPU")
             logging.warning("Reverting to CPU now, which will increase the training time significantly.")
