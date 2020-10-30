@@ -420,6 +420,8 @@ def hpo_pipeline(
     training: Union[None, str, TriplesFactory] = None,
     testing: Union[None, str, TriplesFactory] = None,
     validation: Union[None, str, TriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -484,6 +486,14 @@ def hpo_pipeline(
         A triples factory with test instances or path to the test file if a dataset was not specified
     :param validation:
         A triples factory with validation instances or path to the validation file if a dataset was not specified
+    :param evaluation_entity_whitelist:
+        Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
+        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
+    :param evaluation_relation_whitelist:
+        Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
+        is only interested in certain relation, but the relational patterns with other relations improve the entity
+        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
 
     :param model:
         The name of the model or the model class to pass to :func:`pykeen.pipeline.pipeline`
@@ -648,6 +658,8 @@ def hpo_pipeline(
         training=training,
         testing=testing,
         validation=validation,
+        evaluation_entity_whitelist=evaluation_entity_whitelist,
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
         # 2. Model
         model=model,
         model_kwargs=model_kwargs,
