@@ -998,12 +998,29 @@ def pipeline(  # noqa: C901
 
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
-    losses = training_loop_instance.train(
-        stopper=stopper,
-        result_tracker=result_tracker,
-        clear_optimizer=clear_optimizer,
-        **training_kwargs,
-    )
+    try:
+        losses = training_loop_instance.train(
+            stopper=stopper,
+            result_tracker=result_tracker,
+            clear_optimizer=clear_optimizer,
+            **training_kwargs,
+        )
+    except MemoryError as e:
+        if training_loop_instance.device.type == 'cuda':
+            logging.warning("You tried to train the current model on GPU, but the model is too big for the GPU")
+            logging.warning("Reverting to CPU now, which will increase the training time significantly.")
+            training_loop_instance.model._set_device('cpu')
+            training_loop_instance.model.regularizer.device = torch.device('cpu')
+            training_loop_instance.model.reset_parameters_()
+            training_loop_instance.model.regularizer.reset()
+            losses = training_loop_instance.train(
+                stopper=stopper,
+                result_tracker=result_tracker,
+                clear_optimizer=clear_optimizer,
+                **training_kwargs,
+            )
+        else:
+            raise e
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
