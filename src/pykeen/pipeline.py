@@ -998,30 +998,28 @@ def pipeline(  # noqa: C901
 
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
-    try:
-        losses = training_loop_instance.train(
-            stopper=stopper,
-            result_tracker=result_tracker,
-            clear_optimizer=clear_optimizer,
-            **training_kwargs,
-        )
-    except MemoryError as e:
-        # When the training failed due to OOM on the GPU, the training is reverted to CPU training.
-        if training_loop_instance.device.type == 'cuda':
-            logging.warning("You tried to train the current model on GPU, but the model is too big for the GPU")
-            logging.warning("Reverting to CPU now, which will increase the training time significantly.")
-            training_loop_instance.model._set_device('cpu')
-            training_loop_instance.model.regularizer.device = torch.device('cpu')
-            training_loop_instance.model.reset_parameters_()
-            training_loop_instance.model.regularizer.reset()
+    while True:
+        try:
             losses = training_loop_instance.train(
                 stopper=stopper,
                 result_tracker=result_tracker,
                 clear_optimizer=clear_optimizer,
                 **training_kwargs,
             )
+        except (MemoryError, RuntimeError) as e:
+            # If the training failed due to OOM on the GPU, the training is reverted to CPU training.
+            if training_loop_instance.device.type == 'cuda':
+                logging.warning("Tried to train the current model on GPU, but the model is too big for the GPU")
+                logging.warning("Reverting to CPU now, which will increase the training time significantly.")
+                training_loop_instance.model._set_device('cpu')
+                training_loop_instance.model.regularizer.device = torch.device('cpu')
+                training_loop_instance.model.reset_parameters_()
+                training_loop_instance.model.regularizer.reset()
+            # If the training still fails using the CPU, the error is finally raised
+            else:
+                raise e
         else:
-            raise e
+            break
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
@@ -1038,11 +1036,40 @@ def pipeline(  # noqa: C901
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
-    metric_results: MetricResults = evaluator_instance.evaluate(
-        model=model_instance,
-        mapped_triples=mapped_triples,
-        **evaluation_kwargs,
-    )
+    while True:
+        try:
+            metric_results: MetricResults = evaluator_instance.evaluate(
+                model=model_instance,
+                mapped_triples=mapped_triples,
+                **evaluation_kwargs,
+            )
+        except (MemoryError, RuntimeError) as e:
+            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
+            # restarted with PyKEEN's automatic memory optimization
+            if model_instance.device.type == 'cuda' and evaluation_kwargs.get('batch_size') is not None:
+                logging.warning(
+                    "You tried to evaluate the current model on GPU with batch_size="
+                    f"{evaluation_kwargs.get('batch_size')}, which was too big for the GPU."
+                )
+                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
+                evaluation_kwargs.pop('batch_size', None)
+            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
+            # is restarted using the cpu
+            elif model_instance.device.type == 'cuda' and evaluation_kwargs.get('batch_size') is None:
+                logging.warning(
+                    "Tried to evaluate the current model on GPU, but the model and the dataset are too big for the "
+                    "GPU memory currently available."
+                )
+                logging.warning(
+                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
+                    "significantly."
+                )
+                model_instance._set_device('cpu')
+            # If the evaluation still fails using the CPU, the error is finally raised
+            else:
+                raise e
+        else:
+            break
     evaluate_end_time = time.time() - evaluate_start_time
     result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
