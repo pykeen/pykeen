@@ -1011,8 +1011,13 @@ def pipeline(  # noqa: C901
             if training_loop_instance.device.type == 'cuda':
                 logging.warning("Tried to train the current model on GPU, but the model is too big for the GPU")
                 logging.warning("Reverting to CPU now, which will increase the training time significantly.")
-                training_loop_instance.model._set_device('cpu')
-                training_loop_instance.model.regularizer.device = torch.device('cpu')
+                model_instance.to_cpu_()
+                # We have to create a new optimizer when changing the device of the model
+                # https://github.com/pytorch/pytorch/pull/3463#issuecomment-341673802
+                training_loop_instance.optimizer = optimizer(
+                    params=model_instance.get_grad_params(),
+                    **optimizer_kwargs,
+                )
                 training_loop_instance.model.reset_parameters_()
                 training_loop_instance.model.regularizer.reset()
             # If the training still fails using the CPU, the error is finally raised
@@ -1064,7 +1069,7 @@ def pipeline(  # noqa: C901
                     "Will revert to using the CPU for evaluation, which will increase the evaluation time "
                     "significantly.",
                 )
-                model_instance._set_device('cpu')
+                model_instance.to_cpu_()
             # If the evaluation still fails using the CPU, the error is finally raised
             else:
                 raise e
