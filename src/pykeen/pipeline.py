@@ -1049,7 +1049,7 @@ def pipeline(  # noqa: C901
             if model_instance.device.type == 'cuda' and evaluation_kwargs.get('batch_size') is not None:
                 logging.warning(
                     "You tried to evaluate the current model on GPU with batch_size="
-                    f"{evaluation_kwargs.get('batch_size')}, which was too big for the GPU."
+                    f"{evaluation_kwargs.get('batch_size')}, which was too big for the GPU.",
                 )
                 logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
                 evaluation_kwargs.pop('batch_size', None)
@@ -1058,11 +1058,11 @@ def pipeline(  # noqa: C901
             elif model_instance.device.type == 'cuda' and evaluation_kwargs.get('batch_size') is None:
                 logging.warning(
                     "Tried to evaluate the current model on GPU, but the model and the dataset are too big for the "
-                    "GPU memory currently available."
+                    "GPU memory currently available.",
                 )
                 logging.warning(
                     "Will revert to using the CPU for evaluation, which will increase the evaluation time "
-                    "significantly."
+                    "significantly.",
                 )
                 model_instance._set_device('cpu')
             # If the evaluation still fails using the CPU, the error is finally raised
