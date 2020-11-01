@@ -4,8 +4,11 @@
 
 import gc
 import logging
+import os
+import time
 from abc import ABC, abstractmethod
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from zlib import adler32
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -118,6 +121,16 @@ class TrainingLoop(ABC):
         """The device used by the model."""
         return self.model.device
 
+    @property
+    def checksum(self) -> int:  # noqa: D401
+        """The checksum of the model and optimizer the training loop was configured with."""
+        # Create a checksum that will give the same results on every system and python version.
+        # https://docs.python.org/3/library/zlib.html
+        return (
+                adler32(str(self.model).encode('utf-8')) & 0xffffffff
+                + adler32(str(self.optimizer).encode('utf-8')) & 0xffffffff
+        )
+
     def train(
         self,
         num_epochs: int = 1,
@@ -135,6 +148,8 @@ class TrainingLoop(ABC):
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
+        checkpoint_file: str = 'Save_my_model.pt',
+        checkpoint_frequency: int = 1,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -168,6 +183,11 @@ class TrainingLoop(ABC):
         :param clear_optimizer:
             Whether to delete the optimizer instance after training (as the optimizer might have additional memory
             consumption due to e.g. moments in Adam).
+        :param checkpoint_file:
+            The filename for saving checkpoints. If the given filename exists already, that file will be loaded and used
+            to continue training.
+        :param checkpoint_frequency:
+            The frequency of saving checkpoints in minutes.
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -179,8 +199,20 @@ class TrainingLoop(ABC):
         # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
         torch.cuda.empty_cache()
 
+        # If a checkpoint file is given we check whether it exists already and load it, if it does
+        if checkpoint_file:
+            if os.path.isfile(checkpoint_file):
+                start_epoch = self.load_state(path=checkpoint_file)
+                continue_training = True
+            else:
+                logger.info(f"=> no checkpoint found at '{checkpoint_file}'. Creating a new file.")
+                start_epoch = 1
+        else:
+            start_epoch = 1
+
         result = self._train(
             num_epochs=num_epochs,
+            start_epoch=start_epoch,
             batch_size=batch_size,
             slice_size=slice_size,
             label_smoothing=label_smoothing,
@@ -194,6 +226,8 @@ class TrainingLoop(ABC):
             result_tracker=result_tracker,
             sub_batch_size=sub_batch_size,
             num_workers=num_workers,
+            checkpoint_file=checkpoint_file,
+            checkpoint_frequency=checkpoint_frequency,
         )
 
         # Ensure the release of memory
@@ -208,6 +242,7 @@ class TrainingLoop(ABC):
     def _train(  # noqa: C901
         self,
         num_epochs: int = 1,
+        start_epoch: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         label_smoothing: float = 0.0,
@@ -221,6 +256,8 @@ class TrainingLoop(ABC):
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
+        checkpoint_file: str = None,
+        checkpoint_frequency: int = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -255,6 +292,10 @@ class TrainingLoop(ABC):
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
             The number of child CPU workers used for loading data. If None, data are loaded in the main process.
+        :param checkpoint_file:
+            The filename for saving checkpoints.
+        :param checkpoint_frequency:
+            The frequency of saving checkpoints in minutes.
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -322,9 +363,11 @@ class TrainingLoop(ABC):
             _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
-            epochs = trange(1, 1 + num_epochs, **_tqdm_kwargs)
-        else:
+            epochs = trange(start_epoch, 1 + num_epochs, **_tqdm_kwargs, initial=start_epoch-1, total=num_epochs)
+        elif only_size_probing:
             epochs = range(1, 1 + num_epochs)
+        else:
+            epochs = range(start_epoch, 1 + num_epochs)
 
         logger.debug(f'using stopper: {stopper}')
 
@@ -335,6 +378,11 @@ class TrainingLoop(ABC):
             shuffle=shuffle,
             num_workers=num_workers,
         )
+
+        # Save the time to track when the saved point was available
+        last_checkpoint = time.time()
+        if checkpoint_frequency is None:
+            checkpoint_frequency = 30
 
         # Training Loop
         for epoch in epochs:
@@ -415,6 +463,14 @@ class TrainingLoop(ABC):
             if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                 return self.losses_per_epochs
 
+            # If a checkpoint file is given, we check whether it is time to save a checkpoint
+            if checkpoint_file:
+                minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
+                if minutes_since_last_checkpoint >= checkpoint_frequency:
+                    # Save meta information
+                    self._epoch = epoch
+                    self.save_state(path=checkpoint_file)
+                    last_checkpoint = time.time()
         return self.losses_per_epochs
 
     def _forward_pass(self, batch, start, stop, current_batch_size, label_smoothing, slice_size):
@@ -673,3 +729,49 @@ class TrainingLoop(ABC):
         self.model.regularizer.reset()
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
+
+    def save_state(self, path: str) -> None:
+        """Save the state of the training loop.
+
+        :param path:
+            Path of the file where to store the state in.
+        """
+        logger.debug(f"=> Saving checkpoint.")
+        torch.save(
+            {
+                'epoch': self._epoch,
+                'loss': self.losses_per_epochs,
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'checksum': self.checksum
+            },
+            path,
+        )
+        logger.info(f"=> Saved checkpoint.")
+
+    def load_state(self, path: str) -> int:
+        """Load the state of the model.
+
+        :param path:
+            Path of the file where to load the state from.
+
+        :return:
+            The epoch that the training should be resumed with.
+        """
+        logger.info(f"=> loading checkpoint '{path}'")
+        checkpoint = torch.load(path)
+        loaded_checksum = checkpoint['checksum']
+        if loaded_checksum == self.checksum:
+            self.losses_per_epochs = checkpoint['loss']
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            logger.info(f"=> loaded checkpoint '{path}' stopped at epoch {checkpoint['epoch']}")
+        else:
+            raise FileExistsError(
+                f"The checkpoint file '{path}' that was provided already exists, but seems to be "
+                f"from a different training loop setup.",
+            )
+
+        # The starting epoch has to be one higher than the last epoch
+        start_epoch = checkpoint['epoch'] + 1
+        return start_epoch
