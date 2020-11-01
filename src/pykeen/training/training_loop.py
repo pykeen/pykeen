@@ -743,7 +743,7 @@ class TrainingLoop(ABC):
                 'loss': self.losses_per_epochs,
                 'model_state_dict': self.model.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
-                'checksum': self.checksum
+                'checksum': self.checksum,
             },
             path,
         )
