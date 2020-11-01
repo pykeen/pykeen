@@ -106,6 +106,10 @@ class TrainingLoop(ABC):
         else:
             self._loss_helper = self._label_loss_helper
 
+        # The internal epoch state tracks the last finished epoch of the training loop to allow for
+        # seamless loading and saving of training checkpoints
+        self._epoch = 0
+
     @classmethod
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the training loop."""
@@ -202,17 +206,13 @@ class TrainingLoop(ABC):
         # If a checkpoint file is given we check whether it exists already and load it, if it does
         if checkpoint_file:
             if os.path.isfile(checkpoint_file):
-                start_epoch = self.load_state(path=checkpoint_file)
+                self.load_state(path=checkpoint_file)
                 continue_training = True
             else:
                 logger.info(f"=> no checkpoint found at '{checkpoint_file}'. Creating a new file.")
-                start_epoch = 1
-        else:
-            start_epoch = 1
 
         result = self._train(
             num_epochs=num_epochs,
-            start_epoch=start_epoch,
             batch_size=batch_size,
             slice_size=slice_size,
             label_smoothing=label_smoothing,
@@ -242,7 +242,6 @@ class TrainingLoop(ABC):
     def _train(  # noqa: C901
         self,
         num_epochs: int = 1,
-        start_epoch: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         label_smoothing: float = 0.0,
@@ -363,11 +362,11 @@ class TrainingLoop(ABC):
             _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
-            epochs = trange(start_epoch, 1 + num_epochs, **_tqdm_kwargs, initial=start_epoch - 1, total=num_epochs)
+            epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch - 1, total=num_epochs)
         elif only_size_probing:
             epochs = range(1, 1 + num_epochs)
         else:
-            epochs = range(start_epoch, 1 + num_epochs)
+            epochs = range(self._epoch + 1, 1 + num_epochs)
 
         logger.debug(f'using stopper: {stopper}')
 
@@ -463,12 +462,13 @@ class TrainingLoop(ABC):
             if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                 return self.losses_per_epochs
 
+            # Save the last successful finished epoch
+            self._epoch = epoch
+
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if checkpoint_file:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 if minutes_since_last_checkpoint >= checkpoint_frequency:
-                    # Save meta information
-                    self._epoch = epoch
                     self.save_state(path=checkpoint_file)
                     last_checkpoint = time.time()
         return self.losses_per_epochs
@@ -749,14 +749,11 @@ class TrainingLoop(ABC):
         )
         logger.info("=> Saved checkpoint.")
 
-    def load_state(self, path: str) -> int:
+    def load_state(self, path: str) -> None:
         """Load the state of the model.
 
         :param path:
             Path of the file where to load the state from.
-
-        :return:
-            The epoch that the training should be resumed with.
 
         :raises FileExistsError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
@@ -765,6 +762,7 @@ class TrainingLoop(ABC):
         checkpoint = torch.load(path)
         loaded_checksum = checkpoint['checksum']
         if loaded_checksum == self.checksum:
+            self._epoch = checkpoint['epoch']
             self.losses_per_epochs = checkpoint['loss']
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -774,7 +772,3 @@ class TrainingLoop(ABC):
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
                 "from a different training loop setup.",
             )
-
-        # The starting epoch has to be one higher than the last epoch
-        start_epoch = checkpoint['epoch'] + 1
-        return start_epoch
