@@ -127,8 +127,8 @@ class TrainingLoop(ABC):
         # Create a checksum that will give the same results on every system and python version.
         # https://docs.python.org/3/library/zlib.html
         return (
-                adler32(str(self.model).encode('utf-8')) & 0xffffffff
-                + adler32(str(self.optimizer).encode('utf-8')) & 0xffffffff
+            adler32(str(self.model).encode('utf-8')) & 0xffffffff
+            + adler32(str(self.optimizer).encode('utf-8')) & 0xffffffff
         )
 
     def train(
@@ -148,8 +148,8 @@ class TrainingLoop(ABC):
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
-        checkpoint_file: str = 'Save_my_model.pt',
-        checkpoint_frequency: int = 1,
+        checkpoint_file: str = None,
+        checkpoint_frequency: int = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -363,7 +363,7 @@ class TrainingLoop(ABC):
             _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
-            epochs = trange(start_epoch, 1 + num_epochs, **_tqdm_kwargs, initial=start_epoch-1, total=num_epochs)
+            epochs = trange(start_epoch, 1 + num_epochs, **_tqdm_kwargs, initial=start_epoch - 1, total=num_epochs)
         elif only_size_probing:
             epochs = range(1, 1 + num_epochs)
         else:
@@ -736,7 +736,7 @@ class TrainingLoop(ABC):
         :param path:
             Path of the file where to store the state in.
         """
-        logger.debug(f"=> Saving checkpoint.")
+        logger.debug("=> Saving checkpoint.")
         torch.save(
             {
                 'epoch': self._epoch,
@@ -747,7 +747,7 @@ class TrainingLoop(ABC):
             },
             path,
         )
-        logger.info(f"=> Saved checkpoint.")
+        logger.info("=> Saved checkpoint.")
 
     def load_state(self, path: str) -> int:
         """Load the state of the model.
@@ -757,6 +757,9 @@ class TrainingLoop(ABC):
 
         :return:
             The epoch that the training should be resumed with.
+
+        :raises FileExistsError:
+            If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
         """
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path)
@@ -769,7 +772,7 @@ class TrainingLoop(ABC):
         else:
             raise FileExistsError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
-                f"from a different training loop setup.",
+                "from a different training loop setup.",
             )
 
         # The starting epoch has to be one higher than the last epoch
