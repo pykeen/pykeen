@@ -5,11 +5,13 @@
 import gc
 import logging
 import os
+import random
 import time
 from abc import ABC, abstractmethod
 from hashlib import md5
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
+import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
@@ -768,6 +770,9 @@ class TrainingLoop(ABC):
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'checksum': self.checksum,
                 'stopper_dict': stopper_dict,
+                'random_state': random.getstate(),
+                'np_random_state': np.random.get_state(),
+                'torch_random_state': torch.random.get_rng_state(),
             },
             path,
         )
@@ -793,6 +798,9 @@ class TrainingLoop(ABC):
             self.losses_per_epochs = checkpoint['loss']
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            random.setstate(checkpoint['random_state'])
+            np.random.set_state(checkpoint['np_random_state'])
+            torch.random.set_rng_state(checkpoint['torch_random_state'])
             stopper_dict = checkpoint['stopper_dict']
             logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         else:
