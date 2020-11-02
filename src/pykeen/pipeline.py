@@ -853,7 +853,7 @@ def pipeline(  # noqa: C901
     """
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to store a helper file
     # containing the used random_seed to ensure reproducible results
-    if training_kwargs.get('checkpoint_file'):
+    if training_kwargs and training_kwargs.get('checkpoint_file'):
         checkpoint_file = training_kwargs.get('checkpoint_file')
         pipeline_checkpoint_helper_file = f"{checkpoint_file}_pipeline_helper_file"
         if os.path.isfile(pipeline_checkpoint_helper_file):
@@ -866,6 +866,10 @@ def pipeline(  # noqa: C901
                 random_seed = random_non_negative_int()
                 logger.warning(f'No random seed is specified. Setting to {random_seed}.')
             save_pipeline_checkpoint_helper_file(path=pipeline_checkpoint_helper_file, random_seed=random_seed)
+    else:
+        if random_seed is None:
+            random_seed = random_non_negative_int()
+            logger.warning(f'No random seed is specified. Setting to {random_seed}.')
 
     set_random_seed(random_seed)
 
