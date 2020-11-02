@@ -782,23 +782,19 @@ class TrainingLoop(ABC):
         :return:
             The summary dict of the stopper at the time of saving the checkpoint.
 
-        :raises FileExistsError:
+        :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
         """
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path)
-        loaded_checksum = checkpoint['checksum']
-        if loaded_checksum == self.checksum:
-            self._epoch = checkpoint['epoch']
-            self.losses_per_epochs = checkpoint['loss']
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            stopper_dict = checkpoint['stopper_dict']
-            logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
-        else:
+        if checkpoint['checksum'] != self.checksum:
             raise CheckpointMismatchError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
-                "from a different training loop setup.",
+                f"from a different training loop setup.",
             )
-
-        return stopper_dict
+        self._epoch = checkpoint['epoch']
+        self.losses_per_epochs = checkpoint['loss']
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
+        return checkpoint['stopper_dict']
