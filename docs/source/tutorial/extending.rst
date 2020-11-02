@@ -32,4 +32,35 @@ The only implementation we have to provide is of `score_hrt`
             # evaluate interaction function
             return h * r.sigmoid() * t
 
-and afterwards we can use this new model with all available losses, evaluators, training pipelines, inverse triple modelling, ...
+and afterwards we can use this new model with all available losses, evaluators,
+training pipelines, inverse triple modelling, ...
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+    pipeline(
+        model=ModifiedDistMult,
+        dataset='Nations',
+        loss='NSSA',
+    )
+
+You'll notice that this model is not compatible with :class:`pykeen.losses.MarginRankingLoss`
+because the sigmoid causes it to be non-finite in some cases. If you have a preferred
+loss function for your model, you can add the ``loss_default`` class variable
+where the value is the loss class.
+
+.. code-block:: python
+
+    from pykeen.models.base import EntityRelationEmbeddingModel
+    from pykeen.losses import NSSALoss
+
+    class ModifiedDistMult(EntityRelationEmbeddingModel):
+        loss_default = NSSALoss
+
+        def score_hrt(self, hrt_batch):
+            # Get embeddings
+            h = self.entity_embeddings(  hrt_batch[:, 0])
+            r = self.relation_embeddings(hrt_batch[:, 1])
+            t = self.entity_embeddings(  hrt_batch[:, 2])
+            # evaluate interaction function
+            return h * r.sigmoid() * t
