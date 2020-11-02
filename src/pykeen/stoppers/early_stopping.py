@@ -191,3 +191,11 @@ class EarlyStopper(Stopper):
             best_epoch=self.best_epoch,
             best_metric=self.best_metric,
         )
+
+    @property
+    def improvement(self) -> float:
+        """Get the total improvement."""
+        if self.larger_is_better:
+            return self.best_metric - self.results[0]
+        else:
+            return self.results[0] - self.best_metric
