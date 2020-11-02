@@ -362,7 +362,7 @@ class TrainingLoop(ABC):
             _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
-            epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch - 1, total=num_epochs)
+            epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch, total=num_epochs)
         elif only_size_probing:
             epochs = range(1, 1 + num_epochs)
         else:
@@ -747,7 +747,7 @@ class TrainingLoop(ABC):
             },
             path,
         )
-        logger.info("=> Saved checkpoint.")
+        logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
     def load_state(self, path: str) -> None:
         """Load the state of the model.
@@ -766,7 +766,7 @@ class TrainingLoop(ABC):
             self.losses_per_epochs = checkpoint['loss']
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            logger.info(f"=> loaded checkpoint '{path}' stopped at epoch {checkpoint['epoch']}")
+            logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         else:
             raise FileExistsError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
