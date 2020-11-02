@@ -7,8 +7,8 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
+from hashlib import md5
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
-from zlib import adler32
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -126,14 +126,12 @@ class TrainingLoop(ABC):
         return self.model.device
 
     @property
-    def checksum(self) -> int:  # noqa: D401
+    def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
-        # Create a checksum that will give the same results on every system and python version.
-        # https://docs.python.org/3/library/zlib.html
-        return (
-            adler32(str(self.model).encode('utf-8')) & 0xffffffff
-            + adler32(str(self.optimizer).encode('utf-8')) & 0xffffffff
-        )
+        h = md5()
+        h.update(str(self.model).encode('utf-8'))
+        h.update(str(self.optimizer).encode('utf-8'))
+        return h.hexdigest()
 
     def train(
         self,
