@@ -130,9 +130,9 @@ class TrainingLoop(ABC):
         return self.model.device
 
     @property
-    def checksum(self) -> str:  # noqa: D401, S303
+    def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
-        h = md5()
+        h = md5()  # noqa: S303
         h.update(str(self.model).encode('utf-8'))
         h.update(str(self.optimizer).encode('utf-8'))
         return h.hexdigest()
