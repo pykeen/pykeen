@@ -193,16 +193,16 @@ class EarlyStopper(Stopper):
         )
 
     def _write_from_summary_dict(
-            self,
-            frequency: int,
-            patience: int,
-            relative_delta: float,
-            metric: str,
-            larger_is_better: bool,
-            results: List[float],
-            stopped: bool,
-            best_epoch: int,
-            best_metric: float,
+        self,
+        frequency: int,
+        patience: int,
+        relative_delta: float,
+        metric: str,
+        larger_is_better: bool,
+        results: List[float],
+        stopped: bool,
+        best_epoch: int,
+        best_metric: float,
     ) -> None:
         """Write attributes to stopper from a summary dict."""
         self.frequency = frequency
