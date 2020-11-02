@@ -42,6 +42,10 @@ class TrainingApproachLossMismatchError(TypeError):
     """An exception when an illegal loss function is used with a given training approach."""
 
 
+class CheckpointMismatchError(RuntimeError):
+    """An exception when a provided checkpoint file does not match the current training loop setup."""
+
+
 class SubBatchingNotSupportedError(NotImplementedError):
     """An exception raised when sub batching is not implemented."""
 
@@ -126,7 +130,7 @@ class TrainingLoop(ABC):
         return self.model.device
 
     @property
-    def checksum(self) -> str:  # noqa: D401
+    def checksum(self) -> str:  # noqa: D401, S303
         """The checksum of the model and optimizer the training loop was configured with."""
         h = md5()
         h.update(str(self.model).encode('utf-8'))
@@ -467,20 +471,19 @@ class TrainingLoop(ABC):
             # Save the last successful finished epoch
             self._epoch = epoch
 
+            should_stop = False
             if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                # If a checkpoint file is given, we check whether it is time to save a checkpoint
-                if checkpoint_file:
-                    minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
-                    if minutes_since_last_checkpoint >= checkpoint_frequency:
-                        self._save_state(path=checkpoint_file, stopper=stopper)
+                should_stop = True
+
+            # If a checkpoint file is given, we check whether it is time to save a checkpoint
+            if checkpoint_file:
+                minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
+                if minutes_since_last_checkpoint >= checkpoint_frequency:
+                    self._save_state(path=checkpoint_file, stopper=stopper)
+                    last_checkpoint = time.time()
+
+            if should_stop:
                 return self.losses_per_epochs
-            else:
-                # If a checkpoint file is given, we check whether it is time to save a checkpoint
-                if checkpoint_file:
-                    minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
-                    if minutes_since_last_checkpoint >= checkpoint_frequency:
-                        self._save_state(path=checkpoint_file, stopper=stopper)
-                        last_checkpoint = time.time()
 
         return self.losses_per_epochs
 
@@ -793,7 +796,7 @@ class TrainingLoop(ABC):
             stopper_dict = checkpoint['stopper_dict']
             logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         else:
-            raise FileExistsError(
+            raise CheckpointMismatchError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
                 "from a different training loop setup.",
             )
