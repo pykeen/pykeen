@@ -699,6 +699,34 @@ def pipeline_from_config(
     )
 
 
+def save_pipeline_checkpoint_helper_file(path: str, random_seed: int) -> None:
+    """Save the pipeline checkpoint helper file.
+
+    :param path:
+        Save the state of the pipeline.
+    :param random_seed:
+        The random_seed that was used for the pipeline.
+    """
+    torch.save(
+        {
+            'random_seed': random_seed,
+        },
+        path,
+    )
+
+
+def load_pipeline_checkpoint_helper_file(path: str) -> Mapping[str, Any]:
+    """Load the pipeline checkpoint helper file.
+
+    :param path:
+        Save the state of the pipeline.
+
+    :return:
+        The pipeline checkpoint helper file dictionary loaded from the pipeline helper file.
+    """
+    return torch.load(path)
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -823,9 +851,22 @@ def pipeline(  # noqa: C901
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
-    if random_seed is None:
-        random_seed = random_non_negative_int()
-        logger.warning(f'No random seed is specified. Setting to {random_seed}.')
+    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to store a helper file
+    # containing the used random_seed to ensure reproducible results
+    if training_kwargs.get('checkpoint_file'):
+        checkpoint_file = training_kwargs.get('checkpoint_file')
+        pipeline_checkpoint_helper_file = f"{checkpoint_file}_pipeline_helper_file"
+        if os.path.isfile(pipeline_checkpoint_helper_file):
+            pipeline_checkpoint_helper_dict = load_pipeline_checkpoint_helper_file(pipeline_checkpoint_helper_file)
+            random_seed = pipeline_checkpoint_helper_dict['random_seed']
+            logger.info(f'Loaded random seed {random_seed} from checkpoint.')
+        else:
+            logger.info(f"=> no pipeline checkpoint helper file found at '{checkpoint_file}'. Creating a new file.")
+            if random_seed is None:
+                random_seed = random_non_negative_int()
+                logger.warning(f'No random seed is specified. Setting to {random_seed}.')
+            save_pipeline_checkpoint_helper_file(path=pipeline_checkpoint_helper_file, random_seed=random_seed)
+
     set_random_seed(random_seed)
 
     result_tracker_cls: Type[ResultTracker] = get_result_tracker_cls(result_tracker)

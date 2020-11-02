@@ -153,7 +153,7 @@ class TrainingLoop(ABC):
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
         checkpoint_file: Optional[str] = None,
-        checkpoint_frequency: int = None,
+        checkpoint_frequency: Optional[int] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -301,7 +301,7 @@ class TrainingLoop(ABC):
         :param checkpoint_file:
             The filename for saving checkpoints.
         :param checkpoint_frequency:
-            The frequency of saving checkpoints in minutes.
+            The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
 
         :return:
             A pair of the KGE model and the losses per epoch.
