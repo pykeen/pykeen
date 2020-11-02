@@ -22,7 +22,7 @@ The following code will create a scenario in which training will stop
 ...     evaluator_kwargs=dict(filtered=True),
 ...     evaluation_kwargs=dict(batch_size=128),
 ...     stopper='early',
-...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...     stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ... )
 """
 
