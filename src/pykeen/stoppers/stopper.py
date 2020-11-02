@@ -3,6 +3,7 @@
 """Basic stoppers."""
 
 from abc import ABC, abstractmethod
+from typing import Any, Mapping
 
 __all__ = [
     'Stopper',
@@ -25,6 +26,11 @@ class Stopper(ABC):
         """Validate on validation set and check for termination condition."""
         raise NotImplementedError
 
+    @abstractmethod
+    def get_summary_dict(self) -> Mapping[str, Any]:
+        """Get a summary dict."""
+        raise NotImplementedError
+
 
 class NopStopper(Stopper):
     """A stopper that does nothing."""
@@ -36,3 +42,7 @@ class NopStopper(Stopper):
     def should_stop(self, epoch: int) -> bool:
         """Return false; should never stop."""
         return False
+
+    def get_summary_dict(self) -> Mapping[str, Any]:
+        """Return empty mapping, doesn't have any attributes."""
+        return dict()

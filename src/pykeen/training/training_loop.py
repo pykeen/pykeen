@@ -152,7 +152,7 @@ class TrainingLoop(ABC):
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
-        checkpoint_file: str = None,
+        checkpoint_file: Optional[str] = None,
         checkpoint_frequency: int = None,
     ) -> List[float]:
         """Train the KGE model.
@@ -206,29 +206,36 @@ class TrainingLoop(ABC):
         # If a checkpoint file is given we check whether it exists already and load it, if it does
         if checkpoint_file:
             if os.path.isfile(checkpoint_file):
-                self.load_state(path=checkpoint_file)
+                stopper_dict = self._load_state(path=checkpoint_file)
+                # If the stopper dict has any keys, those are written back to the stopper
+                if stopper_dict:
+                    stopper._write_from_summary_dict(**stopper_dict)
                 continue_training = True
             else:
                 logger.info(f"=> no checkpoint found at '{checkpoint_file}'. Creating a new file.")
 
-        result = self._train(
-            num_epochs=num_epochs,
-            batch_size=batch_size,
-            slice_size=slice_size,
-            label_smoothing=label_smoothing,
-            sampler=sampler,
-            continue_training=continue_training,
-            only_size_probing=only_size_probing,
-            use_tqdm=use_tqdm,
-            use_tqdm_batch=use_tqdm_batch,
-            tqdm_kwargs=tqdm_kwargs,
-            stopper=stopper,
-            result_tracker=result_tracker,
-            sub_batch_size=sub_batch_size,
-            num_workers=num_workers,
-            checkpoint_file=checkpoint_file,
-            checkpoint_frequency=checkpoint_frequency,
-        )
+        # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
+        if getattr(stopper, 'stopped', False):
+            result = self.losses_per_epochs
+        else:
+            result = self._train(
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                slice_size=slice_size,
+                label_smoothing=label_smoothing,
+                sampler=sampler,
+                continue_training=continue_training,
+                only_size_probing=only_size_probing,
+                use_tqdm=use_tqdm,
+                use_tqdm_batch=use_tqdm_batch,
+                tqdm_kwargs=tqdm_kwargs,
+                stopper=stopper,
+                result_tracker=result_tracker,
+                sub_batch_size=sub_batch_size,
+                num_workers=num_workers,
+                checkpoint_file=checkpoint_file,
+                checkpoint_frequency=checkpoint_frequency,
+            )
 
         # Ensure the release of memory
         torch.cuda.empty_cache()
@@ -255,7 +262,7 @@ class TrainingLoop(ABC):
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
-        checkpoint_file: str = None,
+        checkpoint_file: Optional[str] = None,
         checkpoint_frequency: int = None,
     ) -> List[float]:
         """Train the KGE model.
@@ -459,18 +466,24 @@ class TrainingLoop(ABC):
                 'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
             })
 
-            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                return self.losses_per_epochs
-
             # Save the last successful finished epoch
             self._epoch = epoch
 
-            # If a checkpoint file is given, we check whether it is time to save a checkpoint
-            if checkpoint_file:
-                minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
-                if minutes_since_last_checkpoint >= checkpoint_frequency:
-                    self.save_state(path=checkpoint_file)
-                    last_checkpoint = time.time()
+            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
+                # If a checkpoint file is given, we check whether it is time to save a checkpoint
+                if checkpoint_file:
+                    minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
+                    if minutes_since_last_checkpoint >= checkpoint_frequency:
+                        self._save_state(path=checkpoint_file, stopper=stopper)
+                return self.losses_per_epochs
+            else:
+                # If a checkpoint file is given, we check whether it is time to save a checkpoint
+                if checkpoint_file:
+                    minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
+                    if minutes_since_last_checkpoint >= checkpoint_frequency:
+                        self._save_state(path=checkpoint_file, stopper=stopper)
+                        last_checkpoint = time.time()
+
         return self.losses_per_epochs
 
     def _forward_pass(self, batch, start, stop, current_batch_size, label_smoothing, slice_size):
@@ -730,13 +743,22 @@ class TrainingLoop(ABC):
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 
-    def save_state(self, path: str) -> None:
+    def _save_state(self, path: str, stopper: Optional[Stopper] = None) -> None:
         """Save the state of the training loop.
 
         :param path:
             Path of the file where to store the state in.
+        :param stopper:
+            An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
+            if training should stop early
         """
         logger.debug("=> Saving checkpoint.")
+
+        if stopper is None:
+            stopper_dict = dict()
+        else:
+            stopper_dict = stopper.get_summary_dict()
+
         torch.save(
             {
                 'epoch': self._epoch,
@@ -744,16 +766,20 @@ class TrainingLoop(ABC):
                 'model_state_dict': self.model.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'checksum': self.checksum,
+                'stopper_dict': stopper_dict,
             },
             path,
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
-    def load_state(self, path: str) -> None:
-        """Load the state of the model.
+    def _load_state(self, path: str) -> Mapping[str, Any]:
+        """Load the state of the training loop from a checkpoint.
 
         :param path:
             Path of the file where to load the state from.
+
+        :return:
+            The summary dict of the stopper at the time of saving the checkpoint.
 
         :raises FileExistsError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
@@ -766,9 +792,12 @@ class TrainingLoop(ABC):
             self.losses_per_epochs = checkpoint['loss']
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            stopper_dict = checkpoint['stopper_dict']
             logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         else:
             raise FileExistsError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
                 "from a different training loop setup.",
             )
+
+        return stopper_dict
