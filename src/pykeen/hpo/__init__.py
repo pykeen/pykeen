@@ -153,7 +153,7 @@ Early Stopping
 ~~~~~~~~~~~~~~
 Early stopping can be baked directly into the :mod:`optuna` optimization.
 
-The important keys are ``stopping='early'`` and ``stopper_kwargs``.
+The important keys are ``stopper='early'`` and ``stopper_kwargs``.
 When using early stopping, the :func:`hpo_pipeline` automatically takes
 care of adding appropriate callbacks to interface with :mod:`optuna`.
 
@@ -163,7 +163,7 @@ care of adding appropriate callbacks to interface with :mod:`optuna`.
 ...     dataset='Nations',
 ...     model='TransE',
 ...     stopper='early',
-...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...     stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ... )
 
 These stopper kwargs were chosen to make the example run faster. You will
@@ -237,7 +237,7 @@ evaluation, and early stopping settings.
 ...     evaluator_kwargs=dict(filtered=True),
 ...     evaluation_kwargs=dict(batch_size=128),
 ...     stopper='early',
-...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...     stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ... )
 
 If you have the configuration as a dictionary:
@@ -262,7 +262,7 @@ If you have the configuration as a dictionary:
 ...         evaluator_kwargs=dict(filtered=True),
 ...         evaluation_kwargs=dict(batch_size=128),
 ...         stopper='early',
-...         stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...         stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ...     )
 ... }
 ... hpo_pipeline_result = hpo_pipeline_from_config(config)
@@ -289,7 +289,7 @@ If you have a configuration (in the same format) in a JSON file:
 ...         evaluator_kwargs=dict(filtered=True),
 ...         evaluation_kwargs=dict(batch_size=128),
 ...         stopper='early',
-...         stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...         stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ...     )
 ... }
 ... with open('config.json', 'w') as file:
