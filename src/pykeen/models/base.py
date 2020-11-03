@@ -1098,7 +1098,7 @@ class EntityEmbeddingModel(Model):
             device=self.device,
         )
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs):  # noqa: D105
         _annotate(cls)
         _tag(cls)
 
@@ -1157,7 +1157,7 @@ class EntityRelationEmbeddingModel(Model):
             device=self.device,
         )
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs):  # noqa: D105
         _annotate(cls)
         _tag(cls)
 

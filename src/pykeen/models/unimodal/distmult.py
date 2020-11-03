@@ -12,12 +12,11 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
+from ...triples import TriplesFactory
 
 __all__ = [
     'DistMult',
 ]
-
-from ...triples import TriplesFactory
 
 
 class DistMult(EntityRelationEmbeddingModel):
