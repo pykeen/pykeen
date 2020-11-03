@@ -107,8 +107,7 @@ class ConvKB(EntityRelationEmbeddingModel):
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
+        super()._reset_parameters_()
 
         # Use Xavier initialization for weight; bias to zero
         nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
