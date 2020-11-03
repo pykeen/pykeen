@@ -1085,6 +1085,12 @@ class EntityEmbeddingModel(Model):
             device=self.device,
         )
 
+        # Finalize initialization
+        self.reset_parameters_()
+
+    def _reset_parameters_(self):  # noqa: D102
+        self.entity_embeddings.reset_parameters()
+
 
 class EntityRelationEmbeddingModel(EntityEmbeddingModel):
     """A base module for KGE models that have different embeddings for entities and relations."""
@@ -1131,6 +1137,13 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
             embedding_dim=self.relation_dim,
             device=self.device,
         )
+
+        # Finalize initialization
+        self.reset_parameters_()
+
+    def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
+        self.relation_embeddings.reset_parameters()
 
 
 def _can_slice(fn) -> bool:
