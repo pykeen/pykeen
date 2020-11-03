@@ -79,7 +79,7 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def _reset_parameters_(self):  # noqa: D102
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
-        self._reset_parameters_()
+        super()._reset_parameters_()
 
         # weight initialization
         nn.init.zeros_(self.linear1.bias)
