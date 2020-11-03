@@ -2,16 +2,11 @@
 
 """Implementation of the HolE model."""
 
-from typing import Optional
-
 import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_uniform_
-from ...losses import Loss
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
 from ...utils import clamp_norm
 
 __all__ = [

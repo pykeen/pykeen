@@ -2,17 +2,13 @@
 
 """Implementation of DistMult."""
 
-from typing import Optional
-
 import torch
 import torch.autograd
 from torch import nn
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ...losses import Loss
-from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
+from ...regularizers import LpRegularizer
 
 __all__ = [
     'DistMult',
