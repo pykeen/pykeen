@@ -184,7 +184,7 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
-def _annotate(cls):
+def _track_hyperparameters(cls: Type['Model']) -> None:
     """Initialize the subclass while keeping track of hyper-parameters."""
     # Keep track of the hyper-parameters that are used across all
     # subclasses of BaseModule
@@ -193,7 +193,7 @@ def _annotate(cls):
             Model._hyperparameter_usage[k].add(cls.__name__)
 
 
-def _tag(cls):
+def _add_post_reset_parameters(cls: Type['Model']) -> None:
     # The following lines add in a post-init hook to all subclasses
     # such that the reset_parameters_() function is run
     _original_init = cls.__init__
@@ -1098,9 +1098,10 @@ class EntityEmbeddingModel(Model):
             device=self.device,
         )
 
-    def __init_subclass__(cls, **kwargs):  # noqa: D105
-        _annotate(cls)
-        _tag(cls)
+    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
+        _track_hyperparameters(cls)
+        if auto_reset_parameters:
+            _add_post_reset_parameters(cls)
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
@@ -1157,9 +1158,10 @@ class EntityRelationEmbeddingModel(Model):
             device=self.device,
         )
 
-    def __init_subclass__(cls, **kwargs):  # noqa: D105
-        _annotate(cls)
-        _tag(cls)
+    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
+        _track_hyperparameters(cls)
+        if auto_reset_parameters:
+            _add_post_reset_parameters(cls)
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
