@@ -2,6 +2,7 @@
 
 """Base module for all KGE models."""
 
+import functools
 import inspect
 import itertools as itt
 import logging
@@ -1085,11 +1086,22 @@ class EntityEmbeddingModel(Model):
             device=self.device,
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
+
+    def __init_subclass__(cls, **kwargs):  # noqa:D105
+        super().__init_subclass__(**kwargs)
+
+        # The following lines add in a post-init hook to all subclasses
+        # such that the reset_parameters_() function is run
+        _original_init = cls.__init__
+
+        @functools.wraps(_original_init)
+        def _new_init(self, *args, **kwargs):
+            _original_init(self, *args, **kwargs)
+            self.reset_parameters_()
+
+        cls.__init__ = _new_init
 
 
 class EntityRelationEmbeddingModel(EntityEmbeddingModel):
@@ -1137,9 +1149,6 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
             embedding_dim=self.relation_dim,
             device=self.device,
         )
-
-        # Finalize initialization
-        self.reset_parameters_()
 
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
