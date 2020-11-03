@@ -2,17 +2,22 @@
 
 """Implementation of DistMult."""
 
+from typing import Optional
+
 import torch
 import torch.autograd
 from torch import nn
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ...regularizers import LpRegularizer
+from ...losses import Loss
+from ...regularizers import LpRegularizer, Regularizer
 
 __all__ = [
     'DistMult',
 ]
+
+from ...triples import TriplesFactory
 
 
 class DistMult(EntityRelationEmbeddingModel):
@@ -60,6 +65,30 @@ class DistMult(EntityRelationEmbeddingModel):
         p=2.0,
         normalize=True,
     )
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
+        automatic_memory_optimization: Optional[bool] = None,
+        loss: Optional[Loss] = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        r"""Initialize DistMult.
+
+        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            embedding_dim=embedding_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+        )
 
     def _reset_parameters_(self):  # noqa: D102
         # xavier uniform, cf.

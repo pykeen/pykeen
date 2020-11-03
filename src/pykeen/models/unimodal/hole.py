@@ -2,11 +2,16 @@
 
 """Implementation of the HolE model."""
 
+from typing import Optional
+
 import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ..init import embedding_xavier_uniform_
+from ...losses import Loss
+from ...regularizers import Regularizer
+from ...triples import TriplesFactory
 from ...utils import clamp_norm
 
 __all__ = [
@@ -46,6 +51,27 @@ class HolE(EntityRelationEmbeddingModel):
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
     )
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        embedding_dim: int = 200,
+        automatic_memory_optimization: Optional[bool] = None,
+        loss: Optional[Loss] = None,
+        preferred_device: Optional[str] = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        """Initialize the model."""
+        super().__init__(
+            triples_factory=triples_factory,
+            embedding_dim=embedding_dim,
+            loss=loss,
+            automatic_memory_optimization=automatic_memory_optimization,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+        )
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first

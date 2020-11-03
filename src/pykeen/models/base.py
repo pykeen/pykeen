@@ -184,6 +184,28 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
+def _annotate(cls):
+    """Initialize the subclass while keeping track of hyper-parameters."""
+    # Keep track of the hyper-parameters that are used across all
+    # subclasses of BaseModule
+    for k in cls.__init__.__annotations__.keys():
+        if k not in Model.__init__.__annotations__:
+            Model._hyperparameter_usage[k].add(cls.__name__)
+
+
+def _tag(cls):
+    # The following lines add in a post-init hook to all subclasses
+    # such that the reset_parameters_() function is run
+    _original_init = cls.__init__
+
+    @functools.wraps(_original_init)
+    def _new_init(self, *args, **kwargs):
+        _original_init(self, *args, **kwargs)
+        self.reset_parameters_()
+
+    cls.__init__ = _new_init
+
+
 class Model(nn.Module):
     """A base module for all of the KGE models."""
 
@@ -321,16 +343,6 @@ class Model(nn.Module):
         self.to_device_()
         self.post_parameter_update()
         return self
-
-    def __init_subclass__(cls, **kwargs):
-        """Initialize the subclass while keeping track of hyper-parameters."""
-        super().__init_subclass__(**kwargs)
-
-        # Keep track of the hyper-parameters that are used across all
-        # subclasses of BaseModule
-        for k in cls.__init__.__annotations__.keys():
-            if k not in Model.__init__.__annotations__:
-                Model._hyperparameter_usage[k].add(cls.__name__)
 
     @property
     def num_entities(self) -> int:  # noqa: D401
@@ -1086,25 +1098,15 @@ class EntityEmbeddingModel(Model):
             device=self.device,
         )
 
+    def __init_subclass__(cls, **kwargs):
+        _annotate(cls)
+        _tag(cls)
+
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
-    def __init_subclass__(cls, **kwargs):  # noqa:D105
-        super().__init_subclass__(**kwargs)
 
-        # The following lines add in a post-init hook to all subclasses
-        # such that the reset_parameters_() function is run
-        _original_init = cls.__init__
-
-        @functools.wraps(_original_init)
-        def _new_init(self, *args, **kwargs):
-            _original_init(self, *args, **kwargs)
-            self.reset_parameters_()
-
-        cls.__init__ = _new_init
-
-
-class EntityRelationEmbeddingModel(EntityEmbeddingModel):
+class EntityRelationEmbeddingModel(Model):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -1136,7 +1138,12 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
-            embedding_dim=embedding_dim,
+        )
+        self.embedding_dim = embedding_dim
+        self.entity_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=self.embedding_dim,
+            device=self.device,
         )
 
         # Default for relation dimensionality
@@ -1150,8 +1157,12 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
             device=self.device,
         )
 
+    def __init_subclass__(cls, **kwargs):
+        _annotate(cls)
+        _tag(cls)
+
     def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
+        self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
 
 
