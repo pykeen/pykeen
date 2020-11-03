@@ -331,9 +331,6 @@ class RGCN(Model):
         else:
             self.batch_norms = None
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 

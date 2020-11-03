@@ -93,9 +93,6 @@ class ERMLPE(EntityRelationEmbeddingModel):
             nn.ReLU(),
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()

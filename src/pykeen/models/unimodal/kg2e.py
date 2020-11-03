@@ -109,9 +109,6 @@ class KG2E(EntityRelationEmbeddingModel):
             device=self.device,
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # Constraints are applied through post_parameter_update
         for emb in [

@@ -65,32 +65,6 @@ class DistMult(EntityRelationEmbeddingModel):
         normalize=True,
     )
 
-    def __init__(
-        self,
-        triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
-        loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-    ) -> None:
-        r"""Initialize DistMult.
-
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        """
-        super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-        )
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # xavier uniform, cf.
         # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17

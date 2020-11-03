@@ -114,9 +114,6 @@ class NTN(EntityEmbeddingModel):
             non_linearity = nn.Tanh()
         self.non_linearity = non_linearity
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
         nn.init.normal_(self.w)
