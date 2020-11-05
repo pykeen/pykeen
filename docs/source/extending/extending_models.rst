@@ -73,10 +73,10 @@ kind of modifications can be made to set a default regularizer with `regularizer
 
 Implementing a custom `__init__()`
 ----------------------------------
-Let's say you modify the previous interaction model to apply a linear transformation
-to the entity embeddings using the :class:`torch.nn.Linear` module. Each PyKEEN
-model is a subclass of `torch.nn.Module`, so you can update the `__init__()` function.
-However, there are a couple things to consider:
+Let's say you modify the previous interaction model to apply a two consecutive
+linear transformations to the entity embeddings using the :class:`torch.nn.Linear` module.
+Each PyKEEN model is a subclass of `torch.nn.Module`, so you can update the `__init__()`
+function. However, there are a couple things to consider:
 
 1. Don't forget to properly call the `super().__init__()` and make the base class's
    arguments for `__init__()` available (even if you don't understand them). This
@@ -95,10 +95,15 @@ However, there are a couple things to consider:
 
 .. code-block:: python
 
+    from typing import Optional
+
     import torch.nn
 
+    from pykeen.losses import Loss, NSSALoss
     from pykeen.models.base import EntityRelationEmbeddingModel
-    from pykeen.losses import NSSALoss
+    from pykeen.pipeline import pipeline
+    from pykeen.regularizers import Regularizer
+    from pykeen.triples import TriplesFactory
 
     class ModifiedLinearDistMult(EntityRelationEmbeddingModel):
         loss_default = NSSALoss
@@ -125,15 +130,17 @@ However, there are a couple things to consider:
             )
 
             self.hidden_dim = hidden_dim
-            self.linear = nn.Linear(self.hidden_dim, 1)
+
+            self.linear1 = torch.nn.Linear(self.embedding_dim, self.hidden_dim)
+            self.linear2 = torch.nn.Linear(self.hidden_dim, self.embedding_dim)
 
         def score_hrt(self, hrt_batch):
             # Get embeddings
-            h = self.entity_embeddings(  hrt_batch[:, 0])
-            h = self.linear(h)
+            h = self.entity_embeddings(hrt_batch[:, 0])
+            h = self.linear2(self.linear1(h))
             r = self.relation_embeddings(hrt_batch[:, 1])
-            t = self.entity_embeddings(  hrt_batch[:, 2])
-            t = self.linear(t)
+            t = self.entity_embeddings(hrt_batch[:, 2])
+            t = self.linear2(self.linear1(t))
             # evaluate interaction function
             return h * r.sigmoid() * t
 
@@ -141,5 +148,12 @@ However, there are a couple things to consider:
             super()._reset_parameters_()
 
             # weight initialization
-            nn.init.zeros_(self.linear.bias)
-            nn.init.xavier_uniform_(self.linear.weight)
+            torch.nn.init.zeros_(self.linear1.bias)
+            torch.nn.init.zeros_(self.linear2.bias)
+            torch.nn.init.xavier_uniform_(self.linear1.weight)
+            torch.nn.init.xavier_uniform_(self.linear2.weight)
+
+    pipeline(
+        model=ModifiedLinearDistMult,
+        dataset='Nations',
+    )
