@@ -348,16 +348,6 @@ class Result:
 class RepresentationModule(nn.Module):
     """A base class for obtaining representations for entities/relations."""
 
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The representation dimension."""
-        raise NotImplementedError
-
-    @property
-    def num_embeddings(self) -> int:  # noqa:D401
-        """The total number of representations (i.e. the maximum ID)."""
-        raise NotImplementedError
-
     def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
         """Get representations for indices.
 
@@ -374,7 +364,11 @@ class RepresentationModule(nn.Module):
 
 
 class Embedding(RepresentationModule):
-    """Trainable embeddings."""
+    """Trainable embeddings.
+
+    This class provides the same interface as :class:`torch.nn.Embedding` and
+    can be used throughout PyKEEN as a more fully featured drop-in replacement.
+    """
 
     def __init__(
         self,
@@ -405,7 +399,7 @@ class Embedding(RepresentationModule):
         initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
         normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
-    ):
+    ) -> 'Embedding':
         """Create an embedding object on a device.
 
         This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
@@ -437,11 +431,13 @@ class Embedding(RepresentationModule):
         ).to(device=device)
 
     @property
-    def num_embeddings(self) -> int:  # noqa: D102
+    def num_embeddings(self) -> int:  # noqa: D401
+        """The total number of representations (i.e. the maximum ID)."""
         return self._embeddings.num_embeddings
 
     @property
-    def embedding_dim(self) -> int:  # noqa: D102
+    def embedding_dim(self) -> int:  # noqa: D401
+        """The representation dimension."""
         return self._embeddings.embedding_dim
 
     @property
