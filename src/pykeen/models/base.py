@@ -19,7 +19,7 @@ from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 from ..version import get_version
 
 __all__ = [
@@ -1191,11 +1191,10 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
             relation_dim = embedding_dim
 
         self.relation_dim = relation_dim
-        self.relation_embeddings = get_embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=self.relation_dim,
-            device=self.device,
-        )
+        self.relation_embeddings = Embedding(
+            num=triples_factory.num_relations,
+            dim=self.relation_dim,
+        ).to(self.device)
 
 
 def _can_slice(fn) -> bool:
