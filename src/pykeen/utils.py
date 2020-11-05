@@ -349,12 +349,12 @@ class RepresentationModule(nn.Module):
     """A base class for obtaining representations for entities/relations."""
 
     @property
-    def dimension(self) -> int:  # noqa:D401
+    def embedding_dim(self) -> int:  # noqa:D401
         """The representation dimension."""
         raise NotImplementedError
 
     @property
-    def total_size(self) -> int:  # noqa:D401
+    def num_embeddings(self) -> int:  # noqa:D401
         """The total number of representations (i.e. the maximum ID)."""
         raise NotImplementedError
 
@@ -378,8 +378,8 @@ class Embedding(RepresentationModule):
 
     def __init__(
         self,
-        num: int,
-        dim: int,
+        num_embeddings: int,
+        embedding_dim: int,
         initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
         normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
@@ -392,15 +392,15 @@ class Embedding(RepresentationModule):
             self.initialization = initialization
         self.normalization = normalization
         self._embeddings = nn.Embedding(
-            num_embeddings=num,
-            embedding_dim=dim,
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
         )
 
     @classmethod
     def init_with_device(
         cls,
-        num: int,
-        dim: int,
+        num_embeddings: int,
+        embedding_dim: int,
         device: torch.device,
         initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
@@ -411,9 +411,9 @@ class Embedding(RepresentationModule):
         This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
         weight is always initialized on CPU and has to be moved to GPU afterwards.
 
-        :param num: >0
+        :param num_embeddings: >0
             The number of embeddings.
-        :param dim: >0
+        :param embedding_dim: >0
             The embedding dimensionality.
         :param device:
             The device.
@@ -429,20 +429,24 @@ class Embedding(RepresentationModule):
             The embedding.
         """
         return cls(
-            num=num,
-            dim=dim,
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
             initialization=initialization,
             initialization_kwargs=initialization_kwargs,
             normalization=normalization,
         ).to(device=device)
 
     @property
-    def total_size(self) -> int:  # noqa: D102
+    def num_embeddings(self) -> int:  # noqa: D102
         return self._embeddings.num_embeddings
 
     @property
-    def dimension(self) -> int:  # noqa: D102
+    def embedding_dim(self) -> int:  # noqa: D102
         return self._embeddings.embedding_dim
+
+    @property
+    def weight(self):  # noqa: D102
+        return self._embeddings.weight
 
     def reset_parameters(self) -> None:  # noqa: D102
         self.initialization(self._embeddings.weight)
@@ -464,8 +468,8 @@ def get_embedding(
     """Wrap the :func:`Embedding.init_with_device` function for backwards compatibility."""
     warnings.warn("Please directly use the Embedding.init_with_device().", DeprecationWarning)
     return Embedding.init_with_device(
-        num=num_embeddings,
-        dim=embedding_dim,
+        num_embeddings=num_embeddings,
+        embedding_dim=embedding_dim,
         device=device,
         initialization=initializer_,
         initialization_kwargs=initializer_kwargs,

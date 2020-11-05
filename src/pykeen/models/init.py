@@ -32,8 +32,10 @@ def embedding_xavier_uniform_(embedding: nn.Embedding, gain: float = 1.) -> nn.E
     linear unit (ReLu).
 
     >>> import pykeen.utils
+    >>> from pykeen.models.init import embedding_xavier_uniform_
+    >>> from torch.nn.init import calculate_gain
     >>> e = pykeen.utils.Embedding(num_embeddings=3, embedding_dim=5)
-    >>> embedding_xavier_uniform_(embedding=e, gain=nn.init.calculate_gain('relu'))
+    >>> embedding_xavier_uniform_(embedding=e, gain=calculate_gain('relu'))
 
     """
     bound = gain * 6 / math.sqrt(embedding.embedding_dim)
@@ -60,8 +62,10 @@ def embedding_xavier_normal_(embedding: nn.Embedding, gain: float = 1.) -> nn.Em
     linear unit (ReLu).
 
     >>> import pykeen.utils
+    >>> from pykeen.models.init import embedding_xavier_normal_
+    >>> from torch.nn.init import calculate_gain
     >>> e = pykeen.utils.Embedding(num_embeddings=3, embedding_dim=5)
-    >>> embedding_xavier_normal_(embedding=e, gain=nn.init.calculate_gain('relu'))
+    >>> embedding_xavier_normal_(embedding=e, gain=calculate_gain('relu'))
 
     """
     std = gain * 2 / math.sqrt(embedding.embedding_dim)

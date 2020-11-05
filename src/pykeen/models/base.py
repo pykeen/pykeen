@@ -1100,7 +1100,7 @@ class EntityEmbeddingModel(Model):
     @property
     def embedding_dim(self) -> int:  # noqa:D401
         """The entity embedding dimension."""
-        return self.entity_embeddings.dimension
+        return self.entity_embeddings.embedding_dim
 
     def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
         _track_hyperparameters(cls)
@@ -1163,12 +1163,12 @@ class EntityRelationEmbeddingModel(Model):
     @property
     def embedding_dim(self) -> int:  # noqa:D401
         """The entity embedding dimension."""
-        return self.entity_embeddings.dimension
+        return self.entity_embeddings.embedding_dim
 
     @property
     def relation_dim(self):  # noqa:D401
         """The relation embedding dimension."""
-        return self.relation_embeddings.dimension
+        return self.relation_embeddings.embedding_dim
 
     def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
         _track_hyperparameters(cls)
