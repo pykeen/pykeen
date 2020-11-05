@@ -1,0 +1,123 @@
+# -*- coding: utf-8 -*-
+
+"""Embedding modules."""
+
+import functools
+from typing import Any, Callable, Mapping, Optional
+
+import torch
+from torch import nn
+
+__all__ = [
+    'RepresentationModule',
+    'Embedding',
+]
+
+
+class RepresentationModule(nn.Module):
+    """A base class for obtaining representations for entities/relations."""
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
+        """Get representations for indices.
+
+        :param indices: shape: (m,)
+            The indices.
+
+        :return: shape: (m, d)
+            The representations.
+        """
+        raise NotImplementedError
+
+    def reset_parameters(self) -> None:
+        """Reset the module's parameters."""
+
+
+class Embedding(RepresentationModule):
+    """Trainable embeddings.
+
+    This class provides the same interface as :class:`torch.nn.Embedding` and
+    can be used throughout PyKEEN as a more fully featured drop-in replacement.
+    """
+
+    def __init__(
+        self,
+        num_embeddings: int,
+        embedding_dim: int,
+        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        initialization_kwargs: Optional[Mapping[str, Any]] = None,
+        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+    ):
+        super().__init__()
+
+        if initialization_kwargs:
+            self.initialization = functools.partial(initialization, **initialization_kwargs)
+        else:
+            self.initialization = initialization
+        self.normalization = normalization
+        self._embeddings = nn.Embedding(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+        )
+
+    @classmethod
+    def init_with_device(
+        cls,
+        num_embeddings: int,
+        embedding_dim: int,
+        device: torch.device,
+        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        initialization_kwargs: Optional[Mapping[str, Any]] = None,
+        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+    ) -> 'Embedding':
+        """Create an embedding object on a device.
+
+        This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
+        weight is always initialized on CPU and has to be moved to GPU afterwards.
+
+        :param num_embeddings: >0
+            The number of embeddings.
+        :param embedding_dim: >0
+            The embedding dimensionality.
+        :param device:
+            The device.
+        :param initialization:
+            An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies
+            the weights in-place.
+        :param initialization_kwargs:
+            Additional keyword arguments passed to the initializer
+        :param normalization:
+            A normalization function
+
+        :return:
+            The embedding.
+        """
+        return cls(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            initialization=initialization,
+            initialization_kwargs=initialization_kwargs,
+            normalization=normalization,
+        ).to(device=device)
+
+    @property
+    def num_embeddings(self) -> int:  # noqa: D401
+        """The total number of representations (i.e. the maximum ID)."""
+        return self._embeddings.num_embeddings
+
+    @property
+    def embedding_dim(self) -> int:  # noqa: D401
+        """The representation dimension."""
+        return self._embeddings.embedding_dim
+
+    @property
+    def weight(self):  # noqa: D102
+        return self._embeddings.weight
+
+    def reset_parameters(self) -> None:  # noqa: D102
+        self.initialization(self._embeddings.weight)
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        x = self._embeddings(indices)
+        if self.normalization is not None:
+            x = self.normalization(x)
+        return x
