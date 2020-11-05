@@ -219,9 +219,11 @@ class Embedding(RepresentationModule):
         num: int,
         dim: int,
         initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None
     ):
         super().__init__()
         self.initialization = initialization
+        self.normalization = normalization
         self._embeddings = nn.Embedding(
             num_embeddings=num,
             embedding_dim=dim,
@@ -235,6 +237,12 @@ class Embedding(RepresentationModule):
 
     def reset_parameters(self) -> None:  # noqa: D102
         self.initialization(self._embeddings.weight)
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        x = self._embeddings(indices)
+        if self.normalization is not None:
+            x = self.normalization(x)
+        return x
 
 
 class Model(nn.Module):
