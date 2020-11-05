@@ -3,10 +3,12 @@
 """PyKEEN internal "nn" module."""
 
 from . import init
-from .emb import Embedding, RepresentationModule
+from .emb import Embedding, Initializer, Normalizer, RepresentationModule
 
 __all__ = [
     'Embedding',
     'RepresentationModule',
+    'Initializer',
+    'Normalizer',
     'init',
 ]

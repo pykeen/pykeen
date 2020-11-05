@@ -16,7 +16,7 @@ import pandas as pd
 import torch
 from torch import nn
 
-from .nn import Embedding
+from .nn import Embedding, Initializer
 
 __all__ = [
     'clamp_norm',
@@ -350,7 +350,7 @@ def get_embedding(
     num_embeddings: int,
     embedding_dim: int,
     device: torch.device,
-    initializer_: Optional = None,
+    initializer: Optional[Initializer] = None,
     initializer_kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Embedding:
     """Wrap the :func:`Embedding.init_with_device` function for backwards compatibility."""
@@ -359,7 +359,7 @@ def get_embedding(
         num_embeddings=num_embeddings,
         embedding_dim=embedding_dim,
         device=device,
-        initialization=initializer_,
+        initialization=initializer,
         initialization_kwargs=initializer_kwargs,
     )
 

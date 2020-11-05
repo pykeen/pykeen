@@ -11,6 +11,8 @@ from torch import nn
 __all__ = [
     'RepresentationModule',
     'Embedding',
+    'Initializer',
+    'Normalizer',
 ]
 
 
@@ -32,6 +34,10 @@ class RepresentationModule(nn.Module):
         """Reset the module's parameters."""
 
 
+Initializer = Callable[[nn.Parameter], None]
+Normalizer = Callable[[torch.FloatTensor], torch.FloatTensor]
+
+
 class Embedding(RepresentationModule):
     """Trainable embeddings.
 
@@ -43,12 +49,14 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: int,
-        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        initialization: Optional[Initializer] = None,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
-        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+        normalization: Optional[Normalizer] = None,
     ):
         super().__init__()
 
+        if initialization is None:
+            initialization = nn.init.normal_
         if initialization_kwargs:
             self.initialization = functools.partial(initialization, **initialization_kwargs)
         else:
@@ -65,9 +73,9 @@ class Embedding(RepresentationModule):
         num_embeddings: int,
         embedding_dim: int,
         device: torch.device,
-        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        initialization: Optional[Initializer] = None,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
-        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+        normalization: Optional[Normalizer] = None,
     ) -> 'Embedding':  # noqa:E501
         """Create an embedding object on a device.
 
