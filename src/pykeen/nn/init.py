@@ -34,7 +34,7 @@ def embedding_xavier_uniform_(embedding: nn.Embedding, gain: float = 1.) -> nn.E
     >>> import pykeen.nn
     >>> from pykeen.nn.init import embedding_xavier_uniform_
     >>> from torch.nn.init import calculate_gain
-    >>> e = pykeen.nn.emb.Embedding(num_embeddings=3, embedding_dim=5)
+    >>> e = pykeen.nn.Embedding(num_embeddings=3, embedding_dim=5)
     >>> embedding_xavier_uniform_(embedding=e, gain=calculate_gain('relu'))
 
     """

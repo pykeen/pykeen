@@ -68,11 +68,15 @@ class Embedding(RepresentationModule):
         initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
         normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
-    ) -> 'Embedding':
+    ) -> 'Embedding':  # noqa:E501
         """Create an embedding object on a device.
 
         This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
         weight is always initialized on CPU and has to be moved to GPU afterwards.
+
+        .. seealso::
+
+            https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
 
         :param num_embeddings: >0
             The number of embeddings.
