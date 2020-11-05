@@ -13,11 +13,11 @@ PyKEEN
    tutorial/translational_toy_example
    tutorial/running_hpo
    tutorial/running_ablation
-   tutorial/extending
    tutorial/byod
    tutorial/trackers/index
    tutorial/making_predictions
    tutorial/performance
+   extending/index
 
 .. toctree::
    :caption: Reference

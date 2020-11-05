@@ -1,10 +1,7 @@
-How to Extend PyKEEN
-====================
-The following tutorial shows how to extend PyKeen.
-
-Interaction Models
-------------------
-Let's assume you invented a new interaction model, e.g. this variant of DistMult
+Extending the Interaction Models
+================================
+Let's assume you have invented a new interaction model,
+e.g. this variant of :class:`pykeen.models.DistMult`
 
 .. math::
 
@@ -13,8 +10,7 @@ Let's assume you invented a new interaction model, e.g. this variant of DistMult
 where :math:`h,r,t \in \mathbb{R}^d`, and :math:`\sigma` denotes the logistic sigmoid.
 
 From the `documentation <https://pykeen.readthedocs.io/en/latest/reference/models.html#module-pykeen.models.base>`_
-of model base classes, we can see that
-`EntityRelationEmbeddingModel <https://pykeen.readthedocs.io/en/latest/api/pykeen.models.base.EntityRelationEmbeddingModel.html#pykeen.models.base.EntityRelationEmbeddingModel>`_
+of model base classes, we can see that :class:`pykeen.models.base.EntityRelationEmbeddingModel`
 is a good candidate for a base class since we want to have embeddings for entities *and* relations.
 
 The only implementation we have to provide is of `score_hrt`
