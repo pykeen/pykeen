@@ -7,6 +7,7 @@ import functools
 import json
 import logging
 import random
+import warnings
 from io import BytesIO
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
@@ -344,39 +345,131 @@ class Result:
         raise NotImplementedError
 
 
+class RepresentationModule(nn.Module):
+    """A base class for obtaining representations for entities/relations."""
+
+    @property
+    def dimension(self) -> int:  # noqa:D401
+        """The representation dimension."""
+        raise NotImplementedError
+
+    @property
+    def total_size(self) -> int:  # noqa:D401
+        """The total number of representations (i.e. the maximum ID)."""
+        raise NotImplementedError
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
+        """Get representations for indices.
+
+        :param indices: shape: (m,)
+            The indices.
+
+        :return: shape: (m, d)
+            The representations.
+        """
+        raise NotImplementedError
+
+    def reset_parameters(self) -> None:
+        """Reset the module's parameters."""
+
+
+class Embedding(RepresentationModule):
+    """Trainable embeddings."""
+
+    def __init__(
+        self,
+        num: int,
+        dim: int,
+        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        initialization_kwargs: Optional[Mapping[str, Any]] = None,
+        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+    ):
+        super().__init__()
+
+        if initialization_kwargs:
+            self.initialization = functools.partial(initialization, **initialization_kwargs)
+        else:
+            self.initialization = initialization
+        self.normalization = normalization
+        self._embeddings = nn.Embedding(
+            num_embeddings=num,
+            embedding_dim=dim,
+        )
+
+    @classmethod
+    def init_with_device(
+        cls,
+        num: int,
+        dim: int,
+        device: torch.device,
+        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        initialization_kwargs: Optional[Mapping[str, Any]] = None,
+        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+    ):
+        """Create an embedding object on a device.
+
+        This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
+        weight is always initialized on CPU and has to be moved to GPU afterwards.
+
+        :param num: >0
+            The number of embeddings.
+        :param dim: >0
+            The embedding dimensionality.
+        :param device:
+            The device.
+        :param initialization:
+            An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies
+            the weights in-place.
+        :param initialization_kwargs:
+            Additional keyword arguments passed to the initializer
+        :param normalization:
+            A normalization function
+
+        :return:
+            The embedding.
+        """
+        return cls(
+            num=num,
+            dim=dim,
+            initialization=initialization,
+            initialization_kwargs=initialization_kwargs,
+            normalization=normalization,
+        ).to(device=device)
+
+    @property
+    def total_size(self) -> int:  # noqa: D102
+        return self._embeddings.num_embeddings
+
+    @property
+    def dimension(self) -> int:  # noqa: D102
+        return self._embeddings.embedding_dim
+
+    def reset_parameters(self) -> None:  # noqa: D102
+        self.initialization(self._embeddings.weight)
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        x = self._embeddings(indices)
+        if self.normalization is not None:
+            x = self.normalization(x)
+        return x
+
+
 def get_embedding(
     num_embeddings: int,
     embedding_dim: int,
     device: torch.device,
     initializer_: Optional = None,
     initializer_kwargs: Optional[Mapping[str, Any]] = None,
-) -> nn.Embedding:
-    """Create an embedding object on a device.
-
-    This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
-    weight is always initialized on CPU and has to be moved to GPU afterwards.
-
-    :param num_embeddings: >0
-        The number of embeddings.
-    :param embedding_dim: >0
-        The embedding dimensionality.
-    :param device:
-        The device.
-    :param initializer_:
-        An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies the weights
-        in-place.
-    :param initializer_kwargs:
-        Additional keyword arguments passed to the initializer
-
-    :return:
-        The embedding.
-    """
-    logger.warning("Using a deprecated method. Please directly use the constructor of Embedding.")
-    return Embedding(
+) -> Embedding:
+    """Wrap the :func:`Embedding.init_with_device` function for backwards compatibility."""
+    warnings.warn("Please directly use the Embedding.init_with_device().", DeprecationWarning)
+    return Embedding.init_with_device(
         num=num_embeddings,
         dim=embedding_dim,
-        initialization=functools.partial(initializer_, **(initializer_kwargs or {})),
-    ).to(device=device)
+        device=device,
+        initialization=initializer_,
+        initialization_kwargs=initializer_kwargs,
+    )
 
 
 def split_complex(
@@ -470,69 +563,3 @@ def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
     return int(sq.generate_state(1)[0])
-
-
-class RepresentationModule(nn.Module):
-    """A base class for obtaining representations for entities/relations."""
-
-    @property
-    def dimension(self) -> int:
-        """The representation dimension."""
-        raise NotImplementedError
-
-    @property
-    def total_size(self) -> int:
-        """The total number of representations (i.e. the maximum ID)"""
-        raise NotImplementedError
-
-    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
-        """
-        Get representations for indices.
-
-        :param indices: shape: (m,)
-            The indices.
-
-        :return: shape: (m, d)
-            The representations.
-        """
-        raise NotImplementedError
-
-    def reset_parameters(self) -> None:
-        """Reset the module's parameters."""
-        pass
-
-
-class Embedding(RepresentationModule):
-    """Trainable embeddings."""
-
-    def __init__(
-        self,
-        num: int,
-        dim: int,
-        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
-        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None
-    ):
-        super().__init__()
-        self.initialization = initialization
-        self.normalization = normalization
-        self._embeddings = nn.Embedding(
-            num_embeddings=num,
-            embedding_dim=dim,
-        )
-
-    @property
-    def total_size(self) -> int:  # noqa: D102
-        return self._embeddings.num_embeddings
-
-    @property
-    def dimension(self) -> int:  # noqa: D102
-        return self._embeddings.embedding_dim
-
-    def reset_parameters(self) -> None:  # noqa: D102
-        self.initialization(self._embeddings.weight)
-
-    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        x = self._embeddings(indices)
-        if self.normalization is not None:
-            x = self.normalization(x)
-        return x
