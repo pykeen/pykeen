@@ -7,7 +7,7 @@ import itertools as itt
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, Callable, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -209,6 +209,32 @@ class RepresentationModule(nn.Module):
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
         pass
+
+
+class Embedding(RepresentationModule):
+    """Trainable embeddings."""
+
+    def __init__(
+        self,
+        num: int,
+        dim: int,
+        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+    ):
+        super().__init__()
+        self.initialization = initialization
+        self._embeddings = nn.Embedding(
+            num_embeddings=num,
+            embedding_dim=dim,
+        )
+
+    def total_size(self) -> int:  # noqa: D102
+        return self._embeddings.num_embeddings
+
+    def dimension(self) -> int:  # noqa: D102
+        return self._embeddings.embedding_dim
+
+    def reset_parameters(self) -> None:  # noqa: D102
+        self.initialization(self._embeddings.weight)
 
 
 class Model(nn.Module):
