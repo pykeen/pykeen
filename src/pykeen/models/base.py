@@ -186,10 +186,12 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
 class RepresentationModule(nn.Module):
     """A base class for obtaining representations for entities/relations."""
 
+    @property
     def dimension(self) -> int:
         """The representation dimension."""
         raise NotImplementedError
 
+    @property
     def total_size(self) -> int:
         """The total number of representations (i.e. the maximum ID)"""
         raise NotImplementedError
@@ -229,9 +231,11 @@ class Embedding(RepresentationModule):
             embedding_dim=dim,
         )
 
+    @property
     def total_size(self) -> int:  # noqa: D102
         return self._embeddings.num_embeddings
 
+    @property
     def dimension(self) -> int:  # noqa: D102
         return self._embeddings.embedding_dim
 
@@ -1140,12 +1144,11 @@ class EntityEmbeddingModel(Model):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.embedding_dim = embedding_dim
-        self.entity_embeddings = get_embedding(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
-            device=self.device,
-        )
+        self.entity_embeddings = Embedding(
+            num=triples_factory.num_entities,
+            dim=self.embedding_dim,
+        ).to(device=self.device)
+        self.embedding_dim = self.entity_embeddings.dimension
 
 
 class EntityRelationEmbeddingModel(EntityEmbeddingModel):
