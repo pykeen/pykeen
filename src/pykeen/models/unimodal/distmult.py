@@ -88,8 +88,6 @@ class DistMult(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        # Finalize initialization
-        self.reset_parameters_()
 
     def _reset_parameters_(self):  # noqa: D102
         # xavier uniform, cf.

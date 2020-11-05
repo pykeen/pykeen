@@ -98,9 +98,6 @@ class SimplE(EntityRelationEmbeddingModel):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp = clamp_score
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         for emb in [
             self.entity_embeddings,

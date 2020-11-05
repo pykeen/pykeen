@@ -151,7 +151,7 @@ class _ModelTestCase:
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
         # check for finite values by default
-        assert torch.all(torch.isfinite(scores)).item()
+        self.assertTrue(torch.all(torch.isfinite(scores)).item(), f'Some scores were not finite:\n{scores}')
 
         # check whether a gradient can be back-propgated
         scores.mean().backward()

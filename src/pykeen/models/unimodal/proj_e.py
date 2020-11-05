@@ -91,9 +91,6 @@ class ProjE(EntityRelationEmbeddingModel):
             inner_non_linearity = nn.Tanh()
         self.inner_non_linearity = inner_non_linearity
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         embedding_xavier_uniform_(self.entity_embeddings)
         embedding_xavier_uniform_(self.relation_embeddings)

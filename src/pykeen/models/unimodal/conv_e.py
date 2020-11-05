@@ -261,9 +261,6 @@ class ConvE(EntityRelationEmbeddingModel):
         )
         self.fc = nn.Linear(num_in_features, self.embedding_dim)
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
         embedding_xavier_normal_(self.entity_embeddings)

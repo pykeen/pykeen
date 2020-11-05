@@ -137,9 +137,6 @@ class TransD(EntityRelationEmbeddingModel):
             device=self.device,
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first
         super().post_parameter_update()
