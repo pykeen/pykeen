@@ -206,6 +206,10 @@ class RepresentationModule(nn.Module):
         """
         raise NotImplementedError
 
+    def reset_parameters(self) -> None:
+        """Reset the module's parameters."""
+        pass
+
 
 class Model(nn.Module):
     """A base module for all of the KGE models."""
