@@ -119,9 +119,11 @@ class ComplEx(SimpleVectorEntityRelationEmbeddingModel):
         :param regularizer: BaseRegularizer
             The regularizer to use.
         """
+        interaction_function = ComplexInteractionFunction.from_model(self)
+
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ComplexInteractionFunction(),
+            interaction_function=interaction_function,
             embedding_dim=2 * embedding_dim,  # complex embeddings
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,

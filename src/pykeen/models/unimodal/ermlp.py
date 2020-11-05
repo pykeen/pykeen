@@ -50,6 +50,10 @@ class ERMLPInteractionFunction(InteractionFunction):
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
+    @classmethod
+    def from_model(cls, module: 'ERMLP'):
+        return cls(embedding_dim=module.embedding_dim, hidden_dim=module.hidden_dim)
+
     def forward(
         self,
         h: torch.FloatTensor,
@@ -119,12 +123,12 @@ class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
+        self.embedding_dim = embedding_dim
         if hidden_dim is None:
-            hidden_dim = embedding_dim
-        interaction_function = ERMLPInteractionFunction(
-            embedding_dim=embedding_dim,
-            hidden_dim=hidden_dim,
-        )
+            self.hidden_dim = embedding_dim
+
+        interaction_function = ERMLPInteractionFunction.from_model(self)
+
         super().__init__(
             triples_factory=triples_factory,
             interaction_function=interaction_function,

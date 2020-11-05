@@ -1183,6 +1183,10 @@ class MultimodalModel(EntityRelationEmbeddingModel):
 class InteractionFunction(nn.Module):
     """Base class for interaction functions."""
 
+    @classmethod
+    def from_model(cls, module: nn.Module):
+        return cls()
+
     def forward(
         self,
         h: torch.FloatTensor,
