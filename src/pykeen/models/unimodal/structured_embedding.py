@@ -84,9 +84,6 @@ class StructuredEmbedding(EntityEmbeddingModel):
             device=self.device,
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         embedding_xavier_uniform_(self.entity_embeddings)
 
