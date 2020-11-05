@@ -8,7 +8,10 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 
 from typing import Mapping, Set, Type, Union
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel
+from .base import (
+    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel,
+    SimpleVectorEntityRelationEmbeddingModel,
+)
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
     ComplEx,
@@ -73,7 +76,10 @@ def _recur(c):
 _MODELS: Set[Type[Model]] = {
     cls
     for cls in _recur(Model)
-    if cls not in {Model, MultimodalModel, EntityRelationEmbeddingModel, EntityEmbeddingModel}
+    if cls not in {
+        Model, MultimodalModel, EntityRelationEmbeddingModel,
+        EntityEmbeddingModel, SimpleVectorEntityRelationEmbeddingModel,
+    }
 }
 
 #: A mapping of models' names to their implementations

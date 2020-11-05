@@ -1185,7 +1185,7 @@ class InteractionFunction(nn.Module):
     """Base class for interaction functions."""
 
     @classmethod
-    def from_model(cls, module: nn.Module):
+    def from_model(cls, module: nn.Module) -> 'InteractionFunction':
         """Instantiate the interaction function.
 
         Override this function if the interaction function needs to share some of the
