@@ -8,10 +8,11 @@ import torch.autograd
 from torch import nn
 from torch.nn import functional
 
-from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel, normalize_for_einsum
+from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...utils import normalize_for_einsum
 
 __all__ = [
     'DistMult',

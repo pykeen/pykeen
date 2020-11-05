@@ -7,11 +7,11 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel, normalize_for_einsum
+from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import split_complex
+from ...utils import normalize_for_einsum, split_complex
 
 __all__ = [
     'ComplEx',

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of ERMLP."""
+
 import math
 from typing import Optional
 
@@ -51,7 +52,7 @@ class ERMLPInteractionFunction(InteractionFunction):
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
     @classmethod
-    def from_model(cls, module: 'ERMLP'):
+    def from_model(cls, module: 'ERMLP'):  # noqa:D102
         return cls(embedding_dim=module.embedding_dim, hidden_dim=module.hidden_dim)
 
     def forward(

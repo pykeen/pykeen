@@ -41,6 +41,7 @@ __all__ = [
     'NoRandomSeedNecessary',
     'Result',
     'fix_dataclass_init_docs',
+    'normalize_for_einsum',
 ]
 
 logger = logging.getLogger(__name__)
@@ -474,3 +475,26 @@ def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
     return int(sq.generate_state(1)[0])
+
+
+def normalize_for_einsum(
+    x: torch.FloatTensor,
+    batch_size: int,
+    symbol: str,
+) -> Tuple[str, torch.FloatTensor]:
+    """
+    Normalize tensor for broadcasting along batch-dimension in einsum.
+
+    :param x:
+        The tensor.
+    :param batch_size:
+        The batch_size
+    :param symbol:
+        The symbol for the einsum term.
+
+    :return:
+        A tuple (reshaped_tensor, term).
+    """
+    if x.shape[0] == batch_size:
+        return f'b{symbol}d', x
+    return f'{symbol}d', x.squeeze(dim=0)
