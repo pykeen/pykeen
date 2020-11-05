@@ -1320,6 +1320,11 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         # Finalize initialization
         self.reset_parameters_()
 
+    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
+        _track_hyperparameters(cls)
+        if auto_reset_parameters:
+            _add_post_reset_parameters(cls)
+
     def _score(
         self,
         h_ind: Optional[torch.LongTensor] = None,
