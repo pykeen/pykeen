@@ -127,7 +127,7 @@ class MockModel(EntityRelationEmbeddingModel):
         return self._generate_fake_scores(batch=rt_batch)
 
     def reset_parameters_(self) -> Model:  # noqa: D102
-        raise NotImplementedError('Not needed for unittest')
+        pass  # Not needed for unittest
 
 
 class LogCallWrapper:

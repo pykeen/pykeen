@@ -76,9 +76,6 @@ class TransE(EntityRelationEmbeddingModel):
         )
         self.scoring_fct_norm = scoring_fct_norm
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         embedding_xavier_uniform_(self.entity_embeddings)
         embedding_xavier_uniform_(self.relation_embeddings)

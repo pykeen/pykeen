@@ -175,7 +175,7 @@ class SimpleInteractionModel(EntityRelationEmbeddingModel):
         return torch.sum(h + r + t, dim=1)
 
     def reset_parameters_(self) -> Model:  # noqa: D102
-        raise NotImplementedError('Not needed for unittest')
+        pass  # Not needed for unittest
 
 
 @dataclass
