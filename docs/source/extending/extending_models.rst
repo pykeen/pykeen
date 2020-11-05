@@ -9,10 +9,14 @@ e.g. this variant of :class:`pykeen.models.DistMult`
 
 where :math:`h,r,t \in \mathbb{R}^d`, and :math:`\sigma` denotes the logistic sigmoid.
 
+Picking a base class
+--------------------
 From the `documentation <https://pykeen.readthedocs.io/en/latest/reference/models.html#module-pykeen.models.base>`_
 of model base classes, we can see that :class:`pykeen.models.base.EntityRelationEmbeddingModel`
 is a good candidate for a base class since we want to have embeddings for entities *and* relations.
 
+Implementing `score_hrt()`
+--------------------------
 The only implementation we have to provide is of `score_hrt`
 
 .. code-block:: python
@@ -29,17 +33,20 @@ The only implementation we have to provide is of `score_hrt`
             return h * r.sigmoid() * t
 
 and afterwards we can use this new model with all available losses, evaluators,
-training pipelines, inverse triple modelling, ...
+training pipelines, inverse triple modelling, via the :func:`pykeen.pipeline.pipeline`.
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     pipeline(
         model=ModifiedDistMult,
         dataset='Nations',
         loss='NSSA',
     )
 
+Adding defaults
+---------------
 You'll notice that this model is not compatible with :class:`pykeen.losses.MarginRankingLoss`
 because the sigmoid causes it to be non-finite in some cases. If you have a preferred
 loss function for your model, you can add the ``loss_default`` class variable
@@ -60,3 +67,10 @@ where the value is the loss class.
             t = self.entity_embeddings(  hrt_batch[:, 2])
             # evaluate interaction function
             return h * r.sigmoid() * t
+
+Now, when using the pipeline, the NSSA loss is used by default if none is given. The same
+kind of modifications can be made to set a default regularizer with `regularizer_default`.
+
+Implementing a custom `__init__()`
+----------------------------------
+TODO
