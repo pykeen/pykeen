@@ -19,7 +19,7 @@ from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import Embedding, NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed
 from ..version import get_version
 
 __all__ = [
@@ -1078,11 +1078,16 @@ class EntityEmbeddingModel(Model):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = Embedding(
-            num=triples_factory.num_entities,
-            dim=self.embedding_dim,
-        ).to(device=self.device)
-        self.embedding_dim = self.entity_embeddings.dimension
+        self.entity_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=self.embedding_dim,
+            device=self.device,
+        )
+
+    @property
+    def embedding_dim(self) -> int:  # noqa:D401
+        """The entity embedding dimension."""
+        return self.entity_embeddings.dimension
 
 
 class EntityRelationEmbeddingModel(EntityEmbeddingModel):
@@ -1124,11 +1129,16 @@ class EntityRelationEmbeddingModel(EntityEmbeddingModel):
         if relation_dim is None:
             relation_dim = embedding_dim
 
-        self.relation_dim = relation_dim
-        self.relation_embeddings = Embedding(
-            num=triples_factory.num_relations,
-            dim=self.relation_dim,
-        ).to(self.device)
+        self.relation_embeddings = get_embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=relation_dim,
+            device=self.device,
+        )
+
+    @property
+    def relation_dim(self):  # noqa:D401
+        """The relation embedding dimension."""
+        return self.relation_embeddings.dimension
 
 
 def _can_slice(fn) -> bool:
