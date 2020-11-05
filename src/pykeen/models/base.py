@@ -183,6 +183,30 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
+class RepresentationModule(nn.Module):
+    """A base class for obtaining representations for entities/relations."""
+
+    def dimension(self) -> int:
+        """The representation dimension."""
+        raise NotImplementedError
+
+    def total_size(self) -> int:
+        """The total number of representations (i.e. the maximum ID)"""
+        raise NotImplementedError
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
+        """
+        Get representations for indices.
+
+        :param indices: shape: (m,)
+            The indices.
+
+        :return: shape: (m, d)
+            The representations.
+        """
+        raise NotImplementedError
+
+
 class Model(nn.Module):
     """A base module for all of the KGE models."""
 
