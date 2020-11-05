@@ -151,8 +151,8 @@ in ``pykeen``.
 
 | Name            | Reference                           | Description                                                                                       |
 |-----------------|-------------------------------------|---------------------------------------------------------------------------------------------------|
-| bce             | `pykeen.losses.BCELoss`             | A wrapper around the PyTorch binary cross entropy loss.                                           |
 | bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
+| bcewithlogits   | `pykeen.losses.BCEWithLogitsLoss`   | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
 | crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                      |
 | marginranking   | `pykeen.losses.MarginRankingLoss`   | A wrapper around the PyTorch margin ranking loss.                                                 |
 | mse             | `pykeen.losses.MSELoss`             | A wrapper around the PyTorch mean square error loss.                                              |

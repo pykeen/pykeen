@@ -128,9 +128,6 @@ class TuckER(EntityRelationEmbeddingModel):
             self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
             self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         embedding_xavier_normal_(self.entity_embeddings)
         embedding_xavier_normal_(self.relation_embeddings)

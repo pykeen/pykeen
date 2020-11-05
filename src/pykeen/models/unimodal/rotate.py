@@ -71,9 +71,6 @@ class RotatE(EntityRelationEmbeddingModel):
         )
         self.real_embedding_dim = embedding_dim
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         embedding_xavier_uniform_(self.entity_embeddings)
         # phases randomly between 0 and 2 pi

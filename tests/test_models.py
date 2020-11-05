@@ -151,7 +151,7 @@ class _ModelTestCase:
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
         # check for finite values by default
-        assert torch.all(torch.isfinite(scores)).item()
+        self.assertTrue(torch.all(torch.isfinite(scores)).item(), f'Some scores were not finite:\n{scores}')
 
         # check whether a gradient can be back-propgated
         scores.mean().backward()
@@ -590,7 +590,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
+        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
 
 class _TestKG2E(_ModelTestCase):

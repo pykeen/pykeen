@@ -127,6 +127,7 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
+        tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
     ) -> MetricResults:
@@ -160,6 +161,7 @@ class Evaluator(ABC):
             device=device,
             squeeze=True,
             use_tqdm=use_tqdm,
+            tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
         )
@@ -441,6 +443,7 @@ def evaluate(
     device: Optional[torch.device] = None,
     squeeze: bool = True,
     use_tqdm: bool = True,
+    tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
@@ -536,17 +539,17 @@ def evaluate(
     evaluated_once = False
 
     # Disable gradient tracking
-    with optional_context_manager(
-        use_tqdm,
-        tqdm(
-            desc=f'Evaluating on {model.device}',
-            total=num_triples,
-            unit='triple',
-            unit_scale=True,
-            # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
-            disable=not use_tqdm,
-        ),
-    ) as progress_bar, torch.no_grad():
+    _tqdm_kwargs = dict(
+        desc=f'Evaluating on {model.device}',
+        total=num_triples,
+        unit='triple',
+        unit_scale=True,
+        # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
+        disable=not use_tqdm,
+    )
+    if tqdm_kwargs:
+        _tqdm_kwargs.update(tqdm_kwargs)
+    with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]

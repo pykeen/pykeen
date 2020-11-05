@@ -96,9 +96,6 @@ class TransH(EntityRelationEmbeddingModel):
             device=self.device,
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         for emb in [
             self.entity_embeddings,

@@ -331,7 +331,8 @@ class RGCN(Model):
         else:
             self.batch_norms = None
 
-        # Finalize initialization
+        # Finalize initialization, needs to be done manually instead of with
+        # a post-init hook because this model is very special :)
         self.reset_parameters_()
 
     def post_parameter_update(self) -> None:  # noqa: D102
