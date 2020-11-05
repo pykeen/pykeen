@@ -1093,7 +1093,7 @@ class EntityEmbeddingModel(Model):
         )
         self.entity_embeddings = get_embedding(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=embedding_dim,
             device=self.device,
         )
 
@@ -1146,7 +1146,7 @@ class EntityRelationEmbeddingModel(Model):
         )
         self.entity_embeddings = get_embedding(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=embedding_dim,
             device=self.device,
         )
 
