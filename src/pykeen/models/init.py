@@ -31,7 +31,7 @@ def embedding_xavier_uniform_(embedding: nn.Embedding, gain: float = 1.) -> nn.E
     In the following example, an embedding is initialized using the suggested gain for the rectified
     linear unit (ReLu).
 
-    >>> e = nn.Embedding(num_embeddings=3, embedding_dim=5)
+import pykeen.utils    >>> e = pykeen.utils.Embedding(num_embeddings=3, embedding_dim=5)
     >>> embedding_xavier_uniform_(embedding=e, gain=nn.init.calculate_gain('relu'))
 
     """
@@ -58,7 +58,7 @@ def embedding_xavier_normal_(embedding: nn.Embedding, gain: float = 1.) -> nn.Em
     In the following example, an embedding is initialized using the suggested gain for the rectified
     linear unit (ReLu).
 
-    >>> e = nn.Embedding(num_embeddings=3, embedding_dim=5)
+import pykeen.utils    >>> e = pykeen.utils.Embedding(num_embeddings=3, embedding_dim=5)
     >>> embedding_xavier_normal_(embedding=e, gain=nn.init.calculate_gain('relu'))
 
     """

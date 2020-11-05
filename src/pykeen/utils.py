@@ -3,11 +3,12 @@
 """Utilities for PyKEEN."""
 
 import ftplib
+import functools
 import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
@@ -370,17 +371,12 @@ def get_embedding(
     :return:
         The embedding.
     """
-    # Allocate weight on device
-    weight = torch.empty(num_embeddings, embedding_dim, device=device)
-
-    # Initialize if initializer is provided
-    if initializer_ is not None:
-        if initializer_kwargs is None:
-            initializer_kwargs = {}
-        initializer_(weight, **initializer_kwargs)
-
-    # Wrap embedding around it.
-    return nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, _weight=weight)
+    logger.warning("Using a deprecated method. Please directly use the constructor of Embedding.")
+    return Embedding(
+        num=num_embeddings,
+        dim=embedding_dim,
+        initialization=functools.partial(initializer_, **(initializer_kwargs or {})),
+    ).to(device=device)
 
 
 def split_complex(
@@ -474,3 +470,69 @@ def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
     return int(sq.generate_state(1)[0])
+
+
+class RepresentationModule(nn.Module):
+    """A base class for obtaining representations for entities/relations."""
+
+    @property
+    def dimension(self) -> int:
+        """The representation dimension."""
+        raise NotImplementedError
+
+    @property
+    def total_size(self) -> int:
+        """The total number of representations (i.e. the maximum ID)"""
+        raise NotImplementedError
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
+        """
+        Get representations for indices.
+
+        :param indices: shape: (m,)
+            The indices.
+
+        :return: shape: (m, d)
+            The representations.
+        """
+        raise NotImplementedError
+
+    def reset_parameters(self) -> None:
+        """Reset the module's parameters."""
+        pass
+
+
+class Embedding(RepresentationModule):
+    """Trainable embeddings."""
+
+    def __init__(
+        self,
+        num: int,
+        dim: int,
+        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
+        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None
+    ):
+        super().__init__()
+        self.initialization = initialization
+        self.normalization = normalization
+        self._embeddings = nn.Embedding(
+            num_embeddings=num,
+            embedding_dim=dim,
+        )
+
+    @property
+    def total_size(self) -> int:  # noqa: D102
+        return self._embeddings.num_embeddings
+
+    @property
+    def dimension(self) -> int:  # noqa: D102
+        return self._embeddings.embedding_dim
+
+    def reset_parameters(self) -> None:  # noqa: D102
+        self.initialization(self._embeddings.weight)
+
+    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        x = self._embeddings(indices)
+        if self.normalization is not None:
+            x = self.normalization(x)
+        return x

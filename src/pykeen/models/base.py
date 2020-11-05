@@ -7,7 +7,7 @@ import itertools as itt
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Callable, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import Embedding, NoRandomSeedNecessary, resolve_device, set_random_seed
 from ..version import get_version
 
 __all__ = [
@@ -181,72 +181,6 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     df = df[~df['in_testing']]
     del df['in_testing']
     return df
-
-
-class RepresentationModule(nn.Module):
-    """A base class for obtaining representations for entities/relations."""
-
-    @property
-    def dimension(self) -> int:
-        """The representation dimension."""
-        raise NotImplementedError
-
-    @property
-    def total_size(self) -> int:
-        """The total number of representations (i.e. the maximum ID)"""
-        raise NotImplementedError
-
-    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
-        """
-        Get representations for indices.
-
-        :param indices: shape: (m,)
-            The indices.
-
-        :return: shape: (m, d)
-            The representations.
-        """
-        raise NotImplementedError
-
-    def reset_parameters(self) -> None:
-        """Reset the module's parameters."""
-        pass
-
-
-class Embedding(RepresentationModule):
-    """Trainable embeddings."""
-
-    def __init__(
-        self,
-        num: int,
-        dim: int,
-        initialization: Callable[[nn.Parameter], None] = nn.init.normal_,
-        normalization: Optional[Callable[[torch.FloatTensor], torch.FloatTensor]] = None
-    ):
-        super().__init__()
-        self.initialization = initialization
-        self.normalization = normalization
-        self._embeddings = nn.Embedding(
-            num_embeddings=num,
-            embedding_dim=dim,
-        )
-
-    @property
-    def total_size(self) -> int:  # noqa: D102
-        return self._embeddings.num_embeddings
-
-    @property
-    def dimension(self) -> int:  # noqa: D102
-        return self._embeddings.embedding_dim
-
-    def reset_parameters(self) -> None:  # noqa: D102
-        self.initialization(self._embeddings.weight)
-
-    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        x = self._embeddings(indices)
-        if self.normalization is not None:
-            x = self.normalization(x)
-        return x
 
 
 class Model(nn.Module):
