@@ -104,6 +104,10 @@ class TransR(EntityRelationEmbeddingModel):
             initializer=_projection_initializer,
         )
 
+    def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
+        self.relation_projections.reset_parameters()
+
     @staticmethod
     def interaction_function(
         h: torch.FloatTensor,

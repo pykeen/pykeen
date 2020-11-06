@@ -145,6 +145,11 @@ class TransD(EntityRelationEmbeddingModel):
             initializer=xavier_normal_,
         )
 
+    def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
+        self.entity_projections.reset_parameters()
+        self.relation_projections.reset_parameters()
+
     @staticmethod
     def interaction_function(
         h: torch.FloatTensor,
