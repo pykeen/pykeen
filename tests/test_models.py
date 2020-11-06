@@ -279,18 +279,18 @@ class _ModelTestCase:
         ).to_device_()
 
         if isinstance(original_model, EntityEmbeddingModel):
-            assert not (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+            assert not (original_model.entity_embeddings(indices=None) == loaded_model.entity_embeddings(indices=None)).all()
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not (original_model.relation_embeddings.weight == loaded_model.relation_embeddings.weight).all()
+            assert not (original_model.relation_embeddings(indices=None) == loaded_model.relation_embeddings(indices=None)).all()
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
         if isinstance(original_model, EntityEmbeddingModel):
-            assert (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+            assert (original_model.entity_embeddings(indices=None) == loaded_model.entity_embeddings(indices=None)).all()
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert (original_model.relation_embeddings.weight == loaded_model.relation_embeddings.weight).all()
+            assert (original_model.relation_embeddings(indices=None) == loaded_model.relation_embeddings(indices=None)).all()
 
     @property
     def cli_extras(self):
@@ -552,7 +552,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
