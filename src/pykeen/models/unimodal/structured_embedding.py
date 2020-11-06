@@ -146,9 +146,9 @@ class StructuredEmbedding(EntityEmbeddingModel):
     def score_h(self, rt_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h_all = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(indices=rt_batch[:, 0])
-        rel_t = rel_t.view(-1, self.embedding_dim, self.embedding_dim)
+        rel_h = self.left_relation_embeddings(indices=rt_batch[:, 0])
+        rel_h = rel_h.view(-1, 1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
         t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
 
         if slice_size is not None:
