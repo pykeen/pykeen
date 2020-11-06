@@ -474,7 +474,7 @@ Traceback
             old_embeddings = self.model.entity_embeddings
             self.model.entity_embeddings = _CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                embedding_dim=self.embedding_dim,
+                embedding_dim=old_embeddings.embedding_dim,
             )
             # call some functions
             self.model.reset_parameters_()
@@ -487,7 +487,7 @@ Traceback
             old_embeddings = self.model.relation_embeddings
             self.model.relation_embeddings = _CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                embedding_dim=self.embedding_dim,
+                embedding_dim=old_embeddings.embedding_dim,
             )
             # call some functions
             self.model.reset_parameters_()
