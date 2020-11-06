@@ -34,6 +34,7 @@ def xavier_uniform_normed_(tensor, gain: float = 1.):
     return x
 
 
+# TODO delete this function and move documentation
 def embedding_xavier_uniform_(embedding: Union[torch.nn.Embedding, Embedding], gain: float = 1.):
     r"""Initialize weights of embedding similarly to Glorot/Xavier initialization.
 
@@ -74,6 +75,7 @@ def xavier_normal_(tensor, gain: float = 1.0):
     return tensor
 
 
+# TODO delete this function and move documentation
 def embedding_xavier_normal_(embedding: Union[torch.nn.Embedding, Embedding], gain: float = 1.):
     r"""Initialize weights of embedding similarly to Glorot/Xavier initialization.
 
