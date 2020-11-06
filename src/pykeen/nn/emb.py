@@ -89,9 +89,9 @@ class Embedding(RepresentationModule):
         num_embeddings: int,
         embedding_dim: int,
         device: torch.device,
-        initialization: Optional[Initializer] = None,
-        initialization_kwargs: Optional[Mapping[str, Any]] = None,
-        normalization: Optional[Normalizer] = None,
+        initializer: Optional[Initializer] = None,
+        initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        normalizer: Optional[Normalizer] = None,
         constrainer: Optional[Constrainer] = None,
     ) -> 'Embedding':  # noqa:E501
         """Create an embedding object on a device.
@@ -109,12 +109,12 @@ class Embedding(RepresentationModule):
             The embedding dimensionality.
         :param device:
             The device.
-        :param initialization:
+        :param initializer:
             An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies
             the weights in-place.
-        :param initialization_kwargs:
+        :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
-        :param normalization:
+        :param normalizer:
             A normalization function
         :param constrainer:
             A contrainer applied after each parameter update, without tracking gradients.
@@ -125,9 +125,9 @@ class Embedding(RepresentationModule):
         return cls(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
-            initialization=initialization,
-            initialization_kwargs=initialization_kwargs,
-            normalization=normalization,
+            initialization=initializer,
+            initialization_kwargs=initializer_kwargs,
+            normalization=normalizer,
             constrainer=constrainer,
         ).to(device=device)
 

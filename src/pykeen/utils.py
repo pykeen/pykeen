@@ -359,8 +359,8 @@ def get_embedding(
         num_embeddings=num_embeddings,
         embedding_dim=embedding_dim,
         device=device,
-        initialization=initializer,
-        initialization_kwargs=initializer_kwargs,
+        initializer=initializer,
+        initializer_kwargs=initializer_kwargs,
     )
 
 

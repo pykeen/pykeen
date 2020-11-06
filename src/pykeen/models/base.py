@@ -16,6 +16,8 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
+from ..nn import Embedding, Initializer, Normalizer
+from ..nn.emb import Constrainer
 from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
@@ -1125,6 +1127,14 @@ class EntityRelationEmbeddingModel(Model):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_constrainer: Optional[Constrainer] = None,
+        relation_initializer: Optional[Initializer] = None,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_normalizer: Optional[Normalizer] = None,
+        relation_constrainer: Optional[Constrainer] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1144,20 +1154,28 @@ class EntityRelationEmbeddingModel(Model):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = get_embedding(
+        self.entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
+            initializer=entity_initializer,
+            initializer_kwargs=entity_initializer_kwargs,
+            normalizer=entity_normalizer,
+            constrainer=entity_constrainer,
         )
 
         # Default for relation dimensionality
         if relation_dim is None:
             relation_dim = embedding_dim
 
-        self.relation_embeddings = get_embedding(
+        self.relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim,
             device=self.device,
+            initializer=relation_initializer,
+            initializer_kwargs=relation_initializer_kwargs,
+            normalizer=relation_normalizer,
+            constrainer=relation_constrainer,
         )
 
     @property
