@@ -44,9 +44,9 @@ class RepresentationModule(nn.Module):
         """Apply constraints which should not be included in gradients."""
 
 
-Initializer = Callable[[nn.Parameter], None]
-Normalizer = Callable[[torch.FloatTensor], torch.FloatTensor]
-Constrainer = Callable[[torch.FloatTensor], torch.FloatTensor]
+Initializer = Callable[[torch.Tensor], None]
+Normalizer = Callable[[torch.Tensor], torch.Tensor]
+Constrainer = Callable[[torch.Tensor], torch.Tensor]
 
 
 class Embedding(RepresentationModule):
