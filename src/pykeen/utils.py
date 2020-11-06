@@ -277,13 +277,14 @@ def normalize_(
 
 
 def chain_(
-    *op_: Callable[[torch.Tensor], None]
-) -> Callable[[torch.Tensor], None]:
+    *op_: Callable[[torch.Tensor], torch.Tensor]
+) -> Callable[[torch.Tensor], torch.Tensor]:
     """Chain in-place operations."""
 
     def chained_op(x: torch.Tensor):
         for op in op_:
-            op(x)
+            x = op(x)
+        return x
 
     return chained_op
 
