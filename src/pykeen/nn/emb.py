@@ -73,9 +73,9 @@ class Embedding(RepresentationModule):
         if initializer is None:
             initializer = nn.init.normal_
         if initializer_kwargs:
-            self.initializer_ = functools.partial(initializer, **initializer_kwargs)
+            self.initializer = functools.partial(initializer, **initializer_kwargs)
         else:
-            self.initializer_ = initializer
+            self.initializer = initializer
         if constrainer_kwargs:
             self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
         else:
@@ -155,7 +155,7 @@ class Embedding(RepresentationModule):
     @torch.no_grad()
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
-        self.initializer_(self._embeddings.weight)
+        self._embeddings.weight.data = self.initializer(self._embeddings.weight.data)
 
     @torch.no_grad()
     def post_parameter_update(self):  # noqa: D102
