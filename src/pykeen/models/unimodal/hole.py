@@ -75,7 +75,7 @@ class HolE(EntityRelationEmbeddingModel):
             entity_initializer=xavier_uniform_,
             relation_initializer=xavier_uniform_,
             entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1)
+            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 
     @staticmethod
