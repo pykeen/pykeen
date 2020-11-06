@@ -135,10 +135,10 @@ class Embedding(RepresentationModule):
         return cls(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
-            initialization=initializer,
-            initialization_kwargs=initializer_kwargs,
-            normalization=normalizer,
-            normalization_kwargs=normalizer_kwargs,
+            initializer=initializer,
+            initializer_kwargs=initializer_kwargs,
+            normalizer=normalizer,
+            normalizer_kwargs=normalizer_kwargs,
             constrainer=constrainer,
             constrainer_kwargs=constrainer_kwargs,
         ).to(device=device)
