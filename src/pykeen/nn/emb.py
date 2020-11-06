@@ -37,9 +37,14 @@ class RepresentationModule(nn.Module):
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
 
+    @torch.no_grad()
+    def post_parameter_update(self):
+        """Apply constraints which should not be included in gradients."""
+
 
 Initializer = Callable[[nn.Parameter], None]
 Normalizer = Callable[[torch.FloatTensor], torch.FloatTensor]
+Constrainer = Callable[[torch.FloatTensor], torch.FloatTensor]
 
 
 class Embedding(RepresentationModule):
@@ -56,6 +61,7 @@ class Embedding(RepresentationModule):
         initialization: Optional[Initializer] = None,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
         normalization: Optional[Normalizer] = None,
+        constrainer: Optional[Constrainer] = None,
     ):
         super().__init__()
 
@@ -65,11 +71,17 @@ class Embedding(RepresentationModule):
             self.initialization = functools.partial(initialization, **initialization_kwargs)
         else:
             self.initialization = initialization
+        self.constrainer = constrainer
         self.normalization = normalization
         self._embeddings = nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
         )
+
+    @torch.no_grad()
+    def post_parameter_update(self):
+        if self.constrainer is not None:
+            self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
     @classmethod
     def init_with_device(
