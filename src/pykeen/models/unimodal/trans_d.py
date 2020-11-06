@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransD."""
-
+import functools
 from typing import Optional
 
 import torch
@@ -9,10 +9,11 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding, get_embedding_in_canonical_shape
+from ...utils import clamp_norm, clamp_norm_, get_embedding_in_canonical_shape
 
 __all__ = [
     'TransD',
@@ -126,38 +127,22 @@ class TransD(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
+            entity_constrainer=functools.partial(clamp_norm_, maxnorm=1., p=2, dim=-1),
+            relation_constrainer=functools.partial(clamp_norm_, maxnorm=1., p=2, dim=-1),
         )
 
-        self.entity_projections = get_embedding(
+        self.entity_projections = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
             initializer=xavier_normal_,
         )
-        self.relation_projections = get_embedding(
+        self.relation_projections = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim,
             device=self.device,
             initializer=xavier_normal_,
         )
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-        self.relation_embeddings.weight.data = clamp_norm(
-            x=self.relation_embeddings.weight.data,
-            maxnorm=1.,
-            p=2,
-            dim=-1,
-        )
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.entity_projections.reset_parameters()
-        self.relation_projections.reset_parameters()
 
     @staticmethod
     def interaction_function(
