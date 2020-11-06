@@ -14,7 +14,7 @@ import numpy
 import numpy as np
 import pandas as pd
 import torch
-from torch import nn
+import torch.nn
 
 from .nn import Embedding, Initializer
 
@@ -206,7 +206,7 @@ def _flatten_dictionary(
 
 
 def get_embedding_in_canonical_shape(
-    embedding: nn.Embedding,
+    embedding: Union[torch.nn.Embedding, Embedding],
     ind: Optional[torch.LongTensor],
 ) -> torch.FloatTensor:
     """Get embedding in canonical shape.
@@ -216,10 +216,19 @@ def get_embedding_in_canonical_shape(
 
     :return: shape: (batch_size, num_embeddings, d)
     """
-    if ind is None:
-        e = embedding.weight.unsqueeze(dim=0)
+    # FIXME should this go inside the embedding class? should this function be moved?
+    if isinstance(embedding, Embedding):
+        if ind is None:
+            e = embedding(None).unsqueeze(dim=0)
+        else:
+            e = embedding(ind).unsqueeze(dim=1)
+    elif isinstance(embedding, torch.nn.Embedding):
+        if ind is None:
+            e = embedding.weight.unsqueeze(dim=0)
+        else:
+            e = embedding(ind).unsqueeze(dim=1)
     else:
-        e = embedding(ind).unsqueeze(dim=1)
+        raise TypeError
     return e
 
 
