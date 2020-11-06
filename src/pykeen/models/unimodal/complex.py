@@ -155,4 +155,8 @@ class ComplEx(EntityRelationEmbeddingModel):
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
+        # special case
+        if scores.ndimension() < 2:
+            scores = scores.unsqueeze(dim=-1)
+
         return scores
