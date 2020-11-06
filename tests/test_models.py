@@ -280,7 +280,7 @@ class _ModelTestCase:
 
         def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
             """Test whether two embeddings are equal."""
-            return (a.entity_embeddings(indices=None) == b.entity_embeddings(indices=None)).all()
+            return (a(indices=None) == b(indices=None)).all()
 
         if isinstance(original_model, EntityEmbeddingModel):
             assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
@@ -638,7 +638,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        assert all_in_bounds(self.model.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
 
 class _TestKG2E(_ModelTestCase):
@@ -653,9 +653,9 @@ class _TestKG2E(_ModelTestCase):
         * Covariances have to have values between c_min and c_max
         """
         for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(embedding.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
         for cov in (self.model.entity_covariances, self.model.relation_covariances):
-            assert all_in_bounds(cov.weight, low=self.model.c_min, high=self.model.c_max)
+            assert all_in_bounds(cov(indices=None), low=self.model.c_min, high=self.model.c_max)
 
 
 class TestKG2EWithKL(_TestKG2E, unittest.TestCase):
@@ -877,34 +877,6 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     model_kwargs = {
         'relation_dim': 4,
     }
-
-    def test_score_hrt(self):
-        """Test interaction function of TransR."""
-        # entity embeddings
-        weights = torch.tensor([[2., 2.], [3., 3.]])
-        entity_embds = pykeen.nn.Embedding(2, 2)
-        entity_embds._embeddings.weight.data.copy_(weights)
-        self.model.entity_embeddings = entity_embds
-
-        # relation embeddings
-        rel_weights = torch.tensor([[4., 4], [5., 5.]])
-        rel_embds = torch.nn.Embedding(2, 2)
-        rel_embds.weight.data.copy_(rel_weights)
-        self.model.relation_embeddings = rel_embds
-
-        rel_proj_weights = torch.tensor([[5., 5., 6., 6.], [7., 7., 8., 8.]])
-        rel_proj_embds = pykeen.nn.Embedding(2, 4)
-        rel_proj_embds._embeddings.weight.data.copy_(rel_proj_weights)
-        self.model.relation_projections = rel_proj_embds
-
-        # Compute Scores
-        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
-        scores = self.model.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
-        first_score = scores[0].item()
-        # second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -32, delta=0.01)
 
     def _check_constraints(self):
         """Check model constraints.
