@@ -13,6 +13,7 @@ from torch.nn import functional as F  # noqa: N812
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -204,7 +205,7 @@ class ConvE(EntityRelationEmbeddingModel):
         )
 
         # ConvE uses one bias for each entity
-        self.bias_term = get_embedding(
+        self.bias_term = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=1,
             device=self.device,
