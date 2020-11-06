@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of structured model (SE)."""
-
+import functools
 from typing import Optional
 
 import numpy as np
@@ -12,10 +12,11 @@ from torch.nn import functional
 
 from ..base import EntityEmbeddingModel
 from ...losses import Loss
+from ...nn import Embedding
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding
+from ...utils import chain_, normalize_
 
 __all__ = [
     'StructuredEmbedding',
@@ -75,36 +76,36 @@ class StructuredEmbedding(EntityEmbeddingModel):
         self.scoring_fct_norm = scoring_fct_norm
 
         # Embeddings
-        self.left_relation_embeddings = get_embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim ** 2,
-            device=self.device,
+        init_bound = 6 / np.sqrt(self.embedding_dim)
+        # Initialise relation embeddings to unit length
+        initializer = chain_(
+            functools.partial(nn.init.uniform_, a=-init_bound, b=+init_bound),
+            normalize_,
         )
-        self.right_relation_embeddings = get_embedding(
+        self.left_relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim ** 2,
             device=self.device,
+            initializer=initializer,
+        )
+        self.right_relation_embeddings = Embedding.init_with_device(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim ** 2,
+            device=self.device,
+            initializer=initializer,
         )
 
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
-
-        # TODO make into own function
-        # Initialise left relation embeddings to unit length
-        init_bound = 6 / np.sqrt(self.embedding_dim)
-        for emb in [
-            self.left_relation_embeddings,
-            self.right_relation_embeddings,
-        ]:
-            nn.init.uniform_(emb.weight, a=-init_bound, b=+init_bound)
-            functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data)
+        self.left_relation_embeddings.reset_parameters()
+        self.right_relation_embeddings.reset_parameters()
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim, 1)
+        rel_h = self.left_relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
 
         # Project entities
         proj_h = rel_h @ h
@@ -115,10 +116,10 @@ class StructuredEmbedding(EntityEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim, self.embedding_dim)
-        t_all = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim, 1)
+        rel_h = self.left_relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.embedding_dim, self.embedding_dim)
+        t_all = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim, 1)
 
         if slice_size is not None:
             proj_t_arr = []
@@ -143,10 +144,10 @@ class StructuredEmbedding(EntityEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h_all = self.entity_embeddings.weight.view(1, -1, self.embedding_dim, 1)
-        rel_h = self.left_relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)
-        rel_t = self.right_relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
+        h_all = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim, 1)
+        rel_h = self.left_relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim, self.embedding_dim)
+        rel_t = self.right_relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
 
         if slice_size is not None:
             proj_h_arr = []
