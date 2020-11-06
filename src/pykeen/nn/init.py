@@ -3,17 +3,29 @@
 """Embedding weight initialization routines."""
 
 import math
+from typing import Union
 
-from torch import nn
-from torch.nn import init
+import torch.nn
+import torch.nn.init
+
+from .emb import Embedding
 
 __all__ = [
+    'xavier_uniform_',
     'embedding_xavier_uniform_',
+    'xavier_normal_',
     'embedding_xavier_normal_',
 ]
 
 
-def embedding_xavier_uniform_(embedding: nn.Embedding, gain: float = 1.) -> nn.Embedding:
+def xavier_uniform_(tensor, gain: float = 1.):
+    """Initialize weights of the tensor similarly to Glorot/Xavier initialization."""
+    bound = gain * 6 / math.sqrt(tensor.shape[1])  # TODO @mberr is that index right?
+    torch.nn.init.uniform_(tensor, -bound, bound)
+    return tensor
+
+
+def embedding_xavier_uniform_(embedding: Union[torch.nn.Embedding, Embedding], gain: float = 1.):
     r"""Initialize weights of embedding similarly to Glorot/Xavier initialization.
 
     Proceed as if it was a linear layer with fan_in of zero and Xavier uniform
@@ -38,12 +50,22 @@ def embedding_xavier_uniform_(embedding: nn.Embedding, gain: float = 1.) -> nn.E
     >>> embedding_xavier_uniform_(embedding=e, gain=calculate_gain('relu'))
 
     """
-    bound = gain * 6 / math.sqrt(embedding.embedding_dim)
-    init.uniform_(embedding.weight, -bound, bound)
-    return embedding
+    if isinstance(embedding, Embedding):
+        return xavier_uniform_(embedding._embeddings.weight, gain=gain)
+    elif isinstance(embedding, torch.nn.Embedding):
+        return xavier_uniform_(embedding.weight, gain=gain)
+    else:
+        raise TypeError
 
 
-def embedding_xavier_normal_(embedding: nn.Embedding, gain: float = 1.) -> nn.Embedding:
+def xavier_normal_(tensor, gain: float = 1.0):
+    """Initialize weights of the tensor similarly to Glorot/Xavier initialization."""
+    std = gain * 2 / math.sqrt(tensor.shape[1])  # TODO @mberr is that index right?
+    torch.nn.init.normal_(tensor, mean=0., std=std)
+    return tensor
+
+
+def embedding_xavier_normal_(embedding: Union[torch.nn.Embedding, Embedding], gain: float = 1.):
     r"""Initialize weights of embedding similarly to Glorot/Xavier initialization.
 
     :param embedding: An embedding
@@ -68,6 +90,9 @@ def embedding_xavier_normal_(embedding: nn.Embedding, gain: float = 1.) -> nn.Em
     >>> embedding_xavier_normal_(embedding=e, gain=calculate_gain('relu'))
 
     """
-    std = gain * 2 / math.sqrt(embedding.embedding_dim)
-    init.normal_(embedding.weight, mean=0., std=std)
-    return embedding
+    if isinstance(embedding, Embedding):
+        return xavier_normal_(embedding._embeddings.weight, gain=gain)
+    elif isinstance(embedding, torch.nn.Embedding):
+        return xavier_normal_(embedding.weight, gain=gain)
+    else:
+        raise TypeError

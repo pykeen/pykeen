@@ -7,6 +7,7 @@ import warnings
 from typing import Any, Callable, Mapping, Optional
 
 import torch
+import torch.nn
 from torch import nn
 
 __all__ = [
@@ -74,7 +75,7 @@ class Embedding(RepresentationModule):
             self.initialization = initialization
         self.constrainer = constrainer
         self.normalization = normalization
-        self._embeddings = nn.Embedding(
+        self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
         )
@@ -97,8 +98,9 @@ class Embedding(RepresentationModule):
     ) -> 'Embedding':  # noqa:E501
         """Create an embedding object on a device.
 
-        This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
-        weight is always initialized on CPU and has to be moved to GPU afterwards.
+        This method is a hotfix for not being able to pass a device during initialization of
+        :class:torch.nn.Embedding`. Instead the weight is always initialized on CPU and has
+        to be moved to GPU afterwards.
 
         .. seealso::
 
