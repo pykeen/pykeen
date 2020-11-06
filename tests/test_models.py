@@ -764,7 +764,7 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = self.model.relation_embeddings.weight.view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
+        relation_abs = self.model.relation_embeddings(indices=None).view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
@@ -784,7 +784,7 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
 
 
@@ -852,7 +852,7 @@ class TestTransE(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -866,7 +866,7 @@ class TestTransH(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.normal_vector_embeddings.weight.norm(p=2, dim=-1)
+        entity_norms = self.model.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -884,7 +884,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
+            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
