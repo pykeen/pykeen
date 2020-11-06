@@ -19,11 +19,14 @@ __all__ = [
 class RepresentationModule(nn.Module):
     """A base class for obtaining representations for entities/relations."""
 
-    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
         """Get representations for indices.
 
         :param indices: shape: (m,)
-            The indices.
+            The indices, or None. If None, return all representations.
 
         :return: shape: (m, d)
             The representations.
@@ -128,8 +131,14 @@ class Embedding(RepresentationModule):
     def reset_parameters(self) -> None:  # noqa: D102
         self.initialization(self._embeddings.weight)
 
-    def forward(self, indices: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        x = self._embeddings(indices)
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if indices is None:
+            x = self._embeddings.weight
+        else:
+            x = self._embeddings(indices)
         if self.normalization is not None:
             x = self.normalization(x)
         return x
