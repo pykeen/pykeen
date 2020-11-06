@@ -296,7 +296,7 @@ class _ModelTestCase:
         if isinstance(original_model, EntityEmbeddingModel):
             assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert (original_model, loaded_model.relation_embeddings)
+            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
     def cli_extras(self):
