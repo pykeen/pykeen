@@ -38,7 +38,6 @@ class RepresentationModule(nn.Module):
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
 
-    @torch.no_grad()
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
 
@@ -152,12 +151,10 @@ class Embedding(RepresentationModule):
         """The representation dimension."""
         return self._embeddings.embedding_dim
 
-    @torch.no_grad()
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(self._embeddings.weight.data)
 
-    @torch.no_grad()
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
         if self.constrainer is not None:
