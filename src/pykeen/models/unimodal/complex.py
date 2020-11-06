@@ -143,6 +143,7 @@ class ComplEx(EntityRelationEmbeddingModel):
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # TODO: Where are score_h / score_t?
         # get embeddings
         h, r, t = [
             get_embedding_in_canonical_shape(embedding=e, ind=ind)
