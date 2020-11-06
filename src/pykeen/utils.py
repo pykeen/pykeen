@@ -250,6 +250,18 @@ def clamp_norm(
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
 
 
+def clamp_norm_(
+    x: torch.Tensor,
+    maxnorm: float,
+    p: Union[str, int] = 'fro',
+    dim: Union[None, int, Iterable[int]] = None,
+    eps: float = 1.0e-08,
+) -> torch.Tensor:
+    """In-place version of clamp_norm."""
+    x.data = clamp_norm(x=x.data, maxnorm=maxnorm, p=p, dim=dim, eps=eps)
+    return x
+
+
 def set_random_seed(seed: int):
     """Set the random seed on numpy, torch, and python."""
     return (
