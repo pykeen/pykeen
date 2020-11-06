@@ -4,7 +4,7 @@
 
 import functools
 import warnings
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional, TypeVar
 
 import torch
 import torch.nn
@@ -44,9 +44,11 @@ class RepresentationModule(nn.Module):
         """Apply constraints which should not be included in gradients."""
 
 
-Initializer = Callable[[torch.Tensor], None]
-Normalizer = Callable[[torch.Tensor], torch.Tensor]
-Constrainer = Callable[[torch.Tensor], torch.Tensor]
+# FIXME: It has to be more than one type...
+TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)
+Initializer = Callable[[TensorType], None]
+Normalizer = Callable[[TensorType], TensorType]
+Constrainer = Callable[[TensorType], TensorType]
 
 
 class Embedding(RepresentationModule):
