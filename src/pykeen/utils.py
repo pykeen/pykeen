@@ -8,17 +8,19 @@ import logging
 import random
 import warnings
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn
+from torch.nn import functional
 
 from .nn import Embedding, Initializer
 
 __all__ = [
+    "chain_",
     'clamp_norm',
     'compact_mapping',
     'get_embedding',
@@ -26,6 +28,7 @@ __all__ = [
     'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
+    "normalize_",
     'random_non_negative_int',
     'real_part',
     'resolve_device',
@@ -261,6 +264,28 @@ def clamp_norm_(
     """In-place version of clamp_norm."""
     x.data = clamp_norm(x=x.data, maxnorm=maxnorm, p=p, dim=dim, eps=eps)
     return x
+
+
+def normalize_(
+    x: torch.Tensor,
+    p: float = 2.,
+    dim: int = -1,
+) -> torch.Tensor:
+    """In-place version of functional.normalize."""
+    functional.normalize(x.data, p=p, dim=dim, out=x.data)
+    return x
+
+
+def chain_(
+    *op_: Callable[[torch.Tensor], None]
+) -> Callable[[torch.Tensor], None]:
+    """Chain in-place operations."""
+
+    def chained_op(x: torch.Tensor):
+        for op in op_:
+            op(x)
+
+    return chained_op
 
 
 def set_random_seed(seed: int):
