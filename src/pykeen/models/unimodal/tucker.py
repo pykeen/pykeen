@@ -186,9 +186,9 @@ class TuckER(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(1)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(1)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(1)
 
         # Compute scores
         scores = self._scoring_function(h=h, r=r, t=t)
@@ -197,9 +197,9 @@ class TuckER(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight.unsqueeze(0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None).unsqueeze(0)
 
         # Compute scores
         scores = self._scoring_function(h=h, r=r, t=t)
@@ -208,9 +208,9 @@ class TuckER(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight.unsqueeze(0)
-        r = self.relation_embeddings(rt_batch[:, 0])
-        t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(1)
+        h = self.entity_embeddings(indices=None).unsqueeze(0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0])
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(1)
 
         # Compute scores
         scores = self._scoring_function(h=h, r=r, t=t)
