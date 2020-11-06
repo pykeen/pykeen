@@ -61,14 +61,14 @@ _EPSILON = 1.0e-07
 class _CustomRepresentations(RepresentationModule):
     """A custom representation module with minimal implementation."""
 
-    def __init__(self, num: int, dim: int = 2):
+    def __init__(self, num_entities: int, embedding_dim: int = 2):
         super().__init__()
-        self.num = num
-        self.dim = dim
+        self.num_embeddings = num_entities
+        self.embedding_dim = embedding_dim
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        n = self.num if indices is None else indices.shape[0]
-        return torch.rand(n, self.dim)
+        n = self.num_embeddings if indices is None else indices.shape[0]
+        return torch.rand(n, self.embedding_dim)
 
 
 class _ModelTestCase:
@@ -458,6 +458,7 @@ Traceback
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
         self.model.reset_parameters_ = None
+        assert isinstance(self.model, (EntityEmbeddingModel, EntityRelationEmbeddingModel))
         try:
             self.model.__init__(
                 self.factory,
@@ -472,8 +473,8 @@ Traceback
         if isinstance(self.model, EntityEmbeddingModel):
             old_embeddings = self.model.entity_embeddings
             self.model.entity_embeddings = _CustomRepresentations(
-                num=self.factory.num_entities,
-                dim=self.embedding_dim,
+                num_entities=self.factory.num_entities,
+                embedding_dim=self.embedding_dim,
             )
             # call some functions
             self.model.reset_parameters_()
@@ -485,8 +486,8 @@ Traceback
         elif isinstance(self.model, EntityRelationEmbeddingModel):
             old_embeddings = self.model.relation_embeddings
             self.model.relation_embeddings = _CustomRepresentations(
-                num=self.factory.num_entities,
-                dim=self.embedding_dim,
+                num_entities=self.factory.num_entities,
+                embedding_dim=self.embedding_dim,
             )
             # call some functions
             self.model.reset_parameters_()
@@ -978,21 +979,19 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         """Test interaction function of TransR."""
         # entity embeddings
         weights = torch.tensor([[2., 2.], [3., 3.]])
-        entity_embds = torch.nn.Embedding(2, 2)
-        entity_embds.weight.data.copy_(weights)
+        entity_embds = pykeen.nn.Embedding(2, 2)
+        entity_embds._embeddings.weight.data.copy_(weights)
         self.model.entity_embeddings = entity_embds
-        self.model.embedding_dim = 2
 
         # relation embeddings
         rel_weights = torch.tensor([[4., 4], [5., 5.]])
         rel_embds = torch.nn.Embedding(2, 2)
         rel_embds.weight.data.copy_(rel_weights)
         self.model.relation_embeddings = rel_embds
-        self.model.relation_dim = 2
 
         rel_proj_weights = torch.tensor([[5., 5., 6., 6.], [7., 7., 8., 8.]])
-        rel_proj_embds = torch.nn.Embedding(2, 4)
-        rel_proj_embds.weight.data.copy_(rel_proj_weights)
+        rel_proj_embds = pykeen.nn.Embedding(2, 4)
+        rel_proj_embds._embeddings.weight.data.copy_(rel_proj_weights)
         self.model.relation_projections = rel_proj_embds
 
         # Compute Scores
