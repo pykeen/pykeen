@@ -36,7 +36,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.nn import RepresentationModule
+from pykeen.nn import Embedding, RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
@@ -278,19 +278,23 @@ class _ModelTestCase:
             **(self.model_kwargs or {}),
         ).to_device_()
 
+        def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
+            """Test whether two embeddings are equal."""
+            return (a.entity_embeddings(indices=None) == b.entity_embeddings(indices=None)).all()
+
         if isinstance(original_model, EntityEmbeddingModel):
-            assert not (original_model.entity_embeddings(indices=None) == loaded_model.entity_embeddings(indices=None)).all()
+            assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not (original_model.relation_embeddings(indices=None) == loaded_model.relation_embeddings(indices=None)).all()
+            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
         if isinstance(original_model, EntityEmbeddingModel):
-            assert (original_model.entity_embeddings(indices=None) == loaded_model.entity_embeddings(indices=None)).all()
+            assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert (original_model.relation_embeddings(indices=None) == loaded_model.relation_embeddings(indices=None)).all()
+            assert (original_model, loaded_model.relation_embeddings)
 
     @property
     def cli_extras(self):
