@@ -8,6 +8,7 @@ import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
+from unittest.mock import MagicMock
 
 import numpy
 import pytest
@@ -36,7 +37,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.nn import Embedding, RepresentationModule
+from pykeen.nn import RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
@@ -65,7 +66,7 @@ class _CustomRepresentations(RepresentationModule):
         super().__init__()
         self.num_embeddings = num_entities
         self.embedding_dim = embedding_dim
-        self.x = nn.Parameter(torch.rand(embedding_dim,))
+        self.x = nn.Parameter(torch.rand(embedding_dim, ))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         n = self.num_embeddings if indices is None else indices.shape[0]
@@ -462,8 +463,7 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        self.model.reset_parameters_ = None
-        assert isinstance(self.model, (EntityEmbeddingModel, EntityRelationEmbeddingModel))
+        self.model.reset_parameters_ = MagicMock(return_value=None)
         try:
             self.model.__init__(
                 self.factory,
@@ -472,6 +472,7 @@ Traceback
             )
         except TypeError as error:
             assert error.args == ("'NoneType' object is not callable",)
+        self.model.reset_parameters_.assert_called_once()
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
@@ -726,7 +727,7 @@ class _TestRGCN(_ModelTestCase):
 
         Enriched embeddings have to be reset.
         """
-        assert self.model.enriched_embeddings is None
+        assert self.model.entity_representations.enriched_embeddings is None
 
 
 class TestRGCNBasis(_TestRGCN, unittest.TestCase):
