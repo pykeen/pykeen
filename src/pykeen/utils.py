@@ -216,20 +216,10 @@ def get_embedding_in_canonical_shape(
 
     :return: shape: (batch_size, num_embeddings, d)
     """
-    # FIXME should this go inside the embedding class? should this function be moved?
-    if isinstance(embedding, Embedding):
-        if ind is None:
-            e = embedding(None).unsqueeze(dim=0)
-        else:
-            e = embedding(ind).unsqueeze(dim=1)
-    elif isinstance(embedding, torch.nn.Embedding):
-        if ind is None:
-            e = embedding.weight.unsqueeze(dim=0)
-        else:
-            e = embedding(ind).unsqueeze(dim=1)
-    else:
-        raise TypeError
-    return e
+    x = embedding(indices=ind)
+    if ind is None:
+        return x.unsqueeze(dim=0)
+    return x.unsqueeze(dim=1)
 
 
 def clamp_norm(
