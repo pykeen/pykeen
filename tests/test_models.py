@@ -36,6 +36,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
+from pykeen.nn import RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
@@ -55,6 +56,19 @@ for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
 
 _EPSILON = 1.0e-07
+
+
+class _CustomRepresentations(RepresentationModule):
+    """A custom representation module with minimal implementation."""
+
+    def __init__(self, num: int, dim: int = 2):
+        super().__init__()
+        self.num = num
+        self.dim = dim
+
+    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
+        n = self.num if indices is None else indices.shape[0]
+        return torch.rand(n, self.dim)
 
 
 class _ModelTestCase:
@@ -452,6 +466,29 @@ Traceback
             )
         except TypeError as error:
             assert error.args == ("'NoneType' object is not callable",)
+
+    def test_custom_representations(self):
+        """Tests whether we can provide custom representations."""
+        if isinstance(self.model, EntityEmbeddingModel):
+            old_embeddings = self.model.entity_embeddings
+            self.model.entity_embeddings = _CustomRepresentations(num=self.factory.num_entities, dim=self.embedding_dim)
+            # call some functions
+            self.model.reset_parameters_()
+            self.test_score_hrt()
+            self.test_score_t()
+            self.test_post_parameter_update()
+            # reset to old state
+            self.model.entity_embeddings = old_embeddings
+        if isinstance(self.model, EntityRelationEmbeddingModel):
+            old_embeddings = self.model.relation_embeddings
+            self.model.relation_embeddings = _CustomRepresentations(num=self.factory.num_entities, dim=self.embedding_dim)
+            # call some functions
+            self.model.reset_parameters_()
+            self.test_score_hrt()
+            self.test_score_t()
+            self.test_post_parameter_update()
+            # reset to old state
+            self.model.relation_embeddings = old_embeddings
 
 
 class _DistanceModelTestCase(_ModelTestCase):
