@@ -252,7 +252,7 @@ class RGCNRepresentations(RepresentationModule):
     def _get_relation_weights(self, i_layer: int, r: int) -> torch.FloatTensor:
         if self.decomposition == 'block':
             # allocate weight
-            w = torch.zeros(self.embedding_dim, self.embedding_dim, device=self.bases.device)
+            w = torch.zeros(self.embedding_dim, self.embedding_dim, device=self.bases[i_layer].device)
 
             # Get blocks
             this_layer_blocks = self.bases[i_layer]
