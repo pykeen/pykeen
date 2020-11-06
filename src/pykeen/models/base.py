@@ -1120,6 +1120,11 @@ class EntityEmbeddingModel(Model):
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # make sure to call this first, to reset regularizer state!
+        super().post_parameter_update()
+        self.entity_embeddings.post_parameter_update()
+
 
 class EntityRelationEmbeddingModel(Model):
     """A base module for KGE models that have different embeddings for entities and relations."""
@@ -1204,6 +1209,12 @@ class EntityRelationEmbeddingModel(Model):
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # make sure to call this first, to reset regularizer state!
+        super().post_parameter_update()
+        self.entity_embeddings.post_parameter_update()
+        self.relation_embeddings.post_parameter_update()
 
 
 def _can_slice(fn) -> bool:
