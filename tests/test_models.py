@@ -13,7 +13,7 @@ import numpy
 import pytest
 import torch
 from click.testing import CliRunner, Result
-from torch import optim
+from torch import nn, optim
 from torch.optim import SGD
 from torch.optim.adagrad import Adagrad
 
@@ -65,10 +65,11 @@ class _CustomRepresentations(RepresentationModule):
         super().__init__()
         self.num_embeddings = num_entities
         self.embedding_dim = embedding_dim
+        self.x = nn.Parameter(torch.rand(embedding_dim,))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         n = self.num_embeddings if indices is None else indices.shape[0]
-        return torch.rand(n, self.embedding_dim)
+        return self.x.unsqueeze(dim=0).repeat(n, 1)
 
 
 class _ModelTestCase:
@@ -489,7 +490,7 @@ Traceback
         elif isinstance(self.model, EntityRelationEmbeddingModel):
             old_embeddings = self.model.relation_embeddings
             self.model.relation_embeddings = _CustomRepresentations(
-                num_entities=self.factory.num_entities,
+                num_entities=self.factory.num_relations,
                 embedding_dim=old_embeddings.embedding_dim,
             )
             # call some functions
