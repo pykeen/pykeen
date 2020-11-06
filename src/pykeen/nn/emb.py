@@ -63,7 +63,9 @@ class Embedding(RepresentationModule):
         initialization: Optional[Initializer] = None,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
         normalization: Optional[Normalizer] = None,
+        normalization_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
+        constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         super().__init__()
 
@@ -73,8 +75,14 @@ class Embedding(RepresentationModule):
             self.initialization = functools.partial(initialization, **initialization_kwargs)
         else:
             self.initialization = initialization
-        self.constrainer = constrainer
-        self.normalization = normalization
+        if constrainer_kwargs:
+            self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
+        else:
+            self.constrainer = constrainer
+        if normalization_kwargs:
+            self.normalization = functools.partial(normalization, **normalization_kwargs)
+        else:
+            self.normalization = normalization
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
@@ -94,7 +102,9 @@ class Embedding(RepresentationModule):
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
+        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
+        constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> 'Embedding':  # noqa:E501
         """Create an embedding object on a device.
 
