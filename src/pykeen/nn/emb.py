@@ -3,6 +3,7 @@
 """Embedding modules."""
 
 import functools
+import warnings
 from typing import Any, Callable, Mapping, Optional
 
 import torch
@@ -126,7 +127,11 @@ class Embedding(RepresentationModule):
 
     @property
     def weight(self):  # noqa: D102
-        return self._embeddings.weight
+        warnings.warn(
+            f"{self.__class__.__name__}.weight is deprecated. Use {self.__class__.__name__}(indices=None) instead.",
+            DeprecationWarning
+        )
+        return self.forward(indices=None)
 
     def reset_parameters(self) -> None:  # noqa: D102
         self.initialization(self._embeddings.weight)
