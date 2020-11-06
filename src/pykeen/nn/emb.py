@@ -3,7 +3,6 @@
 """Embedding modules."""
 
 import functools
-import warnings
 from typing import Any, Callable, Mapping, Optional, TypeVar
 
 import torch
@@ -152,14 +151,6 @@ class Embedding(RepresentationModule):
     def embedding_dim(self) -> int:  # noqa: D401
         """The representation dimension."""
         return self._embeddings.embedding_dim
-
-    @property
-    def weight(self):  # noqa: D102
-        warnings.warn(
-            f"{self.__class__.__name__}.weight is deprecated. Use {self.__class__.__name__}(indices=None) instead.",
-            DeprecationWarning,
-        )
-        return self.forward(indices=None)
 
     @torch.no_grad()
     def reset_parameters(self) -> None:  # noqa: D102
