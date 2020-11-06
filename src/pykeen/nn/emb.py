@@ -163,10 +163,12 @@ class Embedding(RepresentationModule):
 
     @torch.no_grad()
     def reset_parameters(self) -> None:  # noqa: D102
-        self.initializer_(self._embeddings.weight)  # FIXME what if it needs a device?
+        # initialize weights in-place
+        self.initializer_(self._embeddings.weight)
 
     @torch.no_grad()
     def post_parameter_update(self):  # noqa: D102
+        # apply constraints in-place
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
