@@ -66,7 +66,7 @@ class _CustomRepresentations(RepresentationModule):
         super().__init__()
         self.num_embeddings = num_entities
         self.embedding_dim = embedding_dim
-        self.x = nn.Parameter(torch.rand(embedding_dim, ))
+        self.x = nn.Parameter(torch.rand(embedding_dim))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         n = self.num_embeddings if indices is None else indices.shape[0]
