@@ -20,6 +20,36 @@ __all__ = [
 ]
 
 
+def _init_phases(x: torch.Tensor) -> torch.Tensor:
+    # random phases between 0 and 2*pi
+    phases = 2 * np.pi * torch.rand_like(x[..., :x.shape[-1] // 2])
+    return torch.cat([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
+
+
+def _complex_normalize(x: torch.Tensor) -> torch.Tensor:
+    r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+
+    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+
+    .. math::
+
+        |a + ib| = \sqrt{a^2 + b^2}
+
+    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+
+    .. math::
+        \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
+                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
+                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
+                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    """
+    y = x.data.view(x.shape[0], -1, 2)
+    y = functional.normalize(y, p=2, dim=-1)
+    x.data = y.view(*x.shape)
+    return x
+
+
 class RotatE(EntityRelationEmbeddingModel):
     r"""An implementation of RotatE from [sun2019]_.
 
@@ -69,44 +99,10 @@ class RotatE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=xavier_uniform_,
+            relation_initializer=_init_phases,
+            relation_constrainer=_complex_normalize,
         )
         self.real_embedding_dim = embedding_dim
-
-    def _reset_parameters_(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-
-        # TODO make into a function that can be stored inside the embedding itself
-        # phases randomly between 0 and 2 pi
-        phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim, device=self.device)
-        relations = torch.stack([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
-        assert torch.allclose(torch.norm(relations, p=2, dim=-1), phases.new_ones(size=(1, 1)))
-        self.relation_embeddings.weight.data = relations.view(self.num_relations, self.embedding_dim)
-
-    def post_parameter_update(self):  # noqa: D102
-        r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
-
-        The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
-
-        .. math::
-
-            |a + ib| = \sqrt{a^2 + b^2}
-
-        $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
-
-        .. math::
-            \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                     = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
-                     = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
-                     = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
-                     = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
-        """
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize relation embeddings
-        rel = self.relation_embeddings.weight.data.view(self.num_relations, self.real_embedding_dim, 2)
-        rel = functional.normalize(rel, p=2, dim=-1)
-        self.relation_embeddings.weight.data = rel.view(self.num_relations, self.embedding_dim)
 
     @staticmethod
     def interaction_function(
@@ -152,9 +148,9 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -166,11 +162,11 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Rank against all entities
-        t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
@@ -182,8 +178,8 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # r expresses a rotation in complex plane.
         # The inverse rotation is expressed by the complex conjugate of r.
@@ -193,7 +189,7 @@ class RotatE(EntityRelationEmbeddingModel):
         r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
 
         # Rank against all entities
-        h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=t, r=r_inv, t=h)
