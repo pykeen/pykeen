@@ -471,7 +471,10 @@ Traceback
         """Tests whether we can provide custom representations."""
         if isinstance(self.model, EntityEmbeddingModel):
             old_embeddings = self.model.entity_embeddings
-            self.model.entity_embeddings = _CustomRepresentations(num=self.factory.num_entities, dim=self.embedding_dim)
+            self.model.entity_embeddings = _CustomRepresentations(
+                num=self.factory.num_entities,
+                dim=self.embedding_dim,
+            )
             # call some functions
             self.model.reset_parameters_()
             self.test_score_hrt()
@@ -479,9 +482,12 @@ Traceback
             self.test_post_parameter_update()
             # reset to old state
             self.model.entity_embeddings = old_embeddings
-        if isinstance(self.model, EntityRelationEmbeddingModel):
+        elif isinstance(self.model, EntityRelationEmbeddingModel):
             old_embeddings = self.model.relation_embeddings
-            self.model.relation_embeddings = _CustomRepresentations(num=self.factory.num_entities, dim=self.embedding_dim)
+            self.model.relation_embeddings = _CustomRepresentations(
+                num=self.factory.num_entities,
+                dim=self.embedding_dim,
+            )
             # call some functions
             self.model.reset_parameters_()
             self.test_score_hrt()
