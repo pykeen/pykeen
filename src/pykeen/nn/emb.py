@@ -141,7 +141,9 @@ class Embedding(RepresentationModule):
             initialization=initializer,
             initialization_kwargs=initializer_kwargs,
             normalization=normalizer,
+            normalization_kwargs=normalizer_kwargs,
             constrainer=constrainer,
+            constrainer_kwargs=constrainer_kwargs,
         ).to(device=device)
 
     @property
