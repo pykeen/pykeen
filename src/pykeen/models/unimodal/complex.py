@@ -101,13 +101,11 @@ class ComplEx(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            # initialize with entity and relation embeddings with standard normal distribution, cf.
+            # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
+            entity_initializer=nn.init.normal_,
+            relation_initializer=nn.init.normal_,
         )
-
-    def _reset_parameters_(self):  # noqa: D102
-        # initialize with entity and relation embeddings with standard normal distribution, cf.
-        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-        nn.init.normal_(tensor=self.entity_embeddings.weight, mean=0., std=1.)
-        nn.init.normal_(tensor=self.relation_embeddings.weight, mean=0., std=1.)
 
     @staticmethod
     def interaction_function(

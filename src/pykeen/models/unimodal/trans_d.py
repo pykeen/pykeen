@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_normal_
+from ..init import xavier_normal_
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -124,17 +124,21 @@ class TransD(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
         )
 
         self.entity_projections = get_embedding(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
+            initializer=xavier_normal_,
         )
         self.relation_projections = get_embedding(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim,
             device=self.device,
+            initializer=xavier_normal_,
         )
 
     def post_parameter_update(self) -> None:  # noqa: D102
@@ -151,10 +155,9 @@ class TransD(EntityRelationEmbeddingModel):
         )
 
     def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_normal_(self.entity_embeddings)
-        embedding_xavier_normal_(self.entity_projections)
-        embedding_xavier_normal_(self.relation_embeddings)
-        embedding_xavier_normal_(self.relation_projections)
+        super()._reset_parameters_()
+        self.entity_projections.reset_parameters()
+        self.relation_projections.reset_parameters()
 
     @staticmethod
     def interaction_function(

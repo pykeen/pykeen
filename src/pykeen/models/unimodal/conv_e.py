@@ -12,7 +12,7 @@ from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_normal_
+from ..init import xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -199,6 +199,8 @@ class ConvE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
         )
 
         # ConvE uses one bias for each entity
@@ -206,6 +208,7 @@ class ConvE(EntityRelationEmbeddingModel):
             num_embeddings=triples_factory.num_entities,
             embedding_dim=1,
             device=self.device,
+            initializer=nn.init.zeros_,
         )
 
         # Automatic calculation of remaining dimensions
@@ -262,10 +265,9 @@ class ConvE(EntityRelationEmbeddingModel):
         self.fc = nn.Linear(num_in_features, self.embedding_dim)
 
     def _reset_parameters_(self):  # noqa: D102
-        # embeddings
-        embedding_xavier_normal_(self.entity_embeddings)
-        embedding_xavier_normal_(self.relation_embeddings)
-        nn.init.zeros_(self.bias_term.weight)
+        super()._reset_parameters_()
+
+        self.bias_term.reset_parameters()
 
         # weights
         for module in [

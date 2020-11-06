@@ -122,6 +122,7 @@ class KG2E(EntityRelationEmbeddingModel):
         # Make sure to call super first
         super().post_parameter_update()
 
+        # TODO make functions and add to initialization of these embeddings
         # Normalize entity embeddings
         self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
         self.relation_embeddings.weight.data = clamp_norm(

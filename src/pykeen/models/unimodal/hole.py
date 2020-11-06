@@ -8,7 +8,7 @@ import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
+from ..init import xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -71,6 +71,9 @@ class HolE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
+            entity_initializer=xavier_uniform_,
+            relation_initializer=xavier_uniform_,
         )
 
     def post_parameter_update(self) -> None:  # noqa: D102
@@ -79,11 +82,6 @@ class HolE(EntityRelationEmbeddingModel):
 
         # Normalize entity embeddings
         self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-
-    def _reset_parameters_(self):  # noqa: D102
-        # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        embedding_xavier_uniform_(self.entity_embeddings)
-        embedding_xavier_uniform_(self.relation_embeddings)
 
     @staticmethod
     def interaction_function(

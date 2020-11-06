@@ -10,7 +10,7 @@ import torch.autograd
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
+from ..init import xavier_uniform_
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -68,11 +68,14 @@ class RotatE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_uniform_,
         )
         self.real_embedding_dim = embedding_dim
 
     def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_uniform_(self.entity_embeddings)
+        self.entity_embeddings.reset_parameters()
+
+        # TODO make into a function that can be stored inside the embedding itself
         # phases randomly between 0 and 2 pi
         phases = 2 * np.pi * torch.rand(self.num_relations, self.real_embedding_dim, device=self.device)
         relations = torch.stack([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
