@@ -484,7 +484,6 @@ Traceback
             self.model.reset_parameters_()
             self.test_score_hrt()
             self.test_score_t()
-            self.test_post_parameter_update()
             # reset to old state
             self.model.entity_embeddings = old_embeddings
         elif isinstance(self.model, EntityRelationEmbeddingModel):
@@ -497,7 +496,6 @@ Traceback
             self.model.reset_parameters_()
             self.test_score_hrt()
             self.test_score_t()
-            self.test_post_parameter_update()
             # reset to old state
             self.model.relation_embeddings = old_embeddings
 
