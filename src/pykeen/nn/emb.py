@@ -79,7 +79,7 @@ class Embedding(RepresentationModule):
         )
 
     @torch.no_grad()
-    def post_parameter_update(self):
+    def post_parameter_update(self):  # noqa: D102
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
@@ -92,6 +92,7 @@ class Embedding(RepresentationModule):
         initialization: Optional[Initializer] = None,
         initialization_kwargs: Optional[Mapping[str, Any]] = None,
         normalization: Optional[Normalizer] = None,
+        constrainer: Optional[Constrainer] = None,
     ) -> 'Embedding':  # noqa:E501
         """Create an embedding object on a device.
 
@@ -115,6 +116,8 @@ class Embedding(RepresentationModule):
             Additional keyword arguments passed to the initializer
         :param normalization:
             A normalization function
+        :param constrainer:
+            A contrainer applied after each parameter update, without tracking gradients.
 
         :return:
             The embedding.
@@ -125,6 +128,7 @@ class Embedding(RepresentationModule):
             initialization=initialization,
             initialization_kwargs=initialization_kwargs,
             normalization=normalization,
+            constrainer=constrainer,
         ).to(device=device)
 
     @property
