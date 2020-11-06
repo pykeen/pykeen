@@ -371,7 +371,7 @@ class ConvE(EntityRelationEmbeddingModel):
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings.weight.transpose(1, 0)
+        t = self.entity_embeddings(indices=None).transpose(1, 0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -386,7 +386,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         rt_batch_size = rt_batch.shape[0]
-        h = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(rt_batch[:, 0]).view(
             -1,
             self.input_channels,
