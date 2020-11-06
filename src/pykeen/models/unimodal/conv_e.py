@@ -379,7 +379,7 @@ class ConvE(EntityRelationEmbeddingModel):
         x = self._convolve_entity_relation(h, r)
 
         x = x @ t
-        x = x + self.bias_term.weight.t()
+        x = x + self.bias_term(indices=None).t()
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
