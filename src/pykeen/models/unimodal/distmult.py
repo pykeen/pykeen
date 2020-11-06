@@ -87,22 +87,14 @@ class DistMult(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            # xavier uniform, cf.
+            # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
+            entity_initializer=nn.init.xavier_uniform_,
+            # TODO: Relations are then initialized to unit length
+            relation_initializer=nn.init.xavier_uniform_,
+            # Constrain entity embeddings to unit length
+            entity_constrainer=functional.normalize,
         )
-
-    def _reset_parameters_(self):  # noqa: D102
-        # xavier uniform, cf.
-        # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
-        nn.init.xavier_uniform_(self.entity_embeddings.weight)
-        nn.init.xavier_uniform_(self.relation_embeddings.weight)
-        # Initialise relation embeddings to unit length
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize embeddings of entities
-        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
     @staticmethod
     def interaction_function(
@@ -146,9 +138,9 @@ class DistMult(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
 
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)
@@ -160,9 +152,9 @@ class DistMult(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
 
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)

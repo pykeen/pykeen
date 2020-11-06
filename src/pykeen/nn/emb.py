@@ -80,6 +80,7 @@ class Embedding(RepresentationModule):
 
     @torch.no_grad()
     def post_parameter_update(self):  # noqa: D102
+        super().post_parameter_update()
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
