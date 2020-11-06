@@ -94,7 +94,7 @@ class TransR(EntityRelationEmbeddingModel):
 
         def _projection_initializer(x: torch.FloatTensor) -> torch.FloatTensor:
             """Initialize by Glorot."""
-            return nn.init.xavier_uniform_(x.view(self.num_relations, self.embedding_dim, self.relation_dim))
+            return nn.init.xavier_uniform_(x.view(self.num_relations, self.embedding_dim, self.relation_dim)).view(x.shape)
 
         # embeddings
         self.relation_projections = Embedding.init_with_device(
