@@ -11,7 +11,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape, split_complex
+from ...utils import split_complex
 
 __all__ = [
     'ComplEx',
@@ -145,14 +145,9 @@ class ComplEx(EntityRelationEmbeddingModel):
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # TODO: Where are score_h / score_t?
         # get embeddings
-        h, r, t = [
-            get_embedding_in_canonical_shape(embedding=e, ind=ind)
-            for e, ind in [
-                (self.entity_embeddings, hrt_batch[:, 0]),
-                (self.relation_embeddings, hrt_batch[:, 1]),
-                (self.entity_embeddings, hrt_batch[:, 2]),
-            ]
-        ]
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
