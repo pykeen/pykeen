@@ -7,11 +7,10 @@ from typing import Optional
 import torch
 import torch.autograd
 from torch import nn
-from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_, xavier_uniform_normed_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...utils import clamp_norm, get_embedding
@@ -81,6 +80,8 @@ class TransR(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_uniform_,
+            relation_initializer=xavier_uniform_normed_,
         )
         self.scoring_fct_norm = scoring_fct_norm
 
@@ -105,11 +106,10 @@ class TransR(EntityRelationEmbeddingModel):
         )
 
     def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
         # TODO: Initialize from TransE
-        embedding_xavier_uniform_(self.entity_embeddings)
-        embedding_xavier_uniform_(self.relation_embeddings)
-        # Initialise relation embeddings to unit length
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
+
+        # FIXME
         nn.init.xavier_uniform_(self.relation_projections.weight.view(
             self.num_relations, self.embedding_dim, self.relation_dim,
         ))

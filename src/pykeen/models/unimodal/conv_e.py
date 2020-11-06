@@ -12,8 +12,8 @@ from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...utils import get_embedding, is_cudnn_error

@@ -9,8 +9,8 @@ import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
@@ -108,6 +108,8 @@ class TuckER(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
         )
 
         # Core tensor
@@ -129,8 +131,7 @@ class TuckER(EntityRelationEmbeddingModel):
             self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
 
     def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_normal_(self.entity_embeddings)
-        embedding_xavier_normal_(self.relation_embeddings)
+        super()._reset_parameters_()
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
 

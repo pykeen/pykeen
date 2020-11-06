@@ -8,8 +8,8 @@ import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...utils import clamp_norm

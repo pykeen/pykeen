@@ -11,8 +11,8 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import EntityEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...utils import get_embedding
@@ -68,6 +68,8 @@ class StructuredEmbedding(EntityEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_uniform_,
+            entity_constrainer=functional.normalize,
         )
 
         self.scoring_fct_norm = scoring_fct_norm
@@ -85,8 +87,9 @@ class StructuredEmbedding(EntityEmbeddingModel):
         )
 
     def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_uniform_(self.entity_embeddings)
+        super()._reset_parameters_()
 
+        # TODO make into own function
         # Initialise left relation embeddings to unit length
         init_bound = 6 / np.sqrt(self.embedding_dim)
         for emb in [
@@ -95,13 +98,6 @@ class StructuredEmbedding(EntityEmbeddingModel):
         ]:
             nn.init.uniform_(emb.weight, a=-init_bound, b=+init_bound)
             functional.normalize(emb.weight.data, p=2, dim=-1, out=emb.weight.data)
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalise embeddings of entities
-        functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

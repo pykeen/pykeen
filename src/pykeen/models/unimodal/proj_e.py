@@ -10,8 +10,8 @@ import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 

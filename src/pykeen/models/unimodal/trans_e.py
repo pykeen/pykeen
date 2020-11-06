@@ -9,8 +9,8 @@ import torch.autograd
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_, xavier_uniform_normed_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
@@ -73,19 +73,17 @@ class TransE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_uniform_,
+            relation_initializer=xavier_uniform_normed_,
         )
         self.scoring_fct_norm = scoring_fct_norm
-
-    def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_uniform_(self.entity_embeddings)
-        embedding_xavier_uniform_(self.relation_embeddings)
-        # Initialise relation embeddings to unit length
-        functional.normalize(self.relation_embeddings.weight.data, out=self.relation_embeddings.weight.data)
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first
         super().post_parameter_update()
 
+        # TODO use `relation_constrainer=functional.normalize`
+        # FIXME @mberr why does this show up both in the reset_parameters and in the post_parameter update?
         # Normalize entity embeddings
         functional.normalize(self.entity_embeddings.weight.data, out=self.entity_embeddings.weight.data)
 

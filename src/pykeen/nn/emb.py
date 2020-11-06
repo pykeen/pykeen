@@ -153,7 +153,7 @@ class Embedding(RepresentationModule):
         return self.forward(indices=None)
 
     def reset_parameters(self) -> None:  # noqa: D102
-        self.initialization(self._embeddings.weight)
+        self.initialization(self._embeddings.weight)  # FIXME what if it needs a device?
 
     def forward(
         self,

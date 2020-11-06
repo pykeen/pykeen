@@ -8,8 +8,8 @@ import torch
 import torch.autograd
 
 from ..base import EntityEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
@@ -66,11 +66,9 @@ class UnstructuredModel(EntityEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
         )
         self.scoring_fct_norm = scoring_fct_norm
-
-    def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_uniform_(self.entity_embeddings)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(hrt_batch[:, 0])

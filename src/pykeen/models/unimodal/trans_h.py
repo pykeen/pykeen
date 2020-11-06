@@ -97,18 +97,15 @@ class TransH(EntityRelationEmbeddingModel):
         )
 
     def _reset_parameters_(self):  # noqa: D102
-        for emb in [
-            self.entity_embeddings,
-            self.relation_embeddings,
-            self.normal_vector_embeddings,
-        ]:
-            emb.reset_parameters()
+        super()._reset_parameters_()
+        self.normal_vector_embeddings.reset_parameters()
         # TODO: Add initialization
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # Make sure to call super first
         super().post_parameter_update()
 
+        # TODO
         # Normalise the normal vectors by their l2 norms
         functional.normalize(
             self.normal_vector_embeddings.weight.data,
@@ -121,7 +118,7 @@ class TransH(EntityRelationEmbeddingModel):
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(
             self.entity_embeddings.weight,
-            self.normal_vector_embeddings.weight,
+            self.normal_vector_embeddings.weight,  # FIXME
             self.relation_embeddings.weight,
         )
 
