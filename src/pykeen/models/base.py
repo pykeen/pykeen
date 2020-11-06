@@ -22,7 +22,7 @@ from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
 from ..typing import MappedTriples
-from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 from ..version import get_version
 
 __all__ = [
@@ -1076,6 +1076,10 @@ class EntityEmbeddingModel(Model):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_constrainer: Optional[Constrainer] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1093,10 +1097,14 @@ class EntityEmbeddingModel(Model):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = get_embedding(
+        self.entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
+            initializer=entity_initializer,
+            initializer_kwargs=entity_initializer_kwargs,
+            normalizer=entity_normalizer,
+            constrainer=entity_constrainer,
         )
 
     @property
