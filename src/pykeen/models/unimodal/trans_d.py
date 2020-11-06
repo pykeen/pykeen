@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransD."""
-import functools
 from typing import Optional
 
 import torch
@@ -127,8 +126,10 @@ class TransD(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
-            entity_constrainer=functools.partial(clamp_norm_, maxnorm=1., p=2, dim=-1),
-            relation_constrainer=functools.partial(clamp_norm_, maxnorm=1., p=2, dim=-1),
+            entity_constrainer=clamp_norm_,
+            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_constrainer=clamp_norm_,
+            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 
         self.entity_projections = Embedding.init_with_device(
