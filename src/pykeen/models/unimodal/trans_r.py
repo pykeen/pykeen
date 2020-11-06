@@ -10,10 +10,11 @@ from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import Embedding
 from ...nn.init import xavier_uniform_, xavier_uniform_normed_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding
+from ...utils import clamp_norm
 
 __all__ = [
     'TransR',
@@ -81,38 +82,27 @@ class TransR(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=xavier_uniform_,
+            entity_constrainer=clamp_norm,
+            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             relation_initializer=xavier_uniform_normed_,
+            relation_constrainer=clamp_norm,
+            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
         self.scoring_fct_norm = scoring_fct_norm
 
+        # TODO: Initialize from TransE
+
+        def _projection_initializer(x: torch.FloatTensor) -> torch.FloatTensor:
+            """Initialize by Glorot."""
+            return nn.init.xavier_uniform_(x.view(self.num_relations, self.embedding_dim, self.relation_dim))
+
         # embeddings
-        self.relation_projections = get_embedding(
+        self.relation_projections = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim * embedding_dim,
             device=self.device,
+            initializer=_projection_initializer,
         )
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-        self.relation_embeddings.weight.data = clamp_norm(
-            x=self.relation_embeddings.weight.data,
-            maxnorm=1.,
-            p=2,
-            dim=-1,
-        )
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        # TODO: Initialize from TransE
-
-        # FIXME
-        nn.init.xavier_uniform_(self.relation_projections.weight.view(
-            self.num_relations, self.embedding_dim, self.relation_dim,
-        ))
 
     @staticmethod
     def interaction_function(
@@ -149,27 +139,27 @@ class TransR(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(dim=1)
-        m_r = self.relation_projections(hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
+        m_r = self.relation_projections(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings.weight.unsqueeze(dim=0)
-        m_r = self.relation_projections(hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        m_r = self.relation_projections(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight.unsqueeze(dim=0)
-        r = self.relation_embeddings(rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(dim=1)
-        m_r = self.relation_projections(rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_dim)
+        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
+        m_r = self.relation_projections(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_dim)
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
