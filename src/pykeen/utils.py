@@ -216,6 +216,7 @@ def get_embedding_in_canonical_shape(
 
     :return: shape: (batch_size, num_embeddings, d)
     """
+    # FIXME should this go inside the embedding class? should this function be moved?
     x = embedding(indices=ind)
     if ind is None:
         return x.unsqueeze(dim=0)

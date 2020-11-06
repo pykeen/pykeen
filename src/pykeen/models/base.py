@@ -1038,7 +1038,10 @@ class EntityEmbeddingModel(Model):
         entity_initializer: Optional[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1063,7 +1066,9 @@ class EntityEmbeddingModel(Model):
             initializer=entity_initializer,
             initializer_kwargs=entity_initializer_kwargs,
             normalizer=entity_normalizer,
+            normalizer_kwargs=entity_normalizer_kwargs,
             constrainer=entity_constrainer,
+            constrainer_kwargs=entity_constrainer_kwargs,
         )
 
     @property
@@ -1102,11 +1107,15 @@ class EntityRelationEmbeddingModel(Model):
         entity_initializer: Optional[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Optional[Initializer] = None,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_normalizer: Optional[Normalizer] = None,
+        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_constrainer: Optional[Constrainer] = None,
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1133,7 +1142,9 @@ class EntityRelationEmbeddingModel(Model):
             initializer=entity_initializer,
             initializer_kwargs=entity_initializer_kwargs,
             normalizer=entity_normalizer,
+            normalizer_kwargs=entity_normalizer_kwargs,
             constrainer=entity_constrainer,
+            constrainer_kwargs=entity_constrainer_kwargs,
         )
 
         # Default for relation dimensionality
@@ -1147,7 +1158,9 @@ class EntityRelationEmbeddingModel(Model):
             initializer=relation_initializer,
             initializer_kwargs=relation_initializer_kwargs,
             normalizer=relation_normalizer,
+            normalizer_kwargs=relation_normalizer_kwargs,
             constrainer=relation_constrainer,
+            constrainer_kwargs=relation_constrainer_kwargs,
         )
 
     @property
