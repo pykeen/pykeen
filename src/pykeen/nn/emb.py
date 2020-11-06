@@ -62,38 +62,33 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: int,
-        initialization: Optional[Initializer] = None,
-        initialization_kwargs: Optional[Mapping[str, Any]] = None,
-        normalization: Optional[Normalizer] = None,
-        normalization_kwargs: Optional[Mapping[str, Any]] = None,
+        initializer: Optional[Initializer] = None,
+        initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        normalizer: Optional[Normalizer] = None,
+        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         super().__init__()
 
-        if initialization is None:
-            initialization = nn.init.normal_
-        if initialization_kwargs:
-            self.initialization = functools.partial(initialization, **initialization_kwargs)
+        if initializer is None:
+            initializer = nn.init.normal_
+        if initializer_kwargs:
+            self.initializer_ = functools.partial(initializer, **initializer_kwargs)
         else:
-            self.initialization = initialization
+            self.initializer_ = initializer
         if constrainer_kwargs:
             self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
         else:
             self.constrainer = constrainer
-        if normalization_kwargs:
-            self.normalization = functools.partial(normalization, **normalization_kwargs)
+        if normalizer_kwargs:
+            self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
         else:
-            self.normalization = normalization
+            self.normalizer = normalizer
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
         )
-
-    @torch.no_grad()
-    def post_parameter_update(self):  # noqa: D102
-        if self.constrainer is not None:
-            self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
     @classmethod
     def init_with_device(
@@ -166,8 +161,14 @@ class Embedding(RepresentationModule):
         )
         return self.forward(indices=None)
 
+    @torch.no_grad()
     def reset_parameters(self) -> None:  # noqa: D102
-        self.initialization(self._embeddings.weight)  # FIXME what if it needs a device?
+        self.initializer_(self._embeddings.weight)  # FIXME what if it needs a device?
+
+    @torch.no_grad()
+    def post_parameter_update(self):  # noqa: D102
+        if self.constrainer is not None:
+            self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
 
     def forward(
         self,
@@ -177,6 +178,6 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             x = self._embeddings(indices)
-        if self.normalization is not None:
-            x = self.normalization(x)
+        if self.normalizer is not None:
+            x = self.normalizer(x)
         return x
