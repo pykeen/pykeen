@@ -14,6 +14,7 @@ __all__ = [
     'Embedding',
     'Initializer',
     'Normalizer',
+    'Constrainer',
 ]
 
 
@@ -145,7 +146,7 @@ class Embedding(RepresentationModule):
     def weight(self):  # noqa: D102
         warnings.warn(
             f"{self.__class__.__name__}.weight is deprecated. Use {self.__class__.__name__}(indices=None) instead.",
-            DeprecationWarning
+            DeprecationWarning,
         )
         return self.forward(indices=None)
 

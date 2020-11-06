@@ -16,8 +16,7 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
-from ..nn import Embedding, Initializer, Normalizer
-from ..nn.emb import Constrainer
+from ..nn import Constrainer, Embedding, Initializer, Normalizer
 from ..regularizers import NoRegularizer, Regularizer
 from ..tqdmw import tqdm
 from ..triples import TriplesFactory
