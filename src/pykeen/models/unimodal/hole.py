@@ -6,7 +6,6 @@ from typing import Optional
 
 import torch
 import torch.autograd
-from torch.fft import irfft, rfft
 
 from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
@@ -30,8 +29,8 @@ class HolEInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         # Circular correlation of entity embeddings
-        a_fft = rfft(h, signal_ndim=1, onesided=True)
-        b_fft = rfft(t, signal_ndim=1, onesided=True)
+        a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
+        b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
 
         # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
         a_fft[:, :, :, 1] *= -1
@@ -40,7 +39,7 @@ class HolEInteractionFunction(InteractionFunction):
         p_fft = a_fft * b_fft
 
         # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+        composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
 
         # inner product with relation embedding
         scores = torch.sum(r * composite, dim=-1, keepdim=False)
