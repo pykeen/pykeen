@@ -6,11 +6,9 @@ import math
 
 import torch.nn
 import torch.nn.init
-from torch.nn import functional
 
 __all__ = [
     'xavier_uniform_',
-    'xavier_uniform_normed_',
     'xavier_normal_',
 ]
 
@@ -33,13 +31,6 @@ def xavier_uniform_(tensor, gain: float = 1.):
     bound = gain * 6 / math.sqrt(tensor.shape[1])  # TODO @mberr is that index right?
     torch.nn.init.uniform_(tensor, -bound, bound)
     return tensor
-
-
-def xavier_uniform_normed_(tensor: torch.Tensor, gain: float = 1.) -> torch.Tensor:
-    """Initialize weights of the tensor similarly to Glorot/Xavier initialization the normalize."""
-    x = xavier_uniform_(tensor, gain=gain)
-    functional.normalize(x.data, out=x.data)
-    return x
 
 
 def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:

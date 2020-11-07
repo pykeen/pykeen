@@ -7,14 +7,15 @@ from typing import Optional
 import torch
 import torch.autograd
 import torch.nn.init
+from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding
-from ...nn.init import xavier_uniform_, xavier_uniform_normed_
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm
+from ...utils import clamp_norm, compose
 
 __all__ = [
     'TransR',
@@ -94,7 +95,10 @@ class TransR(EntityRelationEmbeddingModel):
             entity_initializer=xavier_uniform_,
             entity_constrainer=clamp_norm,
             entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_initializer=xavier_uniform_normed_,
+            relation_initializer=compose(
+                xavier_uniform_,
+                functional.normalize,
+            ),
             relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
