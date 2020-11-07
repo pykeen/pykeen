@@ -20,7 +20,7 @@ from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, Initializer, MappedTriples, Normalizer
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, get_embedding_in_canonical_shape, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -1285,6 +1285,18 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Optional[Initializer] = None,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_normalizer: Optional[Normalizer] = None,
+        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer: Optional[Constrainer] = None,
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize embedding model.
 
@@ -1314,17 +1326,29 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=entity_initializer,
+            entity_initializer_kwargs=entity_initializer_kwargs,
+            entity_normalizer=entity_normalizer,
+            entity_normalizer_kwargs=entity_normalizer_kwargs,
+            entity_constrainer=entity_constrainer,
+            entity_constrainer_kwargs=entity_constrainer_kwargs,
+            relation_initializer=relation_initializer,
+            relation_initializer_kwargs=relation_initializer_kwargs,
+            relation_normalizer=relation_normalizer,
+            relation_normalizer_kwargs=relation_normalizer_kwargs,
+            relation_constrainer=relation_constrainer,
+            relation_constrainer_kwargs=relation_constrainer_kwargs,
         )
-
         self.interaction_function = interaction_function
-
-        # Finalize initialization
-        self.reset_parameters_()
 
     def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
         _track_hyperparameters(cls)
         if auto_reset_parameters:
             _add_post_reset_parameters(cls)
+
+    def _reset_parameters_(self):
+        super()._reset_parameters_()
+        self.interaction_function.reset_parameters()
 
     def _score(
         self,
