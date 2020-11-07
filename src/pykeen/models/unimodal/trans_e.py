@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import compose_, normalize_
+from ...utils import compose
 
 __all__ = [
     'TransE',
@@ -75,11 +75,11 @@ class TransE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=xavier_uniform_,
-            relation_initializer=compose_(
+            relation_initializer=compose(
                 xavier_uniform_,
                 functional.normalize,
             ),
-            entity_constrainer=normalize_,
+            entity_constrainer=functional.normalize,
         )
         self.scoring_fct_norm = scoring_fct_norm
 

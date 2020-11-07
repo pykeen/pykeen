@@ -14,20 +14,17 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn
-from torch.nn import functional
 
 from .nn import Embedding
 
 __all__ = [
-    'compose_',
+    'compose',
     'clamp_norm',
-    'clamp_norm_',
     'compact_mapping',
     'imag_part',
     'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
-    'normalize_',
     'random_non_negative_int',
     'real_part',
     'resolve_device',
@@ -253,32 +250,10 @@ def clamp_norm(
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
 
 
-def clamp_norm_(
-    x: torch.Tensor,
-    maxnorm: float,
-    p: Union[str, int] = 'fro',
-    dim: Union[None, int, Iterable[int]] = None,
-    eps: float = 1.0e-08,
-) -> torch.Tensor:
-    """Apply :func:`clamp_norm` in-place."""
-    x.data = clamp_norm(x=x.data, maxnorm=maxnorm, p=p, dim=dim, eps=eps)
-    return x
-
-
-def normalize_(
-    x: torch.Tensor,
-    p: float = 2.,
-    dim: int = -1,
-) -> torch.Tensor:
-    """Apply :func:`torch.nn.functional.normalize` in-place."""
-    functional.normalize(x.data, p=p, dim=dim, out=x.data)
-    return x
-
-
-def compose_(
+def compose(
     *op_: Callable[[torch.Tensor], torch.Tensor],
 ) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Compose in-place operations."""
+    """Function composition."""
 
     def chained_op(x: torch.Tensor):
         for op in op_:

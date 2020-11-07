@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping
+from typing import Callable, Mapping, TypeVar
 
 import numpy as np
 import torch
@@ -20,4 +20,8 @@ MappedTriples = torch.LongTensor
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]
 
-InteractionFunction = Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)  # Fixme: TypeVar expects none, or at least two super-classes
+InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
+Initializer = Callable[[TensorType], TensorType]
+Normalizer = Callable[[TensorType], TensorType]
+Constrainer = Callable[[TensorType], TensorType]

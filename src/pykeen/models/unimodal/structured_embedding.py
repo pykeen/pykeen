@@ -17,7 +17,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import compose_, normalize_
+from ...utils import compose
 
 __all__ = [
     'StructuredEmbedding',
@@ -79,9 +79,9 @@ class StructuredEmbedding(EntityEmbeddingModel):
         # Embeddings
         init_bound = 6 / np.sqrt(self.embedding_dim)
         # Initialise relation embeddings to unit length
-        initializer = compose_(
+        initializer = compose(
             functools.partial(nn.init.uniform_, a=-init_bound, b=+init_bound),
-            normalize_,
+            functional.normalize,
         )
         self.left_relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,

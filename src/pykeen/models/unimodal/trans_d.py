@@ -13,7 +13,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, clamp_norm_, get_embedding_in_canonical_shape
+from ...utils import clamp_norm, get_embedding_in_canonical_shape
 
 __all__ = [
     'TransD',
@@ -127,9 +127,9 @@ class TransD(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
-            entity_constrainer=clamp_norm_,
+            entity_constrainer=clamp_norm,
             entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=clamp_norm_,
+            relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 

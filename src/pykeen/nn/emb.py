@@ -3,7 +3,7 @@
 """Embedding modules."""
 
 import functools
-from typing import Any, Callable, Mapping, Optional, TypeVar
+from typing import Any, Mapping, Optional
 
 import torch
 import torch.nn
@@ -12,10 +12,9 @@ from torch import nn
 __all__ = [
     'RepresentationModule',
     'Embedding',
-    'Initializer',
-    'Normalizer',
-    'Constrainer',
 ]
+
+from pykeen.typing import Constrainer, Initializer, Normalizer
 
 
 class RepresentationModule(nn.Module):
@@ -40,13 +39,6 @@ class RepresentationModule(nn.Module):
 
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
-
-
-# FIXME: It has to be more than one type...
-TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)
-Initializer = Callable[[TensorType], None]
-Normalizer = Callable[[TensorType], TensorType]
-Constrainer = Callable[[TensorType], TensorType]
 
 
 class Embedding(RepresentationModule):

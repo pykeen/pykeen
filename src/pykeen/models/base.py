@@ -16,10 +16,10 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
-from ..nn import Constrainer, Embedding, Initializer, Normalizer
+from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import MappedTriples
+from ..typing import Constrainer, Initializer, MappedTriples, Normalizer
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [

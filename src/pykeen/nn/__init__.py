@@ -3,13 +3,11 @@
 """PyKEEN internal "nn" module."""
 
 from . import init
-from .emb import Constrainer, Embedding, Initializer, Normalizer, RepresentationModule
+from .emb import Embedding, RepresentationModule
+from ..typing import Constrainer, Initializer, Normalizer
 
 __all__ = [
     'Embedding',
     'RepresentationModule',
-    'Initializer',
-    'Normalizer',
-    'Constrainer',
     'init',
 ]
