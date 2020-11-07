@@ -1016,7 +1016,6 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         )
         entity_embeddings._embeddings.weight.data.copy_(weights)
         self.model.entity_embeddings = entity_embeddings
-        self.model.embedding_dim = 2
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[4., 4], [5., 5.]], dtype=torch.float)
@@ -1026,7 +1025,6 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
         self.model.relation_embeddings = relation_embeddings
-        self.model.relation_dim = 2
 
         relation_projection_weights = torch.as_tensor(data=[[5., 5., 6., 6.], [7., 7., 8., 8.]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
