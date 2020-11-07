@@ -97,7 +97,7 @@ class DistMult(SimpleVectorEntityRelationEmbeddingModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         """
-        interaction_function = DistMultInteractionFunction.from_model(self)
+        interaction_function = DistMultInteractionFunction()
 
         super().__init__(
             triples_factory=triples_factory,
