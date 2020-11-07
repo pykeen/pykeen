@@ -8,9 +8,10 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
+from ...nn import Embedding
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding, get_embedding_in_canonical_shape
+from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'SimplE',
@@ -83,12 +84,12 @@ class SimplE(EntityRelationEmbeddingModel):
         )
 
         # extra embeddings
-        self.tail_entity_embeddings = get_embedding(
+        self.tail_entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
         )
-        self.inverse_relation_embeddings = get_embedding(
+        self.inverse_relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
@@ -98,19 +99,20 @@ class SimplE(EntityRelationEmbeddingModel):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp = clamp_score
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
         for emb in [
-            self.entity_embeddings,
             self.tail_entity_embeddings,
-            self.relation_embeddings,
             self.inverse_relation_embeddings,
         ]:
             emb.reset_parameters()
 
-    def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
+    def _score(
+        self,
+        h_ind: Optional[torch.LongTensor],
+        r_ind: Optional[torch.LongTensor],
+        t_ind: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
         # forward model
         h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
         r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)

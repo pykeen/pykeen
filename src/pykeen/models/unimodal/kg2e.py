@@ -10,9 +10,10 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding, get_embedding_in_canonical_shape
+from ...utils import clamp_norm, get_embedding_in_canonical_shape
 
 __all__ = [
     'KG2E',
@@ -83,6 +84,10 @@ class KG2E(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_constrainer=clamp_norm,
+            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_constrainer=clamp_norm,
+            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 
         # Similarity function used for distributions
@@ -98,50 +103,39 @@ class KG2E(EntityRelationEmbeddingModel):
         self.c_max = c_max
 
         # Additional covariance embeddings
-        self.entity_covariances = get_embedding(
+        self.entity_covariances = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
+            # Ensure positive definite covariances matrices and appropriate size by clamping
+            constrainer=torch.clamp,
+            constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
         )
-        self.relation_covariances = get_embedding(
+        self.relation_covariances = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
+            # Ensure positive definite covariances matrices and appropriate size by clamping
+            constrainer=torch.clamp,
+            constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
         )
-
-        # Finalize initialization
-        self.reset_parameters_()
 
     def _reset_parameters_(self):  # noqa: D102
         # Constraints are applied through post_parameter_update
+        super()._reset_parameters_()
         for emb in [
-            self.entity_embeddings,
             self.entity_covariances,
-            self.relation_embeddings,
             self.relation_covariances,
         ]:
             emb.reset_parameters()
 
     def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
         super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-        self.relation_embeddings.weight.data = clamp_norm(
-            x=self.relation_embeddings.weight.data,
-            maxnorm=1.,
-            p=2,
-            dim=-1,
-        )
-
-        # Ensure positive definite covariances matrices and appropriate size by clamping
         for cov in (
             self.entity_covariances,
             self.relation_covariances,
         ):
-            cov_data = cov.weight.data
-            torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
+            cov.post_parameter_update()
 
     def _score(
         self,

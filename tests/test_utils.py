@@ -7,8 +7,8 @@ import unittest
 
 import numpy
 import torch
-from torch import nn
 
+from pykeen.nn import Embedding
 from pykeen.utils import (
     clamp_norm,
     compact_mapping,
@@ -140,9 +140,13 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
 
     def setUp(self) -> None:
         """Initialize embedding."""
-        self.embedding = nn.Embedding(num_embeddings=self.num_embeddings, embedding_dim=self.embedding_dim)
+        self.embedding = Embedding(num_embeddings=self.num_embeddings, embedding_dim=self.embedding_dim)
         self.generator = torch.manual_seed(42)
-        self.embedding.weight.data = torch.rand(self.num_embeddings, self.embedding_dim, generator=self.generator)
+        self.embedding._embeddings.weight.data = torch.rand(
+            self.num_embeddings,
+            self.embedding_dim,
+            generator=self.generator,
+        )
 
     def test_no_indices(self):
         """Test getting all embeddings."""
@@ -152,7 +156,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
         assert emb.shape == (1, self.num_embeddings, self.embedding_dim)
 
         # check values
-        exp = self.embedding.weight.view(1, self.num_embeddings, self.embedding_dim)
+        exp = self.embedding(indices=None).view(1, self.num_embeddings, self.embedding_dim)
         assert torch.allclose(emb, exp)
 
     def _test_with_indices(self, ind: torch.Tensor) -> None:

@@ -9,9 +9,9 @@ from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import Embedding
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding
 
 __all__ = [
     'TransH',
@@ -90,50 +90,39 @@ class TransH(EntityRelationEmbeddingModel):
         self.scoring_fct_norm = scoring_fct_norm
 
         # embeddings
-        self.normal_vector_embeddings = get_embedding(
+        self.normal_vector_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
+            # Normalise the normal vectors by their l2 norms
+            constrainer=functional.normalize,
         )
-
-        # Finalize initialization
-        self.reset_parameters_()
-
-    def _reset_parameters_(self):  # noqa: D102
-        for emb in [
-            self.entity_embeddings,
-            self.relation_embeddings,
-            self.normal_vector_embeddings,
-        ]:
-            emb.reset_parameters()
-        # TODO: Add initialization
 
     def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
         super().post_parameter_update()
+        self.normal_vector_embeddings.post_parameter_update()
 
-        # Normalise the normal vectors by their l2 norms
-        functional.normalize(
-            self.normal_vector_embeddings.weight.data,
-            out=self.normal_vector_embeddings.weight.data,
-        )
+    def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
+        self.normal_vector_embeddings.reset_parameters()
+        # TODO: Add initialization
 
     def regularize_if_necessary(self) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(
-            self.entity_embeddings.weight,
-            self.normal_vector_embeddings.weight,
-            self.relation_embeddings.weight,
+            self.entity_embeddings(indices=None),
+            self.normal_vector_embeddings(indices=None),  # FIXME
+            self.relation_embeddings(indices=None),
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        d_r = self.relation_embeddings(hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        w_r = self.normal_vector_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -146,10 +135,10 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0])
-        d_r = self.relation_embeddings(hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        d_r = self.relation_embeddings(indices=hr_batch[:, 1])
+        w_r = self.normal_vector_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None)
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -162,11 +151,11 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=None)
         rel_id = rt_batch[:, 0]
-        d_r = self.relation_embeddings(rel_id)
-        w_r = self.normal_vector_embeddings(rel_id)
-        t = self.entity_embeddings(rt_batch[:, 1])
+        d_r = self.relation_embeddings(indices=rel_id)
+        w_r = self.normal_vector_embeddings(indices=rel_id)
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Project to hyperplane
         ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]

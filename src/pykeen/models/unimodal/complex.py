@@ -11,7 +11,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape, split_complex
+from ...utils import split_complex
 
 __all__ = [
     'ComplEx',
@@ -101,16 +101,11 @@ class ComplEx(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            # initialize with entity and relation embeddings with standard normal distribution, cf.
+            # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
+            entity_initializer=nn.init.normal_,
+            relation_initializer=nn.init.normal_,
         )
-
-        # Finalize initialization
-        self.reset_parameters_()
-
-    def _reset_parameters_(self):  # noqa: D102
-        # initialize with entity and relation embeddings with standard normal distribution, cf.
-        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-        nn.init.normal_(tensor=self.entity_embeddings.weight, mean=0., std=1.)
-        nn.init.normal_(tensor=self.relation_embeddings.weight, mean=0., std=1.)
 
     @staticmethod
     def interaction_function(
@@ -148,20 +143,20 @@ class ComplEx(EntityRelationEmbeddingModel):
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        # TODO: Where are score_h / score_t?
         # get embeddings
-        h, r, t = [
-            get_embedding_in_canonical_shape(embedding=e, ind=ind)
-            for e, ind in [
-                (self.entity_embeddings, hrt_batch[:, 0]),
-                (self.relation_embeddings, hrt_batch[:, 1]),
-                (self.entity_embeddings, hrt_batch[:, 2]),
-            ]
-        ]
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
+
+        # special case
+        if scores.ndimension() < 2:
+            scores = scores.unsqueeze(dim=-1)
 
         return scores
