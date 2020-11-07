@@ -15,12 +15,12 @@ from ...utils import normalize_for_einsum, split_complex
 
 __all__ = [
     'ComplEx',
-    'ComplexInteractionFunction',
+    'ComplExInteractionFunction',
 ]
 
 
-class ComplexInteractionFunction(InteractionFunction):
-    """Interaction function of CompleE."""
+class ComplExInteractionFunction(InteractionFunction):
+    """Interaction function of ComplEx."""
 
     def forward(
         self,
@@ -119,7 +119,7 @@ class ComplEx(SimpleVectorEntityRelationEmbeddingModel):
         :param regularizer: BaseRegularizer
             The regularizer to use.
         """
-        interaction_function = ComplexInteractionFunction()
+        interaction_function = ComplExInteractionFunction()
 
         super().__init__(
             triples_factory=triples_factory,
