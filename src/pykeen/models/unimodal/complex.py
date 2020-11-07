@@ -128,7 +128,6 @@ class ComplEx(EntityRelationEmbeddingModel):
         :return: shape: (...)
             The scores.
         """
-        # split into real and imaginary part
         h_re, h_im = h.real, h.imag
         r_re, r_im = r.real, r.imag
         t_re, t_im = t.real, t.imag
