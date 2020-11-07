@@ -52,6 +52,7 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: int,
+        dtype: Optional[torch.dtype] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -98,9 +99,14 @@ class Embedding(RepresentationModule):
             self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
         else:
             self.normalizer = normalizer
+
+        # initialize weight outside of torch.nn.Embedding to sneak in the dtype definitiion
+        _weight = torch.empty((num_embeddings, embedding_dim), dtype=dtype)
+
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
+            _weight=_weight,
         )
 
     @classmethod
@@ -109,6 +115,7 @@ class Embedding(RepresentationModule):
         num_embeddings: int,
         embedding_dim: int,
         device: torch.device,
+        dtype: Optional[torch.dtype] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -132,6 +139,7 @@ class Embedding(RepresentationModule):
         return cls(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
+            dtype=dtype,
             initializer=initializer,
             initializer_kwargs=initializer_kwargs,
             normalizer=normalizer,
