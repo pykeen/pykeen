@@ -92,17 +92,18 @@ class RotatE(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=2 * embedding_dim,
+            embedding_dim=embedding_dim,
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_dtype=torch.cfloat,
             entity_initializer=xavier_uniform_,
+            relation_dtype=torch.cfloat,
             relation_initializer=init_phases,
             relation_constrainer=complex_normalize,
         )
-        self.real_embedding_dim = embedding_dim
 
     @staticmethod
     def interaction_function(
@@ -127,10 +128,10 @@ class RotatE(EntityRelationEmbeddingModel):
             The scores.
         """
         # Decompose into real and imaginary part
-        h_re = h[..., 0]
-        h_im = h[..., 1]
-        r_re = r[..., 0]
-        r_im = r[..., 1]
+        h_re = h.real
+        h_im = h.imag
+        r_re = r.real
+        r_im = r.imag
 
         # Rotate (=Hadamard product in complex space).
         rot_h = torch.stack(
@@ -148,9 +149,9 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -162,11 +163,11 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
 
         # Rank against all entities
-        t = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
