@@ -67,6 +67,26 @@ class Embedding(RepresentationModule):
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """Instantiate an embedding with extended functionality.
+
+        :param num_embeddings: >0
+            The number of embeddings.
+        :param embedding_dim: >0
+            The embedding dimensionality.
+        :param initializer:
+            An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies
+            the weights in-place.
+        :param initializer_kwargs:
+            Additional keyword arguments passed to the initializer
+        :param normalizer:
+            A normalization function
+        :param normalizer_kwargs:
+            Additional keyword arguments passed to the normalizer
+        :param constrainer:
+            A contrainer applied after each parameter update, without tracking gradients.
+        :param constrainer_kwargs:
+            Additional keyword arguments passed to the constrainer
+        """
         super().__init__()
 
         if initializer is None:
@@ -101,31 +121,15 @@ class Embedding(RepresentationModule):
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> 'Embedding':  # noqa:E501
-        """Create an embedding object on a device.
+        """Create an embedding object on the given device by wrapping :func:`__init__`.
 
         This method is a hotfix for not being able to pass a device during initialization of
-        :class:torch.nn.Embedding`. Instead the weight is always initialized on CPU and has
+        :class:`torch.nn.Embedding`. Instead the weight is always initialized on CPU and has
         to be moved to GPU afterwards.
 
         .. seealso::
 
             https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
-
-        :param num_embeddings: >0
-            The number of embeddings.
-        :param embedding_dim: >0
-            The embedding dimensionality.
-        :param device:
-            The device.
-        :param initializer:
-            An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies
-            the weights in-place.
-        :param initializer_kwargs:
-            Additional keyword arguments passed to the initializer
-        :param normalizer:
-            A normalization function
-        :param constrainer:
-            A contrainer applied after each parameter update, without tracking gradients.
 
         :return:
             The embedding.
