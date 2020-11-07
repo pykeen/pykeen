@@ -74,16 +74,19 @@ class Embedding(RepresentationModule):
         :param embedding_dim: >0
             The embedding dimensionality.
         :param initializer:
-            An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies
-            the weights in-place.
+            An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
+            and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
+            initialization may be in-place)
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
         :param normalizer:
-            A normalization function
+            A normalization function, which is applied in every forward pass.
         :param normalizer_kwargs:
             Additional keyword arguments passed to the normalizer
         :param constrainer:
-            A contrainer applied after each parameter update, without tracking gradients.
+            A function which is applied to the weights after each parameter update, without tracking gradients.
+            It may be used to enforce model constraints outside of gradient-based training. The function does not need
+            to be in-place, but the weight tensor is modified in-place.
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
         """
