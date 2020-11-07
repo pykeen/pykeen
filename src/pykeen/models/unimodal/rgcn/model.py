@@ -228,9 +228,14 @@ class RGCNRepresentations(RepresentationModule):
 
 
 class Decoder(nn.Module):
+    """Dummy interaction function."""
+
     # TODO: Replace this by interaction function, once https://github.com/pykeen/pykeen/pull/107 is merged.
     def forward(self, h, r, t):
         return (h * r * t).sum(dim=-1)
+
+    def reset_parameters(self):
+        pass
 
 
 class RGCN(Model):
@@ -321,7 +326,7 @@ class RGCN(Model):
             The activation function to use.
         :param activation_kwargs:
             Additional key-word based parameters used to instantiate the activation layer.
-        :param sparse_messages_owa:
+        :param sparse_messages_slcwa:
             Whether to use sparse messages when training with OWA, i.e. do not compute representations for all nodes,
             but only those in a neighborhood of the currently considered ones. Theoretically improves memory
             requirements and runtime, since only a part of the messages are computed, but leads to additional masking.
@@ -333,7 +338,7 @@ class RGCN(Model):
             The edge dropout to use for self-loops. Set to None to disable edge dropout.
         :param edge_weighting:
             The edge weighting function to use.
-        :param decomposition:
+        :param _decomposition:
             The decomposition of the relation-specific weight matrices.
         :param buffer_messages:
             Whether to buffer messages. Useful for instance in evaluation mode, when the parameters remain unchanged,
@@ -377,7 +382,7 @@ class RGCN(Model):
             embedding_dim=embedding_dim,
         )
         # TODO: Dummy
-        self.decoder = Decoder()
+        self.interaction_function = Decoder()
 
         # Finalize initialization, needs to be done manually instead of with
         # a post-init hook because this model is very special :)
@@ -391,10 +396,11 @@ class RGCN(Model):
     def _reset_parameters_(self):
         self.entity_representations.reset_parameters()
         self.relation_embeddings.reset_parameters()
+        self.interaction_function.reset_parameters()
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
         h = self.entity_representations(indices=hrt_batch[:, 0])
-        t = self.entity_representations(indices=hrt_batch[:, 2])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        return self.decoder(h, r, t).unsqueeze(dim=-1)
+        t = self.entity_representations(indices=hrt_batch[:, 2])
+        return self.interaction_function(h=h, r=r, t=t).unsqueeze(dim=-1)
