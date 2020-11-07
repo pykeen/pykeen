@@ -253,7 +253,7 @@ def clamp_norm(
 def compose(
     *op_: Callable[[torch.Tensor], torch.Tensor],
 ) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Function composition."""
+    """Compose functions working on a single tensor."""
 
     def chained_op(x: torch.Tensor):
         for op in op_:
