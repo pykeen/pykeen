@@ -137,7 +137,7 @@ class RotatE(EntityRelationEmbeddingModel):
             [
                 h_re * r_re - h_im * r_im,
                 h_re * r_im + h_im * r_re,
-                ],
+            ],
             dim=-1,
         )
         # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
