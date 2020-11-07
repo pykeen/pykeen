@@ -124,7 +124,6 @@ class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        self.embedding_dim = embedding_dim
         if hidden_dim is None:
             self.hidden_dim = embedding_dim
 

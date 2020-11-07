@@ -10,8 +10,8 @@ import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 
@@ -73,6 +73,8 @@ class ProjE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_uniform_,
+            relation_initializer=xavier_uniform_,
         )
 
         # Global entity projection
@@ -92,8 +94,7 @@ class ProjE(EntityRelationEmbeddingModel):
         self.inner_non_linearity = inner_non_linearity
 
     def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_uniform_(self.entity_embeddings)
-        embedding_xavier_uniform_(self.relation_embeddings)
+        super()._reset_parameters_()
         bound = numpy.sqrt(6) / self.embedding_dim
         nn.init.uniform_(self.d_e, a=-bound, b=bound)
         nn.init.uniform_(self.d_r, a=-bound, b=bound)
@@ -102,9 +103,9 @@ class ProjE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Compute score
         hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
@@ -114,9 +115,9 @@ class ProjE(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0])
-        r = self.relation_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None)
 
         # Rank against all entities
         hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
@@ -126,9 +127,9 @@ class ProjE(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0])
-        t = self.entity_embeddings(rt_batch[:, 1])
+        h = self.entity_embeddings(indices=None)
+        r = self.relation_embeddings(indices=rt_batch[:, 0])
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Rank against all entities
         hidden = self.inner_non_linearity(

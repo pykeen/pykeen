@@ -8,12 +8,13 @@ import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
+from unittest.mock import MagicMock
 
 import numpy
 import pytest
 import torch
 from click.testing import CliRunner, Result
-from torch import optim
+from torch import nn, optim
 from torch.optim import SGD
 from torch.optim.adagrad import Adagrad
 
@@ -36,6 +37,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
+from pykeen.nn import Embedding, RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
@@ -55,6 +57,20 @@ for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
 
 _EPSILON = 1.0e-07
+
+
+class _CustomRepresentations(RepresentationModule):
+    """A custom representation module with minimal implementation."""
+
+    def __init__(self, num_entities: int, embedding_dim: int = 2):
+        super().__init__()
+        self.num_embeddings = num_entities
+        self.embedding_dim = embedding_dim
+        self.x = nn.Parameter(torch.rand(embedding_dim))
+
+    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
+        n = self.num_embeddings if indices is None else indices.shape[0]
+        return self.x.unsqueeze(dim=0).repeat(n, 1)
 
 
 class _ModelTestCase:
@@ -264,19 +280,23 @@ class _ModelTestCase:
             **(self.model_kwargs or {}),
         ).to_device_()
 
+        def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
+            """Test whether two embeddings are equal."""
+            return (a(indices=None) == b(indices=None)).all()
+
         if isinstance(original_model, EntityEmbeddingModel):
-            assert not (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+            assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not (original_model.relation_embeddings.weight == loaded_model.relation_embeddings.weight).all()
+            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
         if isinstance(original_model, EntityEmbeddingModel):
-            assert (original_model.entity_embeddings.weight == loaded_model.entity_embeddings.weight).all()
+            assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert (original_model.relation_embeddings.weight == loaded_model.relation_embeddings.weight).all()
+            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
     def cli_extras(self):
@@ -443,7 +463,7 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        self.model.reset_parameters_ = None
+        self.model.reset_parameters_ = MagicMock(return_value=None)
         try:
             self.model.__init__(
                 self.factory,
@@ -452,6 +472,36 @@ Traceback
             )
         except TypeError as error:
             assert error.args == ("'NoneType' object is not callable",)
+        self.model.reset_parameters_.assert_called_once()
+
+    def test_custom_representations(self):
+        """Tests whether we can provide custom representations."""
+        if isinstance(self.model, EntityEmbeddingModel):
+            old_embeddings = self.model.entity_embeddings
+            self.model.entity_embeddings = _CustomRepresentations(
+                num_entities=self.factory.num_entities,
+                embedding_dim=old_embeddings.embedding_dim,
+            )
+            # call some functions
+            self.model.reset_parameters_()
+            self.test_score_hrt()
+            self.test_score_t()
+            # reset to old state
+            self.model.entity_embeddings = old_embeddings
+        elif isinstance(self.model, EntityRelationEmbeddingModel):
+            old_embeddings = self.model.relation_embeddings
+            self.model.relation_embeddings = _CustomRepresentations(
+                num_entities=self.factory.num_relations,
+                embedding_dim=old_embeddings.embedding_dim,
+            )
+            # call some functions
+            self.model.reset_parameters_()
+            self.test_score_hrt()
+            self.test_score_t()
+            # reset to old state
+            self.model.relation_embeddings = old_embeddings
+        else:
+            self.skipTest(f'Not testing custom representations for model: {self.model.__class__.__name__}')
 
 
 class _DistanceModelTestCase(_ModelTestCase):
@@ -508,7 +558,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -590,7 +640,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        assert all_in_bounds(self.model.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
 
 class _TestKG2E(_ModelTestCase):
@@ -605,9 +655,9 @@ class _TestKG2E(_ModelTestCase):
         * Covariances have to have values between c_min and c_max
         """
         for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(embedding.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
         for cov in (self.model.entity_covariances, self.model.relation_covariances):
-            assert all_in_bounds(cov.weight, low=self.model.c_min, high=self.model.c_max)
+            assert all_in_bounds(cov(indices=None), low=self.model.c_min, high=self.model.c_max)
 
 
 class TestKG2EWithKL(_TestKG2E, unittest.TestCase):
@@ -679,7 +729,7 @@ class _TestRGCN(_ModelTestCase):
 
         Enriched embeddings have to be reset.
         """
-        assert self.model.enriched_embeddings is None
+        assert self.model.entity_representations.enriched_embeddings is None
 
 
 class TestRGCNBasis(_TestRGCN, unittest.TestCase):
@@ -716,7 +766,12 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
 
         Relation embeddings' entries have to have absolute value 1 (i.e. represent a rotation in complex plane)
         """
-        relation_abs = self.model.relation_embeddings.weight.view(self.factory.num_relations, -1, 2).norm(p=2, dim=-1)
+        relation_abs = (
+            self.model
+                .relation_embeddings(indices=None)
+                .view(self.factory.num_relations, -1, 2)
+                .norm(p=2, dim=-1)
+        )
         assert torch.allclose(relation_abs, torch.ones_like(relation_abs))
 
 
@@ -736,7 +791,7 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
 
 
@@ -770,68 +825,76 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
-    def test_score_hrt(self):
-        """Test interaction function of TransD."""
+    def test_score_hrt_manual(self):
+        """Manually test interaction function of TransD."""
         # entity embeddings
-        weights = torch.tensor([[2., 2.], [4., 4.]])
-        entity_embds = torch.nn.Embedding(2, 2)
-        entity_embds.weight.data.copy_(weights)
-        self.model.entity_embeddings = entity_embds
+        weights = torch.as_tensor(data=[[2., 2.], [4., 4.]], dtype=torch.float)
+        entity_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        entity_embeddings._embeddings.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embeddings
 
-        proj_weights = torch.tensor([[3., 3.], [2., 2.]])
-        entity_proj_embds = torch.nn.Embedding(2, 2)
-        entity_proj_embds.weight.data.copy_(proj_weights)
-        self.model.entity_projections = entity_proj_embds
+        projection_weights = torch.as_tensor(data=[[3., 3.], [2., 2.]], dtype=torch.float)
+        entity_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
+        self.model.entity_projections = entity_projection_embeddings
 
         # relation embeddings
-        rel_weights = torch.tensor([[4.], [4.]])
-        rel_embds = torch.nn.Embedding(2, 1)
-        rel_embds.weight.data.copy_(rel_weights)
-        self.model.relation_embeddings = rel_embds
+        relation_weights = torch.as_tensor(data=[[4.], [4.]], dtype=torch.float)
+        relation_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=1,
+        )
+        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
+        self.model.relation_embeddings = relation_embeddings
 
-        rel_proj_weights = torch.tensor([[5.], [3.]])
-        rel_proj_embds = torch.nn.Embedding(2, 1)
-        rel_proj_embds.weight.data.copy_(rel_proj_weights)
-        self.model.relation_projections = rel_proj_embds
+        relation_projection_weights = torch.as_tensor(data=[[5.], [3.]], dtype=torch.float)
+        relation_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=1,
+        )
+        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
+        self.model.relation_projections = relation_projection_embeddings
 
         # Compute Scores
-        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
+        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertEqual(scores.shape[0], 2)
         self.assertEqual(scores.shape[1], 1)
         first_score = scores[0].item()
-        second_score = scores[1].item()
         self.assertAlmostEqual(first_score, -16, delta=0.01)
-
-        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
-        scores = self.model.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
-        first_score = scores[0].item()
-        second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -16, delta=0.01)
-        # self.assertAlmostEqual(second_score, -16, delta=0.01)
 
         # Use different dimension for relation embedding: relation_dim > entity_dim
         # relation embeddings
-        rel_weights = torch.tensor([[3., 3., 3.], [3., 3., 3.]])
-        rel_embds = torch.nn.Embedding(2, 3)
-        rel_embds.weight.data.copy_(rel_weights)
-        self.model.relation_embeddings = rel_embds
+        relation_weights = torch.as_tensor(data=[[3., 3., 3.], [3., 3., 3.]], dtype=torch.float)
+        relation_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=3,
+        )
+        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
+        self.model.relation_embeddings = relation_embeddings
 
-        rel_proj_weights = torch.tensor([[4., 4., 4.], [4., 4., 4.]])
-        rel_proj_embds = torch.nn.Embedding(2, 3)
-        rel_proj_embds.weight.data.copy_(rel_proj_weights)
-        self.model.relation_projections = rel_proj_embds
+        relation_projection_weights = torch.as_tensor(data=[[4., 4., 4.], [4., 4., 4.]], dtype=torch.float)
+        relation_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=3,
+        )
+        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
+        self.model.relation_projections = relation_projection_embeddings
 
         # Compute Scores
-        batch = torch.tensor([[0, 0, 0]])
+        batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertAlmostEqual(scores.item(), -27, delta=0.01)
 
-        batch = torch.tensor([[0, 0, 0], [0, 0, 0]])
+        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertEqual(scores.shape[0], 2)
         self.assertEqual(scores.shape[1], 1)
@@ -842,29 +905,41 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
 
         # Use different dimension for relation embedding: relation_dim < entity_dim
         # entity embeddings
-        weights = torch.tensor([[1., 1., 1.], [1., 1., 1.]])
-        entity_embds = torch.nn.Embedding(2, 3)
-        entity_embds.weight.data.copy_(weights)
-        self.model.entity_embeddings = entity_embds
+        weights = torch.as_tensor(data=[[1., 1., 1.], [1., 1., 1.]], dtype=torch.float)
+        entity_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=3,
+        )
+        entity_embeddings._embeddings.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embeddings
 
-        proj_weights = torch.tensor([[2., 2., 2.], [2., 2., 2.]])
-        entity_proj_embds = torch.nn.Embedding(2, 3)
-        entity_proj_embds.weight.data.copy_(proj_weights)
-        self.model.entity_projections = entity_proj_embds
+        projection_weights = torch.as_tensor(data=[[2., 2., 2.], [2., 2., 2.]], dtype=torch.float)
+        entity_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=3,
+        )
+        entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
+        self.model.entity_projections = entity_projection_embeddings
 
         # relation embeddings
-        rel_weights = torch.tensor([[3., 3.], [3., 3.]])
-        rel_embds = torch.nn.Embedding(2, 2)
-        rel_embds.weight.data.copy_(rel_weights)
-        self.model.relation_embeddings = rel_embds
+        relation_weights = torch.as_tensor(data=[[3., 3.], [3., 3.]], dtype=torch.float)
+        relation_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
+        self.model.relation_embeddings = relation_embeddings
 
-        rel_proj_weights = torch.tensor([[4., 4.], [4., 4.]])
-        rel_proj_embds = torch.nn.Embedding(2, 2)
-        rel_proj_embds.weight.data.copy_(rel_proj_weights)
-        self.model.relation_projections = rel_proj_embds
+        relation_projection_weights = torch.as_tensor(data=[[4., 4.], [4., 4.]], dtype=torch.float)
+        relation_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
+        self.model.relation_projections = relation_projection_embeddings
 
         # Compute Scores
-        batch = torch.tensor([[0, 0, 0], [0, 0, 0]])
+        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertEqual(scores.shape[0], 2)
         self.assertEqual(scores.shape[1], 1)
@@ -905,7 +980,7 @@ class TestTransE(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings.weight.norm(p=2, dim=-1)
+        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -919,7 +994,7 @@ class TestTransH(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.normal_vector_embeddings.weight.norm(p=2, dim=-1)
+        entity_norms = self.model.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -931,29 +1006,36 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         'relation_dim': 4,
     }
 
-    def test_score_hrt(self):
-        """Test interaction function of TransR."""
+    def test_score_hrt_manual(self):
+        """Manually test interaction function of TransR."""
         # entity embeddings
-        weights = torch.tensor([[2., 2.], [3., 3.]])
-        entity_embds = torch.nn.Embedding(2, 2)
-        entity_embds.weight.data.copy_(weights)
-        self.model.entity_embeddings = entity_embds
-        self.model.embedding_dim = 2
+        weights = torch.as_tensor(data=[[2., 2.], [3., 3.]], dtype=torch.float)
+        entity_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        entity_embeddings._embeddings.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embeddings
 
         # relation embeddings
-        rel_weights = torch.tensor([[4., 4], [5., 5.]])
-        rel_embds = torch.nn.Embedding(2, 2)
-        rel_embds.weight.data.copy_(rel_weights)
-        self.model.relation_embeddings = rel_embds
-        self.model.relation_dim = 2
+        relation_weights = torch.as_tensor(data=[[4., 4], [5., 5.]], dtype=torch.float)
+        relation_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
+        self.model.relation_embeddings = relation_embeddings
 
-        rel_proj_weights = torch.tensor([[5., 5., 6., 6.], [7., 7., 8., 8.]])
-        rel_proj_embds = torch.nn.Embedding(2, 4)
-        rel_proj_embds.weight.data.copy_(rel_proj_weights)
-        self.model.relation_projections = rel_proj_embds
+        relation_projection_weights = torch.as_tensor(data=[[5., 5., 6., 6.], [7., 7., 8., 8.]], dtype=torch.float)
+        relation_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=4,
+        )
+        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
+        self.model.relation_projections = relation_projection_embeddings
 
         # Compute Scores
-        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
+        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertEqual(scores.shape[0], 2)
         self.assertEqual(scores.shape[1], 1)
@@ -967,7 +1049,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb.weight.norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
+            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):
