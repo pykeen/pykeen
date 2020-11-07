@@ -11,7 +11,6 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import split_complex
 
 __all__ = [
     'ComplEx',
@@ -101,6 +100,8 @@ class ComplEx(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_dtype=torch.cfloat,
+            relation_dtype=torch.cfloat,
             # initialize with entity and relation embeddings with standard normal distribution, cf.
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
             entity_initializer=nn.init.normal_,
@@ -128,7 +129,9 @@ class ComplEx(EntityRelationEmbeddingModel):
             The scores.
         """
         # split into real and imaginary part
-        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+        h_re, h_im = h.real, h.imag
+        r_re, r_im = r.real, r.imag
+        t_re, t_im = t.real, t.imag
 
         # ComplEx space bilinear product
         # *: Elementwise multiplication
