@@ -20,7 +20,8 @@ MappedTriples = torch.LongTensor
 EntityMapping = Mapping[str, int]
 RelationMapping = Mapping[str, int]
 
-TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)  # Fixme: TypeVar expects none, or at least two super-classes
+# comment: TypeVar expects none, or at least two super-classes
+TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)
 InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
 Initializer = Callable[[TensorType], TensorType]
 Normalizer = Callable[[TensorType], TensorType]
