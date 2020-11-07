@@ -28,7 +28,7 @@ def xavier_uniform_(tensor, gain: float = 1.):
     :param gain: An optional scaling factor, defaults to 1.0.
     :return: Embedding with weights by the Xavier uniform initializer.
     """
-    bound = gain * 6 / math.sqrt(tensor.shape[1])  # TODO @mberr is that index right?
+    bound = gain * 6 / math.sqrt(tensor.shape[-1])
     torch.nn.init.uniform_(tensor, -bound, bound)
     return tensor
 
@@ -48,6 +48,6 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     :param gain: An optional scaling factor, defaults to 1.0.
     :return: Embedding with weights by the Xavier normal initializer.
     """
-    std = gain * 2 / math.sqrt(tensor.shape[1])  # TODO @mberr is that index right?
+    std = gain * 2 / math.sqrt(tensor.shape[-1])
     torch.nn.init.normal_(tensor, mean=0., std=std)
     return tensor
