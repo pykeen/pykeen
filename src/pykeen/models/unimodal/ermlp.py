@@ -139,9 +139,3 @@ class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
-    def _reset_parameters_(self):  # noqa: D102
-        # The authors do not specify which initialization was used. Hence, we use the pytorch default.
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
-        self.interaction_function.reset_parameters()
