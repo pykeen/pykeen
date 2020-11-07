@@ -827,8 +827,8 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
-    def test_score_hrt(self):
-        """Test interaction function of TransD."""
+    def test_score_hrt_manual(self):
+        """Manually test interaction function of TransD."""
         # entity embeddings
         weights = torch.tensor([[2., 2.], [4., 4.]])
         entity_embds = torch.nn.Embedding(2, 2)
@@ -986,8 +986,8 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         'relation_dim': 4,
     }
 
-    def test_score_hrt(self):
-        """Test interaction function of TransR."""
+    def test_score_hrt_manual(self):
+        """Manually test interaction function of TransR."""
         # entity embeddings
         weights = torch.tensor([[2., 2.], [3., 3.]])
         entity_embds = torch.nn.Embedding(2, 2)
