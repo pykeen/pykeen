@@ -20,7 +20,7 @@ __all__ = [
 
 
 class ComplexInteractionFunction(InteractionFunction):
-    """Interaction function of Complex."""
+    """Interaction function of CompleE."""
 
     def forward(
         self,
