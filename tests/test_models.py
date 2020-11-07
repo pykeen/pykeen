@@ -37,7 +37,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.nn import RepresentationModule
+from pykeen.nn import Embedding, RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
@@ -989,26 +989,35 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     def test_score_hrt_manual(self):
         """Manually test interaction function of TransR."""
         # entity embeddings
-        weights = torch.tensor([[2., 2.], [3., 3.]])
-        entity_embds = torch.nn.Embedding(2, 2)
-        entity_embds.weight.data.copy_(weights)
-        self.model.entity_embeddings = entity_embds
+        weights = torch.as_tensor(data=[[2., 2.], [3., 3.]], dtype=torch.float)
+        entity_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        entity_embeddings._embeddings.weight.data.copy_(weights)
+        self.model.entity_embeddings = entity_embeddings
         self.model.embedding_dim = 2
 
         # relation embeddings
-        rel_weights = torch.tensor([[4., 4], [5., 5.]])
-        rel_embds = torch.nn.Embedding(2, 2)
-        rel_embds.weight.data.copy_(rel_weights)
-        self.model.relation_embeddings = rel_embds
+        relation_weights = torch.as_tensor(data=[[4., 4], [5., 5.]], dtype=torch.float)
+        relation_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=2,
+        )
+        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
+        self.model.relation_embeddings = relation_embeddings
         self.model.relation_dim = 2
 
-        rel_proj_weights = torch.tensor([[5., 5., 6., 6.], [7., 7., 8., 8.]])
-        rel_proj_embds = torch.nn.Embedding(2, 4)
-        rel_proj_embds.weight.data.copy_(rel_proj_weights)
-        self.model.relation_projections = rel_proj_embds
+        relation_projection_weights = torch.as_tensor(data=[[5., 5., 6., 6.], [7., 7., 8., 8.]], dtype=torch.float)
+        relation_projection_embeddings = Embedding(
+            num_embeddings=2,
+            embedding_dim=4,
+        )
+        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
+        self.model.relation_projections = relation_projection_embeddings
 
         # Compute Scores
-        batch = torch.tensor([[0, 0, 0], [0, 0, 1]])
+        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertEqual(scores.shape[0], 2)
         self.assertEqual(scores.shape[1], 1)
