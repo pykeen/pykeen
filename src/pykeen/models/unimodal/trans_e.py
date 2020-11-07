@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import chain_, normalize_
+from ...utils import compose_, normalize_
 
 __all__ = [
     'TransE',
@@ -75,7 +75,7 @@ class TransE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=xavier_uniform_,
-            relation_initializer=chain_(
+            relation_initializer=compose_(
                 xavier_uniform_,
                 functional.normalize,
             ),

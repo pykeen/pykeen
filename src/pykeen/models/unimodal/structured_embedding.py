@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of structured model (SE)."""
+
 import functools
 from typing import Optional
 
@@ -16,7 +17,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import chain_, normalize_
+from ...utils import compose_, normalize_
 
 __all__ = [
     'StructuredEmbedding',
@@ -78,7 +79,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
         # Embeddings
         init_bound = 6 / np.sqrt(self.embedding_dim)
         # Initialise relation embeddings to unit length
-        initializer = chain_(
+        initializer = compose_(
             functools.partial(nn.init.uniform_, a=-init_bound, b=+init_bound),
             normalize_,
         )

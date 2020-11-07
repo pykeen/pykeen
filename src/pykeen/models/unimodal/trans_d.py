@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransD."""
+
 from typing import Optional
 
 import torch

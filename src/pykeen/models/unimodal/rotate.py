@@ -20,13 +20,13 @@ __all__ = [
 ]
 
 
-def _init_phases(x: torch.Tensor) -> torch.Tensor:
-    # random phases between 0 and 2*pi
+def init_phases(x: torch.Tensor) -> torch.Tensor:
+    r"""Generate random phases between 0 and :math:`2\pi`."""
     phases = 2 * np.pi * torch.rand_like(x[..., :x.shape[-1] // 2])
     return torch.cat([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
 
 
-def _complex_normalize(x: torch.Tensor) -> torch.Tensor:
+def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 
     The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
@@ -99,8 +99,8 @@ class RotatE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=xavier_uniform_,
-            relation_initializer=_init_phases,
-            relation_constrainer=_complex_normalize,
+            relation_initializer=init_phases,
+            relation_constrainer=complex_normalize,
         )
         self.real_embedding_dim = embedding_dim
 

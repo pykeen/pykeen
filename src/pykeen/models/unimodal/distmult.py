@@ -13,7 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import chain_, normalize_
+from ...utils import compose_, normalize_
 
 __all__ = [
     'DistMult',
@@ -94,7 +94,7 @@ class DistMult(EntityRelationEmbeddingModel):
             # Constrain entity embeddings to unit length
             entity_constrainer=functional.normalize,
             # relations are initialized to unit length (but not constraint)
-            relation_initializer=chain_(
+            relation_initializer=compose_(
                 nn.init.xavier_uniform_,
                 normalize_,
             ),

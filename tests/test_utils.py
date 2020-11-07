@@ -143,7 +143,10 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
         self.embedding = Embedding(num_embeddings=self.num_embeddings, embedding_dim=self.embedding_dim)
         self.generator = torch.manual_seed(42)
         self.embedding._embeddings.weight.data = torch.rand(
-            self.num_embeddings, self.embedding_dim, generator=self.generator)
+            self.num_embeddings,
+            self.embedding_dim,
+            generator=self.generator,
+        )
 
     def test_no_indices(self):
         """Test getting all embeddings."""

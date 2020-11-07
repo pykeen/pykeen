@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransR."""
-
+from functools import partial
 from typing import Optional
 
 import torch
 import torch.autograd
-from torch import nn
+import torch.nn.init
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
@@ -19,6 +19,16 @@ from ...utils import clamp_norm
 __all__ = [
     'TransR',
 ]
+
+
+def _projection_initializer(
+    x: torch.FloatTensor,
+    num_relations: int,
+    embedding_dim: int,
+    relation_dim: int,
+) -> torch.FloatTensor:
+    """Initialize by Glorot."""
+    return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
 
 class TransR(EntityRelationEmbeddingModel):
@@ -92,17 +102,17 @@ class TransR(EntityRelationEmbeddingModel):
 
         # TODO: Initialize from TransE
 
-        def _projection_initializer(x: torch.FloatTensor) -> torch.FloatTensor:
-            """Initialize by Glorot."""
-            return nn.init.xavier_uniform_(x.view(self.num_relations, self.embedding_dim, self.relation_dim)).view(
-                x.shape)
-
         # embeddings
         self.relation_projections = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim * embedding_dim,
             device=self.device,
-            initializer=_projection_initializer,
+            initializer=partial(
+                _projection_initializer,
+                num_relations=self.num_relations,
+                embedding_dim=self.embedding_dim,
+                relation_dim=self.relation_dim,
+            ),
         )
 
     def _reset_parameters_(self):  # noqa: D102

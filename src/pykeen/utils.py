@@ -6,7 +6,6 @@ import ftplib
 import json
 import logging
 import random
-import warnings
 from io import BytesIO
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
@@ -17,18 +16,18 @@ import torch
 import torch.nn
 from torch.nn import functional
 
-from .nn import Embedding, Initializer
+from .nn import Embedding
 
 __all__ = [
-    "chain_",
+    'compose_',
     'clamp_norm',
+    'clamp_norm_',
     'compact_mapping',
-    'get_embedding',
     'imag_part',
     'invert_mapping',
     'l2_regularization',
     'is_cuda_oom_error',
-    "normalize_",
+    'normalize_',
     'random_non_negative_int',
     'real_part',
     'resolve_device',
@@ -209,7 +208,7 @@ def _flatten_dictionary(
 
 
 def get_embedding_in_canonical_shape(
-    embedding: Union[torch.nn.Embedding, Embedding],
+    embedding: Embedding,
     ind: Optional[torch.LongTensor],
 ) -> torch.FloatTensor:
     """Get embedding in canonical shape.
@@ -261,7 +260,7 @@ def clamp_norm_(
     dim: Union[None, int, Iterable[int]] = None,
     eps: float = 1.0e-08,
 ) -> torch.Tensor:
-    """In-place version of clamp_norm."""
+    """Apply :func:`clamp_norm` in-place."""
     x.data = clamp_norm(x=x.data, maxnorm=maxnorm, p=p, dim=dim, eps=eps)
     return x
 
@@ -271,15 +270,15 @@ def normalize_(
     p: float = 2.,
     dim: int = -1,
 ) -> torch.Tensor:
-    """In-place version of functional.normalize."""
+    """Apply :func:`torch.nn.functional.normalize` in-place."""
     functional.normalize(x.data, p=p, dim=dim, out=x.data)
     return x
 
 
-def chain_(
+def compose_(
     *op_: Callable[[torch.Tensor], torch.Tensor],
 ) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Chain in-place operations."""
+    """Compose in-place operations."""
 
     def chained_op(x: torch.Tensor):
         for op in op_:
@@ -382,24 +381,6 @@ class Result:
         :param s3: A client from :func:`boto3.client`, if already instantiated
         """
         raise NotImplementedError
-
-
-def get_embedding(
-    num_embeddings: int,
-    embedding_dim: int,
-    device: torch.device,
-    initializer: Optional[Initializer] = None,
-    initializer_kwargs: Optional[Mapping[str, Any]] = None,
-) -> Embedding:
-    """Wrap the :func:`Embedding.init_with_device` function for backwards compatibility."""
-    warnings.warn("Please directly use the Embedding.init_with_device().", DeprecationWarning)
-    return Embedding.init_with_device(
-        num_embeddings=num_embeddings,
-        embedding_dim=embedding_dim,
-        device=device,
-        initializer=initializer,
-        initializer_kwargs=initializer_kwargs,
-    )
 
 
 def split_complex(
