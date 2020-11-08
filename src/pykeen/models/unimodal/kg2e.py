@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding_in_canonical_shape
+from ...utils import clamp_norm
 
 __all__ = [
     'KG2E',
@@ -153,13 +153,13 @@ class KG2E(EntityRelationEmbeddingModel):
         :return: shape: (batch_size, num_entities)
         """
         # Get embeddings
-        mu_h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        mu_r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        mu_t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        mu_h = self.entity_embeddings.get_in_canonical_shape(indicies=h_ind)
+        mu_r = self.relation_embeddings.get_in_canonical_shape(indicies=r_ind)
+        mu_t = self.entity_embeddings.get_in_canonical_shape(indicies=t_ind)
 
-        sigma_h = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=h_ind)
-        sigma_r = get_embedding_in_canonical_shape(embedding=self.relation_covariances, ind=r_ind)
-        sigma_t = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=t_ind)
+        sigma_h = self.entity_covariances.get_in_canonical_shape(indicies=h_ind)
+        sigma_r = self.relation_covariances.get_in_canonical_shape(indicies=r_ind)
+        sigma_t = self.entity_covariances.get_in_canonical_shape(indicies=t_ind)
 
         # Compute entity distribution
         mu_e = mu_h - mu_t

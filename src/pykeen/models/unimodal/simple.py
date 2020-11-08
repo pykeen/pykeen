@@ -11,7 +11,6 @@ from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'SimplE',
@@ -114,18 +113,18 @@ class SimplE(EntityRelationEmbeddingModel):
         t_ind: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         # forward model
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indicies=h_ind)
+        r = self.relation_embeddings.get_in_canonical_shape(indicies=r_ind)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indicies=t_ind)
         scores = (h * r * t).sum(dim=-1)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
         # backward model
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indicies=t_ind)
+        r = self.inverse_relation_embeddings.get_in_canonical_shape(indicies=r_ind)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indicies=h_ind)
         scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
 
         # Regularization

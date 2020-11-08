@@ -13,7 +13,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding_in_canonical_shape
+from ...utils import clamp_norm
 
 __all__ = [
     'TransD',
@@ -206,14 +206,14 @@ class TransD(EntityRelationEmbeddingModel):
         :return: The scores, shape: (batch_size, num_entities)
         """
         # Head
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        h_p = get_embedding_in_canonical_shape(embedding=self.entity_projections, ind=h_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indicies=h_ind)
+        h_p = self.entity_projections.get_in_canonical_shape(indicies=h_ind)
 
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        r_p = get_embedding_in_canonical_shape(embedding=self.relation_projections, ind=r_ind)
+        r = self.relation_embeddings.get_in_canonical_shape(indicies=r_ind)
+        r_p = self.relation_projections.get_in_canonical_shape(indicies=r_ind)
 
-        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-        t_p = get_embedding_in_canonical_shape(embedding=self.entity_projections, ind=t_ind)
+        t = self.entity_embeddings.get_in_canonical_shape(indicies=t_ind)
+        t_p = self.entity_projections.get_in_canonical_shape(indicies=t_ind)
 
         return self.interaction_function(h=h, h_p=h_p, r=r, r_p=r_p, t=t, t_p=t_p)
 

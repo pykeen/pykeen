@@ -13,7 +13,6 @@ from pykeen.utils import (
     clamp_norm,
     compact_mapping,
     flatten_dictionary,
-    get_embedding_in_canonical_shape,
     get_until_first_blank,
     l2_regularization,
 )
@@ -150,7 +149,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
 
     def test_no_indices(self):
         """Test getting all embeddings."""
-        emb = get_embedding_in_canonical_shape(embedding=self.embedding, ind=None)
+        emb = self.embedding.get_in_canonical_shape(indicies=None)
 
         # check shape
         assert emb.shape == (1, self.num_embeddings, self.embedding_dim)
@@ -161,7 +160,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
 
     def _test_with_indices(self, ind: torch.Tensor) -> None:
         """Help tests with indices."""
-        emb = get_embedding_in_canonical_shape(embedding=self.embedding, ind=ind)
+        emb = self.embedding.get_in_canonical_shape(indicies=ind)
 
         # check shape
         num_ind = ind.shape[0]

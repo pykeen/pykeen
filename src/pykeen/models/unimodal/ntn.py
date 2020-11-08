@@ -11,7 +11,6 @@ from ..base import EntityEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'NTN',
@@ -141,8 +140,8 @@ class NTN(EntityEmbeddingModel):
         assert r_ind is not None
 
         #: shape: (batch_size, num_entities, d)
-        h_all = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        t_all = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        h_all = self.entity_embeddings.get_in_canonical_shape(indicies=h_ind)
+        t_all = self.entity_embeddings.get_in_canonical_shape(indicies=t_ind)
 
         if slice_size is None:
             return self._interaction_function(h=h_all, t=t_all, r_ind=r_ind)
