@@ -8,7 +8,7 @@ import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -466,16 +466,16 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        self.model_cls.reset_parameters_ = MagicMock(return_value=None)
-        try:
-            self.model_cls(
-                triples_factory=self.factory,
-                embedding_dim=self.embedding_dim,
-                **(self.model_kwargs or {}),
-            )
-        except TypeError as error:
-            assert error.args == ("'NoneType' object is not callable",)
-        self.model.reset_parameters_.assert_called_once()
+        with patch.object(self.model_cls, 'reset_parameters_', return_value=None) as mock_method:
+            try:
+                self.model_cls(
+                    triples_factory=self.factory,
+                    embedding_dim=self.embedding_dim,
+                    **(self.model_kwargs or {}),
+                )
+            except TypeError as error:
+                assert error.args == ("'NoneType' object is not callable",)
+            mock_method.assert_called_once()
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
