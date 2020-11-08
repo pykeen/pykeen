@@ -306,10 +306,11 @@ class Model(nn.Module, ABC):
     def _is_abstract(cls) -> bool:
         return inspect.isabstract(cls)
 
-    def __init_subclass__(cls, **kwargs):  # noqa:D105
+    def __init_subclass__(cls, reset_parameters_post_init: bool = True, **kwargs):  # noqa:D105
         if not cls._is_abstract():
             _track_hyperparameters(cls)
-            _add_post_reset_parameters(cls)
+            if reset_parameters_post_init:
+                _add_post_reset_parameters(cls)
 
     @property
     def can_slice_h(self) -> bool:

@@ -423,7 +423,7 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
-class RGCN(Model):
+class RGCN(Model, reset_parameters_post_init=False):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
     This model uses graph convolutions with relation-specific weights.
