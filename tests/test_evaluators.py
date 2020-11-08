@@ -201,9 +201,9 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         batch = data['batch'].detach().numpy()
         for i, (h, r) in enumerate(batch[:, :2]):
             uniq[int(h), int(r)] = i
-        index = sorted(uniq.values())
-        mask = mask[index]
-        scores = scores[index]
+        indices = sorted(uniq.values())
+        mask = mask[indices]
+        scores = scores[indices]
 
         for field in dataclasses.fields(SklearnMetricResults):
             f = field.metadata['f']

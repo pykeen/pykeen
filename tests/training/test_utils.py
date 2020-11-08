@@ -137,18 +137,18 @@ class BatchCompilationTest(unittest.TestCase):
 
     def test_lazy_compile_random_batches(self):
         """Test method lazy_compile_random_batches."""
-        index = np.arange(self.num_samples)
+        indices = np.arange(self.num_samples)
         input_array = self.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.long)
         targets = []
         for _ in range(self.num_samples):
             targets.append(list(set(self.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.long))))
         target_array = np.asarray(targets)
 
-        def _batch_compiler(batch_index):
-            return input_array[batch_index], target_array[batch_index]
+        def _batch_compiler(batch_indices):
+            return input_array[batch_indices], target_array[batch_indices]
 
         iterator = lazy_compile_random_batches(
-            indices=index,
+            indices=indices,
             batch_size=self.batch_size,
             batch_compiler=_batch_compiler,
         )
