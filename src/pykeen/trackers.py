@@ -89,6 +89,14 @@ class MLFlowResultTracker(ResultTracker):
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
 
+    def set_tags(
+            self,
+            tags: Dict[str, Any],
+            prefix: Optional[str] = None
+    ) -> None:
+        tags = flatten_dictionary(dictionary=tags, prefix=prefix)
+        self.mlflow.set_tags(tags)
+
     def end_run(self) -> None:  # noqa: D102
         self.mlflow.end_run()
 
