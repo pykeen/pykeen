@@ -34,6 +34,14 @@ class ResultTracker:
         :param step: An optional step to attach the metrics to (e.g. the epoch).
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
+        
+    def set_tags(self, tags: Dict[str, Any], prefix: Optional[str] = None) -> None:
+        """
+        Log tags in the result store.
+
+        :param tags: The additional run details which are presented as tags to be logged
+        :param prefix: An optional prefix to prepend to every key in metrics.
+        """
 
     def end_run(self) -> None:
         """End a run.

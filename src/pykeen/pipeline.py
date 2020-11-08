@@ -834,9 +834,11 @@ def pipeline(  # noqa: C901
     if not metadata:
         metadata = {}
     title = metadata.get('title')
+    tags = metadata.get('run_tags', None)
 
     # Start tracking
     result_tracker.start_run(run_name=title)
+    result_tracker.set_tags(tags)
 
     device = resolve_device(device)
 
