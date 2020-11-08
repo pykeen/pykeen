@@ -22,6 +22,7 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
+from pykeen.models import _MODELS
 from pykeen.models.base import (
     EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
@@ -463,10 +464,10 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        self.model.reset_parameters_ = MagicMock(return_value=None)
+        self.model_cls.reset_parameters_ = MagicMock(return_value=None)
         try:
-            self.model.__init__(
-                self.factory,
+            self.model_cls(
+                triples_factory=self.factory,
                 embedding_dim=self.embedding_dim,
                 **(self.model_kwargs or {}),
             )
@@ -1238,3 +1239,17 @@ def test_get_novelty_mask():
     )
     assert mask.shape == query_ids.shape
     assert (mask == exp_novel).all()
+
+
+class TestRandom(unittest.TestCase):
+    """Extra tests."""
+
+    def test_abstract(self):
+        """Test that classes are checked as abstract properly."""
+        self.assertTrue(Model._is_abstract())
+        self.assertTrue(EntityEmbeddingModel._is_abstract())
+        self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
+        for model_cls in _MODELS:
+            if issubclass(model_cls, MultimodalModel):
+                continue
+            self.assertFalse(model_cls._is_abstract(), msg=f'{model_cls.__name__} should not be abstract')

@@ -6,7 +6,7 @@ import functools
 import inspect
 import itertools as itt
 import logging
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
@@ -205,7 +205,7 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
     cls.__init__ = _new_init
 
 
-class Model(nn.Module):
+class Model(nn.Module, ABC):
     """A base module for all of the KGE models."""
 
     #: A dictionary of hyper-parameters to the models that use them
@@ -301,6 +301,15 @@ class Model(nn.Module):
 
         # This allows to store the optimized parameters
         self.automatic_memory_optimization = automatic_memory_optimization
+
+    @classmethod
+    def _is_abstract(cls) -> bool:
+        return inspect.isabstract(cls)
+
+    def __init_subclass__(cls, **kwargs):  # noqa:D105
+        if not cls._is_abstract():
+            _track_hyperparameters(cls)
+            _add_post_reset_parameters(cls)
 
     @property
     def can_slice_h(self) -> bool:
@@ -1076,11 +1085,6 @@ class EntityEmbeddingModel(Model):
         """The entity embedding dimension."""
         return self.entity_embeddings.embedding_dim
 
-    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
-        _track_hyperparameters(cls)
-        if auto_reset_parameters:
-            _add_post_reset_parameters(cls)
-
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
@@ -1172,11 +1176,6 @@ class EntityRelationEmbeddingModel(Model):
     def relation_dim(self):  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
-
-    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
-        _track_hyperparameters(cls)
-        if auto_reset_parameters:
-            _add_post_reset_parameters(cls)
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
