@@ -35,6 +35,14 @@ class ResultTracker:
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
 
+    def set_tags(self, tags: Dict[str, Any], prefix: Optional[str] = None) -> None:
+        """
+        Log tags in the result store.
+
+        :param tags: The additional run details which are presented as tags to be logged
+        :param prefix: An optional prefix to prepend to every key in metrics.
+        """
+
     def end_run(self) -> None:
         """End a run.
 
@@ -92,8 +100,8 @@ class MLFlowResultTracker(ResultTracker):
     def set_tags(
             self,
             tags: Dict[str, Any],
-            prefix: Optional[str] = None
-    ) -> None:
+            prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
         tags = flatten_dictionary(dictionary=tags, prefix=prefix)
         self.mlflow.set_tags(tags)
 
