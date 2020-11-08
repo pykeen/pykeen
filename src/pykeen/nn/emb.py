@@ -170,3 +170,18 @@ class Embedding(RepresentationModule):
         if self.normalizer is not None:
             x = self.normalizer(x)
         return x
+
+    def get_in_canonical_shape(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get embedding in canonical shape.
+
+        :param indices: The indices. If None, return all embeddings.
+
+        :return: shape: (batch_size, num_embeddings, d)
+        """
+        x = self(indices=indices)
+        if indices is None:
+            return x.unsqueeze(dim=0)
+        return x.unsqueeze(dim=1)

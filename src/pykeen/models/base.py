@@ -599,7 +599,7 @@ class Model(nn.Module):
             return scores
 
         '''
-        The PyKEEN package handles _inverse relations_ by adding the number of relations to the index of the
+        The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
         _native relation_.
         Example:
         The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
@@ -776,12 +776,12 @@ class Model(nn.Module):
 
                 # reduce size if necessary
                 if result.shape[0] > k:
-                    scores, ind = scores.topk(k=k, largest=True, sorted=False)
-                    result = result[ind]
+                    scores, indices = scores.topk(k=k, largest=True, sorted=False)
+                    result = result[indices]
 
             # Sort final result
-            scores, ind = torch.sort(scores, descending=True)
-            result = result[ind]
+            scores, indices = torch.sort(scores, descending=True)
+            result = result[indices]
 
         if return_tensors:
             return result, scores

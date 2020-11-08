@@ -11,7 +11,6 @@ from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape
 
 __all__ = [
     'SimplE',
@@ -109,23 +108,23 @@ class SimplE(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor],
-        r_ind: Optional[torch.LongTensor],
-        t_ind: Optional[torch.LongTensor],
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         # forward model
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=t_indices)
         scores = (h * r * t).sum(dim=-1)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
         # backward model
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        r = self.inverse_relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=h_indices)
         scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
 
         # Regularization
@@ -140,10 +139,10 @@ class SimplE(EntityRelationEmbeddingModel):
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None)
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

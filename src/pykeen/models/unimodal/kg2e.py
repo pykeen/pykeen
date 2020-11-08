@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding_in_canonical_shape
+from ...utils import clamp_norm
 
 __all__ = [
     'KG2E',
@@ -139,27 +139,27 @@ class KG2E(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
+        h_indices: Optional[torch.LongTensor] = None,
+        r_indices: Optional[torch.LongTensor] = None,
+        t_indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """
         Compute scores for NTN.
 
-        :param h_ind: shape: (batch_size,)
-        :param r_ind: shape: (batch_size,)
-        :param t_ind: shape: (batch_size,)
+        :param h_indices: shape: (batch_size,)
+        :param r_indices: shape: (batch_size,)
+        :param t_indices: shape: (batch_size,)
 
         :return: shape: (batch_size, num_entities)
         """
         # Get embeddings
-        mu_h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        mu_r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        mu_t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        mu_h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        mu_r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        mu_t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
 
-        sigma_h = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=h_ind)
-        sigma_r = get_embedding_in_canonical_shape(embedding=self.relation_covariances, ind=r_ind)
-        sigma_t = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=t_ind)
+        sigma_h = self.entity_covariances.get_in_canonical_shape(indices=h_indices)
+        sigma_r = self.relation_covariances.get_in_canonical_shape(indices=r_indices)
+        sigma_t = self.entity_covariances.get_in_canonical_shape(indices=t_indices)
 
         # Compute entity distribution
         mu_e = mu_h - mu_t
@@ -167,13 +167,13 @@ class KG2E(EntityRelationEmbeddingModel):
         return self.similarity(mu_e=mu_e, mu_r=mu_r, sigma_e=sigma_e, sigma_r=sigma_r)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1])
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1])
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
 
     @staticmethod
     def expected_likelihood(

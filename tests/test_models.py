@@ -72,6 +72,15 @@ class _CustomRepresentations(RepresentationModule):
         n = self.num_embeddings if indices is None else indices.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, 1)
 
+    def get_in_canonical_shape(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        x = self(indices=indices)
+        if indices is None:
+            return x.unsqueeze(dim=0)
+        return x.unsqueeze(dim=1)
+
 
 class _ModelTestCase:
     """A test case for quickly defining common tests for KGE models."""

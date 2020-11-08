@@ -60,7 +60,7 @@ def inverse_indegree_edge_weights(source: torch.LongTensor, target: torch.LongTe
     """Normalize messages by inverse in-degree.
 
     :param source: shape: (num_edges,)
-            The source indices.
+        The source indices.
     :param target: shape: (num_edges,)
         The target indices.
 
@@ -77,7 +77,7 @@ def inverse_outdegree_edge_weights(source: torch.LongTensor, target: torch.LongT
     """Normalize messages by inverse out-degree.
 
     :param source: shape: (num_edges,)
-            The source indices.
+        The source indices.
     :param target: shape: (num_edges,)
         The target indices.
 
@@ -93,7 +93,7 @@ def symmetric_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -
     """Normalize messages by product of inverse sqrt of in-degree and out-degree.
 
     :param source: shape: (num_edges,)
-            The source indices.
+        The source indices.
     :param target: shape: (num_edges,)
         The target indices.
 
