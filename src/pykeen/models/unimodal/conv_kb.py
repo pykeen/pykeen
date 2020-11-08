@@ -120,9 +120,9 @@ class ConvKB(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.conv.bias)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(index=hrt_batch[:, 0])
-        r = self.relation_embeddings(index=hrt_batch[:, 1])
-        t = self.entity_embeddings(index=hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Output layer regularization
         # In the code base only the weights of the output layer are used for regularization

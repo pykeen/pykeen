@@ -117,9 +117,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(index=hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(index=hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(index=hrt_batch[:, 2]).unsqueeze(dim=1)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -129,9 +129,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(index=hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(index=hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(index=None).unsqueeze(dim=0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -141,9 +141,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(index=None).unsqueeze(dim=0)
-        r = self.relation_embeddings(index=rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(index=rt_batch[:, 1]).unsqueeze(dim=1)
+        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

@@ -22,12 +22,12 @@ class RepresentationModule(nn.Module):
 
     def forward(
         self,
-        index: Optional[torch.LongTensor] = None,
+        indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Get representations for entries in the given index.
 
-        :param index: shape: (m,)
-            The index, or None. If None, return all representations.
+        :param indices: shape: (m,)
+            The indices, or None. If None, return all representations.
 
         :return: shape: (m, d)
             The representations.
@@ -161,27 +161,27 @@ class Embedding(RepresentationModule):
 
     def forward(
         self,
-        index: Optional[torch.LongTensor] = None,
+        indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        if index is None:
+        if indices is None:
             x = self._embeddings.weight
         else:
-            x = self._embeddings(index)
+            x = self._embeddings(indices)
         if self.normalizer is not None:
             x = self.normalizer(x)
         return x
 
     def get_in_canonical_shape(
         self,
-        index: Optional[torch.LongTensor] = None,
+        indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Get embedding in canonical shape.
 
-        :param index: The index of entries to get. If None, return all embeddings.
+        :param indices: The indices. If None, return all embeddings.
 
         :return: shape: (batch_size, num_embeddings, d)
         """
-        x = self(index=index)
-        if index is None:
+        x = self(indices=indices)
+        if indices is None:
             return x.unsqueeze(dim=0)
         return x.unsqueeze(dim=1)

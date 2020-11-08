@@ -149,7 +149,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
 
     def test_no_index(self):
         """Test getting all embeddings."""
-        emb = self.embedding.get_in_canonical_shape(index=None)
+        emb = self.embedding.get_in_canonical_shape(indices=None)
 
         # check shape
         assert emb.shape == (1, self.num_embeddings, self.embedding_dim)
@@ -158,32 +158,32 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
         exp = self.embedding(index=None).view(1, self.num_embeddings, self.embedding_dim)
         assert torch.allclose(emb, exp)
 
-    def _test_with_index(self, index: torch.Tensor) -> None:
+    def _test_with_indices(self, indices: torch.Tensor) -> None:
         """Help tests with index."""
-        emb = self.embedding.get_in_canonical_shape(index=index)
+        emb = self.embedding.get_in_canonical_shape(indices=indices)
 
         # check shape
-        num_ind = index.shape[0]
+        num_ind = indices.shape[0]
         assert emb.shape == (num_ind, 1, self.embedding_dim)
 
         # check values
-        exp = torch.stack([self.embedding(i) for i in index], dim=0).view(num_ind, 1, self.embedding_dim)
+        exp = torch.stack([self.embedding(i) for i in indices], dim=0).view(num_ind, 1, self.embedding_dim)
         assert torch.allclose(emb, exp)
 
-    def test_with_consecutive_index(self):
-        """Test to retrieve all embeddings with consecutive index."""
-        index = torch.arange(self.num_embeddings, dtype=torch.long)
-        self._test_with_index(index=index)
+    def test_with_consecutive_indices(self):
+        """Test to retrieve all embeddings with consecutive indices."""
+        indices = torch.arange(self.num_embeddings, dtype=torch.long)
+        self._test_with_indices(indices=indices)
 
-    def test_with_index_with_duplicates(self):
-        """Test to retrieve embeddings at random positions with duplicate index."""
-        index = torch.randint(
+    def test_with_indices_with_duplicates(self):
+        """Test to retrieve embeddings at random positions with duplicate indices."""
+        indices = torch.randint(
             self.num_embeddings,
             size=(2 * self.num_embeddings,),
             dtype=torch.long,
             generator=self.generator,
         )
-        self._test_with_index(index=index)
+        self._test_with_indices(indices=indices)
 
     def test_compact_mapping(self):
         """Test ``compact_mapping()``."""

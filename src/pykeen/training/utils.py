@@ -46,23 +46,23 @@ def apply_label_smoothing(
 
 
 def lazy_compile_random_batches(
-    index: numpy.ndarray,
+    indices: numpy.ndarray,
     batch_size: int,
     batch_compiler: Callable[[numpy.ndarray], X],
 ) -> Iterable[X]:
     """Compile training batches of given size using random shuffling.
 
-    :param index:
-        The index to training samples. Is modified through shuffling.
+    :param indices:
+        The indices to training samples. Is modified through shuffling.
     :param batch_size:
         The desired batch size.
     :param batch_compiler:
         A callable which takes the index to put into a batch, and returns the batch of elements.
     """
     # Shuffle each epoch
-    numpy.random.shuffle(index)
+    numpy.random.shuffle(indices)
 
     # Lazy-splitting into batches
-    index_batches = split_list_in_batches_iter(index, batch_size=batch_size)
+    index_batches = split_list_in_batches_iter(indices, batch_size=batch_size)
 
     return map(batch_compiler, index_batches)

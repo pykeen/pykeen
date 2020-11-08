@@ -382,7 +382,7 @@ class Model(nn.Module):
         Additionally, the model is set to evaluation mode.
 
         :param triples: shape: (number of triples, 3), dtype: long
-            The index of (head, relation, tail) triples.
+            The indices of (head, relation, tail) triples.
 
         :return: shape: (number of triples, 1), dtype: float
             The score for each triple.
@@ -406,7 +406,7 @@ class Model(nn.Module):
         Additionally, the model is set to evaluation mode.
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
-            The index of (head, relation) pairs.
+            The indices of (head, relation) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
@@ -545,7 +545,7 @@ class Model(nn.Module):
         Additionally, the model is set to evaluation mode.
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
-            The index of (head, tail) pairs.
+            The indices of (head, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
@@ -574,7 +574,7 @@ class Model(nn.Module):
         Additionally, the model is set to evaluation mode.
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
-            The index of (relation, tail) pairs.
+            The indices of (relation, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
@@ -599,7 +599,7 @@ class Model(nn.Module):
             return scores
 
         '''
-        The PyKEEN package handles _inverse relations_ by adding the number of relations to the index of the
+        The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
         _native relation_.
         Example:
         The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
@@ -757,8 +757,8 @@ class Model(nn.Module):
 
                 # get top scores within batch
                 if top_scores.numel() >= k:
-                    top_scores, top_index = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
-                    top_heads, top_tails = top_index // self.num_entities, top_index % self.num_entities
+                    top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
+                    top_heads, top_tails = top_indices // self.num_entities, top_indices % self.num_entities
                 else:
                     top_heads = hs.view(-1, 1).repeat(1, self.num_entities).view(-1)
                     top_tails = torch.arange(self.num_entities, device=hs.device).view(1, -1).repeat(
@@ -776,12 +776,12 @@ class Model(nn.Module):
 
                 # reduce size if necessary
                 if result.shape[0] > k:
-                    scores, index = scores.topk(k=k, largest=True, sorted=False)
-                    result = result[index]
+                    scores, indices = scores.topk(k=k, largest=True, sorted=False)
+                    result = result[indices]
 
             # Sort final result
-            scores, index = torch.sort(scores, descending=True)
-            result = result[index]
+            scores, indices = torch.sort(scores, descending=True)
+            result = result[indices]
 
         if return_tensors:
             return result, scores
@@ -918,7 +918,7 @@ class Model(nn.Module):
         This method takes head, relation and tail of each triple and calculates the corresponding score.
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The index of (head, relation, tail) triples.
+            The indices of (head, relation, tail) triples.
         :raises NotImplementedError:
             If the method was not implemented for this class.
         :return: shape: (batch_size, 1), dtype: float
@@ -932,7 +932,7 @@ class Model(nn.Module):
         This method calculates the score for all possible tails for each (head, relation) pair.
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
-            The index of (head, relation) pairs.
+            The indices of (head, relation) pairs.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -955,7 +955,7 @@ class Model(nn.Module):
         This method calculates the score for all possible heads for each (relation, tail) pair.
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
-            The index of (relation, tail) pairs.
+            The indices of (relation, tail) pairs.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -978,7 +978,7 @@ class Model(nn.Module):
         This method calculates the score for all possible relations for each (head, tail) pair.
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
-            The index of (head, tail) pairs.
+            The indices of (head, tail) pairs.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.

@@ -148,7 +148,7 @@ class BatchCompilationTest(unittest.TestCase):
             return input_array[batch_index], target_array[batch_index]
 
         iterator = lazy_compile_random_batches(
-            index=index,
+            indices=index,
             batch_size=self.batch_size,
             batch_compiler=_batch_compiler,
         )

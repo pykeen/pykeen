@@ -112,17 +112,17 @@ class TransH(EntityRelationEmbeddingModel):
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(
-            self.entity_embeddings(index=None),
-            self.normal_vector_embeddings(index=None),  # FIXME
-            self.relation_embeddings(index=None),
+            self.entity_embeddings(indices=None),
+            self.normal_vector_embeddings(indices=None),  # FIXME
+            self.relation_embeddings(indices=None),
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(index=hrt_batch[:, 0])
-        d_r = self.relation_embeddings(index=hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings(index=hrt_batch[:, 1])
-        t = self.entity_embeddings(index=hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        w_r = self.normal_vector_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -135,10 +135,10 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(index=hr_batch[:, 0])
-        d_r = self.relation_embeddings(index=hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings(index=hr_batch[:, 1])
-        t = self.entity_embeddings(index=None)
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        d_r = self.relation_embeddings(indices=hr_batch[:, 1])
+        w_r = self.normal_vector_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None)
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -151,11 +151,11 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(index=None)
+        h = self.entity_embeddings(indices=None)
         rel_id = rt_batch[:, 0]
-        d_r = self.relation_embeddings(index=rel_id)
-        w_r = self.normal_vector_embeddings(index=rel_id)
-        t = self.entity_embeddings(index=rt_batch[:, 1])
+        d_r = self.relation_embeddings(indices=rel_id)
+        w_r = self.normal_vector_embeddings(indices=rel_id)
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Project to hyperplane
         ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]

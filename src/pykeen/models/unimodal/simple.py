@@ -108,23 +108,23 @@ class SimplE(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_index: Optional[torch.LongTensor],
-        r_index: Optional[torch.LongTensor],
-        t_index: Optional[torch.LongTensor],
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         # forward model
-        h = self.entity_embeddings.get_in_canonical_shape(index=h_index)
-        r = self.relation_embeddings.get_in_canonical_shape(index=r_index)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(index=t_index)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=t_indices)
         scores = (h * r * t).sum(dim=-1)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
         # backward model
-        h = self.entity_embeddings.get_in_canonical_shape(index=t_index)
-        r = self.inverse_relation_embeddings.get_in_canonical_shape(index=r_index)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(index=h_index)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        r = self.inverse_relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=h_indices)
         scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
 
         # Regularization
@@ -139,10 +139,10 @@ class SimplE(EntityRelationEmbeddingModel):
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_index=hrt_batch[:, 0], r_index=hrt_batch[:, 1], t_index=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_index=hr_batch[:, 0], r_index=hr_batch[:, 1], t_index=None)
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_index=None, r_index=rt_batch[:, 0], t_index=rt_batch[:, 1])
+        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

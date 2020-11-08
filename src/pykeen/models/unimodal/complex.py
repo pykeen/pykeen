@@ -145,9 +145,9 @@ class ComplEx(EntityRelationEmbeddingModel):
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # TODO: Where are score_h / score_t?
         # get embeddings
-        h = self.entity_embeddings(index=hrt_batch[:, 0])
-        r = self.relation_embeddings(index=hrt_batch[:, 1])
-        t = self.entity_embeddings(index=hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
