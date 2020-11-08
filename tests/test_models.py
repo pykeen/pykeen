@@ -302,7 +302,9 @@ class _ModelTestCase:
     @property
     def cli_extras(self):
         kwargs = self.model_kwargs or {}
-        extras = []
+        extras = [
+            '--silent',
+        ]
         for k, v in kwargs.items():
             extras.append('--' + k.replace('_', '-'))
             extras.append(str(v))
