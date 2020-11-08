@@ -24,7 +24,7 @@ class RepresentationModule(nn.Module):
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
-        """Get representations for entries in the given index.
+        """Get representations for indices.
 
         :param indices: shape: (m,)
             The indices, or None. If None, return all representations.

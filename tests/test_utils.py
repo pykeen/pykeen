@@ -147,7 +147,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
             generator=self.generator,
         )
 
-    def test_no_index(self):
+    def test_no_indices(self):
         """Test getting all embeddings."""
         emb = self.embedding.get_in_canonical_shape(indices=None)
 
@@ -155,7 +155,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
         assert emb.shape == (1, self.num_embeddings, self.embedding_dim)
 
         # check values
-        exp = self.embedding(index=None).view(1, self.num_embeddings, self.embedding_dim)
+        exp = self.embedding(indices=None).view(1, self.num_embeddings, self.embedding_dim)
         assert torch.allclose(emb, exp)
 
     def _test_with_indices(self, indices: torch.Tensor) -> None:

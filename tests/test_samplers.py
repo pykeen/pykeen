@@ -54,8 +54,8 @@ class _NegativeSamplingTestCase:
             num_negs_per_pos=self.num_negs_per_pos,
         )
         random = numpy.random.RandomState(seed=self.seed)
-        batch_index = random.randint(low=0, high=self.slcwa_instances.num_instances, size=(self.batch_size,))
-        self.positive_batch = self.slcwa_instances.mapped_triples[batch_index]
+        batch_indices = random.randint(low=0, high=self.slcwa_instances.num_instances, size=(self.batch_size,))
+        self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
 
     def test_sample(self) -> None:
         # Generate negative sample
@@ -136,10 +136,10 @@ class GraphSamplerTest(unittest.TestCase):
         """Test drawing samples from GraphSampler."""
         for e in range(self.num_epochs):
             # sample a batch
-            batch_index = []
+            batch_indices = []
             for j in self.graph_sampler:
-                batch_index.append(j)
-            batch = torch.stack(batch_index)
+                batch_indices.append(j)
+            batch = torch.stack(batch_indices)
 
             # check shape
             assert batch.shape == (self.num_samples,)

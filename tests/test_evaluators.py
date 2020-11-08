@@ -80,12 +80,12 @@ class _AbstractEvaluatorTests:
 
             # shape: (batch_size, num_triples)
             triple_mask = (triples[None, :, start_col:stop_col] == hrt_batch[:, None, start_col:stop_col]).all(dim=-1)
-            batch_index, triple_index = triple_mask.nonzero(as_tuple=True)
-            entity_index = triples[triple_index, sel_col]
+            batch_indices, triple_indices = triple_mask.nonzero(as_tuple=True)
+            entity_indices = triples[triple_indices, sel_col]
 
             # shape: (batch_size, num_entities)
             mask = torch.zeros_like(scores, dtype=torch.bool)
-            mask[batch_index, entity_index] = True
+            mask[batch_indices, entity_indices] = True
         else:
             mask = None
 

@@ -340,7 +340,7 @@ def create_sparse_positive_filter_(
     relation_filter: torch.BoolTensor = None,
     filter_col: int = 0,
 ) -> Tuple[torch.LongTensor, torch.BoolTensor]:
-    """Compute the index of all positives.
+    """Compute the indices of all positives.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
 

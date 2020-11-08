@@ -57,7 +57,7 @@ def lazy_compile_random_batches(
     :param batch_size:
         The desired batch size.
     :param batch_compiler:
-        A callable which takes the index to put into a batch, and returns the batch of elements.
+        A callable which takes the indices to put into a batch, and returns the batch of elements.
     """
     # Shuffle each epoch
     numpy.random.shuffle(indices)
