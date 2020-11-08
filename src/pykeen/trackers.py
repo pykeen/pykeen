@@ -101,14 +101,7 @@ class MLFlowResultTracker(ResultTracker):
             self,
             tags: Dict[str, Any],
             prefix: Optional[str] = None,
-    ) -> None:
-        """
-        Log tags in the mlflow tracking store
-
-        :param tags: The additional run details which are presented as tags to be logged
-        :param prefix: An optional prefix to prepend to every key in metrics.
-        :return:
-        """
+    ) -> None: # noqa: D102
         tags = flatten_dictionary(dictionary=tags, prefix=prefix)
         self.mlflow.set_tags(tags)
 
