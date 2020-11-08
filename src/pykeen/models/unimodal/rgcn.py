@@ -423,7 +423,7 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
-class RGCN(Model, reset_parameters_post_init=False):
+class RGCN(Model):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
     This model uses graph convolutions with relation-specific weights.
@@ -539,10 +539,6 @@ class RGCN(Model, reset_parameters_post_init=False):
         )
         # TODO: Dummy
         self.decoder = Decoder()
-
-        # Finalize initialization, needs to be done manually instead of with
-        # a post-init hook because this model is very special :)
-        self.reset_parameters_()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
