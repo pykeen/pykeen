@@ -34,15 +34,6 @@ class ResultTracker:
         :param step: An optional step to attach the metrics to (e.g. the epoch).
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
-
-    def set_tags(self, tags: Dict[str, Any], prefix: Optional[str] = None) -> None:
-        """
-        Log tags in the result store.
-
-        :param tags: The additional run details which are presented as tags to be logged
-        :param prefix: An optional prefix to prepend to every key in metrics.
-        """
-
     def end_run(self) -> None:
         """End a run.
 
@@ -58,6 +49,7 @@ class MLFlowResultTracker(ResultTracker):
         tracking_uri: Optional[str] = None,
         experiment_id: Optional[int] = None,
         experiment_name: Optional[str] = None,
+        tags: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize result tracking via MLFlow.
@@ -70,9 +62,12 @@ class MLFlowResultTracker(ResultTracker):
         :param experiment_name:
             The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
             create an experiment of the given name.
+        :param tags:
+            The additional run details which are presented as tags to be logged
         """
         import mlflow as _mlflow
         self.mlflow = _mlflow
+        self.__tags = dict()
 
         self.mlflow.set_tracking_uri(tracking_uri)
         if experiment_id is not None:
@@ -80,9 +75,13 @@ class MLFlowResultTracker(ResultTracker):
             experiment_name = experiment.name
         if experiment_name is not None:
             self.mlflow.set_experiment(experiment_name)
+        if tags is not None:
+            self.__tags = tags
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
+        if len(self.__tags):
+            self.mlflow.set_tags(tags=self.__tags)
 
     def log_metrics(
         self,
@@ -96,14 +95,6 @@ class MLFlowResultTracker(ResultTracker):
     def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
-
-    def set_tags(
-            self,
-            tags: Dict[str, Any],
-            prefix: Optional[str] = None,
-    ) -> None:  # noqa: D102
-        tags = flatten_dictionary(dictionary=tags, prefix=prefix)
-        self.mlflow.set_tags(tags)
 
     def end_run(self) -> None:  # noqa: D102
         self.mlflow.end_run()
