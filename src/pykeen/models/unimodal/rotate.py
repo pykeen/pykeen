@@ -148,9 +148,9 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(index=hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(index=hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(index=hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
@@ -162,11 +162,11 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(index=hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(index=hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # Rank against all entities
-        t = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(index=None).view(1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
@@ -178,8 +178,8 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
+        r = self.relation_embeddings(index=rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
+        t = self.entity_embeddings(index=rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
 
         # r expresses a rotation in complex plane.
         # The inverse rotation is expressed by the complex conjugate of r.
@@ -189,7 +189,7 @@ class RotatE(EntityRelationEmbeddingModel):
         r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
 
         # Rank against all entities
-        h = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
+        h = self.entity_embeddings(index=None).view(1, -1, self.real_embedding_dim, 2)
 
         # Compute scores
         scores = self.interaction_function(h=t, r=r_inv, t=h)

@@ -340,7 +340,7 @@ def create_sparse_positive_filter_(
     relation_filter: torch.BoolTensor = None,
     filter_col: int = 0,
 ) -> Tuple[torch.LongTensor, torch.BoolTensor]:
-    """Compute indices of all positives.
+    """Compute the index of all positives.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
 
@@ -360,7 +360,7 @@ def create_sparse_positive_filter_(
 
     :return:
         - positives, shape: (2, m)
-            The indices of positives in format [(batch_index, entity_id)].
+            The index of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
     """
     if filter_col not in {0, 2}:
@@ -393,7 +393,7 @@ def create_dense_positive_mask_(
     :param zero_tensor: shape: (batch_size, num_entities)
         A tensor of zeros of suitable shape.
     :param filter_batch: shape: (m, 2)
-        The indices of all positives in format (batch_index, entity_id)
+        The index of all positives in format (batch_index, entity_id)
     :return:
         The dense positive mask with x[b, i] = 1 iff (b, i) in filter_batch.
     """
@@ -411,7 +411,7 @@ def filter_scores_(
     :param scores: shape: (batch_size, num_entities)
         The scores for all corrupted triples (including the currently considered true triple). Are modified *in-place*.
     :param filter_batch: (m, 2)
-        The indices of all positives.
+        The index of all positives.
 
     :return:
         A reference to the scores, which have been updated in-place.

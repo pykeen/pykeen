@@ -142,9 +142,9 @@ class DistMult(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
+        h = self.entity_embeddings(index=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        r = self.relation_embeddings(index=hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(index=None).view(1, -1, self.embedding_dim)
 
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)
@@ -156,9 +156,9 @@ class DistMult(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(index=None).view(1, -1, self.embedding_dim)
+        r = self.relation_embeddings(index=rt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(index=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
 
         # Rank against all entities
         scores = self.interaction_function(h=h, r=r, t=t)

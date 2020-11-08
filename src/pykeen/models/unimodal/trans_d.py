@@ -189,39 +189,39 @@ class TransD(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
+        h_index: Optional[torch.LongTensor] = None,
+        r_index: Optional[torch.LongTensor] = None,
+        t_index: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """
         Evaluate the interaction function.
 
-        :param h_ind: shape: (batch_size,)
-            The indices for head entities. If None, score against all.
-        :param r_ind: shape: (batch_size,)
-            The indices for relations. If None, score against all.
-        :param t_ind: shape: (batch_size,)
-            The indices for tail entities. If None, score against all.
+        :param h_index: shape: (batch_size,)
+            The index of head entities. If None, score against all.
+        :param r_index: shape: (batch_size,)
+            The index of relations. If None, score against all.
+        :param t_index: shape: (batch_size,)
+            The index of tail entities. If None, score against all.
 
         :return: The scores, shape: (batch_size, num_entities)
         """
         # Head
-        h = self.entity_embeddings.get_in_canonical_shape(indicies=h_ind)
-        h_p = self.entity_projections.get_in_canonical_shape(indicies=h_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(index=h_index)
+        h_p = self.entity_projections.get_in_canonical_shape(index=h_index)
 
-        r = self.relation_embeddings.get_in_canonical_shape(indicies=r_ind)
-        r_p = self.relation_projections.get_in_canonical_shape(indicies=r_ind)
+        r = self.relation_embeddings.get_in_canonical_shape(index=r_index)
+        r_p = self.relation_projections.get_in_canonical_shape(index=r_index)
 
-        t = self.entity_embeddings.get_in_canonical_shape(indicies=t_ind)
-        t_p = self.entity_projections.get_in_canonical_shape(indicies=t_ind)
+        t = self.entity_embeddings.get_in_canonical_shape(index=t_index)
+        t_p = self.entity_projections.get_in_canonical_shape(index=t_index)
 
         return self.interaction_function(h=h, h_p=h_p, r=r, r_p=r_p, t=t, t_p=t_p)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2])
+        return self._score(h_index=hrt_batch[:, 0], r_index=hrt_batch[:, 1], t_index=hrt_batch[:, 2])
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None)
+        return self._score(h_index=hr_batch[:, 0], r_index=hr_batch[:, 1], t_index=None)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(h_index=None, r_index=rt_batch[:, 0], t_index=rt_batch[:, 1])

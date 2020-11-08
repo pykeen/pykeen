@@ -68,9 +68,18 @@ class _CustomRepresentations(RepresentationModule):
         self.embedding_dim = embedding_dim
         self.x = nn.Parameter(torch.rand(embedding_dim))
 
-    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        n = self.num_embeddings if indices is None else indices.shape[0]
+    def forward(self, index: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
+        n = self.num_embeddings if index is None else index.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, 1)
+
+    def get_in_canonical_shape(
+        self,
+        index: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        x = self(index=index)
+        if index is None:
+            return x.unsqueeze(dim=0)
+        return x.unsqueeze(dim=1)
 
 
 class _ModelTestCase:
@@ -282,7 +291,7 @@ class _ModelTestCase:
 
         def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
             """Test whether two embeddings are equal."""
-            return (a(indices=None) == b(indices=None)).all()
+            return (a(index=None) == b(index=None)).all()
 
         if isinstance(original_model, EntityEmbeddingModel):
             assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
@@ -558,7 +567,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.model.entity_embeddings(index=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -640,7 +649,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        assert all_in_bounds(self.model.entity_embeddings(index=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
 
 class _TestKG2E(_ModelTestCase):
@@ -655,9 +664,9 @@ class _TestKG2E(_ModelTestCase):
         * Covariances have to have values between c_min and c_max
         """
         for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(embedding(index=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
         for cov in (self.model.entity_covariances, self.model.relation_covariances):
-            assert all_in_bounds(cov(indices=None), low=self.model.c_min, high=self.model.c_max)
+            assert all_in_bounds(cov(index=None), low=self.model.c_min, high=self.model.c_max)
 
 
 class TestKG2EWithKL(_TestKG2E, unittest.TestCase):
@@ -768,7 +777,7 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
         """
         relation_abs = (
             self.model
-                .relation_embeddings(indices=None)
+                .relation_embeddings(index=None)
                 .view(self.factory.num_relations, -1, 2)
                 .norm(p=2, dim=-1)
         )
@@ -791,7 +800,7 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        norms = self.model.entity_embeddings(index=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
 
 
@@ -825,7 +834,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(emb(index=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
     def test_score_hrt_manual(self):
         """Manually test interaction function of TransD."""
@@ -980,7 +989,7 @@ class TestTransE(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.model.entity_embeddings(index=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -994,7 +1003,7 @@ class TestTransH(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.model.normal_vector_embeddings(index=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -1049,7 +1058,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
+            assert all_in_bounds(emb(index=None).norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
 
 
 class TestTuckEr(_ModelTestCase, unittest.TestCase):

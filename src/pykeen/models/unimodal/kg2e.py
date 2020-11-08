@@ -139,27 +139,27 @@ class KG2E(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
+        h_index: Optional[torch.LongTensor] = None,
+        r_index: Optional[torch.LongTensor] = None,
+        t_index: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """
         Compute scores for NTN.
 
-        :param h_ind: shape: (batch_size,)
-        :param r_ind: shape: (batch_size,)
-        :param t_ind: shape: (batch_size,)
+        :param h_index: shape: (batch_size,)
+        :param r_index: shape: (batch_size,)
+        :param t_index: shape: (batch_size,)
 
         :return: shape: (batch_size, num_entities)
         """
         # Get embeddings
-        mu_h = self.entity_embeddings.get_in_canonical_shape(indicies=h_ind)
-        mu_r = self.relation_embeddings.get_in_canonical_shape(indicies=r_ind)
-        mu_t = self.entity_embeddings.get_in_canonical_shape(indicies=t_ind)
+        mu_h = self.entity_embeddings.get_in_canonical_shape(index=h_index)
+        mu_r = self.relation_embeddings.get_in_canonical_shape(index=r_index)
+        mu_t = self.entity_embeddings.get_in_canonical_shape(index=t_index)
 
-        sigma_h = self.entity_covariances.get_in_canonical_shape(indicies=h_ind)
-        sigma_r = self.relation_covariances.get_in_canonical_shape(indicies=r_ind)
-        sigma_t = self.entity_covariances.get_in_canonical_shape(indicies=t_ind)
+        sigma_h = self.entity_covariances.get_in_canonical_shape(index=h_index)
+        sigma_r = self.relation_covariances.get_in_canonical_shape(index=r_index)
+        sigma_t = self.entity_covariances.get_in_canonical_shape(index=t_index)
 
         # Compute entity distribution
         mu_e = mu_h - mu_t
@@ -167,13 +167,13 @@ class KG2E(EntityRelationEmbeddingModel):
         return self.similarity(mu_e=mu_e, mu_r=mu_r, sigma_e=sigma_e, sigma_r=sigma_r)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_index=hrt_batch[:, 0], r_index=hrt_batch[:, 1], t_index=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1])
+        return self._score(h_index=hr_batch[:, 0], r_index=hr_batch[:, 1])
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(r_index=rt_batch[:, 0], t_index=rt_batch[:, 1])
 
     @staticmethod
     def expected_likelihood(

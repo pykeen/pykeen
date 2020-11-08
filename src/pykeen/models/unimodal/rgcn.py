@@ -60,9 +60,9 @@ def inverse_indegree_edge_weights(source: torch.LongTensor, target: torch.LongTe
     """Normalize messages by inverse in-degree.
 
     :param source: shape: (num_edges,)
-            The source indices.
+        The source index.
     :param target: shape: (num_edges,)
-        The target indices.
+        The target index.
 
     :return: shape: (num_edges,)
          The edge weights.
@@ -77,9 +77,9 @@ def inverse_outdegree_edge_weights(source: torch.LongTensor, target: torch.LongT
     """Normalize messages by inverse out-degree.
 
     :param source: shape: (num_edges,)
-            The source indices.
+        The source index.
     :param target: shape: (num_edges,)
-        The target indices.
+        The target index.
 
     :return: shape: (num_edges,)
          The edge weights.
@@ -93,9 +93,9 @@ def symmetric_edge_weights(source: torch.LongTensor, target: torch.LongTensor) -
     """Normalize messages by product of inverse sqrt of in-degree and out-degree.
 
     :param source: shape: (num_edges,)
-            The source indices.
+        The source index.
     :param target: shape: (num_edges,)
-        The target indices.
+        The target index.
 
     :return: shape: (num_edges,)
          The edge weights.
@@ -279,15 +279,15 @@ class RGCNRepresentations(RepresentationModule):
 
     def forward(
         self,
-        indices: Optional[torch.LongTensor] = None,
+        index: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         # use buffered messages if applicable
-        if indices is None and self.enriched_embeddings is not None:
+        if index is None and self.enriched_embeddings is not None:
             return self.enriched_embeddings
 
         # Bind fields
         # shape: (num_entities, embedding_dim)
-        x = self.base_embeddings(indices=None)
+        x = self.base_embeddings(index=None)
         sources = self.sources
         targets = self.targets
         edge_types = self.edge_types
@@ -321,7 +321,7 @@ class RGCNRepresentations(RepresentationModule):
                 if not mask.any():
                     continue
 
-                # Get source and target node indices
+                # Get source and target node index
                 sources_r = sources[mask]
                 targets_r = targets[mask]
 
@@ -368,10 +368,10 @@ class RGCNRepresentations(RepresentationModule):
 
             x = new_x
 
-        if indices is None and self.buffer_messages:
+        if index is None and self.buffer_messages:
             self.enriched_embeddings = x
-        if indices is not None:
-            x = x[indices]
+        if index is not None:
+            x = x[index]
 
         return x
 
@@ -555,7 +555,7 @@ class RGCN(Model):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
-        h = self.entity_representations(indices=hrt_batch[:, 0])
-        t = self.entity_representations(indices=hrt_batch[:, 2])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        h = self.entity_representations(index=hrt_batch[:, 0])
+        t = self.entity_representations(index=hrt_batch[:, 2])
+        r = self.relation_embeddings(index=hrt_batch[:, 1])
         return self.decoder(h, r, t).unsqueeze(dim=-1)

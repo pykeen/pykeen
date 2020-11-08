@@ -89,9 +89,9 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
+        h = self.entity_embeddings(index=hrt_batch[:, 0])
+        r = self.relation_embeddings(index=hrt_batch[:, 1])
+        t = self.entity_embeddings(index=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -104,9 +104,9 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
+        h = self.entity_embeddings(index=hr_batch[:, 0])
+        r = self.relation_embeddings(index=hr_batch[:, 1])
+        t = self.entity_embeddings(index=None)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -130,9 +130,9 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
+        h = self.entity_embeddings(index=None)
+        r = self.relation_embeddings(index=rt_batch[:, 0])
+        t = self.entity_embeddings(index=rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
