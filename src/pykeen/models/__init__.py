@@ -67,8 +67,8 @@ __all__ = [
 
 def _concrete_subclasses(cls):
     for subcls in cls.__subclasses__():
-        if not inspect.isabstract(cls):
-            yield cls
+        if not inspect.isabstract(subcls):
+            yield subcls
         yield from _concrete_subclasses(subcls)
 
 
