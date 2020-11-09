@@ -11,6 +11,8 @@ by default.
 Pipeline Example
 ----------------
 This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` function.
+Minimally, the `tracking_uri` and `experiment_name` are required in the
+`result_tracker_kwargs`.
 
 .. code-block:: python
 
@@ -80,6 +82,14 @@ different sub-experiments together using the ``experiment_id`` keyword argument 
             experiment_id=4,
         ),
     )
+
+Adding Tags
+-----------
+What are tags?
+
+Why should you use tags?
+
+Runnable code example using tags.
 
 Additional documentation of the valid keyword arguments can be found
 under :class:`pykeen.trackers.MLFlowResultTracker`.
