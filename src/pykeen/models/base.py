@@ -1274,6 +1274,29 @@ class InteractionFunction(nn.Module):
             x = x.squeeze(dim=dim)
         return x
 
+    def _check_shape(
+        self,
+        *x: Union[str, torch.Tensor],
+    ) -> bool:
+        assert len(x) % 2 == 0
+        tensors = x[::2]
+        shapes = x[1::2]
+        assert all(torch.is_tensor(t) for t in tensors)
+        assert all(isinstance(s, str) for s in shapes)
+        dims = dict()
+        errors = []
+        for tensor, shape in zip(tensors, shapes):
+            if tensor.ndimension() != len(shape):
+                errors.append(f"Invalid number of dimensions: {tensor.shape} vs. {shape}")
+                continue
+            for dim, name in zip(tensor.shape, shape):
+                exp_dim = dims.get(name)
+                if exp_dim is not None and exp_dim != dim:
+                    errors.append(f"{name}: {dim} vs. {exp_dim}")
+        if len(errors) > 0:
+            raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
+        return True
+
     def score_hrt(
         self,
         h: torch.FloatTensor,
@@ -1296,6 +1319,9 @@ class InteractionFunction(nn.Module):
         :return: shape: (batch_size, 1)
             The scores.
         """
+        # check shape
+        assert self._check_shape(h, "be", r, "br", t, "be")
+
         # prepare input to generic score function
         h, r, t = self._add_dim(h, r, t, dim=self.NUM_DIM)
 
@@ -1327,6 +1353,9 @@ class InteractionFunction(nn.Module):
         :return: shape: (batch_size, num_entities)
             The scores.
         """
+        # check shape
+        assert self._check_shape(all_entities, "ne", r, "br", t, "be")
+
         # TODO: What about unsqueezing for additional e.g. head arguments
         # prepare input to generic score function
         r, t = self._add_dim(r, t, dim=self.NUM_DIM)
@@ -1360,6 +1389,9 @@ class InteractionFunction(nn.Module):
         :return: shape: (batch_size, num_entities)
             The scores.
         """
+        # check shape
+        assert self._check_shape(all_relations, "nr", h, "be", t, "be")
+
         # prepare input to generic score function
         h, t = self._add_dim(h, t, dim=self.NUM_DIM)
         r = self._add_dim(all_relations, dim=self.BATCH_DIM)
@@ -1392,6 +1424,9 @@ class InteractionFunction(nn.Module):
         :return: shape: (batch_size, num_entities)
             The scores.
         """
+        # check shape
+        assert self._check_shape(all_entities, "ne", r, "br", h, "be")
+
         # prepare input to generic score function
         h, r = self._add_dim(h, r, dim=self.NUM_DIM)
         t = self._add_dim(all_entities, dim=self.BATCH_DIM)
