@@ -1583,31 +1583,31 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
+        h_indices: Optional[torch.LongTensor] = None,
+        r_indices: Optional[torch.LongTensor] = None,
+        t_indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Evaluate the given triples.
 
-        :param h_ind: shape: (batch_size,)
+        :param h_indices: shape: (batch_size,)
             The indices for head entities. If None, score against all.
-        :param r_ind: shape: (batch_size,)
+        :param r_indices: shape: (batch_size,)
             The indices for relations. If None, score against all.
-        :param t_ind: shape: (batch_size,)
+        :param t_indices: shape: (batch_size,)
             The indices for tail entities. If None, score against all.
 
         :return: The scores, shape: (batch_size, num_entities)
         """
-        return self.index_function(model=self, h_ind=h_ind, r_ind=r_ind, t_ind=t_ind)
+        return self.index_function(model=self, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None).view(-1, self.num_entities)
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None).view(-1, self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
+        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1]).view(-1, self.num_entities)
 
     # TODO
     # def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
