@@ -9,9 +9,9 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 import inspect
 from typing import Mapping, Set, Type, Union
 
-from .base import (
-    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel,
-    SimpleVectorEntityRelationEmbeddingModel, GeneralVectorEntityRelationEmbeddingModel
+from .base import (  # noqa:F401
+    EntityEmbeddingModel, EntityRelationEmbeddingModel, GeneralVectorEntityRelationEmbeddingModel, Model,
+    MultimodalModel, SimpleVectorEntityRelationEmbeddingModel,
 )
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
