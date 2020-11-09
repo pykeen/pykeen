@@ -1516,6 +1516,7 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         triples_factory: TriplesFactory,
         index_function: IndexFunction,
         embedding_dim: int = 200,
+        relation_dim: Optional[int] = None,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -1557,6 +1558,7 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
@@ -1622,6 +1624,7 @@ class SimpleVectorEntityRelationEmbeddingModel(GeneralVectorEntityRelationEmbedd
         triples_factory: TriplesFactory,
         interaction_function: InteractionFunction,
         embedding_dim: int = 200,
+        relation_dim: Optional[int] = None,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: Optional[str] = None,
@@ -1665,6 +1668,7 @@ class SimpleVectorEntityRelationEmbeddingModel(GeneralVectorEntityRelationEmbedd
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
