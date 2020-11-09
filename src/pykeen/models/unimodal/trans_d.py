@@ -123,13 +123,13 @@ class TransDIndexFunction(IndexFunction):
         t_indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         h = model.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        h_p = model.entity_projections.get_in_canonical_shape(indices=h_indices)
+        h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
 
         r = model.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        r_p = model.relation_projections.get_in_canonical_shape(indices=r_indices)
+        r_p = self.relation_projections.get_in_canonical_shape(indices=r_indices)
 
         t = model.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        t_p = model.entity_projections.get_in_canonical_shape(indices=t_indices)
+        t_p = self.entity_projections.get_in_canonical_shape(indices=t_indices)
 
         # Project entities
         h_bot = _project_entity(e=h, e_p=h_p, r=r, r_p=r_p)
