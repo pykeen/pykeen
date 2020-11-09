@@ -7,13 +7,14 @@ from typing import Optional
 import torch
 import torch.autograd
 
-from ..base import EntityRelationEmbeddingModel
+from .. import Model
+from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction, InteractionFunction
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm
+from ...utils import DeviceHint, clamp_norm, resolve_device
 
 __all__ = [
     'TransD',
@@ -67,7 +68,76 @@ def _project_entity(
     return e_bot
 
 
-class TransD(EntityRelationEmbeddingModel):
+class TransDInteractionFunction(InteractionFunction):
+    def __init__(self, p: int = 2, power: int = 2):
+        # Very similar to TransE, could be generalized
+        super().__init__()
+        self.p = p
+        self.power = power
+
+    def forward(self, h: torch.FloatTensor, r: torch.FloatTensor, t: torch.FloatTensor) -> torch.FloatTensor:
+        return -torch.norm(h + r - t, dim=-1, p=self.p) ** self.power
+
+
+class TransDIndexFunction(IndexFunction):
+    """The index-based interaction function for TransD."""
+
+    def __init__(
+        self,
+        num_entities: int,
+        num_relations: int,
+        embedding_dim: int,
+        relation_dim: int,
+        device: DeviceHint,
+        interaction_function: Optional[InteractionFunction] = None,
+    ):
+        super().__init__()
+        device = resolve_device(device)
+        self.entity_projections = Embedding.init_with_device(
+            num_embeddings=num_entities,
+            embedding_dim=embedding_dim,
+            device=device,
+            initializer=xavier_normal_,
+        )
+        self.relation_projections = Embedding.init_with_device(
+            num_embeddings=num_relations,
+            embedding_dim=relation_dim,
+            device=device,
+            initializer=xavier_normal_,
+        )
+        if interaction_function is None:
+            interaction_function = TransDInteractionFunction()
+        self.interaction_function = interaction_function
+
+    def reset_parameters(self):  # noqa: D102
+        self.entity_projections.reset_parameters()
+        self.relation_projections.reset_parameters()
+        self.interaction_function.reset_parameters()
+
+    def forward(
+        self,
+        model: Model,
+        h_indices: Optional[torch.LongTensor] = None,
+        r_indices: Optional[torch.LongTensor] = None,
+        t_indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = model.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        h_p = model.entity_projections.get_in_canonical_shape(indices=h_indices)
+
+        r = model.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        r_p = model.relation_projections.get_in_canonical_shape(indices=r_indices)
+
+        t = model.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        t_p = model.entity_projections.get_in_canonical_shape(indices=t_indices)
+
+        # Project entities
+        h_bot = _project_entity(e=h, e_p=h_p, r=r, r_p=r_p)
+        t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
+
+        return self.interaction_function(h=h_bot, r=r, t=t_bot)
+
+
+class TransD(GeneralVectorEntityRelationEmbeddingModel):
     r"""An implementation of TransD from [ji2015]_.
 
     TransD is an extension of :class:`pykeen.models.TransR` that, like TransR, considers entities and relations
@@ -112,12 +182,21 @@ class TransD(EntityRelationEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         relation_dim: int = 30,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        index_function = TransDIndexFunction(
+            num_entities=triples_factory.num_entities,
+            num_relations=triples_factory.num_relations,
+            embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
+            device=preferred_device,
+        )
+
         super().__init__(
             triples_factory=triples_factory,
+            index_function=index_function,
             embedding_dim=embedding_dim,
             relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -132,96 +211,3 @@ class TransD(EntityRelationEmbeddingModel):
             relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
-
-        self.entity_projections = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
-            device=self.device,
-            initializer=xavier_normal_,
-        )
-        self.relation_projections = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=relation_dim,
-            device=self.device,
-            initializer=xavier_normal_,
-        )
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.entity_projections.reset_parameters()
-        self.relation_projections.reset_parameters()
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        h_p: torch.FloatTensor,
-        r: torch.FloatTensor,
-        r_p: torch.FloatTensor,
-        t: torch.FloatTensor,
-        t_p: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        :param h: shape: (batch_size, num_entities, d_e)
-            Head embeddings.
-        :param h_p: shape: (batch_size, num_entities, d_e)
-            Head projections.
-        :param r: shape: (batch_size, num_entities, d_r)
-            Relation embeddings.
-        :param r_p: shape: (batch_size, num_entities, d_r)
-            Relation projections.
-        :param t: shape: (batch_size, num_entities, d_e)
-            Tail embeddings.
-        :param t_p: shape: (batch_size, num_entities, d_e)
-            Tail projections.
-
-        :return: shape: (batch_size, num_entities)
-            The scores.
-        """
-        # Project entities
-        h_bot = _project_entity(e=h, e_p=h_p, r=r, r_p=r_p)
-        t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
-
-        # score = -||h_bot + r - t_bot||_2^2
-        return -torch.norm(h_bot + r - t_bot, dim=-1, p=2) ** 2
-
-    def _score(
-        self,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """
-        Evaluate the interaction function.
-
-        :param h_indices: shape: (batch_size,)
-            The indices of head entities. If None, score against all.
-        :param r_indices: shape: (batch_size,)
-            The indices of relations. If None, score against all.
-        :param t_indices: shape: (batch_size,)
-            The indices of tail entities. If None, score against all.
-
-        :return: The scores, shape: (batch_size, num_entities)
-        """
-        # Head
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
-
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        r_p = self.relation_projections.get_in_canonical_shape(indices=r_indices)
-
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        t_p = self.entity_projections.get_in_canonical_shape(indices=t_indices)
-
-        return self.interaction_function(h=h, h_p=h_p, r=r, r_p=r_p, t=t, t_p=t_p)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2])
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

@@ -26,6 +26,7 @@ __all__ = [
     'random_non_negative_int',
     'real_part',
     'resolve_device',
+    'DeviceHint',
     'slice_triples',
     'slice_doubles',
     'split_complex',
@@ -72,6 +73,9 @@ def l2_regularization(
         regularization_term /= sum(numpy.prod(x.shape) for x in xs)
 
     return regularization_term
+
+
+DeviceHint = Union[None, str, torch.device]
 
 
 def resolve_device(device: Union[None, str, torch.device] = None) -> torch.device:
