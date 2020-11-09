@@ -224,12 +224,13 @@ class ConvEInteractionFunction(InteractionFunction):
             x = self.bn2(x)
         x = self.activation(x)
 
-        # reshape: (batch_size', )
+        # reshape: (batch_size', embedding_dim)
         x = x.view(batch_size, num_heads, num_relations, 1, self.embedding_dim)
 
         # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
         # output_shape: (batch_size, num_heads, num_relations, num_tails)
-        x = x @ t.view(batch_size, 1, 1, -1, self.embedding_dim).transpose(-1, -2)
+        t = t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]).transpose(-1, -2)
+        x = (x @ t).squeeze(dim=-2)
 
         # add bias term
         x = x + t_bias[:, None, None, :]
