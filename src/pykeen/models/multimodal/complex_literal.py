@@ -96,6 +96,9 @@ class ComplExLiteral(MultimodalModel):
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
 
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        raise NotImplementedError
+
     def score_t(self, doubles: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (tail) prediction for training with the LCWA."""
         batch_heads, batch_relations = slice_doubles(doubles)

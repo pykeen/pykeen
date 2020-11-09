@@ -112,6 +112,9 @@ class DistMultLiteral(MultimodalModel):
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
 
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        raise NotImplementedError
+
     def score_t(self, hr_batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (tail) prediction for training with the LCWA."""
         heads, relations, tails = slice_triples(hr_batch)
