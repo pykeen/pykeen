@@ -15,4 +15,4 @@
 - [Maximilian Hünemörder](https://github.com/huenemoerder)
 - [Michael Galkin](https://github.com/migalkin)
 - [Felix Hamann](https://github.com/kantholtz)
-- [sunny1401](https://github.com/sunny1401)
+- [Sankranti Joshi](https://github.com/sunny1401)
