@@ -1207,6 +1207,7 @@ class InteractionFunction(nn.Module):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Score the given triples.
 
@@ -1216,6 +1217,8 @@ class InteractionFunction(nn.Module):
             The relation representations.
         :param t: shape: (batch_size, num_tails, d_e)
             The tail representations.
+        :param kwargs:
+            Additional key-word based arguments.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
@@ -1227,6 +1230,7 @@ class InteractionFunction(nn.Module):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         all_entities: torch.FloatTensor,
+        **kwargs,
     ) -> torch.FloatTensor:
         """
         Score all tail entities.
@@ -1237,6 +1241,8 @@ class InteractionFunction(nn.Module):
             The relation representations.
         :param all_entities: shape: (num_entities, d_e)
             The tail representations.
+        :param kwargs:
+            Additional key-word based arguments.
 
         :return: shape: (batch_size, num_entities)
             The scores.
@@ -1247,7 +1253,7 @@ class InteractionFunction(nn.Module):
         t = all_entities.unsqueeze(dim=0)
 
         # get scores
-        scores = self(h=h, r=r, t=t)
+        scores = self(h=h, r=r, t=t, **kwargs)
 
         # prepare output shape
         scores = scores.squeeze(dim=2).squeeze(dim=1)
