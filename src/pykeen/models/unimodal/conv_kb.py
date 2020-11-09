@@ -74,20 +74,18 @@ class ConvKBInteractionFunction(InteractionFunction):
 
         # compute conv(stack(h, r, t))
         # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
-        x = self.conv_bias.view(
-            1, 1, 1, 1, 1, self.num_filters
-        ) + h.view(
-            h.shape[0], h.shape[1], 1, 1, self.embedding_dim, 1
-        ) * self.conv_head.view(
-            1, 1, 1, 1, 1, self.num_filters
-        ) + r.view(
-            r.shape[0], 1, r.shape[1], 1, self.embedding_dim, 1
-        ) * self.conv_rel.view(
-            1, 1, 1, 1, 1, self.num_filters
-        ) + t.view(
-            t.shape[0], 1, 1, t.shape[1], self.embedding_dim, 1
-        ) * self.conv_tail.view(
-            1, 1, 1, 1, 1, self.num_filters
+        x = (
+            self.conv_bias.view(1, 1, 1, 1, 1, self.num_filters)
+            + (
+                h.view(h.shape[0], h.shape[1], 1, 1, self.embedding_dim, 1)
+                * self.conv_head.view(1, 1, 1, 1, 1, self.num_filters)
+            ) + (
+                r.view(r.shape[0], 1, r.shape[1], 1, self.embedding_dim, 1)
+                * self.conv_rel.view(1, 1, 1, 1, 1, self.num_filters)
+            ) + (
+                t.view(t.shape[0], 1, 1, t.shape[1], self.embedding_dim, 1)
+                * self.conv_tail.view(1, 1, 1, 1, 1, self.num_filters)
+            )
         )
 
         x = self.relu(x)
@@ -96,7 +94,9 @@ class ConvKBInteractionFunction(InteractionFunction):
         x = self.hidden_dropout(x)
 
         # Linear layer for final scores
-        return self.linear(x.view(-1, self.embedding_dim * self.num_filters)).view(batch_size, num_heads, num_relations, num_tails)
+        return self.linear(
+            x.view(-1, self.embedding_dim * self.num_filters),
+        ).view(batch_size, num_heads, num_relations, num_tails)
 
 
 class ConvKB(EntityRelationEmbeddingModel):
