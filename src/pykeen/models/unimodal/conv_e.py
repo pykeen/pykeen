@@ -129,6 +129,7 @@ class ConvEInteractionFunction(InteractionFunction):
             height=embedding_height,
         )
         logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        self.embedding_dim = embedding_dim
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
         self.input_channels = input_channels
