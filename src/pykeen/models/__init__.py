@@ -6,7 +6,6 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-import inspect
 from typing import Mapping, Set, Type, Union
 
 from .base import (  # noqa:F401
@@ -68,9 +67,15 @@ __all__ = [
 ]
 
 
-def _concrete_subclasses(cls):
+_CONCRETE_BASES = {
+    GeneralVectorEntityRelationEmbeddingModel,
+    SimpleVectorEntityRelationEmbeddingModel,
+}
+
+
+def _concrete_subclasses(cls: Type[Model]):
     for subcls in cls.__subclasses__():
-        if not inspect.isabstract(subcls):
+        if not subcls._is_abstract() and subcls not in _CONCRETE_BASES:
             yield subcls
         yield from _concrete_subclasses(subcls)
 
