@@ -1583,7 +1583,7 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         super()._reset_parameters_()
         self.index_function.reset_parameters()
 
-    def _score(
+    def forward(
         self,
         h_indices: Optional[torch.LongTensor] = None,
         r_indices: Optional[torch.LongTensor] = None,
@@ -1603,13 +1603,13 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         return self.index_function(model=self, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
+        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None).view(-1, self.num_entities)
+        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None).view(-1, self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1]).view(-1, self.num_entities)
+        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1]).view(-1, self.num_entities)
 
     # TODO
     # def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102

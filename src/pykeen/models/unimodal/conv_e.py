@@ -84,7 +84,7 @@ def _add_cuda_warning(func):
                 '\nThis code crash might have been caused by a CUDA bug, see '
                 'https://github.com/allenai/allennlp/issues/2888, '
                 'which causes the code to crash during evaluation mode.\n'
-                'To avoid this error, the batch size has to be reduced.'
+                'To avoid this error, the batch size has to be reduced.',
             ) from e
 
     return wrapped
