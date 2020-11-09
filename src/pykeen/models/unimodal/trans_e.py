@@ -89,6 +89,7 @@ class TransE(EntityRelationEmbeddingModel):
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
         t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
+        # TODO question @mberr - why is keepdim=True here but the others it isn't?
         # TODO: Use torch.dist
         return -torch.norm(h + r - t, dim=-1, p=self.scoring_fct_norm, keepdim=True)
 

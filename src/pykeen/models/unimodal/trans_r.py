@@ -158,6 +158,7 @@ class TransR(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
+        # TODO switch to self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
