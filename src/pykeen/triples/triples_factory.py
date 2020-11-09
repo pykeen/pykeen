@@ -264,12 +264,10 @@ class TriplesFactory:
                 )
                 # extend original triples with inverse ones
                 self.triples = np.concatenate([self.triples, inverse_triples], axis=0)
-                self._num_relations = 2 * len(unique_relations)
 
         else:
             self.create_inverse_triples = False
             self.relation_to_inverse = None
-            self._num_relations = len(unique_relations)
 
         # Generate entity mapping if necessary
         if entity_to_id is None:
@@ -290,15 +288,15 @@ class TriplesFactory:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
         self.relation_to_id = relation_to_id
 
-        self._num_entities = len(self.entity_to_id)
-        self._num_relations = len(self.relation_to_id)
-
         # Map triples of labels to triples of IDs.
         self.mapped_triples = _map_triples_elements_to_ids(
             triples=self.triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
+
+        self._num_entities = len(set(self.mapped_triples[:, 0]).union(self.mapped_triples[:, 2]))
+        self._num_relations = len(set(self.mapped_triples[:, 1]))
 
     @property
     def num_entities(self) -> int:  # noqa: D401
