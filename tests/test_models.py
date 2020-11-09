@@ -26,8 +26,10 @@ from pykeen.models import _MODELS
 from pykeen.models.base import (
     EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
+    GeneralVectorEntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
+    SimpleVectorEntityRelationEmbeddingModel,
     _extend_batch,
     get_novelty_mask,
 )
@@ -49,10 +51,11 @@ SKIP_MODULES = {
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
+    GeneralVectorEntityRelationEmbeddingModel.__name__,
+    SimpleVectorEntityRelationEmbeddingModel.__name__,
     'MockModel',
     'models',
     'get_model_cls',
-    'SimpleInteractionModel',
 }
 for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
@@ -1260,6 +1263,8 @@ class TestRandom(unittest.TestCase):
         self.assertTrue(Model._is_abstract())
         self.assertTrue(EntityEmbeddingModel._is_abstract())
         self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
+        self.assertTrue(GeneralVectorEntityRelationEmbeddingModel._is_abstract())
+        self.assertTrue(SimpleVectorEntityRelationEmbeddingModel._is_abstract())
         for model_cls in _MODELS:
             if issubclass(model_cls, MultimodalModel):
                 continue
