@@ -27,7 +27,10 @@ class HolEInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
+        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
+        if len(kwargs) > 0:
+            raise ValueError(f"{self.__class__.__name__} does not take the following kwargs: {kwargs}")
         # Circular correlation of entity embeddings
         a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
         b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
