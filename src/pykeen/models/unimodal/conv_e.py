@@ -162,12 +162,12 @@ class ConvEInteractionFunction(InteractionFunction):
             self.bn0 = None
             self.bn1 = None
             self.bn2 = None
-        num_in_features = (
+        self.num_in_features = (
             output_channels
             * (2 * self.embedding_height - kernel_height + 1)
             * (self.embedding_width - kernel_width + 1)
         )
-        self.fc = nn.Linear(num_in_features, self.embedding_dim)
+        self.fc = nn.Linear(self.num_in_features, self.embedding_dim)
         self.activation = nn.ReLU()
 
     @_add_cuda_warning
@@ -185,12 +185,14 @@ class ConvEInteractionFunction(InteractionFunction):
         self._check_for_empty_kwargs(kwargs)
 
         # bind sizes
-        batch_size, num_heads = h.shape[:2]
+        batch_size = max(x.shape[0] for x in (h, r, t))
+        num_heads = h.shape[1]
         num_relations = r.shape[1]
+        num_tails = t.shape[1]
 
         # repeat if necessary
-        h = h.unsqueeze(dim=2).repeat(1, 1, num_relations, 1)
-        r = r.unsqueeze(dim=1).repeat(1, num_heads, 1, 1)
+        h = h.unsqueeze(dim=2).repeat(1 if h.shape[0] == batch_size else batch_size, 1, num_relations, 1)
+        r = r.unsqueeze(dim=1).repeat(1 if r.shape[0] == batch_size else batch_size, num_heads, 1, 1)
 
         # resize and concat head and relation, batch_size', num_input_channels, 2*height, width
         # with batch_size' = batch_size * num_heads * num_relations
@@ -216,7 +218,7 @@ class ConvEInteractionFunction(InteractionFunction):
         x = self.feature_map_drop(x)
 
         # batch_size', num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
-        x = x.view(batch_size, -1)
+        x = x.view(-1, self.num_in_features)
         x = self.fc(x)
         x = self.hidden_drop(x)
 
@@ -229,11 +231,11 @@ class ConvEInteractionFunction(InteractionFunction):
 
         # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
         # output_shape: (batch_size, num_heads, num_relations, num_tails)
-        t = t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]).transpose(-1, -2)
+        t = t.view(t.shape[0], 1, 1, num_tails, self.embedding_dim).transpose(-1, -2)
         x = (x @ t).squeeze(dim=-2)
 
         # add bias term
-        x = x + t_bias[:, None, None, :]
+        x = x + t_bias.view(t.shape[0], 1, 1, num_tails)
 
         return x
 
