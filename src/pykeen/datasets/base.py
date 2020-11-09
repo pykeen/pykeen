@@ -41,9 +41,9 @@ class DataSet:
 
     #: A factory wrapping the training triples
     training: TriplesFactory
-    #: A factory wrapping the testing triples, that share indexes with the training triples
+    #: A factory wrapping the testing triples, that share indices with the training triples
     testing: TriplesFactory
-    #: A factory wrapping the validation triples, that share indexes with the training triples
+    #: A factory wrapping the validation triples, that share indices with the training triples
     validation: TriplesFactory
     #: All data sets should take care of inverse triple creation
     create_inverse_triples: bool
@@ -138,14 +138,14 @@ class LazyDataSet(DataSet):
 
     @property
     def testing(self) -> TriplesFactory:  # noqa: D401
-        """The testing triples factory that shares indexes with the training triples factory."""
+        """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         return self._testing
 
     @property
     def validation(self) -> TriplesFactory:  # noqa: D401
-        """The validation triples factory that shares indexes with the training triples factory."""
+        """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         if not self._loaded_validation:

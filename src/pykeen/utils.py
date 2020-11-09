@@ -15,8 +15,6 @@ import pandas as pd
 import torch
 import torch.nn
 
-from .nn import Embedding
-
 __all__ = [
     'compose',
     'clamp_norm',
@@ -38,7 +36,6 @@ __all__ = [
     'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
-    'get_embedding_in_canonical_shape',
     'set_random_seed',
     'NoRandomSeedNecessary',
     'Result',
@@ -203,24 +200,6 @@ def _flatten_dictionary(
         else:
             result[new_prefix] = v
     return result
-
-
-def get_embedding_in_canonical_shape(
-    embedding: Embedding,
-    ind: Optional[torch.LongTensor],
-) -> torch.FloatTensor:
-    """Get embedding in canonical shape.
-
-    :param embedding: The embedding.
-    :param ind: The indices. If None, return all embeddings.
-
-    :return: shape: (batch_size, num_embeddings, d)
-    """
-    # FIXME should this go inside the embedding class? should this function be moved?
-    x = embedding(indices=ind)
-    if ind is None:
-        return x.unsqueeze(dim=0)
-    return x.unsqueeze(dim=1)
 
 
 def clamp_norm(

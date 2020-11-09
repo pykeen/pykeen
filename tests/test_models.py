@@ -8,7 +8,7 @@ import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -22,11 +22,14 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
+from pykeen.models import _MODELS
 from pykeen.models.base import (
     EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
+    GeneralVectorEntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
+    SimpleVectorEntityRelationEmbeddingModel,
     _extend_batch,
     get_novelty_mask,
 )
@@ -48,10 +51,11 @@ SKIP_MODULES = {
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
+    GeneralVectorEntityRelationEmbeddingModel.__name__,
+    SimpleVectorEntityRelationEmbeddingModel.__name__,
     'MockModel',
     'models',
     'get_model_cls',
-    'SimpleInteractionModel',
 }
 for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
@@ -71,6 +75,15 @@ class _CustomRepresentations(RepresentationModule):
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         n = self.num_embeddings if indices is None else indices.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, 1)
+
+    def get_in_canonical_shape(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        x = self(indices=indices)
+        if indices is None:
+            return x.unsqueeze(dim=0)
+        return x.unsqueeze(dim=1)
 
 
 class _ModelTestCase:
@@ -301,7 +314,9 @@ class _ModelTestCase:
     @property
     def cli_extras(self):
         kwargs = self.model_kwargs or {}
-        extras = []
+        extras = [
+            '--silent',
+        ]
         for k, v in kwargs.items():
             extras.append('--' + k.replace('_', '-'))
             extras.append(str(v))
@@ -463,16 +478,16 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        self.model.reset_parameters_ = MagicMock(return_value=None)
-        try:
-            self.model.__init__(
-                self.factory,
-                embedding_dim=self.embedding_dim,
-                **(self.model_kwargs or {}),
-            )
-        except TypeError as error:
-            assert error.args == ("'NoneType' object is not callable",)
-        self.model.reset_parameters_.assert_called_once()
+        with patch.object(self.model_cls, 'reset_parameters_', return_value=None) as mock_method:
+            try:
+                self.model_cls(
+                    triples_factory=self.factory,
+                    embedding_dim=self.embedding_dim,
+                    **(self.model_kwargs or {}),
+                )
+            except TypeError as error:
+                assert error.args == ("'NoneType' object is not callable",)
+            mock_method.assert_called_once()
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
@@ -1238,3 +1253,19 @@ def test_get_novelty_mask():
     )
     assert mask.shape == query_ids.shape
     assert (mask == exp_novel).all()
+
+
+class TestRandom(unittest.TestCase):
+    """Extra tests."""
+
+    def test_abstract(self):
+        """Test that classes are checked as abstract properly."""
+        self.assertTrue(Model._is_abstract())
+        self.assertTrue(EntityEmbeddingModel._is_abstract())
+        self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
+        self.assertTrue(GeneralVectorEntityRelationEmbeddingModel._is_abstract())
+        self.assertTrue(SimpleVectorEntityRelationEmbeddingModel._is_abstract())
+        for model_cls in _MODELS:
+            if issubclass(model_cls, MultimodalModel):
+                continue
+            self.assertFalse(model_cls._is_abstract(), msg=f'{model_cls.__name__} should not be abstract')
