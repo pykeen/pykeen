@@ -15,6 +15,8 @@ import pandas as pd
 import torch
 import torch.nn
 
+from .typing import DeviceHint
+
 __all__ = [
     'compose',
     'clamp_norm',
@@ -26,7 +28,6 @@ __all__ = [
     'random_non_negative_int',
     'real_part',
     'resolve_device',
-    'DeviceHint',
     'slice_triples',
     'slice_doubles',
     'split_complex',
@@ -75,10 +76,7 @@ def l2_regularization(
     return regularization_term
 
 
-DeviceHint = Union[None, str, torch.device]
-
-
-def resolve_device(device: Union[None, str, torch.device] = None) -> torch.device:
+def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
     if device is None or device == 'gpu':
         device = 'cuda'

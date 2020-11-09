@@ -14,7 +14,8 @@ from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import DeviceHint, clamp_norm, resolve_device
+from ...utils import clamp_norm, resolve_device
+from ...typing import DeviceHint
 
 __all__ = [
     'TransD',
