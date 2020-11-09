@@ -1508,7 +1508,7 @@ class InteractionIndexFunction(IndexFunction):
         self.interaction_function.reset_parameters()
 
 
-class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
+class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel, reset_parameters_post_init=False):
     """A base class for embedding models which store a single vector for each entity and relation."""
 
     def __init__(
@@ -1616,7 +1616,9 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
     #     raise NotImplementedError
 
 
-class SimpleVectorEntityRelationEmbeddingModel(GeneralVectorEntityRelationEmbeddingModel):
+class SimpleVectorEntityRelationEmbeddingModel(
+    GeneralVectorEntityRelationEmbeddingModel, reset_parameters_post_init=False,
+):
     """A base class for embedding models which store a single vector for each entity and relation."""
 
     def __init__(
