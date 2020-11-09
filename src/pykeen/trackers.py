@@ -34,6 +34,7 @@ class ResultTracker:
         :param step: An optional step to attach the metrics to (e.g. the epoch).
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
+
     def end_run(self) -> None:
         """End a run.
 
@@ -67,7 +68,7 @@ class MLFlowResultTracker(ResultTracker):
         """
         import mlflow as _mlflow
         self.mlflow = _mlflow
-        self.__tags = dict()
+        self.tags = tags
 
         self.mlflow.set_tracking_uri(tracking_uri)
         if experiment_id is not None:
@@ -75,13 +76,11 @@ class MLFlowResultTracker(ResultTracker):
             experiment_name = experiment.name
         if experiment_name is not None:
             self.mlflow.set_experiment(experiment_name)
-        if tags is not None:
-            self.__tags = tags
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
-        if len(self.__tags):
-            self.mlflow.set_tags(tags=self.__tags)
+        if self.tags is not None:
+            self.mlflow.set_tags(tags=self.tags)
 
     def log_metrics(
         self,
