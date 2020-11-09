@@ -12,6 +12,7 @@ from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'ERMLP',
@@ -116,7 +117,7 @@ class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         hidden_dim: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,

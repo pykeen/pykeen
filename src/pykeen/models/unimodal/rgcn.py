@@ -16,6 +16,7 @@ from ..base import Model
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'RGCN',
@@ -488,7 +489,7 @@ class RGCN(Model):
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         num_bases_or_blocks: int = 5,
         num_layers: int = 2,

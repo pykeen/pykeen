@@ -12,6 +12,7 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'TransH',
@@ -68,7 +69,7 @@ class TransH(EntityRelationEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:

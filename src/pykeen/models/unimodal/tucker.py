@@ -13,6 +13,7 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'TuckER',
@@ -82,7 +83,7 @@ class TuckER(EntityRelationEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
