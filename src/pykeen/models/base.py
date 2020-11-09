@@ -1394,11 +1394,6 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         )
         self.index_function = index_function
 
-    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
-        _track_hyperparameters(cls)
-        if auto_reset_parameters:
-            _add_post_reset_parameters(cls)
-
     def _reset_parameters_(self):
         super()._reset_parameters_()
         self.index_function.reset_parameters()
@@ -1431,8 +1426,9 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1]).view(-1, self.num_entities)
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        raise NotImplementedError
+    # TODO
+    # def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    #     raise NotImplementedError
 
 
 class SimpleVectorEntityRelationEmbeddingModel(GeneralVectorEntityRelationEmbeddingModel):
