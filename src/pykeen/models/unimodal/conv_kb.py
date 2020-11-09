@@ -13,6 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'ConvKB',
@@ -77,7 +78,7 @@ class ConvKB(EntityRelationEmbeddingModel):
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,

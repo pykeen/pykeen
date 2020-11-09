@@ -11,6 +11,7 @@ from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'SimplE',
@@ -67,7 +68,7 @@ class SimplE(EntityRelationEmbeddingModel):
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,

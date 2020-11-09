@@ -17,6 +17,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 from ...utils import compose
 
 __all__ = [
@@ -53,7 +54,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:

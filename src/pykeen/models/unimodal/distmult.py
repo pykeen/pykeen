@@ -13,6 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 from ...utils import compose
 
 __all__ = [
@@ -72,7 +73,7 @@ class DistMult(EntityRelationEmbeddingModel):
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:

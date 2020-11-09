@@ -13,6 +13,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
@@ -112,7 +113,7 @@ class TransD(EntityRelationEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         relation_dim: int = 30,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
