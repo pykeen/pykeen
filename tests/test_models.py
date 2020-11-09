@@ -879,6 +879,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         self.model.relation_projections = relation_projection_embeddings
 
         # Compute Scores
+        # FIXME batch is wrong size?
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
         scores = self.model.score_hrt(hrt_batch=batch)
         self.assertEqual(scores.shape[0], 2)
