@@ -23,6 +23,9 @@ This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` functi
         result_tracker_kwargs=dict(
             tracking_uri='http://localhost:5000',
             experiment_name='Tutorial Training of RotatE on Kinships',
+            tags={
+            "input_file_h_version_id": s3_version_id
+            }
         ),
     )
 
