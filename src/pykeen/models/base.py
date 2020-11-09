@@ -1537,22 +1537,22 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
     ) -> None:
         """Initialize embedding model.
 
-        :param triples_factory: TriplesFactory
+        :param triples_factory:
             The triple factory connected to the model.
-        :param interaction_function:
-            The interaction function used to compute scores.
+        :param index_function:
+            The index-based interaction function used to compute scores.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
             regards to the hardware at hand.
-        :param loss: OptionalLoss (optional)
+        :param loss:
             The loss to use.
-        :param preferred_device: str (optional)
+        :param preferred_device:
             The default device where to model is located.
-        :param random_seed: int (optional)
+        :param random_seed:
             An optional random seed to set before the initialization of weights.
-        :param regularizer: BaseRegularizer
+        :param regularizer:
             The regularizer to use.
         """
         super().__init__(
@@ -1645,22 +1645,22 @@ class SimpleVectorEntityRelationEmbeddingModel(GeneralVectorEntityRelationEmbedd
     ) -> None:
         """Initialize embedding model.
 
-        :param triples_factory: TriplesFactory
+        :param triples_factory:
             The triple factory connected to the model.
         :param interaction_function:
-            The interaction function used to compute scores.
+            The embedding-based interaction function used to compute scores.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param automatic_memory_optimization: bool
+        :param automatic_memory_optimization:
             Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
             regards to the hardware at hand.
-        :param loss: OptionalLoss (optional)
+        :param loss:
             The loss to use.
-        :param preferred_device: str (optional)
+        :param preferred_device:
             The default device where to model is located.
-        :param random_seed: int (optional)
+        :param random_seed:
             An optional random seed to set before the initialization of weights.
-        :param regularizer: BaseRegularizer
+        :param regularizer:
             The regularizer to use.
         """
         index_function = InteractionIndexFunction(interaction_function=interaction_function)
