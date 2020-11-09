@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -19,6 +19,84 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class ConvKBInteractionFunction(InteractionFunction):
+    """Interaction function of ConvKB."""
+
+    def __init__(
+        self,
+        hidden_dropout_rate: float = 0.,
+        embedding_dim: int = 200,
+        num_filters: int = 400,
+    ):
+        super().__init__()
+        self.embedding_dim = embedding_dim
+        self.num_filters = num_filters
+
+        # The interaction model
+        # self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
+        # decompose convolution for faster computation in 1-n case
+        self.conv_head = nn.Parameter(torch.empty(num_filters))
+        self.conv_rel = nn.Parameter(torch.empty(num_filters))
+        self.conv_tail = nn.Parameter(torch.empty(num_filters))
+        self.conv_bias = nn.Parameter(torch.empty(num_filters))
+        self.relu = nn.ReLU()
+        self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
+        self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
+
+    def reset_parameters(self):  # noqa: D102
+        # Use Xavier initialization for weight; bias to zero
+        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.zeros_(self.linear.bias)
+
+        # Initialize all filters to [0.1, 0.1, -0.1],
+        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
+        # nn.init.constant_(self.conv.weight[..., :2], 0.1)
+        # nn.init.constant_(self.conv.weight[..., 2], -0.1)
+        nn.init.constant_(self.conv_head, 0.1)
+        nn.init.constant_(self.conv_rel, 0.1)
+        nn.init.constant_(self.conv_tail, 0.1)
+        nn.init.zeros_(self.conv_bias)
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # bind sizes
+        batch_size = max(x.shape[0] for x in (h, r, t))
+        num_heads = h.shape[1]
+        num_relations = r.shape[1]
+        num_tails = t.shape[1]
+
+        # compute conv(stack(h, r, t))
+        # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
+        x = self.conv_bias.view(
+            1, 1, 1, 1, 1, self.num_filters
+        ) + h.view(
+            h.shape[0], h.shape[1], 1, 1, self.embedding_dim, 1
+        ) * self.conv_head.view(
+            1, 1, 1, 1, 1, self.num_filters
+        ) + r.view(
+            r.shape[0], 1, r.shape[1], 1, self.embedding_dim, 1
+        ) * self.conv_rel.view(
+            1, 1, 1, 1, 1, self.num_filters
+        ) + t.view(
+            t.shape[0], 1, 1, t.shape[1], self.embedding_dim, 1
+        ) * self.conv_tail.view(
+            1, 1, 1, 1, 1, self.num_filters
+        )
+
+        x = self.relu(x)
+
+        # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
+        x = self.hidden_dropout(x)
+
+        # Linear layer for final scores
+        return self.linear(x.view(-1, self.embedding_dim * self.num_filters)).view(batch_size, num_heads, num_relations, num_tails)
 
 
 class ConvKB(EntityRelationEmbeddingModel):
@@ -95,51 +173,24 @@ class ConvKB(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
-        self.num_filters = num_filters
-
-        # The interaction model
-        self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
-        self.relu = nn.ReLU()
-        self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
-        self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
+        self.interaction_function = ConvKBInteractionFunction(
+            hidden_dropout_rate=hidden_dropout_rate,
+            embedding_dim=embedding_dim,
+            num_filters=num_filters,
+        )
 
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
         super()._reset_parameters_()
-
-        # Use Xavier initialization for weight; bias to zero
-        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
-        nn.init.zeros_(self.linear.bias)
-
-        # Initialize all filters to [0.1, 0.1, -0.1],
-        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
-        nn.init.constant_(self.conv.weight[..., :2], 0.1)
-        nn.init.constant_(self.conv.weight[..., 2], -0.1)
-        nn.init.zeros_(self.conv.bias)
+        self.interaction_function.reset_parameters()
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
         t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
         # Output layer regularization
         # In the code base only the weights of the output layer are used for regularization
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
-        self.regularize_if_necessary(self.linear.weight, self.linear.bias)
-
-        # Stack to convolution input
-        conv_inp = torch.stack([h, r, t], dim=-1).view(-1, 1, self.embedding_dim, 3)
-
-        # Convolution
-        conv_out = self.conv(conv_inp).view(-1, self.embedding_dim * self.num_filters)
-        hidden = self.relu(conv_out)
-
-        # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
-        hidden = self.hidden_dropout(hidden)
-
-        # Linear layer for final scores
-        scores = self.linear(hidden)
-
-        return scores
+        self.regularize_if_necessary(self.interaction_function.linear.weight, self.interaction_function.linear.bias)
+        return self.interaction_function.score_hrt(h=h, r=r, t=t)
