@@ -1263,8 +1263,6 @@ class TestRandom(unittest.TestCase):
         self.assertTrue(Model._is_abstract())
         self.assertTrue(EntityEmbeddingModel._is_abstract())
         self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
-        self.assertTrue(GeneralVectorEntityRelationEmbeddingModel._is_abstract())
-        self.assertTrue(SimpleVectorEntityRelationEmbeddingModel._is_abstract())
         for model_cls in _MODELS:
             if issubclass(model_cls, MultimodalModel):
                 continue
