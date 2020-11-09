@@ -231,8 +231,6 @@ class TriplesFactory:
             self.path = '<None>'
             self.triples = triples
 
-        self._num_entities = len(set(self.triples[:, 0]).union(self.triples[:, 2]))
-
         relations = self.triples[:, 1]
         unique_relations = set(relations)
 
@@ -291,6 +289,9 @@ class TriplesFactory:
         if compact_id:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
         self.relation_to_id = relation_to_id
+
+        self._num_entities = len(self.entity_to_id)
+        self._num_relations = len(self.relation_to_id)
 
         # Map triples of labels to triples of IDs.
         self.mapped_triples = _map_triples_elements_to_ids(
