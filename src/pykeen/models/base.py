@@ -1202,6 +1202,12 @@ class MultimodalModel(EntityRelationEmbeddingModel):
 class InteractionFunction(nn.Module):
     """Base class for interaction functions."""
 
+    BATCH_DIM: int = 0
+    NUM_DIM: int = 1
+    HEAD_DIM: int = 1
+    RELATION_DIM: int = 2
+    TAIL_DIM: int = 3
+
     def forward(
         self,
         h: torch.FloatTensor,
@@ -1224,6 +1230,145 @@ class InteractionFunction(nn.Module):
             The scores.
         """
         raise NotImplementedError
+
+    def _check_for_empty_kwargs(self, kwargs: Mapping[str, Any]) -> None:
+        """Check that kwargs is empty."""
+        if len(kwargs) > 0:
+            raise ValueError(f"{self.__class__.__name__} does not take the following kwargs: {kwargs}")
+
+    @staticmethod
+    def _add_dim(*x: torch.FloatTensor, dim: int) -> Sequence[torch.FloatTensor]:
+        """
+        Add a dimension to tensors.
+
+        :param x: shape: (d1, ..., dk)
+            The tensor.
+
+        :return: shape: (1, d1, ..., dk)
+            The tensor with batch dimension.
+        """
+        out = [xx.unsqueeze(dim=dim) for xx in x]
+        if len(x) > 1:
+            return out
+        return out[0]
+
+    @staticmethod
+    def _remove_dim(x: torch.FloatTensor, *dims: int) -> torch.FloatTensor:
+        """
+        Remove dimensions from a tensor.
+
+        :param x:
+            The tensor.
+        :param dims:
+            The dimensions to remove.
+
+        :return:
+            The squeezed tensor.
+        """
+        # normalize dimensions
+        dims = [d if d >= 0 else len(x.shape) + d for d in dims]
+        if len(set(dims)) != len(dims):
+            raise ValueError(f"Duplicate dimensions: {dims}")
+        assert all(0 <= d < len(x.shape) for d in dims)
+        for dim in reversed(sorted(dims)):
+            x = x.squeeze(dim=dim)
+        return x
+
+    def score_hrt(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """
+        Score a batch of triples..
+
+        :param h: shape: (batch_size, d_e)
+            The head representations.
+        :param r: shape: (batch_size, d_r)
+            The relation representations.
+        :param t: shape: (batch_size, d_e)
+            The tail representations.
+        :param kwargs:
+            Additional key-word based arguments.
+
+        :return: shape: (batch_size, 1)
+            The scores.
+        """
+        # prepare input to generic score function
+        h, r, t = self._add_dim(h, r, t, dim=self.NUM_DIM)
+
+        # get scores
+        scores = self(h=h, r=r, t=t, **kwargs)
+
+        # prepare output shape, (batch_size, num_heads, num_relations, num_tails) -> (batch_size, 1)
+        return self._remove_dim(scores, self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM).unsqueeze(dim=-1)
+
+    def score_h(
+        self,
+        all_entities: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """
+        Score all head entities.
+
+        :param all_entities: shape: (num_entities, d_e)
+            The head representations.
+        :param r: shape: (batch_size, d_r)
+            The relation representations.
+        :param t: shape: (batch_size, d_e)
+            The tail representations.
+        :param kwargs:
+            Additional key-word based arguments.
+
+        :return: shape: (batch_size, num_entities)
+            The scores.
+        """
+        # TODO: What about unsqueezing for additional e.g. head arguments
+        # prepare input to generic score function
+        r, t = self._add_dim(r, t, dim=self.NUM_DIM)
+        h = self._add_dim(all_entities, dim=self.BATCH_DIM)
+
+        # get scores
+        scores = self(h=h, r=r, t=t, **kwargs)
+
+        # prepare output shape, (batch_size, num_heads, num_relations, num_tails) -> (batch_size, num_heads)
+        return self._remove_dim(scores, self.RELATION_DIM, self.TAIL_DIM)
+
+    def score_r(
+        self,
+        h: torch.FloatTensor,
+        all_relations: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        """
+        Score all relations.
+
+        :param h: shape: (batch_size, d_e)
+            The head representations.
+        :param all_relations: shape: (batch_size, d_r)
+            The relation representations.
+        :param t: shape: (num_entities, d_e)
+            The tail representations.
+        :param kwargs:
+            Additional key-word based arguments.
+
+        :return: shape: (batch_size, num_entities)
+            The scores.
+        """
+        # prepare input to generic score function
+        h, t = self._add_dim(h, t, dim=self.NUM_DIM)
+        r = self._add_dim(all_relations, dim=self.BATCH_DIM)
+
+        # get scores
+        scores = self(h=h, r=r, t=t, **kwargs)
+
+        # prepare output shape
+        return self._remove_dim(scores, self.HEAD_DIM, self.TAIL_DIM)
 
     def score_t(
         self,
@@ -1248,17 +1393,14 @@ class InteractionFunction(nn.Module):
             The scores.
         """
         # prepare input to generic score function
-        h = h.unsqueeze(dim=1)
-        r = r.unsqueeze(dim=1)
-        t = all_entities.unsqueeze(dim=0)
+        h, r = self._add_dim(h, r, dim=self.NUM_DIM)
+        t = self._add_dim(all_entities, dim=self.BATCH_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t, **kwargs)
 
         # prepare output shape
-        scores = scores.squeeze(dim=2).squeeze(dim=1)
-
-        return scores
+        return self._remove_dim(scores, self.HEAD_DIM, self.RELATION_DIM)
 
     def reset_parameters(self):
         """Reset parameters the interaction function may have."""

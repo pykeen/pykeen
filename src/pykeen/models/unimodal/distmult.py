@@ -31,8 +31,7 @@ class DistMultInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        if len(kwargs) > 0:
-            raise ValueError(f"{self.__class__.__name__} does not take the following kwargs: {kwargs}")
+        self._check_for_empty_kwargs(kwargs)
         batch_size = max(h.shape[0], r.shape[0], t.shape[0])
         h_term, h = normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
         r_term, r = normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')

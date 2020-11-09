@@ -58,8 +58,7 @@ class ERMLPInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        if len(kwargs) > 0:
-            raise ValueError(f"{self.__class__.__name__} does not take the following kwargs: {kwargs}")
+        self._check_for_empty_kwargs(kwargs)
         h = self.head_to_hidden(h)
         r = self.rel_to_hidden(r)
         t = self.tail_to_hidden(t)

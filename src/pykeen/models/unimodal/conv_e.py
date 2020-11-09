@@ -11,7 +11,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
@@ -73,6 +73,10 @@ def _calculate_missing_shape_information(
         raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
 
     return input_channels, width, height
+
+
+class ConvEInteractionFunction(InteractionFunction):
+    """ConvE interaction function."""
 
 
 class ConvE(EntityRelationEmbeddingModel):
