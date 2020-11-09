@@ -13,6 +13,7 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
@@ -62,7 +63,7 @@ class KG2E(EntityRelationEmbeddingModel):
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,

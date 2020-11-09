@@ -12,6 +12,7 @@ from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
@@ -58,7 +59,7 @@ class HolE(EntityRelationEmbeddingModel):
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:

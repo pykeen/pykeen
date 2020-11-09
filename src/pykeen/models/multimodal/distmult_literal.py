@@ -11,6 +11,7 @@ from torch.nn.init import xavier_normal_
 from ..base import MultimodalModel
 from ...losses import Loss
 from ...triples import TriplesNumericLiteralsFactory
+from ...typing import DeviceHint
 from ...utils import slice_triples
 
 
@@ -33,7 +34,7 @@ class DistMultLiteral(MultimodalModel):
         automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.0,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(

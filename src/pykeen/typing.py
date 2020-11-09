@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, TypeVar
+from typing import Callable, Mapping, TypeVar, Union
 
 import numpy as np
 import torch
@@ -13,6 +13,7 @@ __all__ = [
     'EntityMapping',
     'RelationMapping',
     'InteractionFunction',
+    'DeviceHint',
 ]
 
 LabeledTriples = np.ndarray
@@ -26,3 +27,5 @@ InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
 Initializer = Callable[[TensorType], TensorType]
 Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
+
+DeviceHint = Union[None, str, torch.device]

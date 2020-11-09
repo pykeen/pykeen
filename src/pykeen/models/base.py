@@ -19,7 +19,7 @@ from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, Initializer, MappedTriples, Normalizer
+from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
@@ -232,7 +232,7 @@ class Model(nn.Module, ABC):
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -363,7 +363,7 @@ class Model(nn.Module, ABC):
         """The number of unique relation types in the knowledge graph."""
         return self.triples_factory.num_relations
 
-    def _set_device(self, device: Union[None, str, torch.device] = None) -> None:
+    def _set_device(self, device: DeviceHint = None) -> None:
         """Set the Torch device to use."""
         self.device = resolve_device(device=device)
 
@@ -1042,7 +1042,7 @@ class EntityEmbeddingModel(Model):
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         entity_initializer: Optional[Initializer] = None,
@@ -1106,7 +1106,7 @@ class EntityRelationEmbeddingModel(Model):
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         entity_initializer: Optional[Initializer] = None,

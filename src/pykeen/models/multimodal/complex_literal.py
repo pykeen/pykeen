@@ -11,6 +11,7 @@ from torch.nn.init import xavier_normal_
 from ..base import MultimodalModel
 from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
+from ...typing import DeviceHint
 from ...utils import slice_doubles
 
 
@@ -39,7 +40,7 @@ class ComplExLiteral(MultimodalModel):
         automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.2,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the model."""
