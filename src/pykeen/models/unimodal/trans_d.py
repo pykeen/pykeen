@@ -15,7 +15,7 @@ from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
-from ...utils import clamp_norm, resolve_device
+from ...utils import clamp_norm
 
 __all__ = [
     'TransD',
@@ -93,7 +93,6 @@ class TransDIndexFunction(IndexFunction):
         interaction_function: Optional[InteractionFunction] = None,
     ):
         super().__init__()
-        device = resolve_device(device)
         self.entity_projections = Embedding.init_with_device(
             num_embeddings=num_entities,
             embedding_dim=embedding_dim,

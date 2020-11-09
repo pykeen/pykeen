@@ -9,12 +9,13 @@ import torch
 import torch.nn
 from torch import nn
 
+from ..typing import Constrainer, DeviceHint, Initializer, Normalizer
+from ..utils import resolve_device
+
 __all__ = [
     'RepresentationModule',
     'Embedding',
 ]
-
-from pykeen.typing import Constrainer, Initializer, Normalizer
 
 
 class RepresentationModule(nn.Module):
@@ -108,7 +109,7 @@ class Embedding(RepresentationModule):
         cls,
         num_embeddings: int,
         embedding_dim: int,
-        device: torch.device,
+        device: DeviceHint,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -138,7 +139,7 @@ class Embedding(RepresentationModule):
             normalizer_kwargs=normalizer_kwargs,
             constrainer=constrainer,
             constrainer_kwargs=constrainer_kwargs,
-        ).to(device=device)
+        ).to(device=resolve_device(device))
 
     @property
     def num_embeddings(self) -> int:  # noqa: D401
