@@ -52,7 +52,7 @@ copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '1.0.5-dev'
+release = '1.0.6-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -164,36 +164,36 @@ htmlhelp_basename = 'PyKEENdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-}
+# latex_elements = {
+#     The paper size ('letterpaper' or 'a4paper').
+#
+#     'papersize': 'letterpaper',
+#
+#     The font size ('10pt', '11pt' or '12pt').
+#
+#     'pointsize': '10pt',
+#
+#     Additional stuff for the LaTeX preamble.
+#
+#     'preamble': '',
+#
+#     Latex figure (float) alignment
+#
+#     'figure_align': 'htbp',
+# }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (
-        master_doc,
-        'pykeen.tex',
-        'PyKEEN Documentation',
-        author,
-        'manual',
-    ),
-]
+# latex_documents = [
+#     (
+#         master_doc,
+#         'pykeen.tex',
+#         'PyKEEN Documentation',
+#         author,
+#         'manual',
+#     ),
+# ]
 
 # -- Options for manual page output ------------------------------------------
 
@@ -229,7 +229,7 @@ texinfo_documents = [
 # -- Options for Epub output -------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = project
+# epub_title = project
 
 # The unique identifier of the text. This can be a ISBN number
 # or the project homepage.
@@ -241,7 +241,7 @@ epub_title = project
 # epub_uid = ''
 
 # A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
+# epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
 

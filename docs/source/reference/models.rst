@@ -13,5 +13,10 @@ Base Classes
 
 Initialization
 --------------
-.. automodule:: pykeen.models.init
+.. automodule:: pykeen.nn.init
+    :members:
+
+Extra Modules
+-------------
+.. automodule:: pykeen.nn
     :members:

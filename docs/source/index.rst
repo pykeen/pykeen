@@ -9,11 +9,12 @@ PyKEEN
 
    installation
    tutorial/first_steps
-   tutorial/byod
    tutorial/understanding_evaluation
+   tutorial/translational_toy_example
    tutorial/running_hpo
-   tutorial/using_mlflow
-   tutorial/using_wandb
+   tutorial/running_ablation
+   tutorial/byod
+   tutorial/trackers/index
    tutorial/making_predictions
    tutorial/performance
 
@@ -34,7 +35,9 @@ PyKEEN
    reference/evaluation/index
    reference/negative_sampling
    reference/hpo
+   reference/ablation
    reference/lookup
+   reference/sealant
 
 .. toctree::
    :caption: Appendix

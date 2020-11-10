@@ -9,8 +9,9 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
-from ...losses import Loss
+from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
+from ...typing import DeviceHint
 from ...utils import slice_doubles
 
 
@@ -28,7 +29,7 @@ class ComplExLiteral(MultimodalModel):
         },
     )
     #: The default loss function class
-    loss_default = nn.BCELoss
+    loss_default = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
@@ -39,7 +40,7 @@ class ComplExLiteral(MultimodalModel):
         automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.2,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the model."""
@@ -94,6 +95,9 @@ class ComplExLiteral(MultimodalModel):
         real = self.real_non_lin_transf(torch.cat([real_embs, literals], 1))
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        raise NotImplementedError
 
     def score_t(self, doubles: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (tail) prediction for training with the LCWA."""

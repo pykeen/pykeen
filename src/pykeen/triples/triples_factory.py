@@ -26,10 +26,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
-from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
 
@@ -583,10 +583,10 @@ class LabelMapping:
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    #: The mapping from entities' labels to their indexes
+    #: The mapping from entities' labels to their indices
     entity_to_id: EntityMapping
 
-    #: The mapping from relations' labels to their indexes
+    #: The mapping from relations' labels to their indices
     relation_to_id: RelationMapping
 
     #: A three-column matrix where each row are the head label,
@@ -948,7 +948,7 @@ class TriplesFactory:
         }
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
-        """Get an np.array index for triples with the given entities."""
+        """Get np.array indices for triples with the given entities."""
         entities = np.asanyarray(entities, dtype=self.triples.dtype)
         return (
             np.isin(self.triples[:, 0], entities, invert=invert)
@@ -956,7 +956,7 @@ class TriplesFactory:
         )
 
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
-        """Get an np.array index for triples with the given relations."""
+        """Get np.array indices for triples with the given relations."""
         return np.isin(self.triples[:, 1], list(relations), invert=invert)
 
     def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:

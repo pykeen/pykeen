@@ -15,6 +15,8 @@ jobs:
       env: TOXENV=flake8
     - name: "Check documentation with darglint"
       env: TOXENV=darglint
+    # - name: "Check typing with MyPy"
+    #   env: TOXENV=mypy
     # docs stage
     - name: "Check RST documentation style"
       stage: docs
@@ -32,6 +34,7 @@ jobs:
       env: TOXENV=integration
   allow_failures:
     - env: TOXENV=darglint
+    # - env: TOXENV=mypy
 install:
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
   - sh -c 'if [ "$TOXENV" = "docs" ]; then sudo apt-get install graphviz; fi'

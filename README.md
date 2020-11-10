@@ -83,7 +83,7 @@ result = pipeline(
 )
 ```
 
-The results are returned in an instance of the [RankBasedMetricResults](https://pykeen.readthedocs.io/en/latest/reference/evaluation/rank_based.html#pykeen.evaluation.RankBasedMetricResults)
+The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
 dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials on
 [understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
@@ -151,8 +151,8 @@ in ``pykeen``.
 
 | Name            | Reference                           | Description                                                                                       |
 |-----------------|-------------------------------------|---------------------------------------------------------------------------------------------------|
-| bce             | `pykeen.losses.BCELoss`             | A wrapper around the PyTorch binary cross entropy loss.                                           |
 | bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
+| bcewithlogits   | `pykeen.losses.BCEWithLogitsLoss`   | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
 | crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                      |
 | marginranking   | `pykeen.losses.MarginRankingLoss`   | A wrapper around the PyTorch margin ranking loss.                                                 |
 | mse             | `pykeen.losses.MSELoss`             | A wrapper around the PyTorch mean square error loss.                                              |
