@@ -216,7 +216,8 @@ class TriplesFactory:
         if path is None and triples is None:
             raise ValueError('Must specify either triples or path')
         elif path is not None and triples is not None:
-            raise ValueError('Must not specify both triples and path')
+            self.path = path
+            self.triples = triples
         elif path is not None:
             if isinstance(path, str):
                 self.path = os.path.abspath(path)
@@ -510,7 +511,7 @@ class TriplesFactory:
             f'keeping {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples in {self}',
         )
-        return TriplesFactory(triples=self.triples[idx])
+        return TriplesFactory(path=self.path, triples=self.triples[idx])
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
@@ -519,7 +520,7 @@ class TriplesFactory:
             f'removing {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples',
         )
-        return TriplesFactory(triples=self.triples[idx])
+        return TriplesFactory(path=self.path, triples=self.triples[idx])
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
@@ -658,6 +659,7 @@ class TriplesFactory:
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
         factory = TriplesFactory(
+            path=self.path,
             triples=self.triples[keep_mask],
             create_inverse_triples=False,
             entity_to_id=self.entity_to_id,
