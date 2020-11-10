@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Click options for building magical KGE model CLIs."""
-
+import pathlib
 from typing import Optional
 
 import click
@@ -13,6 +13,7 @@ from ...optimizers import get_optimizer_cls, optimizers
 from ...stoppers import _STOPPER_SUFFIX, get_stopper_cls, stoppers
 from ...training import _TRAINING_LOOP_SUFFIX, get_training_loop_cls, training_loops
 from ...triples import TriplesFactory
+from ...typing import Path
 from ...utils import normalize_string, random_non_negative_int, resolve_device
 
 
@@ -34,9 +35,9 @@ def _get_default(f, suffix=None):
     return normalize_string(f(None).__name__, suffix=suffix)
 
 
-def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:
+def triples_factory_callback(_, __, path: Optional[Path]) -> Optional[TriplesFactory]:
     """Generate a triples factory using the given path."""
-    return path and TriplesFactory(path=path)
+    return path and TriplesFactory(path=pathlib.Path(path))
 
 
 CLI_OPTIONS = {
