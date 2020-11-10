@@ -5,6 +5,7 @@
 import json
 import logging
 import os
+import pathlib
 import shutil
 import sys
 import time
@@ -18,7 +19,7 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).parent.absolute()
 
 
 def _turn_on_debugging(_ctx, _param, value):
@@ -28,7 +29,8 @@ def _turn_on_debugging(_ctx, _param, value):
 
 
 def _make_dir(_ctx, _param, value):
-    os.makedirs(value, exist_ok=True)
+    value = pathlib.Path(value)
+    value.mkdir(exist_ok=True, parents=True)
     return value
 
 
@@ -73,7 +75,7 @@ def reproduce(
     reference: str,
     dataset: str,
     replicates: int,
-    directory: str,
+    directory: pathlib.Path,
     move_to_cpu: bool,
     discard_replicates: bool,
 ):
@@ -82,7 +84,7 @@ def reproduce(
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f'{reference}_{model}_{dataset}'
-    path = os.path.join(HERE, model, f'{file_name}.json')
+    path = HERE / model / f'{file_name}.json'
     _help_reproduce(
         directory=directory,
         path=path,
@@ -102,13 +104,13 @@ def reproduce(
 def run(
     path: str,
     replicates: int,
-    directory: str,
+    directory: pathlib.Path,
     move_to_cpu: bool,
     discard_replicates: bool,
 ):
     """Run a single reproduction experiment."""
     _help_reproduce(
-        path=path,
+        path=pathlib.Path(path),
         replicates=replicates,
         directory=directory,
         move_to_cpu=move_to_cpu,
@@ -118,8 +120,8 @@ def run(
 
 def _help_reproduce(
     *,
-    directory: str,
-    path: str,
+    directory: pathlib.Path,
+    path: pathlib.Path,
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -137,7 +139,7 @@ def _help_reproduce(
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if not os.path.exists(path):
+    if not path.exists():
         click.secho(f'Could not find configuration at {path}', fg='red')
         return sys.exit(1)
     click.echo(f'Running configuration at {path}')
@@ -148,9 +150,8 @@ def _help_reproduce(
         experiment_id = f'{datetime}_{uuid4()}_{file_name}'
     else:
         experiment_id = f'{datetime}_{uuid4()}'
-    output_directory = os.path.join(directory, experiment_id)
-
-    os.makedirs(output_directory, exist_ok=True)
+    output_directory = directory / experiment_id
+    output_directory.mkdir(parents=True, exist_ok=True)
 
     replicate_pipeline_from_path(
         path=path,
@@ -160,16 +161,17 @@ def _help_reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
-    shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
+    shutil.copyfile(path, output_directory / 'configuration_copied.json')
 
 
 @experiments.command()
 @click.argument('path')
 @verbose_option
 @click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True))
-def optimize(path: str, directory: str):
+def optimize(path: str, directory: pathlib.Path):
     """Run a single HPO experiment."""
     from pykeen.hpo import hpo_pipeline_from_path
+    path = pathlib.Path(path)
     hpo_pipeline_result = hpo_pipeline_from_path(path)
     hpo_pipeline_result.save_to_directory(directory)
 
@@ -185,7 +187,7 @@ def optimize(path: str, directory: str):
 @verbose_option
 def ablation(
     path: str,
-    directory: Optional[str],
+    directory: Optional[pathlib.Path],
     dry_run: bool,
     best_replicates: int,
     save_artifacts: bool,
@@ -198,9 +200,11 @@ def ablation(
     """
     from pykeen.ablation import ablation_pipeline
 
-    with open(path) as file:
+    path = pathlib.Path(path)
+    with path.open() as file:
         config = json.load(file)
 
+    # TODO: unexpected argument: config
     ablation_pipeline(
         config=config,
         directory=directory,

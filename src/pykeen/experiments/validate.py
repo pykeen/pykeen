@@ -4,7 +4,7 @@
 
 import inspect
 import json
-import os
+import pathlib
 from typing import Iterable, Optional, Set, Type
 
 from torch import nn
@@ -31,24 +31,24 @@ _SKIP_ANNOTATIONS = {
 }
 
 
-def iterate_config_paths() -> Iterable[str]:
+def iterate_config_paths() -> Iterable[str, pathlib.Path, str]:
     """Iterate over all configuration paths."""
-    for model in os.listdir(HERE):
+    for model_directory in HERE.iterdir():
+        model = model_directory.name
         if model not in models_dict:
             continue
-        model_directory = os.path.join(HERE, model)
-        for config in os.listdir(model_directory):
+        for path in model_directory.iterdir():
+            config = path.name
             if config.startswith('hpo'):
                 continue
-            path = os.path.join(model_directory, config)
-            if not os.path.isfile(path) or not path.endswith('.json'):
+            if not path.is_file() or not path.name.endswith('.json'):
                 continue
-            yield model, config, path
+            yield model, path, config
 
 
-def get_configuration_errors(path: str):  # noqa: C901
+def get_configuration_errors(path: pathlib.Path):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
-    with open(path) as file:
+    with path.open() as file:
         configuration = json.load(file)
 
     pipeline = configuration.get('pipeline')
