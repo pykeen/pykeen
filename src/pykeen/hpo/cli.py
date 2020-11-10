@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """A command line interface for hyper-parameter optimization in PyKEEN."""
-
+import pathlib
 import sys
 from typing import Optional
 
@@ -40,6 +40,7 @@ def optimize(
     if n_trials is None and timeout is None:
         click.secho('Must specify either --n-trials or --timeout', fg='red')
         sys.exit(1)
+    output = pathlib.Path(output)
 
     hpo_pipeline_result = hpo_pipeline(
         model=model,

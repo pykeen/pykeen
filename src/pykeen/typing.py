@@ -15,6 +15,7 @@ __all__ = [
     'InteractionFunction',
     'DeviceHint',
     'Path',
+    'PurePath',
 ]
 
 LabeledTriples = np.ndarray
@@ -31,3 +32,4 @@ Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
 Path = Union[pathlib.Path, str]
+PurePath = Union[pathlib.PurePath, str]

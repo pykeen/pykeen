@@ -7,6 +7,7 @@ import ftplib
 import json
 import logging
 import os
+import pathlib
 from dataclasses import dataclass
 from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
 
@@ -32,6 +33,7 @@ from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
 from ..trackers import ResultTracker, get_result_tracker_cls
 from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from ..triples import TriplesFactory
+from ..typing import Path, PurePath
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
     normalize_string,
@@ -99,7 +101,7 @@ class Objective:
     # Misc.
     metric: str = None
     device: Union[None, str, torch.device] = None
-    save_model_directory: Optional[str] = None
+    save_model_directory: Optional[pathlib.Path] = None
 
     @staticmethod
     def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
@@ -236,8 +238,8 @@ class Objective:
             return None
         else:
             if self.save_model_directory:
-                model_directory = os.path.join(self.save_model_directory, str(trial.number))
-                os.makedirs(model_directory, exist_ok=True)
+                model_directory = self.save_model_directory / str(trial.number)
+                model_directory.mkdir(exist_ok=True, parents=True)
                 result.save_to_directory(model_directory)
 
             trial.set_user_attr('random_seed', result.random_seed)
@@ -308,45 +310,47 @@ class HpoPipelineResult(Result):
             pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, directory: str, **kwargs) -> None:
+    def save_to_directory(self, directory: Path, **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        directory = pathlib.Path(directory)
+        directory.mkdir(exist_ok=True, parents=True)
 
         # Output study information
-        with open(os.path.join(directory, 'study.json'), 'w') as file:
+        with (directory / "study.json").open('w') as file:
             json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
-        df.to_csv(os.path.join(directory, 'trials.tsv'), sep='\t', index=False)
+        df.to_csv(directory / 'trials.tsv', sep='\t', index=False)
 
-        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
-        os.makedirs(best_pipeline_directory, exist_ok=True)
+        best_pipeline_directory = directory / 'best_pipeline'
+        best_pipeline_directory.mkdir(exist_ok=True, parents=True)
         # Output best trial as pipeline configuration file
-        with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
+        with (best_pipeline_directory / 'pipeline_config.json').open('w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
+    def save_to_ftp(self, directory: PurePath, ftp: ftplib.FTP):
         """Save the results to the directory in an FTP server.
 
         :param directory: The directory in the FTP server to save to
         :param ftp: A connection to the FTP server
         """
+        directory = pathlib.PurePath(directory)
         ensure_ftp_directory(ftp=ftp, directory=directory)
 
-        study_path = os.path.join(directory, 'study.json')
+        study_path = directory / 'study.json'
         ftp.storbinary(f'STOR {study_path}', get_json_bytes_io(self.study.user_attrs))
 
-        trials_path = os.path.join(directory, 'trials.tsv')
+        trials_path = directory / 'trials.tsv'
         ftp.storbinary(f'STOR {trials_path}', get_df_io(self.study.trials_dataframe()))
 
-        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
+        best_pipeline_directory = directory / 'best_pipeline'
         ensure_ftp_directory(ftp=ftp, directory=best_pipeline_directory)
 
-        best_config_path = os.path.join(best_pipeline_directory, 'pipeline_config.json')
+        best_config_path = best_pipeline_directory / 'pipeline_config.json'
         ftp.storbinary(f'STOR {best_config_path}', get_json_bytes_io(self._get_best_study_config()))
 
-    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+    def save_to_s3(self, directory: PurePath, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
@@ -357,19 +361,19 @@ class HpoPipelineResult(Result):
             import boto3
             s3 = boto3.client('s3')
 
-        study_path = os.path.join(directory, 'study.json')
+        study_path = directory / 'study.json'
         s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
 
-        trials_path = os.path.join(directory, 'trials.tsv')
+        trials_path = directory / 'trials.tsv'
         s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
 
-        best_config_path = os.path.join(directory, 'best_pipeline', 'pipeline_config.json')
+        best_config_path = directory / 'best_pipeline' / 'pipeline_config.json'
         s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
 
     def replicate_best_pipeline(
         self,
         *,
-        directory: str,
+        directory: Path,
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
@@ -381,6 +385,7 @@ class HpoPipelineResult(Result):
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         :param save_replicates: Should the artifacts of the replicates be saved?
         """
+        directory = pathlib.Path(directory)
         config = self._get_best_study_config()
 
         if 'use_testing_data' in config:
@@ -396,9 +401,10 @@ class HpoPipelineResult(Result):
         )
 
 
-def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: Path, **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
-    with open(path) as file:
+    path = pathlib.Path(path)
+    with path.open() as file:
         config = json.load(file)
     return hpo_pipeline_from_config(config, **kwargs)
 
@@ -459,7 +465,7 @@ def hpo_pipeline(
     # 6. Misc
     device: Union[None, str, torch.device] = None,
     #  Optuna Study Settings
-    storage: Union[None, str, BaseStorage] = None,
+    storage: Union[None, str, Path, BaseStorage] = None,
     sampler: Union[None, str, Type[BaseSampler]] = None,
     sampler_kwargs: Optional[Mapping[str, Any]] = None,
     pruner: Union[None, str, Type[BasePruner]] = None,
@@ -471,7 +477,7 @@ def hpo_pipeline(
     n_trials: Optional[int] = None,
     timeout: Optional[int] = None,
     n_jobs: Optional[int] = None,
-    save_model_directory: Optional[str] = None,
+    save_model_directory: Optional[Path] = None,
 ) -> HpoPipelineResult:
     """Train a model on the given dataset.
 
