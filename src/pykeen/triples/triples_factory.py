@@ -637,6 +637,12 @@ class TriplesFactory:
                 'relations as well.',
                 str(self),
             )
+            if any(r.endswith(INVERSE_SUFFIX) for r in relations):
+                logger.warning("relation restriction contains inverse suffixes.")
+                relations = set(
+                    r[:-len(INVERSE_SUFFIX)] if r.endswith(INVERSE_SUFFIX) else r
+                    for r in relations
+                )
             relations = list(relations) + list(map(self.relation_to_inverse.__getitem__, relations))
 
         keep_mask = None
