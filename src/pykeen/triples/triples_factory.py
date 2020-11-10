@@ -4,6 +4,7 @@
 
 import logging
 import os
+import pathlib
 import re
 from collections import Counter, defaultdict
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
@@ -15,7 +16,7 @@ from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, Path, RelationMapping
 from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
 
 __all__ = [
@@ -196,7 +197,7 @@ class TriplesFactory:
     def __init__(
         self,
         *,
-        path: Union[None, str, TextIO] = None,
+        path: Union[None, Path, TextIO] = None,
         triples: Optional[LabeledTriples] = None,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
@@ -219,11 +220,14 @@ class TriplesFactory:
             raise ValueError('Must not specify both triples and path')
         elif path is not None:
             if isinstance(path, str):
-                self.path = os.path.abspath(path)
+                _path = os.path.abspath(path)
             elif isinstance(path, TextIO):
-                self.path = os.path.abspath(path.name)
+                _path = os.path.abspath(path.name)
+            elif isinstance(path, pathlib.Path):
+                _path = path
             else:
                 raise TypeError(f'path is invalid type: {type(path)}')
+            self.path = pathlib.Path(_path)
 
             # TODO: Check if lazy evaluation would make sense
             self.triples = load_triples(path)

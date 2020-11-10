@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Instance creation utilities."""
-
+import pathlib
 from typing import Callable, Mapping, Optional, TextIO, Union
 
 import numpy as np
@@ -27,7 +27,7 @@ PREFIX_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importer
 EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers('extension_importer')
 
 
-def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Optional[str] = None) -> LabeledTriples:
+def load_triples(path: Union[str, TextIO, pathlib.Path], delimiter: str = '\t', encoding: Optional[str] = None) -> LabeledTriples:
     """Load triples saved as tab separated values.
 
     Besides TSV handling, PyKEEN does not come with any importers pre-installed. A few can be found at:
