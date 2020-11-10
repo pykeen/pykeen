@@ -3,9 +3,10 @@
 """Constants for PyKEEN."""
 
 import os
+import pathlib
 
 __all__ = [
     'PYKEEN_HOME',
 ]
 
-PYKEEN_HOME = os.environ.get('PYKEEN_HOME') or os.path.join(os.path.expanduser('~'), '.pykeen')
+PYKEEN_HOME = pathlib.Path(os.environ.get('PYKEEN_HOME')) or pathlib.Path("~", ".pykeen").expanduser()
