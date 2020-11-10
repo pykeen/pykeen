@@ -2,7 +2,7 @@
 
 """Get triples from the UMLS data set."""
 
-import os
+import pathlib
 
 from ..base import PathDataSet
 
@@ -13,11 +13,11 @@ __all__ = [
     'UMLS',
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).parent
 
-UMLS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
-UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
-UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
+UMLS_TRAIN_PATH = HERE / 'train.txt'
+UMLS_TEST_PATH = HERE / 'test.txt'
+UMLS_VALIDATE_PATH = HERE / 'valid.txt'
 
 
 class UMLS(PathDataSet):

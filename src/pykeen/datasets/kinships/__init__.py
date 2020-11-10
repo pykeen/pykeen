@@ -2,7 +2,7 @@
 
 """Get triples from the Kinships data set."""
 
-import os
+import pathlib
 
 from ..base import PathDataSet
 
@@ -13,11 +13,11 @@ __all__ = [
     'Kinships',
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).parent
 
-KINSHIPS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
-KINSHIPS_TEST_PATH = os.path.join(HERE, 'test.txt')
-KINSHIPS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
+KINSHIPS_TRAIN_PATH = HERE / "train.txt"
+KINSHIPS_TEST_PATH = HERE / "test.txt"
+KINSHIPS_VALIDATE_PATH = HERE / "valid.txt"
 
 
 class Kinships(PathDataSet):

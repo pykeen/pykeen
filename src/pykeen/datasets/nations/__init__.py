@@ -2,7 +2,7 @@
 
 """Get triples from the Nations data set."""
 
-import os
+import pathlib
 
 from ..base import PathDataSet
 
@@ -13,11 +13,11 @@ __all__ = [
     'Nations',
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).parent
 
-NATIONS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
-NATIONS_TEST_PATH = os.path.join(HERE, 'test.txt')
-NATIONS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
+NATIONS_TRAIN_PATH = HERE / 'train.txt'
+NATIONS_TEST_PATH = HERE / 'test.txt'
+NATIONS_VALIDATE_PATH = HERE / 'valid.txt'
 
 
 class Nations(PathDataSet):
