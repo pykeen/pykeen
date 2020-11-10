@@ -201,6 +201,27 @@ class TestTriplesFactory(unittest.TestCase):
                                                                     exp_relations))
                         assert exp_relations.issuperset(present_relations)
 
+    def test_restrict_with_inverse(self):
+        """Test restricting relations when there are inverses."""
+        create_inverse_triples = True
+
+        training = TriplesFactory(
+            path=NATIONS_TRAIN_PATH,
+            create_inverse_triples=create_inverse_triples,
+        )
+        testing = TriplesFactory(
+            path=NATIONS_TEST_PATH,
+            entity_to_id=training.entity_to_id,
+            relation_to_id=training.relation_to_id,
+            create_inverse_triples=create_inverse_triples,
+        )
+
+        new_testing = testing.new_with_restriction(relations=['aidenemy'])
+        self.assertEqual(
+            {'aidenemy'},
+            set(new_testing.relation_to_id),
+        )
+
 
 class TestSplit(unittest.TestCase):
     """Test splitting."""
