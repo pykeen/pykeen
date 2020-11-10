@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Type hints for PyKEEN."""
-
+import pathlib
 from typing import Callable, Mapping, TypeVar, Union
 
 import numpy as np
@@ -29,3 +29,4 @@ Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
+Path = Union[pathlib.Path, str]
