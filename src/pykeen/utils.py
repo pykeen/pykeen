@@ -5,6 +5,7 @@
 import ftplib
 import json
 import logging
+import pathlib
 import random
 from io import BytesIO
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
@@ -321,15 +322,15 @@ def compact_mapping(
 class Result:
     """A superclass of results that can be saved to a directory."""
 
-    def save_to_directory(self, directory: str, **kwargs) -> None:
+    def save_to_directory(self, directory: Union[pathlib.Path, str], **kwargs) -> None:
         """Save the results to the directory."""
         raise NotImplementedError
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+    def save_to_ftp(self, directory: Union[pathlib.Path, str], ftp: ftplib.FTP) -> None:
         """Save the results to the directory in an FTP server."""
         raise NotImplementedError
 
-    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+    def save_to_s3(self, directory: Union[pathlib.Path, str], bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
@@ -398,10 +399,10 @@ def get_df_io(df: pd.DataFrame) -> BytesIO:
     return df_io
 
 
-def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: pathlib.PurePath) -> None:
     """Ensure the directory exists on the FTP server."""
     try:
-        ftp.mkd(directory)
+        ftp.mkd(str(directory))
     except ftplib.error_perm:
         pass  # its fine...
 

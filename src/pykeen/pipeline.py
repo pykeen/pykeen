@@ -167,7 +167,7 @@ the :class:`pykeen.dataset.Nations`
 import ftplib
 import json
 import logging
-import os
+import pathlib
 import time
 from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
@@ -189,6 +189,7 @@ from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
+from .typing import Path, PurePath
 from .utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, normalize_string,
     random_non_negative_int, resolve_device, set_random_seed,
@@ -395,7 +396,7 @@ class PipelineResult(Result):
 
         plt.tight_layout()
 
-    def save_model(self, path: str) -> None:
+    def save_model(self, path: Path) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
 
         :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
@@ -418,18 +419,19 @@ class PipelineResult(Result):
             results['stopper'] = self.stopper.get_summary_dict()
         return results
 
-    def save_to_directory(self, directory: str, save_metadata: bool = True, save_replicates: bool = True) -> None:
+    def save_to_directory(self, directory: Path, save_metadata: bool = True, save_replicates: bool = True) -> None:
         """Save all artifacts in the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        directory = pathlib.Path(directory)
+        directory.mkdir(exist_ok=True, parents=True)
 
-        with open(os.path.join(directory, 'metadata.json'), 'w') as file:
+        with (directory / "metadata.json").open("w") as file:
             json.dump(self.metadata, file, indent=2, sort_keys=True)
-        with open(os.path.join(directory, 'results.json'), 'w') as file:
+        with (directory / "results.json").open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
-            self.save_model(os.path.join(directory, 'trained_model.pkl'))
+            self.save_model(directory / "trained_model.pkl")
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+    def save_to_ftp(self, directory: PurePath, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
 
         :param directory: The directory in the FTP server to save to
@@ -474,16 +476,16 @@ class PipelineResult(Result):
         """
         ensure_ftp_directory(ftp=ftp, directory=directory)
 
-        metadata_path = os.path.join(directory, 'metadata.json')
+        metadata_path = directory / 'metadata.json'
         ftp.storbinary(f'STOR {metadata_path}', get_json_bytes_io(self.metadata))
 
-        results_path = os.path.join(directory, 'results.json')
+        results_path = directory / 'results.json'
         ftp.storbinary(f'STOR {results_path}', get_json_bytes_io(self._get_results()))
 
-        model_path = os.path.join(directory, 'trained_model.pkl')
+        model_path = directory / 'trained_model.pkl'
         ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
 
-    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+    def save_to_s3(self, directory: PurePath, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
@@ -510,13 +512,13 @@ class PipelineResult(Result):
             import boto3
             s3 = boto3.client('s3')
 
-        metadata_path = os.path.join(directory, 'metadata.json')
+        metadata_path = directory / 'metadata.json'
         s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
 
-        results_path = os.path.join(directory, 'results.json')
+        results_path = directory / 'results.json'
         s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
 
-        model_path = os.path.join(directory, 'trained_model.pkl')
+        model_path = directory / 'trained_model.pkl'
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
@@ -564,8 +566,8 @@ def _get_reducer_cls(model: str, **kwargs):
 
 
 def replicate_pipeline_from_path(
-    path: str,
-    directory: str,
+    path: Path,
+    directory: Path,
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -594,7 +596,7 @@ def replicate_pipeline_from_path(
 
 def replicate_pipeline_from_config(
     config: Mapping[str, Any],
-    directory: str,
+    directory: Path,
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -629,7 +631,7 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
 
 def save_pipeline_results_to_directory(
     *,
-    directory: str,
+    directory: Path,
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
     save_metadata: bool = False,
@@ -646,32 +648,34 @@ def save_pipeline_results_to_directory(
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
-    replicates_directory = os.path.join(directory, 'replicates')
+    directory = pathlib.Path(directory)
+    replicates_directory = directory / 'replicates'
     losses_rows = []
 
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
     for i, pipeline_result in enumerate(pipeline_results):
-        sd = os.path.join(replicates_directory, f'replicate-{i:0{width}}')
-        os.makedirs(sd, exist_ok=True)
+        sd = replicates_directory / f'replicate-{i:0{width}}'
+        sd.mkdir(exist_ok=True, parents=True)
         pipeline_result.save_to_directory(sd, save_metadata=save_metadata, save_replicates=save_replicates)
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
 
     losses_df = pd.DataFrame(losses_rows, columns=['Replicate', 'Epoch', 'Loss'])
-    losses_df.to_csv(os.path.join(directory, 'all_replicates_losses.tsv'), sep='\t', index=False)
+    losses_df.to_csv(directory / 'all_replicates_losses.tsv', sep='\t', index=False)
 
 
 def pipeline_from_path(
-    path: str,
+    path: Path,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
     :param path: The path to an experiment JSON file
     """
-    with open(path) as file:
+    path = pathlib.Path(path)
+    with path.open() as file:
         config = json.load(file)
     return pipeline_from_config(
         config=config,
@@ -702,11 +706,11 @@ def pipeline_from_config(
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
-    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset: Union[None, Path, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, TriplesFactory, str] = None,
-    testing: Union[None, TriplesFactory, str] = None,
-    validation: Union[None, TriplesFactory, str] = None,
+    training: Union[None, TriplesFactory, Path] = None,
+    testing: Union[None, TriplesFactory, Path] = None,
+    validation: Union[None, TriplesFactory, Path] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -975,10 +979,10 @@ def pipeline(  # noqa: C901
         logging.debug(f"dataset: {dataset}")
         logging.debug(f"dataset_kwargs: {dataset_kwargs}")
     else:
-        logging.debug('training: %s', training.path)
-        logging.debug('testing: %s', testing.path)
+        logging.debug('training: %s', training)
+        logging.debug('testing: %s', testing)
         if validation:
-            logging.debug('validation: %s', validation.path)
+            logging.debug('validation: %s', validation)
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
