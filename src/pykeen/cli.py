@@ -15,6 +15,7 @@ later, but that will cause problems - the code will get executed twice:
 
 import inspect
 import os
+import pathlib
 import sys
 from itertools import chain
 
@@ -40,7 +41,7 @@ from .training import training_loops as training_dict
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).absolute()
 
 
 @click.group()
@@ -351,7 +352,7 @@ def _get_lines(d, tablefmt, submodule):
 @click.option('--check', is_flag=True)
 def readme(check: bool):
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, 'README.md'))
+    readme_path = HERE.parent.parent / "README.md"
     new_readme = get_readme()
 
     if check:
@@ -376,7 +377,7 @@ def readme(check: bool):
 def get_readme() -> str:
     """Get the readme."""
     from jinja2 import FileSystemLoader, Environment
-    loader = FileSystemLoader(os.path.join(HERE, 'templates'))
+    loader = FileSystemLoader(HERE / "templates")
     environment = Environment(
         autoescape=True,
         loader=loader,
