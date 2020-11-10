@@ -5,13 +5,14 @@
 import itertools as itt
 import json
 import logging
-import os
+import pathlib
 import time
 from copy import deepcopy
 from typing import Any, List, Mapping, Optional, Tuple, Union
 from uuid import uuid4
 
 from ..training import _TRAINING_LOOP_SUFFIX
+from ..typing import Path
 from ..utils import normalize_string
 
 __all__ = [
@@ -46,7 +47,7 @@ def ablation_pipeline(
     optuna_config: Optional[Mapping[str, Any]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    directory: Optional[str] = None,
+    directory: Optional[Path] = None,
     dry_run: bool = False,
     best_replicates: Optional[int] = None,
     save_artifacts: bool = True,
@@ -93,9 +94,7 @@ def ablation_pipeline(
      We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     """
-    datetime = time.strftime('%Y-%m-%d-%H-%M')
-    directory = os.path.join(directory, f'{datetime}_{uuid4()}')
-
+    directory = pathlib.Path(directory) / f"{time.strftime('%Y-%m-%d-%H-%M')}_{uuid4()}"
     directories = prepare_ablation(
         datasets=datasets,
         create_inverse_triples=create_inverse_triples,
@@ -128,8 +127,8 @@ def ablation_pipeline(
         if not best_replicates:
             continue
 
-        best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
-        os.makedirs(best_pipeline_dir, exist_ok=True)
+        best_pipeline_dir = output_directory / "best_pipeline"
+        best_pipeline_dir.mkdir(exist_ok=True)
         logger.info('Re-training best pipeline and saving artifacts in %s', best_pipeline_dir)
         hpo_pipeline_result.replicate_best_pipeline(
             replicates=best_replicates,
@@ -142,7 +141,7 @@ def ablation_pipeline(
 def ablation_pipeline_from_config(
     config: Mapping[str, Any],
     *,
-    directory: Optional[str] = None,
+    directory: Optional[Path] = None,
     dry_run: bool = False,
     best_replicates: Optional[int] = None,
     save_artifacts: bool = True,
@@ -175,7 +174,7 @@ def ablation_pipeline_from_config(
     )
 
 
-def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) -> List[Tuple[str, str]]:
+def prepare_ablation_from_path(path: Path, directory: Path, save_artifacts: bool) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare a set of ablation study directories.
 
     :param path: Path to configuration file defining the ablation studies.
@@ -184,16 +183,17 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
     :param save_artifacts: Defines, whether the output directories for the trained models sampled during HPO should be
      created.
     """
-    with open(path) as file:
+    path = pathlib.Path(path)
+    with path.open() as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 
 
 def prepare_ablation_from_config(
     config: Mapping[str, Any],
-    directory: str,
+    directory: Path,
     save_artifacts: bool,
-) -> List[Tuple[str, str]]:
+) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare a set of ablation study directories.
 
     :param config: Dictionary defining the ablation studies.
@@ -257,9 +257,9 @@ def prepare_ablation(  # noqa:C901
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metadata=None,
-    directory: Optional[str] = None,
+    directory: Optional[Path] = None,
     save_artifacts: bool = True,
-) -> List[Tuple[str, str]]:
+) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare an ablation directory.
 
     :return: pairs of output directories and HPO config paths inside those directories
@@ -301,6 +301,7 @@ def prepare_ablation(  # noqa:C901
         ablation_config = {}
 
     directories = []
+    directory = pathlib.Path(directory)
     for counter, (
         dataset,
         create_inverse_triples,
@@ -312,15 +313,17 @@ def prepare_ablation(  # noqa:C901
     ) in enumerate(it):
         dataset_name = normalize_string(dataset) if isinstance(dataset, str) else 'user_data'
         experiment_name = f'{counter:04d}_{dataset_name}_{normalize_string(model)}'
-        output_directory = os.path.join(directory, experiment_name)
-        os.makedirs(output_directory, exist_ok=True)
-        # TODO what happens if already exists?
+        output_directory = directory / experiment_name
+        if output_directory.is_dir():
+            # TODO what happens if already exists?
+            logger.warning(f"Output directory already exists {output_directory}")
+        output_directory.mkdir(exist_ok=True, parents=True)
 
         _experiment_optuna_config = optuna_config.copy() if optuna_config else {}
         _experiment_optuna_config['storage'] = f'sqlite:///{output_directory}/optuna_results.db'
         if save_artifacts:
-            save_model_directory = os.path.join(output_directory, 'artifacts')
-            os.makedirs(save_model_directory, exist_ok=True)
+            save_model_directory = output_directory / "artifacts"
+            save_model_directory.mkdir(exist_ok=True)
             _experiment_optuna_config['save_model_directory'] = save_model_directory
 
         hpo_config = dict()
@@ -410,8 +413,8 @@ def prepare_ablation(  # noqa:C901
             optuna=_experiment_optuna_config,
         )
 
-        rv_config_path = os.path.join(output_directory, 'hpo_config.json')
-        with open(rv_config_path, 'w') as file:
+        rv_config_path = output_directory / "hpo_config.json"
+        with rv_config_path.open("w") as file:
             json.dump(rv_config, file, indent=2, ensure_ascii=True)
 
         directories.append((output_directory, rv_config_path))
