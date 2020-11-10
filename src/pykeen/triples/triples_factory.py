@@ -231,6 +231,7 @@ class TriplesFactory:
             self.path = '<None>'
             self.triples = triples
 
+        self._tags = {}
         self._num_entities = len(set(self.triples[:, 0]).union(self.triples[:, 2]))
 
         relations = self.triples[:, 1]
@@ -332,7 +333,11 @@ class TriplesFactory:
         return self.relation_to_id[inverse_relation]
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(path="{self.path}")'
+        tags = ''.join(
+            f', {k}="{v}"' if isinstance(v, str) else f', {k}={v}'
+            for k, v in self._tags.items()
+        )
+        return f'{self.__class__.__name__}(path="{self.path}"{tags})'
 
     @staticmethod
     def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
@@ -640,15 +645,18 @@ class TriplesFactory:
             relations = list(relations) + list(map(self.relation_to_inverse.__getitem__, relations))
 
         keep_mask = None
+        tags = {}
 
         # Filter for entities
         if entities is not None:
             keep_mask = self.get_idx_for_entities(entities=entities)
+            tags['entities'] = sorted(set(entities))
             logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
 
         # Filter for relations
         if relations is not None:
             relation_mask = self.get_idx_for_relations(relations=relations)
+            tags['relations'] = sorted(set(relations))
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
@@ -664,6 +672,7 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             compact_id=False,
         )
+        factory._tags.update(tags)
 
         # manually copy the inverse relation mappings
         if self.create_inverse_triples:

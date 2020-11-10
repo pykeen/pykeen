@@ -8,6 +8,7 @@ import numpy as np
 import torch
 
 from pykeen.datasets import Nations
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
@@ -200,6 +201,15 @@ class TestTriplesFactory(unittest.TestCase):
                             exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
                                                                     exp_relations))
                         assert exp_relations.issuperset(present_relations)
+
+    def test_repr(self):
+        """Test repr() for triples factories."""
+        t = Nations().training
+        self.assertEqual(f'TriplesFactory(path="{NATIONS_TRAIN_PATH}")', repr(t))
+
+        first = list(t.entity_to_id)[0]
+        x = t.new_with_restriction(entities=[first])
+        self.assertEqual(f'''TriplesFactory(path="{NATIONS_TRAIN_PATH}", entities=['{first}'])''', repr(x))
 
 
 class TestSplit(unittest.TestCase):

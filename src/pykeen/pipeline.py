@@ -975,10 +975,11 @@ def pipeline(  # noqa: C901
         logging.debug(f"dataset: {dataset}")
         logging.debug(f"dataset_kwargs: {dataset_kwargs}")
     else:
-        logging.debug('training: %s', training.path)
-        logging.debug('testing: %s', testing.path)
+        logging.debug('training: %s', training)
+        logging.debug('testing: %s', testing)
         if validation:
-            logging.debug('validation: %s', validation.path)
+            logging.debug('validation: %s', validation)
+
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
