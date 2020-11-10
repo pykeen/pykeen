@@ -14,6 +14,7 @@ __all__ = [
     'RelationMapping',
     'InteractionFunction',
     'DeviceHint',
+    'Path',
 ]
 
 LabeledTriples = np.ndarray
