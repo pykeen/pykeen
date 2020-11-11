@@ -3,6 +3,7 @@
 """Unit tests for triples factories."""
 
 import unittest
+from typing import Optional
 
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, LabelMapping, TRIPLES_DF_COLUMNS, Triples, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
 
 triples = np.array(
@@ -397,3 +398,104 @@ class TestLiterals(unittest.TestCase):
         )
 
         self.assertIn(f'likes{INVERSE_SUFFIX}', triples_factory.relation_to_id)
+
+
+def _check_triples(
+    triples: Triples,
+    num_triples: int,
+    max_entity_id: int,
+    max_relation_id: int,
+    real_max_relation_id: int,
+    contains_inverse: bool,
+    label_mapping: Optional[LabelMapping],
+):
+    # check type
+    assert torch.is_tensor(triples.mapped_triples) and triples.mapped_triples.dtype == torch.long
+    # check shape
+    assert triples.mapped_triples.shape == (num_triples, 3)
+    # check contains inverse
+    assert triples.contains_inverse_triples == contains_inverse
+    # check max ids
+    assert triples.max_entity_id == max_entity_id
+    assert triples.max_relation_id == max_relation_id
+    assert triples.real_max_relation_id == real_max_relation_id
+    # check label mapping
+    assert triples.label_mapping is label_mapping
+
+
+class TriplesTest(unittest.TestCase):
+    """Test for Triples."""
+
+    max_relation_id: int = 7
+    max_entity_id: int = 13
+    num_triples: int = 31
+
+    def setUp(self) -> None:
+        """Generate test data."""
+        self.mapped_triples = torch.stack([
+            torch.randint(self.max_entity_id, size=(self.num_triples,)),
+            torch.randint(self.max_relation_id, size=(self.num_triples,)),
+            torch.randint(self.max_entity_id, size=(self.num_triples,)),
+        ], dim=-1)
+        self.max_entity_id = self.mapped_triples[:, [0, 2]].max() + 1
+        self.max_relation_id = self.mapped_triples[:, 1].max() + 1
+        entity_label_to_id = {
+            f"e_{i}": i
+            for i in range(self.max_entity_id)
+        }
+        relation_label_to_id = {
+            f"r_{i}": i
+            for i in range(self.max_relation_id)
+        }
+        self.label_mapping = LabelMapping(
+            entity_label_to_id=entity_label_to_id,
+            relation_label_to_id=relation_label_to_id,
+        )
+
+    def _check_triples(self, triples: Triples, label_mapping: Optional[LabelMapping] = None):
+        """Common verification of Triples."""
+        _check_triples(
+            triples=triples,
+            num_triples=self.num_triples,
+            max_entity_id=self.max_entity_id,
+            max_relation_id=self.max_relation_id,
+            real_max_relation_id=self.max_relation_id,
+            contains_inverse=False,
+            label_mapping=label_mapping,
+        )
+
+        # check inverse
+        with_inverses = triples.with_inverse_triples()
+        _check_triples(
+            triples=with_inverses,
+            num_triples=2 * self.num_triples,
+            max_entity_id=self.max_entity_id,
+            max_relation_id=2 * self.max_relation_id,
+            real_max_relation_id=self.max_relation_id,
+            contains_inverse=True,
+            label_mapping=label_mapping,
+        )
+
+    def test_minimal_init(self):
+        """Test initialization with minimal input."""
+        self._check_triples(triples=Triples(mapped_triples=self.mapped_triples))
+
+    def test_full_init_no_label_mapping(self):
+        """Test initialization with full input, but without label mapping."""
+        self._check_triples(triples=Triples(
+            mapped_triples=self.mapped_triples,
+            max_entity_id=self.max_entity_id,
+            max_relation_id=self.max_relation_id,
+        ))
+
+    def test_full_init(self):
+        """Test initialization with full input."""
+        self._check_triples(
+            triples=Triples(
+                mapped_triples=self.mapped_triples,
+                max_entity_id=self.max_entity_id,
+                max_relation_id=self.max_relation_id,
+                label_mapping=self.label_mapping,
+            ),
+            label_mapping=self.label_mapping,
+        )
