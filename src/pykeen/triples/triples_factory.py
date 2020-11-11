@@ -344,7 +344,8 @@ class Triples:
     @staticmethod
     def add_inverse_triples(triples: torch.LongTensor) -> torch.LongTensor:
         """Add inverse triples."""
-        triples = 2 * triples
+        triples = triples.clone()
+        triples[:, 1] *= 2
         inverse_triples = triples.clone().flip(-1)
         inverse_triples[:, 1] += 1
         return torch.cat([triples, inverse_triples], dim=0)
