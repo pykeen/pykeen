@@ -150,6 +150,11 @@ class TestTriplesFactory(unittest.TestCase):
         # check column order
         assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ('scores',)
 
+    def test_relation_to_inverse(self):
+        """Test relation_to_inverse."""
+        factory = Nations(create_inverse_triples=True).training
+        assert len(factory.relation_to_id) == len(factory.relation_to_inverse)
+
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
         example_relation_restriction = {
