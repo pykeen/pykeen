@@ -426,7 +426,7 @@ class LabelMapping:
             logger.debug('Label mapping is already compact.')
             return self
 
-        # TODO: Return compaction?
+        # TODO: Return compaction, i.e. the mapping from old to new ID?
         return LabelMapping(
             entity_label_to_id=compact_mapping(mapping=self.entity_label_to_id)[0],
             relation_label_to_id=compact_mapping(mapping=self.relation_label_to_id)[0],
