@@ -280,6 +280,9 @@ class Triples:
     #: The mapped triples, shape: (n, 3)
     mapped_triples: torch.LongTensor
 
+    #: The associated label mapping
+    label_mapping: Optional["LabelMapping"] = None
+
     #: The maximum entity ID
     max_entity_id: int = None
 
@@ -338,6 +341,7 @@ class Triples:
                 triples,
                 inverse_triples,
             ], dim=0),
+            label_mapping=self.label_mapping,
             max_entity_id=self.max_entity_id,
             max_relation_id=self.max_relation_id,
             contains_inverse_triples=True,
