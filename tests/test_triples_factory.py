@@ -217,7 +217,7 @@ class TestTriplesFactory(unittest.TestCase):
             create_inverse_triples=create_inverse_triples,
         )
 
-        new_testing = testing.new_with_restriction(relations=['aidenemy'])
+        new_testing = testing.new_with_restriction(relations=['aidenemy_inverse'])
         self.assertEqual(
             {'aidenemy'},
             set(new_testing.relation_to_id),
