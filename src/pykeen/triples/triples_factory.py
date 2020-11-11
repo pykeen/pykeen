@@ -293,7 +293,7 @@ class Triples:
     max_relation_id: int = None
 
     #: The maximum relation ID (not including inverse relations)
-    real_max_relation_id: int = dataclasses.Field(init=False)
+    real_max_relation_id: int = dataclasses.field(init=False)
 
     #: Whether inverse triples are contained
     contains_inverse_triples: bool = False
@@ -384,22 +384,22 @@ class LabelMapping:
     relation_label_to_id: RelationMapping
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
-    entity_id_to_label: Mapping[int, str] = dataclasses.Field(init=False)
+    entity_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: The inverse mapping for relation_label_to_id; initialized automatically
-    relation_id_to_label: Mapping[int, str] = dataclasses.Field(init=False)
+    relation_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.Field(init=False)
+    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of relation_label_to_id; initialized automatically
-    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.Field(init=False)
+    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.Field(init=False)
+    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of relation_id_to_label; initialized automatically
-    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.Field(init=False)
+    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.field(init=False)
 
     @staticmethod
     def from_labeled_triples(triples: LabeledTriples) -> 'LabelMapping':
