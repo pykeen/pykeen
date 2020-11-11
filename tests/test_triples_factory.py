@@ -152,8 +152,12 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_relation_to_inverse(self):
         """Test relation_to_inverse."""
-        factory = Nations(create_inverse_triples=True).training
-        assert len(factory.relation_to_id) == len(factory.relation_to_inverse)
+        dataset = Nations(create_inverse_triples=True)
+        for factory in (dataset.training, dataset.testing):
+            assert factory.relation_to_inverse is not None
+            # relation_to_id contains the inverse relations as well
+            # relation_to_inverse only maps non-inverse relations to their counterpart.
+            assert len(factory.relation_to_id) == 2 * len(factory.relation_to_inverse)
 
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
