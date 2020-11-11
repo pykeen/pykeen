@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
