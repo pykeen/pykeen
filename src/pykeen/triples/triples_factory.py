@@ -20,7 +20,7 @@ from typing import (
     Set,
     TextIO,
     Tuple,
-    Union,
+    TypeVar, Union,
 )
 
 import numpy as np
@@ -272,6 +272,9 @@ def _label_column(
     return vectorized_labeler(mapped_column, (unknown_label,))
 
 
+RelationID = TypeVar("RelationID", int, torch.LongTensor)
+
+
 @dataclasses.dataclass
 class Triples:
     """ID-based triples."""
@@ -286,8 +289,11 @@ class Triples:
     #: The maximum entity ID
     max_entity_id: int = None
 
-    #: The maximum relation ID
+    #: The maximum relation ID (potentially including inverse relations)
     max_relation_id: int = None
+
+    #: The maximum relation ID (not including inverse relations)
+    real_max_relation_id: int = dataclasses.Field(init=False)
 
     #: Whether inverse triples are contained
     contains_inverse_triples: bool = False
@@ -299,12 +305,6 @@ class Triples:
             self.max_entity_id = max_entity_id + 1
             logger.info(f'Inferred maximum entity ID from triples: maximum_entity_id={self.max_entity_id}.')
 
-        # Infer maximum relation ID from triples if not given
-        max_relation_id = self.mapped_triples[:, 1].max()
-        if self.max_relation_id is None:
-            self.max_relation_id = max_relation_id + 1
-            logger.info(f'Inferred maximum relation ID from triples: maximum_relation_id={self.max_relation_id}.')
-
         # Maximum entity ID validation
         if max_entity_id > self.max_entity_id:
             raise ValueError(
@@ -312,19 +312,42 @@ class Triples:
                 f'({self.max_entity_id}).'
             )
 
-        # Maximum relation ID validation
-        if not self.contains_inverse_triples:
-            if max_relation_id >= self.max_relation_id:
+        # Infer maximum relation ID from triples if not given
+        max_relation_id = self.mapped_triples[:, 1].max()
+        if self.max_relation_id is None:
+            self.max_relation_id = max_relation_id + 1
+            logger.info(f'Inferred maximum relation ID from triples: maximum_relation_id={self.max_relation_id}.')
+
+        if self.contains_inverse_triples:
+            if self.max_relation_id % 2 != 0:
                 raise ValueError(
-                    f'Maximum relation ID present in triples ({max_relation_id}) is not less than the one provided '
-                    f'({self.max_relation_id}).'
+                    f"The triples contain inverse relations, but the max_relation_id is not even ({self.max_relation_id})."
                 )
+            self.real_max_relation_id = self.max_relation_id // 2
         else:
-            if max_relation_id >= 2 * self.max_relation_id:
-                # TODO:
-                raise ValueError('...')
-            elif max_relation_id == self.max_relation_id - 1:
-                logger.warning('contains_inverse_triples=True, but the triples look like they do not contain such.')
+            self.real_max_relation_id = self.max_relation_id
+
+        # Maximum relation ID validation
+        if max_relation_id >= self.max_relation_id:
+            raise ValueError(
+                f'Maximum relation ID present in triples ({max_relation_id}) is not less than the one provided (or '
+                f'inferred) ({self.max_relation_id}).'
+            )
+
+    @staticmethod
+    def get_inverse_relation(
+        relation: RelationID,
+    ) -> RelationID:
+        """Get the Id of the inverse relation."""
+        return relation + 1
+
+    @staticmethod
+    def add_inverse_triples(triples: torch.LongTensor) -> torch.LongTensor:
+        """Add inverse triples."""
+        triples = 2 * triples
+        inverse_triples = triples.clone().flip(-1)
+        inverse_triples[:, 1] += 1
+        return torch.cat([triples, inverse_triples], dim=0)
 
     def with_inverse_triples(self) -> 'Triples':
         """Add inverse triples, or return instance if already present."""
@@ -332,18 +355,11 @@ class Triples:
             logger.warning('Triples object contains already inverse triples.')
             return self
 
-        triples = self.mapped_triples
-        inverse_triples = triples.clone().flip(-1)
-        # TODO: +1 variant
-        inverse_triples[:, 1] += self.max_relation_id
         return Triples(
-            mapped_triples=torch.cat([
-                triples,
-                inverse_triples,
-            ], dim=0),
+            mapped_triples=self.add_inverse_triples(triples=self.mapped_triples),
             label_mapping=self.label_mapping,
             max_entity_id=self.max_entity_id,
-            max_relation_id=self.max_relation_id,
+            max_relation_id=2 * self.max_relation_id,
             contains_inverse_triples=True,
         )
 
