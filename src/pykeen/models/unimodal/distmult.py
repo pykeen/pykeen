@@ -10,11 +10,11 @@ from torch.nn import functional
 
 from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import functional as pykeen_functional
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import compose
-from ...utils import normalize_for_einsum
 
 __all__ = [
     'DistMult',
@@ -33,11 +33,7 @@ class DistMultInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
-        batch_size = max(h.shape[0], r.shape[0], t.shape[0])
-        h_term, h = normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
-        r_term, r = normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
-        t_term, t = normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
-        return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
+        return pykeen_functional.distmult_interaction(h=h, r=r, t=t)
 
 
 class DistMult(SimpleVectorEntityRelationEmbeddingModel):
