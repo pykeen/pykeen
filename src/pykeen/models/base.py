@@ -1272,7 +1272,7 @@ class InteractionFunction(nn.Module):
         if len(set(dims)) != len(dims):
             raise ValueError(f"Duplicate dimensions: {dims}")
         assert all(0 <= d < len(x.shape) for d in dims)
-        for dim in reversed(sorted(dims)):
+        for dim in sorted(dims, reverse=True):
             x = x.squeeze(dim=dim)
         return x
 
