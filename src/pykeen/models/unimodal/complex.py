@@ -9,10 +9,10 @@ import torch.nn as nn
 
 from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
+from ...nn import functional as pykeen_functional
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
-from ...utils import normalize_for_einsum, split_complex
 
 __all__ = [
     'ComplEx',
@@ -31,20 +31,7 @@ class ComplExInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
-        batch_size = max(h.shape[0], r.shape[0], t.shape[0])
-        h_term, h = normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
-        r_term, r = normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
-        t_term, t = normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
-        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-        return sum(
-            torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', hh, rr, tt)
-            for hh, rr, tt in [
-                (h_re, r_re, t_re),
-                (h_re, r_im, t_im),
-                (h_im, r_re, t_im),
-                (h_im, r_im, t_re),
-            ]
-        )
+        return pykeen_functional.complex_interaction(h=h, r=r, t=t)
 
 
 class ComplEx(SimpleVectorEntityRelationEmbeddingModel):
