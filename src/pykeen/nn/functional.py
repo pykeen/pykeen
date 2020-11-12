@@ -323,7 +323,6 @@ def ermlpe_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-    input_dropout: nn.Dropout,
     mlp: nn.Module,
 ) -> torch.FloatTensor:
     r"""
@@ -335,8 +334,6 @@ def ermlpe_interaction(
         The relation representations.
     :param t: shape: (batch_size, num_tails, dim)
         The tail representations.
-    :param input_dropout:
-        The input dropout layer.
     :param mlp:
         The MLP.
 
@@ -345,7 +342,6 @@ def ermlpe_interaction(
     """
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 2 * embedding_dim)
     x = broadcast_cat(h.unsqueeze(dim=2), r.unsqueeze(dim=1), dim=-1)
-    x = input_dropout(x)
 
     # Predict t embedding, shape: (batch_size, num_heads, num_relations, embedding_dim)
     x = mlp(x)

@@ -7,7 +7,7 @@ from typing import Optional, Type
 import torch
 from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import functional as pykeen_functional
 from ...regularizers import Regularizer
@@ -17,6 +17,40 @@ from ...typing import DeviceHint
 __all__ = [
     'ERMLPE',
 ]
+
+
+class ERMLPEInteractionFunction(InteractionFunction):
+    """Interaction function of ER-MLP."""
+
+    def __init__(
+        self,
+        hidden_dim: int = 300,
+        input_dropout: float = 0.2,
+        hidden_dropout: float = 0.3,
+        embedding_dim: int = 200,
+    ):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Dropout(input_dropout),
+            nn.Linear(2 * embedding_dim, hidden_dim),
+            nn.Dropout(hidden_dropout),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, embedding_dim),
+            nn.Dropout(hidden_dropout),
+            nn.BatchNorm1d(embedding_dim),
+            nn.ReLU(),
+        )
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs=kwargs)
+        return pykeen_functional.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
 
 
 class ERMLPE(EntityRelationEmbeddingModel):
@@ -76,78 +110,54 @@ class ERMLPE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.hidden_dim = hidden_dim
-        self.input_dropout = input_dropout
-
-        self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
-        self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
-        self.input_dropout = nn.Dropout(self.input_dropout)
-        self.bn1 = nn.BatchNorm1d(self.hidden_dim)
-        self.bn2 = nn.BatchNorm1d(self.embedding_dim)
-        self.mlp = nn.Sequential(
-            self.linear1,
-            nn.Dropout(hidden_dropout),
-            self.bn1,
-            nn.ReLU(),
-            self.linear2,
-            nn.Dropout(hidden_dropout),
-            self.bn2,
-            nn.ReLU(),
+        self.interaction_function = ERMLPEInteractionFunction(
+            hidden_dim=hidden_dim,
+            input_dropout=input_dropout,
+            hidden_dropout=hidden_dropout,
+            embedding_dim=embedding_dim,
         )
 
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
-        for module in self.modules():
-            if module is self:
-                continue
-            if hasattr(module, "reset_parameters"):
-                module.reset_parameters()
+        self.interaction_function.reset_parameters()
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
         t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        return pykeen_functional.ermlpe_interaction(
-            h=h,
-            r=r,
-            t=t,
-            input_dropout=self.input_dropout,
-            mlp=self.mlp,
-        ).view(hrt_batch.shape[0], 1)
+        return self.interaction_function.score_hrt(h=h, r=r, t=t)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).transpose(1, 0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        return pykeen_functional.ermlpe_interaction(
-            h=h,
-            r=r,
-            t=t,
-            input_dropout=self.input_dropout,
-            mlp=self.mlp,
-        ).view(hr_batch.shape[0], self.num_entities)
+        return self.interaction_function.score_t(h=h, r=r, all_entities=t)
+
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(indices=ht_batch[:, 0])
+        r = self.relation_embeddings(indices=None)
+        t = self.entity_embeddings(indices=ht_batch[:, 1])
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t)
+
+        return self.interaction_function.score_r(h=h, all_relations=r, t=t)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(indices=rt_batch[:, 0])
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        return pykeen_functional.ermlpe_interaction(
-            h=h,
-            r=r,
-            t=t,
-            input_dropout=self.input_dropout,
-            mlp=self.mlp,
-        ).view(rt_batch.shape[0], self.num_entities)
+        return self.interaction_function.score_h(all_entities=h, r=r, t=t)
