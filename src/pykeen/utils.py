@@ -19,6 +19,7 @@ from .typing import DeviceHint
 
 __all__ = [
     'compose',
+    'check_shapes',
     'clamp_norm',
     'compact_mapping',
     'imag_part',
@@ -455,3 +456,38 @@ def normalize_for_einsum(
     if x.shape[0] == batch_size:
         return f'b{symbol}d', x
     return f'{symbol}d', x.squeeze(dim=0)
+
+
+def check_shapes(
+    *x: Tuple[torch.Tensor, str],
+    raise_or_error: bool = True,
+) -> bool:
+    """
+    Verify that a sequence of tensors are of matching shapes.
+
+    :param x:
+        A tuple (tensor, shape), where tensor is a tensor, and shape is a string, where each character corresponds to
+        a (named) dimension. If the shapes of different tensors share a character, the corresponding dimensions are
+        expected to be of equal size.
+    :param raise_or_error:
+        Whether to raise an exception in case of a mismatch.
+
+    :return:
+        Whether the shapes matched.
+
+    :raises ValueError:
+        If the shapes mismatch and raise_on_error is True.
+    """
+    dims = dict()
+    errors = []
+    for tensor, shape in x:
+        if tensor.ndimension() != len(shape):
+            errors.append(f"Invalid number of dimensions: {tensor.shape} vs. {shape}")
+            continue
+        for dim, name in zip(tensor.shape, shape):
+            exp_dim = dims.get(name)
+            if exp_dim is not None and exp_dim != dim:
+                errors.append(f"{name}: {dim} vs. {exp_dim}")
+    if raise_or_error and len(errors) > 0:
+        raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
+    return len(errors) > 0
