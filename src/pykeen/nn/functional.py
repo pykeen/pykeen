@@ -145,6 +145,7 @@ def complex_interaction(
         ]
     )
 
+
 def convkb_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
