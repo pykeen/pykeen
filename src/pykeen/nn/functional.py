@@ -206,23 +206,12 @@ def convkb_interaction(
 
     # compute conv(stack(h, r, t))
     conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
-    conv_bias = conv.bias
+    conv_bias = conv.bias.view(1, 1, 1, 1, 1, num_filters)
     # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
-    x = (
-        conv_bias.view(1, 1, 1, 1, 1, num_filters)
-        + (
-            h.view(h.shape[0], h.shape[1], 1, 1, embedding_dim, 1)
-            * conv_head.view(1, 1, 1, 1, 1, num_filters)
-        ) + (
-            r.view(r.shape[0], 1, r.shape[1], 1, embedding_dim, 1)
-            * conv_rel.view(1, 1, 1, 1, 1, num_filters)
-        ) + (
-            t.view(t.shape[0], 1, 1, t.shape[1], embedding_dim, 1)
-            * conv_tail.view(1, 1, 1, 1, 1, num_filters)
-        )
-    )
-
-    x = activation(x)
+    h = (h.view(h.shape[0], h.shape[1], 1, 1, embedding_dim, 1) * conv_head.view(1, 1, 1, 1, 1, num_filters))
+    r = (r.view(r.shape[0], 1, r.shape[1], 1, embedding_dim, 1) * conv_rel.view(1, 1, 1, 1, 1, num_filters))
+    t = (t.view(t.shape[0], 1, 1, t.shape[1], embedding_dim, 1) * conv_tail.view(1, 1, 1, 1, 1, num_filters))
+    x = activation(conv_bias + h + r + t)
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
@@ -231,3 +220,45 @@ def convkb_interaction(
     return linear(
         x.view(-1, embedding_dim * num_filters),
     ).view(batch_size, num_heads, num_relations, num_tails)
+
+
+def ermlp_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    hidden: nn.Linear,
+    activation: nn.Module,
+    final: nn.Linear,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the ER-MLP interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param hidden:
+        The first linear layer.
+    :param activation:
+        The activation function of the hidden layer.
+    :param final:
+        The second linear layer.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    num_heads, num_relations, num_tails = [x.shape[1] for x in (h, r, t)]
+    hidden_dim, embedding_dim = hidden.weight.shape
+    assert embedding_dim % 3 == 0
+    embedding_dim = embedding_dim // 3
+    # split, shape: (embedding_dim, hidden_dim)
+    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(embedding_dim)
+    bias = hidden.bias.view(1, 1, 1, 1, -1)
+    h = h.view(-1, num_heads, 1, 1, embedding_dim) @ head_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    r = r.view(-1, 1, num_relations, 1, embedding_dim) @ rel_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    t = t.view(-1, 1, 1, num_tails, embedding_dim) @ tail_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    # TODO: Choosing which to combine first, h/r, h/t or r/t, depending on the shape might further improve
+    #       performance in a 1:n scenario.
+    return final(activation(bias + h + r + t)).squeeze(dim=-1)

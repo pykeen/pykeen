@@ -2,7 +2,6 @@
 
 """Implementation of ERMLP."""
 
-import math
 from typing import Optional
 
 import torch
@@ -10,6 +9,7 @@ from torch import nn
 
 from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import functional as pykeen_functional
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -46,9 +46,7 @@ class ERMLPInteractionFunction(InteractionFunction):
            with self.embedding_dim neurons and output layer with one neuron.
            The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
         """
-        self.head_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
-        self.rel_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=True)
-        self.tail_to_hidden = nn.Linear(in_features=embedding_dim, out_features=hidden_dim, bias=False)
+        self.hidden = nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True)
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
@@ -60,33 +58,22 @@ class ERMLPInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
-        h = self.head_to_hidden(h)
-        r = self.rel_to_hidden(r)
-        t = self.tail_to_hidden(t)
-        # TODO: Choosing which to combine first, h/r, h/t or r/t, depending on the shape might further improve
-        #       performance in a 1:n scenario.
-        x = self.activation(h[:, :, None, None, :] + r[:, None, :, None, :] + t[:, None, None, :, :])
-        return self.hidden_to_score(x).squeeze(dim=-1)
+        return pykeen_functional.ermlp_interaction(
+            h=h,
+            r=r,
+            t=t,
+            hidden=self.hidden,
+            activation=self.activation,
+            final=self.hidden_to_score,
+        )
 
     def reset_parameters(self):  # noqa: D102
         # Initialize biases with zero
-        nn.init.zeros_(self.rel_to_hidden.bias)
+        nn.init.zeros_(self.hidden.bias)
         nn.init.zeros_(self.hidden_to_score.bias)
         # In the original formulation,
-        #   W_2 sigma(W_1 cat([h, r, t]) + b_1) + b_2
-        # W_1 would be initialized with nn.init.xavier_uniform, i.e. with a samples from uniform(-a, a) with
-        # a = math.sqrt(3.0) * gain * math.sqrt(2.0 / float(fan_in + fan_out))
-        # we have:
-        # fan_out = hidden_dim
-        # fan_in = 3 * embedding_dim
-        bound = math.sqrt(3.0) * 1 * math.sqrt(2.0 / float(sum(self.head_to_hidden.weight.shape)))
-        for mod in [
-            self.head_to_hidden,
-            self.rel_to_hidden,
-            self.tail_to_hidden,
-        ]:
-            nn.init.uniform_(mod.weight, -bound, bound)
-        nn.init.xavier_uniform_(self.hidden_to_score.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.hidden.weight)
+        nn.init.xavier_uniform_(self.hidden_to_score.weight, gain=nn.init.calculate_gain(self.activation.__class__.__name__.lower()))
 
 
 class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
