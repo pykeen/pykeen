@@ -9,6 +9,7 @@ from ..utils import is_cudnn_error, normalize_for_einsum, split_complex
 __all__ = [
     "complex_interaction",
     "conve_interaction",
+    "convkb_interaction",
     "distmult_interaction",
 ]
 
