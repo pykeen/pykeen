@@ -1404,7 +1404,7 @@ class InteractionFunction(nn.Module):
             The scores.
         """
         # check shape
-        assert check_shapes(all_entities, "ne", r, "br", h, "be")
+        assert check_shapes((all_entities, "ne"), (r, "br"), (h, "be"))
 
         # prepare input to generic score function
         h, r = self._add_dim(h, r, dim=self.NUM_DIM)
