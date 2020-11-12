@@ -112,16 +112,13 @@ def conve_interaction(
     num_tails = t.shape[1]
     embedding_dim = h.shape[-1]
 
-    # repeat if necessary
-    h = h.unsqueeze(dim=2).repeat(1 if h.shape[0] == batch_size else batch_size, 1, num_relations, 1)
-    r = r.unsqueeze(dim=1).repeat(1 if r.shape[0] == batch_size else batch_size, num_heads, 1, 1)
-
-    # resize and concat head and relation, batch_size', num_input_channels, 2*height, width
+    # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
     # with batch_size' = batch_size * num_heads * num_relations
-    x = torch.cat([
-        h.view(-1, input_channels, embedding_height, embedding_width),
-        r.view(-1, input_channels, embedding_height, embedding_width),
-    ], dim=2)
+    h = h.unsqueeze(dim=2)
+    h = h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width)
+    r = r.unsqueeze(dim=1)
+    r = r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width)
+    x = broadcast_cat(h, r, dim=2).view(-1, input_channels, 2 * embedding_height, embedding_width)
 
     # batch_size, num_input_channels, 2*height, width
     if bn0 is not None:
@@ -149,7 +146,7 @@ def conve_interaction(
     x = activation(x)
 
     # reshape: (batch_size', embedding_dim)
-    x = x.view(batch_size, num_heads, num_relations, 1, embedding_dim)
+    x = x.view(-1, num_heads, num_relations, 1, embedding_dim)
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: (batch_size, num_heads, num_relations, num_tails)
@@ -160,6 +157,40 @@ def conve_interaction(
     x = x + t_bias.view(t.shape[0], 1, 1, num_tails)
 
     return x
+
+
+def broadcast_cat(
+    x: torch.FloatTensor,
+    y: torch.FloatTensor,
+    dim: int,
+) -> torch.FloatTensor:
+    """
+    Concatenate with broadcasting.
+
+    :param x:
+        The first tensor.
+    :param y:
+        The second tensor.
+    :param dim:
+        The concat dimension.
+
+    :return:
+    """
+    if x.ndimension() != y.ndimension():
+        raise ValueError
+    x_rep, y_rep = [], []
+    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
+        xr = yr = 1
+        if d != dim and xd != yd:
+            if xd == 1:
+                xr = yd
+            elif yd == 1:
+                yr = xd
+            else:
+                raise ValueError
+        x_rep.append(xr)
+        y_rep.append(yr)
+    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
 
 
 def distmult_interaction(
@@ -319,3 +350,45 @@ def ermlp_interaction(
     # TODO: Choosing which to combine first, h/r, h/t or r/t, depending on the shape might further improve
     #       performance in a 1:n scenario.
     return final(activation(bias + h + r + t)).squeeze(dim=-1)
+
+
+def ermlp_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    hidden: nn.Linear,
+    activation: nn.Module,
+    final: nn.Linear,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the ER-MLPE interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param hidden:
+        The first linear layer.
+    :param activation:
+        The activation function of the hidden layer.
+    :param final:
+        The second linear layer.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # Concatenate them
+    x_s = torch.cat([h, r], dim=-1)
+    x_s = self.input_dropout(x_s)
+
+    # Predict t embedding
+    x_t = self.mlp(x_s)
+
+    # compare with all t's
+    # For efficient calculation, each of the calculated [h, r] rows has only to be multiplied with one t row
+    x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
+    # The application of the sigmoid during training is automatically handled by the default loss.
+
+    return x
