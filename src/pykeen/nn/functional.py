@@ -11,6 +11,7 @@ __all__ = [
     "conve_interaction",
     "convkb_interaction",
     "distmult_interaction",
+    "ermlp_interaction",
 ]
 
 
