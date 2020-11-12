@@ -5,12 +5,12 @@
 import logging
 from typing import Optional
 
-import torch
 import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import Loss
+from ...nn import functional as pykeen_functional
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -36,13 +36,8 @@ class ConvKBInteractionFunction(InteractionFunction):
         self.num_filters = num_filters
 
         # The interaction model
-        # self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
-        # decompose convolution for faster computation in 1-n case
-        self.conv_head = nn.Parameter(torch.empty(num_filters))
-        self.conv_rel = nn.Parameter(torch.empty(num_filters))
-        self.conv_tail = nn.Parameter(torch.empty(num_filters))
-        self.conv_bias = nn.Parameter(torch.empty(num_filters))
-        self.relu = nn.ReLU()
+        self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
+        self.activation = nn.ReLU()
         self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
@@ -53,12 +48,9 @@ class ConvKBInteractionFunction(InteractionFunction):
 
         # Initialize all filters to [0.1, 0.1, -0.1],
         #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
-        # nn.init.constant_(self.conv.weight[..., :2], 0.1)
-        # nn.init.constant_(self.conv.weight[..., 2], -0.1)
-        nn.init.constant_(self.conv_head, 0.1)
-        nn.init.constant_(self.conv_rel, 0.1)
-        nn.init.constant_(self.conv_tail, 0.1)
-        nn.init.zeros_(self.conv_bias)
+        nn.init.constant_(self.conv.weight[..., :2], 0.1)
+        nn.init.constant_(self.conv.weight[..., 2], -0.1)
+        nn.init.zeros_(self.conv.bias)
 
     def forward(
         self,
@@ -67,37 +59,15 @@ class ConvKBInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        # bind sizes
-        batch_size = max(x.shape[0] for x in (h, r, t))
-        num_heads = h.shape[1]
-        num_relations = r.shape[1]
-        num_tails = t.shape[1]
-
-        # compute conv(stack(h, r, t))
-        # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
-        x = (
-            self.conv_bias.view(1, 1, 1, 1, 1, self.num_filters)
-            + (
-                h.view(h.shape[0], h.shape[1], 1, 1, self.embedding_dim, 1)
-                * self.conv_head.view(1, 1, 1, 1, 1, self.num_filters)
-            ) + (
-                r.view(r.shape[0], 1, r.shape[1], 1, self.embedding_dim, 1)
-                * self.conv_rel.view(1, 1, 1, 1, 1, self.num_filters)
-            ) + (
-                t.view(t.shape[0], 1, 1, t.shape[1], self.embedding_dim, 1)
-                * self.conv_tail.view(1, 1, 1, 1, 1, self.num_filters)
-            )
+        return pykeen_functional.convkb_interaction(
+            h=h,
+            r=r,
+            t=t,
+            conv=self.conv,
+            activation=self.activation,
+            hidden_dropout=self.hidden_dropout,
+            linear=self.linear,
         )
-
-        x = self.relu(x)
-
-        # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
-        x = self.hidden_dropout(x)
-
-        # Linear layer for final scores
-        return self.linear(
-            x.view(-1, self.embedding_dim * self.num_filters),
-        ).view(batch_size, num_heads, num_relations, num_tails)
 
 
 class ConvKB(EntityRelationEmbeddingModel):

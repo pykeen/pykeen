@@ -144,3 +144,51 @@ def complex_interaction(
             (h_im, r_im, t_re),
         ]
     )
+
+def convkb_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    conv: nn.Conv2d,
+    activation: nn.Module,
+    hidden_dropout: nn.Dropout,
+    linear: nn.Linear,
+) -> torch.FloatTensor:
+    # bind sizes
+    batch_size = max(x.shape[0] for x in (h, r, t))
+    num_heads = h.shape[1]
+    num_relations = r.shape[1]
+    num_tails = t.shape[1]
+
+    # decompose convolution for faster computation in 1-n case
+    num_filters = conv.weight.shape[0]
+    assert conv.weight.shape == (num_filters, 1, 1, 3)
+    embedding_dim = h.shape[-1]
+
+    # compute conv(stack(h, r, t))
+    conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
+    conv_bias = conv.bias
+    # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
+    x = (
+        conv_bias.view(1, 1, 1, 1, 1, num_filters)
+        + (
+            h.view(h.shape[0], h.shape[1], 1, 1, embedding_dim, 1)
+            * conv_head.view(1, 1, 1, 1, 1, num_filters)
+        ) + (
+            r.view(r.shape[0], 1, r.shape[1], 1, embedding_dim, 1)
+            * conv_rel.view(1, 1, 1, 1, 1, num_filters)
+        ) + (
+            t.view(t.shape[0], 1, 1, t.shape[1], embedding_dim, 1)
+            * conv_tail.view(1, 1, 1, 1, 1, num_filters)
+        )
+    )
+
+    x = activation(x)
+
+    # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
+    x = hidden_dropout(x)
+
+    # Linear layer for final scores
+    return linear(
+        x.view(-1, embedding_dim * num_filters),
+    ).view(batch_size, num_heads, num_relations, num_tails)
