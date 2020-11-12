@@ -490,4 +490,4 @@ def check_shapes(
                 errors.append(f"{name}: {dim} vs. {exp_dim}")
     if raise_or_error and len(errors) > 0:
         raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
-    return len(errors) > 0
+    return len(errors) == 0
