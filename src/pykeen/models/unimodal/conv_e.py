@@ -174,7 +174,6 @@ class ConvEInteractionFunction(InteractionFunction):
             embedding_height=self.embedding_height,
             embedding_width=self.embedding_width,
             num_in_features=self.num_in_features,
-            embedding_dim=self.embedding_dim,
             bn0=self.bn0,
             bn1=self.bn1,
             bn2=self.bn2,

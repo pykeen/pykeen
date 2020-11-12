@@ -53,7 +53,6 @@ def conve_interaction(
     embedding_height: int,
     embedding_width: int,
     num_in_features: int,
-    embedding_dim: int,
     bn0: Optional[nn.BatchNorm1d],
     bn1: Optional[nn.BatchNorm1d],
     bn2: Optional[nn.BatchNorm1d],
@@ -64,11 +63,53 @@ def conve_interaction(
     activation: nn.Module,
     fc: nn.Linear,
 ) -> torch.FloatTensor:
+    """
+    Evaluate the ConvE interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param t_bias: shape: (batch_size, num_tails, dim)
+        The tail entity bias.
+    :param input_channels:
+        The number of input channels.
+    :param embedding_height:
+        The height of the reshaped embedding.
+    :param embedding_width:
+        The width of the reshaped embedding.
+    :param num_in_features:
+        The number of output features of the final layer (calculated with kernel and embedding dimensions).
+    :param bn0:
+        The first batch normalization layer.
+    :param bn1:
+        The second batch normalization layer.
+    :param bn2:
+        The third batch normalization layer.
+    :param inp_drop:
+        The input dropout layer.
+    :param feature_map_drop:
+        The feature map dropout layer.
+    :param hidden_drop:
+        The hidden dropout layer.
+    :param conv1:
+        The convolution layer.
+    :param activation:
+        The activation function.
+    :param fc:
+        The final fully connected layer.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     # bind sizes
     batch_size = max(x.shape[0] for x in (h, r, t))
     num_heads = h.shape[1]
     num_relations = r.shape[1]
     num_tails = t.shape[1]
+    embedding_dim = h.shape[-1]
 
     # repeat if necessary
     h = h.unsqueeze(dim=2).repeat(1 if h.shape[0] == batch_size else batch_size, 1, num_relations, 1)
@@ -126,7 +167,7 @@ def distmult_interaction(
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """
-    DistMult interaction function.
+    Evaluate the DistMult interaction function.
 
     :param h: shape: (batch_size, num_heads, dim)
         The head representations.
