@@ -23,6 +23,7 @@ __all__ = [
     'compact_mapping',
     'imag_part',
     'invert_mapping',
+    'is_cudnn_error',
     'l2_regularization',
     'is_cuda_oom_error',
     'random_non_negative_int',
