@@ -179,6 +179,7 @@ def distmult_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
+    # TODO: check if einsum is still very slow.
     h, h_term, r, r_term, t, t_term = _normalize_terms_for_einsum(h, r, t)
     return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
 
@@ -203,6 +204,7 @@ def complex_interaction(
     """
     h, h_term, r, r_term, t, t_term = _normalize_terms_for_einsum(h, r, t)
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+    # TODO: check if einsum is still very slow.
     return sum(
         torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', hh, rr, tt)
         for hh, rr, tt in [
