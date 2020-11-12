@@ -169,6 +169,27 @@ def convkb_interaction(
     hidden_dropout: nn.Dropout,
     linear: nn.Linear,
 ) -> torch.FloatTensor:
+    """
+    Evaluate the ConvKB interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param conv:
+        The 3x1 convolution.
+    :param activation:
+        The activation function.
+    :param hidden_dropout:
+        The dropout layer applied to the hidden activations.
+    :param linear:
+        The final linear layer.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     # bind sizes
     batch_size = max(x.shape[0] for x in (h, r, t))
     num_heads = h.shape[1]
