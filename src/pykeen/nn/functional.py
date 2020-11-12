@@ -125,6 +125,19 @@ def distmult_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
+    """
+    DistMult interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     h, h_term, r, r_term, t, t_term = _normalize_terms_for_einsum(h, r, t)
     return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
 
