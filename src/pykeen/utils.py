@@ -491,3 +491,37 @@ def check_shapes(
     if raise_or_error and len(errors) > 0:
         raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
     return len(errors) == 0
+
+
+def broadcast_cat(
+    x: torch.FloatTensor,
+    y: torch.FloatTensor,
+    dim: int,
+) -> torch.FloatTensor:
+    """
+    Concatenate with broadcasting.
+
+    :param x:
+        The first tensor.
+    :param y:
+        The second tensor.
+    :param dim:
+        The concat dimension.
+
+    :return:
+    """
+    if x.ndimension() != y.ndimension():
+        raise ValueError
+    x_rep, y_rep = [], []
+    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
+        xr = yr = 1
+        if d != dim and xd != yd:
+            if xd == 1:
+                xr = yd
+            elif yd == 1:
+                yr = xd
+            else:
+                raise ValueError
+        x_rep.append(xr)
+        y_rep.append(yr)
+    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
