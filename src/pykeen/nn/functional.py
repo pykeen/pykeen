@@ -169,8 +169,11 @@ def convkb_interaction(
     hidden_dropout: nn.Dropout,
     linear: nn.Linear,
 ) -> torch.FloatTensor:
-    """
+    r"""
     Evaluate the ConvKB interaction function.
+
+    .. math::
+        W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
 
     :param h: shape: (batch_size, num_heads, dim)
         The head representations.
