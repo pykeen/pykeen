@@ -134,6 +134,19 @@ def complex_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
+    """
+    Evaluate the ComplEx interaction function.
+
+    :param h: shape: (batch_size, num_heads, 2*dim)
+        The complex head representations.
+    :param r: shape: (batch_size, num_relations, 2*dim)
+        The complex relation representations.
+    :param t: shape: (batch_size, num_tails, 2*dim)
+        The complex tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     h, h_term, r, r_term, t, t_term = _normalize_terms_for_einsum(h, r, t)
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
     return sum(
