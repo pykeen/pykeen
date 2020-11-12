@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
-from ..utils import is_cudnn_error, normalize_for_einsum, split_complex
+from ..utils import broadcast_cat, is_cudnn_error, normalize_for_einsum, split_complex
 
 __all__ = [
     "complex_interaction",
@@ -12,6 +12,7 @@ __all__ = [
     "convkb_interaction",
     "distmult_interaction",
     "ermlp_interaction",
+    "ermlpe_interaction",
 ]
 
 
@@ -157,40 +158,6 @@ def conve_interaction(
     x = x + t_bias.view(t.shape[0], 1, 1, num_tails)
 
     return x
-
-
-def broadcast_cat(
-    x: torch.FloatTensor,
-    y: torch.FloatTensor,
-    dim: int,
-) -> torch.FloatTensor:
-    """
-    Concatenate with broadcasting.
-
-    :param x:
-        The first tensor.
-    :param y:
-        The second tensor.
-    :param dim:
-        The concat dimension.
-
-    :return:
-    """
-    if x.ndimension() != y.ndimension():
-        raise ValueError
-    x_rep, y_rep = [], []
-    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
-        xr = yr = 1
-        if d != dim and xd != yd:
-            if xd == 1:
-                xr = yd
-            elif yd == 1:
-                yr = xd
-            else:
-                raise ValueError
-        x_rep.append(xr)
-        y_rep.append(yr)
-    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
 
 
 def distmult_interaction(
@@ -352,13 +319,12 @@ def ermlp_interaction(
     return final(activation(bias + h + r + t)).squeeze(dim=-1)
 
 
-def ermlp_interaction(
+def ermlpe_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-    hidden: nn.Linear,
-    activation: nn.Module,
-    final: nn.Linear,
+    input_dropout: nn.Dropout,
+    mlp: nn.Module,
 ) -> torch.FloatTensor:
     r"""
     Evaluate the ER-MLPE interaction function.
@@ -369,26 +335,19 @@ def ermlp_interaction(
         The relation representations.
     :param t: shape: (batch_size, num_tails, dim)
         The tail representations.
-    :param hidden:
-        The first linear layer.
-    :param activation:
-        The activation function of the hidden layer.
-    :param final:
-        The second linear layer.
+    :param input_dropout:
+        The input dropout layer.
+    :param mlp:
+        The MLP.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Concatenate them
-    x_s = torch.cat([h, r], dim=-1)
-    x_s = self.input_dropout(x_s)
+    # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 2 * embedding_dim)
+    x = broadcast_cat(h.unsqueeze(dim=2), r.unsqueeze(dim=1), dim=-1)
+    x = input_dropout(x)
 
-    # Predict t embedding
-    x_t = self.mlp(x_s)
+    # Predict t embedding, shape: (batch_size, num_heads, num_relations, embedding_dim)
+    x = mlp(x)
 
-    # compare with all t's
-    # For efficient calculation, each of the calculated [h, r] rows has only to be multiplied with one t row
-    x = (x_t.view(-1, self.embedding_dim) * t).sum(dim=1, keepdim=True)
-    # The application of the sigmoid during training is automatically handled by the default loss.
-
-    return x
+    return (x.unsqueeze(dim=-2) @ t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]).transpose(-2, -1)).squeeze(dim=-1)
