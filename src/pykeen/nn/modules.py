@@ -9,6 +9,8 @@ from torch import nn
 from . import functional as F
 from ..utils import check_shapes
 
+logger = logging.getLogger(__name__)
+
 
 class InteractionFunction(nn.Module):
     """Base class for interaction functions."""
@@ -246,9 +248,6 @@ class ComplExInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
         return F.complex_interaction(h=h, r=r, t=t)
-
-
-logger = logging.getLogger(__name__)
 
 
 def _calculate_missing_shape_information(
