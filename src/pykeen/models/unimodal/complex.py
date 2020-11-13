@@ -143,59 +143,32 @@ class ComplEx(EntityRelationEmbeddingModel):
             ]
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def _score(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        """Unified score function."""
         # get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
-        # special case
-        if scores.ndimension() < 2:
-            scores = scores.unsqueeze(dim=-1)
+        # Compute scores
+        return self.interaction_function(h=h, r=r, t=t)
 
-        return scores
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=hr_batch[:, 0])
-        r = self.relation_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=None)
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=ht_batch[:, 0])
-        r = self.relation_embeddings.get_in_canonical_shape(indices=None)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=ht_batch[:, 1])
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores
+        return self._score(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=None)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=rt_batch[:, 1])
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores
+        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
