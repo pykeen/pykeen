@@ -116,15 +116,6 @@ class KG2E(EntityRelationEmbeddingModel):
             constrainer_kwargs=dict(min=c_min, max=c_max),
         )
 
-    def _reset_parameters_(self):  # noqa: D102
-        # Constraints are applied through post_parameter_update
-        super()._reset_parameters_()
-        for emb in [
-            self.entity_covariances,
-            self.relation_covariances,
-        ]:
-            emb.reset_parameters()
-
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
         for cov in (

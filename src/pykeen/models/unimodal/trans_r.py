@@ -122,10 +122,6 @@ class TransR(EntityRelationEmbeddingModel):
             ),
         )
 
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.relation_projections.reset_parameters()
-
     def forward(
         self,
         h_indices: Optional[torch.LongTensor],

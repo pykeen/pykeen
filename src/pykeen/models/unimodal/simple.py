@@ -101,14 +101,6 @@ class SimplE(EntityRelationEmbeddingModel):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp = clamp_score
 
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        for emb in [
-            self.tail_entity_embeddings,
-            self.inverse_relation_embeddings,
-        ]:
-            emb.reset_parameters()
-
     def forward(
         self,
         h_indices: Optional[torch.LongTensor],

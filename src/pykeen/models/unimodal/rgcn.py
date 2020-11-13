@@ -546,10 +546,6 @@ class RGCN(Model):
         self.entity_representations.post_parameter_update()
         self.relation_embeddings.post_parameter_update()
 
-    def _reset_parameters_(self):
-        self.entity_representations.reset_parameters()
-        self.relation_embeddings.reset_parameters()
-
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
         h = self.entity_representations(indices=hrt_batch[:, 0])

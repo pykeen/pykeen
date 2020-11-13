@@ -102,11 +102,6 @@ class TransH(EntityRelationEmbeddingModel):
         super().post_parameter_update()
         self.normal_vector_embeddings.post_parameter_update()
 
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.normal_vector_embeddings.reset_parameters()
-        # TODO: Add initialization
-
     def regularize_if_necessary(self) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
         # As described in [wang2014], all entities and relations are used to compute the regularization term

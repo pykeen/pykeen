@@ -1108,10 +1108,6 @@ class EntityEmbeddingModel(Model):
         """The entity embedding dimension."""
         return self.entity_embeddings.embedding_dim
 
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.entity_embeddings.reset_parameters()
-
     def post_parameter_update(self) -> None:  # noqa: D102
         # make sure to call this first, to reset regularizer state!
         super().post_parameter_update()
@@ -1200,11 +1196,6 @@ class EntityRelationEmbeddingModel(Model):
     def relation_dim(self):  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # make sure to call this first, to reset regularizer state!
@@ -1351,10 +1342,6 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel, re
             relation_constrainer_kwargs=relation_constrainer_kwargs,
         )
         self.index_function = index_function
-
-    def _reset_parameters_(self):
-        super()._reset_parameters_()
-        self.index_function.reset_parameters()
 
     def forward(
         self,

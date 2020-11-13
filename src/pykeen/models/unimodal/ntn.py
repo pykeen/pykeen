@@ -106,13 +106,6 @@ class NTN(EntityEmbeddingModel):
             non_linearity = nn.Tanh()
         self.non_linearity = non_linearity
 
-    def _reset_parameters_(self):  # noqa: D102
-        for module in self.modules():
-            if module is self:
-                continue
-            if hasattr(module, "reset_parameters"):
-                module.reset_parameters()
-
     def forward(
         self,
         h_indices: Optional[torch.LongTensor] = None,

@@ -168,11 +168,6 @@ class ConvE(EntityRelationEmbeddingModel):
             apply_batch_normalization=apply_batch_normalization,
         )
 
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.bias_term.reset_parameters()
-        self.interaction_function.reset_parameters()
-
     def forward(
         self,
         h_indices: Optional[torch.LongTensor],
