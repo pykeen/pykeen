@@ -5,6 +5,7 @@ import math
 from typing import NamedTuple, Optional, SupportsFloat, Union
 
 import torch
+import torch.fft
 from torch import nn
 
 from ..utils import broadcast_cat, clamp_norm, is_cudnn_error, split_complex
@@ -378,22 +379,34 @@ def hole_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:  # noqa: D102
-    """Evaluate the HolE interaction function."""
+    """
+    Evaluate the HolE interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     # Circular correlation of entity embeddings
-    a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
-    b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
+    a_fft = torch.fft.rfft(h, dim=-1)
+    b_fft = torch.fft.rfft(t, dim=-1)
 
-    # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
-    a_fft[:, :, :, 1] *= -1
+    # complex conjugate, shape = (b, h, d)
+    a_fft = torch.conj(a_fft)
 
-    # Hadamard product in frequency domain
-    p_fft = a_fft * b_fft
+    # Hadamard product in frequency domain, shape: (b, h, t, d)
+    p_fft = a_fft.unsqueeze(dim=2) * b_fft.unsqueeze(dim=1)
 
-    # inverse real FFT, shape: (batch_size, num_entities, d)
-    composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+    # inverse real FFT, shape: (b, h, t, d)
+    composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
 
     # inner product with relation embedding
-    return torch.sum(r * composite, dim=-1, keepdim=False)
+    return _extended_einsum("bhtd,brd->bhrt", composite, r)
 
 
 def rotate_interaction(
