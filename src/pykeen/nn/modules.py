@@ -264,13 +264,14 @@ def _build_module_from_stateless(
 class TranslationalInteractionFunction(InteractionFunction):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
-    def __init__(self, p: int):
+    def __init__(self, p: int, power_norm: bool = False):
         """Initialize the translational interaction function.
 
         :param p: The norm used with :func:`torch.norm`. Typically is 1 or 2.
         """
         super().__init__()
         self.p = p
+        self.power_norm = power_norm
 
     def forward(
         self,
@@ -280,7 +281,7 @@ class TranslationalInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pkf.translational_interaction(h=h, r=r, t=t, p=self.p)
+        return pkf.translational_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
 
 
 #: Interaction function of ComplEx
@@ -586,28 +587,6 @@ class ERMLPEInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
-
-
-class TransDInteractionFunction(TranslationalInteractionFunction):
-    """The interaction function for TransD."""
-
-    def __init__(self, p: int = 2, power: int = 2):
-        """Initialize the TransD interaction function.
-
-        :param p: The norm applied by :func:`torch.norm`
-        :param power: The power applied after :func:`torch.norm`.
-        """
-        super().__init__(p=p)
-        self.power = power
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return super().forward(h=h, r=r, t=t, **kwargs) ** self.power
 
 
 class TransRInteractionFunction(InteractionFunction):
