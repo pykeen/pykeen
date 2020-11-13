@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss, SoftplusLoss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import ComplExInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -106,6 +107,10 @@ class ComplEx(SingleVectorEmbeddingModel):
             regularizer=regularizer,
             # initialize with entity and relation embeddings with standard normal distribution, cf.
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-            entity_initializer=nn.init.normal_,
-            relation_initializer=nn.init.normal_,
+            embedding_specification=EmbeddingSpecification(
+                initializer=nn.init.normal_,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=nn.init.normal_,
+            ),
         )

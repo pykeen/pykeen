@@ -9,6 +9,7 @@ from torch.nn import functional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -91,14 +92,18 @@ class DistMult(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            # xavier uniform, cf.
-            # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
-            entity_initializer=nn.init.xavier_uniform_,
-            # Constrain entity embeddings to unit length
-            entity_constrainer=functional.normalize,
-            # relations are initialized to unit length (but not constraint)
-            relation_initializer=compose(
-                nn.init.xavier_uniform_,
-                functional.normalize,
+            embedding_specification=EmbeddingSpecification(
+                # xavier uniform, cf.
+                # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
+                initializer=nn.init.xavier_uniform_,
+                # Constrain entity embeddings to unit length
+                constrainer=functional.normalize,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                # relations are initialized to unit length (but not constraint)
+                initializer=compose(
+                    nn.init.xavier_uniform_,
+                    functional.normalize,
+                ),
             ),
         )

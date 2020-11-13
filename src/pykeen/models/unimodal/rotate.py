@@ -11,6 +11,7 @@ from torch.nn import functional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer
@@ -102,7 +103,11 @@ class RotatE(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            relation_initializer=init_phases,
-            relation_constrainer=complex_normalize,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=init_phases,
+                constrainer=complex_normalize,
+            ),
         )

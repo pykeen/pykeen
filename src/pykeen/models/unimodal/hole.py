@@ -6,6 +6,7 @@ from typing import Optional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import HolEInteractionFunction
 from ...regularizers import Regularizer
@@ -74,8 +75,12 @@ class HolE(SingleVectorEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-            entity_initializer=xavier_uniform_,
-            relation_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+            ),
         )

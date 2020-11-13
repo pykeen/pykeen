@@ -11,6 +11,7 @@ from torch.nn import functional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import StructuredEmbeddingInteractionFunction
 from ...regularizers import Regularizer
@@ -64,7 +65,7 @@ class StructuredEmbedding(SingleVectorEmbeddingModel):
         # Embeddings
         init_bound = 6 / np.sqrt(embedding_dim)
         # Initialise relation embeddings to unit length
-        initializer = compose(
+        relation_initializer = compose(
             functools.partial(nn.init.uniform_, a=-init_bound, b=+init_bound),
             functional.normalize,
         )
@@ -81,7 +82,11 @@ class StructuredEmbedding(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=functional.normalize,
-            relation_initializer=initializer,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+                constrainer=functional.normalize,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=relation_initializer,
+            ),
         )

@@ -10,6 +10,7 @@ from torch import nn
 from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import ConvEInteractionFunction
 from ...regularizers import Regularizer
@@ -142,8 +143,12 @@ class ConvE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+            ),
         )
 
         # ConvE uses one bias for each entity

@@ -6,6 +6,7 @@ from typing import Optional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import TuckerInteractionFunction
 from ...regularizers import Regularizer
@@ -103,6 +104,10 @@ class TuckER(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+            ),
         )

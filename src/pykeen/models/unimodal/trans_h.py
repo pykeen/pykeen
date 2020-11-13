@@ -10,6 +10,7 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding, functional as pkf
+from ...nn.emb import EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -90,12 +91,13 @@ class TransH(EntityRelationEmbeddingModel):
         self.scoring_fct_norm = scoring_fct_norm
 
         # embeddings
-        self.normal_vector_embeddings = Embedding.init_with_device(
+        self.normal_vector_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
-            device=self.device,
-            # Normalise the normal vectors by their l2 norms
-            constrainer=functional.normalize,
+            specification=EmbeddingSpecification(
+                # Normalise the normal vectors by their l2 norms
+                constrainer=functional.normalize,
+            ),
         )
 
     def post_parameter_update(self) -> None:  # noqa: D102

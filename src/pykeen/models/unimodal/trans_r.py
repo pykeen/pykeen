@@ -13,6 +13,7 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TransRInteractionFunction
 from ...regularizers import Regularizer
@@ -95,15 +96,20 @@ class TransR(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_initializer=compose(
-                xavier_uniform_,
-                functional.normalize,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
-            relation_constrainer=clamp_norm,
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=compose(
+                    xavier_uniform_,
+                    functional.normalize,
+                ),
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+
         )
         self.interaction_function = TransRInteractionFunction(p=scoring_fct_norm)
 
