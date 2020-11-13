@@ -4,9 +4,7 @@
 
 from typing import Optional, Type
 
-import torch
-
-from ..base import EntityRelationEmbeddingModel
+from ..base import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.modules import ERMLPEInteractionFunction
 from ...regularizers import Regularizer
@@ -18,7 +16,7 @@ __all__ = [
 ]
 
 
-class ERMLPE(EntityRelationEmbeddingModel):
+class ERMLPE(SimpleVectorEntityRelationEmbeddingModel):
     r"""An extension of ERMLP proposed by [sharifzadeh2019]_.
 
     This model uses a neural network-based approach similar to ERMLP and with slight modifications.
@@ -68,6 +66,12 @@ class ERMLPE(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=ERMLPEInteractionFunction(
+                hidden_dim=hidden_dim,
+                input_dropout=input_dropout,
+                hidden_dropout=hidden_dropout,
+                embedding_dim=embedding_dim,
+            ),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
@@ -75,54 +79,3 @@ class ERMLPE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.interaction_function = ERMLPEInteractionFunction(
-            hidden_dim=hidden_dim,
-            input_dropout=input_dropout,
-            hidden_dropout=hidden_dropout,
-            embedding_dim=embedding_dim,
-        )
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        self.interaction_function.reset_parameters()
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return self.interaction_function.score_hrt(h=h, r=r, t=t)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return self.interaction_function.score_t(h=h, r=r, all_entities=t)
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=ht_batch[:, 0])
-        r = self.relation_embeddings(indices=None)
-        t = self.entity_embeddings(indices=ht_batch[:, 1])
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return self.interaction_function.score_r(h=h, all_relations=r, t=t)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return self.interaction_function.score_h(all_entities=h, r=r, t=t)
