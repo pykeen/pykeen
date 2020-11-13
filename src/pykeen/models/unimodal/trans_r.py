@@ -134,7 +134,7 @@ class TransR(EntityRelationEmbeddingModel):
         t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
         m_r = self.relation_projections(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
 
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -143,7 +143,7 @@ class TransR(EntityRelationEmbeddingModel):
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
         m_r = self.relation_projections(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
 
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(hr_batch.shape[0], self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -152,4 +152,4 @@ class TransR(EntityRelationEmbeddingModel):
         t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
         m_r = self.relation_projections(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_dim)
 
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(rt_batch.shape[0], self.num_entities)

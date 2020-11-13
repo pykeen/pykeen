@@ -2,7 +2,7 @@
 
 """Functional forms of interaction methods."""
 import math
-from typing import NamedTuple, Optional, Tuple, Union
+from typing import NamedTuple, Optional, SupportsFloat, Tuple, Union
 
 import torch
 from torch import nn
@@ -421,15 +421,47 @@ def rotate_interaction(
     return scores
 
 
+def _translational_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: Union[int, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """
+    Evaluate a translational distance interaction function on already broadcasted representations.
+
+    :param h: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The tail representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    d = (h + r - t)
+    if power_norm:
+        assert isinstance(p, SupportsFloat)
+        return -(d.abs() ** p).sum(dim=-1)
+    else:
+        return -d.norm(p=p, dim=-1)
+
+
 def translational_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
     p: Union[int, str] = 2,
-    no_root: bool = False,
+    power_norm: bool = False,
 ) -> torch.FloatTensor:
     """
-    Evaluate the ConvE interaction function.
+    Evaluate a translational distance interaction function.
 
     :param h: shape: (batch_size, num_heads, dim)
         The head representations.
@@ -439,19 +471,24 @@ def translational_interaction(
         The tail representations.
     :param p:
         The p for the norm. cf. torch.norm.
-    :param no_root:
+    :param power_norm:
         Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
+    num_heads, num_relations, num_tails, d_e = _extract_sizes(h, r, t)[:4]
+    h = h.view(-1, num_heads, 1, 1, d_e)
+    r = r.view(-1, 1, num_relations, 1, d_e)
+    t = t.view(-1, 1, 1, num_tails, d_e)
+    return _translational_interaction(h=h, r=r, t=t, p=p, power_norm=power_norm)
+
+
+def _extract_sizes(h, r, t):
     num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
-    dim = h.shape[-1]
-    d = (h.view(-1, num_heads, 1, 1, dim) + r.view(-1, 1, num_relations, 1, dim) - t.view(-1, 1, 1, num_tails, dim))
-    if no_root:
-        return -(d ** p).sum(dim=-1)
-    else:
-        return -d.norm(p=p, dim=-1)
+    d_e = h.shape[-1]
+    d_r = r.shape[-1]
+    return num_heads, num_relations, num_tails, d_e, d_r
 
 
 def transr_interaction(
@@ -460,32 +497,39 @@ def transr_interaction(
     t: torch.FloatTensor,
     m_r: torch.FloatTensor,
     p: int,
+    power_norm: bool = True,
 ) -> torch.FloatTensor:
     """Evaluate the interaction function for given embeddings.
 
-    The embeddings have to be in a broadcastable shape.
-
-    :param h: shape: (batch_size, num_entities, d_e)
+    :param h: shape: (batch_size, num_heads, d_e)
         Head embeddings.
-    :param r: shape: (batch_size, num_entities, d_r)
+    :param r: shape: (batch_size, num_relations, d_r)
         Relation embeddings.
-    :param t: shape: (batch_size, num_entities, d_e)
-        Tail embeddings.
-    :param m_r: shape: (batch_size, num_entities, d_e, d_r)
+    :param m_r: shape: (batch_size, num_relations, d_e, d_r)
         The relation specific linear transformations.
+    :param t: shape: (batch_size, num_tails, d_e)
+        Tail embeddings.
+    :param p:
+        The parameter p for selecting the norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
 
-    :return: shape: (batch_size, num_entities)
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # project to relation specific subspace, shape: (b, e, d_r)
-    h_bot = h @ m_r
-    t_bot = t @ m_r
-    # ensure constraints
+    num_heads, num_relations, num_tails, d_e, d_r = _extract_sizes(h=h, r=r, t=t)
+    # project to relation specific subspace and ensure constraints
+    # head, shape: (b, h, r, 1, d_r)
+    h_bot = h.view(-1, num_heads, 1, 1, d_e) @ m_r.view(-1, 1, num_relations, d_e, d_r)
     h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
+
+    # head, shape: (b, 1, r, t, d_r)
+    t_bot = t.view(-1, 1, 1, num_tails, d_e) @ m_r.view(-1, 1, num_relations, d_e, d_r)
     t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
 
-    # evaluate score function, shape: (b, e)
-    return translational_interaction(h=h_bot, r=r, t=t_bot, p=p, no_root=True)
+    # evaluate score function, shape: (b, h, r, t)
+    r = r.view(-1, 1, num_relations, 1, d_r)
+    return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)
 
 
 class GaussianDistribution(NamedTuple):
