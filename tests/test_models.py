@@ -26,7 +26,6 @@ from pykeen.models import _MODELS
 from pykeen.models.base import (
     EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
-    GeneralVectorEntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
     SimpleVectorEntityRelationEmbeddingModel,
@@ -51,7 +50,6 @@ SKIP_MODULES = {
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
-    GeneralVectorEntityRelationEmbeddingModel.__name__,
     SimpleVectorEntityRelationEmbeddingModel.__name__,
     'MockModel',
     'models',
