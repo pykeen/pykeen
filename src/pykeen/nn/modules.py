@@ -4,7 +4,7 @@
 
 import logging
 import math
-from typing import Any, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
 
 import torch
 from torch import nn
@@ -240,6 +240,21 @@ class InteractionFunction(nn.Module):
                 mod.reset_parameters()
 
 
+class FunctionalInteractionFunction(InteractionFunction):
+    """Interaction function without state or additional parameters."""
+    interaction: Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs)
+        return self.interaction(h, r, t)
+
+
 class TranslationalInteractionFunction(InteractionFunction):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
@@ -262,18 +277,10 @@ class TranslationalInteractionFunction(InteractionFunction):
         return pykeen_functional.translational_interaction(h=h, r=r, t=t, p=self.p)
 
 
-class ComplExInteractionFunction(InteractionFunction):
+class ComplExInteractionFunction(FunctionalInteractionFunction):
     """Interaction function of ComplEx."""
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.complex_interaction(h=h, r=r, t=t)
+    interaction = pykeen_functional.complex_interaction
 
 
 def _calculate_missing_shape_information(
@@ -486,18 +493,10 @@ class ConvKBInteractionFunction(InteractionFunction):
         )
 
 
-class DistMultInteractionFunction(InteractionFunction):
+class DistMultInteractionFunction(FunctionalInteractionFunction):
     """Interaction function of DistMult."""
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.distmult_interaction(h=h, r=r, t=t)
+    interaction = pykeen_functional.distmult_interaction
 
 
 class ERMLPInteractionFunction(InteractionFunction):
@@ -638,32 +637,16 @@ class TransRInteractionFunction(InteractionFunction):
         return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=True)
 
 
-class RotatEInteraction(InteractionFunction):
+class RotatEInteraction(FunctionalInteractionFunction):
     """Interaction function of RotatE."""
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.rotate_interaction(h=h, r=r, t=t)
+    interaction = pykeen_functional.rotate_interaction
 
 
-class HolEInteractionFunction(InteractionFunction):
+class HolEInteractionFunction(FunctionalInteractionFunction):
     """Interaction function for HolE."""
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.hole_interaction(h=h, r=r, t=t)
+    interaction = pykeen_functional.hole_interaction
 
 
 class ProjEInteractionFunction(InteractionFunction):
@@ -709,3 +692,9 @@ class ProjEInteractionFunction(InteractionFunction):
 
         # Compute score
         return pykeen_functional.proje_interaction(h=h, r=r, t=t, d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity).view(-1, 1)
+
+
+class RESCALInteractionFunction(FunctionalInteractionFunction):
+    """RESCAL interaction function."""
+
+    interaction = pykeen_functional.rescal_interaction
