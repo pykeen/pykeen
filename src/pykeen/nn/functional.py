@@ -16,10 +16,10 @@ __all__ = [
     "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
-    'hole_interaction',
-    'rotate_interaction',
-    'translational_interaction',
-    'transr_interaction',
+    "hole_interaction",
+    "rotate_interaction",
+    "translational_interaction",
+    "transr_interaction",
 ]
 
 
