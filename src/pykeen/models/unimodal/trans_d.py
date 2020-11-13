@@ -8,7 +8,10 @@ import torch
 import torch.autograd
 
 from .. import Model
-from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction, InteractionFunction
+from ..base import (
+    GeneralVectorEntityRelationEmbeddingModel, IndexFunction, InteractionFunction,
+    TranslationalInteractionFunction,
+)
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
@@ -18,6 +21,8 @@ from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
+    'TransDInteractionFunction',
+    'TransDIndexFunction',
     'TransD',
 ]
 
@@ -69,15 +74,26 @@ def _project_entity(
     return e_bot
 
 
-class TransDInteractionFunction(InteractionFunction):
+class TransDInteractionFunction(TranslationalInteractionFunction):
+    """The interaction function for TransD."""
+
     def __init__(self, p: int = 2, power: int = 2):
-        # Very similar to TransE, could be generalized
-        super().__init__()
-        self.p = p
+        """Initialize the TransD interaction function.
+
+        :param p: The norm applied by :func:`torch.norm`
+        :param power: The power applied after :func:`torch.norm`.
+        """
+        super().__init__(p=p)
         self.power = power
 
-    def forward(self, h: torch.FloatTensor, r: torch.FloatTensor, t: torch.FloatTensor) -> torch.FloatTensor:
-        return -torch.norm(h + r - t, dim=-1, p=self.p) ** self.power
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa:D102
+        return super().forward(h=h, r=r, t=t, **kwargs) ** self.power
 
 
 class TransDIndexFunction(IndexFunction):

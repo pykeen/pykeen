@@ -16,7 +16,7 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
-from ..nn import Embedding
+from ..nn import Embedding, functional as pykeen_functional
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
@@ -29,6 +29,7 @@ __all__ = [
     'GeneralVectorEntityRelationEmbeddingModel',
     'SimpleVectorEntityRelationEmbeddingModel',
     'InteractionFunction',
+    'TranslationalInteractionFunction',
     'IndexFunction',
     'MultimodalModel',
 ]
@@ -1423,6 +1424,30 @@ class InteractionFunction(nn.Module):
                 continue
             if hasattr(mod, 'reset_parameters'):
                 mod.reset_parameters()
+
+
+class TranslationalInteractionFunction(InteractionFunction):
+    """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
+
+    def __init__(self, p: int):
+        """Initialize the translational interaction function.
+
+        :param p: The norm used with :func:`torch.norm`. Typically is 1 or 2.
+        """
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa:D102
+        return pykeen_functional.translational_interaction(
+            h=h, r=r, t=t,
+            p=self.p, dim=kwargs.get('dim', None), keepdim=kwargs.get('keepdim', False),
+        )
 
 
 class IndexFunction(nn.Module):

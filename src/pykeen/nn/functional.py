@@ -2,12 +2,12 @@
 
 """Functional forms of interaction methods."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 from torch import nn
 
-from ..utils import broadcast_cat, is_cudnn_error, normalize_for_einsum, split_complex
+from ..utils import broadcast_cat, clamp_norm, is_cudnn_error, normalize_for_einsum, split_complex
 
 __all__ = [
     "complex_interaction",
@@ -18,6 +18,8 @@ __all__ = [
     "ermlpe_interaction",
     'hole_interaction',
     'rotate_interaction',
+    'translational_interaction',
+    'transr_interaction',
 ]
 
 
@@ -417,3 +419,49 @@ def rotate_interaction(
     scores = -torch.norm(diff.view(diff.shape[:-2] + (-1,)), dim=-1)
 
     return scores
+
+
+def translational_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    dim: int,
+    p: Union[int, str] = 'fro',
+    keepdim: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the translational interaction."""
+    return -torch.norm(h + r - t, dim=dim, p=p, keepdim=keepdim)
+
+
+def transr_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    m_r: torch.FloatTensor,
+    p: int,
+) -> torch.FloatTensor:
+    """Evaluate the interaction function for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    :param h: shape: (batch_size, num_entities, d_e)
+        Head embeddings.
+    :param r: shape: (batch_size, num_entities, d_r)
+        Relation embeddings.
+    :param t: shape: (batch_size, num_entities, d_e)
+        Tail embeddings.
+    :param m_r: shape: (batch_size, num_entities, d_e, d_r)
+        The relation specific linear transformations.
+
+    :return: shape: (batch_size, num_entities)
+        The scores.
+    """
+    # project to relation specific subspace, shape: (b, e, d_r)
+    h_bot = h @ m_r
+    t_bot = t @ m_r
+    # ensure constraints
+    h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
+    t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
+
+    # evaluate score function, shape: (b, e)
+    return translational_interaction(h=h_bot, r=r, t=t_bot, dim=-1, p=p) ** 2

@@ -7,7 +7,7 @@ from typing import Optional
 import torch
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, TranslationalInteractionFunction
 from ...losses import Loss
 from ...nn import Embedding
 from ...regularizers import Regularizer, TransHRegularizer
@@ -67,7 +67,7 @@ class TransH(EntityRelationEmbeddingModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
-        scoring_fct_norm: int = 1,
+        scoring_fct_norm: int = 2,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -88,7 +88,7 @@ class TransH(EntityRelationEmbeddingModel):
             regularizer=regularizer,
         )
 
-        self.scoring_fct_norm = scoring_fct_norm
+        self.interaction_function = TranslationalInteractionFunction(p=scoring_fct_norm)
 
         # embeddings
         self.normal_vector_embeddings = Embedding.init_with_device(
@@ -132,7 +132,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
+        return self.interaction_function(h=ph, r=d_r, t=pt, dim=-1, keepdim=True)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -148,7 +148,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
+        return self.interaction_function(h=ph[:, None, :], r=d_r[:, None, :], t=pt, dim=-1, keepdim=False)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -165,4 +165,4 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
+        return self.interaction_function(h=ph, r=d_r[:, None, :], t=pt[:, None, :], dim=-1, keepdim=False)

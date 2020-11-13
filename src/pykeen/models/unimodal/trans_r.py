@@ -10,9 +10,9 @@ import torch.autograd
 import torch.nn.init
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, InteractionFunction
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, functional as pykeen_functional
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -20,6 +20,7 @@ from ...typing import DeviceHint
 from ...utils import clamp_norm, compose
 
 __all__ = [
+    'TransRInteractionFunction',
     'TransR',
 ]
 
@@ -32,6 +33,28 @@ def _projection_initializer(
 ) -> torch.FloatTensor:
     """Initialize by Glorot."""
     return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
+
+
+class TransRInteractionFunction(InteractionFunction):
+    """The TransR interaction function."""
+
+    def __init__(self, p: int):
+        """Initialize the TransR interaction function.
+
+        :param p: The norm applied to the translation
+        """
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa:D102
+        m_r = kwargs.pop('m_r')
+        return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p)
 
 
 class TransR(EntityRelationEmbeddingModel):
@@ -85,6 +108,8 @@ class TransR(EntityRelationEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
+        self.interaction_function = TransRInteractionFunction(p=scoring_fct_norm)
+
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -104,7 +129,6 @@ class TransR(EntityRelationEmbeddingModel):
             relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
-        self.scoring_fct_norm = scoring_fct_norm
 
         # TODO: Initialize from TransE
 
@@ -124,39 +148,6 @@ class TransR(EntityRelationEmbeddingModel):
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
         self.relation_projections.reset_parameters()
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        m_r: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        :param h: shape: (batch_size, num_entities, d_e)
-            Head embeddings.
-        :param r: shape: (batch_size, num_entities, d_r)
-            Relation embeddings.
-        :param t: shape: (batch_size, num_entities, d_e)
-            Tail embeddings.
-        :param m_r: shape: (batch_size, num_entities, d_e, d_r)
-            The relation specific linear transformations.
-
-        :return: shape: (batch_size, num_entities)
-            The scores.
-        """
-        # project to relation specific subspace, shape: (b, e, d_r)
-        h_bot = h @ m_r
-        t_bot = t @ m_r
-        # ensure constraints
-        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
-        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
-
-        # evaluate score function, shape: (b, e)
-        return -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
