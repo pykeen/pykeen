@@ -699,7 +699,7 @@ class _BaseNTNTest(_ModelTestCase, unittest.TestCase):
     def test_can_slice(self):
         """Test that the slicing properties are calculated correctly."""
         self.assertTrue(self.model.can_slice_h)
-        self.assertFalse(self.model.can_slice_r)
+        self.assertTrue(self.model.can_slice_r)
         self.assertTrue(self.model.can_slice_t)
 
 

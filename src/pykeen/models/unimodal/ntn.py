@@ -9,6 +9,7 @@ from torch import nn
 
 from ..base import EntityEmbeddingModel
 from ...losses import Loss
+from ...nn import Embedding, functional as F
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -81,46 +82,36 @@ class NTN(EntityEmbeddingModel):
         )
         self.num_slices = num_slices
 
-        self.w = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
-            num_slices,
-            embedding_dim,
-            embedding_dim,
-            device=self.device,
-        ), requires_grad=True)
-        self.vh = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
-            num_slices,
-            embedding_dim,
-            device=self.device,
-        ), requires_grad=True)
-        self.vt = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
-            num_slices,
-            embedding_dim,
-            device=self.device,
-        ), requires_grad=True)
-        self.b = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
-            num_slices,
-            device=self.device,
-        ), requires_grad=True)
-        self.u = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
-            num_slices,
-            device=self.device,
-        ), requires_grad=True)
+        self.w = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * self.embedding_dim ** 2,
+        )
+        self.vh = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim,
+        )
+        self.vt = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim,
+        )
+        self.b = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices,
+        )
+        self.u = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices,
+        )
         if non_linearity is None:
             non_linearity = nn.Tanh()
         self.non_linearity = non_linearity
 
     def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        nn.init.normal_(self.w)
-        nn.init.normal_(self.vh)
-        nn.init.normal_(self.vt)
-        nn.init.normal_(self.b)
-        nn.init.normal_(self.u)
+        for module in self.modules():
+            if module is self:
+                continue
+            if hasattr(module, "reset_parameters"):
+                module.reset_parameters()
 
     def _score(
         self,
@@ -136,17 +127,23 @@ class NTN(EntityEmbeddingModel):
         :param r_indices: shape: (batch_size,)
         :param t_indices: shape: (batch_size,)
 
-        :return: shape: (batch_size, num_entities)
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
         """
-        assert r_indices is not None
+        assert slice_size is None, "not implemented"
 
         #: shape: (batch_size, num_entities, d)
         h_all = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
         t_all = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        w = self.w.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim, self.embedding_dim))
+        b = self.b.get_in_canonical_shape(indices=r_indices)
+        u = self.u.get_in_canonical_shape(indices=r_indices)
+        vh = self.vh.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
+        vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
 
         if slice_size is None:
-            return self._interaction_function(h=h_all, t=t_all, r_indices=r_indices)
+            return F.ntn_interaction(h=h_all, t=t_all, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
 
+        # TODO: Not implemented
         if h_all.shape[1] > t_all.shape[1]:
             h_was_split = True
             split_tensor = torch.split(h_all, slice_size, dim=1)
@@ -164,82 +161,19 @@ class NTN(EntityEmbeddingModel):
             else:
                 h = constant_tensor
                 t = split
-            score = self._interaction_function(h=h, t=t, r_indices=r_indices)
+            score = F.ntn_interaction(h=h_all, t=t_all, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
             scores_arr.append(score)
 
         return torch.cat(scores_arr, dim=1)
 
-    def _interaction_function(
-        self,
-        h: torch.FloatTensor,
-        t: torch.FloatTensor,
-        r_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        #: Prepare h: (b, e, d) -> (b, e, 1, 1, d)
-        h_for_w = h.unsqueeze(dim=-2).unsqueeze(dim=-2)
-
-        #: Prepare t: (b, e, d) -> (b, e, 1, d, 1)
-        t_for_w = t.unsqueeze(dim=-2).unsqueeze(dim=-1)
-
-        #: Prepare w: (R, k, d, d) -> (b, k, d, d) -> (b, 1, k, d, d)
-        w_r = self.w.index_select(dim=0, index=r_indices).unsqueeze(dim=1)
-
-        # h.T @ W @ t, shape: (b, e, k, 1, 1)
-        hwt = (h_for_w @ w_r @ t_for_w)
-
-        #: reduce (b, e, k, 1, 1) -> (b, e, k)
-        hwt = hwt.squeeze(dim=-1).squeeze(dim=-1)
-
-        #: Prepare vh: (R, k, d) -> (b, k, d) -> (b, 1, k, d)
-        vh_r = self.vh.index_select(dim=0, index=r_indices).unsqueeze(dim=1)
-
-        #: Prepare h: (b, e, d) -> (b, e, d, 1)
-        h_for_v = h.unsqueeze(dim=-1)
-
-        # V_h @ h, shape: (b, e, k, 1)
-        vhh = vh_r @ h_for_v
-
-        #: reduce (b, e, k, 1) -> (b, e, k)
-        vhh = vhh.squeeze(dim=-1)
-
-        #: Prepare vt: (R, k, d) -> (b, k, d) -> (b, 1, k, d)
-        vt_r = self.vt.index_select(dim=0, index=r_indices).unsqueeze(dim=1)
-
-        #: Prepare t: (b, e, d) -> (b, e, d, 1)
-        t_for_v = t.unsqueeze(dim=-1)
-
-        # V_t @ t, shape: (b, e, k, 1)
-        vtt = vt_r @ t_for_v
-
-        #: reduce (b, e, k, 1) -> (b, e, k)
-        vtt = vtt.squeeze(dim=-1)
-
-        #: Prepare b: (R, k) -> (b, k) -> (b, 1, k)
-        b = self.b.index_select(dim=0, index=r_indices).unsqueeze(dim=1)
-
-        # a = f(h.T @ W @ t + Vh @ h + Vt @ t + b), shape: (b, e, k)
-        pre_act = hwt + vhh + vtt + b
-        act = self.non_linearity(pre_act)
-
-        # prepare u: (R, k) -> (b, k) -> (b, 1, k, 1)
-        u = self.u.index_select(dim=0, index=r_indices).unsqueeze(dim=1).unsqueeze(dim=-1)
-
-        # prepare act: (b, e, k) -> (b, e, 1, k)
-        act = act.unsqueeze(dim=-2)
-
-        # compute score, shape: (b, e, 1, 1)
-        score = act @ u
-
-        # reduce
-        score = score.squeeze(dim=-1).squeeze(dim=-1)
-
-        return score
-
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2])
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], slice_size=slice_size)
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], slice_size=slice_size).view(hr_batch.shape[0], self.num_entities)
+
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
+        return self._score(h_indices=ht_batch[:, 0], t_indices=ht_batch[:, 1], slice_size=slice_size).view(ht_batch.shape[0], self.num_relations)
 
     def score_h(self, rt_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1], slice_size=slice_size)
+        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1], slice_size=slice_size).view(rt_batch.shape[0], self.num_entities)

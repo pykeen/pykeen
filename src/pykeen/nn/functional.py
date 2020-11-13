@@ -635,3 +635,81 @@ def kg2e_interaction(
     e = GaussianDistribution(mean=e_mean, diagonal_covariance=e_var)
     r = GaussianDistribution(mean=r_mean, diagonal_covariance=r_var)
     return similarity(e=e, r=r, exact=exact)
+
+
+def _extended_einsum(
+    eq: str,
+    *tensors,
+) -> torch.FloatTensor:
+    """Drop dimensions of size 1 to allow broadcasting."""
+    lhs, rhs = eq.split("->")
+    mod_ops, mod_t = [], []
+    for op, t in zip(lhs.split(","), tensors):
+        mod_op = ""
+        assert len(op) == len(t.shape)
+        for i, c in reversed(list(enumerate(op))):
+            if t.shape[i] == 1:
+                t = t.squeeze(dim=i)
+            else:
+                mod_op = c + mod_op
+        mod_ops.append(mod_op)
+        mod_t.append(t)
+    m_lhs = ",".join(mod_ops)
+    r_keep_dims = set("".join(mod_ops))
+    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
+    m_eq = f"{m_lhs}->{m_rhs}"
+    mod_r = torch.einsum(m_eq, *mod_t)
+    # unsqueeze
+    for i, c in enumerate(rhs):
+        if c not in r_keep_dims:
+            mod_r = mod_r.unsqueeze(dim=i)
+    return mod_r
+
+
+def ntn_interaction(
+    h: torch.FloatTensor,
+    t: torch.FloatTensor,
+    w: torch.FloatTensor,
+    b: torch.FloatTensor,
+    u: torch.FloatTensor,
+    vh: torch.FloatTensor,
+    vt: torch.FloatTensor,
+    activation: nn.Module,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the NTN interaction function.
+
+    .. math::
+
+        f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param vh: shape: (batch_size, num_relations, k, dim)
+        The head transformation matrix V_h.
+    :param vt: shape: (batch_size, num_relations, k, dim)
+        The tail transformation matrix V_h.
+    :param w: shape: (batch_size, num_relations, k, dim, dim)
+        The relation specific transformation matrix W_r.
+    :param b: shape: (batch_size, num_relations, k)
+        The relation specific offset b_r.
+    :param u: shape: (batch_size, num_relations, k)
+        The relation specific final linear transformation b_r.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param activation:
+        The activation function.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # TODO: check efficiency of einsum
+    # save sizes
+    num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, b, t)]
+    k = b.shape[-1]
+    x = _extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
+    x = x + _extended_einsum("brkd,bhd->bhk", vh, h).view(-1, num_heads, 1, 1, k)
+    x = x + _extended_einsum("brkd,btd->btk", vt, t).view(-1, 1, 1, num_tails, k)
+    x = activation(x)
+    x = _extended_einsum("bhrtk,brk->bhrt", x, u)
+    return x

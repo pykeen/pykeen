@@ -3,7 +3,7 @@
 """Embedding modules."""
 
 import functools
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Sequence
 
 import torch
 import torch.nn
@@ -175,14 +175,22 @@ class Embedding(RepresentationModule):
     def get_in_canonical_shape(
         self,
         indices: Optional[torch.LongTensor] = None,
+        reshape_dim: Optional[Sequence[int]] = None,
     ) -> torch.FloatTensor:
         """Get embedding in canonical shape.
 
-        :param indices: The indices. If None, return all embeddings.
+        :param indices:
+            The indices. If None, return all embeddings.
+        :param reshape_dim:
+            Optionally reshape the last dimension.
 
         :return: shape: (batch_size, num_embeddings, d)
         """
         x = self(indices=indices)
         if indices is None:
-            return x.unsqueeze(dim=0)
-        return x.unsqueeze(dim=1)
+            x = x.unsqueeze(dim=0)
+        else:
+            x = x.unsqueeze(dim=1)
+        if reshape_dim is not None:
+            x = x.view(*x.shape[:-1], *reshape_dim)
+        return x
