@@ -988,7 +988,7 @@ def _apply_optional_bn_to_tensor(
 ) -> torch.FloatTensor:
     if batch_norm is not None:
         shape = tensor.shape
-        tensor = tensor.view(-1, shape[-1])
+        tensor = tensor.reshape(-1, shape[-1])
         tensor = batch_norm(tensor)
         tensor = tensor.view(*shape)
     tensor = output_dropout(tensor)
