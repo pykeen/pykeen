@@ -14,6 +14,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_uniform_
+from ...nn.modules import TransRInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
