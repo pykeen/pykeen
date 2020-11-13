@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Functional forms of interaction methods."""
+
 from typing import Optional, Tuple
 
 import torch
@@ -13,6 +16,7 @@ __all__ = [
     "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
+    'hole_interaction',
 ]
 
 
@@ -347,3 +351,26 @@ def ermlpe_interaction(
     x = mlp(x)
 
     return (x.unsqueeze(dim=-2) @ t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]).transpose(-2, -1)).squeeze(dim=-1)
+
+
+def hole_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:  # noqa: D102
+    """Evaluate the HolE interaction function."""
+    # Circular correlation of entity embeddings
+    a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
+    b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
+
+    # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
+    a_fft[:, :, :, 1] *= -1
+
+    # Hadamard product in frequency domain
+    p_fft = a_fft * b_fft
+
+    # inverse real FFT, shape: (batch_size, num_entities, d)
+    composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+
+    # inner product with relation embedding
+    return torch.sum(r * composite, dim=-1, keepdim=False)

@@ -4,11 +4,11 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
 
 from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn.functional import hole_interaction
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -31,23 +31,7 @@ class HolEInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
-        # Circular correlation of entity embeddings
-        a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
-        b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
-
-        # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
-        a_fft[:, :, :, 1] *= -1
-
-        # Hadamard product in frequency domain
-        p_fft = a_fft * b_fft
-
-        # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
-
-        # inner product with relation embedding
-        scores = torch.sum(r * composite, dim=-1, keepdim=False)
-
-        return scores
+        return hole_interaction(h=h, r=r, t=t)
 
 
 class HolE(SimpleVectorEntityRelationEmbeddingModel):
