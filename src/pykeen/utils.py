@@ -45,6 +45,10 @@ __all__ = [
     'Result',
     'fix_dataclass_init_docs',
     'normalize_for_einsum',
+    'get_hrt_indices',
+    'get_hr_indices',
+    'get_ht_indices',
+    'get_rt_indices',
 ]
 
 logger = logging.getLogger(__name__)
@@ -525,3 +529,27 @@ def broadcast_cat(
         x_rep.append(xr)
         y_rep.append(yr)
     return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+
+
+# These three following methods could be used throughout PyKEEN to improve
+#  the implicit documentation of functions
+
+
+def get_hrt_indices(hrt_batch: torch.LongTensor) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+    """Get indices from a head/relation/tail batch."""
+    return hrt_batch[:, 0], hrt_batch[:, 1], hrt_batch[:, 2]
+
+
+def get_hr_indices(hr_batch: torch.LongTensor) -> Tuple[torch.LongTensor, torch.LongTensor, None]:
+    """Get indices from a head/relation batch."""
+    return hr_batch[:, 0], hr_batch[:, 1], None
+
+
+def get_ht_indices(ht_batch: torch.LongTensor) -> Tuple[torch.LongTensor, None, torch.LongTensor]:
+    """Get indices from a head/tail batch."""
+    return ht_batch[:, 0], None, ht_batch[:, 1]
+
+
+def get_rt_indices(rt_batch: torch.LongTensor) -> Tuple[None, torch.LongTensor, torch.LongTensor]:
+    """Get indices from a relation/tail batch."""
+    return None, rt_batch[:, 0], rt_batch[:, 1]

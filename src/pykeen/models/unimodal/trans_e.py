@@ -2,7 +2,7 @@
 
 """TransE."""
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch.autograd
 from torch.nn import functional
@@ -14,7 +14,7 @@ from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
-from ...utils import compose
+from ...utils import compose, get_hr_indices, get_hrt_indices, get_ht_indices, get_rt_indices
 
 __all__ = [
     'TransE',
@@ -85,22 +85,32 @@ class TransE(EntityRelationEmbeddingModel):
         self.interaction_function = TranslationalInteractionFunction(p=scoring_fct_norm)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
+        h_indices, r_indices, t_indices = get_hrt_indices(hrt_batch)
+        h, r, t = self._get_hrt(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
         return self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=hr_batch[:, 0])
-        r = self.relation_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=None)
+        h_indices, r_indices, t_indices = get_hr_indices(hr_batch)
+        h, r, t = self._get_hrt(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
         return self.interaction_function(h=h, r=r, t=t).view(hr_batch.shape[0], self.num_entities)
 
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_indices, r_indices, t_indices = get_ht_indices(ht_batch)
+        h, r, t = self._get_hrt(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
+        return self.interaction_function(h=h, r=r, t=t)
+
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=None)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=rt_batch[:, 1])
+        h_indices, r_indices, t_indices = get_rt_indices(rt_batch)
+        h, r, t = self._get_hrt(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
         return self.interaction_function(h=h, r=r, t=t).view(rt_batch.shape[0], self.num_entities)
+
+    def _get_hrt(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        return h, r, t
