@@ -485,7 +485,7 @@ Traceback
                 )
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
-            mock_method.assert_called_once()
+            mock_method.assert_called()
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
