@@ -21,7 +21,10 @@ from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import (
+    NoRandomSeedNecessary, get_hr_indices, get_hrt_indices, get_ht_indices, get_rt_indices,
+    resolve_device, set_random_seed,
+)
 
 __all__ = [
     'Model',
@@ -1356,16 +1359,20 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel, re
         return self.index_function(model=self, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
+        h_indices, r_indices, t_indices = get_hrt_indices(hrt_batch)
+        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None).view(-1, self.num_entities)
+        h_indices, r_indices, t_indices = get_hr_indices(hr_batch)
+        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
+        h_indices, r_indices, t_indices = get_ht_indices(ht_batch)
+        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1]).view(-1, self.num_entities)
+        h_indices, r_indices, t_indices = get_rt_indices(rt_batch)
+        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, self.num_entities)
 
 
 class SimpleVectorEntityRelationEmbeddingModel(
