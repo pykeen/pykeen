@@ -149,7 +149,7 @@ class TransD(EntityRelationEmbeddingModel):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
         h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
 

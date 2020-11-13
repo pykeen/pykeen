@@ -131,5 +131,8 @@ class TransR(EntityRelationEmbeddingModel):
         h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
         r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
         t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        m_r = self.relation_projections.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.embedding_dim, self.relation_dim))
+        m_r = self.relation_projections.get_in_canonical_shape(
+            indices=r_indices,
+            reshape_dim=(self.embedding_dim, self.relation_dim),
+        )
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)

@@ -22,17 +22,13 @@ from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import (
-    NoRandomSeedNecessary, resolve_device, set_random_seed,
-)
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
-    'GeneralVectorEntityRelationEmbeddingModel',
     'SimpleVectorEntityRelationEmbeddingModel',
-    'IndexFunction',
     'MultimodalModel',
 ]
 
@@ -350,7 +346,7 @@ class Model(nn.Module, ABC):
 
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
-        # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372
+        # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372   # noqa:E501
         # Make sure that all modules with parameters do have a reset_parameters method.
         uninitialized_parameters = set(map(id, self.parameters()))
         parents = defaultdict(list)
@@ -379,7 +375,11 @@ class Model(nn.Module, ABC):
 
         # emit warning if there where parameters which were not initialised by reset_parameters.
         if len(uninitialized_parameters) > 0:
-            logger.warning('reset_parameters() not found for all modules containing parameters. %d parameters where likely not initialised.', len(uninitialized_parameters))
+            logger.warning(
+                'reset_parameters() not found for all modules containing parameters. '
+                '%d parameters where likely not initialized.',
+                len(uninitialized_parameters),
+            )
 
             # Additional debug information
             for i, p_id in enumerate(uninitialized_parameters, start=1):

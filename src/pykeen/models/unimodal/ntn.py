@@ -9,7 +9,7 @@ from torch import nn
 
 from ..base import EntityEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as pykeen_functional
+from ...nn import Embedding, functional as pkf
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -135,7 +135,7 @@ class NTN(EntityEmbeddingModel):
         vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
 
         if slice_size is None:
-            return pykeen_functional.ntn_interaction(
+            return pkf.ntn_interaction(
                 h=h_all, t=t_all,
                 w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
             )
@@ -158,7 +158,7 @@ class NTN(EntityEmbeddingModel):
             else:
                 h = constant_tensor
                 t = split
-            score = pykeen_functional.ntn_interaction(
+            score = pkf.ntn_interaction(
                 h=h, t=t,
                 w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
             )
