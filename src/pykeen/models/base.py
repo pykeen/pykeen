@@ -1364,7 +1364,9 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel, re
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h_indices, r_indices, t_indices = get_hr_indices(hr_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, self.num_entities)
+        return self(
+            h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
+        ).view(hr_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h_indices, r_indices, t_indices = get_ht_indices(ht_batch)
@@ -1372,7 +1374,9 @@ class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel, re
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h_indices, r_indices, t_indices = get_rt_indices(rt_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, self.num_entities)
+        return self(
+            h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
+        ).view(rt_batch.shape[0], self.num_entities)
 
 
 class SimpleVectorEntityRelationEmbeddingModel(
