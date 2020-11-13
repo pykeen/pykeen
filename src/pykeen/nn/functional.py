@@ -1146,6 +1146,10 @@ def transd_interaction(
         The relation projections.
     :param t_p: shape: (batch_size, num_tails, d_e)
         The tail projections.
+    :param p:
+        The parameter p for selecting the norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
@@ -1163,10 +1167,5 @@ def transd_interaction(
         e_p=t_p.unsqueeze(dim=1),
         r_p=r_p.unsqueeze(dim=2)
     ).unsqueeze(dim=1)
-    return _translational_interaction(
-        h=h_bot,
-        r=r.view(r.shape[0], 1, r.shape[1], 1, r.shape[2]),
-        t=t_bot,
-        p=p,
-        power_norm=power_norm,
-    )
+    r = r.view(r.shape[0], 1, r.shape[1], 1, r.shape[2])
+    return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)
