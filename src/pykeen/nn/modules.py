@@ -4,6 +4,7 @@
 
 import logging
 import math
+from abc import ABC
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type
 
 import torch
@@ -261,17 +262,25 @@ def _build_module_from_stateless(
     return FunctionalInteractionFunction
 
 
-class TranslationalInteractionFunction(InteractionFunction):
+class TranslationalInteractionFunction(InteractionFunction, ABC):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
     def __init__(self, p: int, power_norm: bool = False):
         """Initialize the translational interaction function.
 
-        :param p: The norm used with :func:`torch.norm`. Typically is 1 or 2.
+        :param p:
+            The norm used with :func:`torch.norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the L_p norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
         """
         super().__init__()
         self.p = p
         self.power_norm = power_norm
+
+
+class TransEInteractionFunction(TranslationalInteractionFunction):
+    """The TransE interaction function."""
 
     def forward(
         self,
@@ -589,16 +598,11 @@ class ERMLPEInteractionFunction(InteractionFunction):
         return pkf.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
 
 
-class TransRInteractionFunction(InteractionFunction):
+class TransRInteractionFunction(TranslationalInteractionFunction):
     """The TransR interaction function."""
 
-    def __init__(self, p: int):
-        """Initialize the TransR interaction function.
-
-        :param p: The norm applied to the translation
-        """
-        super().__init__()
-        self.p = p
+    def __init__(self, p: int, power_norm: bool = True):
+        super().__init__(p=p, power_norm=power_norm)
 
     def forward(
         self,
@@ -609,7 +613,7 @@ class TransRInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa:D102
         m_r = kwargs.pop('m_r')
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=True)
+        return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=self.power_norm)
 
 
 #: Interaction function of RotatE.
@@ -670,22 +674,8 @@ class ProjEInteractionFunction(InteractionFunction):
 RESCALInteractionFunction = _build_module_from_stateless(pkf.rescal_interaction)
 
 
-class StructuredEmbeddingInteractionFunction(InteractionFunction):
+class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction):
     """Interaction function of Structured Embedding."""
-
-    def __init__(
-        self,
-        p: int,
-        power_norm: bool = False,
-    ):
-        """Initialize the SE interaction function.
-
-        :param p: The l_p norm
-        :param power_norm: Should power normalization be applied?
-        """
-        super().__init__()
-        self.p = p
-        self.power_norm = power_norm
 
     def forward(
         self,
@@ -698,14 +688,7 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
         rh, rt = r.split(dim ** 2, dim=-1)
         rh = rh.view(*rh.shape[:-1], dim, dim)
         rt = rt.view(*rt.shape[:-1], dim, dim)
-        return pkf.structured_embedding_interaction(
-            h=h,
-            r_h=rh,
-            r_t=rt,
-            t=t,
-            p=self.p,
-            power_norm=self.power_norm,
-        )
+        return pkf.structured_embedding_interaction(h=h, r_h=rh, r_t=rt, t=t, p=self.p, power_norm=self.power_norm)
 
 
 class TuckerInteractionFunction(InteractionFunction):
@@ -777,13 +760,11 @@ class TuckerInteractionFunction(InteractionFunction):
         )
 
 
-class UnstructuredModelInteractionFunction(InteractionFunction):
+class UnstructuredModelInteractionFunction(TranslationalInteractionFunction):
     """Interaction function of UnstructuredModel."""
 
     def __init__(self, p: int, power_norm: bool = True):
-        super().__init__()
-        self.p = p
-        self.power_norm = power_norm
+        super().__init__(p=p, power_norm=power_norm)
 
     def forward(
         self,
@@ -794,3 +775,19 @@ class UnstructuredModelInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:
         self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
+
+
+class TransDInteractionFunction(TranslationalInteractionFunction):
+    """Interaction function of TransD."""
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        h_p = kwargs.pop("h_p")
+        r_p = kwargs.pop("r_p")
+        t_p = kwargs.pop("t_p")
+        return pkf.transd_interaction(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p, p=self.p, power_norm=self.power_norm)
