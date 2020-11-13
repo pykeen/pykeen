@@ -1300,4 +1300,4 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
         r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
         t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        return F.tucker_interaction(h=h, r=r, t=t)
+        return self.interaction_function(h=h, r=r, t=t)
