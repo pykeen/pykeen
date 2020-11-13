@@ -426,6 +426,7 @@ def translational_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
     p: Union[int, str] = 2,
+    no_root: bool = False,
 ) -> torch.FloatTensor:
     """
     Evaluate the ConvE interaction function.
@@ -438,17 +439,19 @@ def translational_interaction(
         The tail representations.
     :param p:
         The p for the norm. cf. torch.norm.
+    :param no_root:
+        Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
     num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
     dim = h.shape[-1]
-    return -(
-        h.view(-1, num_heads, 1, 1, dim) +
-        r.view(-1, 1, num_relations, 1, dim) -
-        t.view(-1, 1, 1, num_tails, dim)
-    ).norm(p=p, dim=-1)
+    d = (h.view(-1, num_heads, 1, 1, dim) + r.view(-1, 1, num_relations, 1, dim) - t.view(-1, 1, 1, num_tails, dim))
+    if no_root:
+        return -(d ** p).sum(dim=-1)
+    else:
+        return -d.norm(p=p, dim=-1)
 
 
 def transr_interaction(
@@ -482,7 +485,7 @@ def transr_interaction(
     t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
 
     # evaluate score function, shape: (b, e)
-    return translational_interaction(h=h_bot, r=r, t=t_bot, dim=-1, p=p) ** 2
+    return translational_interaction(h=h_bot, r=r, t=t_bot, p=p, no_root=True)
 
 
 class GaussianDistribution(NamedTuple):
