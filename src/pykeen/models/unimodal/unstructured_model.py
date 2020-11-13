@@ -4,12 +4,12 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
 
-from ..base import EntityEmbeddingModel, InteractionFunction
+from ..base import EntityEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_normal_
+from ...nn.modules import UnstructuredModelInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -17,23 +17,6 @@ from ...typing import DeviceHint
 __all__ = [
     'UnstructuredModel',
 ]
-
-
-class UMFunction(InteractionFunction):
-    def __init__(self, p: int, power: int = 2):
-        super().__init__()
-        self.p = p
-        self.power = power
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:
-        keepdim = kwargs.pop('keepdim')
-        return -torch.norm(h - t, dim=-1, p=self.p, keepdim=keepdim) ** self.power
 
 
 class UnstructuredModel(EntityEmbeddingModel):
@@ -86,19 +69,23 @@ class UnstructuredModel(EntityEmbeddingModel):
             regularizer=regularizer,
             entity_initializer=xavier_normal_,
         )
-        self.interaction_function = UMFunction(p=scoring_fct_norm)
+        self.interaction_function = UnstructuredModelInteractionFunction(p=scoring_fct_norm)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-        return self.interaction_function(h=h, r=None, t=t, keepdim=True)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        return self.interaction_function(h=h, r=None, t=t)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        return self.interaction_function(h=h, r=None, t=t)
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        scores = self.interaction_function(h=h, r=None, t=t)
+        # same score for all relations
+        repeats = [1, 1, 1, 1]
+        if r_indices is None:
+            repeats[2] = self.num_relations
+        else:
+            relation_batch_size = len(r_indices)
+            if scores.shape[0] < relation_batch_size:
+                repeats[0] = relation_batch_size
+        return scores.repeat(*repeats)

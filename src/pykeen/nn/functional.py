@@ -1048,3 +1048,29 @@ def tucker_interaction(
 
     # Compute whr x_3 t
     return _extended_einsum("bhrd,btd->bhrt", x, t)
+
+
+def unstructured_model_interaction(
+    h: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: int,
+    power_norm: bool = True,
+) -> torch.FloatTensor:
+    """
+    Evaluate the SimplE interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param p:
+        The parameter p for selecting the norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    h = h.unsqueeze(dim=2).unsqueeze(dim=3)
+    t = t.unsqueeze(dim=1).unsqueeze(dim=2)
+    return negative_norm_of_sum(h, -t, p=p, power_norm=power_norm)

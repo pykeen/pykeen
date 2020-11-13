@@ -802,3 +802,22 @@ class TuckerInteractionFunction(InteractionFunction):
             bn1=self.bn1,
             bn2=self.bn2,
         )
+
+
+class UnstructuredModelInteractionFunction(InteractionFunction):
+    """Interaction function of UnstructuredModel."""
+
+    def __init__(self, p: int, power_norm: bool = True):
+        super().__init__()
+        self.p = p
+        self.power_norm = power_norm
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        self._check_for_empty_kwargs(kwargs=kwargs)
+        return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
