@@ -516,6 +516,8 @@ def broadcast_cat(
     """
     if x.ndimension() != y.ndimension():
         raise ValueError
+    if dim < 0:
+        dim = x.ndimension() + dim
     x_rep, y_rep = [], []
     for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
         xr = yr = 1

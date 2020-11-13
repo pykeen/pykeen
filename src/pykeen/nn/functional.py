@@ -153,7 +153,7 @@ def conve_interaction(
     h = h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width)
     r = r.unsqueeze(dim=1)
     r = r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width)
-    x = broadcast_cat(h, r, dim=2).view(-1, input_channels, 2 * embedding_height, embedding_width)
+    x = broadcast_cat(h, r, dim=-2).view(-1, input_channels, 2 * embedding_height, embedding_width)
 
     # batch_size, num_input_channels, 2*height, width
     if bn0 is not None:
@@ -180,7 +180,7 @@ def conve_interaction(
         x = bn2(x)
     x = activation(x)
 
-    # reshape: (batch_size', embedding_dim)
+    # reshape: (batch_size', embedding_dim) -> (b, h, r, 1, d)
     x = x.view(-1, num_heads, num_relations, 1, embedding_dim)
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
@@ -1038,13 +1038,13 @@ def tucker_interaction(
         The scores.
     """
     # Compute wr = DO(W x_2 r)
-    x = do0(_extended_einsum("ijd,brd->brij", core_tensor, r))
+    x = do0(_extended_einsum("idj,brd->brij", core_tensor, r))
 
     # Compute h_n = DO(BN(h))
     h = _apply_optional_bn_to_tensor(batch_norm=bn1, output_dropout=do1, tensor=h)
 
     # compute whr = DO(BN(h_n x_1 wr))
-    x = _extended_einsum("brid,bhd->bhri", h, x)
+    x = _extended_einsum("brid,bhd->bhri", x, h)
     x = _apply_optional_bn_to_tensor(batch_norm=bn2, tensor=x, output_dropout=do2)
 
     # Compute whr x_3 t
