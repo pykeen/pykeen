@@ -929,7 +929,7 @@ class Model(nn.Module, ABC):
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
-    def score(
+    def forward(
         self,
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
@@ -966,7 +966,7 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
-        return self.score(
+        return self(
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
             t_indices=hrt_batch[:, 2],
@@ -983,7 +983,7 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
-        return self.score(
+        return self(
             h_indices=hr_batch[:, 0],
             r_indices=hr_batch[:, 1],
             t_indices=None,
@@ -1000,7 +1000,7 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        return self.score(
+        return self(
             h_indices=None,
             r_indices=rt_batch[:, 0],
             t_indices=rt_batch[:, 1],
@@ -1017,7 +1017,7 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
-        return self.score(
+        return self(
             h_indices=ht_batch[:, 0],
             r_indices=None,
             t_indices=ht_batch[:, 1],

@@ -173,7 +173,7 @@ class ConvE(EntityRelationEmbeddingModel):
         self.bias_term.reset_parameters()
         self.interaction_function.reset_parameters()
 
-    def score(
+    def forward(
         self,
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],

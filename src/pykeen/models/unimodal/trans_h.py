@@ -117,7 +117,7 @@ class TransH(EntityRelationEmbeddingModel):
             self.relation_embeddings(indices=None),
         )
 
-    def score(
+    def forward(
         self,
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
