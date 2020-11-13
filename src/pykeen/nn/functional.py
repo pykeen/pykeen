@@ -445,7 +445,7 @@ def _translational_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    d = (h + r - t)
+    d = h + r - t
     if power_norm:
         assert isinstance(p, SupportsFloat)
         return -(d.abs() ** p).sum(dim=-1)
