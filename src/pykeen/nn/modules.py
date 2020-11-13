@@ -717,9 +717,9 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:
         dim = h.shape[-1]
-        rh, rt = r.split(dim, dim=-1)
-        rh = rh.view(rh.shape[:-1], dim, dim)
-        rt = rt.view(rt.shape[:-1], dim, dim)
+        rh, rt = r.split(dim ** 2, dim=-1)
+        rh = rh.view(*rh.shape[:-1], dim, dim)
+        rt = rt.view(*rt.shape[:-1], dim, dim)
         return pykeen_functional.structured_embedding_interaction(
             h=h,
             r_h=rh,
