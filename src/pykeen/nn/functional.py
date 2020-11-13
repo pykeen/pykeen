@@ -750,10 +750,8 @@ def ntn_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # TODO: check efficiency of einsum
     # save sizes
-    num_heads, num_relations, num_tails = _extract_sizes(h, b, t)[:3]
-    k = b.shape[-1]
+    num_heads, num_relations, num_tails, _, k = _extract_sizes(h, b, t)
     x = _extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
     x = x + _extended_einsum("brkd,bhd->bhk", vh, h).view(-1, num_heads, 1, 1, k)
     x = x + _extended_einsum("brkd,btd->btk", vt, t).view(-1, 1, 1, num_tails, k)
