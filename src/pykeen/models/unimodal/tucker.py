@@ -4,11 +4,8 @@
 
 from typing import Optional
 
-import torch.autograd
-
 from .. import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import functional as F
 from ...nn.init import xavier_normal_
 from ...nn.modules import TuckerInteractionFunction
 from ...regularizers import Regularizer
@@ -109,14 +106,3 @@ class TuckER(SimpleVectorEntityRelationEmbeddingModel):
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
         )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        return F.tucker_interaction(h=h, r=r, t=t)

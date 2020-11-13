@@ -22,8 +22,7 @@ from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
 from ..utils import (
-    NoRandomSeedNecessary, get_hr_indices, get_hrt_indices, get_ht_indices, get_rt_indices,
-    resolve_device, set_random_seed,
+    NoRandomSeedNecessary, resolve_device, set_random_seed,
 )
 
 __all__ = [
@@ -1212,180 +1211,7 @@ class MultimodalModel(EntityRelationEmbeddingModel):
     """A multimodal KGE model."""
 
 
-class IndexFunction(nn.Module):
-    """A function that handles looking up embeddings by index."""
-
-    def forward(
-        self,
-        model: Model,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get the scores for the given indices.
-
-        :param model:
-            The KGEM so lookup to attributes like entity embeddings and relation embeddings is possible
-        :param h_indices: shape: (batch_size,)
-            The indices for head entities. If None, score against all.
-        :param r_indices: shape: (batch_size,)
-            The indices for relations. If None, score against all.
-        :param t_indices: shape: (batch_size,)
-            The indices for tail entities. If None, score against all.
-
-        :return: The scores, shape: (batch_size, num_entities)
-        """
-        raise NotImplementedError
-
-    def reset_parameters(self):
-        """Reset parameters the interaction function may have."""
-
-
-class InteractionIndexFunction(IndexFunction):
-    """Wrap a :class:`InteractionFunction` with index-based lookup of entity and relation embeddings."""
-
-    def __init__(self, interaction_function: InteractionFunction):
-        super().__init__()
-        self.interaction_function = interaction_function
-
-    def forward(
-        self,
-        model: Model,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = model.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = model.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = model.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-
-        # Compute score
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Only regularize relation embeddings
-        model.regularize_if_necessary(r)
-
-        return scores
-
-    def reset_parameters(self):  # noqa: D102
-        self.interaction_function.reset_parameters()
-
-
-class GeneralVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel, reset_parameters_post_init=False):
-    """A base class for embedding models which store a single vector for each entity and relation."""
-
-    def __init__(
-        self,
-        triples_factory: TriplesFactory,
-        index_function: IndexFunction,
-        embedding_dim: int = 200,
-        relation_dim: Optional[int] = None,
-        automatic_memory_optimization: Optional[bool] = None,
-        loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> None:
-        """Initialize embedding model.
-
-        :param triples_factory:
-            The triple factory connected to the model.
-        :param index_function:
-            The index-based interaction function used to compute scores.
-        :param embedding_dim:
-            The embedding dimensionality of the entity embeddings.
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
-            regards to the hardware at hand.
-        :param loss:
-            The loss to use.
-        :param preferred_device:
-            The default device where to model is located.
-        :param random_seed:
-            An optional random seed to set before the initialization of weights.
-        :param regularizer:
-            The regularizer to use.
-        """
-        super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            entity_initializer=entity_initializer,
-            entity_initializer_kwargs=entity_initializer_kwargs,
-            entity_normalizer=entity_normalizer,
-            entity_normalizer_kwargs=entity_normalizer_kwargs,
-            entity_constrainer=entity_constrainer,
-            entity_constrainer_kwargs=entity_constrainer_kwargs,
-            relation_initializer=relation_initializer,
-            relation_initializer_kwargs=relation_initializer_kwargs,
-            relation_normalizer=relation_normalizer,
-            relation_normalizer_kwargs=relation_normalizer_kwargs,
-            relation_constrainer=relation_constrainer,
-            relation_constrainer_kwargs=relation_constrainer_kwargs,
-        )
-        self.index_function = index_function
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Evaluate the given triples.
-
-        :param h_indices: shape: (batch_size,)
-            The indices for head entities. If None, score against all.
-        :param r_indices: shape: (batch_size,)
-            The indices for relations. If None, score against all.
-        :param t_indices: shape: (batch_size,)
-            The indices for tail entities. If None, score against all.
-
-        :return: The scores, shape: (batch_size, num_entities)
-        """
-        return self.index_function(model=self, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_hrt_indices(hrt_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_hr_indices(hr_batch)
-        return self(
-            h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
-        ).view(hr_batch.shape[0], self.num_entities)
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_ht_indices(ht_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_rt_indices(rt_batch)
-        return self(
-            h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
-        ).view(rt_batch.shape[0], self.num_entities)
-
-
-class SimpleVectorEntityRelationEmbeddingModel(
-    GeneralVectorEntityRelationEmbeddingModel, reset_parameters_post_init=False,
-):
+class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
     """A base class for embedding models which store a single vector for each entity and relation."""
 
     def __init__(
@@ -1432,8 +1258,6 @@ class SimpleVectorEntityRelationEmbeddingModel(
         :param regularizer:
             The regularizer to use.
         """
-        index_function = InteractionIndexFunction(interaction_function=interaction_function)
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -1441,7 +1265,6 @@ class SimpleVectorEntityRelationEmbeddingModel(
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
-            index_function=index_function,
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=entity_initializer,
@@ -1457,3 +1280,26 @@ class SimpleVectorEntityRelationEmbeddingModel(
             relation_constrainer=relation_constrainer,
             relation_constrainer_kwargs=relation_constrainer_kwargs,
         )
+        self.interaction_function = interaction_function
+
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor] = None,
+        r_indices: Optional[torch.LongTensor] = None,
+        t_indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Evaluate the given triples.
+
+        :param h_indices: shape: (batch_size,)
+            The indices for head entities. If None, score against all.
+        :param r_indices: shape: (batch_size,)
+            The indices for relations. If None, score against all.
+        :param t_indices: shape: (batch_size,)
+            The indices for tail entities. If None, score against all.
+
+        :return: The scores, shape: (batch_size, num_entities)
+        """
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        return F.tucker_interaction(h=h, r=r, t=t)
