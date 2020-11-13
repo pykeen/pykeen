@@ -942,3 +942,32 @@ def structured_embedding_interaction(
         p=p,
         power_norm=power_norm,
     )
+
+
+def transh_interaction(
+    h: torch.FloatTensor,
+    w_r: torch.FloatTensor,
+    d_r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """
+    Evaluate the DistMult interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param w_r: shape: (batch_size, num_relations, dim)
+        The relation normal vector representations.
+    :param d_r: shape: (batch_size, num_relations, dim)
+        The relation difference vector representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # Project to hyperplane
+    return _translational_interaction(
+        h=(h.unsqueeze(dim=2) - _extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r)).unsqueeze(dim=3),
+        r=d_r.view(d_r.shape[0], 1, d_r.shape[1], 1, d_r.shape[2]),
+        t=(t.unsqueeze(dim=1) - _extended_einsum("btd,brd,bre->brte", t, w_r, w_r)).unsqueeze(dim=1),
+    )

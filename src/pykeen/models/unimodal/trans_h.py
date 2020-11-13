@@ -9,7 +9,7 @@ from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, functional as F
 from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
@@ -121,49 +121,27 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Project to hyperplane
-        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
-        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
-
-        # Regularization term
+        h = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
+        d_r = self.relation_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
+        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
         self.regularize_if_necessary()
-
-        return self.interaction_function(h=ph, r=d_r, t=pt, dim=-1, keepdim=True)
+        return F.transh_interaction(h, w_r, d_r, t).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        d_r = self.relation_embeddings(indices=hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # Project to hyperplane
-        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
-        pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
-
-        # Regularization term
+        h = self.entity_embeddings.get_in_canonical_shape(indices=hr_batch[:, 0])
+        d_r = self.relation_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
+        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=None)
         self.regularize_if_necessary()
-
-        return self.interaction_function(h=ph[:, None, :], r=d_r[:, None, :], t=pt, dim=-1, keepdim=False)
+        return F.transh_interaction(h, w_r, d_r, t).view(hr_batch.shape[0], self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        rel_id = rt_batch[:, 0]
-        d_r = self.relation_embeddings(indices=rel_id)
-        w_r = self.normal_vector_embeddings(indices=rel_id)
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # Project to hyperplane
-        ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
-        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
-
-        # Regularization term
+        h = self.entity_embeddings.get_in_canonical_shape(indices=None)
+        d_r = self.relation_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
+        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=rt_batch[:, 1])
         self.regularize_if_necessary()
-
-        return self.interaction_function(h=ph, r=d_r[:, None, :], t=pt[:, None, :], dim=-1, keepdim=False)
+        return F.transh_interaction(h, w_r, d_r, t).view(rt_batch.shape[0], self.num_entities)
