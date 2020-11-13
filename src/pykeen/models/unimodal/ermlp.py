@@ -50,14 +50,12 @@ class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        interaction_function = ERMLPInteractionFunction(
-            embedding_dim=embedding_dim,
-            hidden_dim=hidden_dim,
-        )
-
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=interaction_function,
+            interaction_function=ERMLPInteractionFunction(
+                embedding_dim=embedding_dim,
+                hidden_dim=hidden_dim,
+            ),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
