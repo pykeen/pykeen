@@ -865,6 +865,11 @@ class Model(nn.Module, ABC):
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
         self.regularizer.reset()
+        for module in self.modules():
+            if module is self:
+                continue
+            if hasattr(module, "post_parameter_update"):
+                module.post_parameter_update()
 
     def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested.
@@ -1136,11 +1141,6 @@ class EntityEmbeddingModel(Model):
         """The entity embedding dimension."""
         return self.entity_embeddings.embedding_dim
 
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # make sure to call this first, to reset regularizer state!
-        super().post_parameter_update()
-        self.entity_embeddings.post_parameter_update()
-
 
 class EntityRelationEmbeddingModel(Model, ABC):
     """A base module for KGE models that have different embeddings for entities and relations."""
@@ -1201,12 +1201,6 @@ class EntityRelationEmbeddingModel(Model, ABC):
     def relation_dim(self):  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # make sure to call this first, to reset regularizer state!
-        super().post_parameter_update()
-        self.entity_embeddings.post_parameter_update()
-        self.relation_embeddings.post_parameter_update()
 
 
 def _can_slice(fn) -> bool:

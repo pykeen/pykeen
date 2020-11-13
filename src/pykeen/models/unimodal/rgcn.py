@@ -541,11 +541,6 @@ class RGCN(Model):
         # TODO: Dummy
         self.decoder = Decoder()
 
-    def post_parameter_update(self) -> None:  # noqa: D102
-        super().post_parameter_update()
-        self.entity_representations.post_parameter_update()
-        self.relation_embeddings.post_parameter_update()
-
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
         h = self.entity_representations(indices=hrt_batch[:, 0])
