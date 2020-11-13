@@ -8,6 +8,7 @@ import itertools as itt
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from operator import itemgetter
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
@@ -349,11 +350,40 @@ class Model(nn.Module, ABC):
 
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
-        for module in self.modules():
+        # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372
+        # Make sure that all modules with parameters do have a reset_parameters method.
+        uninitialized_parameters = set(map(id, self.parameters()))
+        parents = defaultdict(list)
+
+        # Recursively visit all sub-modules
+        task_list = []
+        for name, module in self.named_modules():
+
+            # skip self
             if module is self:
                 continue
-            if hasattr(module, "reset_parameters"):
-                module.reset_parameters()
+
+            # Track parents for blaming
+            for p in module.parameters():
+                parents[id(p)].append(module)
+
+            # call reset_parameters if possible
+            if hasattr(module, 'reset_parameters'):
+                task_list.append((name.count('.'), module))
+
+        # initialize from bottom to top
+        # This ensures that specialized initializations will take priority over the default ones of its components.
+        for module in map(itemgetter(1), sorted(task_list, reverse=True, key=itemgetter(0))):
+            module.reset_parameters()
+            uninitialized_parameters.difference_update(map(id, module.parameters()))
+
+        # emit warning if there where parameters which were not initialised by reset_parameters.
+        if len(uninitialized_parameters) > 0:
+            logger.warning('reset_parameters() not found for all modules containing parameters. %d parameters where likely not initialised.', len(uninitialized_parameters))
+
+            # Additional debug information
+            for i, p_id in enumerate(uninitialized_parameters, start=1):
+                logger.debug('[%3d] Parents to blame: %s', i, parents.get(p_id))
 
     def reset_parameters_(self) -> 'Model':  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
