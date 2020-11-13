@@ -73,7 +73,10 @@ class ERMLPInteractionFunction(InteractionFunction):
         nn.init.zeros_(self.hidden_to_score.bias)
         # In the original formulation,
         nn.init.xavier_uniform_(self.hidden.weight)
-        nn.init.xavier_uniform_(self.hidden_to_score.weight, gain=nn.init.calculate_gain(self.activation.__class__.__name__.lower()))
+        nn.init.xavier_uniform_(
+            self.hidden_to_score.weight,
+            gain=nn.init.calculate_gain(self.activation.__class__.__name__.lower()),
+        )
 
 
 class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
