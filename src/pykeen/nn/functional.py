@@ -2,12 +2,12 @@
 
 """Functional forms of interaction methods."""
 import math
-from typing import NamedTuple, Optional, SupportsFloat, Tuple, Union
+from typing import NamedTuple, Optional, SupportsFloat, Union
 
 import torch
 from torch import nn
 
-from ..utils import broadcast_cat, clamp_norm, is_cudnn_error, normalize_for_einsum, split_complex
+from ..utils import broadcast_cat, clamp_norm, is_cudnn_error, split_complex
 
 __all__ = [
     "complex_interaction",
@@ -23,16 +23,41 @@ __all__ = [
 ]
 
 
-def _normalize_terms_for_einsum(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> Tuple[torch.FloatTensor, str, torch.FloatTensor, str, torch.FloatTensor, str]:
-    batch_size = max(h.shape[0], r.shape[0], t.shape[0])
-    h_term, h = normalize_for_einsum(x=h, batch_size=batch_size, symbol='h')
-    r_term, r = normalize_for_einsum(x=r, batch_size=batch_size, symbol='r')
-    t_term, t = normalize_for_einsum(x=t, batch_size=batch_size, symbol='t')
-    return h, h_term, r, r_term, t, t_term
+def _extract_sizes(h, r, t):
+    num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
+    d_e = h.shape[-1]
+    d_r = r.shape[-1]
+    return num_heads, num_relations, num_tails, d_e, d_r
+
+
+def _extended_einsum(
+    eq: str,
+    *tensors,
+) -> torch.FloatTensor:
+    """Drop dimensions of size 1 to allow broadcasting."""
+    # TODO: check if einsum is still very slow.
+    lhs, rhs = eq.split("->")
+    mod_ops, mod_t = [], []
+    for op, t in zip(lhs.split(","), tensors):
+        mod_op = ""
+        assert len(op) == len(t.shape)
+        for i, c in reversed(list(enumerate(op))):
+            if t.shape[i] == 1:
+                t = t.squeeze(dim=i)
+            else:
+                mod_op = c + mod_op
+        mod_ops.append(mod_op)
+        mod_t.append(t)
+    m_lhs = ",".join(mod_ops)
+    r_keep_dims = set("".join(mod_ops))
+    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
+    m_eq = f"{m_lhs}->{m_rhs}"
+    mod_r = torch.einsum(m_eq, *mod_t)
+    # unsqueeze
+    for i, c in enumerate(rhs):
+        if c not in r_keep_dims:
+            mod_r = mod_r.unsqueeze(dim=i)
+    return mod_r
 
 
 def _add_cuda_warning(func):
@@ -476,13 +501,6 @@ def translational_interaction(
     return _translational_interaction(h=h, r=r, t=t, p=p, power_norm=power_norm)
 
 
-def _extract_sizes(h, r, t):
-    num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
-    d_e = h.shape[-1]
-    d_r = r.shape[-1]
-    return num_heads, num_relations, num_tails, d_e, d_r
-
-
 def transr_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -693,36 +711,6 @@ def kg2e_interaction(
     e = GaussianDistribution(mean=e_mean, diagonal_covariance=e_var)
     r = GaussianDistribution(mean=r_mean, diagonal_covariance=r_var)
     return similarity(e=e, r=r, exact=exact)
-
-
-def _extended_einsum(
-    eq: str,
-    *tensors,
-) -> torch.FloatTensor:
-    """Drop dimensions of size 1 to allow broadcasting."""
-    # TODO: check if einsum is still very slow.
-    lhs, rhs = eq.split("->")
-    mod_ops, mod_t = [], []
-    for op, t in zip(lhs.split(","), tensors):
-        mod_op = ""
-        assert len(op) == len(t.shape)
-        for i, c in reversed(list(enumerate(op))):
-            if t.shape[i] == 1:
-                t = t.squeeze(dim=i)
-            else:
-                mod_op = c + mod_op
-        mod_ops.append(mod_op)
-        mod_t.append(t)
-    m_lhs = ",".join(mod_ops)
-    r_keep_dims = set("".join(mod_ops))
-    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
-    m_eq = f"{m_lhs}->{m_rhs}"
-    mod_r = torch.einsum(m_eq, *mod_t)
-    # unsqueeze
-    for i, c in enumerate(rhs):
-        if c not in r_keep_dims:
-            mod_r = mod_r.unsqueeze(dim=i)
-    return mod_r
 
 
 def ntn_interaction(
