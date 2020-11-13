@@ -124,13 +124,5 @@ class KG2E(TwoVectorEmbeddingModel):
         r2: torch.FloatTensor,
         t1: torch.FloatTensor,
         t2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        # Compute entity distribution
-        return pkf.kg2e_interaction(
-            h_mean=h1,
-            h_var=h2,
-            r_mean=r1,
-            r_var=r2,
-            t_mean=t1,
-            t_var=t2,
-        )
+    ) -> torch.FloatTensor:  # noqa: D102
+        return pkf.kg2e_interaction(h_mean=h1, h_var=h2, r_mean=r1, r_var=r2, t_mean=t1, t_var=t2)
