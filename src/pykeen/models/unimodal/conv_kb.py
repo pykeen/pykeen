@@ -98,8 +98,4 @@ class ConvKB(SimpleVectorEntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
-    def _reset_parameters_(self):  # noqa: D102
-        # embeddings
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
-        super()._reset_parameters_()
