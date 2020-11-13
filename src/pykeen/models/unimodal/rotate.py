@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from .. import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import RotatEInteraction
@@ -52,7 +52,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
-class RotatE(EntityRelationEmbeddingModel):
+class RotatE(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of RotatE from [sun2019]_.
 
     RotatE models relations as rotations from head to tail entities in complex space:
@@ -92,8 +92,10 @@ class RotatE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
+        # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=RotatEInteraction(),
             embedding_dim=2 * embedding_dim,
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -104,58 +106,3 @@ class RotatE(EntityRelationEmbeddingModel):
             relation_initializer=init_phases,
             relation_constrainer=complex_normalize,
         )
-        self.interaction_function = RotatEInteraction()
-        self.real_embedding_dim = embedding_dim
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 2)
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
-
-        # Rank against all entities
-        t = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 2)
-
-        # r expresses a rotation in complex plane.
-        # The inverse rotation is expressed by the complex conjugate of r.
-        # The score is computed as the distance of the relation-rotated head to the tail.
-        # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
-        # |h * r - t| = |h - conj(r) * t|
-        r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
-
-        # Rank against all entities
-        h = self.entity_embeddings(indices=None).view(1, -1, self.real_embedding_dim, 2)
-
-        # Compute scores
-        scores = self.interaction_function(h=t, r=r_inv, t=h)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
-
-        return scores

@@ -409,6 +409,13 @@ def hole_interaction(
     return _extended_einsum("bhtd,brd->bhrt", composite, r)
 
 
+def _view_complex(
+    x: torch.FloatTensor,
+) -> torch.Tensor:
+    real, imag = split_complex(x=x)
+    return torch.complex(real=real, imag=imag)
+
+
 def rotate_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -416,39 +423,64 @@ def rotate_interaction(
 ) -> torch.FloatTensor:
     """Evaluate the interaction function of RotatE for given embeddings.
 
-    The embeddings have to be in a broadcastable shape.
+    :param h: shape: (batch_size, num_heads, 2*dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, 2*dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, 2*dim)
+        The tail representations.
 
-    WARNING: No forward constraints are applied.
-
-    :param h: shape: (..., e, 2)
-        Head embeddings. Last dimension corresponds to (real, imag).
-    :param r: shape: (..., e, 2)
-        Relation embeddings. Last dimension corresponds to (real, imag).
-    :param t: shape: (..., e, 2)
-        Tail embeddings. Last dimension corresponds to (real, imag).
-
-    :return: shape: (...)
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Decompose into real and imaginary part
-    h_re = h[..., 0]
-    h_im = h[..., 1]
-    r_re = r[..., 0]
-    r_im = r[..., 1]
+    # # r expresses a rotation in complex plane.
+    # # The inverse rotation is expressed by the complex conjugate of r.
+    # # The score is computed as the distance of the relation-rotated head to the tail.
+    # # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
+    # # |h * r - t| = |h - conj(r) * t|
+    # r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
+    h, r, t = [_view_complex(x) for x in (h, r, t)]
 
     # Rotate (=Hadamard product in complex space).
-    rot_h = torch.stack(
-        [
-            h_re * r_re - h_im * r_im,
-            h_re * r_im + h_im * r_re,
-        ],
-        dim=-1,
-    )
-    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
-    diff = rot_h - t
-    scores = -torch.norm(diff.view(diff.shape[:-2] + (-1,)), dim=-1)
+    hr = _extended_einsum("bhd,brd->bhrd", h, r)
 
-    return scores
+    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
+    return negative_norm_of_sum(
+        hr.unsqueeze(dim=3),
+        t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]),
+        p=2,
+        power_norm=False,
+    )
+
+
+def negative_norm_of_sum(
+    *x: torch.FloatTensor,
+    p: Union[int, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """
+    Evaluate negative norm of a sum of vectors on already broadcasted representations.
+
+    :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    d = sum(x)
+    if power_norm:
+        assert isinstance(p, SupportsFloat)
+        return -(d.abs() ** p).sum(dim=-1)
+    else:
+        if torch.is_complex(d):
+            # workaround for complex numbers: manually compute norm
+            return -(d.abs() ** p).sum(dim=-1) ** (1 / p)
+        else:
+            return -d.norm(p=p, dim=-1)
 
 
 def _translational_interaction(
@@ -475,12 +507,7 @@ def _translational_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    d = h + r - t
-    if power_norm:
-        assert isinstance(p, SupportsFloat)
-        return -(d.abs() ** p).sum(dim=-1)
-    else:
-        return -d.norm(p=p, dim=-1)
+    return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
 
 
 def translational_interaction(
