@@ -111,7 +111,7 @@ def conve_interaction(
         The scores.
     """
     # bind sizes
-    batch_size = max(x.shape[0] for x in (h, r, t))
+    # batch_size = max(x.shape[0] for x in (h, r, t))
     num_heads = h.shape[1]
     num_relations = r.shape[1]
     num_tails = t.shape[1]
