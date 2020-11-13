@@ -347,7 +347,6 @@ class Model(nn.Module, ABC):
         """Does this model support sub-batching?"""
         return len(self.modules_not_supporting_sub_batching) == 0
 
-    @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
         for module in self.modules():
