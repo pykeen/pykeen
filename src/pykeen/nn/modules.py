@@ -339,12 +339,6 @@ def _calculate_missing_shape_information(
 class ConvEInteractionFunction(InteractionFunction):
     """ConvE interaction function."""
 
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
-    bn0: Optional[torch.nn.BatchNorm2d]
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
-    bn1: Optional[torch.nn.BatchNorm2d]
-    bn2: Optional[torch.nn.BatchNorm2d]
-
     def __init__(
         self,
         input_channels: Optional[int] = None,
