@@ -11,6 +11,7 @@ from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
+from ...nn.modules import TransDInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -137,6 +138,7 @@ class TransD(TwoVectorEmbeddingModel):
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
         )
+        self.interaction_function = TransDInteractionFunction()
 
     def _forward(
         self,
