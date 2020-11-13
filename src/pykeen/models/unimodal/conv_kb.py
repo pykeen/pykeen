@@ -5,9 +5,7 @@
 import logging
 from typing import Optional
 
-import torch.autograd
-
-from ..base import EntityRelationEmbeddingModel
+from ..base import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import ConvKBInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
@@ -21,7 +19,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(EntityRelationEmbeddingModel):
+class ConvKB(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
     ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
@@ -88,6 +86,11 @@ class ConvKB(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=ConvKBInteractionFunction(
+                hidden_dropout_rate=hidden_dropout_rate,
+                embedding_dim=embedding_dim,
+                num_filters=num_filters,
+            ),
             embedding_dim=embedding_dim,
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -95,24 +98,8 @@ class ConvKB(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.interaction_function = ConvKBInteractionFunction(
-            hidden_dropout_rate=hidden_dropout_rate,
-            embedding_dim=embedding_dim,
-            num_filters=num_filters,
-        )
 
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
         super()._reset_parameters_()
-        self.interaction_function.reset_parameters()
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-        # Output layer regularization
-        # In the code base only the weights of the output layer are used for regularization
-        # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
-        self.regularize_if_necessary(self.interaction_function.linear.weight, self.interaction_function.linear.bias)
-        return self.interaction_function.score_hrt(h=h, r=r, t=t)

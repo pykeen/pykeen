@@ -559,8 +559,8 @@ class TestConvKB(_ModelTestCase, unittest.TestCase):
     model_kwargs = {
         'num_filters': 2,
     }
-    # two bias terms, one conv-filter, written as 3 parts
-    num_constant_init = 5
+    # two bias terms, one conv-filter
+    num_constant_init = 3
 
 
 class TestDistMult(_ModelTestCase, unittest.TestCase):
