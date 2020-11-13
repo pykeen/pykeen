@@ -173,26 +173,15 @@ class ConvE(EntityRelationEmbeddingModel):
         self.bias_term.reset_parameters()
         self.interaction_function.reset_parameters()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-        t_bias = self.bias_term(indices=hrt_batch[:, 2])
+    def score(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        t_bias = self.bias_term.get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary(h, r, t)
-        return self.interaction_function.score_hrt(h=h, r=r, t=t, t_bias=t_bias)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        all_entities = self.entity_embeddings(indices=None)
-        t_bias = self.bias_term(indices=None)
-        self.regularize_if_necessary(h, r, all_entities)
-        return self.interaction_function.score_t(h=h, r=r, all_entities=all_entities, t_bias=t_bias)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        all_entities = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-        t_bias = self.bias_term(indices=rt_batch[:, 1])
-        self.regularize_if_necessary(all_entities, r, t)
-        return self.interaction_function.score_h(all_entities=all_entities, r=r, t=t, t_bias=t_bias)
+        return self.interaction_function(h=h, r=r, t=t, t_bias=t_bias)
