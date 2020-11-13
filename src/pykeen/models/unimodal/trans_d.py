@@ -7,19 +7,16 @@ from typing import Optional
 import torch
 import torch.autograd
 
-from .. import Model
-from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction
+from .. import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
-from ...nn.modules import InteractionFunction, TransDInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
-    'TransDIndexFunction',
     'TransD',
 ]
 
@@ -71,64 +68,7 @@ def _project_entity(
     return e_bot
 
 
-class TransDIndexFunction(IndexFunction):
-    """The index-based interaction function for TransD."""
-
-    def __init__(
-        self,
-        num_entities: int,
-        num_relations: int,
-        embedding_dim: int,
-        relation_dim: int,
-        device: DeviceHint,
-        interaction_function: Optional[InteractionFunction] = None,
-    ):
-        super().__init__()
-        self.entity_projections = Embedding.init_with_device(
-            num_embeddings=num_entities,
-            embedding_dim=embedding_dim,
-            device=device,
-            initializer=xavier_normal_,
-        )
-        self.relation_projections = Embedding.init_with_device(
-            num_embeddings=num_relations,
-            embedding_dim=relation_dim,
-            device=device,
-            initializer=xavier_normal_,
-        )
-        if interaction_function is None:
-            interaction_function = TransDInteractionFunction()
-        self.interaction_function = interaction_function
-
-    def reset_parameters(self):  # noqa: D102
-        self.entity_projections.reset_parameters()
-        self.relation_projections.reset_parameters()
-        self.interaction_function.reset_parameters()
-
-    def forward(
-        self,
-        model: Model,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        h = model.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
-
-        r = model.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        r_p = self.relation_projections.get_in_canonical_shape(indices=r_indices)
-
-        t = model.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        t_p = self.entity_projections.get_in_canonical_shape(indices=t_indices)
-
-        # Project entities
-        h_bot = _project_entity(e=h, e_p=h_p, r=r, r_p=r_p)
-        t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
-
-        return self.interaction_function(h=h_bot, r=r, t=t_bot)
-
-
-class TransD(GeneralVectorEntityRelationEmbeddingModel):
+class TransD(EntityRelationEmbeddingModel):
     r"""An implementation of TransD from [ji2015]_.
 
     TransD is an extension of :class:`pykeen.models.TransR` that, like TransR, considers entities and relations
@@ -177,17 +117,8 @@ class TransD(GeneralVectorEntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        index_function = TransDIndexFunction(
-            num_entities=triples_factory.num_entities,
-            num_relations=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
-            device=preferred_device,
-        )
-
         super().__init__(
             triples_factory=triples_factory,
-            index_function=index_function,
             embedding_dim=embedding_dim,
             relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -202,3 +133,34 @@ class TransD(GeneralVectorEntityRelationEmbeddingModel):
             relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
+        self.entity_projections = Embedding(
+            num_embeddings=self.num_entities,
+            embedding_dim=self.embedding_dim,
+            initializer=xavier_normal_,
+        )
+        self.relation_projections = Embedding(
+            num_embeddings=self.num_relations,
+            embedding_dim=self.relation_dim,
+            initializer=xavier_normal_,
+        )
+
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
+
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        r_p = self.relation_projections.get_in_canonical_shape(indices=r_indices)
+
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        t_p = self.entity_projections.get_in_canonical_shape(indices=t_indices)
+
+        # Project entities
+        h_bot = _project_entity(e=h, e_p=h_p, r=r, r_p=r_p)
+        t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
+
+        return self.interaction_function(h=h_bot, r=r, t=t_bot)
