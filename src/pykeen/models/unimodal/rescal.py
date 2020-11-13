@@ -4,10 +4,9 @@
 
 from typing import Optional
 
-import torch
-
-from ..base import EntityRelationEmbeddingModel
+from ..base import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn.modules import RESCALInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -17,7 +16,7 @@ __all__ = [
 ]
 
 
-class RESCAL(EntityRelationEmbeddingModel):
+class RESCAL(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -68,8 +67,10 @@ class RESCAL(EntityRelationEmbeddingModel):
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
+        # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=RESCALInteractionFunction(),
             embedding_dim=embedding_dim,
             relation_dim=embedding_dim ** 2,  # d x d matrices
             automatic_memory_optimization=automatic_memory_optimization,
@@ -78,48 +79,3 @@ class RESCAL(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        # shape: (b, d)
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        # shape: (b, d, d)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        # shape: (b, d)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
-
-        # Compute scores
-        scores = h @ r @ t
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores[:, :, 0]
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
-
-        # Compute scores
-        scores = h @ r @ t
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores[:, 0, :]
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        """Forward pass using left side (head) prediction."""
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).view(1, self.num_entities, self.embedding_dim)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
-
-        # Compute scores
-        scores = h @ r @ t
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        return scores[:, :, 0]
