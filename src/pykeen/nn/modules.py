@@ -664,3 +664,48 @@ class HolEInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
         return pykeen_functional.hole_interaction(h=h, r=r, t=t)
+
+
+class ProjEInteractionFunction(InteractionFunction):
+    """Interaction function for ProjE."""
+
+    def __init__(
+        self,
+        embedding_dim: int = 50,
+        inner_non_linearity: Optional[nn.Module] = None,
+    ):
+        super().__init__()
+
+        # Global entity projection
+        self.d_e = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
+
+        # Global relation projection
+        self.d_r = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
+
+        # Global combination bias
+        self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
+
+        # Global combination bias
+        self.b_p = nn.Parameter(torch.empty(1), requires_grad=True)
+
+        if inner_non_linearity is None:
+            inner_non_linearity = nn.Tanh()
+        self.inner_non_linearity = inner_non_linearity
+
+    def reset_parameters(self):  # noqa: D102
+        embedding_dim = self.d_e.shape[0]
+        bound = math.sqrt(6) / embedding_dim
+        for p in self.parameters():
+            nn.init.uniform_(p, a=-bound, b=bound)
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        self._check_for_empty_kwargs(kwargs=kwargs)
+
+        # Compute score
+        return pykeen_functional.proje_interaction(h=h, r=r, t=t, d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity).view(-1, 1)

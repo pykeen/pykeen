@@ -4,15 +4,12 @@
 
 from typing import Optional
 
-import numpy
-import torch
-import torch.autograd
 from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from .. import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import functional as F
 from ...nn.init import xavier_uniform_
+from ...nn.modules import ProjEInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -22,7 +19,7 @@ __all__ = [
 ]
 
 
-class ProjE(EntityRelationEmbeddingModel):
+class ProjE(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of ProjE from [shi2017]_.
 
     ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model
@@ -69,6 +66,10 @@ class ProjE(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=ProjEInteractionFunction(
+                embedding_dim=embedding_dim,
+                inner_non_linearity=inner_non_linearity,
+            ),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
@@ -78,36 +79,3 @@ class ProjE(EntityRelationEmbeddingModel):
             entity_initializer=xavier_uniform_,
             relation_initializer=xavier_uniform_,
         )
-
-        # Global entity projection
-        self.d_e = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-
-        # Global relation projection
-        self.d_r = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-
-        # Global combination bias
-        self.b_c = nn.Parameter(torch.empty(self.embedding_dim, device=self.device), requires_grad=True)
-
-        # Global combination bias
-        self.b_p = nn.Parameter(torch.empty(1, device=self.device), requires_grad=True)
-
-        if inner_non_linearity is None:
-            inner_non_linearity = nn.Tanh()
-        self.inner_non_linearity = inner_non_linearity
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        bound = numpy.sqrt(6) / self.embedding_dim
-        nn.init.uniform_(self.d_e, a=-bound, b=bound)
-        nn.init.uniform_(self.d_r, a=-bound, b=bound)
-        nn.init.uniform_(self.b_c, a=-bound, b=bound)
-        nn.init.uniform_(self.b_p, a=-bound, b=bound)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
-
-        # Compute score
-        return F.proje_interaction(h=h, r=r, t=t, d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity).view(-1, 1)
