@@ -98,10 +98,6 @@ class KG2E(EntityRelationEmbeddingModel):
             raise ValueError(dist_similarity)
         self.similarity = dist_similarity
 
-        # element-wise covariance bounds
-        self.c_min = c_min
-        self.c_max = c_max
-
         # Additional covariance embeddings
         self.entity_covariances = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
@@ -109,7 +105,7 @@ class KG2E(EntityRelationEmbeddingModel):
             device=self.device,
             # Ensure positive definite covariances matrices and appropriate size by clamping
             constrainer=torch.clamp,
-            constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
+            constrainer_kwargs=dict(min=c_min, max=c_max),
         )
         self.relation_covariances = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
@@ -117,7 +113,7 @@ class KG2E(EntityRelationEmbeddingModel):
             device=self.device,
             # Ensure positive definite covariances matrices and appropriate size by clamping
             constrainer=torch.clamp,
-            constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
+            constrainer_kwargs=dict(min=c_min, max=c_max),
         )
 
     def _reset_parameters_(self):  # noqa: D102
