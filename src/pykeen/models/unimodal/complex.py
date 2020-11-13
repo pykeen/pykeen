@@ -132,7 +132,7 @@ class ComplEx(EntityRelationEmbeddingModel):
         (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
 
         if t_re.ndim != h_re.ndim:
-            (r_re, r_im) = [x.view(-1, 1, h_re.shape[1]) for x in (r_re, r_im)]
+            (r_re, r_im) = [x.view(-1, 1, r_re.shape[1]) for x in (r_re, r_im)]
 
         if t_re.ndim > h_re.ndim:
             # TODO: Encapuslate logic in own function?
