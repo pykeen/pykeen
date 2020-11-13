@@ -687,12 +687,14 @@ class ProjEInteractionFunction(InteractionFunction):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
 
         # Compute score
-        return pykeen_functional.proje_interaction(h=h, r=r, t=t, d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity).view(-1, 1)
-
+        return pykeen_functional.proje_interaction(
+            h=h, r=r, t=t,
+            d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity,
+        ).view(-1, 1)
 
 class RESCALInteractionFunction(FunctionalInteractionFunction):
     """RESCAL interaction function."""
