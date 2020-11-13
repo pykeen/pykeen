@@ -165,7 +165,10 @@ class NTN(EntityEmbeddingModel):
             else:
                 h = constant_tensor
                 t = split
-            score = F.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
+            score = pykeen_functional.ntn_interaction(
+                h=h, t=t,
+                w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
+            )
             scores_arr.append(score)
 
         return torch.cat(scores_arr, dim=1)
