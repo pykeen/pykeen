@@ -929,6 +929,31 @@ class Model(nn.Module, ABC):
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
+    def score(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail indices and calculates the corresponding score.
+
+        All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
+
+        :param h_indices:
+            The head indices. None indicates to use all.
+        :param r_indices:
+            The relation indices. None indicates to use all.
+        :param t_indices:
+            The tail indices. None indicates to use all.
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The score for each triple.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
 
@@ -941,7 +966,11 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
-        raise NotImplementedError
+        return self.score(
+            h_indices=hrt_batch[:, 0],
+            r_indices=hrt_batch[:, 1],
+            t_indices=hrt_batch[:, 2],
+        ).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
@@ -954,17 +983,11 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
-        logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_t function. This might cause the calculations to take longer than necessary.',
-        )
-        # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = _extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.entity_to_id.values()), dim=2)
-        # Calculate the scores for each (h, r, t) triple using the generic interaction function
-        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
-        # Reshape the scores to match the pre-defined output shape of the score_t function.
-        scores = expanded_scores.view(hr_batch.shape[0], -1)
-        return scores
+        return self.score(
+            h_indices=hr_batch[:, 0],
+            r_indices=hr_batch[:, 1],
+            t_indices=None,
+        ).view(hr_batch.shape[0], self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
@@ -977,17 +1000,11 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_h function. This might cause the calculations to take longer than necessary.',
-        )
-        # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = _extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.entity_to_id.values()), dim=0)
-        # Calculate the scores for each (h, r, t) triple using the generic interaction function
-        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
-        # Reshape the scores to match the pre-defined output shape of the score_h function.
-        scores = expanded_scores.view(rt_batch.shape[0], -1)
-        return scores
+        return self.score(
+            h_indices=None,
+            r_indices=rt_batch[:, 0],
+            t_indices=rt_batch[:, 1],
+        ).view(rt_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
@@ -1000,17 +1017,11 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
-        logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_r function. This might cause the calculations to take longer than necessary.',
-        )
-        # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = _extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.relation_to_id.values()), dim=1)
-        # Calculate the scores for each (h, r, t) triple using the generic interaction function
-        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
-        # Reshape the scores to match the pre-defined output shape of the score_r function.
-        scores = expanded_scores.view(ht_batch.shape[0], -1)
-        return scores
+        return self.score(
+            h_indices=ht_batch[:, 0],
+            r_indices=None,
+            t_indices=ht_batch[:, 1],
+        ).view(ht_batch.shape[0], self.num_relations)
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
