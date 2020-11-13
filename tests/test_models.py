@@ -846,6 +846,8 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
 
     def test_score_hrt_manual(self):
         """Manually test interaction function of TransD."""
+        self.model: TwoVectorEmbeddingModel
+
         # entity embeddings
         weights = torch.as_tensor(data=[[2., 2.], [4., 4.]], dtype=torch.float)
         entity_embeddings = Embedding(
@@ -861,7 +863,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
             embedding_dim=2,
         )
         entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        self.model.entity_projections = entity_projection_embeddings
+        self.model.second_entity_embeddings = entity_projection_embeddings
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[4.], [4.]], dtype=torch.float)
@@ -878,7 +880,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
             embedding_dim=1,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.model.relation_projections = relation_projection_embeddings
+        self.model.second_relation_embeddings = relation_projection_embeddings
 
         # Compute Scores
         # FIXME batch is wrong size?
@@ -905,7 +907,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
             embedding_dim=3,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.model.relation_projections = relation_projection_embeddings
+        self.model.second_relation_embeddings = relation_projection_embeddings
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
@@ -937,7 +939,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
             embedding_dim=3,
         )
         entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        self.model.entity_projections = entity_projection_embeddings
+        self.model.second_entity_embeddings = entity_projection_embeddings
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[3., 3.], [3., 3.]], dtype=torch.float)
@@ -954,7 +956,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
             embedding_dim=2,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.model.relation_projections = relation_projection_embeddings
+        self.model.second_relation_embeddings = relation_projection_embeddings
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
