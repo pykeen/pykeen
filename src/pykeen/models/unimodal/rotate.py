@@ -9,10 +9,10 @@ import torch
 import torch.autograd
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import functional as pykeen_functional
 from ...nn.init import xavier_uniform_
+from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -50,20 +50,6 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     y = functional.normalize(y, p=2, dim=-1)
     x.data = y.view(*x.shape)
     return x
-
-
-class RotatEInteraction(InteractionFunction):
-    """Interaction function of RotatE."""
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.rotate_interaction(h=h, r=r, t=t)
 
 
 class RotatE(EntityRelationEmbeddingModel):

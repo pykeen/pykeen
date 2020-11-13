@@ -633,3 +633,17 @@ class TransRInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa:D102
         m_r = kwargs.pop('m_r')
         return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p)
+
+
+class RotatEInteraction(InteractionFunction):
+    """Interaction function of RotatE."""
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs)
+        return pykeen_functional.rotate_interaction(h=h, r=r, t=t)
