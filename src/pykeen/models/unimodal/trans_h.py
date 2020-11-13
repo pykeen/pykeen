@@ -10,7 +10,6 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding, functional as F
-from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -89,8 +88,6 @@ class TransH(EntityRelationEmbeddingModel):
             regularizer=regularizer,
         )
 
-        self.interaction_function = TranslationalInteractionFunction(p=scoring_fct_norm)
-
         # embeddings
         self.normal_vector_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
@@ -126,7 +123,7 @@ class TransH(EntityRelationEmbeddingModel):
         w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
         t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
         self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t).view(hrt_batch.shape[0], 1)
+        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -135,7 +132,7 @@ class TransH(EntityRelationEmbeddingModel):
         w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
         t = self.entity_embeddings.get_in_canonical_shape(indices=None)
         self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t).view(hr_batch.shape[0], self.num_entities)
+        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm).view(hr_batch.shape[0], self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -144,4 +141,4 @@ class TransH(EntityRelationEmbeddingModel):
         w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
         t = self.entity_embeddings.get_in_canonical_shape(indices=rt_batch[:, 1])
         self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t).view(rt_batch.shape[0], self.num_entities)
+        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm).view(rt_batch.shape[0], self.num_entities)

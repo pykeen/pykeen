@@ -949,6 +949,8 @@ def transh_interaction(
     w_r: torch.FloatTensor,
     d_r: torch.FloatTensor,
     t: torch.FloatTensor,
+    p: int,
+    power_norm: bool = False,
 ) -> torch.FloatTensor:
     """
     Evaluate the DistMult interaction function.
@@ -961,6 +963,10 @@ def transh_interaction(
         The relation difference vector representations.
     :param t: shape: (batch_size, num_tails, dim)
         The tail representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return |x-y|_p^p.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
@@ -970,4 +976,6 @@ def transh_interaction(
         h=(h.unsqueeze(dim=2) - _extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r)).unsqueeze(dim=3),
         r=d_r.view(d_r.shape[0], 1, d_r.shape[1], 1, d_r.shape[2]),
         t=(t.unsqueeze(dim=1) - _extended_einsum("btd,brd,bre->brte", t, w_r, w_r)).unsqueeze(dim=1),
+        p=p,
+        power_norm=power_norm,
     )
