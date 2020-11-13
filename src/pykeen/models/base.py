@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Base module for all KGE models."""
-
 import functools
 import inspect
 import itertools as itt
@@ -17,6 +16,7 @@ from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding
+from ..nn.emb import EmbeddingSpecification
 from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
@@ -1449,3 +1449,76 @@ class SimpleVectorEntityRelationEmbeddingModel(
             relation_constrainer=relation_constrainer,
             relation_constrainer_kwargs=relation_constrainer_kwargs,
         )
+
+
+class AbstractModel(Model):
+    def __init__(
+        self,
+        interaction_function: InteractionFunction,
+        triples_factory: TriplesFactory,
+        entity_embeddings: Optional[Mapping[str, EmbeddingSpecification]] = None,
+        relation_embeddings: Optional[Mapping[str, EmbeddingSpecification]] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ):
+        super().__init__(
+            triples_factory=triples_factory,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            automatic_memory_optimization=automatic_memory_optimization,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+        )
+        self.interaction_function = interaction_function
+        self.entity_embeddings = nn.ModuleDict({
+            key: Embedding.from_specification(num=self.num_entities, specification=spec)
+            for key, spec in entity_embeddings.items()
+        })
+        self.relation_embeddings = nn.ModuleDict({
+            key: Embedding.from_specification(num=self.num_relations, specification=spec)
+            for key, spec in relation_embeddings.items()
+        })
+
+    def _get_representations(
+        self,
+        indices: Optional[torch.LongTensor],
+        source: Mapping[str, Embedding],
+        prefix: str,
+    ) -> Mapping[str, torch.FloatTensor]:
+        return {
+            prefix + "_" + key if len(key) > 0 else prefix: embedding.get_in_canonical_shape(indices=indices, reshape_dim=embedding.shape)
+            for key, embedding in source
+        }
+
+    def _score(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        return self.interaction_function(
+            **self._get_representations(indices=h_indices, source=self.entity_embeddings, prefix="h"),
+            **self._get_representations(indices=r_indices, source=self.relation_embeddings, prefix="r"),
+            **self._get_representations(indices=t_indices, source=self.entity_embeddings, prefix="t"),
+        )
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_indices, r_indices, t_indices = get_hrt_indices(hrt_batch)
+        return self._score(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(hrt_batch.shape[0], 1)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_indices, r_indices, t_indices = get_hr_indices(hr_batch)
+        return self._score(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(hr_batch.shape[0], self.num_entities)
+
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_indices, r_indices, t_indices = get_ht_indices(ht_batch)
+        return self._score(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(ht_batch.shape[0], self.num_relations)
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h_indices, r_indices, t_indices = get_rt_indices(rt_batch)
+        return self._score(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(rt_batch.shape[0], self.num_entities)
