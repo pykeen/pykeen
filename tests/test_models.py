@@ -1060,7 +1060,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
         self.assertEqual(scores.shape[1], 1)
         first_score = scores[0].item()
         # second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -32, delta=0.01)
+        self.assertAlmostEqual(first_score, -8, delta=1.0e-06)
 
     def _check_constraints(self):
         """Check model constraints.
