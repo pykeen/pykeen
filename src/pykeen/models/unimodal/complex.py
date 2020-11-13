@@ -143,7 +143,7 @@ class ComplEx(EntityRelationEmbeddingModel):
             ]
         )
 
-    def _score(
+    def forward(
         self,
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
