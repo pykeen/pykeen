@@ -8,9 +8,9 @@ import torch.autograd
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
-from ...nn import functional as F
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
+from ...nn.modules import TransDInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -90,6 +90,7 @@ class TransD(TwoVectorEmbeddingModel):
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
         )
+        self.interaction_function = TransDInteractionFunction(p=2, power_norm=True)
 
     def _forward(
         self,
@@ -100,4 +101,4 @@ class TransD(TwoVectorEmbeddingModel):
         t1: torch.FloatTensor,
         t2: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa:D102
-        return F.transd_interaction(h=h1, r=r1, t=t1, h_p=h2, r_p=r2, t_p=t2, p=2, power_norm=True)
+        return self.interaction_function(h=h1, r=r1, t=t1, h_p=h2, r_p=r2, t_p=t2, p=2, power_norm=True)
