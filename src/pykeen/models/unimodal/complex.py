@@ -131,6 +131,17 @@ class ComplEx(EntityRelationEmbeddingModel):
         # split into real and imaginary part
         (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
 
+        if t_re.ndim != h_re.ndim:
+            (r_re, r_im) = [x.view(-1, 1, h_re.shape[1]) for x in (r_re, r_im)]
+
+        if t_re.ndim > h_re.ndim:
+            # TODO: Encapuslate logic in own function?
+            (h_re, h_im) = [x.view(-1, 1, h_re.shape[1]) for x in (h_re, h_im)]
+            (t_re, t_im) = [x.view(x.shape[:-1]) for x in (t_re, t_im)]
+        elif h_re.ndim > t_re.ndim:
+            (t_re, t_im) = [x.view(-1, 1, h_re.shape[1]) for x in (t_re, t_im)]
+            (h_re, h_im) = [x.view(x.shape[:-1]) for x in (h_re, h_im)]
+
         # ComplEx space bilinear product
         # *: Elementwise multiplication
         return sum(
@@ -159,5 +170,31 @@ class ComplEx(EntityRelationEmbeddingModel):
         # special case
         if scores.ndimension() < 2:
             scores = scores.unsqueeze(dim=-1)
+
+        return scores
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim // 2, 2)
+
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t)
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h, r, t.view(-1, self.embedding_dim))
+
+        return scores
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim // 2, 2)
+        r = self.relation_embeddings(indices=rt_batch[:, 0])
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
+
+        # Compute scores
+        scores = self.interaction_function(h=h, r=r, t=t)
+
+        # Embedding Regularization
+        self.regularize_if_necessary(h.view(-1, self.embedding_dim), r, t)
 
         return scores
