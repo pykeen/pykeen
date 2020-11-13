@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-def _extract_sizes(h, r, t):
+def _extract_sizes(h, r, t) -> Tuple[int, int, int, int, int]:
     num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
     d_e = h.shape[-1]
     d_r = r.shape[-1]
@@ -278,7 +278,7 @@ def convkb_interaction(
         The scores.
     """
     # bind sizes
-    num_heads, num_relations, num_tails, embedding_dim = _extract_sizes(h, r, t)[:4]
+    num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
 
     # decompose convolution for faster computation in 1-n case
     num_filters = conv.weight.shape[0]
@@ -329,7 +329,7 @@ def ermlp_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, embedding_dim = _extract_sizes(h, r, t)[:4]
+    num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
     hidden_dim = hidden.weight.shape[0]
     assert embedding_dim % 3 == 0
     embedding_dim = embedding_dim // 3
@@ -534,7 +534,7 @@ def translational_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, d_e = _extract_sizes(h, r, t)[:4]
+    num_heads, num_relations, num_tails, d_e, _ = _extract_sizes(h, r, t)
     h = h.view(-1, num_heads, 1, 1, d_e)
     r = r.view(-1, 1, num_relations, 1, d_e)
     t = t.view(-1, 1, 1, num_tails, d_e)
@@ -837,7 +837,7 @@ def proje_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, dim = _extract_sizes(h, r, t)[:4]
+    num_heads, num_relations, num_tails, dim, _ = _extract_sizes(h, r, t)
     # global projections
     h = h * d_e.view(1, 1, dim)
     r = r * d_r.view(1, 1, dim)
