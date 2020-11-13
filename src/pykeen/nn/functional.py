@@ -425,12 +425,30 @@ def translational_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-    dim: int,
-    p: Union[int, str] = 'fro',
-    keepdim: bool = False,
+    p: Union[int, str] = 2,
 ) -> torch.FloatTensor:
-    """Evaluate the translational interaction."""
-    return -torch.norm(h + r - t, dim=dim, p=p, keepdim=keepdim)
+    """
+    Evaluate the ConvE interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
+    dim = h.shape[-1]
+    return -(
+        h.view(-1, num_heads, 1, 1, dim) +
+        r.view(-1, 1, num_relations, 1, dim) -
+        t.view(-1, 1, 1, num_tails, dim)
+    ).norm(p=p, dim=-1)
 
 
 def transr_interaction(

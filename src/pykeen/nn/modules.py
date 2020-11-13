@@ -258,10 +258,8 @@ class TranslationalInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        return pykeen_functional.translational_interaction(
-            h=h, r=r, t=t,
-            p=self.p, dim=kwargs.get('dim', None), keepdim=kwargs.get('keepdim', False),
-        )
+        self._check_for_empty_kwargs(kwargs=kwargs)
+        return pykeen_functional.translational_interaction(h=h, r=r, t=t, p=self.p)
 
 
 class ComplExInteractionFunction(InteractionFunction):

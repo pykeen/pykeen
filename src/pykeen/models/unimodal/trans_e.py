@@ -86,29 +86,21 @@ class TransE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # TODO question @mberr - why is keepdim=True here but the others it isn't?
-        # TODO: Use torch.dist
-
-        return self.interaction_function(h=h, r=r, t=t, dim=-1, keepdim=True)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
+        return self.interaction_function(h=h, r=r, t=t).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # TODO: Use torch.cdist
-        return self.interaction_function(h=h[:, None, :], r=r[:, None, :], t=t[None, :, :], dim=-1, keepdim=False)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=hr_batch[:, 0])
+        r = self.relation_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=None)
+        return self.interaction_function(h=h, r=r, t=t).view(hr_batch.shape[0], self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # TODO: Use torch.cdist
-        return self.interaction_function(h=h[None, :, :], r=r[:, None, :], t=t[:, None, :], dim=-1, keepdim=False)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=None)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=rt_batch[:, 1])
+        return self.interaction_function(h=h, r=r, t=t).view(rt_batch.shape[0], self.num_entities)
