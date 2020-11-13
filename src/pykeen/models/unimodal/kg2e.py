@@ -10,7 +10,8 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, functional as pykeen_functional
+from ...nn.functional import KG2E_SIMILARITIES
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -92,12 +93,10 @@ class KG2E(EntityRelationEmbeddingModel):
         )
 
         # Similarity function used for distributions
-        if dist_similarity is None or dist_similarity.upper() == 'KL':
-            self.similarity = self.kullback_leibler_similarity
-        elif dist_similarity.upper() == 'EL':
-            self.similarity = self.expected_likelihood
-        else:
-            raise ValueError(f'Unknown distribution similarity: "{dist_similarity}".')
+        dist_similarity = dist_similarity.upper()
+        if dist_similarity not in KG2E_SIMILARITIES:
+            raise ValueError(dist_similarity)
+        self.similarity = dist_similarity
 
         # element-wise covariance bounds
         self.c_min = c_min
@@ -163,118 +162,24 @@ class KG2E(EntityRelationEmbeddingModel):
         sigma_t = self.entity_covariances.get_in_canonical_shape(indices=t_indices)
 
         # Compute entity distribution
-        mu_e = mu_h - mu_t
-        sigma_e = sigma_h + sigma_t
-        return self.similarity(mu_e=mu_e, mu_r=mu_r, sigma_e=sigma_e, sigma_r=sigma_r)
+        return pykeen_functional.kg2e_interaction(
+            h_mean=mu_h,
+            h_var=sigma_h,
+            r_mean=mu_r,
+            r_var=sigma_r,
+            t_mean=mu_t,
+            t_var=sigma_t,
+        )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(
+            h_indices=hrt_batch[:, 0],
+            r_indices=hrt_batch[:, 1],
+            t_indices=hrt_batch[:, 2],
+        ).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1])
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1]).view(hr_batch.shape[0], self.num_entities)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
-
-    @staticmethod
-    def expected_likelihood(
-        mu_e: torch.FloatTensor,
-        mu_r: torch.FloatTensor,
-        sigma_e: torch.FloatTensor,
-        sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
-    ) -> torch.FloatTensor:
-        r"""Compute the similarity based on expected likelihood.
-
-        .. math::
-
-            D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-            = \frac{1}{2} \left(
-                (\mu_e - \mu_r)^T(\Sigma_e + \Sigma_r)^{-1}(\mu_e - \mu_r)
-                + \log \det (\Sigma_e + \Sigma_r) + d \log (2 \pi)
-            \right)
-            = \frac{1}{2} \left(
-                \mu^T\Sigma^{-1}\mu
-                + \log \det \Sigma + d \log (2 \pi)
-            \right)
-
-        :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The mean of the first Gaussian.
-        :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The mean of the second Gaussian.
-        :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The diagonal covariance matrix of the first Gaussian.
-        :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The diagonal covariance matrix of the second Gaussian.
-        :param epsilon: float (default=1.0)
-            Small constant used to avoid numerical issues when dividing.
-
-        :return: torch.Tensor, shape: (s_1, ..., s_k)
-            The similarity.
-        """
-        d = sigma_e.shape[-1]
-        sigma = sigma_r + sigma_e
-        mu = mu_e - mu_r
-
-        #: a = \mu^T\Sigma^{-1}\mu
-        safe_sigma = torch.clamp_min(sigma, min=epsilon)
-        sigma_inv = torch.reciprocal(safe_sigma)
-        a = torch.sum(sigma_inv * mu ** 2, dim=-1)
-
-        #: b = \log \det \Sigma
-        b = safe_sigma.log().sum(dim=-1)
-        return a + b + d * _LOG_2_PI
-
-    @staticmethod
-    def kullback_leibler_similarity(
-        mu_e: torch.FloatTensor,
-        mu_r: torch.FloatTensor,
-        sigma_e: torch.FloatTensor,
-        sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
-    ) -> torch.FloatTensor:
-        r"""Compute the similarity based on KL divergence.
-
-        This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
-
-        .. math::
-
-            D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-            = \frac{1}{2} \left(
-                tr(\Sigma_r^{-1}\Sigma_e)
-                + (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
-                - \log \frac{det(\Sigma_e)}{det(\Sigma_r)} - k_e
-            \right)
-
-        Note: The sign of the function has been flipped as opposed to the description in the paper, as the
-              Kullback Leibler divergence is large if the distributions are dissimilar.
-
-        :param mu_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The mean of the first Gaussian.
-        :param mu_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The mean of the second Gaussian.
-        :param sigma_e: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The diagonal covariance matrix of the first Gaussian.
-        :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
-            The diagonal covariance matrix of the second Gaussian.
-        :param epsilon: float (default=1.0)
-            Small constant used to avoid numerical issues when dividing.
-
-        :return: torch.Tensor, shape: (s_1, ..., s_k)
-            The similarity.
-        """
-        d = mu_e.shape[-1]
-        safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
-        sigma_r_inv = torch.reciprocal(safe_sigma_r)
-
-        #: a = tr(\Sigma_r^{-1}\Sigma_e)
-        a = torch.sum(sigma_e * sigma_r_inv, dim=-1)
-
-        #: b = (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
-        mu = mu_r - mu_e
-        b = torch.sum(sigma_r_inv * mu ** 2, dim=-1)
-
-        #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
-        # = sum log (sigma_e)_i - sum log (sigma_r)_i
-        c = sigma_e.clamp_min(min=epsilon).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
-        return -0.5 * (a + b - c - d)
+        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1]).view(rt_batch.shape[0], self.num_entities)
