@@ -351,7 +351,11 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
-        raise NotImplementedError
+        for module in self.modules():
+            if module is self:
+                continue
+            if hasattr(module, "reset_parameters"):
+                module.reset_parameters()
 
     def reset_parameters_(self) -> 'Model':  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
