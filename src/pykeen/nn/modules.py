@@ -10,7 +10,6 @@ import torch
 from torch import nn
 
 from . import functional as pykeen_functional
-from .. import typing as pykeen_typing
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
@@ -48,10 +47,11 @@ class InteractionFunction(nn.Module):
         """
         raise NotImplementedError
 
-    def _check_for_empty_kwargs(self, kwargs: Mapping[str, Any]) -> None:
+    @classmethod
+    def _check_for_empty_kwargs(cls, kwargs: Mapping[str, Any]) -> None:
         """Check that kwargs is empty."""
         if len(kwargs) > 0:
-            raise ValueError(f"{self.__class__.__name__} does not take the following kwargs: {kwargs}")
+            raise ValueError(f"{cls.__name__} does not take the following kwargs: {kwargs}")
 
     @staticmethod
     def _add_dim(*x: torch.FloatTensor, dim: int) -> Sequence[torch.FloatTensor]:
@@ -264,11 +264,8 @@ class TranslationalInteractionFunction(InteractionFunction):
         )
 
 
-class _SimpleInteractionFunction(InteractionFunction):
-    """An intermediate base interaction function for simple stateless functions that only take h,r,t."""
-
-    #: A reference to the stateless interaction function
-    interaction_function: pykeen_typing.InteractionFunction
+class ComplExInteractionFunction(InteractionFunction):
+    """Interaction function of ComplEx."""
 
     def forward(
         self,
@@ -278,13 +275,7 @@ class _SimpleInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
-        return self.interaction_function(h, r, t)
-
-
-class ComplExInteractionFunction(_SimpleInteractionFunction):
-    """Interaction function of ComplEx."""
-
-    interaction_function = pykeen_functional.complex_interaction
+        return pykeen_functional.complex_interaction(h=h, r=r, t=t)
 
 
 def _calculate_missing_shape_information(
@@ -497,10 +488,18 @@ class ConvKBInteractionFunction(InteractionFunction):
         )
 
 
-class DistMultInteractionFunction(_SimpleInteractionFunction):
+class DistMultInteractionFunction(InteractionFunction):
     """Interaction function of DistMult."""
 
-    interaction_function = pykeen_functional.distmult_interaction
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs)
+        return pykeen_functional.distmult_interaction(h=h, r=r, t=t)
 
 
 class ERMLPInteractionFunction(InteractionFunction):
@@ -640,13 +639,29 @@ class TransRInteractionFunction(InteractionFunction):
         return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p)
 
 
-class RotatEInteraction(_SimpleInteractionFunction):
+class RotatEInteraction(InteractionFunction):
     """Interaction function of RotatE."""
 
-    interaction_function = pykeen_functional.rotate_interaction
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs)
+        return pykeen_functional.rotate_interaction(h=h, r=r, t=t)
 
 
-class HolEInteractionFunction(_SimpleInteractionFunction):
+class HolEInteractionFunction(InteractionFunction):
     """Interaction function for HolE."""
 
-    interaction_function = pykeen_functional.hole_interaction
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs)
+        return pykeen_functional.hole_interaction(h=h, r=r, t=t)
