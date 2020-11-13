@@ -126,30 +126,14 @@ class TransR(EntityRelationEmbeddingModel):
         super()._reset_parameters_()
         self.relation_projections.reset_parameters()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        # TODO switch to self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
-        m_r = self.relation_projections(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
-
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(hrt_batch.shape[0], 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-        m_r = self.relation_projections(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
-
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(hr_batch.shape[0], self.num_entities)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
-        m_r = self.relation_projections(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_dim)
-
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(rt_batch.shape[0], self.num_entities)
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        m_r = self.relation_projections.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.embedding_dim, self.relation_dim))
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)

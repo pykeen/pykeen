@@ -13,7 +13,6 @@ from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
-from ...utils import get_hr_indices, get_hrt_indices, get_ht_indices, get_rt_indices
 
 __all__ = [
     'SimplE',
@@ -146,19 +145,3 @@ class SimplE(EntityRelationEmbeddingModel):
         # Regularization
         self.regularize_if_necessary(h, r, t)
         return self.interaction_function(h, r, t)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_hrt_indices(hrt_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_hr_indices(hr_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_ht_indices(ht_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h_indices, r_indices, t_indices = get_rt_indices(rt_batch)
-        return self(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
