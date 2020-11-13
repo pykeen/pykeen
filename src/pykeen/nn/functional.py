@@ -17,6 +17,7 @@ __all__ = [
     "ermlp_interaction",
     "ermlpe_interaction",
     'hole_interaction',
+    'rotate_interaction',
 ]
 
 
@@ -374,3 +375,45 @@ def hole_interaction(
 
     # inner product with relation embedding
     return torch.sum(r * composite, dim=-1, keepdim=False)
+
+
+def rotate_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the interaction function of RotatE for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    WARNING: No forward constraints are applied.
+
+    :param h: shape: (..., e, 2)
+        Head embeddings. Last dimension corresponds to (real, imag).
+    :param r: shape: (..., e, 2)
+        Relation embeddings. Last dimension corresponds to (real, imag).
+    :param t: shape: (..., e, 2)
+        Tail embeddings. Last dimension corresponds to (real, imag).
+
+    :return: shape: (...)
+        The scores.
+    """
+    # Decompose into real and imaginary part
+    h_re = h[..., 0]
+    h_im = h[..., 1]
+    r_re = r[..., 0]
+    r_im = r[..., 1]
+
+    # Rotate (=Hadamard product in complex space).
+    rot_h = torch.stack(
+        [
+            h_re * r_re - h_im * r_im,
+            h_re * r_im + h_im * r_re,
+        ],
+        dim=-1,
+    )
+    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
+    diff = rot_h - t
+    scores = -torch.norm(diff.view(diff.shape[:-2] + (-1,)), dim=-1)
+
+    return scores
