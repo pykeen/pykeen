@@ -4,7 +4,7 @@
 
 import logging
 import math
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type
 
 import torch
 from torch import nn
@@ -240,19 +240,25 @@ class InteractionFunction(nn.Module):
                 mod.reset_parameters()
 
 
-class FunctionalInteractionFunction(InteractionFunction):
-    """Interaction function without state or additional parameters."""
-    interaction: Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+def _build_module_from_stateless(
+    f: Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
+) -> Type[InteractionFunction]:
+    """Build a stateless interaction function module with a pre-defined functional interface."""
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return self.interaction(h, r, t)
+    class FunctionalInteractionFunction(InteractionFunction):
+        """Interaction function without state or additional parameters."""
+
+        def forward(
+            self,
+            h: torch.FloatTensor,
+            r: torch.FloatTensor,
+            t: torch.FloatTensor,
+            **kwargs,
+        ) -> torch.FloatTensor:  # noqa: D102
+            self._check_for_empty_kwargs(kwargs)
+            return f(h, r, t)
+
+    return FunctionalInteractionFunction
 
 
 class TranslationalInteractionFunction(InteractionFunction):
@@ -277,10 +283,8 @@ class TranslationalInteractionFunction(InteractionFunction):
         return pykeen_functional.translational_interaction(h=h, r=r, t=t, p=self.p)
 
 
-class ComplExInteractionFunction(FunctionalInteractionFunction):
-    """Interaction function of ComplEx."""
-
-    interaction = pykeen_functional.complex_interaction
+#: Interaction function of ComplEx
+ComplExInteractionFunction = _build_module_from_stateless(pykeen_functional.complex_interaction)
 
 
 def _calculate_missing_shape_information(
@@ -493,10 +497,8 @@ class ConvKBInteractionFunction(InteractionFunction):
         )
 
 
-class DistMultInteractionFunction(FunctionalInteractionFunction):
-    """Interaction function of DistMult."""
-
-    interaction = pykeen_functional.distmult_interaction
+#: Interaction function for HolE
+DistMultInteractionFunction = _build_module_from_stateless(pykeen_functional.distmult_interaction)
 
 
 class ERMLPInteractionFunction(InteractionFunction):
@@ -637,16 +639,11 @@ class TransRInteractionFunction(InteractionFunction):
         return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=True)
 
 
-class RotatEInteraction(FunctionalInteractionFunction):
-    """Interaction function of RotatE."""
+#: Interaction function of RotatE.
+RotatEInteraction = _build_module_from_stateless(pykeen_functional.rotate_interaction)
 
-    interaction = pykeen_functional.rotate_interaction
-
-
-class HolEInteractionFunction(FunctionalInteractionFunction):
-    """Interaction function for HolE."""
-
-    interaction = pykeen_functional.hole_interaction
+#: Interaction function for HolE.
+HolEInteractionFunction = _build_module_from_stateless(pykeen_functional.hole_interaction)
 
 
 class ProjEInteractionFunction(InteractionFunction):
@@ -696,7 +693,5 @@ class ProjEInteractionFunction(InteractionFunction):
             d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity,
         ).view(-1, 1)
 
-class RESCALInteractionFunction(FunctionalInteractionFunction):
-    """RESCAL interaction function."""
 
-    interaction = pykeen_functional.rescal_interaction
+RESCALInteractionFunction = _build_module_from_stateless(pykeen_functional.rescal_interaction)
