@@ -9,7 +9,7 @@ from torch import nn
 
 from ..base import EntityEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as F
+from ...nn import Embedding, functional as pykeen_functional
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -113,7 +113,7 @@ class NTN(EntityEmbeddingModel):
             if hasattr(module, "reset_parameters"):
                 module.reset_parameters()
 
-    def _score(
+    def forward(
         self,
         h_indices: Optional[torch.LongTensor] = None,
         r_indices: Optional[torch.LongTensor] = None,
@@ -134,14 +134,18 @@ class NTN(EntityEmbeddingModel):
         #: shape: (batch_size, num_entities, d)
         h_all = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
         t_all = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        w = self.w.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim, self.embedding_dim))
+        w = self.w.get_in_canonical_shape(indices=r_indices,
+                                          reshape_dim=(self.num_slices, self.embedding_dim, self.embedding_dim))
         b = self.b.get_in_canonical_shape(indices=r_indices)
         u = self.u.get_in_canonical_shape(indices=r_indices)
         vh = self.vh.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
         vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
 
         if slice_size is None:
-            return F.ntn_interaction(h=h_all, t=t_all, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
+            return pykeen_functional.ntn_interaction(
+                h=h_all, t=t_all,
+                w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
+            )
 
         # TODO: Not implemented
         if h_all.shape[1] > t_all.shape[1]:
@@ -161,19 +165,38 @@ class NTN(EntityEmbeddingModel):
             else:
                 h = constant_tensor
                 t = split
-            score = F.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
+            score = pykeen_functional.ntn_interaction(
+                h=h, t=t,
+                w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
+            )
             scores_arr.append(score)
 
         return torch.cat(scores_arr, dim=1)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(hrt_batch.shape[0], 1)
+        return self(
+            h_indices=hrt_batch[:, 0],
+            r_indices=hrt_batch[:, 1],
+            t_indices=hrt_batch[:, 2],
+        ).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], slice_size=slice_size).view(hr_batch.shape[0], self.num_entities)
+        return self(
+            h_indices=hr_batch[:, 0],
+            r_indices=hr_batch[:, 1],
+            slice_size=slice_size,
+        ).view(hr_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=ht_batch[:, 0], t_indices=ht_batch[:, 1], slice_size=slice_size).view(ht_batch.shape[0], self.num_relations)
+        return self(
+            h_indices=ht_batch[:, 0],
+            t_indices=ht_batch[:, 1],
+            slice_size=slice_size,
+        ).view(ht_batch.shape[0], self.num_relations)
 
     def score_h(self, rt_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1], slice_size=slice_size).view(rt_batch.shape[0], self.num_entities)
+        return self.forward(
+            r_indices=rt_batch[:, 0],
+            t_indices=rt_batch[:, 1],
+            slice_size=slice_size,
+        ).view(rt_batch.shape[0], self.num_entities)

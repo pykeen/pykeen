@@ -487,6 +487,7 @@ def transr_interaction(
 
 class GaussianDistribution(NamedTuple):
     """A gaussian distribution with diagonal covariance matrix."""
+
     mean: torch.FloatTensor
     diagonal_covariance: torch.FloatTensor
 
