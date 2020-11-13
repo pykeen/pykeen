@@ -133,7 +133,7 @@ class ComplEx(EntityRelationEmbeddingModel):
         if t.ndim > h.ndim:
             h = h.view(-1, 1, h.shape[1])
         elif h.ndim > t.ndim:
-            t = h.view(-1, 1, t.shape[1])
+            t = t.view(-1, 1, t.shape[1])
 
         # split into real and imaginary part
         (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
