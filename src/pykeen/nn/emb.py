@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Embedding modules."""
-
+import dataclasses
 import functools
 from typing import Any, Mapping, Optional, Sequence
 
@@ -40,6 +40,25 @@ class RepresentationModule(nn.Module):
 
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
+
+
+@dataclasses.dataclass
+class EmbeddingSpecification:
+    """An embedding specification."""
+
+    # embedding_dim: int
+    # shape: Optional[Sequence[int]] = None
+
+    initializer: Optional[Initializer] = None
+    initializer_kwargs: Optional[Mapping[str, Any]] = None
+
+    normalizer: Optional[Normalizer] = None
+    normalizer_kwargs: Optional[Mapping[str, Any]] = None
+
+    constrainer: Optional[Constrainer] = None
+    constrainer_kwargs: Optional[Mapping[str, Any]] = None
+
+    # regularizer: Optional[Regularizer] = None
 
 
 class Embedding(RepresentationModule):
@@ -103,6 +122,43 @@ class Embedding(RepresentationModule):
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
         )
+
+    @classmethod
+    def from_specification(
+        cls,
+        num_embeddings: int,
+        embedding_dim: int,
+        specification: Optional[EmbeddingSpecification],
+        device: Optional[torch.device] = None,
+    ) -> "Embedding":
+        """
+        Create an embedding based on an specification.
+
+        :param num_embeddings:
+            The number of embeddings.
+        :param specification:
+            The specification.
+        :param device:
+            If given, move to device.
+
+        :return:
+            An embedding object.
+        """
+        if specification is None:
+            specification = EmbeddingSpecification()
+        embedding = Embedding(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            initializer=specification.initializer,
+            initializer_kwargs=specification.initializer_kwargs,
+            normalizer=specification.normalizer,
+            normalizer_kwargs=specification.normalizer_kwargs,
+            constrainer=specification.constrainer,
+            constrainer_kwargs=specification.constrainer_kwargs,
+        )
+        if device is not None:
+            embedding = embedding.to(device=device)
+        return embedding
 
     @classmethod
     def init_with_device(

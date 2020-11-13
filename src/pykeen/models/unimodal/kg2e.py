@@ -10,7 +10,8 @@ import torch.autograd
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as pkf
+from ...nn import functional as pkf
+from ...nn.emb import EmbeddingSpecification
 from ...nn.functional import KG2E_SIMILARITIES
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -86,35 +87,30 @@ class KG2E(TwoVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=clamp_norm,
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            embedding_specification=EmbeddingSpecification(
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            # Ensure positive definite covariances matrices and appropriate size by clamping
+            second_embedding_specification=EmbeddingSpecification(
+                constrainer=torch.clamp,
+                constrainer_kwargs=dict(min=c_min, max=c_max),
+            ),
+            second_relation_embedding_specification=EmbeddingSpecification(
+                # Ensure positive definite covariances matrices and appropriate size by clamping
+                constrainer=torch.clamp,
+                constrainer_kwargs=dict(min=c_min, max=c_max),
+            )
         )
-
         # Similarity function used for distributions
         dist_similarity = dist_similarity.upper()
         if dist_similarity not in KG2E_SIMILARITIES:
             raise ValueError(dist_similarity)
         self.similarity = dist_similarity
-
-        # Additional covariance embeddings
-        self.entity_covariances = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
-            device=self.device,
-            # Ensure positive definite covariances matrices and appropriate size by clamping
-            constrainer=torch.clamp,
-            constrainer_kwargs=dict(min=c_min, max=c_max),
-        )
-        self.relation_covariances = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
-            device=self.device,
-            # Ensure positive definite covariances matrices and appropriate size by clamping
-            constrainer=torch.clamp,
-            constrainer_kwargs=dict(min=c_min, max=c_max),
-        )
 
     def _forward(
         self,
@@ -125,4 +121,6 @@ class KG2E(TwoVectorEmbeddingModel):
         t1: torch.FloatTensor,
         t2: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        return pkf.kg2e_interaction(h_mean=h1, h_var=h2, r_mean=r1, r_var=r2, t_mean=t1, t_var=t2)
+        return pkf.kg2e_interaction(
+            h_mean=h1, h_var=h2, r_mean=r1, r_var=r2, t_mean=t1, t_var=t2, similarity=self.similarity,
+        )

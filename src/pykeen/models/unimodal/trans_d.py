@@ -9,6 +9,7 @@ import torch.autograd
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -125,12 +126,16 @@ class TransD(TwoVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=clamp_norm,
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+                constrainer=clamp_norm,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
         )
 
     def _forward(

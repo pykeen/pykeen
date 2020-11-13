@@ -18,6 +18,7 @@ from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding
+from ..nn.emb import EmbeddingSpecification
 from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
@@ -1141,7 +1142,7 @@ class EntityEmbeddingModel(Model):
         self.entity_embeddings.post_parameter_update()
 
 
-class EntityRelationEmbeddingModel(Model):
+class EntityRelationEmbeddingModel(Model, ABC):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -1155,18 +1156,8 @@ class EntityRelationEmbeddingModel(Model):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        embedding_specification: EmbeddingSpecification = None,
+        relation_embedding_specification: EmbeddingSpecification = None,
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1186,32 +1177,22 @@ class EntityRelationEmbeddingModel(Model):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = Embedding.init_with_device(
+        self.entity_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
-            device=self.device,
-            initializer=entity_initializer,
-            initializer_kwargs=entity_initializer_kwargs,
-            normalizer=entity_normalizer,
-            normalizer_kwargs=entity_normalizer_kwargs,
-            constrainer=entity_constrainer,
-            constrainer_kwargs=entity_constrainer_kwargs,
+            specification=embedding_specification,
         )
 
         # Default for relation dimensionality
         if relation_dim is None:
             relation_dim = embedding_dim
+        if relation_embedding_specification is None:
+            relation_embedding_specification = embedding_specification
 
-        self.relation_embeddings = Embedding.init_with_device(
+        self.relation_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim,
-            device=self.device,
-            initializer=relation_initializer,
-            initializer_kwargs=relation_initializer_kwargs,
-            normalizer=relation_normalizer,
-            normalizer_kwargs=relation_normalizer_kwargs,
-            constrainer=relation_constrainer,
-            constrainer_kwargs=relation_constrainer_kwargs,
+            specification=relation_embedding_specification,
         )
 
     @property
@@ -1254,18 +1235,8 @@ class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        embedding_specification: EmbeddingSpecification = None,
+        relation_embedding_specification: EmbeddingSpecification = None,
     ) -> None:
         """Initialize embedding model.
 
@@ -1297,18 +1268,8 @@ class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=entity_initializer,
-            entity_initializer_kwargs=entity_initializer_kwargs,
-            entity_normalizer=entity_normalizer,
-            entity_normalizer_kwargs=entity_normalizer_kwargs,
-            entity_constrainer=entity_constrainer,
-            entity_constrainer_kwargs=entity_constrainer_kwargs,
-            relation_initializer=relation_initializer,
-            relation_initializer_kwargs=relation_initializer_kwargs,
-            relation_normalizer=relation_normalizer,
-            relation_normalizer_kwargs=relation_normalizer_kwargs,
-            relation_constrainer=relation_constrainer,
-            relation_constrainer_kwargs=relation_constrainer_kwargs,
+            embedding_specification=embedding_specification,
+            relation_embedding_specification=relation_embedding_specification,
         )
         self.interaction_function = interaction_function
 
@@ -1349,18 +1310,10 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        embedding_specification: EmbeddingSpecification = None,
+        relation_embedding_specification: EmbeddingSpecification = None,
+        second_embedding_specification: EmbeddingSpecification = None,
+        second_relation_embedding_specification: EmbeddingSpecification = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -1372,30 +1325,24 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=entity_initializer,
-            entity_initializer_kwargs=entity_initializer_kwargs,
-            entity_normalizer=entity_normalizer,
-            entity_normalizer_kwargs=entity_normalizer_kwargs,
-            entity_constrainer=entity_constrainer,
-            entity_constrainer_kwargs=entity_constrainer_kwargs,
-            relation_initializer=relation_initializer,
-            relation_initializer_kwargs=relation_initializer_kwargs,
-            relation_normalizer=relation_normalizer,
-            relation_normalizer_kwargs=relation_normalizer_kwargs,
-            relation_constrainer=relation_constrainer,
-            relation_constrainer_kwargs=relation_constrainer_kwargs,
+            embedding_specification=embedding_specification,
+            relation_embedding_specification=relation_embedding_specification,
         )
 
         # extra embeddings
-        self.second_entity_embeddings = Embedding.init_with_device(
+        if second_embedding_specification is None:
+            second_embedding_specification = embedding_specification
+        self.second_entity_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
-            device=self.device,
+            specification=second_embedding_specification,
         )
-        self.second_relation_embeddings = Embedding.init_with_device(
+        if second_relation_embedding_specification is None:
+            second_relation_embedding_specification = relation_embedding_specification
+        self.second_relation_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
-            device=self.device,
+            specification=second_relation_embedding_specification,
         )
 
     def _forward(
