@@ -2,12 +2,12 @@
 
 """Functional forms of interaction methods."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 from torch import nn
 
-from ..utils import broadcast_cat, is_cudnn_error, normalize_for_einsum, split_complex
+from ..utils import broadcast_cat, clamp_norm, is_cudnn_error, normalize_for_einsum, split_complex
 
 __all__ = [
     "complex_interaction",
@@ -17,6 +17,9 @@ __all__ = [
     "ermlp_interaction",
     "ermlpe_interaction",
     'hole_interaction',
+    'rotate_interaction',
+    'translational_interaction',
+    'transr_interaction',
 ]
 
 
@@ -374,3 +377,91 @@ def hole_interaction(
 
     # inner product with relation embedding
     return torch.sum(r * composite, dim=-1, keepdim=False)
+
+
+def rotate_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the interaction function of RotatE for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    WARNING: No forward constraints are applied.
+
+    :param h: shape: (..., e, 2)
+        Head embeddings. Last dimension corresponds to (real, imag).
+    :param r: shape: (..., e, 2)
+        Relation embeddings. Last dimension corresponds to (real, imag).
+    :param t: shape: (..., e, 2)
+        Tail embeddings. Last dimension corresponds to (real, imag).
+
+    :return: shape: (...)
+        The scores.
+    """
+    # Decompose into real and imaginary part
+    h_re = h[..., 0]
+    h_im = h[..., 1]
+    r_re = r[..., 0]
+    r_im = r[..., 1]
+
+    # Rotate (=Hadamard product in complex space).
+    rot_h = torch.stack(
+        [
+            h_re * r_re - h_im * r_im,
+            h_re * r_im + h_im * r_re,
+        ],
+        dim=-1,
+    )
+    # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
+    diff = rot_h - t
+    scores = -torch.norm(diff.view(diff.shape[:-2] + (-1,)), dim=-1)
+
+    return scores
+
+
+def translational_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    dim: int,
+    p: Union[int, str] = 'fro',
+    keepdim: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the translational interaction."""
+    return -torch.norm(h + r - t, dim=dim, p=p, keepdim=keepdim)
+
+
+def transr_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    m_r: torch.FloatTensor,
+    p: int,
+) -> torch.FloatTensor:
+    """Evaluate the interaction function for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    :param h: shape: (batch_size, num_entities, d_e)
+        Head embeddings.
+    :param r: shape: (batch_size, num_entities, d_r)
+        Relation embeddings.
+    :param t: shape: (batch_size, num_entities, d_e)
+        Tail embeddings.
+    :param m_r: shape: (batch_size, num_entities, d_e, d_r)
+        The relation specific linear transformations.
+
+    :return: shape: (batch_size, num_entities)
+        The scores.
+    """
+    # project to relation specific subspace, shape: (b, e, d_r)
+    h_bot = h @ m_r
+    t_bot = t @ m_r
+    # ensure constraints
+    h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
+    t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
+
+    # evaluate score function, shape: (b, e)
+    return translational_interaction(h=h_bot, r=r, t=t_bot, dim=-1, p=p) ** 2

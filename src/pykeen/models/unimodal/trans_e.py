@@ -4,11 +4,10 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import EntityRelationEmbeddingModel, TranslationalInteractionFunction
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
@@ -67,6 +66,7 @@ class TransE(EntityRelationEmbeddingModel):
 
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
+        self.interaction_function = TranslationalInteractionFunction(p=scoring_fct_norm)
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -82,7 +82,6 @@ class TransE(EntityRelationEmbeddingModel):
             ),
             entity_constrainer=functional.normalize,
         )
-        self.scoring_fct_norm = scoring_fct_norm
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -92,7 +91,8 @@ class TransE(EntityRelationEmbeddingModel):
 
         # TODO question @mberr - why is keepdim=True here but the others it isn't?
         # TODO: Use torch.dist
-        return -torch.norm(h + r - t, dim=-1, p=self.scoring_fct_norm, keepdim=True)
+
+        return self.interaction_function(h=h, r=r, t=t, dim=-1, keepdim=True)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -101,7 +101,7 @@ class TransE(EntityRelationEmbeddingModel):
         t = self.entity_embeddings(indices=None)
 
         # TODO: Use torch.cdist
-        return -torch.norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, p=self.scoring_fct_norm)
+        return self.interaction_function(h=h[:, None, :], r=r[:, None, :], t=t[None, :, :], dim=-1, keepdim=False)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -110,4 +110,4 @@ class TransE(EntityRelationEmbeddingModel):
         t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # TODO: Use torch.cdist
-        return -torch.norm(h[None, :, :] + r[:, None, :] - t[:, None, :], dim=-1, p=self.scoring_fct_norm)
+        return self.interaction_function(h=h[None, :, :], r=r[:, None, :], t=t[:, None, :], dim=-1, keepdim=False)
