@@ -9,6 +9,7 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding
+from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -82,6 +83,7 @@ class SimplE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
+        self.interaction_function = DistMultInteractionFunction()
 
         # extra embeddings
         self.tail_entity_embeddings = Embedding.init_with_device(
@@ -113,23 +115,13 @@ class SimplE(EntityRelationEmbeddingModel):
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
-        # forward model
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        scores = (h * r * t).sum(dim=-1)
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # backward model
-        h = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        r = self.inverse_relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
+        scores = 0.5 * sum(
+            self._single_forward(h_ind=h_ind, r_ind=r_ind, t_ind=t_ind, r_emb=r_emb)
+            for (h_ind, r_ind, t_ind, r_emb) in (
+                (h_indices, r_indices, t_indices, self.relation_embeddings),
+                (t_indices, r_indices, h_indices, self.inverse_relation_embeddings),
+            )
+        )
 
         # Note: In the code in their repository, the score is clamped to [-20, 20].
         #       That is not mentioned in the paper, so it is omitted here.
@@ -138,6 +130,21 @@ class SimplE(EntityRelationEmbeddingModel):
             scores = scores.clamp(min=min_, max=max_)
 
         return scores
+
+    def _single_forward(
+        self,
+        h_ind: torch.LongTensor,
+        r_ind: torch.LongTensor,
+        t_ind: torch.LongTensor,
+        r_emb: Embedding,
+    ) -> torch.FloatTensor:
+        # scores
+        h = self.entity_embeddings.get_in_canonical_shape(h_ind)
+        r = r_emb.get_in_canonical_shape(r_ind)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(t_ind)
+        # Regularization
+        self.regularize_if_necessary(h, r, t)
+        return self.interaction_function(h, r, t)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)

@@ -2,7 +2,7 @@
 
 """Functional forms of interaction methods."""
 import math
-from typing import NamedTuple, Optional, SupportsFloat, Union
+from typing import NamedTuple, Optional, SupportsFloat, Tuple, Union
 
 import torch
 import torch.fft
@@ -867,3 +867,40 @@ def rescal_interaction(
         The scores.
     """
     return _extended_einsum("bhd,brde,bte->bhrt", h, r, t)
+
+
+def simple_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    h_inv: torch.FloatTensor,
+    r_inv: torch.FloatTensor,
+    t_inv: torch.FloatTensor,
+    clamp: Optional[Tuple[float, float]] = None,
+) -> torch.FloatTensor:
+    """
+    Evaluate the SimplE interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param h_inv: shape: (batch_size, num_heads, dim)
+        The inverse head representations.
+    :param r_inv: shape: (batch_size, num_relations, dim, dim)
+        The relation representations.
+    :param t_inv: shape: (batch_size, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    scores = 0.5 * (distmult_interaction(h=h, r=r, t=t) + distmult_interaction(h=h_inv, r=r_inv, t=t_inv))
+    # Note: In the code in their repository, the score is clamped to [-20, 20].
+    #       That is not mentioned in the paper, so it is made optional here.
+    if clamp:
+        min_, max_ = clamp
+        scores = scores.clamp(min=min_, max=max_)
+    return scores
