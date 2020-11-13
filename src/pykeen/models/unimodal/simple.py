@@ -108,10 +108,14 @@ class SimplE(EntityRelationEmbeddingModel):
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         scores = 0.5 * sum(
-            self._single_forward(h_ind=h_ind, r_ind=r_ind, t_ind=t_ind, r_emb=r_emb)
-            for (h_ind, r_ind, t_ind, r_emb) in (
-                (h_indices, r_indices, t_indices, self.relation_embeddings),
-                (t_indices, r_indices, h_indices, self.inverse_relation_embeddings),
+            self.interaction_function(
+                h_source.get_in_canonical_shape(indices=h_indices),
+                r_source.get_in_canonical_shape(indices=r_indices),
+                t_source.get_in_canonical_shape(indices=t_indices)
+            )
+            for h_source, r_source, t_source in (
+                (self.entity_embeddings, self.relation_embeddings, self.tail_entity_embeddings),
+                (self.tail_entity_embeddings, self.inverse_relation_embeddings, self.entity_embeddings),
             )
         )
 
@@ -122,18 +126,3 @@ class SimplE(EntityRelationEmbeddingModel):
             scores = scores.clamp(min=min_, max=max_)
 
         return scores
-
-    def _single_forward(
-        self,
-        h_ind: torch.LongTensor,
-        r_ind: torch.LongTensor,
-        t_ind: torch.LongTensor,
-        r_emb: Embedding,
-    ) -> torch.FloatTensor:
-        # scores
-        h = self.entity_embeddings.get_in_canonical_shape(h_ind)
-        r = r_emb.get_in_canonical_shape(r_ind)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(t_ind)
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-        return self.interaction_function(h, r, t)
