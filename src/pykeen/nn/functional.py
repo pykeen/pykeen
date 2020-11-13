@@ -846,3 +846,24 @@ def proje_interaction(
     x = activation(x)
     # dot product with t, shape: (b, h, r, t)
     return (x @ t.unsqueeze(dim=1).transpose(-2, -1)) + b_p
+
+
+def rescal_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """
+    Evaluate the RESCAL interaction function.
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return _extended_einsum("bhd,brde,bte->bhrt", h, r, t)
