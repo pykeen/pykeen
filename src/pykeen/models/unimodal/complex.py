@@ -128,19 +128,15 @@ class ComplEx(EntityRelationEmbeddingModel):
         :return: shape: (...)
             The scores.
         """
+        if t.ndim != h.ndim:
+            r = r.view(-1, 1, r.shape[1])
+        if t.ndim > h.ndim:
+            h = h.view(-1, 1, h.shape[1])
+        elif h.ndim > t.ndim:
+            t = h.view(-1, 1, t.shape[1])
+
         # split into real and imaginary part
         (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-
-        if t_re.ndim != h_re.ndim:
-            (r_re, r_im) = [x.view(-1, 1, r_re.shape[1]) for x in (r_re, r_im)]
-
-        if t_re.ndim > h_re.ndim:
-            # TODO: Encapuslate logic in own function?
-            (h_re, h_im) = [x.view(-1, 1, h_re.shape[1]) for x in (h_re, h_im)]
-            (t_re, t_im) = [x.view(x.shape[:-1]) for x in (t_re, t_im)]
-        elif h_re.ndim > t_re.ndim:
-            (t_re, t_im) = [x.view(-1, 1, h_re.shape[1]) for x in (t_re, t_im)]
-            (h_re, h_im) = [x.view(x.shape[:-1]) for x in (h_re, h_im)]
 
         # ComplEx space bilinear product
         # *: Elementwise multiplication
@@ -176,7 +172,7 @@ class ComplEx(EntityRelationEmbeddingModel):
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim // 2, 2)
+        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
 
         # Compute scores
         scores = self.interaction_function(h=h, r=r, t=t)
@@ -187,7 +183,7 @@ class ComplEx(EntityRelationEmbeddingModel):
         return scores
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim // 2, 2)
+        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
         r = self.relation_embeddings(indices=rt_batch[:, 0])
         t = self.entity_embeddings(indices=rt_batch[:, 1])
 
