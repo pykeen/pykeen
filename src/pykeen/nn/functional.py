@@ -367,7 +367,8 @@ def ermlpe_interaction(
     x = broadcast_cat(h.unsqueeze(dim=2), r.unsqueeze(dim=1), dim=-1)
 
     # Predict t embedding, shape: (batch_size, num_heads, num_relations, embedding_dim)
-    x = mlp(x)
+    shape = x.shape
+    x = mlp(x.view(-1, shape[-1])).view(*shape[:-1], -1)
 
     return (x.unsqueeze(dim=-2) @ t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]).transpose(-2, -1)).squeeze(dim=-1)
 
