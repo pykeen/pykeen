@@ -331,8 +331,6 @@ def ermlp_interaction(
     """
     num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
     hidden_dim = hidden.weight.shape[0]
-    assert embedding_dim % 3 == 0
-    embedding_dim = embedding_dim // 3
     # split, shape: (embedding_dim, hidden_dim)
     head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(embedding_dim)
     bias = hidden.bias.view(1, 1, 1, 1, -1)
