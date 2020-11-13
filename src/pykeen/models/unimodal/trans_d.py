@@ -8,14 +8,11 @@ import torch
 import torch.autograd
 
 from .. import Model
-from ..base import (
-    GeneralVectorEntityRelationEmbeddingModel, IndexFunction
-from ...nn.modules import InteractionFunction,
-    TranslationalInteractionFunction,
-)
+from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
+from ...nn.modules import InteractionFunction, TranslationalInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint

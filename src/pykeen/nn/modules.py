@@ -236,6 +236,30 @@ class InteractionFunction(nn.Module):
                 mod.reset_parameters()
 
 
+class TranslationalInteractionFunction(InteractionFunction):
+    """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
+
+    def __init__(self, p: int):
+        """Initialize the translational interaction function.
+
+        :param p: The norm used with :func:`torch.norm`. Typically is 1 or 2.
+        """
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa:D102
+        return F.translational_interaction(
+            h=h, r=r, t=t,
+            p=self.p, dim=kwargs.get('dim', None), keepdim=kwargs.get('keepdim', False),
+        )
+
+
 class ComplExInteractionFunction(InteractionFunction):
     """Interaction function of ComplEx."""
 
