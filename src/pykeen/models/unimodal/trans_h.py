@@ -9,7 +9,7 @@ from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as F
+from ...nn import Embedding, functional as pkf
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -124,4 +124,4 @@ class TransH(EntityRelationEmbeddingModel):
         w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=r_indices)
         t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm)
+        return pkf.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm)

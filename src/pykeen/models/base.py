@@ -22,17 +22,13 @@ from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import (
-    NoRandomSeedNecessary, resolve_device, set_random_seed,
-)
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
-    'GeneralVectorEntityRelationEmbeddingModel',
     'SimpleVectorEntityRelationEmbeddingModel',
-    'IndexFunction',
     'MultimodalModel',
 ]
 

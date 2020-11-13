@@ -705,6 +705,11 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
         p: int,
         power_norm: bool = False
     ):
+        """Initialize the SE interaction function.
+
+        :param p: The l_p norm
+        :param power_norm: Should power normalization be applied?
+        """
         super().__init__()
         self.p = p
         self.power_norm = power_norm
@@ -765,7 +770,7 @@ class TuckerInteractionFunction(InteractionFunction):
         else:
             self.bn1 = self.bn2 = None
 
-    def reset_parameters(self):
+    def reset_parameters(self):  # noqa:D102
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
 
@@ -775,7 +780,7 @@ class TuckerInteractionFunction(InteractionFunction):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
         return pykeen_functional.tucker_interaction(
             h=h,
