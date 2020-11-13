@@ -4,13 +4,10 @@
 
 from typing import Optional
 
-import torch.autograd
-
 from ..base import SimpleVectorEntityRelationEmbeddingModel
-from ...nn.modules import InteractionFunction
 from ...losses import Loss
-from ...nn.functional import hole_interaction
 from ...nn.init import xavier_uniform_
+from ...nn.modules import HolEInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -19,20 +16,6 @@ from ...utils import clamp_norm
 __all__ = [
     'HolE',
 ]
-
-
-class HolEInteractionFunction(InteractionFunction):
-    """Interaction function for HolE."""
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return hole_interaction(h=h, r=r, t=t)
 
 
 class HolE(SimpleVectorEntityRelationEmbeddingModel):

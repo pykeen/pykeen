@@ -7,6 +7,7 @@ import torch
 from torch import nn
 
 from . import functional as F, functional as pykeen_functional
+from .functional import hole_interaction
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
@@ -647,3 +648,17 @@ class RotatEInteraction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
         return pykeen_functional.rotate_interaction(h=h, r=r, t=t)
+
+
+class HolEInteractionFunction(InteractionFunction):
+    """Interaction function for HolE."""
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa: D102
+        self._check_for_empty_kwargs(kwargs)
+        return hole_interaction(h=h, r=r, t=t)
