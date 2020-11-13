@@ -4,14 +4,13 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
-from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from .. import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import functional as F
 from ...nn.init import xavier_normal_
+from ...nn.modules import TuckerInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -21,7 +20,7 @@ __all__ = [
 ]
 
 
-class TuckER(EntityRelationEmbeddingModel):
+class TuckER(SimpleVectorEntityRelationEmbeddingModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
     TuckER is a linear model that is based on the tensor factorization method Tucker in which a three-mode tensor
@@ -92,6 +91,14 @@ class TuckER(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=TuckerInteractionFunction(
+                embedding_dim=embedding_dim,
+                relation_dim=relation_dim,
+                dropout_0=dropout_0,
+                dropout_1=dropout_1,
+                dropout_2=dropout_2,
+                apply_batch_normalization=apply_batch_normalization,
+            ),
             embedding_dim=embedding_dim,
             relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -102,29 +109,6 @@ class TuckER(EntityRelationEmbeddingModel):
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
         )
-
-        # Core tensor
-        # Note: we use a different dimension permutation as in the official implementation to match the paper.
-        self.core_tensor = nn.Parameter(
-            torch.empty(self.embedding_dim, self.relation_dim, self.embedding_dim, device=self.device),
-            requires_grad=True,
-        )
-
-        # Dropout
-        self.input_dropout = nn.Dropout(dropout_0)
-        self.hidden_dropout_1 = nn.Dropout(dropout_1)
-        self.hidden_dropout_2 = nn.Dropout(dropout_2)
-
-        self.apply_batch_normalization = apply_batch_normalization
-
-        if self.apply_batch_normalization:
-            self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
-            self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1., 1.)
 
     def forward(
         self,

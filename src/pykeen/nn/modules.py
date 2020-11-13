@@ -728,3 +728,63 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
             p=self.p,
             power_norm=self.power_norm,
         )
+
+
+class TuckerInteractionFunction(InteractionFunction):
+    """Interaction function of Tucker."""
+
+    def __init__(
+        self,
+        embedding_dim: int = 200,
+        relation_dim: Optional[int] = None,
+        dropout_0: float = 0.3,
+        dropout_1: float = 0.4,
+        dropout_2: float = 0.5,
+        apply_batch_normalization: bool = True,
+    ):
+        super().__init__()
+
+        if relation_dim is None:
+            relation_dim = embedding_dim
+
+        # Core tensor
+        # Note: we use a different dimension permutation as in the official implementation to match the paper.
+        self.core_tensor = nn.Parameter(
+            torch.empty(embedding_dim, relation_dim, embedding_dim),
+            requires_grad=True,
+        )
+
+        # Dropout
+        self.input_dropout = nn.Dropout(dropout_0)
+        self.hidden_dropout_1 = nn.Dropout(dropout_1)
+        self.hidden_dropout_2 = nn.Dropout(dropout_2)
+
+        if apply_batch_normalization:
+            self.bn1 = nn.BatchNorm1d(embedding_dim)
+            self.bn2 = nn.BatchNorm1d(embedding_dim)
+        else:
+            self.bn1 = self.bn2 = None
+
+    def reset_parameters(self):
+        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
+        nn.init.uniform_(self.core_tensor, -1., 1.)
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        self._check_for_empty_kwargs(kwargs=kwargs)
+        return pykeen_functional.tucker_interaction(
+            h=h,
+            r=r,
+            t=t,
+            core_tensor=self.core_tensor,
+            do0=self.input_dropout,
+            do1=self.hidden_dropout_1,
+            do2=self.hidden_dropout_2,
+            bn1=self.bn1,
+            bn2=self.bn2,
+        )
