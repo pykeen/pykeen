@@ -12,7 +12,7 @@ from ...nn import Embedding
 from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, InteractionFunction
 
 __all__ = [
     'SimplE',
@@ -73,6 +73,7 @@ class SimplE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        interaction_function: Optional[InteractionFunction] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -83,7 +84,9 @@ class SimplE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        self.interaction_function = DistMultInteractionFunction()
+        if interaction_function is None:
+            interaction_function = DistMultInteractionFunction()
+        self.interaction_function = interaction_function
 
         # extra embeddings
         self.tail_entity_embeddings = Embedding.init_with_device(
