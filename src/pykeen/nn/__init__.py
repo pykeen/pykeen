@@ -9,4 +9,5 @@ __all__ = [
     'Embedding',
     'RepresentationModule',
     'init',
+    'functional',
 ]

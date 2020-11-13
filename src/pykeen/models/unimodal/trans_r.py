@@ -86,8 +86,6 @@ class TransR(EntityRelationEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        self.interaction_function = TransRInteractionFunction(p=scoring_fct_norm)
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -107,6 +105,7 @@ class TransR(EntityRelationEmbeddingModel):
             relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
+        self.interaction_function = TransRInteractionFunction(p=scoring_fct_norm)
 
         # TODO: Initialize from TransE
 

@@ -67,7 +67,6 @@ class TransE(EntityRelationEmbeddingModel):
 
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
-        self.interaction_function = TranslationalInteractionFunction(p=scoring_fct_norm)
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
@@ -83,6 +82,7 @@ class TransE(EntityRelationEmbeddingModel):
             ),
             entity_constrainer=functional.normalize,
         )
+        self.interaction_function = TranslationalInteractionFunction(p=scoring_fct_norm)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
