@@ -185,9 +185,7 @@ def distmult_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # TODO: check if einsum is still very slow.
-    h, h_term, r, r_term, t, t_term = _normalize_terms_for_einsum(h, r, t)
-    return torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', h, r, t)
+    return _extended_einsum("bhd,brd,btd->bhrt", h, r, t)
 
 
 def complex_interaction(
@@ -208,11 +206,9 @@ def complex_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    h, h_term, r, r_term, t, t_term = _normalize_terms_for_einsum(h, r, t)
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-    # TODO: check if einsum is still very slow.
     return sum(
-        torch.einsum(f'{h_term},{r_term},{t_term}->bhrt', hh, rr, tt)
+        _extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
         for hh, rr, tt in [
             (h_re, r_re, t_re),
             (h_re, r_im, t_im),
@@ -256,15 +252,11 @@ def convkb_interaction(
         The scores.
     """
     # bind sizes
-    batch_size = max(x.shape[0] for x in (h, r, t))
-    num_heads = h.shape[1]
-    num_relations = r.shape[1]
-    num_tails = t.shape[1]
+    num_heads, num_relations, num_tails, embedding_dim = _extract_sizes(h, r, t)[:4]
 
     # decompose convolution for faster computation in 1-n case
     num_filters = conv.weight.shape[0]
     assert conv.weight.shape == (num_filters, 1, 1, 3)
-    embedding_dim = h.shape[-1]
 
     # compute conv(stack(h, r, t))
     conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
@@ -281,7 +273,7 @@ def convkb_interaction(
     # Linear layer for final scores
     return linear(
         x.view(-1, embedding_dim * num_filters),
-    ).view(batch_size, num_heads, num_relations, num_tails)
+    ).view(-1, num_heads, num_relations, num_tails)
 
 
 def ermlp_interaction(
@@ -311,8 +303,8 @@ def ermlp_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails = [x.shape[1] for x in (h, r, t)]
-    hidden_dim, embedding_dim = hidden.weight.shape
+    num_heads, num_relations, num_tails, embedding_dim = _extract_sizes(h, r, t)[:4]
+    hidden_dim = hidden.weight.shape[0]
     assert embedding_dim % 3 == 0
     embedding_dim = embedding_dim // 3
     # split, shape: (embedding_dim, hidden_dim)
@@ -708,6 +700,7 @@ def _extended_einsum(
     *tensors,
 ) -> torch.FloatTensor:
     """Drop dimensions of size 1 to allow broadcasting."""
+    # TODO: check if einsum is still very slow.
     lhs, rhs = eq.split("->")
     mod_ops, mod_t = [], []
     for op, t in zip(lhs.split(","), tensors):
@@ -771,7 +764,7 @@ def ntn_interaction(
     """
     # TODO: check efficiency of einsum
     # save sizes
-    num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, b, t)]
+    num_heads, num_relations, num_tails = _extract_sizes(h, b, t)[:3]
     k = b.shape[-1]
     x = _extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
     x = x + _extended_einsum("brkd,bhd->bhk", vh, h).view(-1, num_heads, 1, 1, k)
