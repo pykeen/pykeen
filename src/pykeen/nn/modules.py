@@ -6,7 +6,7 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 import torch
 from torch import nn
 
-from . import functional as F
+from . import functional as F, functional as pykeen_functional
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
@@ -589,3 +589,47 @@ class ERMLPEInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs=kwargs)
         return F.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
+
+
+class TransDInteractionFunction(TranslationalInteractionFunction):
+    """The interaction function for TransD."""
+
+    def __init__(self, p: int = 2, power: int = 2):
+        """Initialize the TransD interaction function.
+
+        :param p: The norm applied by :func:`torch.norm`
+        :param power: The power applied after :func:`torch.norm`.
+        """
+        super().__init__(p=p)
+        self.power = power
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa:D102
+        return super().forward(h=h, r=r, t=t, **kwargs) ** self.power
+
+
+class TransRInteractionFunction(InteractionFunction):
+    """The TransR interaction function."""
+
+    def __init__(self, p: int):
+        """Initialize the TransR interaction function.
+
+        :param p: The norm applied to the translation
+        """
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:  # noqa:D102
+        m_r = kwargs.pop('m_r')
+        return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p)

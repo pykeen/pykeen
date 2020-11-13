@@ -10,9 +10,9 @@ import torch.autograd
 import torch.nn.init
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as pykeen_functional
+from ...nn import Embedding
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -20,7 +20,6 @@ from ...typing import DeviceHint
 from ...utils import clamp_norm, compose
 
 __all__ = [
-    'TransRInteractionFunction',
     'TransR',
 ]
 
@@ -33,28 +32,6 @@ def _projection_initializer(
 ) -> torch.FloatTensor:
     """Initialize by Glorot."""
     return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
-
-
-class TransRInteractionFunction(InteractionFunction):
-    """The TransR interaction function."""
-
-    def __init__(self, p: int):
-        """Initialize the TransR interaction function.
-
-        :param p: The norm applied to the translation
-        """
-        super().__init__()
-        self.p = p
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa:D102
-        m_r = kwargs.pop('m_r')
-        return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p)
 
 
 class TransR(EntityRelationEmbeddingModel):

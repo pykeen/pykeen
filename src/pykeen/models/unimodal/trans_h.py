@@ -7,9 +7,10 @@ from typing import Optional
 import torch
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel, TranslationalInteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding
+from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint

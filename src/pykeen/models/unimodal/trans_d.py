@@ -12,14 +12,13 @@ from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
-from ...nn.modules import InteractionFunction, TranslationalInteractionFunction
+from ...nn.modules import InteractionFunction, TransDInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
-    'TransDInteractionFunction',
     'TransDIndexFunction',
     'TransD',
 ]
@@ -70,28 +69,6 @@ def _project_entity(
     e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
     return e_bot
-
-
-class TransDInteractionFunction(TranslationalInteractionFunction):
-    """The interaction function for TransD."""
-
-    def __init__(self, p: int = 2, power: int = 2):
-        """Initialize the TransD interaction function.
-
-        :param p: The norm applied by :func:`torch.norm`
-        :param power: The power applied after :func:`torch.norm`.
-        """
-        super().__init__(p=p)
-        self.power = power
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return super().forward(h=h, r=r, t=t, **kwargs) ** self.power
 
 
 class TransDIndexFunction(IndexFunction):

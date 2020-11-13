@@ -7,9 +7,10 @@ from typing import Optional
 import torch.autograd
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel, TranslationalInteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
+from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
