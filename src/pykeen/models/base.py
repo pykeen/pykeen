@@ -1186,9 +1186,6 @@ class EntityRelationEmbeddingModel(Model, ABC):
         # Default for relation dimensionality
         if relation_dim is None:
             relation_dim = embedding_dim
-        if relation_embedding_specification is None:
-            relation_embedding_specification = embedding_specification
-
         self.relation_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim,
@@ -1330,15 +1327,11 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
         )
 
         # extra embeddings
-        if second_embedding_specification is None:
-            second_embedding_specification = embedding_specification
         self.second_entity_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             specification=second_embedding_specification,
         )
-        if second_relation_embedding_specification is None:
-            second_relation_embedding_specification = relation_embedding_specification
         self.second_relation_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
@@ -1386,18 +1379,10 @@ class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        embedding_specification: EmbeddingSpecification = None,
+        relation_embedding_specification: EmbeddingSpecification = None,
+        second_embedding_specification: EmbeddingSpecification = None,
+        second_relation_embedding_specification: EmbeddingSpecification = None,
     ):
         super().__init__(
             triples_factory=triples_factory,
@@ -1409,18 +1394,10 @@ class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=entity_initializer,
-            entity_initializer_kwargs=entity_initializer_kwargs,
-            entity_normalizer=entity_normalizer,
-            entity_normalizer_kwargs=entity_normalizer_kwargs,
-            entity_constrainer=entity_constrainer,
-            entity_constrainer_kwargs=entity_constrainer_kwargs,
-            relation_initializer=relation_initializer,
-            relation_initializer_kwargs=relation_initializer_kwargs,
-            relation_normalizer=relation_normalizer,
-            relation_normalizer_kwargs=relation_normalizer_kwargs,
-            relation_constrainer=relation_constrainer,
-            relation_constrainer_kwargs=relation_constrainer_kwargs,
+            embedding_specification=embedding_specification,
+            relation_embedding_specification=relation_embedding_specification,
+            second_embedding_specification=second_embedding_specification,
+            second_relation_embedding_specification=second_relation_embedding_specification,
         )
         self.interaction_function = interaction_function
 

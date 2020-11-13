@@ -8,6 +8,7 @@ from torch.nn import functional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer
@@ -75,10 +76,14 @@ class TransE(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            relation_initializer=compose(
-                xavier_uniform_,
-                functional.normalize,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+                constrainer=functional.normalize,
             ),
-            entity_constrainer=functional.normalize,
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=compose(
+                    xavier_uniform_,
+                    functional.normalize,
+                ),
+            ),
         )

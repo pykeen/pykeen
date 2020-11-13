@@ -6,19 +6,19 @@ from typing import Optional, Tuple, Union
 
 import torch.autograd
 
-from ..base import TwoSideModel
+from ..base import TwoSideEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint, InteractionFunction
+from ...typing import DeviceHint
 
 __all__ = [
     'SimplE',
 ]
 
 
-class SimplE(TwoSideModel):
+class SimplE(TwoSideEmbeddingModel):
     r"""An implementation of SimplE [kazemi2018]_.
 
     SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
@@ -72,7 +72,6 @@ class SimplE(TwoSideModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
-        interaction_function: Optional[InteractionFunction] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
