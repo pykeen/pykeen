@@ -904,3 +904,41 @@ def simple_interaction(
         min_, max_ = clamp
         scores = scores.clamp(min=min_, max=max_)
     return scores
+
+
+def structured_embedding_interaction(
+    h: torch.FloatTensor,
+    r_h: torch.FloatTensor,
+    r_t: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: int,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the Structured Embedding interaction function.
+
+    .. math ::
+        f(h, r, t) = \|R_h r - R_t t\|
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r_h: shape: (batch_size, num_relations, dim, rel_dim)
+        The relation-specific head projection.
+    :param r_t: shape: (batch_size, num_relations, dim, rel_dim)
+        The relation-specific tail projection.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return the powered norm.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm_of_sum(
+        _extended_einsum("brde,bhd->bhre", r_h, h).unsqueeze(dim=3),
+        -_extended_einsum("brde,btd->brte", r_t, t).unsqueeze(dim=1),
+        p=p,
+        power_norm=power_norm,
+    )

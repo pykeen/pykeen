@@ -698,3 +698,36 @@ class RESCALInteractionFunction(FunctionalInteractionFunction):
     """RESCAL interaction function."""
 
     interaction = pykeen_functional.rescal_interaction
+
+
+class StructuredEmbeddingInteractionFunction(InteractionFunction):
+    """Interaction function of Structured Embedding."""
+
+    def __init__(
+        self,
+        p: int,
+        power_norm: bool = False
+    ):
+        super().__init__()
+        self.p = p
+        self.power_norm = power_norm
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
+        dim = h.shape[-1]
+        rh, rt = r.split(dim, dim=-1)
+        rh = rh.view(rh.shape[:-1], dim, dim)
+        rt = rt.view(rt.shape[:-1], dim, dim)
+        return pykeen_functional.structured_embedding_interaction(
+            h=h,
+            r_h=rh,
+            r_t=rt,
+            t=t,
+            p=self.p,
+            power_norm=self.power_norm,
+        )
