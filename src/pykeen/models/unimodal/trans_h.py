@@ -87,6 +87,7 @@ class TransH(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
+        self.scoring_fct_norm = scoring_fct_norm
 
         # embeddings
         self.normal_vector_embeddings = Embedding.init_with_device(
@@ -116,29 +117,16 @@ class TransH(EntityRelationEmbeddingModel):
             self.relation_embeddings(indices=None),
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
-        d_r = self.relation_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        d_r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm).view(hrt_batch.shape[0], 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=hr_batch[:, 0])
-        d_r = self.relation_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=hr_batch[:, 1])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=None)
-        self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm).view(hr_batch.shape[0], self.num_entities)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=None)
-        d_r = self.relation_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
-        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=rt_batch[:, 0])
-        t = self.entity_embeddings.get_in_canonical_shape(indices=rt_batch[:, 1])
-        self.regularize_if_necessary()
-        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm).view(rt_batch.shape[0], self.num_entities)
+        return F.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm)
