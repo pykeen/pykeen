@@ -92,7 +92,6 @@ class RotatE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        self.interaction_function = RotatEInteraction()
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,
@@ -105,6 +104,7 @@ class RotatE(EntityRelationEmbeddingModel):
             relation_initializer=init_phases,
             relation_constrainer=complex_normalize,
         )
+        self.interaction_function = RotatEInteraction()
         self.real_embedding_dim = embedding_dim
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
