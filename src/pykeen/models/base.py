@@ -1329,12 +1329,12 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
         # extra embeddings
         self.second_entity_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
+            embedding_dim=self.embedding_dim,
             specification=second_embedding_specification,
         )
         self.second_relation_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=relation_dim,
+            embedding_dim=self.relation_dim,
             specification=second_relation_embedding_specification,
         )
 

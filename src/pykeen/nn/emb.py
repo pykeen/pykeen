@@ -136,6 +136,8 @@ class Embedding(RepresentationModule):
 
         :param num_embeddings:
             The number of embeddings.
+        :param embedding_dim:
+            The embedding dimension.
         :param specification:
             The specification.
         :param device:
