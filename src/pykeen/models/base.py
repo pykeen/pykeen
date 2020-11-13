@@ -956,7 +956,6 @@ class Model(nn.Module, ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
 
