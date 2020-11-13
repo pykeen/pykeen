@@ -10,7 +10,7 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as pykeen_functional
+from ...nn import Embedding, functional as pkf
 from ...nn.functional import KG2E_SIMILARITIES
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -149,7 +149,7 @@ class KG2E(EntityRelationEmbeddingModel):
         sigma_t = self.entity_covariances.get_in_canonical_shape(indices=t_indices)
 
         # Compute entity distribution
-        return pykeen_functional.kg2e_interaction(
+        return pkf.kg2e_interaction(
             h_mean=mu_h,
             h_var=sigma_h,
             r_mean=mu_r,

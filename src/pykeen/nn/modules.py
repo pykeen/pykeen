@@ -9,7 +9,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type
 import torch
 from torch import nn
 
-from . import functional as pykeen_functional
+from . import functional as pkf
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
@@ -280,11 +280,11 @@ class TranslationalInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pykeen_functional.translational_interaction(h=h, r=r, t=t, p=self.p)
+        return pkf.translational_interaction(h=h, r=r, t=t, p=self.p)
 
 
 #: Interaction function of ComplEx
-ComplExInteractionFunction = _build_module_from_stateless(pykeen_functional.complex_interaction)
+ComplExInteractionFunction = _build_module_from_stateless(pkf.complex_interaction)
 
 
 def _calculate_missing_shape_information(
@@ -428,7 +428,7 @@ class ConvEInteractionFunction(InteractionFunction):
             raise TypeError(f"{self.__class__.__name__}.forward expects keyword argument 't_bias'.")
         t_bias: torch.FloatTensor = kwargs.pop("t_bias")
         self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.conve_interaction(
+        return pkf.conve_interaction(
             h=h,
             r=r,
             t=t,
@@ -486,7 +486,7 @@ class ConvKBInteractionFunction(InteractionFunction):
         t: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        return pykeen_functional.convkb_interaction(
+        return pkf.convkb_interaction(
             h=h,
             r=r,
             t=t,
@@ -498,7 +498,7 @@ class ConvKBInteractionFunction(InteractionFunction):
 
 
 #: Interaction function for HolE
-DistMultInteractionFunction = _build_module_from_stateless(pykeen_functional.distmult_interaction)
+DistMultInteractionFunction = _build_module_from_stateless(pkf.distmult_interaction)
 
 
 class ERMLPInteractionFunction(InteractionFunction):
@@ -539,7 +539,7 @@ class ERMLPInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.ermlp_interaction(
+        return pkf.ermlp_interaction(
             h=h,
             r=r,
             t=t,
@@ -591,7 +591,7 @@ class ERMLPEInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pykeen_functional.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
+        return pkf.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
 
 
 class TransDInteractionFunction(TranslationalInteractionFunction):
@@ -636,14 +636,14 @@ class TransRInteractionFunction(InteractionFunction):
     ) -> torch.FloatTensor:  # noqa:D102
         m_r = kwargs.pop('m_r')
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pykeen_functional.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=True)
+        return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=True)
 
 
 #: Interaction function of RotatE.
-RotatEInteraction = _build_module_from_stateless(pykeen_functional.rotate_interaction)
+RotatEInteraction = _build_module_from_stateless(pkf.rotate_interaction)
 
 #: Interaction function for HolE.
-HolEInteractionFunction = _build_module_from_stateless(pykeen_functional.hole_interaction)
+HolEInteractionFunction = _build_module_from_stateless(pkf.hole_interaction)
 
 
 class ProjEInteractionFunction(InteractionFunction):
@@ -688,13 +688,13 @@ class ProjEInteractionFunction(InteractionFunction):
         self._check_for_empty_kwargs(kwargs=kwargs)
 
         # Compute score
-        return pykeen_functional.proje_interaction(
+        return pkf.proje_interaction(
             h=h, r=r, t=t,
             d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity,
         ).view(-1, 1)
 
 
-RESCALInteractionFunction = _build_module_from_stateless(pykeen_functional.rescal_interaction)
+RESCALInteractionFunction = _build_module_from_stateless(pkf.rescal_interaction)
 
 
 class StructuredEmbeddingInteractionFunction(InteractionFunction):
@@ -725,7 +725,7 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
         rh, rt = r.split(dim ** 2, dim=-1)
         rh = rh.view(*rh.shape[:-1], dim, dim)
         rt = rt.view(*rt.shape[:-1], dim, dim)
-        return pykeen_functional.structured_embedding_interaction(
+        return pkf.structured_embedding_interaction(
             h=h,
             r_h=rh,
             r_t=rt,
@@ -791,7 +791,7 @@ class TuckerInteractionFunction(InteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pykeen_functional.tucker_interaction(
+        return pkf.tucker_interaction(
             h=h,
             r=r,
             t=t,
