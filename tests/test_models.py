@@ -669,10 +669,13 @@ class _TestKG2E(_ModelTestCase):
         * Entity and relation embeddings have to have at most unit L2 norm.
         * Covariances have to have values between c_min and c_max
         """
+        low = self.model.entity_covariances.constrainer.keywords['min']
+        high = self.model.entity_covariances.constrainer.keywords['max']
+
         for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
         for cov in (self.model.entity_covariances, self.model.relation_covariances):
-            assert all_in_bounds(cov(indices=None), low=self.model.c_min, high=self.model.c_max)
+            assert all_in_bounds(cov(indices=None), low=low, high=high)
 
 
 class TestKG2EWithKL(_TestKG2E, unittest.TestCase):
