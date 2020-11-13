@@ -743,7 +743,7 @@ def kg2e_interaction(
         The scores.
     """
     if similarity not in KG2E_SIMILARITIES:
-        raise ValueError(similarity)
+        raise KeyError(similarity)
     similarity = _KG2E_SIMILARITIES[similarity]
     # Compute entity distribution
     e_mean = h_mean.unsqueeze(dim=2) - t_mean.unsqueeze(dim=1)
