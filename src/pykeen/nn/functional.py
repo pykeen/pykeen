@@ -798,3 +798,51 @@ def ntn_interaction(
     x = activation(x)
     x = _extended_einsum("bhrtk,brk->bhrt", x, u)
     return x
+
+
+def proje_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    d_e: torch.FloatTensor,
+    d_r: torch.FloatTensor,
+    b_c: torch.FloatTensor,
+    b_p: torch.FloatTensor,
+    activation: nn.Module,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the ProjE interaction function.
+
+    .. math::
+
+        f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
+
+    :param h: shape: (batch_size, num_heads, dim)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, dim)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, dim)
+        The tail representations.
+    :param d_e: shape: (dim,)
+        Global entity projection.
+    :param d_r: shape: (dim,)
+        Global relation projection.
+    :param b_c: shape: (dim,)
+        Global combination bias.
+    :param b_p: shape: (1,)
+        Final score bias
+    :param activation:
+        The activation function.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    num_heads, num_relations, num_tails, dim = _extract_sizes(h, r, t)[:4]
+    # global projections
+    h = h * d_e.view(1, 1, dim)
+    r = r * d_r.view(1, 1, dim)
+    # combination, shape: (b, h, r, d)
+    x = h.unsqueeze(dim=2) + r.unsqueeze(dim=1) + b_c.view(1, 1, 1, dim)
+    x = activation(x)
+    # dot product with t, shape: (b, h, r, t)
+    return (x @ t.unsqueeze(dim=1).transpose(-2, -1)) + b_p

@@ -11,6 +11,7 @@ from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import functional as F
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -104,39 +105,9 @@ class ProjE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
+        h = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings.get_in_canonical_shape(indices=hrt_batch[:, 2])
 
         # Compute score
-        hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
-        scores = torch.sum(hidden * t, dim=-1, keepdim=True) + self.b_p
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
-
-        # Rank against all entities
-        hidden = self.inner_non_linearity(self.d_e[None, :] * h + self.d_r[None, :] * r + self.b_c[None, :])
-        scores = torch.sum(hidden[:, None, :] * t[None, :, :], dim=-1) + self.b_p
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
-
-        # Rank against all entities
-        hidden = self.inner_non_linearity(
-            self.d_e[None, None, :] * h[None, :, :]
-            + (self.d_r[None, None, :] * r[:, None, :] + self.b_c[None, None, :]),
-        )
-        scores = torch.sum(hidden * t[:, None, :], dim=-1) + self.b_p
-
-        return scores
+        return F.proje_interaction(h=h, r=r, t=t, d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity).view(-1, 1)
