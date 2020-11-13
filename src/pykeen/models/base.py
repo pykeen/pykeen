@@ -1109,6 +1109,7 @@ class EntityEmbeddingModel(Model):
         return self.entity_embeddings.embedding_dim
 
     def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
         self.entity_embeddings.reset_parameters()
 
     def post_parameter_update(self) -> None:  # noqa: D102
@@ -1201,6 +1202,7 @@ class EntityRelationEmbeddingModel(Model):
         return self.relation_embeddings.embedding_dim
 
     def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
 
