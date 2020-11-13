@@ -6,7 +6,8 @@ from typing import Optional
 
 import torch.autograd
 
-from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
+from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ...nn.modules import InteractionFunction
 from ...losses import Loss
 from ...nn.functional import hole_interaction
 from ...nn.init import xavier_uniform_

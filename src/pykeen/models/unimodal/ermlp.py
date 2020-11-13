@@ -4,79 +4,16 @@
 
 from typing import Optional
 
-import torch
-from torch import nn
-
-from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
+from ..base import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import functional as pykeen_functional
+from ...nn.modules import ERMLPInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
 __all__ = [
     'ERMLP',
-    'ERMLPInteractionFunction',
 ]
-
-
-class ERMLPInteractionFunction(InteractionFunction):
-    """
-    Interaction function of ER-MLP.
-
-    .. math ::
-        f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
-    """
-
-    def __init__(
-        self,
-        embedding_dim: int,
-        hidden_dim: int,
-    ):
-        """
-        Initialize the interaction function.
-
-        :param embedding_dim:
-            The embedding vector dimension.
-        :param hidden_dim:
-            The hidden dimension of the MLP.
-        """
-        super().__init__()
-        """The multi-layer perceptron consisting of an input layer with 3 * self.embedding_dim neurons, a  hidden layer
-           with self.embedding_dim neurons and output layer with one neuron.
-           The input is represented by the concatenation embeddings of the heads, relations and tail embeddings.
-        """
-        self.hidden = nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True)
-        self.activation = nn.ReLU()
-        self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.ermlp_interaction(
-            h=h,
-            r=r,
-            t=t,
-            hidden=self.hidden,
-            activation=self.activation,
-            final=self.hidden_to_score,
-        )
-
-    def reset_parameters(self):  # noqa: D102
-        # Initialize biases with zero
-        nn.init.zeros_(self.hidden.bias)
-        nn.init.zeros_(self.hidden_to_score.bias)
-        # In the original formulation,
-        nn.init.xavier_uniform_(self.hidden.weight)
-        nn.init.xavier_uniform_(
-            self.hidden_to_score.weight,
-            gain=nn.init.calculate_gain(self.activation.__class__.__name__.lower()),
-        )
 
 
 class ERMLP(SimpleVectorEntityRelationEmbeddingModel):

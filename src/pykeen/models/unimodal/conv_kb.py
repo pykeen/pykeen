@@ -6,11 +6,10 @@ import logging
 from typing import Optional
 
 import torch.autograd
-from torch import nn
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import functional as pykeen_functional
+from ...nn.modules import ConvKBInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -20,54 +19,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class ConvKBInteractionFunction(InteractionFunction):
-    """Interaction function of ConvKB."""
-
-    def __init__(
-        self,
-        hidden_dropout_rate: float = 0.,
-        embedding_dim: int = 200,
-        num_filters: int = 400,
-    ):
-        super().__init__()
-        self.embedding_dim = embedding_dim
-        self.num_filters = num_filters
-
-        # The interaction model
-        self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
-        self.activation = nn.ReLU()
-        self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
-        self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
-
-    def reset_parameters(self):  # noqa: D102
-        # Use Xavier initialization for weight; bias to zero
-        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
-        nn.init.zeros_(self.linear.bias)
-
-        # Initialize all filters to [0.1, 0.1, -0.1],
-        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
-        nn.init.constant_(self.conv.weight[..., :2], 0.1)
-        nn.init.constant_(self.conv.weight[..., 2], -0.1)
-        nn.init.zeros_(self.conv.bias)
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return pykeen_functional.convkb_interaction(
-            h=h,
-            r=r,
-            t=t,
-            conv=self.conv,
-            activation=self.activation,
-            hidden_dropout=self.hidden_dropout,
-            linear=self.linear,
-        )
 
 
 class ConvKB(EntityRelationEmbeddingModel):

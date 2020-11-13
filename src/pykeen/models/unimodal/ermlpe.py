@@ -5,11 +5,10 @@
 from typing import Optional, Type
 
 import torch
-from torch import nn
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import functional as pykeen_functional
+from ...nn.modules import ERMLPEInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -17,40 +16,6 @@ from ...typing import DeviceHint
 __all__ = [
     'ERMLPE',
 ]
-
-
-class ERMLPEInteractionFunction(InteractionFunction):
-    """Interaction function of ER-MLP."""
-
-    def __init__(
-        self,
-        hidden_dim: int = 300,
-        input_dropout: float = 0.2,
-        hidden_dropout: float = 0.3,
-        embedding_dim: int = 200,
-    ):
-        super().__init__()
-        self.mlp = nn.Sequential(
-            nn.Dropout(input_dropout),
-            nn.Linear(2 * embedding_dim, hidden_dim),
-            nn.Dropout(hidden_dropout),
-            nn.BatchNorm1d(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, embedding_dim),
-            nn.Dropout(hidden_dropout),
-            nn.BatchNorm1d(embedding_dim),
-            nn.ReLU(),
-        )
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs=kwargs)
-        return pykeen_functional.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
 
 
 class ERMLPE(EntityRelationEmbeddingModel):

@@ -2,7 +2,7 @@
 
 """PyKEEN internal "nn" module."""
 
-from . import init
+from . import functional, init
 from .emb import Embedding, RepresentationModule
 
 __all__ = [

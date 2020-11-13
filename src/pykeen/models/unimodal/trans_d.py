@@ -8,7 +8,8 @@ import torch
 import torch.autograd
 
 from .. import Model
-from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction, InteractionFunction
+from ..base import GeneralVectorEntityRelationEmbeddingModel, IndexFunction
+from ...nn.modules import InteractionFunction
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_

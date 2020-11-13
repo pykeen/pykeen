@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of ConvE."""
-
 import logging
-import math
-from typing import Optional, Tuple, Type
+from typing import Optional, Type
 
 import torch
 from torch import nn
 
-from ..base import EntityRelationEmbeddingModel, InteractionFunction
+from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import Embedding, functional as pykeen_functional
+from ...nn import Embedding
 from ...nn.init import xavier_normal_
+from ...nn.modules import ConvEInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -22,168 +21,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _calculate_missing_shape_information(
-    embedding_dim: int,
-    input_channels: Optional[int] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-) -> Tuple[int, int, int]:
-    """
-    Automatically calculates missing dimensions for ConvE.
-
-    :param embedding_dim:
-    :param input_channels:
-    :param width:
-    :param height:
-
-    :return: (input_channels, width, height), such that
-            `embedding_dim = input_channels * width * height`
-    :raises:
-        If no factorization could be found.
-    """
-    # Store initial input for error message
-    original = (input_channels, width, height)
-
-    # All are None
-    if all(factor is None for factor in [input_channels, width, height]):
-        input_channels = 1
-        result_sqrt = math.floor(math.sqrt(embedding_dim))
-        height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
-        width = embedding_dim // height
-
-    # input_channels is None, and any of height or width is None -> set input_channels=1
-    if input_channels is None and any(remaining is None for remaining in [width, height]):
-        input_channels = 1
-
-    # input channels is not None, and one of height or width is None
-    assert len([factor for factor in [input_channels, width, height] if factor is None]) <= 1
-    if width is None:
-        width = embedding_dim // (height * input_channels)
-    if height is None:
-        height = embedding_dim // (width * input_channels)
-    if input_channels is None:
-        input_channels = embedding_dim // (width * height)
-    assert not any(factor is None for factor in [input_channels, width, height])
-
-    if input_channels * width * height != embedding_dim:
-        raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
-
-    return input_channels, width, height
-
-
-class ConvEInteractionFunction(InteractionFunction):
-    """ConvE interaction function."""
-
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
-    bn0: Optional[torch.nn.BatchNorm2d]
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
-    bn1: Optional[torch.nn.BatchNorm2d]
-    bn2: Optional[torch.nn.BatchNorm2d]
-
-    def __init__(
-        self,
-        input_channels: Optional[int] = None,
-        output_channels: int = 32,
-        embedding_height: Optional[int] = None,
-        embedding_width: Optional[int] = None,
-        kernel_height: int = 3,
-        kernel_width: int = 3,
-        input_dropout: float = 0.2,
-        output_dropout: float = 0.3,
-        feature_map_dropout: float = 0.2,
-        embedding_dim: int = 200,
-        apply_batch_normalization: bool = True,
-    ):
-        super().__init__()
-
-        # Automatic calculation of remaining dimensions
-        logger.info(f'Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
-        if embedding_dim is None:
-            embedding_dim = input_channels * embedding_width * embedding_height
-
-        # Parameter need to fulfil:
-        #   input_channels * embedding_height * embedding_width = embedding_dim
-        input_channels, embedding_width, embedding_height = _calculate_missing_shape_information(
-            embedding_dim=embedding_dim,
-            input_channels=input_channels,
-            width=embedding_width,
-            height=embedding_height,
-        )
-        logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
-        self.embedding_dim = embedding_dim
-        self.embedding_height = embedding_height
-        self.embedding_width = embedding_width
-        self.input_channels = input_channels
-
-        if self.input_channels * self.embedding_height * self.embedding_width != self.embedding_dim:
-            raise ValueError(
-                f'Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width '
-                f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})',
-            )
-
-        self.inp_drop = nn.Dropout(input_dropout)
-        self.hidden_drop = nn.Dropout(output_dropout)
-        self.feature_map_drop = nn.Dropout2d(feature_map_dropout)
-
-        self.conv1 = torch.nn.Conv2d(
-            in_channels=self.input_channels,
-            out_channels=output_channels,
-            kernel_size=(kernel_height, kernel_width),
-            stride=1,
-            padding=0,
-            bias=True,
-        )
-
-        self.apply_batch_normalization = apply_batch_normalization
-        if self.apply_batch_normalization:
-            self.bn0 = nn.BatchNorm2d(self.input_channels)
-            self.bn1 = nn.BatchNorm2d(output_channels)
-            self.bn2 = nn.BatchNorm1d(self.embedding_dim)
-        else:
-            self.bn0 = None
-            self.bn1 = None
-            self.bn2 = None
-        self.num_in_features = (
-            output_channels
-            * (2 * self.embedding_height - kernel_height + 1)
-            * (self.embedding_width - kernel_width + 1)
-        )
-        self.fc = nn.Linear(self.num_in_features, self.embedding_dim)
-        self.activation = nn.ReLU()
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # get tail bias term
-        if "t_bias" not in kwargs:
-            raise TypeError(f"{self.__class__.__name__}.forward expects keyword argument 't_bias'.")
-        t_bias: torch.FloatTensor = kwargs.pop("t_bias")
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.conve_interaction(
-            h=h,
-            r=r,
-            t=t,
-            t_bias=t_bias,
-            input_channels=self.input_channels,
-            embedding_height=self.embedding_height,
-            embedding_width=self.embedding_width,
-            num_in_features=self.num_in_features,
-            bn0=self.bn0,
-            bn1=self.bn1,
-            bn2=self.bn2,
-            inp_drop=self.inp_drop,
-            feature_map_drop=self.feature_map_drop,
-            hidden_drop=self.hidden_drop,
-            conv1=self.conv1,
-            activation=self.activation,
-            fc=self.fc,
-        )
 
 
 class ConvE(EntityRelationEmbeddingModel):

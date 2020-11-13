@@ -4,34 +4,18 @@
 
 from typing import Optional
 
-import torch
 import torch.nn as nn
 
-from ..base import InteractionFunction, SimpleVectorEntityRelationEmbeddingModel
+from ..base import SimpleVectorEntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
-from ...nn import functional as pykeen_functional
+from ...nn.modules import ComplExInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
 __all__ = [
     'ComplEx',
-    'ComplExInteractionFunction',
 ]
-
-
-class ComplExInteractionFunction(InteractionFunction):
-    """Interaction function of ComplEx."""
-
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
-        return pykeen_functional.complex_interaction(h=h, r=r, t=t)
 
 
 class ComplEx(SimpleVectorEntityRelationEmbeddingModel):
