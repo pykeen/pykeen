@@ -703,7 +703,7 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
     def __init__(
         self,
         p: int,
-        power_norm: bool = False
+        power_norm: bool = False,
     ):
         """Initialize the SE interaction function.
 
@@ -720,7 +720,7 @@ class StructuredEmbeddingInteractionFunction(InteractionFunction):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         dim = h.shape[-1]
         rh, rt = r.split(dim ** 2, dim=-1)
         rh = rh.view(*rh.shape[:-1], dim, dim)
@@ -747,6 +747,15 @@ class TuckerInteractionFunction(InteractionFunction):
         dropout_2: float = 0.5,
         apply_batch_normalization: bool = True,
     ):
+        """Initialize the Tucker interaction function.
+
+        :param embedding_dim:
+        :param relation_dim:
+        :param dropout_0:
+        :param dropout_1:
+        :param dropout_2:
+        :param apply_batch_normalization:
+        """
         super().__init__()
 
         if relation_dim is None:
