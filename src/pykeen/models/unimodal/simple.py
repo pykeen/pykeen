@@ -6,9 +6,8 @@ from typing import Optional, Tuple, Union
 
 import torch.autograd
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import TwoSideERModel
 from ...losses import Loss, SoftplusLoss
-from ...nn import Embedding
 from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -19,7 +18,7 @@ __all__ = [
 ]
 
 
-class SimplE(EntityRelationEmbeddingModel):
+class SimplE(TwoSideERModel):
     r"""An implementation of SimplE [kazemi2018]_.
 
     SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
@@ -77,6 +76,7 @@ class SimplE(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=DistMultInteractionFunction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
@@ -84,22 +84,6 @@ class SimplE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
         )
-        if interaction_function is None:
-            interaction_function = DistMultInteractionFunction()
-        self.interaction_function = interaction_function
-
-        # extra embeddings
-        self.tail_entity_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
-            device=self.device,
-        )
-        self.inverse_relation_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
-            device=self.device,
-        )
-
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp = clamp_score
@@ -110,16 +94,10 @@ class SimplE(EntityRelationEmbeddingModel):
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
-        scores = 0.5 * sum(
-            self.interaction_function(
-                h_source.get_in_canonical_shape(indices=h_indices),
-                r_source.get_in_canonical_shape(indices=r_indices),
-                t_source.get_in_canonical_shape(indices=t_indices)
-            )
-            for h_source, r_source, t_source in (
-                (self.entity_embeddings, self.relation_embeddings, self.tail_entity_embeddings),
-                (self.tail_entity_embeddings, self.inverse_relation_embeddings, self.entity_embeddings),
-            )
+        scores = super().forward(
+            h_indices=h_indices,
+            r_indices=r_indices,
+            t_indices=t_indices,
         )
 
         # Note: In the code in their repository, the score is clamped to [-20, 20].

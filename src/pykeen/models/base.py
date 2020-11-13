@@ -1250,6 +1250,7 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         relation_dim: Optional[int] = None,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -1292,6 +1293,7 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
             relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
@@ -1331,3 +1333,87 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
         t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
         return self.interaction_function(h=h, r=r, t=t)
+
+
+class TwoSideERModel(EntityRelationEmbeddingModel):
+    """A model with two sets of entity and relation embeddings."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction,
+        embedding_dim: int = 50,
+        relation_dim: Optional[int] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Optional[Initializer] = None,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_normalizer: Optional[Normalizer] = None,
+        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer: Optional[Constrainer] = None,
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        super().__init__(
+            triples_factory=triples_factory,
+            embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            entity_initializer=entity_initializer,
+            entity_initializer_kwargs=entity_initializer_kwargs,
+            entity_normalizer=entity_normalizer,
+            entity_normalizer_kwargs=entity_normalizer_kwargs,
+            entity_constrainer=entity_constrainer,
+            entity_constrainer_kwargs=entity_constrainer_kwargs,
+            relation_initializer=relation_initializer,
+            relation_initializer_kwargs=relation_initializer_kwargs,
+            relation_normalizer=relation_normalizer,
+            relation_normalizer_kwargs=relation_normalizer_kwargs,
+            relation_constrainer=relation_constrainer,
+            relation_constrainer_kwargs=relation_constrainer_kwargs,
+        )
+        self.interaction_function = interaction_function
+
+        # extra embeddings
+        self.reverse_entity_embeddings = Embedding.init_with_device(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
+        self.reverse_relation_embeddings = Embedding.init_with_device(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=embedding_dim,
+            device=self.device,
+        )
+
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        return 0.5 * sum(
+            self.interaction_function(
+                h_source.get_in_canonical_shape(indices=h_indices),
+                r_source.get_in_canonical_shape(indices=r_indices),
+                t_source.get_in_canonical_shape(indices=t_indices)
+            )
+            for h_source, r_source, t_source in (
+                (self.entity_embeddings, self.relation_embeddings, self.reverse_entity_embeddings),
+                (self.reverse_entity_embeddings, self.reverse_relation_embeddings, self.entity_embeddings),
+            )
+        )
