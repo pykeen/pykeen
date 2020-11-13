@@ -979,3 +979,73 @@ def transh_interaction(
         p=p,
         power_norm=power_norm,
     )
+
+
+def _apply_optional_bn_to_tensor(
+    batch_norm: Optional[nn.BatchNorm1d],
+    output_dropout: nn.Dropout,
+    tensor: torch.FloatTensor,
+) -> torch.FloatTensor:
+    if batch_norm is not None:
+        shape = tensor.shape
+        tensor = tensor.view(-1, shape[-1])
+        tensor = batch_norm(tensor)
+        tensor = tensor.view(*shape)
+    tensor = output_dropout(tensor)
+    return tensor
+
+
+def tucker_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    core_tensor: torch.FloatTensor,
+    do1: nn.Dropout,
+    do0: nn.Dropout,
+    do2: nn.Dropout,
+    bn1: Optional[nn.BatchNorm1d],
+    bn2: Optional[nn.BatchNorm1d],
+) -> torch.FloatTensor:
+    """
+    Evaluate the TuckEr interaction function.
+
+    Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
+
+        DO(BN(DO(BN(h)) x_1 DO(W x_2 r))) x_3 t
+
+    where BN denotes BatchNorm and DO denotes Dropout
+
+    :param h: shape: (batch_size, num_heads, d_e)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, d_r)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, d_e)
+        The tail representations.
+    :param core_tensor: shape: (d_e, d_r, d_e)
+        The core tensor.
+    :param do1:
+        The dropout layer for the head representations.
+    :param do0:
+        The first hidden dropout.
+    :param do2:
+        The second hidden dropout.
+    :param bn1:
+        The first batch normalization layer.
+    :param bn2:
+        The second batch normalization layer.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # Compute wr = DO(W x_2 r)
+    x = do0(_extended_einsum("ijd,brd->brij", core_tensor, r))
+
+    # Compute h_n = DO(BN(h))
+    h = _apply_optional_bn_to_tensor(batch_norm=bn1, output_dropout=do1, tensor=h)
+
+    # compute whr = DO(BN(h_n x_1 wr))
+    x = _extended_einsum("brid,bhd->bhri", h, x)
+    x = _apply_optional_bn_to_tensor(batch_norm=bn2, tensor=x, output_dropout=do2)
+
+    # Compute whr x_3 t
+    return _extended_einsum("bhrd,btd->bhrt", x, t)

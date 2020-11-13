@@ -10,6 +10,7 @@ from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import functional as F
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -18,17 +19,6 @@ from ...typing import DeviceHint
 __all__ = [
     'TuckER',
 ]
-
-
-def _apply_bn_to_tensor(
-    batch_norm: nn.BatchNorm1d,
-    tensor: torch.FloatTensor,
-) -> torch.FloatTensor:
-    shape = tensor.shape
-    tensor = tensor.view(-1, shape[-1])
-    tensor = batch_norm(tensor)
-    tensor = tensor.view(*shape)
-    return tensor
 
 
 class TuckER(EntityRelationEmbeddingModel):
@@ -136,84 +126,13 @@ class TuckER(EntityRelationEmbeddingModel):
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
 
-    def _scoring_function(
+    def forward(
         self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:
-        """
-        Evaluate the scoring function.
-
-        Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
-
-            DO(BN(DO(BN(h)) x_1 DO(W x_2 r))) x_3 t
-
-        where BN denotes BatchNorm and DO denotes Dropout
-
-        :param h: shape: (batch_size, 1, embedding_dim) or (1, num_entities, embedding_dim)
-        :param r: shape: (batch_size, relation_dim)
-        :param t: shape: (1, num_entities, embedding_dim) or (batch_size, 1, embedding_dim)
-        :return: shape: (batch_size, num_entities) or (batch_size, 1)
-        """
-        # Abbreviation
-        w = self.core_tensor
-        d_e = self.embedding_dim
-        d_r = self.relation_dim
-
-        # Compute h_n = DO(BN(h))
-        if self.apply_batch_normalization:
-            h = _apply_bn_to_tensor(batch_norm=self.bn_0, tensor=h)
-
-        h = self.input_dropout(h)
-
-        # Compute wr = DO(W x_2 r)
-        w = w.view(1, d_e, d_r, d_e)
-        r = r.view(-1, 1, 1, d_r)
-        wr = r @ w
-        wr = self.hidden_dropout_1(wr)
-
-        # compute whr = DO(BN(h_n x_1 wr))
-        wr = wr.view(-1, d_e, d_e)
-        whr = (h @ wr)
-        if self.apply_batch_normalization:
-            whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
-        whr = self.hidden_dropout_2(whr)
-
-        # Compute whr x_3 t
-        scores = torch.sum(whr * t, dim=-1)
-
-        return scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(1)
-
-        # Compute scores
-        scores = self._scoring_function(h=h, r=r, t=t)
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(1)
-        r = self.relation_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None).unsqueeze(0)
-
-        # Compute scores
-        scores = self._scoring_function(h=h, r=r, t=t)
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(indices=None).unsqueeze(0)
-        r = self.relation_embeddings(indices=rt_batch[:, 0])
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(1)
-
-        # Compute scores
-        scores = self._scoring_function(h=h, r=r, t=t)
-
-        return scores
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        return F.tucker_interaction(h=h, r=r, t=t)
