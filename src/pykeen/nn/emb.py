@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """Embedding modules."""
-import dataclasses
+
 import functools
 from typing import Any, Mapping, Optional, Sequence
 
-import numpy
 import torch
 import torch.nn
 from torch import nn
@@ -43,19 +42,6 @@ class RepresentationModule(nn.Module):
         """Apply constraints which should not be included in gradients."""
 
 
-@dataclasses.dataclass
-class EmbeddingSpecification:
-    shape: Sequence[int]
-    initializer: Initializer
-    constrainer: Optional[Constrainer] = None
-    normalizer: Optional[Normalizer] = None
-    # regularizer: Optional[Regularizer]
-    initializer_kwargs: Optional[Mapping[str, Any]] = None
-    normalizer_kwargs: Optional[Mapping[str, Any]] = None
-    constrainer_kwargs: Optional[Mapping[str, Any]] = None
-    # regularizer_kwargs: Optional[Mapping[str, Any]] = None
-
-
 class Embedding(RepresentationModule):
     """Trainable embeddings.
 
@@ -66,8 +52,7 @@ class Embedding(RepresentationModule):
     def __init__(
         self,
         num_embeddings: int,
-        embedding_dim: Optional[int],
-        shape: Optional[Sequence[int]] = None,
+        embedding_dim: int,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -114,30 +99,9 @@ class Embedding(RepresentationModule):
             self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
         else:
             self.normalizer = normalizer
-        if shape is not None:
-            embedding_dim = numpy.prod(shape)
-        self.shape = shape
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
-        )
-
-    @classmethod
-    def from_specification(
-        cls,
-        num: int,
-        specification: EmbeddingSpecification,
-    ) -> "Embedding":
-        return Embedding(
-            num_embeddings=num,
-            embedding_dim=None,
-            shape=specification.shape,
-            initializer=specification.initializer,
-            initializer_kwargs=specification.initializer_kwargs,
-            normalizer=specification.normalizer,
-            normalizer_kwargs=specification.normalizer_kwargs,
-            constrainer=specification.constrainer,
-            constrainer_kwargs=specification.constrainer_kwargs,
         )
 
     @classmethod
@@ -186,12 +150,6 @@ class Embedding(RepresentationModule):
     def embedding_dim(self) -> int:  # noqa: D401
         """The representation dimension."""
         return self._embeddings.embedding_dim
-
-    @property
-    def shape(self) -> Sequence[int]:
-        if self.shape is None:
-            raise AssertionError
-        return self.shape
 
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
