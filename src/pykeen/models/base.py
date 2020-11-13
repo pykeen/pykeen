@@ -1334,7 +1334,7 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
         )
         self.second_relation_embeddings = Embedding.from_specification(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
+            embedding_dim=relation_dim,
             specification=second_relation_embedding_specification,
         )
 

@@ -38,8 +38,8 @@ from pykeen.models.unimodal.rgcn import (
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
-from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import Embedding, RepresentationModule
+from pykeen.nn.functional import _project_entity
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
@@ -974,12 +974,10 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         e_p = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
 
         # random relation embeddings & projections
-        r = torch.rand(self.batch_size, 1, self.model.relation_dim, generator=self.generator)
-        r = clamp_norm(r, maxnorm=1, p=2, dim=-1)
         r_p = torch.rand(self.batch_size, 1, self.model.relation_dim, generator=self.generator)
 
         # project
-        e_bot = _project_entity(e=e, e_p=e_p, r=r, r_p=r_p)
+        e_bot = _project_entity(e=e, e_p=e_p, r_p=r_p)
 
         # check shape:
         assert e_bot.shape == (self.batch_size, self.model.num_entities, self.model.relation_dim)

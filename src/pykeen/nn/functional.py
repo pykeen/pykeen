@@ -1075,3 +1075,98 @@ def unstructured_model_interaction(
     h = h.unsqueeze(dim=2).unsqueeze(dim=3)
     t = t.unsqueeze(dim=1).unsqueeze(dim=2)
     return negative_norm_of_sum(h, -t, p=p, power_norm=power_norm)
+
+
+def _project_entity(
+    e: torch.FloatTensor,
+    e_p: torch.FloatTensor,
+    r_p: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Project entity relation-specific.
+
+    .. math::
+
+        e_{\bot} = M_{re} e
+                 = (r_p e_p^T + I^{d_r \times d_e}) e
+                 = r_p e_p^T e + I^{d_r \times d_e} e
+                 = r_p (e_p^T e) + e'
+
+    and additionally enforces
+
+    .. math::
+
+        \|e_{\bot}\|_2 \leq 1
+
+    :param e: shape: (..., d_e)
+        The entity embedding.
+    :param e_p: shape: (..., d_e)
+        The entity projection.
+    :param r_p: shape: (..., d_r)
+        The relation projection.
+
+    :return: shape: (..., d_r)
+
+    """
+    # The dimensions affected by e'
+    change_dim = min(e.shape[-1], r_p.shape[-1])
+
+    # Project entities
+    # r_p (e_p.T e) + e'
+    e_bot = r_p * torch.sum(e_p * e, dim=-1, keepdim=True)
+    e_bot[..., :change_dim] += e[..., :change_dim]
+
+    # Enforce constraints
+    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
+
+    return e_bot
+
+
+def transd_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    h_p: torch.FloatTensor,
+    r_p: torch.FloatTensor,
+    t_p: torch.FloatTensor,
+    p: int,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """
+    Evaluate the DistMult interaction function.
+
+    :param h: shape: (batch_size, num_heads, d_e)
+        The head representations.
+    :param r: shape: (batch_size, num_relations, d_r)
+        The relation representations.
+    :param t: shape: (batch_size, num_tails, d_e)
+        The tail representations.
+    :param h_p: shape: (batch_size, num_heads, d_e)
+        The head projections.
+    :param r_p: shape: (batch_size, num_relations, d_r)
+        The relation projections.
+    :param t_p: shape: (batch_size, num_tails, d_e)
+        The tail projections.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # Project entities
+    # shape: (b, h, r, 1, d_r)
+    h_bot = _project_entity(
+        e=h.unsqueeze(dim=2),
+        e_p=h_p.unsqueeze(dim=2),
+        r_p=r_p.unsqueeze(dim=1),
+    ).unsqueeze(dim=-2)
+    # shape: (b, 1, r, t, d_r)
+    t_bot = _project_entity(
+        e=t.unsqueeze(dim=1),
+        e_p=t_p.unsqueeze(dim=1),
+        r_p=r_p.unsqueeze(dim=2)
+    ).unsqueeze(dim=1)
+    return _translational_interaction(
+        h=h_bot,
+        r=r.view(r.shape[0], 1, r.shape[1], 1, r.shape[2]),
+        t=t_bot,
+        p=p,
+        power_norm=power_norm,
+    )

@@ -4,14 +4,13 @@
 
 from typing import Optional
 
-import torch
 import torch.autograd
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
+from ...nn import functional as F
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...nn.modules import TranslationalInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -20,53 +19,6 @@ from ...utils import clamp_norm
 __all__ = [
     'TransD',
 ]
-
-
-def _project_entity(
-    e: torch.FloatTensor,
-    e_p: torch.FloatTensor,
-    r: torch.FloatTensor,
-    r_p: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Project entity relation-specific.
-
-    .. math::
-
-        e_{\bot} = M_{re} e
-                 = (r_p e_p^T + I^{d_r \times d_e}) e
-                 = r_p e_p^T e + I^{d_r \times d_e} e
-                 = r_p (e_p^T e) + e'
-
-    and additionally enforces
-
-    .. math::
-
-        \|e_{\bot}\|_2 \leq 1
-
-    :param e: shape: (batch_size, num_entities, d_e)
-        The entity embedding.
-    :param e_p: shape: (batch_size, num_entities, d_e)
-        The entity projection.
-    :param r: shape: (batch_size, num_entities, d_r)
-        The relation embedding.
-    :param r_p: shape: (batch_size, num_entities, d_r)
-        The relation projection.
-
-    :return: shape: (batch_size, num_entities, d_r)
-
-    """
-    # The dimensions affected by e'
-    change_dim = min(e.shape[-1], r.shape[-1])
-
-    # Project entities
-    # r_p (e_p.T e) + e'
-    e_bot = r_p * torch.sum(e_p * e, dim=-1, keepdim=True)
-    e_bot[:, :, :change_dim] += e[:, :, :change_dim]
-
-    # Enforce constraints
-    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
-
-    return e_bot
 
 
 class TransD(TwoVectorEmbeddingModel):
@@ -138,7 +90,6 @@ class TransD(TwoVectorEmbeddingModel):
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
         )
-        self.interaction_function = TranslationalInteractionFunction(p=2, power_norm=True)
 
     def _forward(
         self,
@@ -149,7 +100,4 @@ class TransD(TwoVectorEmbeddingModel):
         t1: torch.FloatTensor,
         t2: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa:D102
-        # Project entities
-        h_bot = _project_entity(e=h1, e_p=h2, r=r1, r_p=r2)
-        t_bot = _project_entity(e=t1, e_p=t2, r=r1, r_p=r2)
-        return self.interaction_function(h=h_bot, r=r1, t=t_bot)
+        return F.transd_interaction(h=h1, r=r1, t=t1, h_p=h2, r_p=r2, t_p=t2, p=2, power_norm=True)
