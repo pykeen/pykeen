@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from .. import SimpleVectorEntityRelationEmbeddingModel
+from .. import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_
 from ...nn.modules import TuckerInteractionFunction
@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-class TuckER(SimpleVectorEntityRelationEmbeddingModel):
+class TuckER(SingleVectorEmbeddingModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
     TuckER is a linear model that is based on the tensor factorization method Tucker in which a three-mode tensor

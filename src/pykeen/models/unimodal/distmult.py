@@ -7,7 +7,7 @@ from typing import Optional
 from torch import nn
 from torch.nn import functional
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class DistMult(SimpleVectorEntityRelationEmbeddingModel):
+class DistMult(SingleVectorEmbeddingModel):
     r"""An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.

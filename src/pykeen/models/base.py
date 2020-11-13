@@ -28,7 +28,7 @@ __all__ = [
     'Model',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
-    'SimpleVectorEntityRelationEmbeddingModel',
+    'SingleVectorEmbeddingModel',
     'MultimodalModel',
 ]
 
@@ -1239,7 +1239,7 @@ class MultimodalModel(EntityRelationEmbeddingModel):
     """A multimodal KGE model."""
 
 
-class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
+class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
     """A base class for embedding models which store a single vector for each entity and relation."""
 
     def __init__(
@@ -1335,13 +1335,12 @@ class SimpleVectorEntityRelationEmbeddingModel(EntityRelationEmbeddingModel):
         return self.interaction_function(h=h, r=r, t=t)
 
 
-class TwoSideERModel(EntityRelationEmbeddingModel):
-    """A model with two sets of entity and relation embeddings."""
+class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
+    """A model with two vectors for each entity and relation."""
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction,
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
@@ -1386,19 +1385,97 @@ class TwoSideERModel(EntityRelationEmbeddingModel):
             relation_constrainer=relation_constrainer,
             relation_constrainer_kwargs=relation_constrainer_kwargs,
         )
-        self.interaction_function = interaction_function
 
         # extra embeddings
-        self.reverse_entity_embeddings = Embedding.init_with_device(
+        self.second_entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
         )
-        self.reverse_relation_embeddings = Embedding.init_with_device(
+        self.second_relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
         )
+
+    def _forward(
+        self,
+        h1: torch.FloatTensor,
+        h2: torch.FloatTensor,
+        r1: torch.FloatTensor,
+        r2: torch.FloatTensor,
+        t1: torch.FloatTensor,
+        t2: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        raise NotImplementedError
+
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h1 = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        h2 = self.second_entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r1 = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        r2 = self.second_relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t1 = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        t2 = self.second_entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        return self._forward(h1, h2, r1, r2, t1, t2)
+
+
+class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
+    """A model which averages scores for forward and backward model."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction,
+        embedding_dim: int = 50,
+        relation_dim: Optional[int] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Optional[Initializer] = None,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_normalizer: Optional[Normalizer] = None,
+        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer: Optional[Constrainer] = None,
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        super().__init__(
+            triples_factory=triples_factory,
+            embedding_dim=embedding_dim,
+            relation_dim=relation_dim,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            entity_initializer=entity_initializer,
+            entity_initializer_kwargs=entity_initializer_kwargs,
+            entity_normalizer=entity_normalizer,
+            entity_normalizer_kwargs=entity_normalizer_kwargs,
+            entity_constrainer=entity_constrainer,
+            entity_constrainer_kwargs=entity_constrainer_kwargs,
+            relation_initializer=relation_initializer,
+            relation_initializer_kwargs=relation_initializer_kwargs,
+            relation_normalizer=relation_normalizer,
+            relation_normalizer_kwargs=relation_normalizer_kwargs,
+            relation_constrainer=relation_constrainer,
+            relation_constrainer_kwargs=relation_constrainer_kwargs,
+        )
+        self.interaction_function = interaction_function
 
     def forward(
         self,
@@ -1413,7 +1490,7 @@ class TwoSideERModel(EntityRelationEmbeddingModel):
                 t_source.get_in_canonical_shape(indices=t_indices)
             )
             for h_source, r_source, t_source in (
-                (self.entity_embeddings, self.relation_embeddings, self.reverse_entity_embeddings),
-                (self.reverse_entity_embeddings, self.reverse_relation_embeddings, self.entity_embeddings),
+                (self.entity_embeddings, self.relation_embeddings, self.second_entity_embeddings),
+                (self.second_entity_embeddings, self.second_relation_embeddings, self.entity_embeddings),
             )
         )

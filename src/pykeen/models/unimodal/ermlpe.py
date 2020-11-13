@@ -4,7 +4,7 @@
 
 from typing import Optional, Type
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.modules import ERMLPEInteractionFunction
 from ...regularizers import Regularizer
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class ERMLPE(SimpleVectorEntityRelationEmbeddingModel):
+class ERMLPE(SingleVectorEmbeddingModel):
     r"""An extension of ERMLP proposed by [sharifzadeh2019]_.
 
     This model uses a neural network-based approach similar to ERMLP and with slight modifications.

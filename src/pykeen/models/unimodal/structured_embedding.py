@@ -9,7 +9,7 @@ import numpy as np
 from torch import nn
 from torch.nn import functional
 
-from .. import SimpleVectorEntityRelationEmbeddingModel
+from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import StructuredEmbeddingInteractionFunction
@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 
-class StructuredEmbedding(SimpleVectorEntityRelationEmbeddingModel):
+class StructuredEmbedding(SingleVectorEmbeddingModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 
     SE applies role- and relation-specific projection matrices

@@ -7,9 +7,8 @@ from typing import Optional
 import torch
 import torch.autograd
 
-from .. import EntityRelationEmbeddingModel
+from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -68,7 +67,7 @@ def _project_entity(
     return e_bot
 
 
-class TransD(EntityRelationEmbeddingModel):
+class TransD(TwoVectorEmbeddingModel):
     r"""An implementation of TransD from [ji2015]_.
 
     TransD is an extension of :class:`pykeen.models.TransR` that, like TransR, considers entities and relations
@@ -133,34 +132,17 @@ class TransD(EntityRelationEmbeddingModel):
             relation_constrainer=clamp_norm,
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
-        self.entity_projections = Embedding(
-            num_embeddings=self.num_entities,
-            embedding_dim=self.embedding_dim,
-            initializer=xavier_normal_,
-        )
-        self.relation_projections = Embedding(
-            num_embeddings=self.num_relations,
-            embedding_dim=self.relation_dim,
-            initializer=xavier_normal_,
-        )
 
-    def forward(
+    def _forward(
         self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+        h1: torch.FloatTensor,
+        h2: torch.FloatTensor,
+        r1: torch.FloatTensor,
+        r2: torch.FloatTensor,
+        t1: torch.FloatTensor,
+        t2: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa:D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
-
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        r_p = self.relation_projections.get_in_canonical_shape(indices=r_indices)
-
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        t_p = self.entity_projections.get_in_canonical_shape(indices=t_indices)
-
         # Project entities
-        h_bot = _project_entity(e=h, e_p=h_p, r=r, r_p=r_p)
-        t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
-
-        return self.interaction_function(h=h_bot, r=r, t=t_bot)
+        h_bot = _project_entity(e=h1, e_p=h2, r=r1, r_p=r2)
+        t_bot = _project_entity(e=t1, e_p=t2, r=r1, r_p=r2)
+        return self.interaction_function(h=h_bot, r=r1, t=t_bot)

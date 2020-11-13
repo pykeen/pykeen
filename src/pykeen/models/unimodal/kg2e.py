@@ -8,7 +8,7 @@ from typing import Optional
 import torch
 import torch.autograd
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding, functional as pkf
 from ...nn.functional import KG2E_SIMILARITIES
@@ -24,7 +24,7 @@ __all__ = [
 _LOG_2_PI = math.log(2. * math.pi)
 
 
-class KG2E(EntityRelationEmbeddingModel):
+class KG2E(TwoVectorEmbeddingModel):
     r"""An implementation of KG2E from [he2015]_.
 
     KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
@@ -116,44 +116,21 @@ class KG2E(EntityRelationEmbeddingModel):
             constrainer_kwargs=dict(min=c_min, max=c_max),
         )
 
-    def post_parameter_update(self) -> None:  # noqa: D102
-        super().post_parameter_update()
-        for cov in (
-            self.entity_covariances,
-            self.relation_covariances,
-        ):
-            cov.post_parameter_update()
-
-    def forward(
+    def _forward(
         self,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
+        h1: torch.FloatTensor,
+        h2: torch.FloatTensor,
+        r1: torch.FloatTensor,
+        r2: torch.FloatTensor,
+        t1: torch.FloatTensor,
+        t2: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """
-        Compute scores for NTN.
-
-        :param h_indices: shape: (batch_size,)
-        :param r_indices: shape: (batch_size,)
-        :param t_indices: shape: (batch_size,)
-
-        :return: shape: (batch_size, num_entities)
-        """
-        # Get embeddings
-        mu_h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        mu_r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        mu_t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-
-        sigma_h = self.entity_covariances.get_in_canonical_shape(indices=h_indices)
-        sigma_r = self.relation_covariances.get_in_canonical_shape(indices=r_indices)
-        sigma_t = self.entity_covariances.get_in_canonical_shape(indices=t_indices)
-
         # Compute entity distribution
         return pkf.kg2e_interaction(
-            h_mean=mu_h,
-            h_var=sigma_h,
-            r_mean=mu_r,
-            r_var=sigma_r,
-            t_mean=mu_t,
-            t_var=sigma_t,
+            h_mean=h1,
+            h_var=h2,
+            r_mean=r1,
+            r_var=r2,
+            t_mean=t1,
+            t_var=t2,
         )

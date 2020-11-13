@@ -6,7 +6,7 @@ from typing import Optional
 
 import torch.nn as nn
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import ComplExInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class ComplEx(SimpleVectorEntityRelationEmbeddingModel):
+class ComplEx(SingleVectorEmbeddingModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 
     ComplEx is an extension of :class:`pykeen.models.DistMult` that uses complex valued representations for the

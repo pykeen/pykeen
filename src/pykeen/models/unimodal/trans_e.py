@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch.nn import functional
 
-from .. import SimpleVectorEntityRelationEmbeddingModel
+from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TranslationalInteractionFunction
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class TransE(SimpleVectorEntityRelationEmbeddingModel):
+class TransE(SingleVectorEmbeddingModel):
     r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}` [bordes2013]_.
 
     .. math::

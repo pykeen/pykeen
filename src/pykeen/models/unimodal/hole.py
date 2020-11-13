@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import HolEInteractionFunction
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class HolE(SimpleVectorEntityRelationEmbeddingModel):
+class HolE(SingleVectorEmbeddingModel):
     r"""An implementation of HolE [nickel2016]_.
 
     Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between

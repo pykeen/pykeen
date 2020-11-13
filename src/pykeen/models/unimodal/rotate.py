@@ -9,7 +9,7 @@ import torch
 import torch.autograd
 from torch.nn import functional
 
-from .. import SimpleVectorEntityRelationEmbeddingModel
+from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import RotatEInteraction
@@ -52,7 +52,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
-class RotatE(SimpleVectorEntityRelationEmbeddingModel):
+class RotatE(SingleVectorEmbeddingModel):
     r"""An implementation of RotatE from [sun2019]_.
 
     RotatE models relations as rotations from head to tail entities in complex space:

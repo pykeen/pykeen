@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch import nn
 
-from .. import SimpleVectorEntityRelationEmbeddingModel
+from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...nn.modules import ProjEInteractionFunction
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class ProjE(SimpleVectorEntityRelationEmbeddingModel):
+class ProjE(SingleVectorEmbeddingModel):
     r"""An implementation of ProjE from [shi2017]_.
 
     ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model

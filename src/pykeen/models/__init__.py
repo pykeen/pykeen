@@ -10,7 +10,7 @@ from typing import Mapping, Set, Type, Union
 
 from .base import (  # noqa:F401
     EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
-    MultimodalModel, SimpleVectorEntityRelationEmbeddingModel,
+    MultimodalModel, SingleVectorEmbeddingModel,
 )
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
@@ -67,7 +67,7 @@ __all__ = [
 ]
 
 _CONCRETE_BASES = {
-    SimpleVectorEntityRelationEmbeddingModel,
+    SingleVectorEmbeddingModel,
 }
 
 

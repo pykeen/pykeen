@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union
 
 import torch.autograd
 
-from ..base import TwoSideERModel
+from ..base import TwoSideModel
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import DistMultInteractionFunction
 from ...regularizers import PowerSumRegularizer, Regularizer
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class SimplE(TwoSideERModel):
+class SimplE(TwoSideModel):
     r"""An implementation of SimplE [kazemi2018]_.
 
     SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity

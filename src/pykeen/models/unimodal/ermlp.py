@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import ERMLPInteractionFunction
 from ...regularizers import Regularizer
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class ERMLP(SimpleVectorEntityRelationEmbeddingModel):
+class ERMLP(SingleVectorEmbeddingModel):
     r"""An implementation of ERMLP from [dong2014]_.
 
     ERMLP is a multi-layer perceptron based approach that uses a single hidden layer and represents entities and

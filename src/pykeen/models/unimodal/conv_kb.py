@@ -5,7 +5,7 @@
 import logging
 from typing import Optional
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import ConvKBInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
@@ -19,7 +19,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(SimpleVectorEntityRelationEmbeddingModel):
+class ConvKB(SingleVectorEmbeddingModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
     ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.

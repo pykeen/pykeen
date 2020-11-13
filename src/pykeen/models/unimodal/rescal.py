@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from ..base import SimpleVectorEntityRelationEmbeddingModel
+from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import RESCALInteractionFunction
 from ...regularizers import LpRegularizer, Regularizer
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class RESCAL(SimpleVectorEntityRelationEmbeddingModel):
+class RESCAL(SingleVectorEmbeddingModel):
     r"""An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
