@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Functional forms of interaction methods."""
+
 import math
 from typing import NamedTuple, Optional, SupportsFloat, Tuple, Union
 
@@ -465,7 +466,7 @@ def negative_norm_of_sum(
     :param p:
         The p for the norm. cf. torch.norm.
     :param power_norm:
-        Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
@@ -501,7 +502,7 @@ def _translational_interaction(
     :param p:
         The p for the norm. cf. torch.norm.
     :param power_norm:
-        Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
@@ -516,7 +517,7 @@ def translational_interaction(
     p: Union[int, str] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
-    """
+    r"""
     Evaluate a translational distance interaction function.
 
     :param h: shape: (batch_size, num_heads, dim)
@@ -528,7 +529,7 @@ def translational_interaction(
     :param p:
         The p for the norm. cf. torch.norm.
     :param power_norm:
-        Whether to return |x-y|_p^p, cf. https://github.com/pytorch/pytorch/issues/28119
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
