@@ -1211,7 +1211,7 @@ class MultimodalModel(EntityRelationEmbeddingModel):
     """A multimodal KGE model."""
 
 
-class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
+class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
     """A base class for embedding models which store a single vector for each entity and relation."""
 
     def __init__(
@@ -1287,7 +1287,7 @@ class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
         return self.interaction_function(h=h, r=r, t=t)
 
 
-class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
+class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
     """A model with two vectors for each entity and relation."""
 
     def __init__(
