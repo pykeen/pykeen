@@ -382,6 +382,8 @@ def _calculate_missing_shape_information(
 class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
     """ConvE interaction function."""
 
+    tail_entity_shape = ("d", "k")  # with k=1
+
     def __init__(
         self,
         input_channels: Optional[int] = None,
