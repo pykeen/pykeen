@@ -10,6 +10,7 @@ from torch import nn
 from ..base import EntityEmbeddingModel
 from ...losses import Loss
 from ...nn import Embedding, functional as pkf
+from ...nn.modules import NTNInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -102,10 +103,7 @@ class NTN(EntityEmbeddingModel):
             num_embeddings=triples_factory.num_relations,
             embedding_dim=num_slices * embedding_dim,
         )
-
-        if non_linearity is None:
-            non_linearity = nn.Tanh()
-        self.non_linearity = non_linearity
+        self.interaction = NTNInteractionFunction(non_linearity=non_linearity)
 
     def forward(
         self,
@@ -136,7 +134,7 @@ class NTN(EntityEmbeddingModel):
         vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
 
         if slice_size is None:
-            return pkf.ntn_interaction(
+            return self.interaction(
                 h=h_all, t=t_all,
                 w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
             )
