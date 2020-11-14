@@ -71,12 +71,9 @@ class NTN(Model):
         :param non_linearity: A non-linear activation function. Defaults to the hyperbolic
          tangent :class:`torch.nn.Tanh`.
         """
-        self.embedding_dim = embedding_dim
-        self.num_slices = num_slices
-
         w = Embedding(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim ** 2,
+            shape=(num_slices, embedding_dim, embedding_dim)
         )
         b = Embedding(
             num_embeddings=triples_factory.num_relations,
@@ -88,11 +85,11 @@ class NTN(Model):
         )
         vh = Embedding(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim,
+            shape=(num_slices, embedding_dim),
         )
         vt = Embedding(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim,
+            shape=(num_slices, embedding_dim),
         )
         super().__init__(
             triples_factory=triples_factory,

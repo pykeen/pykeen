@@ -91,7 +91,7 @@ class Embedding(RepresentationModule):
     def __init__(
         self,
         num_embeddings: int,
-        embedding_dim: int,
+        embedding_dim: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -124,6 +124,8 @@ class Embedding(RepresentationModule):
             Additional keyword arguments passed to the constrainer
         """
         super().__init__()
+        if shape is None and embedding_dim is None:
+            raise ValueError
         if shape is not None:
             embedding_dim = numpy.prod(shape)
         else:
