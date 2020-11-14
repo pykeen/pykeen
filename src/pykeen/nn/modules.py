@@ -5,7 +5,7 @@
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar
 
 import torch
 from torch import nn
@@ -22,11 +22,18 @@ RelationRepresentation = TypeVar("RelationRepresentation", torch.FloatTensor, Se
 class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepresentation]):
     """Base class for interaction functions."""
 
+    # Dimensions
     BATCH_DIM: int = 0
     NUM_DIM: int = 1
     HEAD_DIM: int = 1
     RELATION_DIM: int = 2
     TAIL_DIM: int = 3
+
+    #: The symbolic shapes for entity representations
+    entity_shape: Sequence[str]
+
+    #: The symbolic shapes for relation representations
+    relation_shape: Sequence[str]
 
     def forward(
         self,
