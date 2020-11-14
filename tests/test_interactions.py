@@ -40,16 +40,21 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
     num_relations: int = 5
     num_entities: int = 7
 
+    shape_kwargs = dict()
+
     def _get_hrt(
         self,
         *shapes: Tuple[int, ...],
-        **kwargs
     ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:
-        kwargs.setdefault("d", self.dim)
-        return tuple(
-            torch.rand(*s, *(kwargs.get(ss) for ss in ms), requires_grad=True)
+        self.shape_kwargs.setdefault("d", self.dim)
+        result = tuple(
+            tuple(
+                torch.rand(*s, *(self.shape_kwargs[sss] for sss in mss), requires_grad=True)
+                for mss in ms
+            )
             for s, ms in zip(shapes, [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape])
         )
+        return [x[0] if len(x) == 1 else x for x in result]
 
     def _check_scores(self, scores: torch.FloatTensor, exp_shape: Tuple[int, ...]):
         """Check shape, dtype and gradients of scores."""
@@ -220,24 +225,9 @@ class NTNTests(InteractionTests, unittest.TestCase):
     cls = pykeen.nn.modules.NTNInteractionFunction
 
     num_slices: int = 2
-
-    def _get_hrt(
-        self,
-        *shapes: Tuple[int, ...],
-    ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:
-        h, r, t = super()._get_hrt(*shapes)
-        r_shape = r.shape[:-1]
-        r = [
-            torch.rand(*r_shape, *shape)
-            for shape in [
-                (self.num_slices, self.dim, self.dim),
-                (self.num_slices,),
-                (self.num_slices,),
-                (self.num_slices, self.dim),
-                (self.num_slices, self.dim),
-            ]
-        ]
-        return h, r, t
+    shape_kwargs = dict(
+        k=2,
+    )
 
 
 class TransETests(InteractionTests, unittest.TestCase):
