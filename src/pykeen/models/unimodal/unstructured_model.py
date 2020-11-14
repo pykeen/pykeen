@@ -4,8 +4,6 @@
 
 from typing import Optional
 
-import torch.autograd
-
 from .. import Model
 from ...losses import Loss
 from ...nn import Embedding
@@ -77,25 +75,3 @@ class UnstructuredModel(Model):
                 initializer=xavier_normal_,
             ),
         )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        scores = super(UnstructuredModel, self).forward(
-            h_indices=h_indices,
-            r_indices=r_indices,
-            t_indices=t_indices,
-        )
-        # TODO: move this logic to superclass
-        # same score for all relations
-        repeats = [1, 1, 1, 1]
-        if r_indices is None:
-            repeats[2] = self.num_relations
-        else:
-            relation_batch_size = len(r_indices)
-            if scores.shape[0] < relation_batch_size:
-                repeats[0] = relation_batch_size
-        return scores.repeat(*repeats)

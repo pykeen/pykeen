@@ -316,9 +316,9 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         self.automatic_memory_optimization = automatic_memory_optimization
 
         # normalization
-        if not isinstance(entity_representations, Sequence):
+        if entity_representations is not None and not isinstance(entity_representations, Sequence):
             entity_representations = [entity_representations]
-        if not isinstance(relation_representations, Sequence):
+        if relation_representations is not None and not isinstance(relation_representations, Sequence):
             relation_representations = [relation_representations]
         # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
         self.entity_representations = nn.ModuleList(entity_representations)
@@ -1025,7 +1025,20 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         ]
         # normalization
         h, r, t = [x[0] if len(x) == 1 else x for x in (h, r, t)]
-        return self.interaction_function(h=h, r=r, t=t)
+
+        scores = self.interaction_function(h=h, r=r, t=t)
+        if len(self.relation_representations) == 0:
+            # same score for all relations
+            repeats = [1, 1, 1, 1]
+            if r_indices is None:
+                repeats[2] = self.num_relations
+            else:
+                relation_batch_size = len(r_indices)
+                if scores.shape[0] < relation_batch_size:
+                    repeats[0] = relation_batch_size
+            scores = scores.repeat(*repeats)
+
+        return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
