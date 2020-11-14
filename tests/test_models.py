@@ -29,7 +29,9 @@ from pykeen.models.base import (
     Model,
     MultimodalModel,
     SingleVectorEmbeddingModel,
-    TwoVectorEmbeddingModel, _extend_batch,
+    TwoSideEmbeddingModel,
+    TwoVectorEmbeddingModel,
+    _extend_batch,
     get_novelty_mask,
 )
 from pykeen.models.cli import build_cli_from_cls
@@ -51,6 +53,8 @@ SKIP_MODULES = {
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
     SingleVectorEmbeddingModel.__name__,
+    TwoVectorEmbeddingModel.__name__,
+    TwoSideEmbeddingModel.__name__,
     'MockModel',
     'models',
     'get_model_cls',
