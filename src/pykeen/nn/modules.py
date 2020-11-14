@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Tuple[Sequence[Representation], ...]:
-    return c
+    return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
 
 
 class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
