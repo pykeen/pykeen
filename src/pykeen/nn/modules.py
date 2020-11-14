@@ -5,20 +5,17 @@ import itertools
 import logging
 import math
 from abc import ABC
-from typing import Callable, Generic, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Callable, Generic, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import nn
 
 from . import functional as pkf
 from .functional import KG2E_SIMILARITIES
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
-
-HeadRepresentation = TypeVar("HeadRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
-RelationRepresentation = TypeVar("RelationRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
-TailRepresentation = TypeVar("TailRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
 
 
 class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
