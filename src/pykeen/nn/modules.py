@@ -624,14 +624,14 @@ class TransRInteractionFunction(TranslationalInteractionFunction[torch.FloatTens
         return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=self.power_norm)
 
 
-class RotatEInteraction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class RotatEInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function of RotatE."""
 
     def __init__(self):
         super().__init__(f=pkf.rotate_interaction)
 
 
-class HolEInteraction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class HolEInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function for HolE."""
 
     def __init__(self):
