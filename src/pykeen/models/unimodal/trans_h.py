@@ -4,13 +4,13 @@
 
 from typing import Optional
 
-import torch
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from .. import Model
 from ...losses import Loss
-from ...nn import Embedding, functional as pkf
+from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
+from ...nn.modules import TransHInteractionFunction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class TransH(EntityRelationEmbeddingModel):
+class TransH(Model):
     r"""An implementation of TransH [wang2014]_.
 
     This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
@@ -70,6 +70,7 @@ class TransH(EntityRelationEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 2,
         loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -79,47 +80,37 @@ class TransH(EntityRelationEmbeddingModel):
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
         """
+        embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
+            interaction_function=TransHInteractionFunction(
+                p=scoring_fct_norm,
+                power_norm=False,
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-        )
-        self.scoring_fct_norm = scoring_fct_norm
-
-        # embeddings
-        self.normal_vector_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
-            specification=EmbeddingSpecification(
-                # Normalise the normal vectors by their l2 norms
-                constrainer=functional.normalize,
+            predict_with_sigmoid=predict_with_sigmoid,
+            entity_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+                specification=None,
             ),
+            relation_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=embedding_dim,
+                    specification=None,
+                ),
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=embedding_dim,
+                    specification=EmbeddingSpecification(
+                        # Normalise the normal vectors by their l2 norms
+                        constrainer=functional.normalize,
+                    ),
+                ),
+            ],
         )
-
-    def regularize_if_necessary(self) -> None:
-        """Update the regularizer's term given some tensors, if regularization is requested."""
-        # As described in [wang2014], all entities and relations are used to compute the regularization term
-        # which enforces the defined soft constraints.
-        super().regularize_if_necessary(
-            self.entity_embeddings(indices=None),
-            self.normal_vector_embeddings(indices=None),  # FIXME
-            self.relation_embeddings(indices=None),
-        )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        d_r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        w_r = self.normal_vector_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        self.regularize_if_necessary()
-        return pkf.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm)

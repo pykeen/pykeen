@@ -910,3 +910,22 @@ class KG2EInteractionFunction(
             similarity=self.similarity,
             exact=self.exact,
         )
+
+
+class TransHInteractionFunction(
+    TranslationalInteractionFunction[
+        torch.FloatTensor,
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        torch.FloatTensor,
+    ]
+):
+    """Interaction function of TransH."""
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        w_r, d_r = r
+        return pkf.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm)
