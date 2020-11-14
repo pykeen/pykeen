@@ -272,6 +272,8 @@ class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, Relat
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
+        # normalization
+        h, r, t = [(x,) if torch.is_tensor(x) else x for x in (h, r, t)]
         return self.f(*h, *r, *t)
 
 
