@@ -817,7 +817,7 @@ def rescal_interaction(
 
     :param h: shape: (batch_size, num_heads, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim ** 2)
+    :param r: shape: (batch_size, num_relations, dim, dim)
         The relation representations.
     :param t: shape: (batch_size, num_tails, dim)
         The tail representations.
@@ -825,7 +825,7 @@ def rescal_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _extended_einsum("bhd,brde,bte->bhrt", h, r.view(*r.shape[:-1], h.shape[-1], h.shape[-1]), t)
+    return _extended_einsum("bhd,brde,bte->bhrt", h, r, t)
 
 
 def rotate_interaction(

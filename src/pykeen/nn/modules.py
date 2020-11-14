@@ -18,6 +18,10 @@ from ..utils import check_shapes
 logger = logging.getLogger(__name__)
 
 
+def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Tuple[Sequence[Representation], ...]:
+    return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
+
+
 class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Base class for interaction functions."""
 
@@ -29,11 +33,11 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
     TAIL_DIM: int = 3
 
     #: The symbolic shapes for entity representations
-    entity_shape: Union[str, Sequence[str]] = "d"
-    tail_entity_shape: Union[None, str, Sequence[str]] = None
+    entity_shape: Tuple[str, ...] = ("d",)
+    tail_entity_shape: Union[None, Tuple[str, ...]] = None
 
     #: The symbolic shapes for relation representations
-    relation_shape: Union[str, Sequence[str]] = "d"
+    relation_shape: Tuple[str, ...] = ("d",)
 
     def forward(
         self,
@@ -67,9 +71,9 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
             The tensor with batch dimension.
         """
         out = [xx.unsqueeze(dim=dim) for xx in x]
-        if len(x) > 1:
-            return out
-        return out[0]
+        if len(x) == 1:
+            return out[0]
+        return out
 
     @staticmethod
     def _remove_dim(x: torch.FloatTensor, *dims: int) -> torch.FloatTensor:
@@ -132,9 +136,6 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
             ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape)),
         ), raise_or_error=raise_on_error)
 
-    def _ensure_tuple(self, *x: Union[Representation, Sequence[Representation]]) -> Tuple[Sequence[Representation], ...]:
-        return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
-
     def score_hrt(
         self,
         h: HeadRepresentation = tuple(),
@@ -154,7 +155,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, 1)
             The scores.
         """
-        h, r, t = self._ensure_tuple(h, r, t)
+        h, r, t = _ensure_tuple(h, r, t)
         assert self._check_shapes(h=h, r=r, t=t)
 
         # prepare input to generic score function
@@ -187,7 +188,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        h, r, t = self._ensure_tuple(all_entities, r, t)
+        h, r, t = _ensure_tuple(all_entities, r, t)
         assert self._check_shapes(h=h, r=r, t=t, h_prefix="n")
 
         # prepare input to generic score function
@@ -220,7 +221,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        h, r, t = self._ensure_tuple(h, all_relations, t)
+        h, r, t = _ensure_tuple(h, all_relations, t)
         assert self._check_shapes(h=h, r=r, t=t, r_prefix="n")
 
         # prepare input to generic score function
@@ -253,7 +254,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        h, r, t = self._ensure_tuple(h, r, all_entities)
+        h, r, t = _ensure_tuple(h, r, all_entities)
         assert self._check_shapes(h=h, r=r, t=t, t_prefix="n")
 
         # prepare input to generic score function
@@ -290,7 +291,7 @@ class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, Relat
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
         # normalization
-        h, r, t = [(x,) if torch.is_tensor(x) else x for x in (h, r, t)]
+        h, r, t = _ensure_tuple(h, r, t)
         return self.f(*h, *r, *t)
 
 
@@ -706,7 +707,7 @@ class ProjEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
 class RESCALInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function of RESCAL."""
 
-    relation_shape = "dd"
+    relation_shape = ("dd",)
 
     def __init__(self):
         super().__init__(f=pkf.rescal_interaction)
@@ -715,7 +716,7 @@ class RESCALInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, 
 class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]):
     """Interaction function of Structured Embedding."""
 
-    relation_shape = "dd"
+    relation_shape = ("dd", "dd")
 
     def forward(
         self,
@@ -874,6 +875,9 @@ class KG2EInteractionFunction(
     ]
 ):
     """Interaction function of KG2E."""
+
+    entity_shape = ("d", "d")
+    relation_shape = ("d", "d")
 
     def __init__(
         self,
