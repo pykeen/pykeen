@@ -17,6 +17,27 @@ from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "ComplExInteractionFunction",
+    "ConvEInteractionFunction",
+    "ConvKBInteractionFunction",
+    "DistMultInteractionFunction",
+    "ERMLPInteractionFunction",
+    "ERMLPEInteractionFunction",
+    "HolEInteractionFunction",
+    "InteractionFunction",
+    "KG2EInteractionFunction",
+    "NTNInteractionFunction",
+    "ProjEInteractionFunction",
+    "RESCALInteractionFunction",
+    "RotatEInteractionFunction",
+    "StructuredEmbeddingInteractionFunction",
+    "TransDInteractionFunction",
+    "TransEInteractionFunction",
+    "TransHInteractionFunction",
+    "TransRInteractionFunction",
+]
+
 
 def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Tuple[Sequence[Representation], ...]:
     return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
