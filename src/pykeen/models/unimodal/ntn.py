@@ -133,4 +133,4 @@ class NTN(EntityEmbeddingModel):
         vh = self.vh.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
         vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
 
-        return self.interaction(h=h, t=t, r=(w, b, u, vh, vt)),
+        return self.interaction(h=h, t=t, r=(w, b, u, vh, vt))
