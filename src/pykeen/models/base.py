@@ -1377,7 +1377,7 @@ class TwoVectorEmbeddingModel(Model, ABC):
         )
 
 
-class TwoSideEmbeddingModel(EntityRelationEmbeddingModel):
+class TwoSideEmbeddingModel(Model):
     """A model which averages scores for forward and backward model."""
 
     def __init__(
@@ -1397,31 +1397,42 @@ class TwoSideEmbeddingModel(EntityRelationEmbeddingModel):
         second_embedding_specification: Optional[EmbeddingSpecification] = None,
         second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ):
+        if relation_dim is None:
+            relation_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            embedding_specification=embedding_specification,
-            relation_embedding_specification=relation_embedding_specification,
+            entity_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=embedding_specification,
+                ),
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=second_embedding_specification,
+                ),
+            ],
+            relation_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=relation_dim,
+                    specification=relation_embedding_specification,
+                ),
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=relation_dim,
+                    specification=second_relation_embedding_specification,
+                ),
+            ],
+            interaction_function=interaction_function,
         )
-        # extra embeddings
-        self.second_entity_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
-            specification=second_embedding_specification,
-        )
-        self.second_relation_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=self.relation_dim,
-            specification=second_relation_embedding_specification,
-        )
-        self.interaction_function = interaction_function
 
     def forward(
         self,
