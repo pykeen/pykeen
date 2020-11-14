@@ -669,12 +669,12 @@ class _TestKG2E(_ModelTestCase):
         * Covariances have to have values between c_min and c_max
         """
         self.model: TwoVectorEmbeddingModel
-        low = self.model.second_entity_embeddings.constrainer.keywords['min']
-        high = self.model.second_entity_embeddings.constrainer.keywords['max']
+        low = self.model.entity_representations[1].constrainer.keywords['min']
+        high = self.model.entity_representations[1].constrainer.keywords['max']
 
-        for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
+        for embedding in (self.model.entity_representations[0], self.model.relation_representations[0]):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
-        for cov in (self.model.second_entity_embeddings, self.model.second_relation_embeddings):
+        for cov in (self.model.entity_representations[1], self.model.relation_representations[1]):
             assert all_in_bounds(cov(indices=None), low=low, high=high)
 
 

@@ -1313,31 +1313,9 @@ class SingleVectorEmbeddingModel(Model, ABC):
                 specification=relation_embedding_specification,
             ),
         )
-    #
-    # def forward(
-    #     self,
-    #     h_indices: Optional[torch.LongTensor] = None,
-    #     r_indices: Optional[torch.LongTensor] = None,
-    #     t_indices: Optional[torch.LongTensor] = None,
-    # ) -> torch.FloatTensor:
-    #     """Evaluate the given triples.
-    #
-    #     :param h_indices: shape: (batch_size,)
-    #         The indices for head entities. If None, score against all.
-    #     :param r_indices: shape: (batch_size,)
-    #         The indices for relations. If None, score against all.
-    #     :param t_indices: shape: (batch_size,)
-    #         The indices for tail entities. If None, score against all.
-    #
-    #     :return: The scores, shape: (batch_size, num_entities)
-    #     """
-    #     h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-    #     r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-    #     t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-    #     return self.interaction_function(h=h, r=r, t=t)
 
 
-class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
+class TwoVectorEmbeddingModel(Model, ABC):
     """A model with two vectors for each entity and relation."""
 
     def __init__(
@@ -1361,46 +1339,42 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
         second_embedding_specification: Optional[EmbeddingSpecification] = None,
         second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ) -> None:
+        if relation_dim is None:
+            relation_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            embedding_specification=embedding_specification,
-            relation_embedding_specification=relation_embedding_specification,
+            entity_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=embedding_specification,
+                ),
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=second_embedding_specification,
+                )
+            ],
+            relation_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=relation_dim,
+                    specification=relation_embedding_specification,
+                ),
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=relation_dim,
+                    specification=second_relation_embedding_specification,
+                )
+            ],
+            interaction_function=interaction_function,
         )
-
-        # extra embeddings
-        self.second_entity_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
-            specification=second_embedding_specification,
-        )
-        self.second_relation_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=self.relation_dim,
-            specification=second_relation_embedding_specification,
-        )
-        self.interaction_function = interaction_function
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        h1 = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        h2 = self.second_entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r1 = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        r2 = self.second_relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t1 = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        t2 = self.second_entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        return self.interaction_function(h=(h1, h2), r=(r1, r2), t=(t1, t2))
 
 
 class TwoSideEmbeddingModel(EntityRelationEmbeddingModel):
