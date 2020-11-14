@@ -140,7 +140,9 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         assert self._check_shapes(h=h, r=r, t=t)
 
         # prepare input to generic score function
-        h, r, t = self._add_dim(h, r, t, dim=self.NUM_DIM)
+        h = self._add_dim(h, dim=self.NUM_DIM)
+        r = self._add_dim(r, dim=self.NUM_DIM)
+        t = self._add_dim(t, dim=self.NUM_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)
@@ -171,10 +173,10 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         """
         assert self._check_shapes(h=all_entities, r=r, t=t, h_prefix="n")
 
-        # TODO: What about unsqueezing for additional e.g. head arguments
         # prepare input to generic score function
-        r, t = self._add_dim(r, t, dim=self.NUM_DIM)
         h = self._add_dim(all_entities, dim=self.BATCH_DIM)
+        r = self._add_dim(r, dim=self.NUM_DIM)
+        t = self._add_dim(t, dim=self.NUM_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)
@@ -206,8 +208,9 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         assert self._check_shapes(h=h, r=all_relations, t=t, r_prefix="n")
 
         # prepare input to generic score function
-        h, t = self._add_dim(h, t, dim=self.NUM_DIM)
+        h = self._add_dim(h, dim=self.NUM_DIM)
         r = self._add_dim(all_relations, dim=self.BATCH_DIM)
+        t = self._add_dim(t, dim=self.NUM_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)
@@ -239,7 +242,8 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         assert self._check_shapes(h=h, r=r, t=all_entities, t_prefix="n")
 
         # prepare input to generic score function
-        h, r = self._add_dim(h, r, dim=self.NUM_DIM)
+        h = self._add_dim(h, dim=self.NUM_DIM)
+        r = self._add_dim(r, dim=self.NUM_DIM)
         t = self._add_dim(all_entities, dim=self.BATCH_DIM)
 
         # get scores
