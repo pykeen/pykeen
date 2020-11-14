@@ -15,6 +15,7 @@ __all__ = [
     'DeviceHint',
     'HeadRepresentation',
     'RelationRepresentation',
+    'Representation',
     'TailRepresentation',
 ]
 
