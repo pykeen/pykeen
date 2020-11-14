@@ -541,9 +541,13 @@ class RGCN(Model):
         # TODO: Dummy
         self.decoder = Decoder()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Enrich embeddings
-        h = self.entity_representations(indices=hrt_batch[:, 0])
-        t = self.entity_representations(indices=hrt_batch[:, 2])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self.entity_representations(indices=h_indices)
+        r = self.relation_embeddings(indices=r_indices)
+        t = self.entity_representations(indices=t_indices)
         return self.decoder(h, r, t).unsqueeze(dim=-1)
