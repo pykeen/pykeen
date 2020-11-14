@@ -174,7 +174,7 @@ class InteractionFunction(nn.Module):
 
         :param h: shape: (batch_size, d_e)
             The head representations.
-        :param all_relations: shape: (batch_size, d_r)
+        :param all_relations: shape: (num_relations, d_r)
             The relation representations.
         :param t: shape: (batch_size, d_e)
             The tail representations.
