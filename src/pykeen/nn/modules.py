@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Stateful interaction functions."""
-
+import itertools
 import logging
 import math
 from abc import ABC
@@ -100,6 +100,22 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
             x = x.squeeze(dim=dim)
         return x
 
+    def _check_shapes(
+        self,
+        h: EntityRepresentation = tuple(),
+        r: RelationRepresentation = tuple(),
+        t: EntityRepresentation = tuple(),
+        h_prefix: str = "b",
+        r_prefix: str = "b",
+        t_prefix: str = "b",
+        raise_on_error: bool = True,
+    ) -> bool:
+        return len(h) == len(self.entity_shape) and len(r) == len(self.relation_shape) and len(t) == len(self.entity_shape) and check_shapes(*itertools.chain(
+            ((hh, h_prefix + hs) for hh, hs in zip(h, self.entity_shape)),
+            ((rr, r_prefix + rs) for rr, rs in zip(r, self.relation_shape)),
+            ((tt, t_prefix + ts) for tt, ts in zip(t, self.entity_shape)),
+        ), raise_or_error=raise_on_error)
+
     def score_hrt(
         self,
         h: EntityRepresentation = tuple(),
@@ -121,8 +137,7 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         :return: shape: (batch_size, 1)
             The scores.
         """
-        # check shape
-        assert check_shapes((h, "be"), (r, "br"), (t, "be"))
+        assert self._check_shapes(h=h, r=r, t=t)
 
         # prepare input to generic score function
         h, r, t = self._add_dim(h, r, t, dim=self.NUM_DIM)
@@ -154,8 +169,7 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        # check shape
-        assert check_shapes((all_entities, "ne"), (r, "br"), (t, "be"))
+        assert self._check_shapes(h=all_entities, r=r, t=t, h_prefix="n")
 
         # TODO: What about unsqueezing for additional e.g. head arguments
         # prepare input to generic score function
@@ -189,8 +203,7 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        # check shape
-        assert check_shapes((all_relations, "nr"), (h, "be"), (t, "be"))
+        assert self._check_shapes(h=h, r=all_relations, t=t, r_prefix="n")
 
         # prepare input to generic score function
         h, t = self._add_dim(h, t, dim=self.NUM_DIM)
@@ -223,8 +236,7 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        # check shape
-        assert check_shapes((all_entities, "ne"), (r, "br"), (h, "be"))
+        assert self._check_shapes(h=h, r=r, t=all_entities, t_prefix="n")
 
         # prepare input to generic score function
         h, r = self._add_dim(h, r, dim=self.NUM_DIM)
