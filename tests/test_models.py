@@ -423,7 +423,7 @@ Traceback
             scores_h = self.model.score_h(batch)
             scores_hrt = super(self.model.__class__, self.model).score_h(batch)
         except NotImplementedError:
-            self.fail(msg='Score_h not yet implemented')
+            self.fail(msg=f'{self.model.__class__.__name__}.score_h() has not yet been implemented')
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -444,7 +444,7 @@ Traceback
             scores_r = self.model.score_r(batch)
             scores_hrt = super(self.model.__class__, self.model).score_r(batch)
         except NotImplementedError:
-            self.fail(msg='Score_h not yet implemented')
+            self.fail(msg=f'{self.model.__class__.__name__}.score_r() has not yet been implemented')
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -465,7 +465,7 @@ Traceback
             scores_t = self.model.score_t(batch)
             scores_hrt = super(self.model.__class__, self.model).score_t(batch)
         except NotImplementedError:
-            self.fail(msg='Score_h not yet implemented')
+            self.fail(msg=f'{self.model.__class__.__name__}.score_t() has not yet been implemented')
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
