@@ -184,4 +184,4 @@ class ConvE(EntityRelationEmbeddingModel):
         t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
         t_bias = self.bias_term.get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary(h, r, t)
-        return self.interaction_function(h=h, r=r, t=t, t_bias=t_bias)
+        return self.interaction_function(h=h, r=r, t=(t, t_bias))
