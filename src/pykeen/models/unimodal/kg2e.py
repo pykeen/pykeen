@@ -10,9 +10,7 @@ import torch.autograd
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
-from ...nn import functional as pkf
 from ...nn.emb import EmbeddingSpecification
-from ...nn.functional import KG2E_SIMILARITIES
 from ...nn.modules import KG2EInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
