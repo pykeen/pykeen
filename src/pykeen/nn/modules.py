@@ -5,7 +5,7 @@ import itertools
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar
+from typing import Any, Callable, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import torch
 from torch import nn
@@ -15,11 +15,12 @@ from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
 
-EntityRepresentation = TypeVar("EntityRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
+HeadRepresentation = TypeVar("HeadRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
 RelationRepresentation = TypeVar("RelationRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
+TailRepresentation = TypeVar("TailRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
 
 
-class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepresentation]):
+class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Base class for interaction functions."""
 
     # Dimensions
@@ -30,16 +31,17 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
     TAIL_DIM: int = 3
 
     #: The symbolic shapes for entity representations
-    entity_shape: Sequence[str]
+    entity_shape: Union[str, Sequence[str]] = "d"
+    tail_entity_shape: Union[None, str, Sequence[str]] = None
 
     #: The symbolic shapes for relation representations
-    relation_shape: Sequence[str]
+    relation_shape: Union[str, Sequence[str]] = "d"
 
     def forward(
         self,
-        h: EntityRepresentation = tuple(),
+        h: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
-        t: EntityRepresentation = tuple(),
+        t: TailRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given representations for head, relation and tails.
 
@@ -102,25 +104,36 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
 
     def _check_shapes(
         self,
-        h: EntityRepresentation = tuple(),
+        h: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
-        t: EntityRepresentation = tuple(),
+        t: TailRepresentation = tuple(),
         h_prefix: str = "b",
         r_prefix: str = "b",
         t_prefix: str = "b",
         raise_on_error: bool = True,
     ) -> bool:
-        return len(h) == len(self.entity_shape) and len(r) == len(self.relation_shape) and len(t) == len(self.entity_shape) and check_shapes(*itertools.chain(
-            ((hh, h_prefix + hs) for hh, hs in zip(h, self.entity_shape)),
-            ((rr, r_prefix + rs) for rr, rs in zip(r, self.relation_shape)),
-            ((tt, t_prefix + ts) for tt, ts in zip(t, self.entity_shape)),
+        entity_shape = self.entity_shape
+        if isinstance(entity_shape, str):
+            entity_shape = (entity_shape,)
+        relation_shape = self.relation_shape
+        if isinstance(relation_shape, str):
+            relation_shape = (relation_shape,)
+        tail_entity_shape = self.tail_entity_shape
+        if tail_entity_shape is None:
+            tail_entity_shape = entity_shape
+        if isinstance(tail_entity_shape, str):
+            tail_entity_shape = (tail_entity_shape,)
+        return len(h) == len(entity_shape) and len(r) == len(relation_shape) and len(t) == len(tail_entity_shape) and check_shapes(*itertools.chain(
+            ((hh, h_prefix + hs) for hh, hs in zip(h, entity_shape)),
+            ((rr, r_prefix + rs) for rr, rs in zip(r, relation_shape)),
+            ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape)),
         ), raise_or_error=raise_on_error)
 
     def score_hrt(
         self,
-        h: EntityRepresentation = tuple(),
+        h: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
-        t: EntityRepresentation = tuple(),
+        t: TailRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score a batch of triples..
@@ -150,9 +163,9 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
 
     def score_h(
         self,
-        all_entities: EntityRepresentation = tuple(),
+        all_entities: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
-        t: EntityRepresentation = tuple(),
+        t: TailRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score all head entities.
@@ -182,9 +195,9 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
 
     def score_r(
         self,
-        h: EntityRepresentation = tuple(),
+        h: HeadRepresentation = tuple(),
         all_relations: RelationRepresentation = tuple(),
-        t: EntityRepresentation = tuple(),
+        t: TailRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score all relations.
@@ -214,9 +227,9 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
 
     def score_t(
         self,
-        h: EntityRepresentation = tuple(),
+        h: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
-        all_entities: EntityRepresentation = tuple(),
+        all_entities: TailRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score all tail entities.
@@ -358,7 +371,7 @@ def _calculate_missing_shape_information(
     return input_channels, width, height
 
 
-class ConvEInteractionFunction(InteractionFunction):
+class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor]):
     """ConvE interaction function."""
 
     def __init__(
@@ -437,7 +450,6 @@ class ConvEInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         # get tail bias term
         if "t_bias" not in kwargs:
@@ -689,8 +701,7 @@ RESCALInteractionFunction = _build_module_from_stateless(pkf.rescal_interaction)
 class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
     """Interaction function of Structured Embedding."""
 
-    entity_shape = ("d",)
-    relation_shape = ("dd",)
+    relation_shape = "dd"
 
     def forward(
         self,
@@ -775,7 +786,6 @@ class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torc
     """Interaction function of UnstructuredModel."""
 
     # shapes
-    entity_shape = ("d",)
     relation_shape = tuple()
 
     def __init__(self, p: int, power_norm: bool = True):
