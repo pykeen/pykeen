@@ -41,7 +41,7 @@ from pykeen.models.unimodal.rgcn import (
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
-from pykeen.nn import Embedding, RepresentationModule
+from pykeen.nn import RepresentationModule
 from pykeen.nn.functional import _project_entity
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
@@ -1026,44 +1026,6 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
     model_kwargs = {
         'relation_dim': 4,
     }
-
-    def test_score_hrt_manual(self):
-        """Manually test interaction function of TransR."""
-        # TODO: Move to interaction tests.
-        # entity embeddings
-        weights = torch.as_tensor(data=[[2., 2.], [3., 3.]], dtype=torch.float)
-        entity_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.model.entity_embeddings = entity_embeddings
-
-        # relation embeddings
-        relation_weights = torch.as_tensor(data=[[4., 4], [5., 5.]], dtype=torch.float)
-        relation_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=2,
-        )
-        relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.model.relation_embeddings = relation_embeddings
-
-        relation_projection_weights = torch.as_tensor(data=[[5., 5., 6., 6.], [7., 7., 8., 8.]], dtype=torch.float)
-        relation_projection_embeddings = Embedding(
-            num_embeddings=2,
-            embedding_dim=4,
-        )
-        relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.model.relation_projections = relation_projection_embeddings
-
-        # Compute Scores
-        batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
-        scores = self.model.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
-        first_score = scores[0].item()
-        # second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -8, delta=1.0e-06)
 
     def _check_constraints(self):
         """Check model constraints.

@@ -325,6 +325,17 @@ class TransRTests(TranslationalInteractionTests, unittest.TestCase):
         e=3,
     )
 
+    def test_manual(self):
+        """A manual test of the score function."""
+        # Compute Scores
+        h = torch.as_tensor(data=[2, 2], dtype=torch.float32).view(1, 2)
+        r = torch.as_tensor(data=[4, 4], dtype=torch.float32).view(1, 2)
+        m_r = torch.as_tensor(data=[5, 5, 6, 6], dtype=torch.float32).view(1, 2, 2)
+        t = torch.as_tensor(data=[2, 2], dtype=torch.float32).view(1, 2)
+        scores = self.instance.score_hrt(h=h, r=(r, m_r), t=t)
+        first_score = scores[0].item()
+        self.assertAlmostEqual(first_score, -32, delta=1.0e-04)
+
 
 class SETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for SE interaction function."""
