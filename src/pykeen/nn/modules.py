@@ -290,7 +290,7 @@ class TransEInteractionFunction(TranslationalInteractionFunction):
         **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
-        return pkf._translational_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
+        return pkf.transe_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
 
 
 #: Interaction function of ComplEx
