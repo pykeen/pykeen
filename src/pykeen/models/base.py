@@ -1125,6 +1125,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
 class EntityEmbeddingModel(Model):
     """A base module for most KGE models that have one embedding for entities."""
+    # TODO: deprecated
 
     def __init__(
         self,
@@ -1152,7 +1153,6 @@ class EntityEmbeddingModel(Model):
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
-        # TODO: use spec
         self.embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,

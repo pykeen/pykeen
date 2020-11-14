@@ -6,8 +6,9 @@ from typing import Optional
 
 import torch.autograd
 
-from ..base import EntityEmbeddingModel
+from .. import Model
 from ...losses import Loss
+from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...nn.modules import UnstructuredModelInteractionFunction
 from ...regularizers import Regularizer
@@ -19,7 +20,7 @@ __all__ = [
 ]
 
 
-class UnstructuredModel(EntityEmbeddingModel):
+class UnstructuredModel(Model):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
     UM computes the distance between head and tail entities then applies the $l_p$ norm.
@@ -50,6 +51,7 @@ class UnstructuredModel(EntityEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -59,17 +61,22 @@ class UnstructuredModel(EntityEmbeddingModel):
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
         """
+        self.embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_normal_,
+            interaction_function=UnstructuredModelInteractionFunction(p=scoring_fct_norm),
+            entity_representations=Embedding(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+            ),
         )
-        self.interaction_function = UnstructuredModelInteractionFunction(p=scoring_fct_norm)
 
     def forward(
         self,
@@ -77,9 +84,12 @@ class UnstructuredModel(EntityEmbeddingModel):
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        scores = self.interaction_function(h=h, r=None, t=t)
+        scores = super(UnstructuredModel, self).forward(
+            h_indices=h_indices,
+            r_indices=r_indices,
+            t_indices=t_indices,
+        )
+        # TODO: move this logic to superclass
         # same score for all relations
         repeats = [1, 1, 1, 1]
         if r_indices is None:
