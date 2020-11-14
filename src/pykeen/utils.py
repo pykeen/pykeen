@@ -468,6 +468,7 @@ def check_shapes(
             exp_dim = dims.get(name)
             if exp_dim is not None and exp_dim != dim:
                 errors.append(f"{name}: {dim} vs. {exp_dim}")
+            dims[name] = dim
     if raise_or_error and len(errors) > 0:
         raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
     return len(errors) == 0
