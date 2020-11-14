@@ -266,7 +266,7 @@ class _ModelTestCase:
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
-            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler)
+            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler, use_tqdm=False)
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
