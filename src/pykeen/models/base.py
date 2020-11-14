@@ -1405,7 +1405,7 @@ class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
             self.interaction_function(
                 h_source.get_in_canonical_shape(indices=h_indices),
                 r_source.get_in_canonical_shape(indices=r_indices),
-                t_source.get_in_canonical_shape(indices=t_indices)
+                t_source.get_in_canonical_shape(indices=t_indices),
             )
             for h_source, r_source, t_source in (
                 (self.entity_embeddings, self.relation_embeddings, self.second_entity_embeddings),

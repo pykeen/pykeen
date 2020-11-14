@@ -104,7 +104,7 @@ class KG2E(TwoVectorEmbeddingModel):
                 # Ensure positive definite covariances matrices and appropriate size by clamping
                 constrainer=torch.clamp,
                 constrainer_kwargs=dict(min=c_min, max=c_max),
-            )
+            ),
         )
         # Similarity function used for distributions
         dist_similarity = dist_similarity.upper()

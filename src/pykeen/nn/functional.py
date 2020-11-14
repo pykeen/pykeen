@@ -1165,7 +1165,7 @@ def transd_interaction(
     t_bot = _project_entity(
         e=t.unsqueeze(dim=1),
         e_p=t_p.unsqueeze(dim=1),
-        r_p=r_p.unsqueeze(dim=2)
+        r_p=r_p.unsqueeze(dim=2),
     ).unsqueeze(dim=1)
     r = r.view(r.shape[0], 1, r.shape[1], 1, r.shape[2])
     return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)

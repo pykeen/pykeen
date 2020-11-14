@@ -246,7 +246,7 @@ def _build_module_from_stateless(
 ) -> Type[InteractionFunction]:
     """Build a stateless interaction function module with a pre-defined functional interface."""
 
-    class FunctionalInteractionFunction(InteractionFunction):
+    class StatelessInteractionFunction(InteractionFunction):
         """Interaction function without state or additional parameters."""
 
         def forward(
@@ -259,7 +259,7 @@ def _build_module_from_stateless(
             self._check_for_empty_kwargs(kwargs)
             return f(h, r, t)
 
-    return FunctionalInteractionFunction
+    return StatelessInteractionFunction
 
 
 class TranslationalInteractionFunction(InteractionFunction, ABC):
@@ -772,7 +772,7 @@ class UnstructuredModelInteractionFunction(TranslationalInteractionFunction):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
 
@@ -786,7 +786,7 @@ class TransDInteractionFunction(TranslationalInteractionFunction):
         r: torch.FloatTensor,
         t: torch.FloatTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         h_p = kwargs.pop("h_p")
         r_p = kwargs.pop("r_p")
         t_p = kwargs.pop("t_p")
