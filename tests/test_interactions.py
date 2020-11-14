@@ -1,6 +1,7 @@
 """Tests for interaction functions."""
 import unittest
 from typing import Any, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
+from unittest.case import SkipTest
 
 import torch
 
@@ -52,6 +53,10 @@ class InteractionTests(GenericTests[InteractionFunction]):
         assert scores.ndimension() == len(exp_shape)
         assert scores.shape == exp_shape
         assert scores.requires_grad
+        self._additional_score_checks(scores)
+
+    def _additional_score_checks(self, scores):
+        """Additional checks for scores."""
 
     def test_score_hrt(self):
         """Test score_hrt."""
@@ -118,11 +123,25 @@ class InteractionTests(GenericTests[InteractionFunction]):
                 scores = self.instance(h=h, r=r, t=t)
                 self._check_scores(scores=scores, exp_shape=expected_shape)
 
+    def test_scores(self):
+        """Test individual scores."""
+        for i in range(10):
+            h, r, t = self._get_hrt((1, 1, self.dim), (1, 1, self.dim), (1, 1, self.dim))
+            scores = self.instance(h=h, r=r, t=t)
+            exp_score = self._exp_score(h, r, t).item()
+            assert scores.item() == exp_score
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        raise SkipTest()
+
 
 class DistMultTests(InteractionTests, unittest.TestCase):
     """Tests for DistMult interaction function."""
 
     cls = DistMultInteractionFunction
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return (h * r * t).sum(dim=-1)
 
 
 class TransETests(InteractionTests, unittest.TestCase):
@@ -132,3 +151,9 @@ class TransETests(InteractionTests, unittest.TestCase):
     kwargs = dict(
         p=2,
     )
+
+    def _additional_score_checks(self, scores):
+        assert (scores <= 0).all()
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return -(h + r - t).norm(p=2, dim=-1)
