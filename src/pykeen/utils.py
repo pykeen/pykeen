@@ -18,6 +18,7 @@ import torch.nn
 from .typing import DeviceHint
 
 __all__ = [
+    'broadcast_cat',
     'compose',
     'check_shapes',
     'clamp_norm',
