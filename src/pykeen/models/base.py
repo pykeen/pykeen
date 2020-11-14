@@ -1293,6 +1293,11 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction[
+            Tuple[torch.FloatTensor, torch.FloatTensor],
+            Tuple[torch.FloatTensor, torch.FloatTensor],
+            Tuple[torch.FloatTensor, torch.FloatTensor],
+        ],
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
@@ -1331,17 +1336,7 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
             embedding_dim=self.relation_dim,
             specification=second_relation_embedding_specification,
         )
-
-    def _forward(
-        self,
-        h1: torch.FloatTensor,
-        h2: torch.FloatTensor,
-        r1: torch.FloatTensor,
-        r2: torch.FloatTensor,
-        t1: torch.FloatTensor,
-        t2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
+        self.interaction_function = interaction_function
 
     def forward(
         self,
@@ -1355,10 +1350,10 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel, ABC):
         r2 = self.second_relation_embeddings.get_in_canonical_shape(indices=r_indices)
         t1 = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
         t2 = self.second_entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        return self._forward(h1, h2, r1, r2, t1, t2)
+        return self.interaction_function(h=(h1, h2), r=(r1, r2), t=(t1, t2))
 
 
-class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
+class TwoSideEmbeddingModel(EntityRelationEmbeddingModel):
     """A model which averages scores for forward and backward model."""
 
     def __init__(
@@ -1390,8 +1385,17 @@ class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
             regularizer=regularizer,
             embedding_specification=embedding_specification,
             relation_embedding_specification=relation_embedding_specification,
-            second_embedding_specification=second_embedding_specification,
-            second_relation_embedding_specification=second_relation_embedding_specification,
+        )
+        # extra embeddings
+        self.second_entity_embeddings = Embedding.from_specification(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=self.embedding_dim,
+            specification=second_embedding_specification,
+        )
+        self.second_relation_embeddings = Embedding.from_specification(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=self.relation_dim,
+            specification=second_relation_embedding_specification,
         )
         self.interaction_function = interaction_function
 

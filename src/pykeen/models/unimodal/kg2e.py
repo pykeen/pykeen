@@ -13,6 +13,7 @@ from ...losses import Loss
 from ...nn import functional as pkf
 from ...nn.emb import EmbeddingSpecification
 from ...nn.functional import KG2E_SIMILARITIES
+from ...nn.modules import KG2EInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -81,6 +82,9 @@ class KG2E(TwoVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=KG2EInteractionFunction(
+                similarity=dist_similarity,
+            ),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
@@ -105,22 +109,4 @@ class KG2E(TwoVectorEmbeddingModel):
                 constrainer=torch.clamp,
                 constrainer_kwargs=dict(min=c_min, max=c_max),
             ),
-        )
-        # Similarity function used for distributions
-        dist_similarity = dist_similarity.upper()
-        if dist_similarity not in KG2E_SIMILARITIES:
-            raise ValueError(dist_similarity)
-        self.similarity = dist_similarity
-
-    def _forward(
-        self,
-        h1: torch.FloatTensor,
-        h2: torch.FloatTensor,
-        r1: torch.FloatTensor,
-        r2: torch.FloatTensor,
-        t1: torch.FloatTensor,
-        t2: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return pkf.kg2e_interaction(
-            h_mean=h1, h_var=h2, r_mean=r1, r_var=r2, t_mean=t1, t_var=t2, similarity=self.similarity,
         )

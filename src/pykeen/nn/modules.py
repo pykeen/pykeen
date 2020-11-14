@@ -11,6 +11,7 @@ import torch
 from torch import nn
 
 from . import functional as pkf
+from .functional import KG2E_SIMILARITIES
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
@@ -39,9 +40,9 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
 
     def forward(
         self,
-        h: HeadRepresentation = tuple(),
-        r: RelationRepresentation = tuple(),
-        t: TailRepresentation = tuple(),
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given representations for head, relation and tails.
 
@@ -845,3 +846,45 @@ class NTNInteractionFunction(
     ) -> torch.FloatTensor:
         w, b, u, vh, vt = r
         return pkf.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
+
+
+class KG2EInteractionFunction(
+    InteractionFunction[
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+    ]
+):
+    """Interaction function of KG2E."""
+
+    def __init__(
+        self,
+        similarity: str = "KL",
+        exact: bool = True,
+    ):
+        super().__init__()
+        similarity = similarity.upper()
+        if similarity not in KG2E_SIMILARITIES:
+            raise ValueError(similarity)
+        self.similarity = similarity
+        self.exact = exact
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:
+        h_mean, h_var = h
+        r_mean, r_var = r
+        t_mean, t_var = t
+        return pkf.kg2e_interaction(
+            h_mean=h_mean,
+            h_var=h_var,
+            r_mean=r_mean,
+            r_var=r_var,
+            t_mean=t_mean,
+            t_var=t_var,
+            similarity=self.similarity,
+            exact=self.exact,
+        )
