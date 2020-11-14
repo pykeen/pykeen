@@ -1136,6 +1136,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
 class EntityEmbeddingModel(Model):
     """A base module for most KGE models that have one embedding for entities."""
+
     # TODO: deprecated
 
     def __init__(
@@ -1193,6 +1194,7 @@ class EntityRelationEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction[Representation, Representation, Representation],
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
@@ -1213,39 +1215,31 @@ class EntityRelationEmbeddingModel(Model, ABC):
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         .. seealso:: Constructor of the base class :class:`pykeen.models.EntityEmbeddingModel`
         """
+        self.embedding_dim = embedding_dim
+        # Default for relation dimensionality
+        if relation_dim is None:
+            relation_dim = embedding_dim
+        self.relation_dim = relation_dim
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=interaction_function,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
+            entity_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+                specification=embedding_specification,
+            ),
+            relation_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_relations,
+                embedding_dim=relation_dim,
+                specification=relation_embedding_specification,
+            ),
         )
-        self.entity_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
-            specification=embedding_specification,
-        )
-
-        # Default for relation dimensionality
-        if relation_dim is None:
-            relation_dim = embedding_dim
-        self.relation_embeddings = Embedding.from_specification(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=relation_dim,
-            specification=relation_embedding_specification,
-        )
-
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The entity embedding dimension."""
-        return self.entity_embeddings.embedding_dim
-
-    @property
-    def relation_dim(self):  # noqa:D401
-        """The relation embedding dimension."""
-        return self.relation_embeddings.embedding_dim
 
 
 def _can_slice(fn) -> bool:

@@ -7,7 +7,7 @@ from typing import Optional, Type
 import torch
 from torch import nn
 
-from ..base import EntityRelationEmbeddingModel
+from .. import Model
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
@@ -24,7 +24,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvE(EntityRelationEmbeddingModel):
+class ConvE(Model):
     r"""An implementation of ConvE from [dettmers2018]_.
 
     ConvE  is a CNN-based approach. For each triple $(h,r,t)$, the input to ConvE is a matrix
@@ -134,43 +134,50 @@ class ConvE(EntityRelationEmbeddingModel):
                 'This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set '
                 'to true.',
             )
-
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
+            entity_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=EmbeddingSpecification(
+                        initializer=xavier_normal_,
+                    ),
+                ),
+                # ConvE uses one bias for each entity
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=1,
+                    specification=EmbeddingSpecification(
+                        initializer=nn.init.zeros_,
+                    ),
+                )
+            ],
+            relation_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_relations,
+                embedding_dim=embedding_dim,
+                specification=EmbeddingSpecification(
+                    initializer=xavier_normal_,
+                ),
             ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
+            interaction_function=ConvEInteractionFunction(
+                input_channels=input_channels,
+                output_channels=output_channels,
+                embedding_height=embedding_height,
+                embedding_width=embedding_width,
+                kernel_height=kernel_height,
+                kernel_width=kernel_width,
+                input_dropout=input_dropout,
+                output_dropout=output_dropout,
+                feature_map_dropout=feature_map_dropout,
+                embedding_dim=embedding_dim,
+                apply_batch_normalization=apply_batch_normalization,
             ),
-        )
-
-        # ConvE uses one bias for each entity
-        self.bias_term = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=1,
-            device=self.device,
-            initializer=nn.init.zeros_,
-        )
-
-        self.interaction_function = ConvEInteractionFunction(
-            input_channels=input_channels,
-            output_channels=output_channels,
-            embedding_height=embedding_height,
-            embedding_width=embedding_width,
-            kernel_height=kernel_height,
-            kernel_width=kernel_width,
-            input_dropout=input_dropout,
-            output_dropout=output_dropout,
-            feature_map_dropout=feature_map_dropout,
-            embedding_dim=embedding_dim,
-            apply_batch_normalization=apply_batch_normalization,
         )
 
     def forward(
@@ -179,9 +186,9 @@ class ConvE(EntityRelationEmbeddingModel):
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        t_bias = self.bias_term.get_in_canonical_shape(indices=t_indices)
+        h = self.entity_representations[0].get_in_canonical_shape(indices=h_indices)
+        r = self.relation_representations[0].get_in_canonical_shape(indices=r_indices)
+        t = self.entity_representations[0].get_in_canonical_shape(indices=t_indices)
+        t_bias = self.entity_representations[1].get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary(h, r, t)
         return self.interaction_function(h=h, r=r, t=(t, t_bias))
