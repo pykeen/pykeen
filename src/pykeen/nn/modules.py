@@ -921,6 +921,8 @@ class TransHInteractionFunction(
 ):
     """Interaction function of TransH."""
 
+    relation_shape = ("d", "d")
+
     def forward(
         self,
         h: torch.FloatTensor,
@@ -928,4 +930,4 @@ class TransHInteractionFunction(
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         w_r, d_r = r
-        return pkf.transh_interaction(h, w_r, d_r, t, p=self.scoring_fct_norm)
+        return pkf.transh_interaction(h, w_r, d_r, t, p=self.p, power_norm=self.power_norm)

@@ -311,13 +311,10 @@ class TransETests(TranslationalInteractionTests, unittest.TestCase):
         return -(h + r - t).norm(p=2, dim=-1)
 
 
-# class TransHTests(TranslationalInteractionTests, unittest.TestCase):
-#     """Tests for TransH interaction function."""
-#
-#     cls = pykeen.nn.modules.TransHInteractionFunction
-#     # shape_kwargs = dict(
-#     #     e=3,
-#     # )
+class TransHTests(TranslationalInteractionTests, unittest.TestCase):
+    """Tests for TransH interaction function."""
+
+    cls = pykeen.nn.modules.TransHInteractionFunction
 
 
 class TransRTests(TranslationalInteractionTests, unittest.TestCase):
