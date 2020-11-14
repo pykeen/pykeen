@@ -5,7 +5,7 @@
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import torch
 from torch import nn
@@ -15,8 +15,11 @@ from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
 
+EntityRepresentation = TypeVar("EntityRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
+RelationRepresentation = TypeVar("RelationRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
 
-class InteractionFunction(nn.Module):
+
+class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepresentation]):
     """Base class for interaction functions."""
 
     BATCH_DIM: int = 0
@@ -27,9 +30,9 @@ class InteractionFunction(nn.Module):
 
     def forward(
         self,
-        h: Sequence[torch.FloatTensor] = tuple(),
-        r: Sequence[torch.FloatTensor] = tuple(),
-        t: Sequence[torch.FloatTensor] = tuple(),
+        h: EntityRepresentation = tuple(),
+        r: RelationRepresentation = tuple(),
+        t: EntityRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given representations for head, relation and tails.
 
@@ -48,6 +51,7 @@ class InteractionFunction(nn.Module):
     @classmethod
     def _check_for_empty_kwargs(cls, kwargs: Mapping[str, Any]) -> None:
         """Check that kwargs is empty."""
+        # TODO: Deprecated
         if len(kwargs) > 0:
             raise ValueError(f"{cls.__name__} does not take the following kwargs: {kwargs}")
 
@@ -91,9 +95,9 @@ class InteractionFunction(nn.Module):
 
     def score_hrt(
         self,
-        h: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        r: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        t: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        h: EntityRepresentation = tuple(),
+        r: RelationRepresentation = tuple(),
+        t: EntityRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score a batch of triples..
@@ -124,9 +128,9 @@ class InteractionFunction(nn.Module):
 
     def score_h(
         self,
-        all_entities: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        r: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        t: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        all_entities: EntityRepresentation = tuple(),
+        r: RelationRepresentation = tuple(),
+        t: EntityRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score all head entities.
@@ -152,16 +156,16 @@ class InteractionFunction(nn.Module):
         h = self._add_dim(all_entities, dim=self.BATCH_DIM)
 
         # get scores
-        scores = self(h=h, r=r, t=t, **kwargs)
+        scores = self(h=h, r=r, t=t)
 
         # prepare output shape, (batch_size, num_heads, num_relations, num_tails) -> (batch_size, num_heads)
         return self._remove_dim(scores, self.RELATION_DIM, self.TAIL_DIM)
 
     def score_r(
         self,
-        h: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        all_relations: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        t: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        h: EntityRepresentation = tuple(),
+        all_relations: RelationRepresentation = tuple(),
+        t: EntityRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score all relations.
@@ -186,16 +190,16 @@ class InteractionFunction(nn.Module):
         r = self._add_dim(all_relations, dim=self.BATCH_DIM)
 
         # get scores
-        scores = self(h=h, r=r, t=t, **kwargs)
+        scores = self(h=h, r=r, t=t)
 
         # prepare output shape
         return self._remove_dim(scores, self.HEAD_DIM, self.TAIL_DIM)
 
     def score_t(
         self,
-        h: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        r: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
-        all_entities: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        h: EntityRepresentation = tuple(),
+        r: RelationRepresentation = tuple(),
+        all_entities: EntityRepresentation = tuple(),
     ) -> torch.FloatTensor:
         """
         Score all tail entities.
@@ -220,7 +224,7 @@ class InteractionFunction(nn.Module):
         t = self._add_dim(all_entities, dim=self.BATCH_DIM)
 
         # get scores
-        scores = self(h=h, r=r, t=t, **kwargs)
+        scores = self(h=h, r=r, t=t)
 
         # prepare output shape
         return self._remove_dim(scores, self.HEAD_DIM, self.RELATION_DIM)
