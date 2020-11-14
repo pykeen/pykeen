@@ -686,20 +686,19 @@ class ProjEInteractionFunction(InteractionFunction):
 RESCALInteractionFunction = _build_module_from_stateless(pkf.rescal_interaction)
 
 
-class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction):
+class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
     """Interaction function of Structured Embedding."""
+
+    entity_shape = ("d",)
+    relation_shape = ("dd",)
 
     def forward(
         self,
         h: torch.FloatTensor,
-        r: torch.FloatTensor,
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        dim = h.shape[-1]
-        rh, rt = r.split(dim ** 2, dim=-1)
-        rh = rh.view(*rh.shape[:-1], dim, dim)
-        rt = rt.view(*rt.shape[:-1], dim, dim)
+        rh, rt = r
         return pkf.structured_embedding_interaction(h=h, r_h=rh, r_t=rt, t=t, p=self.p, power_norm=self.power_norm)
 
 
