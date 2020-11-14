@@ -5,12 +5,12 @@ import dataclasses
 import functools
 from typing import Any, Mapping, Optional, Sequence
 
+import numpy
 import torch
 import torch.nn
 from torch import nn
 
-from ..typing import Constrainer, DeviceHint, Initializer, Normalizer
-from ..utils import resolve_device
+from ..typing import Constrainer, Initializer, Normalizer
 
 __all__ = [
     'RepresentationModule',
@@ -61,18 +61,23 @@ class EmbeddingSpecification:
 
     # regularizer: Optional[Regularizer] = None
 
-    def make(self, num_embeddings: int, embedding_dim: int, device: DeviceHint) -> 'Embedding':
+    def make(
+        self,
+        num_embeddings: int,
+        embedding_dim: int,
+        shape: Optional[Sequence[int]],
+    ) -> 'Embedding':
         """Create an embedding with this specification."""
-        return Embedding.init_with_device(
+        return Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
+            shape=shape,
             initializer=self.initializer,
             initializer_kwargs=self.initializer_kwargs,
             normalizer=self.normalizer,
             normalizer_kwargs=self.normalizer_kwargs,
             constrainer=self.constrainer,
             constrainer_kwargs=self.constrainer_kwargs,
-            device=device,
         )
 
 
@@ -87,6 +92,7 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: int,
+        shape: Optional[Sequence[int]] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -118,6 +124,11 @@ class Embedding(RepresentationModule):
             Additional keyword arguments passed to the constrainer
         """
         super().__init__()
+        if shape is not None:
+            embedding_dim = numpy.prod(shape)
+        else:
+            shape = (embedding_dim,)
+        self.shape = shape
 
         if initializer is None:
             initializer = nn.init.normal_
@@ -143,8 +154,8 @@ class Embedding(RepresentationModule):
         cls,
         num_embeddings: int,
         embedding_dim: int,
-        specification: Optional[EmbeddingSpecification],
-        device: DeviceHint = None,
+        shape: Optional[Sequence[int]] = None,
+        specification: Optional[EmbeddingSpecification] = None,
     ) -> 'Embedding':
         """Create an embedding based on a specification.
 
@@ -154,9 +165,6 @@ class Embedding(RepresentationModule):
             The embedding dimension.
         :param specification:
             The specification.
-        :param device:
-            If given, move to device.
-
         :return:
             An embedding object.
         """
@@ -165,45 +173,8 @@ class Embedding(RepresentationModule):
         return specification.make(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
-            device=device,
+            shape=shape,
         )
-
-    @classmethod
-    def init_with_device(
-        cls,
-        num_embeddings: int,
-        embedding_dim: int,
-        device: DeviceHint,
-        initializer: Optional[Initializer] = None,
-        initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Optional[Normalizer] = None,
-        normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        constrainer: Optional[Constrainer] = None,
-        constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> 'Embedding':  # noqa:E501
-        """Create an embedding object on the given device by wrapping :func:`__init__`.
-
-        This method is a hotfix for not being able to pass a device during initialization of
-        :class:`torch.nn.Embedding`. Instead the weight is always initialized on CPU and has
-        to be moved to GPU afterwards.
-
-        .. seealso::
-
-            https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
-
-        :return:
-            The embedding.
-        """
-        return cls(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            initializer=initializer,
-            initializer_kwargs=initializer_kwargs,
-            normalizer=normalizer,
-            normalizer_kwargs=normalizer_kwargs,
-            constrainer=constrainer,
-            constrainer_kwargs=constrainer_kwargs,
-        ).to(device=resolve_device(device))
 
     @property
     def num_embeddings(self) -> int:  # noqa: D401
@@ -255,6 +226,8 @@ class Embedding(RepresentationModule):
             x = x.unsqueeze(dim=0)
         else:
             x = x.unsqueeze(dim=1)
+        if len(self.shape) > 1 and reshape_dim is None:
+            reshape_dim = self.shape
         if reshape_dim is not None:
             x = x.view(*x.shape[:-1], *reshape_dim)
         return x
