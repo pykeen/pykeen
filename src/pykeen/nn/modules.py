@@ -262,7 +262,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
 class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Interaction function without state."""
 
-    def __init__(self, f: Callable[[torch.FloatTensor, ...], torch.FloatTensor]):
+    def __init__(self, f: Callable[..., torch.FloatTensor]):
         super().__init__()
         self.f = f
 
