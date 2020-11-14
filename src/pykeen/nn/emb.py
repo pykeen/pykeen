@@ -15,6 +15,7 @@ from ..utils import resolve_device
 __all__ = [
     'RepresentationModule',
     'Embedding',
+    'EmbeddingSpecification',
 ]
 
 
