@@ -97,7 +97,7 @@ class StructuredEmbedding(EntityRelationEmbeddingModel):
         self.interaction_function = StructuredEmbeddingInteractionFunction(
             p=scoring_fct_norm,
             power_norm=False,
-        ),
+        )
 
     def forward(
         self,
