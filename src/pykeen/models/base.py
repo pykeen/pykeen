@@ -17,7 +17,7 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
-from ..nn import Embedding
+from ..nn import Embedding, RepresentationModule
 from ..nn.emb import EmbeddingSpecification
 from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
@@ -239,6 +239,9 @@ class Model(nn.Module, ABC):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_representations: Optional[Sequence[RepresentationModule]] = None,
+        relation_representations: Optional[Sequence[RepresentationModule]] = None,
+        tail_representations: Optional[Sequence[RepresentationModule]] = None,
     ) -> None:
         """Initialize the module.
 
@@ -305,6 +308,12 @@ class Model(nn.Module, ABC):
 
         # This allows to store the optimized parameters
         self.automatic_memory_optimization = automatic_memory_optimization
+
+        # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
+        self.entity_representations = nn.ModuleList(entity_representations)
+        self.relation_representations = nn.ModuleList(relation_representations)
+        if tail_representations is not None:
+            self.tail_representations = nn.ModuleList(tail_representations)
 
     @classmethod
     def _is_abstract(cls) -> bool:
