@@ -533,3 +533,15 @@ def get_ht_indices(ht_batch: torch.LongTensor) -> Tuple[torch.LongTensor, None, 
 def get_rt_indices(rt_batch: torch.LongTensor) -> Tuple[None, torch.LongTensor, torch.LongTensor]:
     """Get indices from a relation/tail batch."""
     return None, rt_batch[:, 0], rt_batch[:, 1]
+
+
+def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
+    """
+    Get all subclasses.
+
+    Credit to: https://stackoverflow.com/a/33607093.
+
+    """
+    for subclass in cls.__subclasses__():
+        yield from get_subclasses(subclass)
+        yield subclass

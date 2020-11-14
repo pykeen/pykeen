@@ -1,12 +1,14 @@
 """Tests for interaction functions."""
 import unittest
-from typing import Any, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
 import torch
 
 import pykeen.nn.modules
+from pykeen.nn.modules import InteractionFunction, StatelessInteractionFunction, TranslationalInteractionFunction
 from pykeen.typing import Representation
+from pykeen.utils import get_subclasses
 
 T = TypeVar("T")
 
@@ -30,6 +32,21 @@ class GenericTests(Generic[T]):
 
     def post_instantiation_hook(self) -> None:
         """Perform actions after instantiation."""
+
+
+class TestsTest(Generic[T]):
+    """A generic test for tests."""
+
+    base_cls: Type[T]
+    base_test: Type[GenericTests[T]]
+    skip_cls: Collection[T] = tuple()
+
+    def test_testing(self):
+        """Check that there is a test for all subclasses."""
+        to_test = set(get_subclasses(self.base_cls)).difference(self.skip_cls)
+        tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
+        not_tested = to_test.difference(tested)
+        assert not_tested == set()
 
 
 class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
@@ -259,7 +276,7 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
 class ERMLPETests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP-E interaction function."""
 
-    cls = pykeen.nn.modules.ERMLPInteractionFunction
+    cls = pykeen.nn.modules.ERMLPEInteractionFunction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
@@ -413,3 +430,14 @@ class UMTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for UM interaction function."""
 
     cls = pykeen.nn.modules.UnstructuredModelInteractionFunction
+
+
+class InteractionTestsTest(TestsTest[InteractionFunction], unittest.TestCase):
+    """Test for tests for all interaction functions."""
+
+    base_cls = InteractionFunction
+    base_test = InteractionTests
+    skip_cls = {
+        TranslationalInteractionFunction,
+        StatelessInteractionFunction,
+    }
