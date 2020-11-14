@@ -22,6 +22,10 @@ def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Tuple[
     return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
 
 
+def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
+    return [x[0] if len(x) == 1 else x for x in xs]
+
+
 class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Base class for interaction functions."""
 
@@ -136,6 +140,69 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
             ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape)),
         ), raise_or_error=raise_on_error)
 
+    def _score(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+        h_prefix: str = "b",
+        r_prefix: str = "b",
+        t_prefix: str = "b",
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        assert {h_prefix, r_prefix, t_prefix}.issubset(list("bn"))
+        # at most one of h_prefix, r_prefix, t_prefix equals n
+        slice_dim = [dim for dim, prefix in zip("hrt", (h_prefix, r_prefix, t_prefix)) if prefix == "n"]
+        if len(slice_dim) == 1:
+            slice_dim = slice_dim[0]
+        else:
+            slice_dim = None
+        h, r, t = _ensure_tuple(h, r, t)
+        assert self._check_shapes(h=h, r=r, t=t, h_prefix=h_prefix, r_prefix=r_prefix, t_prefix=t_prefix)
+
+        # prepare input to generic score function: bh*, br*, bt*
+        h = self._add_dim(*h, dim=self.BATCH_DIM if h_prefix == "n" else self.NUM_DIM)
+        r = self._add_dim(*r, dim=self.BATCH_DIM if r_prefix == "n" else self.NUM_DIM)
+        t = self._add_dim(*t, dim=self.BATCH_DIM if t_prefix == "n" else self.NUM_DIM)
+
+        # get scores
+        if slice_size is None:
+            scores = self(h=h, r=r, t=t)
+        else:
+            assert slice_dim is not None
+            scores = []
+            if slice_dim == "h":
+                cat_dim = self.HEAD_DIM
+                for h_batch in zip(*(hh.split(slice_size, dim=1) for hh in _ensure_tuple(h)[0])):
+                    if len(h_batch) == 1:
+                        h_batch = h_batch[0]
+                    scores.append(self(h=h_batch, r=r, t=t))
+            elif slice_dim == "r":
+                cat_dim = self.RELATION_DIM
+                for r_batch in zip(*(rr.split(slice_size, dim=1) for rr in _ensure_tuple(r)[0])):
+                    if len(r_batch) == 1:
+                        r_batch = r_batch[0]
+                    scores.append(self(h=h, r=r_batch, t=t))
+            elif slice_dim == "t":
+                cat_dim = self.TAIL_DIM
+                for t_batch in zip(*(tt.split(slice_size, dim=1) for tt in _ensure_tuple(t)[0])):
+                    if len(t_batch) == 1:
+                        t_batch = t_batch[0]
+                    scores.append(self(h=h, r=r, t=t_batch))
+            else:
+                raise ValueError(slice_dim)
+            scores = torch.cat(scores, dim=cat_dim)
+        remove_dims = [
+            dim
+            for dim, prefix in zip(
+                (self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM),
+                (h_prefix, r_prefix, t_prefix),
+            )
+            if prefix == "b"
+        ]
+        # prepare output shape
+        return self._remove_dim(scores, *remove_dims)
+
     def score_hrt(
         self,
         h: HeadRepresentation = tuple(),
@@ -155,25 +222,14 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, 1)
             The scores.
         """
-        h, r, t = _ensure_tuple(h, r, t)
-        assert self._check_shapes(h=h, r=r, t=t)
-
-        # prepare input to generic score function
-        h = self._add_dim(*h, dim=self.NUM_DIM)
-        r = self._add_dim(*r, dim=self.NUM_DIM)
-        t = self._add_dim(*t, dim=self.NUM_DIM)
-
-        # get scores
-        scores = self(h=h, r=r, t=t)
-
-        # prepare output shape, (batch_size, num_heads, num_relations, num_tails) -> (batch_size, 1)
-        return self._remove_dim(scores, self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM).unsqueeze(dim=-1)
+        return self._score(h=h, r=r, t=t).unsqueeze(dim=-1)
 
     def score_h(
         self,
         all_entities: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
         t: TailRepresentation = tuple(),
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
         Score all head entities.
@@ -188,25 +244,14 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        h, r, t = _ensure_tuple(all_entities, r, t)
-        assert self._check_shapes(h=h, r=r, t=t, h_prefix="n")
-
-        # prepare input to generic score function
-        h = self._add_dim(*h, dim=self.BATCH_DIM)
-        r = self._add_dim(*r, dim=self.NUM_DIM)
-        t = self._add_dim(*t, dim=self.NUM_DIM)
-
-        # get scores
-        scores = self(h=h, r=r, t=t)
-
-        # prepare output shape, (batch_size, num_heads, num_relations, num_tails) -> (batch_size, num_heads)
-        return self._remove_dim(scores, self.RELATION_DIM, self.TAIL_DIM)
+        return self._score(h=all_entities, r=r, t=t, h_prefix="n", slice_size=slice_size)
 
     def score_r(
         self,
         h: HeadRepresentation = tuple(),
         all_relations: RelationRepresentation = tuple(),
         t: TailRepresentation = tuple(),
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
         Score all relations.
@@ -221,25 +266,14 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        h, r, t = _ensure_tuple(h, all_relations, t)
-        assert self._check_shapes(h=h, r=r, t=t, r_prefix="n")
-
-        # prepare input to generic score function
-        h = self._add_dim(*h, dim=self.NUM_DIM)
-        r = self._add_dim(*r, dim=self.BATCH_DIM)
-        t = self._add_dim(*t, dim=self.NUM_DIM)
-
-        # get scores
-        scores = self(h=h, r=r, t=t)
-
-        # prepare output shape
-        return self._remove_dim(scores, self.HEAD_DIM, self.TAIL_DIM)
+        return self._score(h=h, r=all_relations, t=t, r_prefix="n", slice_size=slice_size)
 
     def score_t(
         self,
         h: HeadRepresentation = tuple(),
         r: RelationRepresentation = tuple(),
         all_entities: TailRepresentation = tuple(),
+        slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
         Score all tail entities.
@@ -254,19 +288,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        h, r, t = _ensure_tuple(h, r, all_entities)
-        assert self._check_shapes(h=h, r=r, t=t, t_prefix="n")
-
-        # prepare input to generic score function
-        h = self._add_dim(*h, dim=self.NUM_DIM)
-        r = self._add_dim(*r, dim=self.NUM_DIM)
-        t = self._add_dim(*t, dim=self.BATCH_DIM)
-
-        # get scores
-        scores = self(h=h, r=r, t=t)
-
-        # prepare output shape
-        return self._remove_dim(scores, self.HEAD_DIM, self.RELATION_DIM)
+        return self._score(h=h, r=r, t=all_entities, t_prefix="n", slice_size=slice_size)
 
     def reset_parameters(self):
         """Reset parameters the interaction function may have."""

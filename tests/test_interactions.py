@@ -32,10 +32,6 @@ class GenericTests(Generic[T]):
         """Perform actions after instantiation."""
 
 
-def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
-    return [x[0] if len(x) == 1 else x for x in xs]
-
-
 class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
     """Generic test for interaction functions."""
 
@@ -61,7 +57,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
                 [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape],
             )
         )
-        return tuple(_unpack_singletons(*result))
+        return tuple(pykeen.nn.modules._unpack_singletons(*result))
 
     def _check_scores(self, scores: torch.FloatTensor, exp_shape: Tuple[int, ...]):
         """Check shape, dtype and gradients of scores."""
@@ -95,6 +91,19 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
         scores = self.instance.score_h(all_entities=h, r=r, t=t)
         self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
 
+    def test_score_h_slicing(self):
+        """Test score_h with slicing."""
+        #: The equivalence for models with batch norm only holds in evaluation mode
+        self.instance.eval()
+        h, r, t = self._get_hrt(
+            (self.num_entities,),
+            (self.batch_size,),
+            (self.batch_size,),
+        )
+        scores = self.instance.score_h(all_entities=h, r=r, t=t, slice_size=self.num_entities // 2 + 1)
+        scores_no_slice = self.instance.score_h(all_entities=h, r=r, t=t, slice_size=None)
+        assert torch.allclose(scores, scores_no_slice)
+
     def test_score_r(self):
         """Test score_r."""
         h, r, t = self._get_hrt(
@@ -109,6 +118,21 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
             exp_shape = (self.batch_size, self.num_relations)
         self._check_scores(scores=scores, exp_shape=exp_shape)
 
+    def test_score_r_slicing(self):
+        """Test score_r with slicing."""
+        if len(self.cls.relation_shape) == 0:
+            raise SkipTest("No use in slicing relations for models without relation information.")
+        #: The equivalence for models with batch norm only holds in evaluation mode
+        self.instance.eval()
+        h, r, t = self._get_hrt(
+            (self.batch_size,),
+            (self.num_relations,),
+            (self.batch_size,),
+        )
+        scores = self.instance.score_r(h=h, all_relations=r, t=t, slice_size=self.num_relations // 2 + 1)
+        scores_no_slice = self.instance.score_r(h=h, all_relations=r, t=t, slice_size=None)
+        assert torch.allclose(scores, scores_no_slice)
+
     def test_score_t(self):
         """Test score_t."""
         h, r, t = self._get_hrt(
@@ -118,6 +142,19 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
         )
         scores = self.instance.score_t(h=h, r=r, all_entities=t)
         self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+
+    def test_score_t_slicing(self):
+        """Test score_t with slicing."""
+        #: The equivalence for models with batch norm only holds in evaluation mode
+        self.instance.eval()
+        h, r, t = self._get_hrt(
+            (self.batch_size,),
+            (self.batch_size,),
+            (self.num_entities,),
+        )
+        scores = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=self.num_entities // 2 + 1)
+        scores_no_slice = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=None)
+        assert torch.allclose(scores, scores_no_slice)
 
     def test_forward(self):
         """Test forward."""
