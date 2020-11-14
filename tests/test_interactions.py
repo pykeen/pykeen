@@ -301,6 +301,35 @@ class TransDTests(TranslationalInteractionTests, unittest.TestCase):
         e=3,
     )
 
+    def test_manual_small_relation_dim(self):
+        """Manually test the value of the interaction function."""
+        # entity embeddings
+        h = t = torch.as_tensor(data=[2., 2.], dtype=torch.float).view(1, 2)
+        h_p = t_p = torch.as_tensor(data=[3., 3.], dtype=torch.float).view(1, 2)
+
+        # relation embeddings
+        r = torch.as_tensor(data=[4.], dtype=torch.float).view(1, 1)
+        r_p = torch.as_tensor(data=[5.], dtype=torch.float).view(1, 1)
+
+        # Compute Scores
+        scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
+        first_score = scores[0].item()
+        self.assertAlmostEqual(first_score, -16, delta=0.01)
+
+    def test_manual_big_relation_dim(self):
+        """Manually test the value of the interaction function."""
+        # entity embeddings
+        h = t = torch.as_tensor(data=[2., 2.], dtype=torch.float).view(1, 2)
+        h_p = t_p = torch.as_tensor(data=[3., 3.], dtype=torch.float).view(1, 2)
+
+        # relation embeddings
+        r = torch.as_tensor(data=[3., 3., 3.], dtype=torch.float).view(1, 3)
+        r_p = torch.as_tensor(data=[4., 4., 4.], dtype=torch.float).view(1, 3)
+
+        # Compute Scores
+        scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
+        self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+
 
 class TransETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransE interaction function."""
@@ -326,7 +355,7 @@ class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     )
 
     def test_manual(self):
-        """A manual test of the score function."""
+        """Manually test the value of the interaction function."""
         # Compute Scores
         h = torch.as_tensor(data=[2, 2], dtype=torch.float32).view(1, 2)
         r = torch.as_tensor(data=[4, 4], dtype=torch.float32).view(1, 2)

@@ -951,7 +951,7 @@ def transd_interaction(
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """
-    Evaluate the DistMult interaction function.
+    Evaluate the TransD interaction function.
 
     :param h: shape: (batch_size, num_heads, d_e)
         The head representations.

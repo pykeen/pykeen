@@ -825,6 +825,9 @@ class TransDInteractionFunction(
     entity_shape = ("d", "d")
     relation_shape = ("e", "e")
 
+    def __init__(self, p: int = 2, power_norm: bool = True):
+        super().__init__(p=p, power_norm=power_norm)
+
     def forward(
         self,
         h: Tuple[torch.FloatTensor, torch.FloatTensor],

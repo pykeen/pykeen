@@ -8,7 +8,6 @@ import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
-from unittest.case import SkipTest
 from unittest.mock import patch
 
 import numpy
@@ -845,130 +844,6 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         """
         for emb in (self.model.entity_representations[0], self.model.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
-
-    def test_score_hrt_manual(self):
-        """Manually test interaction function of TransD."""
-        raise SkipTest("TODO: Move this test to interaction function checks.")
-        # self.model: TwoVectorEmbeddingModel
-        #
-        # # entity embeddings
-        # weights = torch.as_tensor(data=[[2., 2.], [4., 4.]], dtype=torch.float)
-        # entity_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=2,
-        # )
-        # entity_embeddings._embeddings.weight.data.copy_(weights)
-        # self.model.entity_representations[0] = entity_embeddings
-        #
-        # projection_weights = torch.as_tensor(data=[[3., 3.], [2., 2.]], dtype=torch.float)
-        # entity_projection_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=2,
-        # )
-        # entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        # self.model.second_entity_embeddings = entity_projection_embeddings
-        #
-        # # relation embeddings
-        # relation_weights = torch.as_tensor(data=[[4.], [4.]], dtype=torch.float)
-        # relation_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=1,
-        # )
-        # relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        # self.model.relation_representations[0] = relation_embeddings
-        #
-        # relation_projection_weights = torch.as_tensor(data=[[5.], [3.]], dtype=torch.float)
-        # relation_projection_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=1,
-        # )
-        # relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        # self.model.second_relation_embeddings = relation_projection_embeddings
-        #
-        # # Compute Scores
-        # batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
-        # scores = self.model.score_hrt(hrt_batch=batch)
-        # self.assertEqual(scores.shape[0], 2)
-        # self.assertEqual(scores.shape[1], 1)
-        # first_score = scores[0].item()
-        # self.assertAlmostEqual(first_score, -16, delta=0.01)
-        #
-        # # Use different dimension for relation embedding: relation_dim > entity_dim
-        # # relation embeddings
-        # relation_weights = torch.as_tensor(data=[[3., 3., 3.], [3., 3., 3.]], dtype=torch.float)
-        # relation_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=3,
-        # )
-        # relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        # self.model.relation_representations[0] = relation_embeddings
-        #
-        # relation_projection_weights = torch.as_tensor(data=[[4., 4., 4.], [4., 4., 4.]], dtype=torch.float)
-        # relation_projection_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=3,
-        # )
-        # relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        # self.model.relation_representations[1] = relation_projection_embeddings
-        #
-        # # Compute Scores
-        # batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
-        # scores = self.model.score_hrt(hrt_batch=batch)
-        # self.assertAlmostEqual(scores.item(), -27, delta=0.01)
-        #
-        # batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
-        # scores = self.model.score_hrt(hrt_batch=batch)
-        # self.assertEqual(scores.shape[0], 2)
-        # self.assertEqual(scores.shape[1], 1)
-        # first_score = scores[0].item()
-        # second_score = scores[1].item()
-        # self.assertAlmostEqual(first_score, -27, delta=0.01)
-        # self.assertAlmostEqual(second_score, -27, delta=0.01)
-        #
-        # # Use different dimension for relation embedding: relation_dim < entity_dim
-        # # entity embeddings
-        # weights = torch.as_tensor(data=[[1., 1., 1.], [1., 1., 1.]], dtype=torch.float)
-        # entity_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=3,
-        # )
-        # entity_embeddings._embeddings.weight.data.copy_(weights)
-        # self.model.entity_representations[0] = entity_embeddings
-        #
-        # projection_weights = torch.as_tensor(data=[[2., 2., 2.], [2., 2., 2.]], dtype=torch.float)
-        # entity_projection_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=3,
-        # )
-        # entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        # self.model.second_entity_embeddings = entity_projection_embeddings
-        #
-        # # relation embeddings
-        # relation_weights = torch.as_tensor(data=[[3., 3.], [3., 3.]], dtype=torch.float)
-        # relation_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=2,
-        # )
-        # relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        # self.model.relation_representations[0] = relation_embeddings
-        #
-        # relation_projection_weights = torch.as_tensor(data=[[4., 4.], [4., 4.]], dtype=torch.float)
-        # relation_projection_embeddings = Embedding(
-        #     num_embeddings=2,
-        #     embedding_dim=2,
-        # )
-        # relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        # self.model.relation_representations[1] = relation_projection_embeddings
-        #
-        # # Compute Scores
-        # batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
-        # scores = self.model.score_hrt(hrt_batch=batch)
-        # self.assertEqual(scores.shape[0], 2)
-        # self.assertEqual(scores.shape[1], 1)
-        # first_score = scores[0].item()
-        # second_score = scores[1].item()
-        # self.assertAlmostEqual(first_score, -18, delta=0.01)
-        # self.assertAlmostEqual(second_score, -18, delta=0.01)
 
     def test_project_entity(self):
         """Test _project_entity."""
