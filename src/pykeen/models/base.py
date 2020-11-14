@@ -1217,7 +1217,7 @@ class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction,
+        interaction_function: InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         embedding_dim: int = 200,
         relation_dim: Optional[int] = None,
         automatic_memory_optimization: Optional[bool] = None,
