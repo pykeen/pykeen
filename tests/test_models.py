@@ -481,14 +481,11 @@ Traceback
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
         with patch.object(self.model_cls, 'reset_parameters_', return_value=None) as mock_method:
-            try:
-                self.model_cls(
-                    triples_factory=self.factory,
-                    embedding_dim=self.embedding_dim,
-                    **(self.model_kwargs or {}),
-                )
-            except TypeError as error:
-                assert error.args == ("'NoneType' object is not callable",)
+            self.model_cls(
+                triples_factory=self.factory,
+                embedding_dim=self.embedding_dim,
+                **(self.model_kwargs or {}),
+            )
             mock_method.assert_called_once()
 
     def test_custom_representations(self):
