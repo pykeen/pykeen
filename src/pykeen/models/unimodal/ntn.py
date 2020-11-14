@@ -86,14 +86,6 @@ class NTN(EntityEmbeddingModel):
             num_embeddings=triples_factory.num_relations,
             embedding_dim=num_slices * self.embedding_dim ** 2,
         )
-        self.vh = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim,
-        )
-        self.vt = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim,
-        )
         self.b = Embedding(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=num_slices,
@@ -102,6 +94,15 @@ class NTN(EntityEmbeddingModel):
             num_embeddings=triples_factory.num_relations,
             embedding_dim=num_slices,
         )
+        self.vh = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim,
+        )
+        self.vt = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim,
+        )
+
         if non_linearity is None:
             non_linearity = nn.Tanh()
         self.non_linearity = non_linearity

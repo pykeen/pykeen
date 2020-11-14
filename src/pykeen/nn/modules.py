@@ -266,6 +266,22 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
                 mod.reset_parameters()
 
 
+class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """Interaction function without state."""
+
+    def __init__(self, f: Callable[[torch.FloatTensor, ...], torch.FloatTensor]):
+        super().__init__()
+        self.f = f
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.f(*h, *r, *t)
+
+
 def _build_module_from_stateless(
     f: Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
 ) -> Type[InteractionFunction]:
@@ -287,7 +303,7 @@ def _build_module_from_stateless(
     return StatelessInteractionFunction
 
 
-class TranslationalInteractionFunction(InteractionFunction[EntityRepresentation, RelationRepresentation], ABC):
+class TranslationalInteractionFunction(InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -304,7 +320,7 @@ class TranslationalInteractionFunction(InteractionFunction[EntityRepresentation,
         self.power_norm = power_norm
 
 
-class TransEInteractionFunction(TranslationalInteractionFunction):
+class TransEInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """The TransE interaction function."""
 
     def forward(
@@ -318,8 +334,11 @@ class TransEInteractionFunction(TranslationalInteractionFunction):
         return pkf.transe_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
 
 
-#: Interaction function of ComplEx
-ComplExInteractionFunction = _build_module_from_stateless(pkf.complex_interaction)
+class ComplExInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Interaction function of ComplEx."""
+
+    def __init__(self):
+        super().__init__(f=pkf.complex_interaction)
 
 
 def _calculate_missing_shape_information(
@@ -477,7 +496,7 @@ class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
         )
 
 
-class ConvKBInteractionFunction(InteractionFunction):
+class ConvKBInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function of ConvKB."""
 
     def __init__(
@@ -512,7 +531,6 @@ class ConvKBInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         return pkf.convkb_interaction(
             h=h,
@@ -525,11 +543,14 @@ class ConvKBInteractionFunction(InteractionFunction):
         )
 
 
-#: Interaction function for HolE
-DistMultInteractionFunction = _build_module_from_stateless(pkf.distmult_interaction)
+class DistMultInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Interaction function of DistMult."""
+
+    def __init__(self):
+        super().__init__(f=pkf.distmult_interaction)
 
 
-class ERMLPInteractionFunction(InteractionFunction):
+class ERMLPInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """
     Interaction function of ER-MLP.
 
@@ -564,9 +585,7 @@ class ERMLPInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs)
         return pkf.ermlp_interaction(
             h=h,
             r=r,
@@ -588,7 +607,7 @@ class ERMLPInteractionFunction(InteractionFunction):
         )
 
 
-class ERMLPEInteractionFunction(InteractionFunction):
+class ERMLPEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function of ER-MLP."""
 
     def __init__(
@@ -616,14 +635,14 @@ class ERMLPEInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
 
 
-class TransRInteractionFunction(TranslationalInteractionFunction):
+class TransRInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]):
     """The TransR interaction function."""
+
+    relation_shape = ("e", "de")
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
@@ -631,23 +650,28 @@ class TransRInteractionFunction(TranslationalInteractionFunction):
     def forward(
         self,
         h: torch.FloatTensor,
-        r: torch.FloatTensor,
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        m_r = kwargs.pop('m_r')
-        self._check_for_empty_kwargs(kwargs=kwargs)
+        r, m_r = r
         return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=self.power_norm)
 
 
-#: Interaction function of RotatE.
-RotatEInteraction = _build_module_from_stateless(pkf.rotate_interaction)
+class RotatEInteraction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Interaction function of RotatE."""
 
-#: Interaction function for HolE.
-HolEInteractionFunction = _build_module_from_stateless(pkf.hole_interaction)
+    def __init__(self):
+        super().__init__(f=pkf.rotate_interaction)
 
 
-class ProjEInteractionFunction(InteractionFunction):
+class HolEInteraction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Interaction function for HolE."""
+
+    def __init__(self):
+        super().__init__(f=pkf.hole_interaction)
+
+
+class ProjEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function for ProjE."""
 
     def __init__(
@@ -684,18 +708,20 @@ class ProjEInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        self._check_for_empty_kwargs(kwargs=kwargs)
-
-        # Compute score
         return pkf.proje_interaction(
             h=h, r=r, t=t,
             d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity,
-        ).view(-1, 1)
+        )
 
 
-RESCALInteractionFunction = _build_module_from_stateless(pkf.rescal_interaction)
+class RESCALInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Interaction function of RESCAL."""
+
+    relation_shape = "dd"
+
+    def __init__(self):
+        super().__init__(f=pkf.rescal_interaction)
 
 
 class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]):
@@ -713,7 +739,7 @@ class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[to
         return pkf.structured_embedding_interaction(h=h, r_h=rh, r_t=rt, t=t, p=self.p, power_norm=self.power_norm)
 
 
-class TuckerInteractionFunction(InteractionFunction):
+class TuckerInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """Interaction function of Tucker."""
 
     def __init__(
@@ -766,9 +792,7 @@ class TuckerInteractionFunction(InteractionFunction):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.tucker_interaction(
             h=h,
             r=r,
@@ -800,24 +824,40 @@ class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torc
         return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
 
 
-class TransDInteractionFunction(TranslationalInteractionFunction):
+class TransDInteractionFunction(
+    TranslationalInteractionFunction[
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+    ]
+):
     """Interaction function of TransD."""
+
+    entity_shape = ("d", "d")
+    relation_shape = ("e", "e")
 
     def forward(
         self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
+        h: Tuple[torch.FloatTensor, torch.FloatTensor],
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
+        t: Tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> torch.FloatTensor:  # noqa:D102
-        h_p = kwargs.pop("h_p")
-        r_p = kwargs.pop("r_p")
-        t_p = kwargs.pop("t_p")
+        h, h_p = h
+        r, r_p = r
+        t, t_p = t
         return pkf.transd_interaction(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p, p=self.p, power_norm=self.power_norm)
 
 
-class NTNInteractionFunction(InteractionFunction):
+class NTNInteractionFunction(
+    InteractionFunction[
+        torch.FloatTensor,
+        Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        torch.FloatTensor,
+    ]
+):
     """The interaction function of NTN."""
+
+    relation_shape = ("kdd", "k", "k", "kd", "kd")
 
     def __init__(
         self,
@@ -831,7 +871,8 @@ class NTNInteractionFunction(InteractionFunction):
     def forward(
         self,
         h: torch.FloatTensor,
-        r: torch.FloatTensor,
+        r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:
+        w, b, u, vh, vt = r
+        return pkf.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
