@@ -9,7 +9,7 @@ from torch import nn
 
 from ..base import EntityEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, functional as pkf
+from ...nn import Embedding
 from ...nn.modules import NTNInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -124,8 +124,8 @@ class NTN(EntityEmbeddingModel):
         assert slice_size is None, "not implemented"
 
         #: shape: (batch_size, num_entities, d)
-        h_all = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        t_all = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
         w = self.w.get_in_canonical_shape(indices=r_indices,
                                           reshape_dim=(self.num_slices, self.embedding_dim, self.embedding_dim))
         b = self.b.get_in_canonical_shape(indices=r_indices)
@@ -133,34 +133,4 @@ class NTN(EntityEmbeddingModel):
         vh = self.vh.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
         vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
 
-        if slice_size is None:
-            return self.interaction(
-                h=h_all, t=t_all,
-                w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
-            )
-
-        # TODO: Not implemented
-        if h_all.shape[1] > t_all.shape[1]:
-            h_was_split = True
-            split_tensor = torch.split(h_all, slice_size, dim=1)
-            constant_tensor = t_all
-        else:
-            h_was_split = False
-            split_tensor = torch.split(t_all, slice_size, dim=1)
-            constant_tensor = h_all
-
-        scores_arr = []
-        for split in split_tensor:
-            if h_was_split:
-                h = split
-                t = constant_tensor
-            else:
-                h = constant_tensor
-                t = split
-            score = pkf.ntn_interaction(
-                h=h, t=t,
-                w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity,
-            )
-            scores_arr.append(score)
-
-        return torch.cat(scores_arr, dim=1)
+        return self.interaction(h=h, t=t, r=(w, b, u, vh, vt)),
