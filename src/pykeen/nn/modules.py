@@ -176,7 +176,7 @@ class InteractionFunction(nn.Module):
             The head representations.
         :param all_relations: shape: (batch_size, d_r)
             The relation representations.
-        :param t: shape: (num_entities, d_e)
+        :param t: shape: (batch_size, d_e)
             The tail representations.
         :param kwargs:
             Additional key-word based arguments.
