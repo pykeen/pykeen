@@ -5,7 +5,7 @@
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import torch
 from torch import nn
@@ -27,21 +27,18 @@ class InteractionFunction(nn.Module):
 
     def forward(
         self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
+        h: Sequence[torch.FloatTensor] = tuple(),
+        r: Sequence[torch.FloatTensor] = tuple(),
+        t: Sequence[torch.FloatTensor] = tuple(),
     ) -> torch.FloatTensor:
-        """Score the given triples.
+        """Compute broadcasted triple scores given representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, d_e)
+        :param h: shape: (batch_size, num_heads, *)
             The head representations.
-        :param r: shape: (batch_size, num_relations, d_r)
+        :param r: shape: (batch_size, num_relations, *)
             The relation representations.
-        :param t: shape: (batch_size, num_tails, d_e)
+        :param t: shape: (batch_size, num_tails, *)
             The tail representations.
-        :param kwargs:
-            Additional key-word based arguments.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
@@ -94,10 +91,9 @@ class InteractionFunction(nn.Module):
 
     def score_hrt(
         self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
+        h: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        r: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        t: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
     ) -> torch.FloatTensor:
         """
         Score a batch of triples..
@@ -121,17 +117,16 @@ class InteractionFunction(nn.Module):
         h, r, t = self._add_dim(h, r, t, dim=self.NUM_DIM)
 
         # get scores
-        scores = self(h=h, r=r, t=t, **kwargs)
+        scores = self(h=h, r=r, t=t)
 
         # prepare output shape, (batch_size, num_heads, num_relations, num_tails) -> (batch_size, 1)
         return self._remove_dim(scores, self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM).unsqueeze(dim=-1)
 
     def score_h(
         self,
-        all_entities: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
+        all_entities: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        r: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        t: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
     ) -> torch.FloatTensor:
         """
         Score all head entities.
@@ -164,10 +159,9 @@ class InteractionFunction(nn.Module):
 
     def score_r(
         self,
-        h: torch.FloatTensor,
-        all_relations: torch.FloatTensor,
-        t: torch.FloatTensor,
-        **kwargs,
+        h: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        all_relations: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        t: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
     ) -> torch.FloatTensor:
         """
         Score all relations.
@@ -199,10 +193,9 @@ class InteractionFunction(nn.Module):
 
     def score_t(
         self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        all_entities: torch.FloatTensor,
-        **kwargs,
+        h: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        r: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
+        all_entities: Union[None, torch.FloatTensor, Sequence[torch.FloatTensor]] = None,
     ) -> torch.FloatTensor:
         """
         Score all tail entities.
@@ -791,3 +784,24 @@ class TransDInteractionFunction(TranslationalInteractionFunction):
         r_p = kwargs.pop("r_p")
         t_p = kwargs.pop("t_p")
         return pkf.transd_interaction(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p, p=self.p, power_norm=self.power_norm)
+
+
+class NTNInteractionFunction(InteractionFunction):
+    """The interaction function of NTN."""
+
+    def __init__(
+        self,
+        non_linearity: Optional[nn.Module] = None,
+    ):
+        super().__init__()
+        if non_linearity is None:
+            non_linearity = nn.Tanh()
+        self.non_linearity = non_linearity
+
+    def forward(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        **kwargs,
+    ) -> torch.FloatTensor:
