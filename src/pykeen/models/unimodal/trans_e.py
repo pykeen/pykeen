@@ -10,7 +10,7 @@ from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...nn.modules import TranslationalInteractionFunction
+from ...nn.modules import TransEInteractionFunction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -69,7 +69,7 @@ class TransE(SingleVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TranslationalInteractionFunction(p=scoring_fct_norm),
+            interaction_function=TransEInteractionFunction(p=scoring_fct_norm, power_norm=False),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
