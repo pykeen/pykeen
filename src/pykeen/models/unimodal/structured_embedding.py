@@ -76,7 +76,7 @@ class StructuredEmbedding(DoubleRelationEmbeddingModel):
                 power_norm=False,
             ),
             embedding_dim=embedding_dim,
-            relation_dim=embedding_dim ** 2,
+            relation_dim=(embedding_dim, embedding_dim),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,

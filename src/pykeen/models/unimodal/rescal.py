@@ -72,7 +72,7 @@ class RESCAL(SingleVectorEmbeddingModel):
             triples_factory=triples_factory,
             interaction_function=RESCALInteractionFunction(),
             embedding_dim=embedding_dim,
-            relation_dim=embedding_dim ** 2,  # d x d matrices
+            relation_dim=(embedding_dim, embedding_dim),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,

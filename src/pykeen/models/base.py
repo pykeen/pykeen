@@ -1258,7 +1258,7 @@ class SingleVectorEmbeddingModel(Model, ABC):
         triples_factory: TriplesFactory,
         interaction_function: InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         embedding_dim: int = 200,
-        relation_dim: Optional[int] = None,
+        relation_dim: Union[None, int, Sequence[int]] = None,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -1291,8 +1291,6 @@ class SingleVectorEmbeddingModel(Model, ABC):
         # Default for relation dimensionality
         if relation_dim is None:
             relation_dim = embedding_dim
-        self.embedding_dim = embedding_dim
-        self.relation_dim = relation_dim
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -1304,15 +1302,29 @@ class SingleVectorEmbeddingModel(Model, ABC):
             interaction_function=interaction_function,
             entity_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_entities,
-                embedding_dim=embedding_dim,
+                shape=embedding_dim,
                 specification=embedding_specification,
             ),
             relation_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_relations,
-                embedding_dim=relation_dim,
+                shape=relation_dim,
                 specification=relation_embedding_specification,
             ),
         )
+
+    @property
+    def embedding_dim(self) -> int:
+        """The entity embedding dim."""
+        embedding = self.entity_representations[0]
+        assert isinstance(embedding, Embedding)
+        return embedding.embedding_dim
+
+    @property
+    def relation_dim(self) -> int:
+        """The relation embedding dim."""
+        embedding = self.relation_representations[0]
+        assert isinstance(embedding, Embedding)
+        return embedding.embedding_dim
 
 
 class DoubleRelationEmbeddingModel(Model, ABC):
@@ -1327,7 +1339,7 @@ class DoubleRelationEmbeddingModel(Model, ABC):
             torch.FloatTensor,
         ],
         embedding_dim: int = 50,
-        relation_dim: Optional[int] = None,
+        relation_dim: Union[None, int, Sequence[int]] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
@@ -1351,19 +1363,19 @@ class DoubleRelationEmbeddingModel(Model, ABC):
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
+                    shape=embedding_dim,
                     specification=embedding_specification,
                 ),
             ],
             relation_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    embedding_dim=relation_dim,
+                    shape=relation_dim,
                     specification=relation_embedding_specification,
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    embedding_dim=relation_dim,
+                    shape=relation_dim,
                     specification=second_relation_embedding_specification,
                 )
             ],

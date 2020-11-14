@@ -3,7 +3,7 @@
 """Embedding modules."""
 import dataclasses
 import functools
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy
 import torch
@@ -64,8 +64,8 @@ class EmbeddingSpecification:
     def make(
         self,
         num_embeddings: int,
-        embedding_dim: int,
-        shape: Optional[Sequence[int]],
+        embedding_dim: Optional[int],
+        shape: Optional[Union[int, Sequence[int]]]
     ) -> 'Embedding':
         """Create an embedding with this specification."""
         return Embedding(
@@ -92,7 +92,7 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: Optional[int] = None,
-        shape: Optional[Sequence[int]] = None,
+        shape: Optional[Union[int, Sequence[int]]] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -127,6 +127,8 @@ class Embedding(RepresentationModule):
         if shape is None and embedding_dim is None:
             raise ValueError
         if shape is not None:
+            if not isinstance(shape, Sequence):
+                shape = (shape,)
             embedding_dim = numpy.prod(shape)
         else:
             shape = (embedding_dim,)
@@ -155,8 +157,8 @@ class Embedding(RepresentationModule):
     def from_specification(
         cls,
         num_embeddings: int,
-        embedding_dim: int,
-        shape: Optional[Sequence[int]] = None,
+        embedding_dim: Optional[int] = None,
+        shape: Optional[Union[int, Sequence[int]]] = None,
         specification: Optional[EmbeddingSpecification] = None,
     ) -> 'Embedding':
         """Create an embedding based on a specification.
