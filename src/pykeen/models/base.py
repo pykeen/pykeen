@@ -1136,7 +1136,6 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
 class EntityEmbeddingModel(Model):
     """A base module for most KGE models that have one embedding for entities."""
-
     # TODO: deprecated
 
     def __init__(
@@ -1190,6 +1189,7 @@ class EntityEmbeddingModel(Model):
 
 class EntityRelationEmbeddingModel(Model, ABC):
     """A base module for KGE models that have different embeddings for entities and relations."""
+    # TODO: Deprecated.
 
     def __init__(
         self,
