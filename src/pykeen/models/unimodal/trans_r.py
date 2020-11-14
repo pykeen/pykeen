@@ -141,4 +141,4 @@ class TransR(EntityRelationEmbeddingModel):
             indices=r_indices,
             reshape_dim=(self.embedding_dim, self.relation_dim),
         )
-        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
+        return self.interaction_function(h=h, r=(r, m_r), t=t)
