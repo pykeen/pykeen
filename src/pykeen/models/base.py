@@ -1156,8 +1156,8 @@ class EntityRelationEmbeddingModel(Model, ABC):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        embedding_specification: EmbeddingSpecification = None,
-        relation_embedding_specification: EmbeddingSpecification = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1226,8 +1226,8 @@ class SingleVectorEmbeddingModel(EntityRelationEmbeddingModel):
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        embedding_specification: EmbeddingSpecification = None,
-        relation_embedding_specification: EmbeddingSpecification = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ) -> None:
         """Initialize embedding model.
 
@@ -1301,10 +1301,10 @@ class TwoVectorEmbeddingModel(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        embedding_specification: EmbeddingSpecification = None,
-        relation_embedding_specification: EmbeddingSpecification = None,
-        second_embedding_specification: EmbeddingSpecification = None,
-        second_relation_embedding_specification: EmbeddingSpecification = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
+        second_embedding_specification: Optional[EmbeddingSpecification] = None,
+        second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -1373,10 +1373,10 @@ class TwoSideEmbeddingModel(TwoVectorEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        embedding_specification: EmbeddingSpecification = None,
-        relation_embedding_specification: EmbeddingSpecification = None,
-        second_embedding_specification: EmbeddingSpecification = None,
-        second_relation_embedding_specification: EmbeddingSpecification = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
+        second_embedding_specification: Optional[EmbeddingSpecification] = None,
+        second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ):
         super().__init__(
             triples_factory=triples_factory,

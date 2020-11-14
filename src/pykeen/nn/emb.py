@@ -60,6 +60,20 @@ class EmbeddingSpecification:
 
     # regularizer: Optional[Regularizer] = None
 
+    def make(self, num_embeddings: int, embedding_dim: int, device: DeviceHint) -> 'Embedding':
+        """Create an embedding with this specification."""
+        return Embedding.init_with_device(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            initializer=self.initializer,
+            initializer_kwargs=self.initializer_kwargs,
+            normalizer=self.normalizer,
+            normalizer_kwargs=self.normalizer_kwargs,
+            constrainer=self.constrainer,
+            constrainer_kwargs=self.constrainer_kwargs,
+            device=device,
+        )
+
 
 class Embedding(RepresentationModule):
     """Trainable embeddings.
@@ -129,10 +143,9 @@ class Embedding(RepresentationModule):
         num_embeddings: int,
         embedding_dim: int,
         specification: Optional[EmbeddingSpecification],
-        device: Optional[torch.device] = None,
-    ) -> "Embedding":
-        """
-        Create an embedding based on an specification.
+        device: DeviceHint = None,
+    ) -> 'Embedding':
+        """Create an embedding based on a specification.
 
         :param num_embeddings:
             The number of embeddings.
@@ -148,19 +161,11 @@ class Embedding(RepresentationModule):
         """
         if specification is None:
             specification = EmbeddingSpecification()
-        embedding = Embedding(
+        return specification.make(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
-            initializer=specification.initializer,
-            initializer_kwargs=specification.initializer_kwargs,
-            normalizer=specification.normalizer,
-            normalizer_kwargs=specification.normalizer_kwargs,
-            constrainer=specification.constrainer,
-            constrainer_kwargs=specification.constrainer_kwargs,
+            device=device,
         )
-        if device is not None:
-            embedding = embedding.to(device=device)
-        return embedding
 
     @classmethod
     def init_with_device(
