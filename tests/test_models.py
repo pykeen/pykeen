@@ -572,7 +572,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.model.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
@@ -654,7 +654,7 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        assert all_in_bounds(self.model.entity_representations[0](indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
 
 
 class _TestKG2E(_ModelTestCase):
@@ -786,7 +786,7 @@ class TestRotatE(_ModelTestCase, unittest.TestCase):
         """
         relation_abs = (
             self.model
-                .relation_embeddings(indices=None)
+                .relation_representations[0](indices=None)
                 .view(self.factory.num_relations, -1, 2)
                 .norm(p=2, dim=-1)
         )
@@ -998,7 +998,7 @@ class TestTransE(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        entity_norms = self.model.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
