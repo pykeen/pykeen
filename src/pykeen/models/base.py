@@ -1315,6 +1315,62 @@ class SingleVectorEmbeddingModel(Model, ABC):
         )
 
 
+class DoubleRelationEmbeddingModel(Model, ABC):
+    """A model with one vector for each entity and two vectors for each relation."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction[
+            torch.FloatTensor,
+            Tuple[torch.FloatTensor, torch.FloatTensor],
+            torch.FloatTensor,
+        ],
+        embedding_dim: int = 50,
+        relation_dim: Optional[int] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
+        second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
+    ) -> None:
+        if relation_dim is None:
+            relation_dim = embedding_dim
+        super().__init__(
+            triples_factory=triples_factory,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            entity_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=embedding_specification,
+                ),
+            ],
+            relation_representations=[
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=relation_dim,
+                    specification=relation_embedding_specification,
+                ),
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_relations,
+                    embedding_dim=relation_dim,
+                    specification=second_relation_embedding_specification,
+                )
+            ],
+            interaction_function=interaction_function,
+        )
+
+
 class TwoVectorEmbeddingModel(Model, ABC):
     """A model with two vectors for each entity and relation."""
 

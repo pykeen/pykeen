@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransR."""
-
+import logging
 from functools import partial
 from typing import Optional
 
@@ -10,9 +10,8 @@ import torch.autograd
 import torch.nn.init
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TransRInteractionFunction
@@ -36,7 +35,7 @@ def _projection_initializer(
     return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
 
-class TransR(EntityRelationEmbeddingModel):
+class TransR(DoubleRelationEmbeddingModel):
     r"""An implementation of TransR from [lin2015]_.
 
     TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
@@ -109,36 +108,17 @@ class TransR(EntityRelationEmbeddingModel):
                 constrainer=clamp_norm,
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
-
-        )
-        self.interaction_function = TransRInteractionFunction(p=scoring_fct_norm)
-
-        # TODO: Initialize from TransE
-
-        # embeddings
-        self.relation_projections = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=relation_dim * embedding_dim,
-            device=self.device,
-            initializer=partial(
-                _projection_initializer,
-                num_relations=self.num_relations,
-                embedding_dim=self.embedding_dim,
-                relation_dim=self.relation_dim,
+            # Relation projections
+            second_relation_embedding_specification=EmbeddingSpecification(
+                initializer=partial(
+                    _projection_initializer,
+                    num_relations=triples_factory.num_relations,
+                    embedding_dim=embedding_dim,
+                    relation_dim=relation_dim,
+                ),
+            ),
+            interaction_function=TransRInteractionFunction(
+                p=scoring_fct_norm,
             ),
         )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        m_r = self.relation_projections.get_in_canonical_shape(
-            indices=r_indices,
-            reshape_dim=(self.embedding_dim, self.relation_dim),
-        )
-        return self.interaction_function(h=h, r=(r, m_r), t=t)
+        logging.warning("Initialize from TransE")

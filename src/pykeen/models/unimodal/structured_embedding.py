@@ -6,11 +6,10 @@ import functools
 from typing import Optional
 
 import numpy as np
-import torch
 from torch import nn
 from torch.nn import functional
 
-from .. import EntityRelationEmbeddingModel
+from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
@@ -25,7 +24,7 @@ __all__ = [
 ]
 
 
-class StructuredEmbedding(EntityRelationEmbeddingModel):
+class StructuredEmbedding(DoubleRelationEmbeddingModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 
     SE applies role- and relation-specific projection matrices
@@ -72,8 +71,12 @@ class StructuredEmbedding(EntityRelationEmbeddingModel):
         )
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=StructuredEmbeddingInteractionFunction(
+                p=scoring_fct_norm,
+                power_norm=False,
+            ),
             embedding_dim=embedding_dim,
-            relation_dim=embedding_dim ** 2,  # head projection matrices
+            relation_dim=embedding_dim ** 2,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
@@ -86,38 +89,7 @@ class StructuredEmbedding(EntityRelationEmbeddingModel):
             relation_embedding_specification=EmbeddingSpecification(
                 initializer=relation_initializer,
             ),
+            second_relation_embedding_specification=EmbeddingSpecification(
+                initializer=relation_initializer,
+            )
         )
-        self.second_relation_embedding = EmbeddingSpecification(
-            initializer=relation_initializer,
-        ).make(
-            num_embeddings=self.num_relations,
-            embedding_dim=self.relation_dim,
-            device=self.device,
-        )
-        self.interaction_function = StructuredEmbeddingInteractionFunction(
-            p=scoring_fct_norm,
-            power_norm=False,
-        )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Evaluate the given triples.
-
-        :param h_indices: shape: (batch_size,)
-            The indices for head entities. If None, score against all.
-        :param r_indices: shape: (batch_size,)
-            The indices for relations. If None, score against all.
-        :param t_indices: shape: (batch_size,)
-            The indices for tail entities. If None, score against all.
-
-        :return: The scores, shape: (batch_size, num_entities)
-        """
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r_h = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        r_t = self.second_relation_embedding.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        return self.interaction_function(h=h, r=(r_h, r_t), t=t)

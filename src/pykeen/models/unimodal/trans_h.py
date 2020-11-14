@@ -6,9 +6,8 @@ from typing import Optional
 
 from torch.nn import functional
 
-from .. import Model
+from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import TransHInteractionFunction
 from ...regularizers import Regularizer, TransHRegularizer
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class TransH(Model):
+class TransH(DoubleRelationEmbeddingModel):
     r"""An implementation of TransH [wang2014]_.
 
     This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
@@ -80,37 +79,23 @@ class TransH(Model):
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
         """
-        embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
             interaction_function=TransHInteractionFunction(
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
+            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
-            entity_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_entities,
-                embedding_dim=embedding_dim,
-                specification=None,
+            embedding_specification=None,
+            relation_embedding_specification=None,
+            second_relation_embedding_specification=EmbeddingSpecification(
+                # Normalise the normal vectors by their l2 norms
+                constrainer=functional.normalize,
             ),
-            relation_representations=[
-                Embedding.from_specification(
-                    num_embeddings=triples_factory.num_relations,
-                    embedding_dim=embedding_dim,
-                    specification=None,
-                ),
-                Embedding.from_specification(
-                    num_embeddings=triples_factory.num_relations,
-                    embedding_dim=embedding_dim,
-                    specification=EmbeddingSpecification(
-                        # Normalise the normal vectors by their l2 norms
-                        constrainer=functional.normalize,
-                    ),
-                ),
-            ],
         )
