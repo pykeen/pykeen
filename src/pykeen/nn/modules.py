@@ -438,7 +438,7 @@ class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
         self,
         h: torch.FloatTensor,
         r: torch.FloatTensor,
-        t: torch.FloatTensor,
+        t: Tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         # get tail bias term
         t, t_bias = t
