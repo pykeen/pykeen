@@ -371,7 +371,7 @@ def _calculate_missing_shape_information(
     return input_channels, width, height
 
 
-class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor]):
+class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
     """ConvE interaction function."""
 
     def __init__(
@@ -698,7 +698,7 @@ class ProjEInteractionFunction(InteractionFunction):
 RESCALInteractionFunction = _build_module_from_stateless(pkf.rescal_interaction)
 
 
-class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
+class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]):
     """Interaction function of Structured Embedding."""
 
     relation_shape = "dd"
@@ -782,7 +782,7 @@ class TuckerInteractionFunction(InteractionFunction):
         )
 
 
-class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, None]):
+class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, None, torch.FloatTensor]):
     """Interaction function of UnstructuredModel."""
 
     # shapes
