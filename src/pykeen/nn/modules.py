@@ -12,7 +12,7 @@ from torch import nn
 
 from . import functional as pkf
 from .functional import KG2E_SIMILARITIES
-from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
 from ..utils import check_shapes
 
 logger = logging.getLogger(__name__)
@@ -114,11 +114,26 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
             tail_entity_shape = entity_shape
         if isinstance(tail_entity_shape, str):
             tail_entity_shape = (tail_entity_shape,)
-        return len(h) == len(entity_shape) and len(r) == len(relation_shape) and len(t) == len(tail_entity_shape) and check_shapes(*itertools.chain(
+        if len(h) != len(entity_shape):
+            if raise_on_error:
+                raise ValueError
+            return False
+        if len(r) != len(relation_shape):
+            if raise_on_error:
+                raise ValueError
+            return False
+        if len(t) != len(tail_entity_shape):
+            if raise_on_error:
+                raise ValueError
+            return False
+        return check_shapes(*itertools.chain(
             ((hh, h_prefix + hs) for hh, hs in zip(h, entity_shape)),
             ((rr, r_prefix + rs) for rr, rs in zip(r, relation_shape)),
             ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape)),
         ), raise_or_error=raise_on_error)
+
+    def _ensure_tuple(self, *x: Union[Representation, Sequence[Representation]]) -> Tuple[Sequence[Representation], ...]:
+        return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
 
     def score_hrt(
         self,
@@ -139,12 +154,13 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, 1)
             The scores.
         """
+        h, r, t = self._ensure_tuple(h, r, t)
         assert self._check_shapes(h=h, r=r, t=t)
 
         # prepare input to generic score function
-        h = self._add_dim(h, dim=self.NUM_DIM)
-        r = self._add_dim(r, dim=self.NUM_DIM)
-        t = self._add_dim(t, dim=self.NUM_DIM)
+        h = self._add_dim(*h, dim=self.NUM_DIM)
+        r = self._add_dim(*r, dim=self.NUM_DIM)
+        t = self._add_dim(*t, dim=self.NUM_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)
@@ -171,12 +187,13 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        assert self._check_shapes(h=all_entities, r=r, t=t, h_prefix="n")
+        h, r, t = self._ensure_tuple(all_entities, r, t)
+        assert self._check_shapes(h=h, r=r, t=t, h_prefix="n")
 
         # prepare input to generic score function
-        h = self._add_dim(all_entities, dim=self.BATCH_DIM)
-        r = self._add_dim(r, dim=self.NUM_DIM)
-        t = self._add_dim(t, dim=self.NUM_DIM)
+        h = self._add_dim(*h, dim=self.BATCH_DIM)
+        r = self._add_dim(*r, dim=self.NUM_DIM)
+        t = self._add_dim(*t, dim=self.NUM_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)
@@ -203,12 +220,13 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        assert self._check_shapes(h=h, r=all_relations, t=t, r_prefix="n")
+        h, r, t = self._ensure_tuple(h, all_relations, t)
+        assert self._check_shapes(h=h, r=r, t=t, r_prefix="n")
 
         # prepare input to generic score function
-        h = self._add_dim(h, dim=self.NUM_DIM)
-        r = self._add_dim(all_relations, dim=self.BATCH_DIM)
-        t = self._add_dim(t, dim=self.NUM_DIM)
+        h = self._add_dim(*h, dim=self.NUM_DIM)
+        r = self._add_dim(*r, dim=self.BATCH_DIM)
+        t = self._add_dim(*t, dim=self.NUM_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)
@@ -235,12 +253,13 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        assert self._check_shapes(h=h, r=r, t=all_entities, t_prefix="n")
+        h, r, t = self._ensure_tuple(h, r, all_entities)
+        assert self._check_shapes(h=h, r=r, t=t, t_prefix="n")
 
         # prepare input to generic score function
-        h = self._add_dim(h, dim=self.NUM_DIM)
-        r = self._add_dim(r, dim=self.NUM_DIM)
-        t = self._add_dim(all_entities, dim=self.BATCH_DIM)
+        h = self._add_dim(*h, dim=self.NUM_DIM)
+        r = self._add_dim(*r, dim=self.NUM_DIM)
+        t = self._add_dim(*t, dim=self.BATCH_DIM)
 
         # get scores
         scores = self(h=h, r=r, t=t)

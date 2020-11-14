@@ -4,7 +4,7 @@ from typing import Any, Generic, Mapping, MutableMapping, Optional, Tuple, Type,
 
 import torch
 
-from pykeen.nn.modules import InteractionFunction, TransEInteractionFunction
+from pykeen.nn.modules import DistMultInteractionFunction, InteractionFunction, TransEInteractionFunction
 from pykeen.typing import Representation
 
 T = TypeVar("T")
@@ -45,44 +45,84 @@ class InteractionTests(GenericTests[InteractionFunction]):
     ) -> Tuple[Representation, ...]:
         return tuple([torch.rand(*s, requires_grad=True) for s in shapes])
 
-    def _get_shapes_for_score_(self, dim: int) -> Tuple[Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int, int]]:
-        result = []
-        num_choices = self.num_entities if dim != 1 else self.num_relations
-        for i in range(3):
-            shape = [1, 1, 1, 1]
-            if i == dim:
-                shape[i + 1] = num_choices
-            else:
-                shape[0] = self.batch_size
-            result.append(tuple(shape))
-        shape = [self.batch_size, 1, 1, 1]
-        shape[dim + 1] = num_choices
-        result.append(tuple(shape))
-        return tuple(result)
+    def _check_scores(self, scores: torch.FloatTensor, exp_shape: Tuple[int, ...]):
+        """Check shape, dtype and gradients of scores."""
+        assert torch.is_tensor(scores)
+        assert scores.dtype == torch.float32
+        assert scores.ndimension() == len(exp_shape)
+        assert scores.shape == exp_shape
+        assert scores.requires_grad
+
+    def test_score_hrt(self):
+        """Test score_hrt."""
+        h, r, t = self._get_hrt(
+            (self.batch_size, self.dim),
+            (self.batch_size, self.dim),
+            (self.batch_size, self.dim),
+        )
+        scores = self.instance.score_hrt(h=h, r=r, t=t)
+        self._check_scores(scores=scores, exp_shape=(self.batch_size, 1))
+
+    def test_score_h(self):
+        """Test score_h."""
+        h, r, t = self._get_hrt(
+            (self.num_entities, self.dim),
+            (self.batch_size, self.dim),
+            (self.batch_size, self.dim),
+        )
+        scores = self.instance.score_h(all_entities=h, r=r, t=t)
+        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+
+    def test_score_r(self):
+        """Test score_r."""
+        h, r, t = self._get_hrt(
+            (self.batch_size, self.dim),
+            (self.num_relations, self.dim),
+            (self.batch_size, self.dim),
+        )
+        scores = self.instance.score_r(h=h, all_relations=r, t=t)
+        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_relations))
+
+    def test_score_t(self):
+        """Test score_t."""
+        h, r, t = self._get_hrt(
+            (self.batch_size, self.dim),
+            (self.batch_size, self.dim),
+            (self.num_entities, self.dim),
+        )
+        scores = self.instance.score_t(h=h, r=r, all_entities=t)
+        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
 
     def test_forward(self):
-        for hs, rs, ts, exp in [
-            # slcwa
+        """Test forward."""
+        for hs, rs, ts in [
             [
                 (self.batch_size, 1, self.dim),
-                (self.batch_size, 1, self.dim),
-                (self.batch_size, 1, self.dim),
-                (self.batch_size, 1, 1, 1),
+                (1, self.num_relations, self.dim),
+                (self.batch_size, self.num_entities, self.dim),
             ],
-            # score_h
-            self._get_shapes_for_score_(dim=0),
-            # score_r
-            self._get_shapes_for_score_(dim=1),
-            # score_t
-            self._get_shapes_for_score_(dim=2),
+            [
+                (1, 1, self.dim),
+                (1, self.num_relations, self.dim),
+                (self.batch_size, self.num_entities, self.dim),
+            ],
+            [
+                (1, self.num_entities, self.dim),
+                (1, self.num_relations, self.dim),
+                (1, self.num_entities, self.dim),
+            ],
         ]:
-            h, r, t = self._get_hrt(hs, rs, ts)
-            scores = self.instance.forward(h=h, r=r, t=t)
-            assert torch.is_tensor(scores)
-            assert scores.dtype == torch.float32
-            assert scores.ndimension() == 4
-            assert scores.shape == exp
-            assert scores.requires_grad
+            with self.subTest(f"forward({hs}, {rs}, {ts})"):
+                expected_shape = (max(hs[0], rs[0], ts[0]), hs[1], rs[1], ts[1])
+                h, r, t = self._get_hrt(hs, rs, ts)
+                scores = self.instance(h=h, r=r, t=t)
+                self._check_scores(scores=scores, exp_shape=expected_shape)
+
+
+class DistMultTests(InteractionTests, unittest.TestCase):
+    """Tests for DistMult interaction function."""
+
+    cls = DistMultInteractionFunction
 
 
 class TransETests(InteractionTests, unittest.TestCase):
