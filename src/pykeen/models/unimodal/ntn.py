@@ -4,10 +4,9 @@
 
 from typing import Optional
 
-import torch
 from torch import nn
 
-from ..base import EntityEmbeddingModel
+from .. import Model
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.modules import NTNInteractionFunction
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-class NTN(EntityEmbeddingModel):
+class NTN(Model):
     r"""An implementation of NTN from [socher2013]_.
 
     NTN uses a bilinear tensor layer instead of a standard linear neural network layer:
@@ -72,65 +71,42 @@ class NTN(EntityEmbeddingModel):
         :param non_linearity: A non-linear activation function. Defaults to the hyperbolic
          tangent :class:`torch.nn.Tanh`.
         """
+        self.embedding_dim = embedding_dim
+        self.num_slices = num_slices
+
+        w = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim ** 2,
+        )
+        b = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices,
+        )
+        u = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices,
+        )
+        vh = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim,
+        )
+        vt = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices * embedding_dim,
+        )
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            interaction_function=NTNInteractionFunction(
+                non_linearity=non_linearity,
+            ),
+            entity_representations=Embedding(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=(w, b, u, vh, vt),
         )
-        self.num_slices = num_slices
-
-        self.w = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * self.embedding_dim ** 2,
-        )
-        self.b = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices,
-        )
-        self.u = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices,
-        )
-        self.vh = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim,
-        )
-        self.vt = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices * embedding_dim,
-        )
-        self.interaction = NTNInteractionFunction(non_linearity=non_linearity)
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor] = None,
-        r_indices: Optional[torch.LongTensor] = None,
-        t_indices: Optional[torch.LongTensor] = None,
-        slice_size: int = None,
-    ) -> torch.FloatTensor:
-        """
-        Compute scores for NTN.
-
-        :param h_indices: shape: (batch_size,)
-        :param r_indices: shape: (batch_size,)
-        :param t_indices: shape: (batch_size,)
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
-        """
-        assert slice_size is None, "not implemented"
-
-        #: shape: (batch_size, num_entities, d)
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        w = self.w.get_in_canonical_shape(indices=r_indices,
-                                          reshape_dim=(self.num_slices, self.embedding_dim, self.embedding_dim))
-        b = self.b.get_in_canonical_shape(indices=r_indices)
-        u = self.u.get_in_canonical_shape(indices=r_indices)
-        vh = self.vh.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
-        vt = self.vt.get_in_canonical_shape(indices=r_indices, reshape_dim=(self.num_slices, self.embedding_dim))
-
-        return self.interaction(h=h, t=t, r=(w, b, u, vh, vt))

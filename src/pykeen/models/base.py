@@ -6,7 +6,7 @@ import functools
 import inspect
 import itertools as itt
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
 from typing import Any, ClassVar, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
@@ -22,7 +22,7 @@ from ..nn.emb import EmbeddingSpecification
 from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, HeadRepresentation, Initializer, MappedTriples, Normalizer, RelationRepresentation, TailRepresentation
+from ..typing import Constrainer, DeviceHint, HeadRepresentation, Initializer, MappedTriples, Normalizer, RelationRepresentation, Representation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
@@ -325,6 +325,9 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         self.relation_representations = nn.ModuleList(relation_representations)
 
         self.interaction_function = interaction_function
+
+        # reset parameters
+        self.reset_parameters_()
 
     @classmethod
     def _is_abstract(cls) -> bool:
@@ -1126,6 +1129,7 @@ class EntityEmbeddingModel(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
+        interaction_function: InteractionFunction[Representation, RelationRepresentation, Representation],
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -1148,6 +1152,8 @@ class EntityEmbeddingModel(Model):
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
+        # TODO: use spec
+        self.embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -1156,23 +1162,18 @@ class EntityEmbeddingModel(Model):
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
+            entity_representations=Embedding(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                initializer_kwargs=entity_initializer_kwargs,
+                normalizer=entity_normalizer,
+                normalizer_kwargs=entity_normalizer_kwargs,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs,
+            ),
+            interaction_function=interaction_function,
         )
-        self.entity_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
-            device=self.device,
-            initializer=entity_initializer,
-            initializer_kwargs=entity_initializer_kwargs,
-            normalizer=entity_normalizer,
-            normalizer_kwargs=entity_normalizer_kwargs,
-            constrainer=entity_constrainer,
-            constrainer_kwargs=entity_constrainer_kwargs,
-        )
-
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The entity embedding dimension."""
-        return self.entity_embeddings.embedding_dim
 
 
 class EntityRelationEmbeddingModel(Model, ABC):
