@@ -131,8 +131,6 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
             The relation representations.
         :param t: shape: (batch_size, d_e)
             The tail representations.
-        :param kwargs:
-            Additional key-word based arguments.
 
         :return: shape: (batch_size, 1)
             The scores.
@@ -165,8 +163,6 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
             The relation representations.
         :param t: shape: (batch_size, d_e)
             The tail representations.
-        :param kwargs:
-            Additional key-word based arguments.
 
         :return: shape: (batch_size, num_entities)
             The scores.
@@ -199,8 +195,6 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
             The relation representations.
         :param t: shape: (batch_size, d_e)
             The tail representations.
-        :param kwargs:
-            Additional key-word based arguments.
 
         :return: shape: (batch_size, num_entities)
             The scores.
@@ -233,8 +227,6 @@ class InteractionFunction(nn.Module, Generic[EntityRepresentation, RelationRepre
             The relation representations.
         :param all_entities: shape: (num_entities, d_e)
             The tail representations.
-        :param kwargs:
-            Additional key-word based arguments.
 
         :return: shape: (batch_size, num_entities)
             The scores.
