@@ -5,7 +5,7 @@ import itertools
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Callable, Generic, Optional, Sequence, Tuple, TypeVar, Union
 
 import torch
 from torch import nn
@@ -56,13 +56,6 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
             The scores.
         """
         raise NotImplementedError
-
-    @classmethod
-    def _check_for_empty_kwargs(cls, kwargs: Mapping[str, Any]) -> None:
-        """Check that kwargs is empty."""
-        # TODO: Deprecated
-        if len(kwargs) > 0:
-            raise ValueError(f"{cls.__name__} does not take the following kwargs: {kwargs}")
 
     @staticmethod
     def _add_dim(*x: torch.FloatTensor, dim: int) -> Sequence[torch.FloatTensor]:
@@ -282,27 +275,6 @@ class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, Relat
         return self.f(*h, *r, *t)
 
 
-def _build_module_from_stateless(
-    f: Callable[[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
-) -> Type[InteractionFunction]:
-    """Build a stateless interaction function module with a pre-defined functional interface."""
-
-    class StatelessInteractionFunction(InteractionFunction):
-        """Interaction function without state or additional parameters."""
-
-        def forward(
-            self,
-            h: torch.FloatTensor,
-            r: torch.FloatTensor,
-            t: torch.FloatTensor,
-            **kwargs,
-        ) -> torch.FloatTensor:  # noqa: D102
-            self._check_for_empty_kwargs(kwargs)
-            return f(h, r, t)
-
-    return StatelessInteractionFunction
-
-
 class TranslationalInteractionFunction(InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
@@ -328,9 +300,7 @@ class TransEInteractionFunction(TranslationalInteractionFunction[torch.FloatTens
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.transe_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
 
 
@@ -471,10 +441,7 @@ class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         # get tail bias term
-        if "t_bias" not in kwargs:
-            raise TypeError(f"{self.__class__.__name__}.forward expects keyword argument 't_bias'.")
-        t_bias: torch.FloatTensor = kwargs.pop("t_bias")
-        self._check_for_empty_kwargs(kwargs)
+        t, t_bias = t
         return pkf.conve_interaction(
             h=h,
             r=r,
