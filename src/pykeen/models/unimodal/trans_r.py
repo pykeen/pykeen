@@ -2,16 +2,13 @@
 
 """Implementation of TransR."""
 import logging
-from functools import partial
 from typing import Optional
 
-import torch
-import torch.autograd
-import torch.nn.init
 from torch.nn import functional
 
-from ..base import DoubleRelationEmbeddingModel
+from .. import Model
 from ...losses import Loss
+from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TransRInteractionFunction
@@ -25,17 +22,7 @@ __all__ = [
 ]
 
 
-def _projection_initializer(
-    x: torch.FloatTensor,
-    num_relations: int,
-    embedding_dim: int,
-    relation_dim: int,
-) -> torch.FloatTensor:
-    """Initialize by Glorot."""
-    return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
-
-
-class TransR(DoubleRelationEmbeddingModel):
+class TransR(Model):
     r"""An implementation of TransR from [lin2015]_.
 
     TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
@@ -88,35 +75,42 @@ class TransR(DoubleRelationEmbeddingModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-                constrainer=clamp_norm,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            entity_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_entities,
+                shape=embedding_dim,
+                specification=EmbeddingSpecification(
+                    initializer=xavier_uniform_,
+                    constrainer=clamp_norm,
+                    constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                )
             ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=compose(
-                    xavier_uniform_,
-                    functional.normalize,
+            relation_representations=[
+                Embedding.from_specification(
+                    triples_factory.num_relations,
+                    shape=relation_dim,
+                    specification=EmbeddingSpecification(
+                        initializer=compose(
+                            xavier_uniform_,
+                            functional.normalize,
+                        ),
+                        constrainer=clamp_norm,
+                        constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                    ),
                 ),
-                constrainer=clamp_norm,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            # Relation projections
-            second_relation_embedding_specification=EmbeddingSpecification(
-                initializer=partial(
-                    _projection_initializer,
-                    num_relations=triples_factory.num_relations,
-                    embedding_dim=embedding_dim,
-                    relation_dim=relation_dim,
-                ),
-            ),
+                # Relation projections
+                Embedding.from_specification(
+                    triples_factory.num_relations,
+                    shape=(relation_dim, embedding_dim),
+                    specification=EmbeddingSpecification(
+                        initializer=xavier_uniform_,
+                    ),
+                )
+            ],
             interaction_function=TransRInteractionFunction(
                 p=scoring_fct_norm,
             ),

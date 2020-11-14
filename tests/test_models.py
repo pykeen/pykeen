@@ -25,7 +25,7 @@ from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
 from pykeen.models import _MODELS
 from pykeen.models.base import (
-    EntityEmbeddingModel,
+    DoubleRelationEmbeddingModel, EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
@@ -810,7 +810,7 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.model.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        norms = self.model.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
 
 
@@ -1014,7 +1014,8 @@ class TestTransH(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
+        self.model: DoubleRelationEmbeddingModel
+        entity_norms = self.model.relation_representations[1](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
@@ -1028,6 +1029,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
 
     def test_score_hrt_manual(self):
         """Manually test interaction function of TransR."""
+        # TODO: Move to interaction tests.
         # entity embeddings
         weights = torch.as_tensor(data=[[2., 2.], [3., 3.]], dtype=torch.float)
         entity_embeddings = Embedding(
@@ -1068,7 +1070,7 @@ class TestTransR(_DistanceModelTestCase, unittest.TestCase):
 
         Entity and relation embeddings have to have at most unit L2 norm.
         """
-        for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
+        for emb in (self.model.entity_representations[0], self.model.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=1.0e-06)
 
 
