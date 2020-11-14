@@ -31,6 +31,7 @@ Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
 
-HeadRepresentation = TypeVar("HeadRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
-RelationRepresentation = TypeVar("RelationRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
-TailRepresentation = TypeVar("TailRepresentation", torch.FloatTensor, Sequence[torch.FloatTensor])
+Representation = torch.FloatTensor
+HeadRepresentation = TypeVar("HeadRepresentation", Representation, Sequence[Representation])
+RelationRepresentation = TypeVar("RelationRepresentation", Representation, Sequence[Representation])
+TailRepresentation = TypeVar("TailRepresentation", Representation, Sequence[Representation])

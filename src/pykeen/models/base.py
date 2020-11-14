@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ from ..nn.emb import EmbeddingSpecification
 from ..nn.modules import InteractionFunction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
+from ..typing import Constrainer, DeviceHint, HeadRepresentation, Initializer, MappedTriples, Normalizer, RelationRepresentation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
@@ -209,7 +209,7 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
     cls.__init__ = _new_init
 
 
-class Model(nn.Module, ABC):
+class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """A base module for all of the KGE models."""
 
     #: A dictionary of hyper-parameters to the models that use them
@@ -230,6 +230,12 @@ class Model(nn.Module, ABC):
     #: The instance of the regularizer
     regularizer: Regularizer
 
+    #: The entity representations
+    entity_representations: Sequence[RepresentationModule]
+
+    #: The relation representations
+    relation_representations: Sequence[RepresentationModule]
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -241,7 +247,7 @@ class Model(nn.Module, ABC):
         regularizer: Optional[Regularizer] = None,
         entity_representations: Optional[Sequence[RepresentationModule]] = None,
         relation_representations: Optional[Sequence[RepresentationModule]] = None,
-        tail_representations: Optional[Sequence[RepresentationModule]] = None,
+        interaction_function: InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation] = None,
     ) -> None:
         """Initialize the module.
 
@@ -312,8 +318,8 @@ class Model(nn.Module, ABC):
         # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
         self.entity_representations = nn.ModuleList(entity_representations)
         self.relation_representations = nn.ModuleList(relation_representations)
-        if tail_representations is not None:
-            self.tail_representations = nn.ModuleList(tail_representations)
+
+        self.interaction_function = interaction_function
 
     @classmethod
     def _is_abstract(cls) -> bool:
