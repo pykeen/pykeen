@@ -274,7 +274,7 @@ def _build_module_from_stateless(
     return StatelessInteractionFunction
 
 
-class TranslationalInteractionFunction(InteractionFunction, ABC):
+class TranslationalInteractionFunction(InteractionFunction[EntityRepresentation, RelationRepresentation], ABC):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -772,8 +772,12 @@ class TuckerInteractionFunction(InteractionFunction):
         )
 
 
-class UnstructuredModelInteractionFunction(TranslationalInteractionFunction):
+class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, None]):
     """Interaction function of UnstructuredModel."""
+
+    # shapes
+    entity_shape = ("d",)
+    relation_shape = tuple()
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
@@ -781,11 +785,9 @@ class UnstructuredModelInteractionFunction(TranslationalInteractionFunction):
     def forward(
         self,
         h: torch.FloatTensor,
-        r: torch.FloatTensor,
+        r: None,
         t: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa:D102
-        self._check_for_empty_kwargs(kwargs=kwargs)
         return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
 
 
