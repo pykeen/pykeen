@@ -80,12 +80,12 @@ class TransD(TwoVectorEmbeddingModel):
             regularizer=regularizer,
             embedding_specification=EmbeddingSpecification(
                 initializer=xavier_normal_,
-                constrainer=clamp_norm,
+                constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
             relation_embedding_specification=EmbeddingSpecification(
                 initializer=xavier_normal_,
-                constrainer=clamp_norm,
+                constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
         )

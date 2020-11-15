@@ -2,7 +2,7 @@
 
 """Implementation of TuckEr."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
@@ -61,7 +61,7 @@ class TuckER(SingleVectorEmbeddingModel):
     #: The default loss function class
     loss_default = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,

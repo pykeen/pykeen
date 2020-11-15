@@ -5,6 +5,7 @@
 import logging
 import os
 import re
+import typing
 from collections import Counter, defaultdict
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
@@ -283,9 +284,9 @@ class TriplesFactory:
         # Generate relation mapping if necessary
         if relation_to_id is None:
             if self.create_inverse_triples:
-                relation_to_id = create_relation_mapping(
-                    set(self.relation_to_inverse.keys()).union(set(self.relation_to_inverse.values())),
-                )
+                _keys = set(self.relation_to_inverse.keys()) if self.relation_to_inverse else set()
+                _values = set(self.relation_to_inverse.values()) if self.relation_to_inverse else set()
+                relation_to_id = create_relation_mapping(_keys.union(_values))
             else:
                 relation_to_id = create_relation_mapping(unique_relations)
         if compact_id:
@@ -328,6 +329,8 @@ class TriplesFactory:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
             raise ValueError('Can not get inverse triple, they have not been created.')
+        if self.relation_to_inverse is None:
+            raise ValueError
         inverse_relation = self.relation_to_inverse[relation]
         return self.relation_to_id[inverse_relation]
 
@@ -481,7 +484,7 @@ class TriplesFactory:
         elif not isinstance(n, int):
             raise TypeError('n must be either an integer or a float')
 
-        counter = Counter(self.triples[:, 1])
+        counter: typing.Counter[str] = Counter(self.triples[:, 1])
         return {
             relation
             for relation, _ in counter.most_common(n)
@@ -566,7 +569,7 @@ class TriplesFactory:
     def tensor_to_df(
         self,
         tensor: torch.LongTensor,
-        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],  # FIXME fix the type annotation
     ) -> pd.DataFrame:
         """Take a tensor of triples and make a pandas dataframe with labels.
 
@@ -605,7 +608,7 @@ class TriplesFactory:
         for key, values in kwargs.items():
             # convert PyTorch tensors to numpy
             if torch.is_tensor(values):
-                values = values.cpu().numpy()
+                values = values.cpu().numpy()  # type: ignore
             data[key] = values
 
         # convert to dataframe
@@ -637,6 +640,8 @@ class TriplesFactory:
                 'relations as well.',
                 str(self),
             )
+            if self.relation_to_inverse is None:
+                raise ValueError
             relations = list(relations) + list(map(self.relation_to_inverse.__getitem__, relations))
 
         keep_mask = None

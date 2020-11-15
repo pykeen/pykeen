@@ -77,7 +77,7 @@ class HolE(SingleVectorEmbeddingModel):
             # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
             embedding_specification=EmbeddingSpecification(
                 initializer=xavier_uniform_,
-                constrainer=clamp_norm,
+                constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
             relation_embedding_specification=EmbeddingSpecification(

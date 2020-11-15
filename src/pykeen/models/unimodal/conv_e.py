@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of ConvE."""
+
 import logging
-from typing import Optional, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -102,9 +103,9 @@ class ConvE(Model):
         feature_map_dropout=dict(type=float, low=0.0, high=1.0),
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,

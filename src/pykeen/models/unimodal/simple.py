@@ -2,7 +2,7 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional, Tuple, Union
+from typing import Any, ClassVar, Mapping, Optional, Tuple, Union
 
 import torch.autograd
 
@@ -50,7 +50,7 @@ class SimplE(TwoSideEmbeddingModel):
     #: The default loss function class
     loss_default = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.

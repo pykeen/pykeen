@@ -49,7 +49,10 @@ class ERMLP(SingleVectorEmbeddingModel):
         hidden_dim: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
-        """Initialize the model."""
+        """Initialize ERMLP."""
+        if hidden_dim is None:
+            hidden_dim = embedding_dim
+
         super().__init__(
             triples_factory=triples_factory,
             interaction_function=ERMLPInteraction(

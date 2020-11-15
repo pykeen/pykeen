@@ -196,7 +196,7 @@ def _kullback_leibler_similarity(
 ) -> torch.FloatTensor:
     r"""Compute the similarity based on KL divergence.
 
-    This is done between two Gaussian distributions given by mean mu_* and diagonal covariance matrix sigma_*.
+    This is done between two Gaussian distributions given by mean `mu_*` and diagonal covariance matrix `sigma_*`.
 
     .. math::
 
@@ -251,10 +251,10 @@ def _kullback_leibler_similarity(
     return sim
 
 
-KG2E_SIMILARITIES = dict(
-    KL=_kullback_leibler_similarity,
-    EL=_expected_likelihood,
-)
+KG2E_SIMILARITIES = {
+    'KL': _kullback_leibler_similarity,
+    'EL': _expected_likelihood,
+}
 
 
 def _extended_einsum(
@@ -346,7 +346,7 @@ def complex_interaction(
     """
     Evaluate the ComplEx interaction function.
 
-    :param h: shape: (batch_size, num_heads, 2*dim)
+    :param h: shape: (batch_size, num_heads, `2*dim`)
         The complex head representations.
     :param r: shape: (batch_size, num_relations, 2*dim)
         The complex relation representations.
@@ -1049,7 +1049,7 @@ def transh_interaction(
     :param p:
         The p for the norm. cf. torch.norm.
     :param power_norm:
-        Whether to return |x-y|_p^p.
+        Whether to return $|x-y|_p^p$.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.

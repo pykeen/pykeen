@@ -85,7 +85,7 @@ class TransR(Model):
                 shape=embedding_dim,
                 specification=EmbeddingSpecification(
                     initializer=xavier_uniform_,
-                    constrainer=clamp_norm,
+                    constrainer=clamp_norm,  # type: ignore
                     constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
                 ),
             ),
@@ -98,7 +98,7 @@ class TransR(Model):
                             xavier_uniform_,
                             functional.normalize,
                         ),
-                        constrainer=clamp_norm,
+                        constrainer=clamp_norm,  # type: ignore
                         constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
                     ),
                 ),

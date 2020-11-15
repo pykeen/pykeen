@@ -13,7 +13,7 @@ from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...nn.modules import RotatEInteractionFunction
+from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -96,7 +96,7 @@ class RotatE(SingleVectorEmbeddingModel):
         # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=RotatEInteractionFunction(),
+            interaction_function=RotatEInteraction(),
             embedding_dim=2 * embedding_dim,
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,

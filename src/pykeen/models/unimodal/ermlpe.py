@@ -2,7 +2,7 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Optional, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
@@ -47,9 +47,9 @@ class ERMLPE(SingleVectorEmbeddingModel):
         hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,

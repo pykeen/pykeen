@@ -47,6 +47,9 @@ def create_matrix_of_literals(
 class TriplesNumericLiteralsFactory(TriplesFactory):
     """Create multi-modal instances given the path to triples."""
 
+    numeric_literals: np.ndarray
+    literals_to_id: Dict[str, int]
+
     def __init__(
         self,
         *,
@@ -79,9 +82,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             self.path_to_numeric_triples = '<None>'
             self.numeric_triples = numeric_triples
 
-        self.numeric_literals = None
-        self.literals_to_id = None
-
         self._create_numeric_literals()
 
     def __repr__(self):  # noqa: D105
@@ -104,6 +104,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if self.numeric_literals is None:
             self._create_numeric_literals()
 
+        assert self.numeric_literals is not None
+        assert self.literals_to_id is not None
+
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
             entity_to_id=slcwa_instances.entity_to_id,
@@ -118,6 +121,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
 
         if self.numeric_literals is None:
             self._create_numeric_literals()
+
+        assert self.numeric_literals is not None
+        assert self.literals_to_id is not None
 
         return MultimodalLCWAInstances(
             mapped_triples=lcwa_instances.mapped_triples,

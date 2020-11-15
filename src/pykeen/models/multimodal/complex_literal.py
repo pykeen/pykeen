@@ -2,7 +2,7 @@
 
 """Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA) training approach."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.nn as nn
@@ -31,7 +31,7 @@ class ComplExLiteral(MultimodalModel):
     #: The default loss function class
     loss_default = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,

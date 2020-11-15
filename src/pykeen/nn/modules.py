@@ -12,7 +12,6 @@ import torch
 from torch import FloatTensor, nn
 
 from . import functional as pkf
-from .functional import KG2E_SIMILARITIES
 from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
 from ..utils import check_shapes
 
@@ -74,11 +73,11 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, *)
+        :param h: shape: (batch_size, num_heads, ``*``)
             The head representations.
-        :param r: shape: (batch_size, num_relations, *)
+        :param r: shape: (batch_size, num_relations, ``*``)
             The relation representations.
-        :param t: shape: (batch_size, num_tails, *)
+        :param t: shape: (batch_size, num_tails, ``*``)
             The tail representations.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
@@ -951,16 +950,17 @@ class KG2EInteraction(
 
     entity_shape = ("d", "d")
     relation_shape = ("d", "d")
+    similarity: str
+    exact: bool
 
     def __init__(
         self,
-        similarity: str = "KL",
+        similarity: Optional[str] = None,
         exact: bool = True,
     ):
         super().__init__()
-        similarity = similarity.upper()
-        if similarity not in KG2E_SIMILARITIES:
-            raise ValueError(similarity)
+        if similarity is None:
+            similarity = 'KL'
         self.similarity = similarity
         self.exact = exact
 

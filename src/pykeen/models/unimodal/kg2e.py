@@ -11,7 +11,7 @@ import torch.autograd
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
-from ...nn.modules import KG2EInteractionFunction
+from ...nn.modules import KG2EInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -80,7 +80,7 @@ class KG2E(TwoVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=KG2EInteractionFunction(
+            interaction_function=KG2EInteraction(
                 similarity=dist_similarity,
             ),
             embedding_dim=embedding_dim,
@@ -90,11 +90,11 @@ class KG2E(TwoVectorEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             embedding_specification=EmbeddingSpecification(
-                constrainer=clamp_norm,
+                constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
             relation_embedding_specification=EmbeddingSpecification(
-                constrainer=clamp_norm,
+                constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
             # Ensure positive definite covariances matrices and appropriate size by clamping

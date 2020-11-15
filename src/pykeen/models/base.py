@@ -212,7 +212,8 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
         _original_init(self, *args, **kwargs)
         self.reset_parameters_()
 
-    cls.__init__ = _new_init
+    # sorry mypy, but this kind of evil must be permitted.
+    cls.__init__ = _new_init  # type: ignore
 
 
 class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -231,8 +232,9 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
     #: The instance of the loss
     loss: Loss
 
+    # FIXME problem with typing (remove type: ignore)
     #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
@@ -255,8 +257,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         regularizer: Optional[Regularizer] = None,
         entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
         relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
-        interaction_function: Interaction[
-            HeadRepresentation, RelationRepresentation, TailRepresentation] = None,
+        interaction_function: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation] = None,
     ) -> None:
         """Initialize the module.
 
@@ -295,12 +296,12 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
         # Loss
         if loss is None:
-            self.loss = self.loss_default(**self.loss_default_kwargs)
+            self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
         else:
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(self.loss, MarginRankingLoss)
+        self.is_mr_loss: bool = isinstance(self.loss, MarginRankingLoss)
 
         # Regularizer
         if regularizer is None:
@@ -310,7 +311,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
             )
         self.regularizer = regularizer
 
-        self.is_nssa_loss = isinstance(self.loss, NSSALoss)
+        self.is_nssa_loss: bool = isinstance(self.loss, NSSALoss)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
@@ -495,10 +496,10 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         """
         # Enforce evaluation mode
         self.eval()
-        if slice_size is None:
-            scores = self.score_t(hr_batch)
+        if slice_size is not None and self.can_slice_t:
+            scores = self.score_t(hr_batch, slice_size=slice_size)  # type: ignore
         else:
-            scores = self.score_t(hr_batch, slice_size=slice_size)
+            scores = self.score_t(hr_batch)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -634,10 +635,10 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         """
         # Enforce evaluation mode
         self.eval()
-        if slice_size is None:
-            scores = self.score_r(ht_batch)
+        if slice_size is not None and self.can_slice_r:
+            scores = self.score_r(ht_batch, slice_size=slice_size)  # type: ignore
         else:
-            scores = self.score_r(ht_batch, slice_size=slice_size)
+            scores = self.score_r(ht_batch)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -670,10 +671,10 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         for a (tail, inverse_relation) pair.
         '''
         if not self.triples_factory.create_inverse_triples:
-            if slice_size is None:
-                scores = self.score_h(rt_batch)
+            if slice_size is not None and self.can_slice_h:
+                scores = self.score_h(rt_batch, slice_size=slice_size)  # type: ignore
             else:
-                scores = self.score_h(rt_batch, slice_size=slice_size)
+                scores = self.score_h(rt_batch)
             if self.predict_with_sigmoid:
                 scores = torch.sigmoid(scores)
             return scores
@@ -695,10 +696,11 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
         rt_batch_cloned = rt_batch_cloned.flip(1)
-        if slice_size is None:
-            scores = self.score_t(rt_batch_cloned)
+        if slice_size is not None and self.can_slice_t:
+            scores = self.score_t(rt_batch_cloned, slice_size=slice_size)  # type: ignore
         else:
-            scores = self.score_t(rt_batch_cloned, slice_size=slice_size)
+            scores = self.score_t(rt_batch_cloned)
+
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
