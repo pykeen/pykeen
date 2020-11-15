@@ -12,7 +12,7 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...nn.modules import ConvEInteractionFunction
+from ...nn.modules import ConvEInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -156,7 +156,7 @@ class ConvE(Model):
                     specification=EmbeddingSpecification(
                         initializer=nn.init.zeros_,
                     ),
-                )
+                ),
             ],
             relation_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_relations,
@@ -165,7 +165,7 @@ class ConvE(Model):
                     initializer=xavier_normal_,
                 ),
             ),
-            interaction_function=ConvEInteractionFunction(
+            interaction_function=ConvEInteraction(
                 input_channels=input_channels,
                 output_channels=output_channels,
                 embedding_height=embedding_height,

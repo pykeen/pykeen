@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """Stateful interaction functions."""
+
 import itertools
 import logging
 import math
 from abc import ABC
-from typing import Callable, Generic, Optional, Sequence, Tuple, Union
+from typing import Callable, Generic, List, Optional, Sequence, Tuple, Union
 
 import torch
-from torch import nn
+from torch import FloatTensor, nn
 
 from . import functional as pkf
 from .functional import KG2E_SIMILARITIES
@@ -18,24 +19,24 @@ from ..utils import check_shapes
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "ComplExInteractionFunction",
-    "ConvEInteractionFunction",
-    "ConvKBInteractionFunction",
-    "DistMultInteractionFunction",
-    "ERMLPInteractionFunction",
-    "ERMLPEInteractionFunction",
-    "HolEInteractionFunction",
-    "InteractionFunction",
-    "KG2EInteractionFunction",
-    "NTNInteractionFunction",
-    "ProjEInteractionFunction",
-    "RESCALInteractionFunction",
-    "RotatEInteractionFunction",
-    "StructuredEmbeddingInteractionFunction",
-    "TransDInteractionFunction",
-    "TransEInteractionFunction",
-    "TransHInteractionFunction",
-    "TransRInteractionFunction",
+    "ComplExInteraction",
+    "ConvEInteraction",
+    "ConvKBInteraction",
+    "DistMultInteraction",
+    "ERMLPInteraction",
+    "ERMLPEInteraction",
+    "HolEInteraction",
+    "Interaction",
+    "KG2EInteraction",
+    "NTNInteraction",
+    "ProjEInteraction",
+    "RESCALInteraction",
+    "RotatEInteraction",
+    "StructuredEmbeddingInteraction",
+    "TransDInteraction",
+    "TransEInteraction",
+    "TransHInteraction",
+    "TransRInteraction",
 ]
 
 
@@ -47,7 +48,7 @@ def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
     return [x[0] if len(x) == 1 else x for x in xs]
 
 
-class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Base class for interaction functions."""
 
     # Dimensions
@@ -58,11 +59,12 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
     TAIL_DIM: int = 3
 
     #: The symbolic shapes for entity representations
-    entity_shape: Tuple[str, ...] = ("d",)
-    tail_entity_shape: Union[None, Tuple[str, ...]] = None
+    entity_shape: Sequence[str] = ("d",)
+    # TODO add docstring
+    tail_entity_shape: Optional[Sequence[str]] = None
 
     #: The symbolic shapes for relation representations
-    relation_shape: Tuple[str, ...] = ("d",)
+    relation_shape: Sequence[str] = ("d",)
 
     def forward(
         self,
@@ -114,7 +116,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
             The squeezed tensor.
         """
         # normalize dimensions
-        dims = [d if d >= 0 else len(x.shape) + d for d in dims]
+        dims = tuple(d if d >= 0 else len(x.shape) + d for d in dims)
         if len(set(dims)) != len(dims):
             raise ValueError(f"Duplicate dimensions: {dims}")
         assert all(0 <= d < len(x.shape) for d in dims)
@@ -130,7 +132,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         h_prefix: str = "b",
         r_prefix: str = "b",
         t_prefix: str = "b",
-        raise_on_error: bool = True,
+        raise_on_errors: bool = True,
     ) -> bool:
         entity_shape = self.entity_shape
         if isinstance(entity_shape, str):
@@ -144,22 +146,27 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
         if isinstance(tail_entity_shape, str):
             tail_entity_shape = (tail_entity_shape,)
         if len(h) != len(entity_shape):
-            if raise_on_error:
+            if raise_on_errors:
                 raise ValueError
             return False
         if len(r) != len(relation_shape):
-            if raise_on_error:
+            if raise_on_errors:
                 raise ValueError
             return False
         if len(t) != len(tail_entity_shape):
-            if raise_on_error:
+            if raise_on_errors:
                 raise ValueError
             return False
-        return check_shapes(*itertools.chain(
-            ((hh, h_prefix + hs) for hh, hs in zip(h, entity_shape)),
-            ((rr, r_prefix + rs) for rr, rs in zip(r, relation_shape)),
-            ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape)),
-        ), raise_or_error=raise_on_error)
+
+        # TODO make helper function + unit test
+        a = ((hh, h_prefix + hs) for hh, hs in zip(h, entity_shape))  # type: ignore
+        b = ((rr, r_prefix + rs) for rr, rs in zip(r, relation_shape))  # type: ignore
+        c = ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape))  # type: ignore
+
+        return check_shapes(
+            *itertools.chain(a, b, c),
+            raise_on_errors=raise_on_errors,
+        )
 
     def _score(
         self,
@@ -173,11 +180,12 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
     ) -> torch.FloatTensor:
         assert {h_prefix, r_prefix, t_prefix}.issubset(list("bn"))
         # at most one of h_prefix, r_prefix, t_prefix equals n
-        slice_dim = [dim for dim, prefix in zip("hrt", (h_prefix, r_prefix, t_prefix)) if prefix == "n"]
-        if len(slice_dim) == 1:
-            slice_dim = slice_dim[0]
-        else:
-            slice_dim = None
+        slice_dims: List[str] = [
+            dim
+            for dim, prefix in zip("hrt", (h_prefix, r_prefix, t_prefix))
+            if prefix == "n"
+        ]
+        slice_dim: Optional[str] = slice_dims[0] if len(slice_dims) == 1 else None
         h, r, t = _ensure_tuple(h, r, t)
         assert self._check_shapes(h=h, r=r, t=t, h_prefix=h_prefix, r_prefix=r_prefix, t_prefix=t_prefix)
 
@@ -320,7 +328,7 @@ class InteractionFunction(nn.Module, Generic[HeadRepresentation, RelationReprese
                 mod.reset_parameters()
 
 
-class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class StatelessInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Interaction function without state."""
 
     def __init__(self, f: Callable[..., torch.FloatTensor]):
@@ -338,7 +346,10 @@ class StatelessInteractionFunction(InteractionFunction[HeadRepresentation, Relat
         return self.f(*h, *r, *t)
 
 
-class TranslationalInteractionFunction(InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
+class TranslationalInteraction(
+    Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+    ABC,
+):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -355,7 +366,7 @@ class TranslationalInteractionFunction(InteractionFunction[HeadRepresentation, R
         self.power_norm = power_norm
 
 
-class TransEInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """The TransE interaction function."""
 
     def forward(
@@ -367,7 +378,7 @@ class TransEInteractionFunction(TranslationalInteractionFunction[torch.FloatTens
         return pkf.transe_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
 
 
-class ComplExInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class ComplExInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of ComplEx."""
 
     def __init__(self):
@@ -408,14 +419,14 @@ def _calculate_missing_shape_information(
         input_channels = 1
 
     # input channels is not None, and one of height or width is None
-    assert len([factor for factor in [input_channels, width, height] if factor is None]) <= 1
-    if width is None:
+    if width is None and height is not None and input_channels is not None:
         width = embedding_dim // (height * input_channels)
-    if height is None:
+    elif height is None and width is not None and input_channels is not None:
         height = embedding_dim // (width * input_channels)
-    if input_channels is None:
+    elif input_channels is None and height is not None and width is not None:
         input_channels = embedding_dim // (width * height)
-    assert not any(factor is None for factor in [input_channels, width, height])
+    else:
+        raise ValueError('More than one of width, height, and input_channels was None')
 
     if input_channels * width * height != embedding_dim:
         raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
@@ -423,7 +434,9 @@ def _calculate_missing_shape_information(
     return input_channels, width, height
 
 
-class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
+class ConvEInteraction(
+    Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]],
+):
     """ConvE interaction function."""
 
     tail_entity_shape = ("d", "k")  # with k=1
@@ -528,7 +541,7 @@ class ConvEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
         )
 
 
-class ConvKBInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of ConvKB."""
 
     def __init__(
@@ -575,14 +588,14 @@ class ConvKBInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Flo
         )
 
 
-class DistMultInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class DistMultInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of DistMult."""
 
     def __init__(self):
         super().__init__(f=pkf.distmult_interaction)
 
 
-class ERMLPInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """
     Interaction function of ER-MLP.
 
@@ -639,7 +652,7 @@ class ERMLPInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
         )
 
 
-class ERMLPEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of ER-MLP."""
 
     def __init__(
@@ -671,7 +684,13 @@ class ERMLPEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Flo
         return pkf.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
 
 
-class TransRInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]):
+class TransRInteraction(
+    TranslationalInteraction[
+        torch.FloatTensor,
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        torch.FloatTensor,
+    ],
+):
     """The TransR interaction function."""
 
     relation_shape = ("e", "de")
@@ -689,21 +708,21 @@ class TransRInteractionFunction(TranslationalInteractionFunction[torch.FloatTens
         return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=self.power_norm)
 
 
-class RotatEInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class RotatEInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of RotatE."""
 
     def __init__(self):
         super().__init__(f=pkf.rotate_interaction)
 
 
-class HolEInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class HolEInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function for HolE."""
 
     def __init__(self):
         super().__init__(f=pkf.hole_interaction)
 
 
-class ProjEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function for ProjE."""
 
     def __init__(
@@ -747,7 +766,7 @@ class ProjEInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Floa
         )
 
 
-class RESCALInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class RESCALInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of RESCAL."""
 
     relation_shape = ("dd",)
@@ -756,7 +775,13 @@ class RESCALInteractionFunction(StatelessInteractionFunction[torch.FloatTensor, 
         super().__init__(f=pkf.rescal_interaction)
 
 
-class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]):
+class StructuredEmbeddingInteraction(
+    TranslationalInteraction[
+        torch.FloatTensor,
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        torch.FloatTensor,
+    ],
+):
     """Interaction function of Structured Embedding."""
 
     relation_shape = ("dd", "dd")
@@ -771,7 +796,7 @@ class StructuredEmbeddingInteractionFunction(TranslationalInteractionFunction[to
         return pkf.structured_embedding_interaction(h=h, r_h=rh, r_t=rt, t=t, p=self.p, power_norm=self.power_norm)
 
 
-class TuckerInteractionFunction(InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of Tucker."""
 
     def __init__(
@@ -838,11 +863,13 @@ class TuckerInteractionFunction(InteractionFunction[torch.FloatTensor, torch.Flo
         )
 
 
-class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torch.FloatTensor, None, torch.FloatTensor]):
+class UnstructuredModelInteraction(
+    TranslationalInteraction[torch.FloatTensor, None, torch.FloatTensor],
+):
     """Interaction function of UnstructuredModel."""
 
     # shapes
-    relation_shape = tuple()
+    relation_shape: Sequence[str] = tuple()
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
@@ -856,12 +883,12 @@ class UnstructuredModelInteractionFunction(TranslationalInteractionFunction[torc
         return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
 
 
-class TransDInteractionFunction(
-    TranslationalInteractionFunction[
+class TransDInteraction(
+    TranslationalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
-    ]
+    ],
 ):
     """Interaction function of TransD."""
 
@@ -883,12 +910,12 @@ class TransDInteractionFunction(
         return pkf.transd_interaction(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p, p=self.p, power_norm=self.power_norm)
 
 
-class NTNInteractionFunction(
-    InteractionFunction[
+class NTNInteraction(
+    Interaction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
-    ]
+    ],
 ):
     """The interaction function of NTN."""
 
@@ -908,17 +935,17 @@ class NTNInteractionFunction(
         h: torch.FloatTensor,
         r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         w, b, u, vh, vt = r
         return pkf.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
 
 
-class KG2EInteractionFunction(
-    InteractionFunction[
+class KG2EInteraction(
+    Interaction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
-    ]
+    ],
 ):
     """Interaction function of KG2E."""
 
@@ -942,7 +969,7 @@ class KG2EInteractionFunction(
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         h_mean, h_var = h
         r_mean, r_var = r
         t_mean, t_var = t
@@ -958,13 +985,7 @@ class KG2EInteractionFunction(
         )
 
 
-class TransHInteractionFunction(
-    TranslationalInteractionFunction[
-        torch.FloatTensor,
-        Tuple[torch.FloatTensor, torch.FloatTensor],
-        torch.FloatTensor,
-    ]
-):
+class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """Interaction function of TransH."""
 
     relation_shape = ("d", "d")

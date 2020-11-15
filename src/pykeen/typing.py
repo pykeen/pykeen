@@ -12,6 +12,9 @@ __all__ = [
     'MappedTriples',
     'EntityMapping',
     'RelationMapping',
+    'Initializer',
+    'Normalizer',
+    'Constrainer',
     'DeviceHint',
     'HeadRepresentation',
     'RelationRepresentation',
@@ -33,6 +36,6 @@ Constrainer = Callable[[TensorType], TensorType]
 DeviceHint = Union[None, str, torch.device]
 
 Representation = torch.FloatTensor
-HeadRepresentation = TypeVar("HeadRepresentation", Representation, Sequence[Representation])
-RelationRepresentation = TypeVar("RelationRepresentation", Representation, Sequence[Representation])
-TailRepresentation = TypeVar("TailRepresentation", Representation, Sequence[Representation])
+HeadRepresentation = TypeVar("HeadRepresentation", Representation, Sequence[Representation])  # type: ignore
+RelationRepresentation = TypeVar("RelationRepresentation", Representation, Sequence[Representation])  # type: ignore
+TailRepresentation = TypeVar("TailRepresentation", Representation, Sequence[Representation])  # type: ignore

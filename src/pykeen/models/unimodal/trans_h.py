@@ -9,7 +9,7 @@ from torch.nn import functional
 from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
-from ...nn.modules import TransHInteractionFunction
+from ...nn.modules import TransHInteraction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -81,7 +81,7 @@ class TransH(DoubleRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TransHInteractionFunction(
+            interaction_function=TransHInteraction(
                 p=scoring_fct_norm,
                 power_norm=False,
             ),

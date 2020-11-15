@@ -10,7 +10,7 @@ from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...nn.modules import ProjEInteractionFunction
+from ...nn.modules import ProjEInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -67,7 +67,7 @@ class ProjE(SingleVectorEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ProjEInteractionFunction(
+            interaction_function=ProjEInteraction(
                 embedding_dim=embedding_dim,
                 inner_non_linearity=inner_non_linearity,
             ),

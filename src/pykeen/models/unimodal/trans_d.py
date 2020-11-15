@@ -8,7 +8,7 @@ from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...nn.modules import TransDInteractionFunction
+from ...nn.modules import TransDInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -70,7 +70,7 @@ class TransD(TwoVectorEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TransDInteractionFunction(p=2, power_norm=True),
+            interaction_function=TransDInteraction(p=2, power_norm=True),
             embedding_dim=embedding_dim,
             relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,

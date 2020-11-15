@@ -654,7 +654,11 @@ class TestHolE(_ModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_representations[0](indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        assert all_in_bounds(
+            self.model.entity_representations[0](indices=None).norm(p=2, dim=-1),
+            high=1.,
+            a_tol=_EPSILON,
+        )
 
 
 class _TestKG2E(_ModelTestCase):

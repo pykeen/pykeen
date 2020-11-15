@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Tests for interaction functions."""
+
 import unittest
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
@@ -6,7 +9,7 @@ from unittest.case import SkipTest
 import torch
 
 import pykeen.nn.modules
-from pykeen.nn.modules import InteractionFunction, StatelessInteractionFunction, TranslationalInteractionFunction
+from pykeen.nn.modules import Interaction, StatelessInteraction, TranslationalInteraction
 from pykeen.typing import Representation
 from pykeen.utils import get_subclasses
 
@@ -21,6 +24,7 @@ class GenericTests(Generic[T]):
     instance: T
 
     def setUp(self) -> None:
+        """Set up the generic testing method."""
         kwargs = self.kwargs or {}
         kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
         self.instance = self.cls(**kwargs)
@@ -49,7 +53,7 @@ class TestsTest(Generic[T]):
         assert not_tested == set()
 
 
-class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
+class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
     """Generic test for interaction functions."""
 
     dim: int = 2
@@ -206,7 +210,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
     def test_scores(self):
         """Test individual scores."""
         self.instance.eval()
-        for i in range(10):
+        for _ in range(10):
             h, r, t = self._get_hrt((1, 1), (1, 1), (1, 1))
             scores = self.instance(h=h, r=r, t=t)
             exp_score = self._exp_score(h, r, t).item()
@@ -219,13 +223,13 @@ class InteractionTests(GenericTests[pykeen.nn.modules.InteractionFunction]):
 class ComplExTests(InteractionTests, unittest.TestCase):
     """Tests for ComplEx interaction function."""
 
-    cls = pykeen.nn.modules.ComplExInteractionFunction
+    cls = pykeen.nn.modules.ComplExInteraction
 
 
 class ConvETests(InteractionTests, unittest.TestCase):
     """Tests for ConvE interaction function."""
 
-    cls = pykeen.nn.modules.ConvEInteractionFunction
+    cls = pykeen.nn.modules.ConvEInteraction
     kwargs = dict(
         embedding_height=1,
         embedding_width=2,
@@ -237,7 +241,7 @@ class ConvETests(InteractionTests, unittest.TestCase):
     def _get_hrt(
         self,
         *shapes: Tuple[int, ...],
-        **kwargs
+        **kwargs,
     ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:
         h, r, t = super()._get_hrt(*shapes, **kwargs)
         t_bias = torch.rand_like(t[..., 0, None])
@@ -247,7 +251,7 @@ class ConvETests(InteractionTests, unittest.TestCase):
 class ConvKBTests(InteractionTests, unittest.TestCase):
     """Tests for ConvKB interaction function."""
 
-    cls = pykeen.nn.modules.ConvKBInteractionFunction
+    cls = pykeen.nn.modules.ConvKBInteraction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         num_filters=2 * InteractionTests.dim - 1,
@@ -257,7 +261,7 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
 class DistMultTests(InteractionTests, unittest.TestCase):
     """Tests for DistMult interaction function."""
 
-    cls = pykeen.nn.modules.DistMultInteractionFunction
+    cls = pykeen.nn.modules.DistMultInteraction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return (h * r * t).sum(dim=-1)
@@ -266,7 +270,7 @@ class DistMultTests(InteractionTests, unittest.TestCase):
 class ERMLPTests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP interaction function."""
 
-    cls = pykeen.nn.modules.ERMLPInteractionFunction
+    cls = pykeen.nn.modules.ERMLPInteraction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
@@ -276,7 +280,7 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
 class ERMLPETests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP-E interaction function."""
 
-    cls = pykeen.nn.modules.ERMLPEInteractionFunction
+    cls = pykeen.nn.modules.ERMLPEInteraction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
@@ -286,13 +290,13 @@ class ERMLPETests(InteractionTests, unittest.TestCase):
 class HolETests(InteractionTests, unittest.TestCase):
     """Tests for HolE interaction function."""
 
-    cls = pykeen.nn.modules.HolEInteractionFunction
+    cls = pykeen.nn.modules.HolEInteraction
 
 
 class NTNTests(InteractionTests, unittest.TestCase):
     """Tests for NTN interaction function."""
 
-    cls = pykeen.nn.modules.NTNInteractionFunction
+    cls = pykeen.nn.modules.NTNInteraction
 
     num_slices: int = 2
     shape_kwargs = dict(
@@ -303,7 +307,7 @@ class NTNTests(InteractionTests, unittest.TestCase):
 class ProjETests(InteractionTests, unittest.TestCase):
     """Tests for ProjE interaction function."""
 
-    cls = pykeen.nn.modules.ProjEInteractionFunction
+    cls = pykeen.nn.modules.ProjEInteraction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
@@ -312,19 +316,19 @@ class ProjETests(InteractionTests, unittest.TestCase):
 class RESCALTests(InteractionTests, unittest.TestCase):
     """Tests for RESCAL interaction function."""
 
-    cls = pykeen.nn.modules.RESCALInteractionFunction
+    cls = pykeen.nn.modules.RESCALInteraction
 
 
 class KG2ETests(InteractionTests, unittest.TestCase):
     """Tests for KG2E interaction function."""
 
-    cls = pykeen.nn.modules.KG2EInteractionFunction
+    cls = pykeen.nn.modules.KG2EInteraction
 
 
 class TuckerTests(InteractionTests, unittest.TestCase):
     """Tests for Tucker interaction function."""
 
-    cls = pykeen.nn.modules.TuckerInteractionFunction
+    cls = pykeen.nn.modules.TuckerInteraction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
@@ -333,7 +337,7 @@ class TuckerTests(InteractionTests, unittest.TestCase):
 class RotatETests(InteractionTests, unittest.TestCase):
     """Tests for RotatE interaction function."""
 
-    cls = pykeen.nn.modules.RotatEInteractionFunction
+    cls = pykeen.nn.modules.RotatEInteraction
 
 
 class TranslationalInteractionTests(InteractionTests):
@@ -350,7 +354,7 @@ class TranslationalInteractionTests(InteractionTests):
 class TransDTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransD interaction function."""
 
-    cls = pykeen.nn.modules.TransDInteractionFunction
+    cls = pykeen.nn.modules.TransDInteraction
     shape_kwargs = dict(
         e=3,
     )
@@ -388,7 +392,7 @@ class TransDTests(TranslationalInteractionTests, unittest.TestCase):
 class TransETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransE interaction function."""
 
-    cls = pykeen.nn.modules.TransEInteractionFunction
+    cls = pykeen.nn.modules.TransEInteraction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return -(h + r - t).norm(p=2, dim=-1)
@@ -397,13 +401,13 @@ class TransETests(TranslationalInteractionTests, unittest.TestCase):
 class TransHTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransH interaction function."""
 
-    cls = pykeen.nn.modules.TransHInteractionFunction
+    cls = pykeen.nn.modules.TransHInteraction
 
 
 class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransR interaction function."""
 
-    cls = pykeen.nn.modules.TransRInteractionFunction
+    cls = pykeen.nn.modules.TransRInteraction
     shape_kwargs = dict(
         e=3,
     )
@@ -423,21 +427,21 @@ class TransRTests(TranslationalInteractionTests, unittest.TestCase):
 class SETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for SE interaction function."""
 
-    cls = pykeen.nn.modules.StructuredEmbeddingInteractionFunction
+    cls = pykeen.nn.modules.StructuredEmbeddingInteraction
 
 
 class UMTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for UM interaction function."""
 
-    cls = pykeen.nn.modules.UnstructuredModelInteractionFunction
+    cls = pykeen.nn.modules.UnstructuredModelInteraction
 
 
-class InteractionTestsTest(TestsTest[InteractionFunction], unittest.TestCase):
+class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
     """Test for tests for all interaction functions."""
 
-    base_cls = InteractionFunction
+    base_cls = Interaction
     base_test = InteractionTests
     skip_cls = {
-        TranslationalInteractionFunction,
-        StatelessInteractionFunction,
+        TranslationalInteraction,
+        StatelessInteraction,
     }

@@ -6,7 +6,7 @@ from typing import Optional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.modules import RESCALInteractionFunction
+from ...nn.modules import RESCALInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -70,7 +70,7 @@ class RESCAL(SingleVectorEmbeddingModel):
         # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=RESCALInteractionFunction(),
+            interaction_function=RESCALInteraction(),
             embedding_dim=embedding_dim,
             relation_dim=(embedding_dim, embedding_dim),
             automatic_memory_optimization=automatic_memory_optimization,

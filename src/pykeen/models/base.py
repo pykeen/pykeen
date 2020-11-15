@@ -9,7 +9,10 @@ import logging
 from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
-from typing import Any, ClassVar, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import (
+    Any, ClassVar, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Set, Tuple,
+    Type, Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -19,10 +22,13 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding, RepresentationModule
 from ..nn.emb import EmbeddingSpecification
-from ..nn.modules import InteractionFunction
+from ..nn.modules import Interaction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, HeadRepresentation, Initializer, MappedTriples, Normalizer, RelationRepresentation, Representation, TailRepresentation
+from ..typing import (
+    Constrainer, DeviceHint, HeadRepresentation, Initializer, MappedTriples, Normalizer,
+    RelationRepresentation, Representation, TailRepresentation,
+)
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
@@ -217,12 +223,14 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
+
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
     loss: Loss
+
     #: The default regularizer class
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
     #: The default parameters for the default regularizer class
@@ -247,7 +255,8 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         regularizer: Optional[Regularizer] = None,
         entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
         relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
-        interaction_function: InteractionFunction[HeadRepresentation, RelationRepresentation, TailRepresentation] = None,
+        interaction_function: Interaction[
+            HeadRepresentation, RelationRepresentation, TailRepresentation] = None,
     ) -> None:
         """Initialize the module.
 
@@ -1136,12 +1145,13 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
 class EntityEmbeddingModel(Model):
     """A base module for most KGE models that have one embedding for entities."""
+
     # TODO: deprecated
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction[Representation, RelationRepresentation, Representation],
+        interaction_function: Interaction[Representation, RelationRepresentation, Representation],
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -1155,7 +1165,6 @@ class EntityEmbeddingModel(Model):
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_constrainer: Optional[Constrainer] = None,
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1189,12 +1198,13 @@ class EntityEmbeddingModel(Model):
 
 class EntityRelationEmbeddingModel(Model, ABC):
     """A base module for KGE models that have different embeddings for entities and relations."""
+
     # TODO: Deprecated.
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction[Representation, Representation, Representation],
+        interaction_function: Interaction[Representation, Representation, Representation],
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
@@ -1256,7 +1266,7 @@ class SingleVectorEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        interaction_function: Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         embedding_dim: int = 200,
         relation_dim: Union[None, int, Sequence[int]] = None,
         automatic_memory_optimization: Optional[bool] = None,
@@ -1313,14 +1323,14 @@ class SingleVectorEmbeddingModel(Model, ABC):
         )
 
     @property
-    def embedding_dim(self) -> int:
+    def embedding_dim(self) -> int:  # noqa:D401
         """The entity embedding dim."""
         embedding = self.entity_representations[0]
         assert isinstance(embedding, Embedding)
         return embedding.embedding_dim
 
     @property
-    def relation_dim(self) -> int:
+    def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dim."""
         embedding = self.relation_representations[0]
         assert isinstance(embedding, Embedding)
@@ -1333,7 +1343,7 @@ class DoubleRelationEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction[
+        interaction_function: Interaction[
             torch.FloatTensor,
             Tuple[torch.FloatTensor, torch.FloatTensor],
             torch.FloatTensor,
@@ -1377,7 +1387,7 @@ class DoubleRelationEmbeddingModel(Model, ABC):
                     num_embeddings=triples_factory.num_relations,
                     shape=relation_dim,
                     specification=second_relation_embedding_specification,
-                )
+                ),
             ],
             interaction_function=interaction_function,
         )
@@ -1389,7 +1399,7 @@ class TwoVectorEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction[
+        interaction_function: Interaction[
             Tuple[torch.FloatTensor, torch.FloatTensor],
             Tuple[torch.FloatTensor, torch.FloatTensor],
             Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1427,7 +1437,7 @@ class TwoVectorEmbeddingModel(Model, ABC):
                     num_embeddings=triples_factory.num_entities,
                     embedding_dim=embedding_dim,
                     specification=second_embedding_specification,
-                )
+                ),
             ],
             relation_representations=[
                 Embedding.from_specification(
@@ -1439,7 +1449,7 @@ class TwoVectorEmbeddingModel(Model, ABC):
                     num_embeddings=triples_factory.num_relations,
                     embedding_dim=relation_dim,
                     specification=second_relation_embedding_specification,
-                )
+                ),
             ],
             interaction_function=interaction_function,
         )
@@ -1451,7 +1461,7 @@ class TwoSideEmbeddingModel(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: InteractionFunction,
+        interaction_function: Interaction,
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,

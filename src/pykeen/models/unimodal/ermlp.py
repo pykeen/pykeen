@@ -6,7 +6,7 @@ from typing import Optional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.modules import ERMLPInteractionFunction
+from ...nn.modules import ERMLPInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -52,7 +52,7 @@ class ERMLP(SingleVectorEmbeddingModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ERMLPInteractionFunction(
+            interaction_function=ERMLPInteraction(
                 embedding_dim=embedding_dim,
                 hidden_dim=hidden_dim,
             ),

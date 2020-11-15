@@ -11,7 +11,7 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...nn.modules import TransRInteractionFunction
+from ...nn.modules import TransRInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -87,7 +87,7 @@ class TransR(Model):
                     initializer=xavier_uniform_,
                     constrainer=clamp_norm,
                     constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-                )
+                ),
             ),
             relation_representations=[
                 Embedding.from_specification(
@@ -109,9 +109,9 @@ class TransR(Model):
                     specification=EmbeddingSpecification(
                         initializer=xavier_uniform_,
                     ),
-                )
+                ),
             ],
-            interaction_function=TransRInteractionFunction(
+            interaction_function=TransRInteraction(
                 p=scoring_fct_norm,
             ),
         )

@@ -8,7 +8,7 @@ from .. import Model
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
-from ...nn.modules import UnstructuredModelInteractionFunction
+from ...nn.modules import UnstructuredModelInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -68,7 +68,7 @@ class UnstructuredModel(Model):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            interaction_function=UnstructuredModelInteractionFunction(p=scoring_fct_norm),
+            interaction_function=UnstructuredModelInteraction(p=scoring_fct_norm),
             entity_representations=Embedding(
                 num_embeddings=triples_factory.num_entities,
                 embedding_dim=embedding_dim,

@@ -9,7 +9,7 @@ import torch.nn as nn
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import EmbeddingSpecification
-from ...nn.modules import ComplExInteractionFunction
+from ...nn.modules import ComplExInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -94,7 +94,7 @@ class ComplEx(SingleVectorEmbeddingModel):
         :param regularizer: BaseRegularizer
             The regularizer to use.
         """
-        interaction_function = ComplExInteractionFunction()
+        interaction_function = ComplExInteraction()
 
         super().__init__(
             triples_factory=triples_factory,

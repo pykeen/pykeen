@@ -8,7 +8,7 @@ import torch.autograd
 
 from ..base import TwoSideEmbeddingModel
 from ...losses import Loss, SoftplusLoss
-from ...nn.modules import DistMultInteractionFunction
+from ...nn.modules import DistMultInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -75,7 +75,7 @@ class SimplE(TwoSideEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=DistMultInteractionFunction(),
+            interaction_function=DistMultInteraction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,

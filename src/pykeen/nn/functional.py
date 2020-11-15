@@ -44,7 +44,7 @@ def _extract_sizes(h, r, t) -> Tuple[int, int, int, int, int]:
 
 def _negative_norm_of_sum(
     *x: torch.FloatTensor,
-    p: Union[int, str] = 2,
+    p: Union[str, int] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """
@@ -60,12 +60,13 @@ def _negative_norm_of_sum(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    d = sum(x)
+    d: torch.FloatTensor = sum(x)
     if power_norm:
         assert isinstance(p, SupportsFloat)
         return -(d.abs() ** p).sum(dim=-1)
     else:
         if torch.is_complex(d):
+            assert isinstance(p, SupportsFloat)
             # workaround for complex numbers: manually compute norm
             return -(d.abs() ** p).sum(dim=-1) ** (1 / p)
         else:
@@ -250,11 +251,10 @@ def _kullback_leibler_similarity(
     return sim
 
 
-_KG2E_SIMILARITIES = dict(
+KG2E_SIMILARITIES = dict(
     KL=_kullback_leibler_similarity,
     EL=_expected_likelihood,
 )
-KG2E_SIMILARITIES = set(_KG2E_SIMILARITIES.keys())
 
 
 def _extended_einsum(
@@ -706,15 +706,13 @@ def kg2e_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    if similarity not in KG2E_SIMILARITIES:
-        raise KeyError(similarity)
-    similarity = _KG2E_SIMILARITIES[similarity]
+    similarity_fn = KG2E_SIMILARITIES[similarity]
     # Compute entity distribution
     e_mean = h_mean.unsqueeze(dim=2) - t_mean.unsqueeze(dim=1)
     e_var = h_var.unsqueeze(dim=2) + t_var.unsqueeze(dim=1)
     e = GaussianDistribution(mean=e_mean, diagonal_covariance=e_var)
     r = GaussianDistribution(mean=r_mean, diagonal_covariance=r_var)
-    return similarity(e=e, r=r, exact=exact)
+    return similarity_fn(e=e, r=r, exact=exact)
 
 
 def ntn_interaction(

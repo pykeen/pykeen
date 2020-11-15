@@ -13,7 +13,7 @@ from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...nn.modules import StructuredEmbeddingInteractionFunction
+from ...nn.modules import StructuredEmbeddingInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -71,7 +71,7 @@ class StructuredEmbedding(DoubleRelationEmbeddingModel):
         )
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=StructuredEmbeddingInteractionFunction(
+            interaction_function=StructuredEmbeddingInteraction(
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
@@ -91,5 +91,5 @@ class StructuredEmbedding(DoubleRelationEmbeddingModel):
             ),
             second_relation_embedding_specification=EmbeddingSpecification(
                 initializer=relation_initializer,
-            )
+            ),
         )

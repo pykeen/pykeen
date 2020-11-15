@@ -8,7 +8,7 @@ from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...nn.modules import HolEInteractionFunction
+from ...nn.modules import HolEInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -63,7 +63,7 @@ class HolE(SingleVectorEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        interaction_function = HolEInteractionFunction()
+        interaction_function = HolEInteraction()
 
         super().__init__(
             triples_factory=triples_factory,

@@ -6,7 +6,7 @@ from typing import Optional, Type
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn.modules import ERMLPEInteractionFunction
+from ...nn.modules import ERMLPEInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -66,7 +66,7 @@ class ERMLPE(SingleVectorEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ERMLPEInteractionFunction(
+            interaction_function=ERMLPEInteraction(
                 hidden_dim=hidden_dim,
                 input_dropout=input_dropout,
                 hidden_dropout=hidden_dropout,

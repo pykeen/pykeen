@@ -9,7 +9,7 @@ from torch import nn
 from .. import Model
 from ...losses import Loss
 from ...nn import Embedding
-from ...nn.modules import NTNInteractionFunction
+from ...nn.modules import NTNInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -73,7 +73,7 @@ class NTN(Model):
         """
         w = Embedding(
             num_embeddings=triples_factory.num_relations,
-            shape=(num_slices, embedding_dim, embedding_dim)
+            shape=(num_slices, embedding_dim, embedding_dim),
         )
         b = Embedding(
             num_embeddings=triples_factory.num_relations,
@@ -98,7 +98,7 @@ class NTN(Model):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            interaction_function=NTNInteractionFunction(
+            interaction_function=NTNInteraction(
                 non_linearity=non_linearity,
             ),
             entity_representations=Embedding(

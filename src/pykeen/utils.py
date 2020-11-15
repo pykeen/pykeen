@@ -251,13 +251,12 @@ def compose(
     return chained_op
 
 
-def set_random_seed(seed: int):
+def set_random_seed(seed: int) -> Tuple[None, torch._C.Generator, None]:
     """Set the random seed on numpy, torch, and python."""
-    return (
-        np.random.seed(seed=seed),
-        torch.manual_seed(seed=seed),
-        random.seed(seed),
-    )
+    np.random.seed(seed=seed)
+    generator = torch.manual_seed(seed=seed)
+    random.seed(seed)
+    return None, generator, None
 
 
 class NoRandomSeedNecessary:
@@ -441,7 +440,7 @@ def random_non_negative_int() -> int:
 
 def check_shapes(
     *x: Tuple[torch.Tensor, str],
-    raise_or_error: bool = True,
+    raise_on_errors: bool = True,
 ) -> bool:
     """
     Verify that a sequence of tensors are of matching shapes.
@@ -450,7 +449,7 @@ def check_shapes(
         A tuple (tensor, shape), where tensor is a tensor, and shape is a string, where each character corresponds to
         a (named) dimension. If the shapes of different tensors share a character, the corresponding dimensions are
         expected to be of equal size.
-    :param raise_or_error:
+    :param raise_on_errors:
         Whether to raise an exception in case of a mismatch.
 
     :return:
@@ -459,7 +458,7 @@ def check_shapes(
     :raises ValueError:
         If the shapes mismatch and raise_on_error is True.
     """
-    dims = dict()
+    dims: Dict[str, Tuple[int, ...]] = dict()
     errors = []
     for tensor, shape in x:
         if tensor.ndimension() != len(shape):
@@ -470,7 +469,7 @@ def check_shapes(
             if exp_dim is not None and exp_dim != dim:
                 errors.append(f"{name}: {dim} vs. {exp_dim}")
             dims[name] = dim
-    if raise_or_error and len(errors) > 0:
+    if raise_on_errors and errors:
         raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
     return len(errors) == 0
 

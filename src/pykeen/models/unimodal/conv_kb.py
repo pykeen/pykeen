@@ -7,7 +7,7 @@ from typing import Optional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.modules import ConvKBInteractionFunction
+from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -86,7 +86,7 @@ class ConvKB(SingleVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ConvKBInteractionFunction(
+            interaction_function=ConvKBInteraction(
                 hidden_dropout_rate=hidden_dropout_rate,
                 embedding_dim=embedding_dim,
                 num_filters=num_filters,

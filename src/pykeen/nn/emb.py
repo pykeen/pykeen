@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """Embedding modules."""
+
 import dataclasses
 import functools
+import logging
 from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy
@@ -18,14 +20,13 @@ __all__ = [
     'EmbeddingSpecification',
 ]
 
+logger = logging.getLogger(__name__)
+
 
 class RepresentationModule(nn.Module):
     """A base class for obtaining representations for entities/relations."""
 
-    def forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         """Get representations for indices.
 
         :param indices: shape: (m,)
@@ -65,7 +66,7 @@ class EmbeddingSpecification:
         self,
         num_embeddings: int,
         embedding_dim: Optional[int],
-        shape: Optional[Union[int, Sequence[int]]]
+        shape: Optional[Union[int, Sequence[int]]],
     ) -> 'Embedding':
         """Create an embedding with this specification."""
         return Embedding(
@@ -88,11 +89,15 @@ class Embedding(RepresentationModule):
     can be used throughout PyKEEN as a more fully featured drop-in replacement.
     """
 
+    shape: Sequence[int]
+    normalizer: Optional[Normalizer]
+    constrainer: Optional[Constrainer]
+
     def __init__(
         self,
         num_embeddings: int,
         embedding_dim: Optional[int] = None,
-        shape: Optional[Union[int, Sequence[int]]] = None,
+        shape: Union[None, int, Sequence[int]] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -125,29 +130,33 @@ class Embedding(RepresentationModule):
         """
         super().__init__()
         if shape is None and embedding_dim is None:
-            raise ValueError
-        if shape is not None:
-            if not isinstance(shape, Sequence):
-                shape = (shape,)
+            raise ValueError('Missing both shape and embedding_dim')
+        elif shape is not None:
+            if isinstance(shape, int):
+                self.shape = (shape,)
+            else:
+                self.shape = shape
             embedding_dim = numpy.prod(shape)
         else:
-            shape = (embedding_dim,)
-        self.shape = shape
+            assert embedding_dim is not None
+            self.shape = (embedding_dim,)
 
         if initializer is None:
             initializer = nn.init.normal_
         if initializer_kwargs:
-            self.initializer = functools.partial(initializer, **initializer_kwargs)
-        else:
-            self.initializer = initializer
-        if constrainer_kwargs:
-            self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
+            initializer = functools.partial(initializer, **initializer_kwargs)
+        self.initializer = initializer
+
+        if constrainer is not None and constrainer_kwargs:
+            self.constrainer: Constrainer = functools.partial(constrainer, **constrainer_kwargs)
         else:
             self.constrainer = constrainer
-        if normalizer_kwargs:
-            self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
+
+        if normalizer is not None and normalizer_kwargs:
+            self.normalizer: Normalizer = functools.partial(normalizer, **normalizer_kwargs)
         else:
             self.normalizer = normalizer
+
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
@@ -193,7 +202,7 @@ class Embedding(RepresentationModule):
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
-            self._embeddings.weight.data.view(self.num_embeddings, *self.shape)
+            self._embeddings.weight.data.view(self.num_embeddings, *self.shape),
         ).view(self.num_embeddings, self.embedding_dim)
 
     def post_parameter_update(self):  # noqa: D102

@@ -10,7 +10,7 @@ from torch.nn import functional
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
-from ...nn.modules import DistMultInteractionFunction
+from ...nn.modules import DistMultInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -81,7 +81,7 @@ class DistMult(SingleVectorEmbeddingModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         """
-        interaction_function = DistMultInteractionFunction()
+        interaction_function = DistMultInteraction()
 
         super().__init__(
             triples_factory=triples_factory,

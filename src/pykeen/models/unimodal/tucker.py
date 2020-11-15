@@ -8,7 +8,7 @@ from .. import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...nn.modules import TuckerInteractionFunction
+from ...nn.modules import TuckerInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -89,7 +89,7 @@ class TuckER(SingleVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TuckerInteractionFunction(
+            interaction_function=TuckerInteraction(
                 embedding_dim=embedding_dim,
                 relation_dim=relation_dim,
                 dropout_0=dropout_0,
