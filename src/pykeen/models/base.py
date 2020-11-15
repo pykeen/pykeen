@@ -1527,7 +1527,7 @@ class TwoSideEmbeddingModel(Model):
                 t_source.get_in_canonical_shape(indices=t_indices),
             )
             for h_source, r_source, t_source in (
-                (self.entity_embeddings, self.relation_embeddings, self.second_entity_embeddings),
-                (self.second_entity_embeddings, self.second_relation_embeddings, self.entity_embeddings),
+                (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
+                (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
             )
         )
