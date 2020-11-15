@@ -112,7 +112,7 @@ def get_novelty_mask(
     """
     other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
     other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
-    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
     known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
@@ -249,6 +249,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
     def __init__(
         self,
         triples_factory: TriplesFactory,
+        interaction_function: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
@@ -257,7 +258,6 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         regularizer: Optional[Regularizer] = None,
         entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
         relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
-        interaction_function: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation] = None,
     ) -> None:
         """Initialize the module.
 

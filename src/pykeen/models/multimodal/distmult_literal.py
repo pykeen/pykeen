@@ -10,9 +10,14 @@ from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
 from ...losses import Loss
+from ...nn.modules import DistMultInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import slice_triples
+
+__all__ = [
+    'DistMultLiteral',
+]
 
 
 # TODO: Check entire build of the model
@@ -38,6 +43,7 @@ class DistMultLiteral(MultimodalModel):
         random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
+            interaction_function=DistMultInteraction(),
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,

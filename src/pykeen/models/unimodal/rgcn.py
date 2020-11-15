@@ -509,15 +509,8 @@ class RGCN(Model):
     ):
         if triples_factory.create_inverse_triples:
             raise ValueError('R-GCN handles edges in an undirected manner.')
-        super().__init__(
-            triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-        )
-        self.entity_representations = RGCNRepresentations(
+
+        entity_representations = RGCNRepresentations(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             num_bases_or_blocks=num_bases_or_blocks,
@@ -534,12 +527,21 @@ class RGCN(Model):
             buffer_messages=buffer_messages,
             base_representations=None,
         )
-        self.relation_embeddings = Embedding(
+        relation_representations = Embedding(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
         )
-        # TODO: Dummy
-        self.decoder = Decoder()
+        super().__init__(
+            triples_factory=triples_factory,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            interaction_function=Decoder(),
+            entity_representations=entity_representations,
+            relation_representations=relation_representations,
+        )
 
     def forward(
         self,
@@ -547,7 +549,7 @@ class RGCN(Model):
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_representations(indices=h_indices)
-        r = self.relation_embeddings(indices=r_indices)
-        t = self.entity_representations(indices=t_indices)
+        h = self.entity_representations[0](indices=h_indices)
+        r = self.relation_representations[0](indices=r_indices)
+        t = self.entity_representations[0](indices=t_indices)
         return self.decoder(h, r, t).unsqueeze(dim=-1)

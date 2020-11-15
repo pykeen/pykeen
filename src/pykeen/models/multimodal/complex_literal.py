@@ -10,9 +10,14 @@ from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
 from ...losses import BCEWithLogitsLoss, Loss
+from ...nn.modules import ComplExInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import slice_doubles
+
+__all__ = [
+    'ComplExLiteral',
+]
 
 
 # TODO: Check entire build of the model
@@ -46,17 +51,13 @@ class ComplExLiteral(MultimodalModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
+            interaction_function=ComplExInteraction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-
-        self.entity_embs_real = None
-        self.entity_embs_img = None
-        self.relation_embs_real = None
-        self.relation_embs_img = None
 
         # Literal
         # num_ent x num_lit
@@ -79,9 +80,6 @@ class ComplExLiteral(MultimodalModel):
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
 
-        self._init_embeddings()
-
-    def _init_embeddings(self):
         self.entity_embs_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.entity_embs_img = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.relation_embs_real = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
