@@ -10,7 +10,6 @@ from .. import ERModel
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.modules import NTNInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -62,7 +61,6 @@ class NTN(ERModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         non_linearity: Optional[nn.Module] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize NTN.
 

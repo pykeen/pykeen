@@ -6,8 +6,9 @@ from typing import Optional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import RESCALInteraction
-from ...regularizers import LpRegularizer, Regularizer
+from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -57,7 +58,6 @@ class RESCAL(SingleVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize RESCAL.
 
@@ -67,7 +67,6 @@ class RESCAL(SingleVectorEmbeddingModel):
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
-        # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
             interaction=RESCALInteraction(),
@@ -77,4 +76,18 @@ class RESCAL(SingleVectorEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            embedding_specification=EmbeddingSpecification(
+                regularizer=LpRegularizer(
+                    weight=10,
+                    p=2.,
+                    normalize=True,
+                ),
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                regularizer=LpRegularizer(
+                    weight=10,
+                    p=2.,
+                    normalize=True,
+                ),
+            ),
         )

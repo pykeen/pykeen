@@ -69,7 +69,6 @@ class KG2E(TwoVectorEmbeddingModel):
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,
         c_max: float = 5.,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize KG2E.
 

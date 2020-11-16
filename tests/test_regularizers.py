@@ -55,7 +55,6 @@ class _RegularizerTestCase:
         # Use RESCAL as it regularizes multiple tensors of different shape.
         model = RESCAL(
             triples_factory=self.triples_factory,
-            regularizer=self.regularizer,
         ).to(self.device)
 
         # Check if regularizer is stored correctly.

@@ -11,7 +11,6 @@ from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import ProjEInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -63,7 +62,6 @@ class ProjE(SingleVectorEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,

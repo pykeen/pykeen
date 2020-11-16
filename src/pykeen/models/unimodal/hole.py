@@ -9,7 +9,6 @@ from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import HolEInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import clamp_norm
@@ -60,7 +59,6 @@ class HolE(SingleVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
