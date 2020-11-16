@@ -753,7 +753,7 @@ class _TestRGCN(_ModelTestCase):
 
         Enriched embeddings have to be reset.
         """
-        assert self.model.entity_representations.enriched_embeddings is None
+        assert self.model.entity_representations[0].enriched_embeddings is None
 
 
 class TestRGCNBasis(_TestRGCN, unittest.TestCase):
