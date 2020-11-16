@@ -13,6 +13,7 @@ import torch
 import torch.nn
 from torch import nn
 
+from ..regularizers import Regularizer
 from ..typing import Constrainer, Initializer, Normalizer
 
 __all__ = [
@@ -86,7 +87,7 @@ class EmbeddingSpecification:
     constrainer: Optional[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    # regularizer: Optional[Regularizer] = None
+    regularizer: Optional[Regularizer] = None
 
     def make(
         self,
@@ -105,6 +106,7 @@ class EmbeddingSpecification:
             normalizer_kwargs=self.normalizer_kwargs,
             constrainer=self.constrainer,
             constrainer_kwargs=self.constrainer_kwargs,
+            regularizer=self.regularizer,
         )
 
 
@@ -118,6 +120,7 @@ class Embedding(RepresentationModule):
     shape: Sequence[int]
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
+    regularizer: Optional[Regularizer]
 
     def __init__(
         self,
@@ -130,6 +133,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer: Optional[Regularizer] = None,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -169,19 +173,20 @@ class Embedding(RepresentationModule):
 
         if initializer is None:
             initializer = nn.init.normal_
+
         if initializer_kwargs:
             initializer = functools.partial(initializer, **initializer_kwargs)
         self.initializer = initializer
 
         if constrainer is not None and constrainer_kwargs:
-            self.constrainer: Constrainer = functools.partial(constrainer, **constrainer_kwargs)
-        else:
-            self.constrainer = constrainer
+            constrainer: Constrainer = functools.partial(constrainer, **constrainer_kwargs)
+        self.constrainer = constrainer
 
         if normalizer is not None and normalizer_kwargs:
-            self.normalizer: Normalizer = functools.partial(normalizer, **normalizer_kwargs)
-        else:
-            self.normalizer = normalizer
+            normalizer: Normalizer = functools.partial(normalizer, **normalizer_kwargs)
+        self.normalizer = normalizer
+
+        self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
@@ -235,6 +240,8 @@ class Embedding(RepresentationModule):
         # apply constraints in-place
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
+        if self.regularizer is not None:
+            self.regularizer.reset()
 
     def forward(
         self,
@@ -246,6 +253,8 @@ class Embedding(RepresentationModule):
             x = self._embeddings(indices)
         if self.normalizer is not None:
             x = self.normalizer(x)
+        if self.regularizer is not None:
+            self.regularizer.update(x)
         return x
 
     def get_in_canonical_shape(
