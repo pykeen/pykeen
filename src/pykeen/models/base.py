@@ -26,7 +26,7 @@ from ..nn.modules import Interaction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import (
-    DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, Representation, TailRepresentation,
+    DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation,
 )
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
@@ -1228,62 +1228,6 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             scores = scores.repeat(*repeats)
 
         return scores
-
-
-class EntityRelationEmbeddingModel(ERModel, autoreset=False):
-    """A base module for KGE models that have different embeddings for entities and relations."""
-
-    # TODO: Deprecated.
-
-    def __init__(
-        self,
-        triples_factory: TriplesFactory,
-        interaction: Interaction[Representation, Representation, Representation],
-        embedding_dim: int = 50,
-        relation_dim: Optional[int] = None,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-        embedding_specification: Optional[EmbeddingSpecification] = None,
-        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
-    ) -> None:
-        """Initialize the entity embedding model.
-
-        :param relation_dim:
-            The relation embedding dimensionality. If not given, defaults to same size as entity embedding
-            dimension.
-
-        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        .. seealso:: Constructor of the base class :class:`pykeen.models.EntityEmbeddingModel`
-        """
-        self.embedding_dim = embedding_dim
-        # Default for relation dimensionality
-        if relation_dim is None:
-            relation_dim = embedding_dim
-        self.relation_dim = relation_dim
-        super().__init__(
-            triples_factory=triples_factory,
-            interaction=interaction,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-            entity_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_entities,
-                embedding_dim=embedding_dim,
-                specification=embedding_specification,
-            ),
-            relation_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_relations,
-                embedding_dim=relation_dim,
-                specification=relation_embedding_specification,
-            ),
-        )
 
 
 class MultimodalModel(ERModel, autoreset=False):
