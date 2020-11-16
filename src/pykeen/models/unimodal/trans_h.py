@@ -78,7 +78,6 @@ class TransH(DoubleRelationEmbeddingModel):
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
         """
-        # TODO: Regularizer
         super().__init__(
             triples_factory=triples_factory,
             interaction=TransHInteraction(
@@ -97,4 +96,11 @@ class TransH(DoubleRelationEmbeddingModel):
                 # Normalise the normal vectors by their l2 norms
                 constrainer=functional.normalize,
             ),
+        )
+        self.regularizer = TransHRegularizer(
+            weight=0.05,
+            epsilon=1e-5,
+            entity_embeddings=list(self.entity_representations[0].parameters()).pop(),
+            relation_embeddings=list(self.relation_representations[0].parameters()).pop(),
+            normal_vector_embeddings=list(self.relation_representations[1].parameters()).pop(),
         )
