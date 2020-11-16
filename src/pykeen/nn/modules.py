@@ -274,7 +274,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
         t: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
         slice_size: Optional[int],
-        slice_dim: str,
+        slice_dim: Optional[str],
     ) -> torch.FloatTensor:
         """
         Compute broadcasted triple scores with optional slicing for representations in canonical shape.

@@ -179,12 +179,12 @@ class Embedding(RepresentationModule):
         self.initializer = initializer
 
         if constrainer is not None and constrainer_kwargs:
-            constrainer: Constrainer = functools.partial(constrainer, **constrainer_kwargs)
+            constrainer = functools.partial(constrainer, **constrainer_kwargs)
         self.constrainer = constrainer
 
         # TODO: Move regularizer and normalizer to RepresentationModule?
         if normalizer is not None and normalizer_kwargs:
-            normalizer: Normalizer = functools.partial(normalizer, **normalizer_kwargs)
+            normalizer = functools.partial(normalizer, **normalizer_kwargs)
         self.normalizer = normalizer
 
         self.regularizer = regularizer
