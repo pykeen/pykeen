@@ -296,23 +296,25 @@ class _ModelTestCase:
             **(self.model_kwargs or {}),
         ).to_device_()
 
-        def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
-            """Test whether two embeddings are equal."""
-            return (a(indices=None) == b(indices=None)).all()
+        def _equal_weights(a: nn.Module, b: nn.Module) -> bool:
+            """Test whether two modules are equal."""
+            a_state = a.state_dict()
+            b_state = b.state_dict()
+            if a_state.keys() != b_state.keys():
+                return False
+            for key, original_value in a_state.items():
+                if not torch.allclose(original_value, b_state[key]):
+                    return False
+            return True
 
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
+        assert not _equal_weights(original_model, loaded_model)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
-        if isinstance(original_model, EntityRelationEmbeddingModel):
-            assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
+
+        assert _equal_weights(original_model, loaded_model)
 
     @property
     def cli_extras(self):
