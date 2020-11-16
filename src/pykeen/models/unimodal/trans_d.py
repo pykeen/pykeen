@@ -9,7 +9,6 @@ from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import TransDInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import clamp_norm
@@ -66,7 +65,6 @@ class TransD(TwoVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,

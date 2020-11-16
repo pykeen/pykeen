@@ -91,6 +91,7 @@ class ComplEx(SingleVectorEmbeddingModel):
         :param random_seed: int (optional)
             An optional random seed to set before the initialization of weights.
         """
+        regularizer = LpRegularizer(weight=0.01, p=2.0, normalize=True)
         super().__init__(
             triples_factory=triples_factory,
             interaction=ComplExInteraction(),
@@ -103,18 +104,10 @@ class ComplEx(SingleVectorEmbeddingModel):
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
             embedding_specification=EmbeddingSpecification(
                 initializer=nn.init.normal_,
-                regularizer=LpRegularizer(
-                    weight=0.01,
-                    p=2.0,
-                    normalize=True,
-                ),
+                regularizer=regularizer,
             ),
             relation_embedding_specification=EmbeddingSpecification(
                 initializer=nn.init.normal_,
-                regularizer=LpRegularizer(
-                    weight=0.01,
-                    p=2.0,
-                    normalize=True,
-                ),
+                regularizer=regularizer,
             ),
         )

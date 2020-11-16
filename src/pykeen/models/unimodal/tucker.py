@@ -9,7 +9,6 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import TuckerInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -75,7 +74,6 @@ class TuckER(SingleVectorEmbeddingModel):
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
-        regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
     ) -> None:
         """Initialize the model.

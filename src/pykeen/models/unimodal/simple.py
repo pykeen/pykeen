@@ -8,8 +8,9 @@ import torch.autograd
 
 from ..base import TwoSideEmbeddingModel
 from ...losses import Loss, SoftplusLoss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
-from ...regularizers import PowerSumRegularizer, Regularizer
+from ...regularizers import PowerSumRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -70,9 +71,9 @@ class SimplE(TwoSideEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
     ) -> None:
+        regularizer = PowerSumRegularizer(weight=20, p=2.0, normalize=True)
         super().__init__(
             triples_factory=triples_factory,
             interaction=DistMultInteraction(),
@@ -81,6 +82,18 @@ class SimplE(TwoSideEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            embedding_specification=EmbeddingSpecification(
+                regularizer=regularizer,
+            ),
+            relation_embedding_specification=EmbeddingSpecification(
+                regularizer=regularizer,
+            ),
+            second_embedding_specification=EmbeddingSpecification(
+                regularizer=regularizer,
+            ),
+            second_relation_embedding_specification=EmbeddingSpecification(
+                regularizer=regularizer,
+            ),
         )
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)

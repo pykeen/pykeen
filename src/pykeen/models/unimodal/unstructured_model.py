@@ -9,7 +9,6 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...nn.modules import UnstructuredModelInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -52,7 +51,6 @@ class UnstructuredModel(ERModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize UM.
 

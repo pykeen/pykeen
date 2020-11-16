@@ -10,7 +10,7 @@ from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
-from ...regularizers import Regularizer, TransHRegularizer
+from ...regularizers import TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -72,13 +72,13 @@ class TransH(DoubleRelationEmbeddingModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize TransH.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
         """
+        # TODO: Regularizer
         super().__init__(
             triples_factory=triples_factory,
             interaction=TransHInteraction(
