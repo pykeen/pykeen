@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch import nn
 
-from .. import Model
+from .. import ERModel
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.modules import NTNInteraction
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class NTN(Model):
+class NTN(ERModel):
     r"""An implementation of NTN from [socher2013]_.
 
     NTN uses a bilinear tensor layer instead of a standard linear neural network layer:

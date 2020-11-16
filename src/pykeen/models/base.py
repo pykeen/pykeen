@@ -6,7 +6,7 @@ import functools
 import inspect
 import itertools as itt
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
 from typing import (
@@ -33,9 +33,13 @@ from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
+    'ERModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
     'SingleVectorEmbeddingModel',
+    'DoubleRelationEmbeddingModel',
+    'TwoVectorEmbeddingModel',
+    'TwoSideEmbeddingModel',
     'MultimodalModel',
 ]
 
@@ -193,6 +197,10 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
+def _can_slice(fn) -> bool:
+    return 'slice_size' in inspect.getfullargspec(fn).args
+
+
 def _track_hyperparameters(cls: Type['Model']) -> None:
     """Initialize the subclass while keeping track of hyper-parameters."""
     # Keep track of the hyper-parameters that are used across all
@@ -216,11 +224,28 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
     cls.__init__ = _new_init  # type: ignore
 
 
-class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
-    """A base module for all of the KGE models."""
+class Model(nn.Module, ABC):
+    """An abstract class for knowledge graph embedding models (KGEMs).
+
+    The only function that needs to be implemented for a given subclass is
+    :meth:`Model.forward`. The job of the :meth:`Model.forward` function, as
+    opposed to the completely general :meth:`torch.nn.Module.forward` is
+    to take indices for the head, relation, and tails' respective representation(s)
+    and to determine a score.
+
+    Subclasses of Model can decide however they want on how to store entities' and
+    relations' representations, how they want to be looked up, and how they should
+    be scored. The :class:`GeneralModel` provides a commonly useful implementation
+    which allows for the specification of one or more entity representations and
+    one or more relation representations in the form of :class:`pykeen.nn.Embedding`
+    as well as a matching instance of a :class:`pykeen.nn.Interaction`.
+    """
 
     #: A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
+
+    #: Keep track of if this is a base model
+    _is_abstract: ClassVar[bool]
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
@@ -240,24 +265,15 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
     #: The instance of the regularizer
     regularizer: Regularizer
 
-    #: The entity representations
-    entity_representations: Sequence[RepresentationModule]
-
-    #: The relation representations
-    relation_representations: Sequence[RepresentationModule]
-
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
-        relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
     ) -> None:
         """Initialize the module.
 
@@ -325,27 +341,11 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         # This allows to store the optimized parameters
         self.automatic_memory_optimization = automatic_memory_optimization
 
-        # normalization
-        if entity_representations is not None and not isinstance(entity_representations, Sequence):
-            entity_representations = [entity_representations]
-        if relation_representations is not None and not isinstance(relation_representations, Sequence):
-            relation_representations = [relation_representations]
-        # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-        self.entity_representations = nn.ModuleList(entity_representations)
-        self.relation_representations = nn.ModuleList(relation_representations)
-
-        self.interaction = interaction
-
-        # reset parameters
-        self.reset_parameters_()
-
-    @classmethod
-    def _is_abstract(cls) -> bool:
-        return inspect.isabstract(cls)
-
-    def __init_subclass__(cls, **kwargs):  # noqa:D105
-        if not cls._is_abstract():
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        cls._is_abstract = not autoreset
+        if not cls._is_abstract:
             _track_hyperparameters(cls)
+            _add_post_reset_parameters(cls)
 
     @property
     def can_slice_h(self) -> bool:
@@ -998,7 +998,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
             )
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
-    # @abstractmethod
+    @abstractmethod
     def forward(
         self,
         h_indices: Optional[torch.LongTensor],
@@ -1021,33 +1021,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """
-        h, r, t = [
-            [
-                representation.get_in_canonical_shape(indices=indices)
-                for representation in representations
-            ]
-            for indices, representations in (
-                (h_indices, self.entity_representations),
-                (r_indices, self.relation_representations),
-                (t_indices, self.entity_representations),
-            )
-        ]
-        # normalization
-        h, r, t = [x[0] if len(x) == 1 else x for x in (h, r, t)]
-
-        scores = self.interaction(h=h, r=r, t=t)
-        if len(self.relation_representations) == 0:
-            # same score for all relations
-            repeats = [1, 1, 1, 1]
-            if r_indices is None:
-                repeats[2] = self.num_relations
-            else:
-                relation_batch_size = len(r_indices)
-                if scores.shape[0] < relation_batch_size:
-                    repeats[0] = relation_batch_size
-            scores = scores.repeat(*repeats)
-
-        return scores
+        raise NotImplementedError
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
@@ -1056,8 +1030,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
-        :raises NotImplementedError:
-            If the method was not implemented for this class.
+
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
@@ -1145,7 +1118,122 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         self.load_state_dict(torch.load(path, map_location=self.device))
 
 
-class EntityEmbeddingModel(Model):
+class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
+    """A commonly useful base for KGEMs using embeddings and interaction modules."""
+
+    #: The entity representations
+    entity_representations: Sequence[RepresentationModule]
+
+    #: The relation representations
+    relation_representations: Sequence[RepresentationModule]
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+        entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
+        relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
+    ) -> None:
+        """Initialize the module.
+
+        :param triples_factory:
+            The triples factory facilitates access to the dataset.
+        :param loss:
+            The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param predict_with_sigmoid:
+            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
+            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
+            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
+        :param automatic_memory_optimization:
+            If set to `True`, the model derives the maximum possible batch sizes for the scoring of triples during
+            evaluation and also training (if no batch size was given). This allows to fully utilize the hardware at hand
+            and achieves the fastest calculations possible.
+        :param preferred_device:
+            The preferred device for model training and inference.
+        :param random_seed:
+            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param regularizer:
+            A regularizer to use for training.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            predict_with_sigmoid=predict_with_sigmoid,
+        )
+
+        # normalization
+        if entity_representations is not None and not isinstance(entity_representations, Sequence):
+            entity_representations = [entity_representations]
+        if relation_representations is not None and not isinstance(relation_representations, Sequence):
+            relation_representations = [relation_representations]
+        # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
+        self.entity_representations = nn.ModuleList(entity_representations)
+        self.relation_representations = nn.ModuleList(relation_representations)
+
+        self.interaction = interaction
+
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail indices and calculates the corresponding score.
+
+        All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
+
+        :param h_indices:
+            The head indices. None indicates to use all.
+        :param r_indices:
+            The relation indices. None indicates to use all.
+        :param t_indices:
+            The tail indices. None indicates to use all.
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The score for each triple.
+        """
+        h, r, t = [
+            [
+                representation.get_in_canonical_shape(indices=indices)
+                for representation in representations
+            ]
+            for indices, representations in (
+                (h_indices, self.entity_representations),
+                (r_indices, self.relation_representations),
+                (t_indices, self.entity_representations),
+            )
+        ]
+        # normalization
+        h, r, t = [x[0] if len(x) == 1 else x for x in (h, r, t)]
+
+        scores = self.interaction(h=h, r=r, t=t)
+        if len(self.relation_representations) == 0:
+            # same score for all relations
+            repeats = [1, 1, 1, 1]
+            if r_indices is None:
+                repeats[2] = self.num_relations
+            else:
+                relation_batch_size = len(r_indices)
+                if scores.shape[0] < relation_batch_size:
+                    repeats[0] = relation_batch_size
+            scores = scores.repeat(*repeats)
+
+        return scores
+
+
+class EntityEmbeddingModel(ERModel, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
     # TODO: deprecated
@@ -1198,7 +1286,7 @@ class EntityEmbeddingModel(Model):
         )
 
 
-class EntityRelationEmbeddingModel(Model, ABC):
+class EntityRelationEmbeddingModel(ERModel, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     # TODO: Deprecated.
@@ -1254,16 +1342,12 @@ class EntityRelationEmbeddingModel(Model, ABC):
         )
 
 
-def _can_slice(fn) -> bool:
-    return 'slice_size' in inspect.getfullargspec(fn).args
-
-
-class MultimodalModel(EntityRelationEmbeddingModel):
+class MultimodalModel(EntityRelationEmbeddingModel, autoreset=False):
     """A multimodal KGE model."""
 
 
-class SingleVectorEmbeddingModel(Model, ABC):
-    """A base class for embedding models which store a single vector for each entity and relation."""
+class SingleVectorEmbeddingModel(ERModel, autoreset=False):
+    """A KGEM that stores one :class:`pykeen.nn.Embedding` for each entities and relations."""
 
     def __init__(
         self,
@@ -1339,8 +1423,14 @@ class SingleVectorEmbeddingModel(Model, ABC):
         return embedding.embedding_dim
 
 
-class DoubleRelationEmbeddingModel(Model, ABC):
-    """A model with one vector for each entity and two vectors for each relation."""
+class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
+    """A KGEM that stores one :class:`pykeen.nn.Embedding` for entities and two for relations.
+
+    .. seealso::
+
+        - :class:`pykeen.models.StructuredEmbedding`
+        - :class:`pykeen.models.TransH`
+    """
 
     def __init__(
         self,
@@ -1395,8 +1485,14 @@ class DoubleRelationEmbeddingModel(Model, ABC):
         )
 
 
-class TwoVectorEmbeddingModel(Model, ABC):
-    """A model with two vectors for each entity and relation."""
+class TwoVectorEmbeddingModel(ERModel, autoreset=False):
+    """A KGEM that stores two :class:`pykeen.nn.Embedding` for each entities and relations.
+
+    .. seealso::
+
+        - :class:`pykeen.models.KG2E`
+        - :class:`pykeen.models.TransD`
+    """
 
     def __init__(
         self,
@@ -1457,8 +1553,13 @@ class TwoVectorEmbeddingModel(Model, ABC):
         )
 
 
-class TwoSideEmbeddingModel(Model):
-    """A model which averages scores for forward and backward model."""
+class TwoSideEmbeddingModel(ERModel, autoreset=False):
+    """A KGEM with two sub-KGEMs that serve as a "forwards" and "backwards" model.
+
+    Stores two :class:`pykeen.nn.Embedding` for each entities and relations.
+
+    .. seealso:: :class:`pykeen.models.SimplE`
+    """
 
     def __init__(
         self,

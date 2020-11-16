@@ -9,7 +9,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 from typing import Mapping, Set, Type, Union
 
 from .base import (  # noqa:F401
-    DoubleRelationEmbeddingModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel,
+    DoubleRelationEmbeddingModel, ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel,
     SingleVectorEmbeddingModel, TwoSideEmbeddingModel, TwoVectorEmbeddingModel,
 )
 from .multimodal import ComplExLiteral, DistMultLiteral
@@ -66,7 +66,8 @@ __all__ = [
     'get_model_cls',
 ]
 
-_CONCRETE_BASES = {
+_BASE_MODELS = {
+    ERModel,
     SingleVectorEmbeddingModel,
     DoubleRelationEmbeddingModel,
     TwoSideEmbeddingModel,
@@ -79,12 +80,12 @@ _CONCRETE_BASES = {
 
 def _concrete_subclasses(cls: Type[Model]):
     for subcls in cls.__subclasses__():
-        if not subcls._is_abstract() and subcls not in _CONCRETE_BASES:
+        if not subcls._is_abstract and subcls not in _BASE_MODELS:
             yield subcls
         yield from _concrete_subclasses(subcls)
 
 
-_MODELS: Set[Type[Model]] = set(_concrete_subclasses(Model))
+_MODELS: Set[Type[Model]] = set(_concrete_subclasses(Model))  # type: ignore
 
 #: A mapping of models' names to their implementations
 models: Mapping[str, Type[Model]] = {
@@ -101,6 +102,6 @@ def get_model_cls(query: Union[str, Type[Model]]) -> Type[Model]:
     """
     return get_cls(
         query,
-        base=Model,
+        base=Model,  # type: ignore
         lookup_dict=models,
     )

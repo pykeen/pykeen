@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from .. import Model
+from .. import ERModel
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class UnstructuredModel(Model):
+class UnstructuredModel(ERModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
     UM computes the distance between head and tail entities then applies the $l_p$ norm.

@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 from torch import nn
 
-from .. import Model
+from .. import ERModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
@@ -25,7 +25,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvE(Model):
+class ConvE(ERModel):
     r"""An implementation of ConvE from [dettmers2018]_.
 
     ConvE  is a CNN-based approach. For each triple $(h,r,t)$, the input to ConvE is a matrix

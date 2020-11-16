@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch.nn import functional
 
-from .. import Model
+from .. import ERModel
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.emb import EmbeddingSpecification
@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-class TransR(Model):
+class TransR(ERModel):
     r"""An implementation of TransR from [lin2015]_.
 
     TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as

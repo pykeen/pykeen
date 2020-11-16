@@ -18,24 +18,29 @@ from ..utils import check_shapes
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "ComplExInteraction",
-    "ConvEInteraction",
-    "ConvKBInteraction",
-    "DistMultInteraction",
-    "ERMLPInteraction",
-    "ERMLPEInteraction",
-    "HolEInteraction",
-    "Interaction",
-    "KG2EInteraction",
-    "NTNInteraction",
-    "ProjEInteraction",
-    "RESCALInteraction",
-    "RotatEInteraction",
-    "StructuredEmbeddingInteraction",
-    "TransDInteraction",
-    "TransEInteraction",
-    "TransHInteraction",
-    "TransRInteraction",
+    # Base Classes
+    'Interaction',
+    'StatelessInteraction',
+    'TranslationalInteraction',
+    # Concrete Classes
+    'ComplExInteraction',
+    'ConvEInteraction',
+    'ConvKBInteraction',
+    'DistMultInteraction',
+    'ERMLPInteraction',
+    'ERMLPEInteraction',
+    'HolEInteraction',
+    'KG2EInteraction',
+    'NTNInteraction',
+    'ProjEInteraction',
+    'RESCALInteraction',
+    'RotatEInteraction',
+    'StructuredEmbeddingInteraction',
+    'TransDInteraction',
+    'TransEInteraction',
+    'TransHInteraction',
+    'TransRInteraction',
+    'UnstructuredModelInteraction',
 ]
 
 

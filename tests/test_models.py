@@ -22,9 +22,9 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models import _MODELS
+from pykeen.models import _BASE_MODELS, _MODELS
 from pykeen.models.base import (
-    DoubleRelationEmbeddingModel, EntityEmbeddingModel,
+    DoubleRelationEmbeddingModel, ERModel, EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
@@ -491,32 +491,33 @@ Traceback
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
-        if isinstance(self.model, EntityEmbeddingModel):
-            old_embeddings = self.model.entity_embeddings
-            self.model.entity_embeddings = _CustomRepresentations(
-                num_entities=self.factory.num_entities,
-                embedding_dim=old_embeddings.embedding_dim,
-            )
-            # call some functions
-            self.model.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.model.entity_embeddings = old_embeddings
-        elif isinstance(self.model, EntityRelationEmbeddingModel):
-            old_embeddings = self.model.relation_embeddings
-            self.model.relation_embeddings = _CustomRepresentations(
-                num_entities=self.factory.num_relations,
-                embedding_dim=old_embeddings.embedding_dim,
-            )
-            # call some functions
-            self.model.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.model.relation_embeddings = old_embeddings
-        else:
+        if not isinstance(self.model, ERModel):
             self.skipTest(f'Not testing custom representations for model: {self.model.__class__.__name__}')
+
+        old_entity_reps = self.model.entity_representations
+        self.model.entity_representations = nn.ModuleList([
+            _CustomRepresentations(
+                num_entities=self.factory.num_entities,
+                embedding_dim=er.embedding_dim,
+            )
+            for er in old_entity_reps
+        ])
+        old_relation_reps = self.model.relation_representations
+        self.model.relation_representations = nn.ModuleList([
+            _CustomRepresentations(
+                num_entities=self.factory.num_entities,
+                embedding_dim=er.embedding_dim,
+            )
+            for er in old_relation_reps
+        ])
+
+        # call some functions
+        self.model.reset_parameters_()
+        self.test_score_hrt()
+        self.test_score_t()
+        # reset to old state
+        self.model.entity_representations = old_entity_reps
+        self.model.relation_representations = old_relation_reps
 
 
 class _DistanceModelTestCase(_ModelTestCase):
@@ -706,9 +707,9 @@ class _BaseNTNTest(_ModelTestCase, unittest.TestCase):
 
     def test_can_slice(self):
         """Test that the slicing properties are calculated correctly."""
-        self.assertTrue(self.model.can_slice_h)
-        self.assertTrue(self.model.can_slice_r)
-        self.assertTrue(self.model.can_slice_t)
+        self.assertTrue(self.model.can_slice_h, msg='Unable to slice on heads')
+        self.assertTrue(self.model.can_slice_r, msg='Unable to slice on relations')
+        self.assertTrue(self.model.can_slice_t, msg='Unable to slice on tails')
 
 
 class TestNTNLowMemory(_BaseNTNTest):
@@ -1109,10 +1110,7 @@ class TestRandom(unittest.TestCase):
 
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
-        self.assertTrue(Model._is_abstract())
-        self.assertTrue(EntityEmbeddingModel._is_abstract())
-        self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
+        for model_cls in _BASE_MODELS:
+            self.assertTrue(model_cls._is_abstract)
         for model_cls in _MODELS:
-            if issubclass(model_cls, MultimodalModel):
-                continue
-            self.assertFalse(model_cls._is_abstract(), msg=f'{model_cls.__name__} should not be abstract')
+            self.assertFalse(model_cls._is_abstract, msg=f'{model_cls.__name__} should not be abstract')

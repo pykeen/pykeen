@@ -12,7 +12,7 @@ from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityEmbeddingModel
-from ..base import Model
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
 from ...nn.modules import DistMultInteraction
@@ -419,7 +419,7 @@ class RGCNRepresentations(RepresentationModule):
                 act.reset_parameters()
 
 
-class RGCN(Model):
+class RGCN(ERModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
     This model uses graph convolutions with relation-specific weights.
