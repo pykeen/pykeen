@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from ..base import MultimodalModel
+from .. import ERModel
 from ...losses import Loss
 from ...nn import Embedding, Interaction
 from ...nn.emb import EmbeddingSpecification
@@ -39,7 +39,9 @@ class LiteralRepresentations(Embedding):
         self._embeddings.requires_grad_(False)
 
 
-class LiteralModel(MultimodalModel):
+class LiteralModel(ERModel):
+    """Base class for models with entity literals."""
+
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
