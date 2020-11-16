@@ -10,6 +10,7 @@ from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
 from ...losses import BCEWithLogitsLoss, Loss
+from ...nn import Embedding
 from ...nn.modules import ComplExInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
@@ -52,11 +53,18 @@ class ComplExLiteral(MultimodalModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=ComplExInteraction(),
-            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            entity_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_relations,
+                embedding_dim=embedding_dim,
+            ),
         )
 
         # Literal

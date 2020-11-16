@@ -10,6 +10,7 @@ from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
 from ...losses import Loss
+from ...nn import Embedding
 from ...nn.modules import DistMultInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
@@ -45,11 +46,18 @@ class DistMultLiteral(MultimodalModel):
         super().__init__(
             interaction=DistMultInteraction(),
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            entity_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_entities,
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_relations,
+                embedding_dim=embedding_dim,
+            ),
         )
 
         numeric_literals = triples_factory.numeric_literals

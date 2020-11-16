@@ -1286,7 +1286,7 @@ class EntityRelationEmbeddingModel(ERModel, autoreset=False):
         )
 
 
-class MultimodalModel(EntityRelationEmbeddingModel, autoreset=False):
+class MultimodalModel(ERModel, autoreset=False):
     """A multimodal KGE model."""
 
 
