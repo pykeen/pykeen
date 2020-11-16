@@ -11,10 +11,10 @@ import torch
 from pykeen.nn import Embedding
 from pykeen.utils import (
     clamp_norm,
-    compact_mapping,
+    combine_complex, compact_mapping,
     flatten_dictionary,
     get_until_first_blank,
-    l2_regularization,
+    imag_part, l2_regularization, real_part, split_complex,
 )
 
 
@@ -217,3 +217,15 @@ def test_clamp_norm():
                 norm = x.norm(p=p, dim=dim)
                 mask = torch.stack([(norm < max_norm)] * x.shape[dim], dim=dim)
                 assert (x_c[mask] == x[mask]).all()
+
+
+def test_complex_utils():
+    """Test complex tensor utilities."""
+    re = torch.rand(20, 10)
+    im = torch.rand(20, 10)
+    x = combine_complex(x_re=re, x_im=im)
+    assert (real_part(x) == re).all()
+    assert (imag_part(x) == im).all()
+    re2, im2 = split_complex(x)
+    assert (re2 == re).all()
+    assert (im2 == im).all()
