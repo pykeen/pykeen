@@ -514,14 +514,3 @@ class RGCN(ERModel):
             entity_representations=entity_representations,
             relation_representations=relation_representations,
         )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_representations[0](indices=h_indices)
-        r = self.relation_representations[0](indices=r_indices)
-        t = self.entity_representations[0](indices=t_indices)
-        return self.decoder(h, r, t).unsqueeze(dim=-1)
