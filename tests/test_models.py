@@ -24,9 +24,7 @@ from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
 from pykeen.models import _BASE_MODELS, _MODELS
 from pykeen.models.base import (
-    DoubleRelationEmbeddingModel, ERModel, EntityEmbeddingModel,
-    EntityRelationEmbeddingModel,
-    Model,
+    DoubleRelationEmbeddingModel, ERModel, Model,
     MultimodalModel,
     SingleVectorEmbeddingModel,
     TwoSideEmbeddingModel,
@@ -51,8 +49,6 @@ SKIP_MODULES = {
     'DummyModel',
     MultimodalModel.__name__,
     DoubleRelationEmbeddingModel.__name__,
-    EntityEmbeddingModel.__name__,
-    EntityRelationEmbeddingModel.__name__,
     SingleVectorEmbeddingModel.__name__,
     TwoVectorEmbeddingModel.__name__,
     TwoSideEmbeddingModel.__name__,

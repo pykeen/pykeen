@@ -9,7 +9,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 from typing import Mapping, Set, Type, Union
 
 from .base import (  # noqa:F401
-    DoubleRelationEmbeddingModel, ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel,
+    DoubleRelationEmbeddingModel, ERModel, Model, MultimodalModel,
     SingleVectorEmbeddingModel, TwoSideEmbeddingModel, TwoVectorEmbeddingModel,
 )
 from .multimodal import ComplExLiteral, DistMultLiteral
@@ -71,8 +71,6 @@ _BASE_MODELS = {
     SingleVectorEmbeddingModel,
     DoubleRelationEmbeddingModel,
     TwoSideEmbeddingModel,
-    EntityEmbeddingModel,
-    EntityRelationEmbeddingModel,
     TwoVectorEmbeddingModel,
     MultimodalModel,
 }

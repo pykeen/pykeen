@@ -28,8 +28,8 @@ from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import samplers as hpo_samplers_dict
 from .losses import losses as losses_dict
-from .models import models as models_dict
-from .models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model
+from .models import ERModel, models as models_dict
+from .models.base import Model
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizers as optimizers_dict
 from .regularizers import regularizers as regularizers_dict
@@ -94,8 +94,7 @@ def parameters():
 
     base_parameters = set(chain(
         Model.__init__.__annotations__,
-        EntityEmbeddingModel.__init__.__annotations__,
-        EntityRelationEmbeddingModel.__init__.__annotations__,
+        ERModel.__init__.__annotations__,
     ))
     _hyperparameter_usage = sorted(
         (k, v)

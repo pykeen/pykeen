@@ -26,16 +26,13 @@ from ..nn.modules import Interaction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import (
-    Constrainer, DeviceHint, HeadRepresentation, Initializer, MappedTriples, Normalizer,
-    RelationRepresentation, Representation, TailRepresentation,
+    DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, Representation, TailRepresentation,
 )
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
     'ERModel',
-    'EntityEmbeddingModel',
-    'EntityRelationEmbeddingModel',
     'SingleVectorEmbeddingModel',
     'DoubleRelationEmbeddingModel',
     'TwoVectorEmbeddingModel',
@@ -1231,59 +1228,6 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             scores = scores.repeat(*repeats)
 
         return scores
-
-
-class EntityEmbeddingModel(ERModel, autoreset=False):
-    """A base module for most KGE models that have one embedding for entities."""
-
-    # TODO: deprecated
-
-    def __init__(
-        self,
-        triples_factory: TriplesFactory,
-        interaction: Interaction[Representation, RelationRepresentation, Representation],
-        embedding_dim: int = 50,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> None:
-        """Initialize the entity embedding model.
-
-        :param embedding_dim:
-            The embedding dimensionality. Exact usages depends on the specific model subclass.
-
-        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        """
-        self.embedding_dim = embedding_dim
-        super().__init__(
-            triples_factory=triples_factory,
-            interaction=interaction,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-            entity_representations=Embedding(
-                num_embeddings=triples_factory.num_entities,
-                embedding_dim=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                normalizer=entity_normalizer,
-                normalizer_kwargs=entity_normalizer_kwargs,
-                constrainer=entity_constrainer,
-                constrainer_kwargs=entity_constrainer_kwargs,
-            ),
-        )
 
 
 class EntityRelationEmbeddingModel(ERModel, autoreset=False):
