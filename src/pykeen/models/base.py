@@ -235,7 +235,7 @@ class Model(nn.Module, ABC):
 
     Subclasses of Model can decide however they want on how to store entities' and
     relations' representations, how they want to be looked up, and how they should
-    be scored. The :class:`GeneralModel` provides a commonly useful implementation
+    be scored. The :class:`ERModel` provides a commonly useful implementation
     which allows for the specification of one or more entity representations and
     one or more relation representations in the form of :class:`pykeen.nn.Embedding`
     as well as a matching instance of a :class:`pykeen.nn.Interaction`.
