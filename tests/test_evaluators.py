@@ -15,7 +15,7 @@ from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_spar
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel, Model
+from pykeen.models.base import MockModel, Model
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
@@ -428,35 +428,6 @@ class DummyEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class DummyModel(EntityRelationEmbeddingModel):
-    """A dummy model returning fake scores."""
-
-    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
-        super().__init__(
-            triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
-            interaction=...,
-        )
-        num_entities = self.num_entities
-        self.scores = torch.arange(num_entities, dtype=torch.float)
-
-    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
-        batch_size = batch.shape[0]
-        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
-        assert batch_scores.shape == (batch_size, self.num_entities)
-        return batch_scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hrt_batch)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hr_batch)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=rt_batch)
-
-
 class TestEvaluationStructure(unittest.TestCase):
     """Tests for testing the correct structure of the evaluation procedure."""
 
@@ -465,7 +436,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
         self.triples_factory = Nations().training
-        self.model = DummyModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
+        self.model = MockModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
