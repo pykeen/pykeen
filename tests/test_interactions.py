@@ -50,7 +50,7 @@ class TestsTest(Generic[T]):
         to_test = set(get_subclasses(self.base_cls)).difference(self.skip_cls)
         tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
         not_tested = to_test.difference(tested)
-        assert not_tested == set()
+        assert not not_tested, not_tested
 
 
 class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):

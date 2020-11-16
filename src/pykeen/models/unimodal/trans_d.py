@@ -70,7 +70,7 @@ class TransD(TwoVectorEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TransDInteraction(p=2, power_norm=True),
+            interaction=TransDInteraction(p=2, power_norm=True),
             embedding_dim=embedding_dim,
             relation_dim=relation_dim,
             automatic_memory_optimization=automatic_memory_optimization,

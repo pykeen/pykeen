@@ -15,6 +15,7 @@ from .. import EntityEmbeddingModel
 from ..base import Model
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
+from ...nn.modules import DistMultInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -418,12 +419,6 @@ class RGCNRepresentations(RepresentationModule):
                 act.reset_parameters()
 
 
-class Decoder(nn.Module):
-    # TODO: Replace this by interaction function, once https://github.com/pykeen/pykeen/pull/107 is merged.
-    def forward(self, h, r, t):
-        return (h * r * t).sum(dim=-1)
-
-
 class RGCN(Model):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
@@ -538,7 +533,7 @@ class RGCN(Model):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            interaction_function=Decoder(),
+            interaction=DistMultInteraction(),
             entity_representations=entity_representations,
             relation_representations=relation_representations,
         )

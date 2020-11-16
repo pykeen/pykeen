@@ -70,7 +70,7 @@ class RESCAL(SingleVectorEmbeddingModel):
         # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=RESCALInteraction(),
+            interaction=RESCALInteraction(),
             embedding_dim=embedding_dim,
             relation_dim=(embedding_dim, embedding_dim),
             automatic_memory_optimization=automatic_memory_optimization,

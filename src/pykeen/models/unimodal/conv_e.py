@@ -166,7 +166,7 @@ class ConvE(Model):
                     initializer=xavier_normal_,
                 ),
             ),
-            interaction_function=ConvEInteraction(
+            interaction=ConvEInteraction(
                 input_channels=input_channels,
                 output_channels=output_channels,
                 embedding_height=embedding_height,
@@ -192,4 +192,4 @@ class ConvE(Model):
         t = self.entity_representations[0].get_in_canonical_shape(indices=t_indices)
         t_bias = self.entity_representations[1].get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary(h, r, t)
-        return self.interaction_function(h=h, r=r, t=(t, t_bias))
+        return self.interaction(h=h, r=r, t=(t, t_bias))

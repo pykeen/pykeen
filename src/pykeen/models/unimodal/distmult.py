@@ -81,11 +81,9 @@ class DistMult(SingleVectorEmbeddingModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         """
-        interaction_function = DistMultInteraction()
-
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=interaction_function,
+            interaction=DistMultInteraction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,

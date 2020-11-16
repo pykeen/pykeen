@@ -98,7 +98,7 @@ class NTN(Model):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            interaction_function=NTNInteraction(
+            interaction=NTNInteraction(
                 non_linearity=non_linearity,
             ),
             entity_representations=Embedding(

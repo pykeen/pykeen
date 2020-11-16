@@ -63,13 +63,11 @@ class HolE(SingleVectorEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
-        interaction_function = HolEInteraction()
-
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             loss=loss,
-            interaction_function=interaction_function,
+            interaction=HolEInteraction(),
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,

@@ -69,7 +69,7 @@ class TransE(SingleVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TransEInteraction(p=scoring_fct_norm, power_norm=False),
+            interaction=TransEInteraction(p=scoring_fct_norm, power_norm=False),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,

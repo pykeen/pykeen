@@ -80,7 +80,7 @@ class KG2E(TwoVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=KG2EInteraction(
+            interaction=KG2EInteraction(
                 similarity=dist_similarity,
             ),
             embedding_dim=embedding_dim,

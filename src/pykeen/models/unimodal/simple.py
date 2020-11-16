@@ -75,7 +75,7 @@ class SimplE(TwoSideEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=DistMultInteraction(),
+            interaction=DistMultInteraction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,

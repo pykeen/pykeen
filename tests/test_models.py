@@ -50,6 +50,7 @@ SKIP_MODULES = {
     Model.__name__,
     'DummyModel',
     MultimodalModel.__name__,
+    DoubleRelationEmbeddingModel.__name__,
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
     SingleVectorEmbeddingModel.__name__,

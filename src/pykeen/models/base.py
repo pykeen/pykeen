@@ -249,7 +249,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
@@ -334,7 +334,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         self.entity_representations = nn.ModuleList(entity_representations)
         self.relation_representations = nn.ModuleList(relation_representations)
 
-        self.interaction_function = interaction_function
+        self.interaction = interaction
 
         # reset parameters
         self.reset_parameters_()
@@ -1035,7 +1035,7 @@ class Model(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailR
         # normalization
         h, r, t = [x[0] if len(x) == 1 else x for x in (h, r, t)]
 
-        scores = self.interaction_function(h=h, r=r, t=t)
+        scores = self.interaction(h=h, r=r, t=t)
         if len(self.relation_representations) == 0:
             # same score for all relations
             repeats = [1, 1, 1, 1]
@@ -1153,7 +1153,7 @@ class EntityEmbeddingModel(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction[Representation, RelationRepresentation, Representation],
+        interaction: Interaction[Representation, RelationRepresentation, Representation],
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -1178,6 +1178,7 @@ class EntityEmbeddingModel(Model):
         self.embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
+            interaction=interaction,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
@@ -1194,7 +1195,6 @@ class EntityEmbeddingModel(Model):
                 constrainer=entity_constrainer,
                 constrainer_kwargs=entity_constrainer_kwargs,
             ),
-            interaction_function=interaction_function,
         )
 
 
@@ -1206,7 +1206,7 @@ class EntityRelationEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction[Representation, Representation, Representation],
+        interaction: Interaction[Representation, Representation, Representation],
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
@@ -1234,7 +1234,7 @@ class EntityRelationEmbeddingModel(Model, ABC):
         self.relation_dim = relation_dim
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=interaction_function,
+            interaction=interaction,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
@@ -1268,7 +1268,7 @@ class SingleVectorEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        interaction: Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         embedding_dim: int = 200,
         relation_dim: Union[None, int, Sequence[int]] = None,
         automatic_memory_optimization: Optional[bool] = None,
@@ -1284,7 +1284,7 @@ class SingleVectorEmbeddingModel(Model, ABC):
 
         :param triples_factory:
             The triple factory connected to the model.
-        :param interaction_function:
+        :param interaction:
             The embedding-based interaction function used to compute scores.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
@@ -1311,7 +1311,7 @@ class SingleVectorEmbeddingModel(Model, ABC):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            interaction_function=interaction_function,
+            interaction=interaction,
             entity_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_entities,
                 shape=embedding_dim,
@@ -1345,7 +1345,7 @@ class DoubleRelationEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction[
+        interaction: Interaction[
             torch.FloatTensor,
             Tuple[torch.FloatTensor, torch.FloatTensor],
             torch.FloatTensor,
@@ -1366,6 +1366,7 @@ class DoubleRelationEmbeddingModel(Model, ABC):
             relation_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
+            interaction=interaction,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
@@ -1391,7 +1392,6 @@ class DoubleRelationEmbeddingModel(Model, ABC):
                     specification=second_relation_embedding_specification,
                 ),
             ],
-            interaction_function=interaction_function,
         )
 
 
@@ -1401,7 +1401,7 @@ class TwoVectorEmbeddingModel(Model, ABC):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction[
+        interaction: Interaction[
             Tuple[torch.FloatTensor, torch.FloatTensor],
             Tuple[torch.FloatTensor, torch.FloatTensor],
             Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1453,7 +1453,7 @@ class TwoVectorEmbeddingModel(Model, ABC):
                     specification=second_relation_embedding_specification,
                 ),
             ],
-            interaction_function=interaction_function,
+            interaction=interaction,
         )
 
 
@@ -1463,7 +1463,7 @@ class TwoSideEmbeddingModel(Model):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        interaction_function: Interaction,
+        interaction: Interaction,
         embedding_dim: int = 50,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
@@ -1511,7 +1511,7 @@ class TwoSideEmbeddingModel(Model):
                     specification=second_relation_embedding_specification,
                 ),
             ],
-            interaction_function=interaction_function,
+            interaction=interaction,
         )
 
     def forward(
@@ -1521,7 +1521,7 @@ class TwoSideEmbeddingModel(Model):
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         return 0.5 * sum(
-            self.interaction_function(
+            self.interaction(
                 h_source.get_in_canonical_shape(indices=h_indices),
                 r_source.get_in_canonical_shape(indices=r_indices),
                 t_source.get_in_canonical_shape(indices=t_indices),

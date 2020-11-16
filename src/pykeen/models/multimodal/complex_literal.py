@@ -51,7 +51,7 @@ class ComplExLiteral(MultimodalModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ComplExInteraction(),
+            interaction=ComplExInteraction(),
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,

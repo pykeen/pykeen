@@ -96,7 +96,7 @@ class RotatE(SingleVectorEmbeddingModel):
         # TODO: regularization
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=RotatEInteraction(),
+            interaction=RotatEInteraction(),
             embedding_dim=2 * embedding_dim,
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,

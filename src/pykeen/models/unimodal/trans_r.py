@@ -111,7 +111,7 @@ class TransR(Model):
                     ),
                 ),
             ],
-            interaction_function=TransRInteraction(
+            interaction=TransRInteraction(
                 p=scoring_fct_norm,
             ),
         )

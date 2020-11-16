@@ -89,7 +89,7 @@ class TuckER(SingleVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TuckerInteraction(
+            interaction=TuckerInteraction(
                 embedding_dim=embedding_dim,
                 relation_dim=relation_dim,
                 dropout_0=dropout_0,

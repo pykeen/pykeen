@@ -71,7 +71,7 @@ class StructuredEmbedding(DoubleRelationEmbeddingModel):
         )
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=StructuredEmbeddingInteraction(
+            interaction=StructuredEmbeddingInteraction(
                 p=scoring_fct_norm,
                 power_norm=False,
             ),

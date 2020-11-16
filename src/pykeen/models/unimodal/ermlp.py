@@ -55,7 +55,7 @@ class ERMLP(SingleVectorEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ERMLPInteraction(
+            interaction=ERMLPInteraction(
                 embedding_dim=embedding_dim,
                 hidden_dim=hidden_dim,
             ),

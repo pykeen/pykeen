@@ -106,7 +106,11 @@ class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
-        super().__init__(triples_factory=triples_factory, automatic_memory_optimization=automatic_memory_optimization)
+        super().__init__(
+            triples_factory=triples_factory,
+            automatic_memory_optimization=automatic_memory_optimization,
+            interaction=None,
+        )
         num_entities = self.num_entities
         self.scores = torch.arange(num_entities, dtype=torch.float)
 
@@ -125,9 +129,6 @@ class MockModel(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=rt_batch)
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
 
 
 class LogCallWrapper:

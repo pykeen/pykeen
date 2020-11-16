@@ -81,7 +81,7 @@ class TransH(DoubleRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=TransHInteraction(
+            interaction=TransHInteraction(
                 p=scoring_fct_norm,
                 power_norm=False,
             ),

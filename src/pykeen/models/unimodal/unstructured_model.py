@@ -68,7 +68,7 @@ class UnstructuredModel(Model):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            interaction_function=UnstructuredModelInteraction(p=scoring_fct_norm),
+            interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
             entity_representations=Embedding(
                 num_embeddings=triples_factory.num_entities,
                 embedding_dim=embedding_dim,

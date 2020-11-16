@@ -43,7 +43,7 @@ class DistMultLiteral(MultimodalModel):
         random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
-            interaction_function=DistMultInteraction(),
+            interaction=DistMultInteraction(),
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             automatic_memory_optimization=automatic_memory_optimization,

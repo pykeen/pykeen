@@ -66,7 +66,7 @@ class ERMLPE(SingleVectorEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ERMLPEInteraction(
+            interaction=ERMLPEInteraction(
                 hidden_dim=hidden_dim,
                 input_dropout=input_dropout,
                 hidden_dropout=hidden_dropout,

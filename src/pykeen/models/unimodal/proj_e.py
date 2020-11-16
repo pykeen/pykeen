@@ -67,7 +67,7 @@ class ProjE(SingleVectorEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ProjEInteraction(
+            interaction=ProjEInteraction(
                 embedding_dim=embedding_dim,
                 inner_non_linearity=inner_non_linearity,
             ),

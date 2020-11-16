@@ -86,7 +86,7 @@ class ConvKB(SingleVectorEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction_function=ConvKBInteraction(
+            interaction=ConvKBInteraction(
                 hidden_dropout_rate=hidden_dropout_rate,
                 embedding_dim=embedding_dim,
                 num_filters=num_filters,
