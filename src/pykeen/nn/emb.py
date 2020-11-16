@@ -56,8 +56,6 @@ class RepresentationModule(nn.Module):
             x = x.unsqueeze(dim=0)
         else:
             x = x.unsqueeze(dim=1)
-        if len(self.shape) > 1 and reshape_dim is None:
-            reshape_dim = self.shape
         if reshape_dim is not None:
             x = x.view(*x.shape[:-1], *reshape_dim)
         return x
