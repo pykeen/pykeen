@@ -1201,6 +1201,51 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """
+        h, r, t = self._get_representations(h_indices, r_indices, t_indices)
+        scores = self.interaction(h=h, r=r, t=t)
+        scores = self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
+        return scores
+
+    def _repeat_scores_if_necessary(
+        self,
+        scores: torch.FloatTensor,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        repeat_relations = len(self.relation_representations) == 0
+        repeat_entities = len(self.entity_representations) == 0
+
+        if not (repeat_entities or repeat_relations):
+            return scores
+
+        repeats = [1, 1, 1, 1]
+
+        for i, (flag, ind, num) in enumerate((
+            (repeat_entities, h_indices, self.num_entities),
+            (repeat_relations, r_indices, self.num_relations),
+            (repeat_entities, t_indices, self.num_entities),
+        ), start=1):
+            if flag:
+                if ind is None:
+                    repeats[i] = num
+                else:
+                    batch_size = len(ind)
+                    if scores.shape[0] < batch_size:
+                        repeats[0] = batch_size
+
+        return scores.repeat(*repeats)
+
+    def _get_representations(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> Tuple[
+        Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
+        Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
+        Union[torch.FloatTensor, Sequence[torch.FloatTensor]]
+    ]:
         h, r, t = [
             [
                 representation.get_in_canonical_shape(indices=indices)
@@ -1214,20 +1259,7 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         ]
         # normalization
         h, r, t = [x[0] if len(x) == 1 else x for x in (h, r, t)]
-
-        scores = self.interaction(h=h, r=r, t=t)
-        if len(self.relation_representations) == 0:
-            # same score for all relations
-            repeats = [1, 1, 1, 1]
-            if r_indices is None:
-                repeats[2] = self.num_relations
-            else:
-                relation_batch_size = len(r_indices)
-                if scores.shape[0] < relation_batch_size:
-                    repeats[0] = relation_batch_size
-            scores = scores.repeat(*repeats)
-
-        return scores
+        return h, r, t
 
 
 class MultimodalModel(ERModel, autoreset=False):
