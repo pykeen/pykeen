@@ -38,6 +38,7 @@ __all__ = [
     'TransEInteraction',
     'TransHInteraction',
     'TransRInteraction',
+    'TuckerInteraction',
     'UnstructuredModelInteraction',
 ]
 

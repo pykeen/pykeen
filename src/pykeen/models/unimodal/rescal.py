@@ -6,7 +6,7 @@ from typing import Optional
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import RESCALInteraction
 from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory

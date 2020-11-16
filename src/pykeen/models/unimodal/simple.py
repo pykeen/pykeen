@@ -8,7 +8,7 @@ import torch.autograd
 
 from ..base import TwoSideEmbeddingModel
 from ...losses import Loss, SoftplusLoss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
 from ...regularizers import PowerSumRegularizer
 from ...triples import TriplesFactory

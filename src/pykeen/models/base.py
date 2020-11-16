@@ -20,8 +20,7 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
-from ..nn import Embedding, RepresentationModule
-from ..nn.emb import EmbeddingSpecification, LiteralRepresentations
+from ..nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
 from ..nn.modules import Interaction
 from ..regularizers import collect_regularization_terms
 from ..triples import TriplesFactory, TriplesNumericLiteralsFactory

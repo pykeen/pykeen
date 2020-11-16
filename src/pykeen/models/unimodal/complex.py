@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss, SoftplusLoss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
 from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory

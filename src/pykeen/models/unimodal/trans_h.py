@@ -8,7 +8,7 @@ from torch.nn import functional
 
 from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
 from ...regularizers import TransHRegularizer
 from ...triples import TriplesFactory

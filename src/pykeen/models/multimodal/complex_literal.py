@@ -10,9 +10,8 @@ from torch.nn.init import xavier_normal_
 
 from ..base import LiteralModel
 from ...losses import BCEWithLogitsLoss, Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import combine_complex, split_complex
@@ -84,7 +83,6 @@ class ComplExLiteral(LiteralModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(

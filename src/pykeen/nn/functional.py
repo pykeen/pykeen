@@ -2,14 +2,18 @@
 
 """Functional forms of interaction methods."""
 
-import math
-from typing import NamedTuple, Optional, SupportsFloat, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import torch
 import torch.fft
 from torch import nn
 
-from ..utils import broadcast_cat, clamp_norm, is_cudnn_error, split_complex
+from .sim import KG2E_SIMILARITIES
+from ..typing import GaussianDistribution
+from ..utils import (
+    broadcast_cat, clamp_norm, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
+    split_complex, view_complex,
+)
 
 __all__ = [
     "complex_interaction",
@@ -35,6 +39,7 @@ __all__ = [
 ]
 
 
+# TODO @mberr documentation
 def _extract_sizes(h, r, t) -> Tuple[int, int, int, int, int]:
     num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
     d_e = h.shape[-1]
@@ -42,44 +47,7 @@ def _extract_sizes(h, r, t) -> Tuple[int, int, int, int, int]:
     return num_heads, num_relations, num_tails, d_e, d_r
 
 
-def _negative_norm_of_sum(
-    *x: torch.FloatTensor,
-    p: Union[str, int] = 2,
-    power_norm: bool = False,
-) -> torch.FloatTensor:
-    """
-    Evaluate negative norm of a sum of vectors on already broadcasted representations.
-
-    :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
-        The representations.
-    :param p:
-        The p for the norm. cf. torch.norm.
-    :param power_norm:
-        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
-
-    :return: shape: (batch_size, num_heads, num_relations, num_tails)
-        The scores.
-    """
-    d: torch.FloatTensor = sum(x)
-    if power_norm:
-        assert isinstance(p, SupportsFloat)
-        return -(d.abs() ** p).sum(dim=-1)
-    else:
-        if torch.is_complex(d):
-            assert isinstance(p, SupportsFloat)
-            # workaround for complex numbers: manually compute norm
-            return -(d.abs() ** p).sum(dim=-1) ** (1 / p)
-        else:
-            return -d.norm(p=p, dim=-1)
-
-
-class GaussianDistribution(NamedTuple):
-    """A gaussian distribution with diagonal covariance matrix."""
-
-    mean: torch.FloatTensor
-    diagonal_covariance: torch.FloatTensor
-
-
+# TODO @mberr documentation
 def _apply_optional_bn_to_tensor(
     batch_norm: Optional[nn.BatchNorm1d],
     output_dropout: nn.Dropout,
@@ -92,206 +60,6 @@ def _apply_optional_bn_to_tensor(
         tensor = tensor.view(*shape)
     tensor = output_dropout(tensor)
     return tensor
-
-
-def _project_entity(
-    e: torch.FloatTensor,
-    e_p: torch.FloatTensor,
-    r_p: torch.FloatTensor,
-) -> torch.FloatTensor:
-    r"""Project entity relation-specific.
-
-    .. math::
-
-        e_{\bot} = M_{re} e
-                 = (r_p e_p^T + I^{d_r \times d_e}) e
-                 = r_p e_p^T e + I^{d_r \times d_e} e
-                 = r_p (e_p^T e) + e'
-
-    and additionally enforces
-
-    .. math::
-
-        \|e_{\bot}\|_2 \leq 1
-
-    :param e: shape: (..., d_e)
-        The entity embedding.
-    :param e_p: shape: (..., d_e)
-        The entity projection.
-    :param r_p: shape: (..., d_r)
-        The relation projection.
-
-    :return: shape: (..., d_r)
-
-    """
-    # The dimensions affected by e'
-    change_dim = min(e.shape[-1], r_p.shape[-1])
-
-    # Project entities
-    # r_p (e_p.T e) + e'
-    e_bot = r_p * torch.sum(e_p * e, dim=-1, keepdim=True)
-    e_bot[..., :change_dim] += e[..., :change_dim]
-
-    # Enforce constraints
-    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
-
-    return e_bot
-
-
-def _expected_likelihood(
-    e: GaussianDistribution,
-    r: GaussianDistribution,
-    epsilon: float = 1.0e-10,
-    exact: bool = True,
-) -> torch.FloatTensor:
-    r"""Compute the similarity based on expected likelihood.
-
-    .. math::
-
-        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-        = \frac{1}{2} \left(
-            (\mu_e - \mu_r)^T(\Sigma_e + \Sigma_r)^{-1}(\mu_e - \mu_r)
-            + \log \det (\Sigma_e + \Sigma_r) + d \log (2 \pi)
-        \right)
-        = \frac{1}{2} \left(
-            \mu^T\Sigma^{-1}\mu
-            + \log \det \Sigma + d \log (2 \pi)
-        \right)
-
-    :param e: shape: (batch_size, num_heads, num_tails, d)
-        The entity Gaussian distribution.
-    :param r: shape: (batch_size, num_relations, d)
-        The relation Gaussian distribution.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
-    :param exact:
-        Whether to return the exact similarity, or leave out constant offsets.
-
-    :return: torch.Tensor, shape: (s_1, ..., s_k)
-        The similarity.
-    """
-    # subtract, shape: (batch_size, num_heads, num_relations, num_tails, dim)
-    r_shape = r.mean.shape
-    r_shape = (r_shape[0], 1, r_shape[1], 1, r_shape[2])
-    var = r.diagonal_covariance.view(*r_shape) + e.diagonal_covariance.unsqueeze(dim=2)
-    mean = e.mean.unsqueeze(dim=2) - r.mean.view(*r_shape)
-
-    #: a = \mu^T\Sigma^{-1}\mu
-    safe_sigma = torch.clamp_min(var, min=epsilon)
-    sigma_inv = torch.reciprocal(safe_sigma)
-    sim = torch.sum(sigma_inv * mean ** 2, dim=-1)
-
-    #: b = \log \det \Sigma
-    sim = sim + safe_sigma.log().sum(dim=-1)
-    if exact:
-        sim = sim + sim.shape[-1] * math.log(2. * math.pi)
-    return sim
-
-
-def _kullback_leibler_similarity(
-    e: GaussianDistribution,
-    r: GaussianDistribution,
-    epsilon: float = 1.0e-10,
-    exact: bool = True,
-) -> torch.FloatTensor:
-    r"""Compute the similarity based on KL divergence.
-
-    This is done between two Gaussian distributions given by mean `mu_*` and diagonal covariance matrix `sigma_*`.
-
-    .. math::
-
-        D((\mu_e, \Sigma_e), (\mu_r, \Sigma_r)))
-        = \frac{1}{2} \left(
-            tr(\Sigma_r^{-1}\Sigma_e)
-            + (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
-            - \log \frac{det(\Sigma_e)}{det(\Sigma_r)} - k_e
-        \right)
-
-    Note: The sign of the function has been flipped as opposed to the description in the paper, as the
-          Kullback Leibler divergence is large if the distributions are dissimilar.
-
-    :param e: shape: (batch_size, num_heads, num_tails, d)
-        The entity Gaussian distributions, as mean/diagonal covariance pairs.
-    :param r: shape: (batch_size, num_relations, d)
-        The relation Gaussian distributions, as mean/diagonal covariance pairs.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
-    :param exact:
-        Whether to return the exact similarity, or leave out constant offsets.
-
-    :return: torch.Tensor, shape: (s_1, ..., s_k)
-        The similarity.
-    """
-    # invert covariance, shape: (batch_size, num_relations, d)
-    safe_sigma_r = torch.clamp_min(r.diagonal_covariance, min=epsilon)
-    sigma_r_inv = torch.reciprocal(safe_sigma_r)
-
-    #: a = tr(\Sigma_r^{-1}\Sigma_e), (batch_size, num_heads, num_relations, num_tails)
-    # [(b, h, t, d), (b, r, d) -> (b, 1, r, d) -> (b, 1, d, r)] -> (b, h, t, r) -> (b, h, r, t)
-    sim = (e.diagonal_covariance @ sigma_r_inv.unsqueeze(dim=1).transpose(-2, -1)).transpose(-2, -1)
-
-    #: b = (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
-    r_shape = r.mean.shape
-    # mu.shape: (b, h, r, t, d)
-    mu = r.mean.view(r_shape[0], 1, r_shape[1], 1, r_shape[2]) - e.mean.unsqueeze(dim=2)
-    sim = sim + (mu ** 2 @ sigma_r_inv.view(r_shape[0], 1, r_shape[1], r_shape[2], 1)).squeeze(dim=-1)
-
-    #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
-    # = sum log (sigma_e)_i - sum log (sigma_r)_i
-    # ce.shape: (b, h, t)
-    ce = e.diagonal_covariance.clamp_min(min=epsilon).log().sum(dim=-1)
-    # cr.shape: (b, r)
-    cr = safe_sigma_r.log().sum(dim=-1)
-    sim = sim + ce.unsqueeze(dim=2) - cr.view(r_shape[0], 1, r_shape[1], 1)
-
-    if exact:
-        sim = sim - e.mean.shape[-1]
-        sim = 0.5 * sim
-
-    return sim
-
-
-KG2E_SIMILARITIES = {
-    'KL': _kullback_leibler_similarity,
-    'EL': _expected_likelihood,
-}
-
-
-def _extended_einsum(
-    eq: str,
-    *tensors,
-) -> torch.FloatTensor:
-    """Drop dimensions of size 1 to allow broadcasting."""
-    # TODO: check if einsum is still very slow.
-    lhs, rhs = eq.split("->")
-    mod_ops, mod_t = [], []
-    for op, t in zip(lhs.split(","), tensors):
-        mod_op = ""
-        assert len(op) == len(t.shape)
-        for i, c in reversed(list(enumerate(op))):
-            if t.shape[i] == 1:
-                t = t.squeeze(dim=i)
-            else:
-                mod_op = c + mod_op
-        mod_ops.append(mod_op)
-        mod_t.append(t)
-    m_lhs = ",".join(mod_ops)
-    r_keep_dims = set("".join(mod_ops))
-    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
-    m_eq = f"{m_lhs}->{m_rhs}"
-    mod_r = torch.einsum(m_eq, *mod_t)
-    # unsqueeze
-    for i, c in enumerate(rhs):
-        if c not in r_keep_dims:
-            mod_r = mod_r.unsqueeze(dim=i)
-    return mod_r
-
-
-def _view_complex(
-    x: torch.FloatTensor,
-) -> torch.Tensor:
-    real, imag = split_complex(x=x)
-    return torch.complex(real=real, imag=imag)
 
 
 def _translational_interaction(
@@ -318,7 +86,7 @@ def _translational_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
+    return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
 
 
 def _add_cuda_warning(func):
@@ -358,7 +126,7 @@ def complex_interaction(
     """
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
     return sum(
-        _extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
+        extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
         for hh, rr, tt in [
             (h_re, r_re, t_re),
             (h_re, r_im, t_im),
@@ -559,7 +327,7 @@ def distmult_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _extended_einsum("bhd,brd,btd->bhrt", h, r, t)
+    return extended_einsum("bhd,brd,btd->bhrt", h, r, t)
 
 
 def ermlp_interaction(
@@ -670,7 +438,7 @@ def hole_interaction(
     composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
 
     # inner product with relation embedding
-    return _extended_einsum("bhtd,brd->bhrt", composite, r)
+    return extended_einsum("bhtd,brd->bhrt", composite, r)
 
 
 def kg2e_interaction(
@@ -754,11 +522,11 @@ def ntn_interaction(
     """
     # save sizes
     num_heads, num_relations, num_tails, _, k = _extract_sizes(h, b, t)
-    x = _extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
-    x = x + _extended_einsum("brkd,bhd->bhk", vh, h).view(-1, num_heads, 1, 1, k)
-    x = x + _extended_einsum("brkd,btd->btk", vt, t).view(-1, 1, 1, num_tails, k)
+    x = extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
+    x = x + extended_einsum("brkd,bhd->bhk", vh, h).view(-1, num_heads, 1, 1, k)
+    x = x + extended_einsum("brkd,btd->btk", vt, t).view(-1, 1, 1, num_tails, k)
     x = activation(x)
-    x = _extended_einsum("bhrtk,brk->bhrt", x, u)
+    x = extended_einsum("bhrtk,brk->bhrt", x, u)
     return x
 
 
@@ -828,7 +596,7 @@ def rescal_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _extended_einsum("bhd,brde,bte->bhrt", h, r, t)
+    return extended_einsum("bhd,brde,bte->bhrt", h, r, t)
 
 
 def rotate_interaction(
@@ -854,13 +622,13 @@ def rotate_interaction(
     # # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
     # # |h * r - t| = |h - conj(r) * t|
     # r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
-    h, r, t = [_view_complex(x) for x in (h, r, t)]
+    h, r, t = [view_complex(x) for x in (h, r, t)]
 
     # Rotate (=Hadamard product in complex space).
-    hr = _extended_einsum("bhd,brd->bhrd", h, r)
+    hr = extended_einsum("bhd,brd->bhrd", h, r)
 
     # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
-    return _negative_norm_of_sum(
+    return negative_norm_of_sum(
         hr.unsqueeze(dim=3),
         t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]),
         p=2,
@@ -935,9 +703,9 @@ def structured_embedding_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _negative_norm_of_sum(
-        _extended_einsum("brde,bhd->bhre", r_h, h).unsqueeze(dim=3),
-        -_extended_einsum("brde,btd->brte", r_t, t).unsqueeze(dim=1),
+    return negative_norm_of_sum(
+        extended_einsum("brde,bhd->bhre", r_h, h).unsqueeze(dim=3),
+        -extended_einsum("brde,btd->brte", r_t, t).unsqueeze(dim=1),
         p=p,
         power_norm=power_norm,
     )
@@ -978,13 +746,13 @@ def transd_interaction(
     """
     # Project entities
     # shape: (b, h, r, 1, d_r)
-    h_bot = _project_entity(
+    h_bot = project_entity(
         e=h.unsqueeze(dim=2),
         e_p=h_p.unsqueeze(dim=2),
         r_p=r_p.unsqueeze(dim=1),
     ).unsqueeze(dim=-2)
     # shape: (b, 1, r, t, d_r)
-    t_bot = _project_entity(
+    t_bot = project_entity(
         e=t.unsqueeze(dim=1),
         e_p=t_p.unsqueeze(dim=1),
         r_p=r_p.unsqueeze(dim=2),
@@ -1017,7 +785,7 @@ def transe_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, embedding_dim = _extract_sizes(h, r, t)[:4]
+    num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
     return _translational_interaction(
         h=h.view(-1, num_heads, 1, 1, embedding_dim),
         r=r.view(-1, 1, num_relations, 1, embedding_dim),
@@ -1056,9 +824,9 @@ def transh_interaction(
     """
     # Project to hyperplane
     return _translational_interaction(
-        h=(h.unsqueeze(dim=2) - _extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r)).unsqueeze(dim=3),
+        h=(h.unsqueeze(dim=2) - extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r)).unsqueeze(dim=3),
         r=d_r.view(d_r.shape[0], 1, d_r.shape[1], 1, d_r.shape[2]),
-        t=(t.unsqueeze(dim=1) - _extended_einsum("btd,brd,bre->brte", t, w_r, w_r)).unsqueeze(dim=1),
+        t=(t.unsqueeze(dim=1) - extended_einsum("btd,brd,bre->brte", t, w_r, w_r)).unsqueeze(dim=1),
         p=p,
         power_norm=power_norm,
     )
@@ -1148,17 +916,17 @@ def tucker_interaction(
         The scores.
     """
     # Compute wr = DO(W x_2 r)
-    x = do0(_extended_einsum("idj,brd->brij", core_tensor, r))
+    x = do0(extended_einsum("idj,brd->brij", core_tensor, r))
 
     # Compute h_n = DO(BN(h))
     h = _apply_optional_bn_to_tensor(batch_norm=bn1, output_dropout=do1, tensor=h)
 
     # compute whr = DO(BN(h_n x_1 wr))
-    x = _extended_einsum("brid,bhd->bhri", x, h)
+    x = extended_einsum("brid,bhd->bhri", x, h)
     x = _apply_optional_bn_to_tensor(batch_norm=bn2, tensor=x, output_dropout=do2)
 
     # Compute whr x_3 t
-    return _extended_einsum("bhrd,btd->bhrt", x, t)
+    return extended_einsum("bhrd,btd->bhrt", x, t)
 
 
 def unstructured_model_interaction(
@@ -1184,4 +952,4 @@ def unstructured_model_interaction(
     """
     h = h.unsqueeze(dim=2).unsqueeze(dim=3)
     t = t.unsqueeze(dim=1).unsqueeze(dim=2)
-    return _negative_norm_of_sum(h, -t, p=p, power_norm=power_norm)
+    return negative_norm_of_sum(h, -t, p=p, power_norm=power_norm)

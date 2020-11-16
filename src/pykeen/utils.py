@@ -7,13 +7,14 @@ import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, SupportsFloat, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn
+from torch.nn import functional
 
 from .typing import DeviceHint
 
@@ -22,12 +23,15 @@ __all__ = [
     'compose',
     'check_shapes',
     'clamp_norm',
+    'combine_complex',
     'compact_mapping',
+    'complex_normalize',
+    'fix_dataclass_init_docs',
     'imag_part',
     'invert_mapping',
     'is_cudnn_error',
-    'l2_regularization',
     'is_cuda_oom_error',
+    'l2_regularization',
     'random_non_negative_int',
     'real_part',
     'resolve_device',
@@ -38,17 +42,13 @@ __all__ = [
     'split_list_in_batches',
     'normalize_string',
     'normalized_lookup',
+    'negative_norm_of_sum',
     'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
     'set_random_seed',
     'NoRandomSeedNecessary',
     'Result',
-    'fix_dataclass_init_docs',
-    'get_hrt_indices',
-    'get_hr_indices',
-    'get_ht_indices',
-    'get_rt_indices',
 ]
 
 logger = logging.getLogger(__name__)
@@ -59,6 +59,7 @@ _CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear i
 _CUDA_OOM_ERROR = 'CUDA out of memory.'
 
 
+# TODO remove (unused)
 def l2_regularization(
     *xs: torch.Tensor,
     normalize: bool = False,
@@ -103,6 +104,7 @@ def slice_triples(triples):
     )
 
 
+# TODO remove (unused/untested)
 def slice_doubles(doubles):
     """Get the heads and relations from a matrix of doubles."""
     return (
@@ -114,6 +116,7 @@ def slice_doubles(doubles):
 X = TypeVar('X')
 
 
+# TODO remove (unused)
 def split_list_in_batches(input_list: List[X], batch_size: int) -> List[List[X]]:
     """Split a list of instances in batches of size batch_size."""
     return list(split_list_in_batches_iter(input_list=input_list, batch_size=batch_size))
@@ -353,6 +356,12 @@ def split_complex(
     return x[..., :dim], x[..., dim:]
 
 
+def view_complex(x: torch.FloatTensor) -> torch.Tensor:
+    """Convert a PyKEEN complex tensor representation into a torch one."""
+    real, imag = split_complex(x=x)
+    return torch.complex(real=real, imag=imag)
+
+
 def combine_complex(
     x_re: torch.FloatTensor,
     x_im: torch.FloatTensor,
@@ -361,6 +370,7 @@ def combine_complex(
     return torch.cat([x_re, x_im], dim=-1)
 
 
+# TODO remove (unused)
 def real_part(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
@@ -369,6 +379,7 @@ def real_part(
     return x[..., :dim]
 
 
+# TODO remove (unused)
 def imag_part(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
@@ -518,30 +529,6 @@ def broadcast_cat(
     return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
 
 
-# These three following methods could be used throughout PyKEEN to improve
-#  the implicit documentation of functions
-
-
-def get_hrt_indices(hrt_batch: torch.LongTensor) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
-    """Get indices from a head/relation/tail batch."""
-    return hrt_batch[:, 0], hrt_batch[:, 1], hrt_batch[:, 2]
-
-
-def get_hr_indices(hr_batch: torch.LongTensor) -> Tuple[torch.LongTensor, torch.LongTensor, None]:
-    """Get indices from a head/relation batch."""
-    return hr_batch[:, 0], hr_batch[:, 1], None
-
-
-def get_ht_indices(ht_batch: torch.LongTensor) -> Tuple[torch.LongTensor, None, torch.LongTensor]:
-    """Get indices from a head/tail batch."""
-    return ht_batch[:, 0], None, ht_batch[:, 1]
-
-
-def get_rt_indices(rt_batch: torch.LongTensor) -> Tuple[None, torch.LongTensor, torch.LongTensor]:
-    """Get indices from a relation/tail batch."""
-    return None, rt_batch[:, 0], rt_batch[:, 1]
-
-
 def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
     """
     Get all subclasses.
@@ -552,3 +539,131 @@ def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
     for subclass in cls.__subclasses__():
         yield from get_subclasses(subclass)
         yield subclass
+
+
+def complex_normalize(x: torch.Tensor) -> torch.Tensor:
+    r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+
+    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+
+    .. math::
+
+        |a + ib| = \sqrt{a^2 + b^2}
+
+    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+
+    .. math::
+        \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
+                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
+                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
+                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    """
+    y = x.data.view(x.shape[0], -1, 2)
+    y = functional.normalize(y, p=2, dim=-1)
+    x.data = y.view(*x.shape)
+    return x
+
+
+def negative_norm_of_sum(
+    *x: torch.FloatTensor,
+    p: Union[str, int] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate negative norm of a sum of vectors on already broadcasted representations.
+
+    :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    d: torch.FloatTensor = sum(x)
+    if power_norm:
+        assert isinstance(p, SupportsFloat)
+        return -(d.abs() ** p).sum(dim=-1)
+
+    if torch.is_complex(d):
+        assert isinstance(p, SupportsFloat)
+        # workaround for complex numbers: manually compute norm
+        return -(d.abs() ** p).sum(dim=-1) ** (1 / p)
+
+    return -d.norm(p=p, dim=-1)
+
+
+def extended_einsum(
+    eq: str,
+    *tensors,
+) -> torch.FloatTensor:
+    """Drop dimensions of size 1 to allow broadcasting."""
+    # TODO: check if einsum is still very slow.
+    lhs, rhs = eq.split("->")
+    mod_ops, mod_t = [], []
+    for op, t in zip(lhs.split(","), tensors):
+        mod_op = ""
+        assert len(op) == len(t.shape)
+        for i, c in reversed(list(enumerate(op))):
+            if t.shape[i] == 1:
+                t = t.squeeze(dim=i)
+            else:
+                mod_op = c + mod_op
+        mod_ops.append(mod_op)
+        mod_t.append(t)
+    m_lhs = ",".join(mod_ops)
+    r_keep_dims = set("".join(mod_ops))
+    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
+    m_eq = f"{m_lhs}->{m_rhs}"
+    mod_r = torch.einsum(m_eq, *mod_t)
+    # unsqueeze
+    for i, c in enumerate(rhs):
+        if c not in r_keep_dims:
+            mod_r = mod_r.unsqueeze(dim=i)
+    return mod_r
+
+
+def project_entity(
+    e: torch.FloatTensor,
+    e_p: torch.FloatTensor,
+    r_p: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Project entity relation-specific.
+
+    .. math::
+
+        e_{\bot} = M_{re} e
+                 = (r_p e_p^T + I^{d_r \times d_e}) e
+                 = r_p e_p^T e + I^{d_r \times d_e} e
+                 = r_p (e_p^T e) + e'
+
+    and additionally enforces
+
+    .. math::
+
+        \|e_{\bot}\|_2 \leq 1
+
+    :param e: shape: (..., d_e)
+        The entity embedding.
+    :param e_p: shape: (..., d_e)
+        The entity projection.
+    :param r_p: shape: (..., d_r)
+        The relation projection.
+
+    :return: shape: (..., d_r)
+
+    """
+    # The dimensions affected by e'
+    change_dim = min(e.shape[-1], r_p.shape[-1])
+
+    # Project entities
+    # r_p (e_p.T e) + e'
+    e_bot = r_p * torch.sum(e_p * e, dim=-1, keepdim=True)
+    e_bot[..., :change_dim] += e[..., :change_dim]
+
+    # Enforce constraints
+    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
+
+    return e_bot

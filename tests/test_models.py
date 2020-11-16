@@ -41,10 +41,9 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.nn import RepresentationModule
-from pykeen.nn.functional import _project_entity
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
-from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
+from pykeen.utils import all_in_bounds, clamp_norm, project_entity, set_random_seed
 
 SKIP_MODULES = {
     Model.__name__,
@@ -862,7 +861,7 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         r_p = torch.rand(self.batch_size, 1, self.model.relation_dim, generator=self.generator)
 
         # project
-        e_bot = _project_entity(e=e, e_p=e_p, r_p=r_p)
+        e_bot = project_entity(e=e, e_p=e_p, r_p=r_p)
 
         # check shape:
         assert e_bot.shape == (self.batch_size, self.model.num_entities, self.model.relation_dim)

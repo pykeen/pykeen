@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, Sequence, TypeVar, Union
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union
 
 import numpy as np
 import torch
@@ -20,6 +20,7 @@ __all__ = [
     'RelationRepresentation',
     'Representation',
     'TailRepresentation',
+    'GaussianDistribution',
 ]
 
 LabeledTriples = np.ndarray
@@ -41,3 +42,10 @@ Representation = torch.FloatTensor
 HeadRepresentation = TypeVar("HeadRepresentation", Representation, Sequence[Representation])  # type: ignore
 RelationRepresentation = TypeVar("RelationRepresentation", Representation, Sequence[Representation])  # type: ignore
 TailRepresentation = TypeVar("TailRepresentation", Representation, Sequence[Representation])  # type: ignore
+
+
+class GaussianDistribution(NamedTuple):
+    """A gaussian distribution with diagonal covariance matrix."""
+
+    mean: torch.FloatTensor
+    diagonal_covariance: torch.FloatTensor

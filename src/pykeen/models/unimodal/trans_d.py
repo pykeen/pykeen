@@ -6,7 +6,7 @@ from typing import Optional
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import TransDInteraction
 from ...triples import TriplesFactory

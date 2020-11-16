@@ -8,7 +8,7 @@ from torch.nn import functional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TransEInteraction
 from ...triples import TriplesFactory

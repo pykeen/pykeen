@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransR."""
+
 import logging
 from typing import Optional
 
@@ -8,8 +9,7 @@ from torch.nn import functional
 
 from .. import ERModel
 from ...losses import Loss
-from ...nn import Embedding
-from ...nn.emb import EmbeddingSpecification
+from ...nn import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TransRInteraction
 from ...triples import TriplesFactory

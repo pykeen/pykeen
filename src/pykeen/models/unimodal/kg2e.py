@@ -10,7 +10,7 @@ import torch.autograd
 
 from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import KG2EInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -20,7 +20,7 @@ __all__ = [
     'KG2E',
 ]
 
-_LOG_2_PI = math.log(2. * math.pi)
+_LOG_2_PI = math.log(math.tau)
 
 
 class KG2E(TwoVectorEmbeddingModel):

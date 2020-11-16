@@ -11,7 +11,7 @@ from torch.nn import functional
 
 from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import StructuredEmbeddingInteraction
 from ...triples import TriplesFactory

@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 from .. import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import TuckerInteraction
 from ...triples import TriplesFactory

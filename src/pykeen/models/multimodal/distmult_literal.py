@@ -9,9 +9,8 @@ from torch.nn.init import xavier_normal_
 
 from ..base import LiteralModel
 from ...losses import Loss
-from ...nn.emb import EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 
@@ -46,7 +45,6 @@ class DistMultLiteral(LiteralModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         predict_with_sigmoid: bool = False,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
