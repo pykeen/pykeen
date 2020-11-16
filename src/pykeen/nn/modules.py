@@ -66,6 +66,13 @@ def _get_prefix(slice_size, slice_dim, d) -> str:
         return 'n'
 
 
+def _get_batches(z, slice_size):
+    for batch in zip(*(hh.split(slice_size, dim=1) for hh in _ensure_tuple(z)[0])):
+        if len(batch) == 1:
+            batch = batch[0]
+        yield batch
+
+
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
@@ -258,31 +265,18 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         # get scores
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
+        elif slice_dim == "h":
+            batch_scores = [self(h=h_batch, r=r, t=t) for h_batch in _get_batches(h, slice_size)]
+            scores = torch.cat(batch_scores, dim=self.HEAD_DIM)
+        elif slice_dim == "r":
+            batch_scores = [self(h=h, r=r_batch, t=t) for r_batch in _get_batches(r, slice_size)]
+            scores = torch.cat(batch_scores, dim=self.RELATION_DIM)
+        elif slice_dim == "t":
+            batch_scores = [self(h=h, r=r, t=t_batch) for t_batch in _get_batches(t, slice_size)]
+            scores = torch.cat(batch_scores, dim=self.TAIL_DIM)
         else:
-            assert slice_dim is not None
-            # TODO externalize logic into function
-            scores = []
-            if slice_dim == "h":
-                cat_dim = self.HEAD_DIM
-                for h_batch in zip(*(hh.split(slice_size, dim=1) for hh in _ensure_tuple(h)[0])):
-                    if len(h_batch) == 1:
-                        h_batch = h_batch[0]
-                    scores.append(self(h=h_batch, r=r, t=t))
-            elif slice_dim == "r":
-                cat_dim = self.RELATION_DIM
-                for r_batch in zip(*(rr.split(slice_size, dim=1) for rr in _ensure_tuple(r)[0])):
-                    if len(r_batch) == 1:
-                        r_batch = r_batch[0]
-                    scores.append(self(h=h, r=r_batch, t=t))
-            elif slice_dim == "t":
-                cat_dim = self.TAIL_DIM
-                for t_batch in zip(*(tt.split(slice_size, dim=1) for tt in _ensure_tuple(t)[0])):
-                    if len(t_batch) == 1:
-                        t_batch = t_batch[0]
-                    scores.append(self(h=h, r=r, t=t_batch))
-            else:
-                raise ValueError(slice_dim)
-            scores = torch.cat(scores, dim=cat_dim)
+            raise ValueError(f'Invalid slice_dim: {slice_dim}')
+
         remove_dims = [
             dim
             for dim, prefix in zip(
