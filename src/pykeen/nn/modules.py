@@ -222,14 +222,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        return self._score(
+        return self._forward(
             h=h,
             r=r,
             t=t,
-            h_prefix=_get_prefix(slice_size=slice_size, slice_dim=slice_dim, d='h'),
-            r_prefix=_get_prefix(slice_size=slice_size, slice_dim=slice_dim, d='r'),
-            t_prefix=_get_prefix(slice_size=slice_size, slice_dim=slice_dim, d='t'),
             slice_size=slice_size,
+            slice_dim=slice_dim,
         )
 
     def _score(
@@ -262,6 +260,20 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r = self._add_dim(*r, dim=self.BATCH_DIM if r_prefix == "n" else self.NUM_DIM)
         t = self._add_dim(*t, dim=self.BATCH_DIM if t_prefix == "n" else self.NUM_DIM)
 
+        scores = self._forward(h, r, t, slice_dim, slice_size)
+
+        remove_dims = [
+            dim
+            for dim, prefix in zip(
+                (self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM),
+                (h_prefix, r_prefix, t_prefix),
+            )
+            if prefix == "b"
+        ]
+        # prepare output shape
+        return self._remove_dim(scores, *remove_dims)
+
+    def _forward(self, h, r, t, slice_size, slice_dim):
         # get scores
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
@@ -276,17 +288,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             scores = torch.cat(batch_scores, dim=self.TAIL_DIM)
         else:
             raise ValueError(f'Invalid slice_dim: {slice_dim}')
-
-        remove_dims = [
-            dim
-            for dim, prefix in zip(
-                (self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM),
-                (h_prefix, r_prefix, t_prefix),
-            )
-            if prefix == "b"
-        ]
-        # prepare output shape
-        return self._remove_dim(scores, *remove_dims)
+        return scores
 
     def score_hrt(
         self,
