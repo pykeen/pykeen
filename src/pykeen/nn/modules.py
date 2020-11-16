@@ -114,7 +114,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         raise NotImplementedError
 
     @staticmethod
-    def _add_dim(*x: torch.FloatTensor, dim: int) -> Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]]:
+    def _add_dim(*x: torch.FloatTensor, dim: int) -> Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]:
         """
         Add a dimension to tensors.
 
@@ -270,9 +270,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def _forward_slicing_wrapper(
         self,
-        h: Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]],
-        r: Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]],
-        t: Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]],
+        h: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
+        r: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
+        t: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
         slice_size: Optional[int],
         slice_dim: str,
     ) -> torch.FloatTensor:

@@ -41,7 +41,7 @@ class Regularizer(nn.Module, ABC):
     hpo_default: ClassVar[Mapping[str, Any]]
 
     #: weights which should be regularized
-    parameters: Optional[Collection[nn.Parameter]] = None
+    tracked_parameters: Optional[Collection[nn.Parameter]] = None
 
     def __init__(
         self,
@@ -50,10 +50,14 @@ class Regularizer(nn.Module, ABC):
         parameters: Optional[Sequence[nn.Parameter]] = None,
     ):
         super().__init__()
-        self.register_buffer(name='weight', tensor=torch.as_tensor(weight, device=self.device))
+        self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
-        self.pop_regularization_term()
-        self.parameters = parameters
+        self.tracked_parameters = parameters
+        self._clear()
+
+    def _clear(self):
+        self.regularization_term = 0.
+        self.updated = False
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -65,27 +69,21 @@ class Regularizer(nn.Module, ABC):
         """Compute the regularization term for one tensor."""
         raise NotImplementedError
 
-    def update(self, *tensors: torch.FloatTensor) -> None:
+    def update(self, *tensors: torch.FloatTensor) -> bool:
         """Update the regularization term based on passed tensors."""
         if not self.training or not torch.is_grad_enabled() or (self.apply_only_once and self.updated):
-            return
+            return False
         self.regularization_term = self.regularization_term + sum(self(x) for x in tensors)
         self.updated = True
+        return True
 
     def pop_regularization_term(self) -> torch.FloatTensor:
         """Return the weighted regularization term, and clear it afterwards."""
-        if self.parameters is not None:
-            self.update(*self.parameters)
+        if self.tracked_parameters is not None:
+            self.update(*self.tracked_parameters)
         term = self.regularization_term
-        self.regularization_term = 0.
-        self.updated = False
+        self._clear()
         return self.weight * term
-
-    @property
-    def term(self) -> torch.FloatTensor:
-        """Return the weighted regularization term."""
-        # TODO: Deprecated
-        raise RuntimeError
 
 
 class NoRegularizer(Regularizer):
@@ -93,13 +91,10 @@ class NoRegularizer(Regularizer):
 
     Used to simplify code.
     """
+    # TODO: Deprecated
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
-
-    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
-        # no need to compute anything
-        pass
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         # always return zero
@@ -231,7 +226,6 @@ class CombinedRegularizer(Regularizer):
     def __init__(
         self,
         regularizers: Iterable[Regularizer],
-        device: torch.device,
         total_weight: float = 1.0,
         apply_only_once: bool = False,
         parameters: Optional[Sequence[nn.Parameter]] = None,
@@ -241,9 +235,8 @@ class CombinedRegularizer(Regularizer):
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
                 raise TypeError('Can not combine a no-op regularizer')
-        self.register_buffer(name='normalization_factor', tensor=torch.as_tensor(
-            sum(r.weight for r in self.regularizers), device=device,
-        ).reciprocal())
+        normalization_factor = torch.as_tensor(sum(r.weight for r in self.regularizers)).reciprocal()
+        self.register_buffer(name='normalization_factor', tensor=normalization_factor)
 
     @property
     def normalize(self):  # noqa: D102
