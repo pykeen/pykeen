@@ -74,6 +74,8 @@ class Regularizer(nn.Module, ABC):
 
     def update(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularization term based on passed tensors."""
+        if not self.training:
+            return
         if self.apply_only_once and self.updated:
             return
         self.regularization_term = self.regularization_term + sum(self(x) for x in tensors)
