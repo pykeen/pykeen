@@ -85,7 +85,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for entity representations
     entity_shape: Sequence[str] = ("d",)
-    # TODO add docstring
+
+    #: The symbolic shapes for entity representations for tail entities, if different. This is ony relevant for ConvE.
     tail_entity_shape: Optional[Sequence[str]] = None
 
     #: The symbolic shapes for relation representations
@@ -126,7 +127,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         out = [xx.unsqueeze(dim=dim) for xx in x]
         if len(x) == 1:
             return out[0]
-        return out
+        return tuple(out)
 
     @staticmethod
     def _remove_dim(x: torch.FloatTensor, *dims: int) -> torch.FloatTensor:
