@@ -4,13 +4,13 @@
 
 import unittest
 from dataclasses import dataclass
+from unittest.mock import MagicMock
 
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel
-from pykeen.nn.modules import Interaction
+from pykeen.models import Model, TransE
+from pykeen.models.base import MockModel
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 
@@ -21,7 +21,7 @@ class TestBaseModel(unittest.TestCase):
     batch_size: int
     embedding_dim: int
     factory: TriplesFactory
-    model: EntityRelationEmbeddingModel
+    model: Model
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""
@@ -81,9 +81,9 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the scoring functions."""
         self.generator = torch.random.manual_seed(seed=42)
-        self.triples_factory = MinimalTriplesFactory
+        self.triples_factory = MagicMock(num_relations=2, num_entities=2)
         self.device = resolve_device()
-        self.model = SimpleInteractionModel(triples_factory=self.triples_factory).to(self.device)
+        self.model = MockModel(triples_factory=self.triples_factory).to(self.device)
 
     def test_alignment_of_score_t_fall_back(self) -> None:
         """Test if ``BaseModule.score_t`` aligns with ``BaseModule.score_hrt``."""
@@ -106,8 +106,8 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
             device=self.device,
         )
         scores_t_function = self.model.score_t(hr_batch=hr_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_t_function == scores_hrt_function)
+        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
+        assert (scores_t_function == scores_hrt_function).all()
 
     def test_alignment_of_score_h_fall_back(self) -> None:
         """Test if ``BaseModule.score_h`` aligns with ``BaseModule.score_hrt``."""
@@ -130,8 +130,8 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
             device=self.device,
         )
         scores_h_function = self.model.score_h(rt_batch=rt_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_h_function == scores_hrt_function)
+        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
+        assert (scores_h_function == scores_hrt_function).all()
 
     def test_alignment_of_score_r_fall_back(self) -> None:
         """Test if ``BaseModule.score_r`` aligns with ``BaseModule.score_hrt``."""
@@ -154,22 +154,8 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
             device=self.device,
         )
         scores_r_function = self.model.score_r(ht_batch=ht_batch).flatten()
-        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch)
-        assert all(scores_r_function == scores_hrt_function)
-
-
-class SimpleInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
-    """A simple interaction as the sum of the vectors."""
-
-    def forward(self, h, r, t) -> torch.FloatTensor:  # noqa:D102
-        return torch.sum(h + r + t, dim=1)
-
-
-class SimpleInteractionModel(EntityRelationEmbeddingModel):
-    """A model with a simple interaction function for testing the base model."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, interaction=SimpleInteraction(), **kwargs)
+        scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
+        assert (scores_r_function == scores_hrt_function).all()
 
 
 @dataclass

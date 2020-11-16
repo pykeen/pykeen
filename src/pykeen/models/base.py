@@ -1580,9 +1580,10 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
 
 class MockModel(Model):
     """A mock model returning fake scores."""
+
     # TODO: Where to put this?
 
-    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
+    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool = True):
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -1595,13 +1596,21 @@ class MockModel(Model):
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
         # (batch_size, num_heads, num_relations, num_tails)
-        bss, (nh, nr, nt) = zip(*(
-            (1, num) if ind is None else (ind.shape[0], 1)
-            for ind, num in (
+        scores = torch.zeros(1, 1, 1, 1, requires_grad=True)  # for requires_grad
+        # reproducible scores
+        for i, (ind, num) in enumerate(
+            (
                 (h_indices, self.num_entities),
                 (r_indices, self.num_relations),
                 (t_indices, self.num_entities),
             )
-        ))
-        bs = max(bss)
-        return torch.rand(bs, nh, nr, nt, requires_grad=True)
+        ):
+            shape = [1, 1, 1, 1]
+            if ind is None:
+                shape[i + 1] = num
+                delta = torch.arange(num)
+            else:
+                shape[0] = len(ind)
+                delta = ind
+            scores = scores + delta.float().view(*shape)
+        return scores
