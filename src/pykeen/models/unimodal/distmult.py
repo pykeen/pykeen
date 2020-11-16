@@ -11,7 +11,7 @@ from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
-from ...regularizers import LpRegularizer, Regularizer
+from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import compose
@@ -75,7 +75,6 @@ class DistMult(SingleVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize DistMult.
 
@@ -101,6 +100,12 @@ class DistMult(SingleVectorEmbeddingModel):
                 initializer=compose(
                     nn.init.xavier_uniform_,
                     functional.normalize,
+                ),
+                # Only relation embeddings are regularized
+                regularizer=LpRegularizer(
+                    weight=0.1,
+                    p=2.0,
+                    normalize=True,
                 ),
             ),
         )

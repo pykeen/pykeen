@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 from ..base import SingleVectorEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.modules import ERMLPEInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -62,7 +61,6 @@ class ERMLPE(SingleVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,

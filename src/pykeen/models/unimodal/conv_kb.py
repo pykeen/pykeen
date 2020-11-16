@@ -8,7 +8,7 @@ from typing import Optional
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import ConvKBInteraction
-from ...regularizers import LpRegularizer, Regularizer
+from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -78,12 +78,12 @@ class ConvKB(SingleVectorEmbeddingModel):
         preferred_device: DeviceHint = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model.
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
+        # TODO: regularize weight and bias
         super().__init__(
             triples_factory=triples_factory,
             interaction=ConvKBInteraction(

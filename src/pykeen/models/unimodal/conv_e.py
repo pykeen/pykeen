@@ -124,7 +124,6 @@ class ConvE(ERModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
     ) -> None:
         """Initialize the model."""

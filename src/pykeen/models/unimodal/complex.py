@@ -10,7 +10,7 @@ from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
-from ...regularizers import LpRegularizer, Regularizer
+from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -74,7 +74,6 @@ class ComplEx(SingleVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize ComplEx.
 
@@ -91,8 +90,6 @@ class ComplEx(SingleVectorEmbeddingModel):
             The default device where to model is located.
         :param random_seed: int (optional)
             An optional random seed to set before the initialization of weights.
-        :param regularizer: BaseRegularizer
-            The regularizer to use.
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -106,8 +103,18 @@ class ComplEx(SingleVectorEmbeddingModel):
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
             embedding_specification=EmbeddingSpecification(
                 initializer=nn.init.normal_,
+                regularizer=LpRegularizer(
+                    weight=0.01,
+                    p=2.0,
+                    normalize=True,
+                ),
             ),
             relation_embedding_specification=EmbeddingSpecification(
                 initializer=nn.init.normal_,
+                regularizer=LpRegularizer(
+                    weight=0.01,
+                    p=2.0,
+                    normalize=True,
+                ),
             ),
         )

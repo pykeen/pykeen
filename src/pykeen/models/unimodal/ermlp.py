@@ -7,7 +7,6 @@ from typing import Optional
 from ..base import SingleVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.modules import ERMLPInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -47,7 +46,6 @@ class ERMLP(SingleVectorEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         hidden_dim: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize ERMLP."""
         if hidden_dim is None:
