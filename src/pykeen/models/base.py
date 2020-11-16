@@ -23,7 +23,7 @@ from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding, RepresentationModule
 from ..nn.emb import EmbeddingSpecification, LiteralRepresentations
 from ..nn.modules import Interaction
-from ..regularizers import NoRegularizer, Regularizer
+from ..regularizers import collect_regularization_terms
 from ..triples import TriplesFactory, TriplesNumericLiteralsFactory
 from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
@@ -255,14 +255,6 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
-    # FIXME problem with typing (remove type: ignore)
-    #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
-    #: The default parameters for the default regularizer class
-    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-    #: The instance of the regularizer
-    regularizer: Regularizer
-
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -271,7 +263,6 @@ class Model(nn.Module, ABC):
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the module.
 
@@ -291,8 +282,6 @@ class Model(nn.Module, ABC):
             The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
-        :param regularizer:
-            A regularizer to use for training.
         """
         super().__init__()
 
@@ -316,15 +305,6 @@ class Model(nn.Module, ABC):
 
         # TODO: Check loss functions that require 1 and -1 as label but only
         self.is_mr_loss: bool = isinstance(self.loss, MarginRankingLoss)
-
-        # Regularizer
-        if regularizer is None:
-            regularizer = self.regularizer_default(
-                device=self.device,
-                **(self.regularizer_default_kwargs or {}),
-            )
-        self.regularizer = regularizer
-
         self.is_nssa_loss: bool = isinstance(self.loss, NSSALoss)
 
         # The triples factory facilitates access to the dataset.
@@ -439,7 +419,6 @@ class Model(nn.Module, ABC):
     def to_device_(self) -> 'Model':
         """Transfer model to device."""
         self.to(self.device)
-        self.regularizer.to(self.device)
         torch.cuda.empty_cache()
         return self
 
@@ -894,20 +873,11 @@ class Model(nn.Module, ABC):
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
-        self.regularizer.reset()
         for module in self.modules():
             if module is self:
                 continue
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
-
-    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
-        """Update the regularizer's term given some tensors, if regularization is requested.
-
-        :param tensors: The tensors that should be passed to the regularizer to update its term.
-        """
-        if self.training:
-            self.regularizer.update(*tensors)
 
     def compute_mr_loss(
         self,
@@ -931,7 +901,7 @@ class Model(nn.Module, ABC):
                 ' losses. Please use the compute_loss method instead.',
             )
         y = torch.ones_like(negative_scores, device=self.device)
-        return self.loss(positive_scores, negative_scores, y) + self.regularizer.term
+        return self.loss(positive_scores, negative_scores, y) + collect_regularization_terms(self)
 
     def compute_label_loss(
         self,
@@ -994,7 +964,7 @@ class Model(nn.Module, ABC):
                 'The chosen loss does not allow the calculation of margin label'
                 ' losses. Please use the compute_mr_loss method instead.',
             )
-        return self.loss(tensor_1, tensor_2) + self.regularizer.term
+        return self.loss(tensor_1, tensor_2) + collect_regularization_terms(self)
 
     @abstractmethod
     def forward(
@@ -1156,7 +1126,6 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
         relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
     ) -> None:
@@ -1178,8 +1147,6 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
-        :param regularizer:
-            A regularizer to use for training.
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -1187,7 +1154,6 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
 
@@ -1304,7 +1270,6 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
         predict_with_sigmoid: bool = False,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ) -> None:
@@ -1325,8 +1290,6 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
             The default device where to model is located.
         :param random_seed:
             An optional random seed to set before the initialization of weights.
-        :param regularizer:
-            The regularizer to use.
         """
         # Default for relation dimensionality
         if relation_dim is None:
@@ -1338,7 +1301,6 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             interaction=interaction,
             entity_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_entities,
@@ -1391,7 +1353,6 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         relation_embedding_specification: Optional[EmbeddingSpecification] = None,
         second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
@@ -1406,7 +1367,6 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
@@ -1453,7 +1413,6 @@ class TwoVectorEmbeddingModel(ERModel, autoreset=False):
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         relation_embedding_specification: Optional[EmbeddingSpecification] = None,
         second_embedding_specification: Optional[EmbeddingSpecification] = None,
@@ -1468,7 +1427,6 @@ class TwoVectorEmbeddingModel(ERModel, autoreset=False):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
@@ -1516,7 +1474,6 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         relation_embedding_specification: Optional[EmbeddingSpecification] = None,
         second_embedding_specification: Optional[EmbeddingSpecification] = None,
@@ -1531,7 +1488,6 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
@@ -1600,7 +1556,6 @@ class LiteralModel(ERModel, autoreset=False):
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ):
         super().__init__(
             triples_factory=triples_factory,
@@ -1610,7 +1565,6 @@ class LiteralModel(ERModel, autoreset=False):
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=[
                 # entity embeddings
                 Embedding.from_specification(

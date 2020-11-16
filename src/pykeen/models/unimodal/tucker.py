@@ -103,7 +103,6 @@ class TuckER(SingleVectorEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             embedding_specification=EmbeddingSpecification(
                 initializer=xavier_normal_,
             ),

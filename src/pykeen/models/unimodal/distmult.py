@@ -89,7 +89,6 @@ class DistMult(SingleVectorEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             embedding_specification=EmbeddingSpecification(
                 # xavier uniform, cf.
                 # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17

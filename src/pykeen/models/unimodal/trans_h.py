@@ -90,7 +90,6 @@ class TransH(DoubleRelationEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
             embedding_specification=None,
             relation_embedding_specification=None,

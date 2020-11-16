@@ -442,9 +442,6 @@ class TrainingLoop(ABC):
         loss.backward()
         current_epoch_loss = loss.item()
 
-        # reset the regularizer to free the computational graph
-        self.model.regularizer.reset()
-
         return current_epoch_loss
 
     @staticmethod
@@ -671,7 +668,5 @@ class TrainingLoop(ABC):
         return self.model.to_embeddingdb(session=session, use_tqdm=use_tqdm)
 
     def _free_graph_and_cache(self):
-        # The regularizer has to be reset to free the computational graph
-        self.model.regularizer.reset()
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()

@@ -71,7 +71,6 @@ class HolE(SingleVectorEmbeddingModel):
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
             embedding_specification=EmbeddingSpecification(
                 initializer=xavier_uniform_,

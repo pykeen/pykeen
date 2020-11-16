@@ -88,7 +88,6 @@ class KG2E(TwoVectorEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             embedding_specification=EmbeddingSpecification(
                 constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),

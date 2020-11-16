@@ -96,6 +96,5 @@ class ConvKB(SingleVectorEmbeddingModel):
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
         )
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')

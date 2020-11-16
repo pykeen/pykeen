@@ -107,5 +107,4 @@ class ComplExLiteral(LiteralModel):
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
         )

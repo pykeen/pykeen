@@ -141,7 +141,6 @@ class ConvE(ERModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
@@ -193,5 +192,4 @@ class ConvE(ERModel):
         r = self.relation_representations[0].get_in_canonical_shape(indices=r_indices)
         t = self.entity_representations[0].get_in_canonical_shape(indices=t_indices)
         t_bias = self.entity_representations[1].get_in_canonical_shape(indices=t_indices)
-        self.regularize_if_necessary(h, r, t)
         return self.interaction.score(h=h, r=r, t=(t, t_bias), slice_size=slice_size, slice_dim=slice_dim)

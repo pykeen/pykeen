@@ -241,8 +241,6 @@ class Embedding(RepresentationModule):
         # apply constraints in-place
         if self.constrainer is not None:
             self._embeddings.weight.data = self.constrainer(self._embeddings.weight.data)
-        if self.regularizer is not None:
-            self.regularizer.reset()
 
     def forward(
         self,

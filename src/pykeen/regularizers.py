@@ -18,6 +18,7 @@ __all__ = [
     'CombinedRegularizer',
     'PowerSumRegularizer',
     'TransHRegularizer',
+    'collect_regularization_terms',
     'get_regularizer_cls',
 ]
 
@@ -31,7 +32,7 @@ class Regularizer(nn.Module, ABC):
     weight: torch.FloatTensor
 
     #: The current regularization term (a scalar)
-    regularization_term: torch.FloatTensor
+    regularization_term: Union[torch.FloatTensor, float]
 
     #: Should the regularization only be applied once? This was used for ConvKB and defaults to False.
     apply_only_once: bool
@@ -41,31 +42,18 @@ class Regularizer(nn.Module, ABC):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 1.0,
         apply_only_once: bool = False,
     ):
         super().__init__()
-        self.device = device
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight, device=self.device))
         self.apply_only_once = apply_only_once
-        self.reset()
-
-    def to(self, *args, **kwargs) -> 'Regularizer':  # noqa: D102
-        super().to(*args, **kwargs)
-        self.device = torch._C._nn._parse_to(*args, **kwargs)[0]
-        self.reset()
-        return self
+        self.pop_regularization_term()
 
     @classmethod
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the regularizer class."""
         return normalize_string(cls.__name__, suffix=_REGULARIZER_SUFFIX)
-
-    def reset(self) -> None:
-        """Reset the regularization term to zero."""
-        self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
-        self.updated = False
 
     @abstractmethod
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
@@ -79,10 +67,18 @@ class Regularizer(nn.Module, ABC):
         self.regularization_term = self.regularization_term + sum(self(x) for x in tensors)
         self.updated = True
 
+    def pop_regularization_term(self) -> torch.FloatTensor:
+        """Return the weighted regularization term, and clear it afterwards."""
+        term = self.regularization_term
+        self.regularization_term = 0.
+        self.updated = False
+        return self.weight * term
+
     @property
     def term(self) -> torch.FloatTensor:
         """Return the weighted regularization term."""
-        return self.regularization_term * self.weight
+        # TODO: Deprecated
+        raise RuntimeError
 
 
 class NoRegularizer(Regularizer):
@@ -100,7 +96,7 @@ class NoRegularizer(Regularizer):
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         # always return zero
-        return torch.zeros(1, dtype=x.dtype, device=x.device)
+        return x.new_zeros(1)
 
 
 class LpRegularizer(Regularizer):
@@ -120,14 +116,13 @@ class LpRegularizer(Regularizer):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 1.0,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -160,14 +155,13 @@ class PowerSumRegularizer(Regularizer):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 1.0,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -190,13 +184,12 @@ class TransHRegularizer(Regularizer):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 0.05,
         epsilon: float = 1e-5,
     ):
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(device=device, weight=weight, apply_only_once=True)
+        super().__init__(weight=weight, apply_only_once=True)
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -233,7 +226,7 @@ class CombinedRegularizer(Regularizer):
         total_weight: float = 1.0,
         apply_only_once: bool = False,
     ):
-        super().__init__(weight=total_weight, device=device, apply_only_once=apply_only_once)
+        super().__init__(weight=total_weight, apply_only_once=apply_only_once)
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
@@ -273,4 +266,13 @@ def get_regularizer_cls(query: Union[None, str, Type[Regularizer]]) -> Type[Regu
         lookup_dict=regularizers,
         default=NoRegularizer,
         suffix=_REGULARIZER_SUFFIX,
+    )
+
+
+def collect_regularization_terms(main_module: nn.Module) -> Union[float, torch.FloatTensor]:
+    """Recursively collect regularization terms from attached regularizers, and clear their accumulator."""
+    return sum(
+        module.pop_regularization_term()
+        for module in main_module.modules()
+        if isinstance(module, Regularizer)
     )

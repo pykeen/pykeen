@@ -79,7 +79,6 @@ class TransR(ERModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_entities,
                 shape=embedding_dim,

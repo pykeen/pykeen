@@ -81,7 +81,6 @@ class SimplE(TwoSideEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
         )
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)

@@ -70,13 +70,6 @@ class _RegularizerTestCase:
         # Check if regularization term is reset
         self.assertEqual(0., model.regularizer.term)
 
-    def test_reset(self) -> None:
-        """Test method `reset`."""
-        # Call method
-        self.regularizer.reset()
-
-        self.assertEqual(0., self.regularizer.regularization_term)
-
     def test_update(self) -> None:
         """Test method `update`."""
         # Generate random tensors
@@ -168,8 +161,8 @@ class CombinedRegularizerTest(_RegularizerTestCase, unittest.TestCase):
     regularizer_cls = CombinedRegularizer
     regularizer_kwargs = {
         'regularizers': [
-            LpRegularizer(weight=0.1, p=1, device=resolve_device()),
-            LpRegularizer(weight=0.7, p=2, device=resolve_device()),
+            LpRegularizer(weight=0.1, p=1),
+            LpRegularizer(weight=0.7, p=2),
         ],
     }
 
@@ -212,7 +205,6 @@ class TransHRegularizerTest(unittest.TestCase):
         self.device = resolve_device()
         self.regularizer_kwargs = {'weight': .5, 'epsilon': 1e-5}
         self.regularizer = TransHRegularizer(
-            device=self.device,
             **(self.regularizer_kwargs or {}),
         )
         self.num_entities = 10
@@ -275,7 +267,6 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertIn('apply_only_once', ConvKB.regularizer_default_kwargs)
         self.assertTrue(ConvKB.regularizer_default_kwargs['apply_only_once'])
         regularizer = LpRegularizer(
-            device=self.device,
             **ConvKB.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
@@ -284,7 +275,6 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         """Test the TransH regularizer only updates once."""
         self.assertNotIn('apply_only_once', TransH.regularizer_default_kwargs)
         regularizer = TransHRegularizer(
-            device=self.device,
             **TransH.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
@@ -312,6 +302,6 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertTrue(regularizer.updated)
         self.assertEqual(term, regularizer.regularization_term)
 
-        regularizer.reset()
+        # regularizer.reset()
         self.assertFalse(regularizer.updated)
         self.assertEqual(0.0, regularizer.regularization_term.item())

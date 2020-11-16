@@ -97,7 +97,6 @@ class NTN(ERModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             interaction=NTNInteraction(
                 non_linearity=non_linearity,
             ),

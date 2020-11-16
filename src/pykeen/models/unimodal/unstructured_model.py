@@ -67,7 +67,6 @@ class UnstructuredModel(ERModel):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
             interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
             entity_representations=Embedding(
                 num_embeddings=triples_factory.num_entities,
