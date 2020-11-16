@@ -15,8 +15,6 @@ from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
 from ..utils import check_shapes
 
-logger = logging.getLogger(__name__)
-
 __all__ = [
     # Base Classes
     'Interaction',
@@ -43,17 +41,29 @@ __all__ = [
     'UnstructuredModelInteraction',
 ]
 
+logger = logging.getLogger(__name__)
 
-def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Tuple[Sequence[Representation], ...]:
-    return tuple(xx if isinstance(xx, Sequence) else (xx,) for xx in x)
+
+def _upgrade_to_sequence(x: Union[FloatTensor, Sequence[FloatTensor]]) -> Sequence[FloatTensor]:
+    return x if isinstance(x, Sequence) else (x,)
+
+
+def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Sequence[Sequence[Representation]]:
+    return tuple(_upgrade_to_sequence(xx) for xx in x)
 
 
 def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
-    return [x[0] if len(x) == 1 else x for x in xs]
+    return [
+        x[0] if len(x) == 1 else x
+        for x in xs
+    ]
 
 
 def _get_prefix(slice_size, slice_dim, d) -> str:
-    return "b" if (slice_size is None or slice_dim != d) else "n"
+    if slice_size is None or slice_dim != d:
+        return 'b'
+    else:
+        return 'n'
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -246,6 +256,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             scores = self(h=h, r=r, t=t)
         else:
             assert slice_dim is not None
+            # TODO externalize logic into function
             scores = []
             if slice_dim == "h":
                 cat_dim = self.HEAD_DIM
@@ -281,9 +292,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def score_hrt(
         self,
-        h: HeadRepresentation = tuple(),
-        r: RelationRepresentation = tuple(),
-        t: TailRepresentation = tuple(),
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
     ) -> torch.FloatTensor:
         """
         Score a batch of triples..
@@ -302,9 +313,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def score_h(
         self,
-        all_entities: HeadRepresentation = tuple(),
-        r: RelationRepresentation = tuple(),
-        t: TailRepresentation = tuple(),
+        all_entities: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
@@ -326,9 +337,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def score_r(
         self,
-        h: HeadRepresentation = tuple(),
-        all_relations: RelationRepresentation = tuple(),
-        t: TailRepresentation = tuple(),
+        h: HeadRepresentation,
+        all_relations: RelationRepresentation,
+        t: TailRepresentation,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
@@ -350,9 +361,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def score_t(
         self,
-        h: HeadRepresentation = tuple(),
-        r: RelationRepresentation = tuple(),
-        all_entities: TailRepresentation = tuple(),
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        all_entities: TailRepresentation,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
