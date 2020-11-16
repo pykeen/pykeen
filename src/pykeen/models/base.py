@@ -1001,6 +1001,8 @@ class Model(nn.Module, ABC):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -1014,13 +1016,17 @@ class Model(nn.Module, ABC):
             The relation indices. None indicates to use all.
         :param t_indices:
             The tail indices. None indicates to use all.
+        :param slice_size:
+            The slice size.
+        :param slice_dim:
+            The dimension along which to slice. From {"h", "r", "t"}
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """
         raise NotImplementedError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -1035,9 +1041,11 @@ class Model(nn.Module, ABC):
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
             t_indices=hrt_batch[:, 2],
+            slice_size=slice_size,
+            slice_dim="h",
         ).view(hrt_batch.shape[0], 1)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -1052,9 +1060,11 @@ class Model(nn.Module, ABC):
             h_indices=hr_batch[:, 0],
             r_indices=hr_batch[:, 1],
             t_indices=None,
+            slice_size=slice_size,
+            slice_dim="h",
         ).view(hr_batch.shape[0], self.num_entities)
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -1069,9 +1079,11 @@ class Model(nn.Module, ABC):
             h_indices=None,
             r_indices=rt_batch[:, 0],
             t_indices=rt_batch[:, 1],
+            slice_size=slice_size,
+            slice_dim="h",
         ).view(rt_batch.shape[0], self.num_entities)
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -1086,6 +1098,8 @@ class Model(nn.Module, ABC):
             h_indices=ht_batch[:, 0],
             r_indices=None,
             t_indices=ht_batch[:, 1],
+            slice_size=slice_size,
+            slice_dim="h",
         ).view(ht_batch.shape[0], self.num_relations)
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
@@ -1184,6 +1198,8 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -1197,12 +1213,16 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             The relation indices. None indicates to use all.
         :param t_indices:
             The tail indices. None indicates to use all.
+        :param slice_size:
+            The slice size.
+        :param slice_dim:
+            The dimension along which to slice. From {"h", "r", "t"}
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """
         h, r, t = self._get_representations(h_indices, r_indices, t_indices)
-        scores = self.interaction(h=h, r=r, t=t)
+        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
 
     def _repeat_scores_if_necessary(

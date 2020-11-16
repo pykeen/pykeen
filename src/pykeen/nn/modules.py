@@ -173,6 +173,40 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             raise_on_errors=raise_on_errors,
         )
 
+    def score(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
+    ) -> torch.FloatTensor:
+        """
+        Compute broadcasted triple scores with optional slicing.
+
+        .. note ::
+            At most one of the slice sizes may be not None.
+
+        :param h: shape: (batch_size, num_heads, ``*``)
+            The head representations.
+        :param r: shape: (batch_size, num_relations, ``*``)
+            The relation representations.
+        :param t: shape: (batch_size, num_tails, ``*``)
+            The tail representations.
+        :param slice_size:
+            The slice size.
+        :param slice_dim:
+            The dimension along which to slice. From {"h", "r", "t"}
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The scores.
+        """
+        kwargs = {
+            f"{d}_prefix": "b" if (slice_size is None or slice_dim != d) else "n"
+            for d in "hrt"
+        }
+        return self._score(h=h, r=r, t=t, **kwargs, slice_size=slice_size)
+
     def _score(
         self,
         h: HeadRepresentation,
