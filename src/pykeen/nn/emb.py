@@ -5,6 +5,7 @@
 import dataclasses
 import functools
 import logging
+from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy
@@ -23,9 +24,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class RepresentationModule(nn.Module):
+class RepresentationModule(nn.Module, ABC):
     """A base class for obtaining representations for entities/relations."""
 
+    @abstractmethod
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         """Get representations for indices.
 

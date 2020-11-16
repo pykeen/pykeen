@@ -2,7 +2,7 @@
 
 """Implementation of the DistMultLiteral model."""
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import torch
 import torch.nn as nn
@@ -16,6 +16,9 @@ from ...nn.modules import DistMultInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+
+if TYPE_CHECKING:
+    from ...typing import Representation  # noqa
 
 __all__ = [
     'DistMultLiteral',

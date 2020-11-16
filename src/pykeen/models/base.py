@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
 from typing import (
-    Any, ClassVar, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Set, Tuple,
+    Any, ClassVar, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Set, TYPE_CHECKING, Tuple,
     Type, Union,
 )
 
@@ -25,10 +25,11 @@ from ..nn.emb import EmbeddingSpecification
 from ..nn.modules import Interaction
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import (
-    DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation,
-)
+from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+
+if TYPE_CHECKING:
+    from ..typing import Representation  # noqa
 
 __all__ = [
     'Model',
@@ -1271,7 +1272,7 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
     ) -> Tuple[
         Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
         Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
-        Union[torch.FloatTensor, Sequence[torch.FloatTensor]]
+        Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
     ]:
         h, r, t = [
             [
@@ -1607,13 +1608,11 @@ class MockModel(Model):
         # (batch_size, num_heads, num_relations, num_tails)
         scores = torch.zeros(1, 1, 1, 1, requires_grad=True)  # for requires_grad
         # reproducible scores
-        for i, (ind, num) in enumerate(
-            (
-                (h_indices, self.num_entities),
-                (r_indices, self.num_relations),
-                (t_indices, self.num_entities),
-            )
-        ):
+        for i, (ind, num) in enumerate((
+            (h_indices, self.num_entities),
+            (r_indices, self.num_relations),
+            (t_indices, self.num_entities),
+        )):
             shape = [1, 1, 1, 1]
             if ind is None:
                 shape[i + 1] = num

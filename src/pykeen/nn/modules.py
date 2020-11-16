@@ -52,6 +52,10 @@ def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
     return [x[0] if len(x) == 1 else x for x in xs]
 
 
+def _get_prefix(slice_size, slice_dim, d) -> str:
+    return "b" if (slice_size is None or slice_dim != d) else "n"
+
+
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
@@ -131,9 +135,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     def _check_shapes(
         self,
-        h: HeadRepresentation = tuple(),
-        r: RelationRepresentation = tuple(),
-        t: TailRepresentation = tuple(),
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
         h_prefix: str = "b",
         r_prefix: str = "b",
         t_prefix: str = "b",
@@ -201,11 +205,15 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        kwargs = {
-            f"{d}_prefix": "b" if (slice_size is None or slice_dim != d) else "n"
-            for d in "hrt"
-        }
-        return self._score(h=h, r=r, t=t, **kwargs, slice_size=slice_size)
+        return self._score(
+            h=h,
+            r=r,
+            t=t,
+            h_prefix=_get_prefix(slice_size=slice_size, slice_dim=slice_dim, d='h'),
+            r_prefix=_get_prefix(slice_size=slice_size, slice_dim=slice_dim, d='r'),
+            t_prefix=_get_prefix(slice_size=slice_size, slice_dim=slice_dim, d='t'),
+            slice_size=slice_size,
+        )
 
     def _score(
         self,
@@ -378,7 +386,7 @@ class StatelessInteraction(Interaction[HeadRepresentation, RelationRepresentatio
 
     def __init__(self, f: Callable[..., torch.FloatTensor]):
         """Instantiate the stateless interaction module.
-        
+
         :param f: The interaction function, like ones from :mod:`pykeen.nn.functional`.
         """
         super().__init__()
@@ -1012,9 +1020,9 @@ class KG2EInteraction(
 
     def forward(
         self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
+        h: Tuple[torch.FloatTensor, torch.FloatTensor],
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
+        t: Tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> torch.FloatTensor:  # noqa:D102
         h_mean, h_var = h
         r_mean, r_var = r
