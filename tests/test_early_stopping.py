@@ -13,8 +13,9 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import TransE
-from pykeen.models.base import MockModel, Model
+from pykeen.models.base import Model
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
+from pykeen.testing.mocks import MockModel
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples

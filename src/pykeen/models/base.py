@@ -21,10 +21,10 @@ from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding, RepresentationModule
-from ..nn.emb import EmbeddingSpecification
+from ..nn.emb import EmbeddingSpecification, LiteralRepresentations
 from ..nn.modules import Interaction
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import TriplesFactory
+from ..triples import TriplesFactory, TriplesNumericLiteralsFactory
 from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
@@ -38,7 +38,7 @@ __all__ = [
     'DoubleRelationEmbeddingModel',
     'TwoVectorEmbeddingModel',
     'TwoSideEmbeddingModel',
-    'MultimodalModel',
+    'LiteralModel',
 ]
 
 logger = logging.getLogger(__name__)
@@ -1290,10 +1290,6 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         return h, r, t
 
 
-class MultimodalModel(ERModel, autoreset=False):
-    """A multimodal KGE model."""
-
-
 class SingleVectorEmbeddingModel(ERModel, autoreset=False):
     """A KGEM that stores one :class:`pykeen.nn.Embedding` for each entities and relations."""
 
@@ -1586,16 +1582,54 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
         )
 
 
-class MockModel(Model):
-    """A mock model returning fake scores."""
+class LiteralModel(ERModel, autoreset=False):
+    """Base class for models with entity literals."""
 
-    # TODO: Where to put this?
+    # TODO: Move to other file?
 
-    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool = True):
+    def __init__(
+        self,
+        triples_factory: TriplesNumericLiteralsFactory,
+        embedding_dim: int,
+        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        combination: nn.Module,
+        entity_specification: Optional[EmbeddingSpecification] = None,
+        relation_specification: Optional[EmbeddingSpecification] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ):
         super().__init__(
             triples_factory=triples_factory,
+            interaction=interaction,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
             automatic_memory_optimization=automatic_memory_optimization,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            entity_representations=[
+                # entity embeddings
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=entity_specification,
+                ),
+                # Entity literals
+                LiteralRepresentations(
+                    numeric_literals=torch.as_tensor(triples_factory.numeric_literals, dtype=torch.float32),
+                ),
+            ],
+            relation_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_relations,
+                embedding_dim=embedding_dim,
+                specification=relation_specification,
+            ),
         )
+        self.combination = combination
 
     def forward(
         self,
@@ -1605,20 +1639,11 @@ class MockModel(Model):
         slice_size: Optional[int] = None,
         slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # (batch_size, num_heads, num_relations, num_tails)
-        scores = torch.zeros(1, 1, 1, 1, requires_grad=True)  # for requires_grad
-        # reproducible scores
-        for i, (ind, num) in enumerate((
-            (h_indices, self.num_entities),
-            (r_indices, self.num_relations),
-            (t_indices, self.num_entities),
-        )):
-            shape = [1, 1, 1, 1]
-            if ind is None:
-                shape[i + 1] = num
-                delta = torch.arange(num)
-            else:
-                shape[0] = len(ind)
-                delta = ind
-            scores = scores + delta.float().view(*shape)
-        return scores
+        h, r, t = self._get_representations(h_indices, r_indices, t_indices)
+        # combine entity embeddings + literals
+        h, t = [
+            self.combination(torch.cat(x, dim=-1))
+            for x in (h, t)
+        ]
+        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
+        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)

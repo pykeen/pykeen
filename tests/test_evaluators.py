@@ -15,7 +15,8 @@ from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_spar
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import TransE
-from pykeen.models.base import MockModel, Model
+from pykeen.models.base import Model
+from pykeen.testing.mocks import MockModel
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 

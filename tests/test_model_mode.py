@@ -10,7 +10,7 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.models import Model, TransE
-from pykeen.models.base import MockModel
+from pykeen.testing.mocks import MockModel
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 

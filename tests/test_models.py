@@ -24,8 +24,10 @@ from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
 from pykeen.models import _BASE_MODELS, _MODELS
 from pykeen.models.base import (
-    DoubleRelationEmbeddingModel, ERModel, Model,
-    MultimodalModel,
+    DoubleRelationEmbeddingModel,
+    ERModel,
+    LiteralModel,
+    Model,
     SingleVectorEmbeddingModel,
     TwoSideEmbeddingModel,
     TwoVectorEmbeddingModel,
@@ -47,7 +49,7 @@ from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
 SKIP_MODULES = {
     Model.__name__,
     'DummyModel',
-    MultimodalModel.__name__,
+    LiteralModel.__name__,
     DoubleRelationEmbeddingModel.__name__,
     SingleVectorEmbeddingModel.__name__,
     TwoVectorEmbeddingModel.__name__,
@@ -56,7 +58,7 @@ SKIP_MODULES = {
     'models',
     'get_model_cls',
 }
-for cls in MultimodalModel.__subclasses__():
+for cls in LiteralModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
 
 _EPSILON = 1.0e-07
@@ -953,7 +955,7 @@ class TestTesting(unittest.TestCase):
                 isinstance(value, type)
                 and issubclass(value, _ModelTestCase)
                 and not name.startswith('_')
-                and not issubclass(value.model_cls, MultimodalModel)
+                and not issubclass(value.model_cls, LiteralModel)
             )
         }
         tested_model_names -= SKIP_MODULES

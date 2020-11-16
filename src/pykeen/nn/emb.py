@@ -19,6 +19,7 @@ __all__ = [
     'RepresentationModule',
     'Embedding',
     'EmbeddingSpecification',
+    'LiteralRepresentations',
 ]
 
 logger = logging.getLogger(__name__)
@@ -267,3 +268,20 @@ class Embedding(RepresentationModule):
             indices=indices,
             reshape_dim=reshape_dim,
         )
+
+
+class LiteralRepresentations(Embedding):
+    """Literal representations."""
+
+    def __init__(
+        self,
+        numeric_literals: torch.FloatTensor,
+    ):
+        num_embeddings, embedding_dim = numeric_literals.shape
+        super().__init__(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            initializer=lambda x: numeric_literals,  # initialize with the literals
+        )
+        # freeze
+        self._embeddings.requires_grad_(False)

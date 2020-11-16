@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from .distmult_literal import LiteralModel
+from ..base import LiteralModel
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
