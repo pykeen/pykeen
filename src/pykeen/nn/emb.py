@@ -37,6 +37,31 @@ class RepresentationModule(nn.Module):
         """
         raise NotImplementedError
 
+    def get_in_canonical_shape(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+        reshape_dim: Optional[Sequence[int]] = None,
+    ) -> torch.FloatTensor:
+        """Get representations in canonical shape.
+
+        :param indices:
+            The indices. If None, return all embeddings.
+        :param reshape_dim:
+            Optionally reshape the last dimension.
+
+        :return: shape: (batch_size, num_embeddings, d)
+        """
+        x = self(indices=indices)
+        if indices is None:
+            x = x.unsqueeze(dim=0)
+        else:
+            x = x.unsqueeze(dim=1)
+        if len(self.shape) > 1 and reshape_dim is None:
+            reshape_dim = self.shape
+        if reshape_dim is not None:
+            x = x.view(*x.shape[:-1], *reshape_dim)
+        return x
+
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
 
@@ -236,13 +261,9 @@ class Embedding(RepresentationModule):
 
         :return: shape: (batch_size, num_embeddings, d)
         """
-        x = self(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        else:
-            x = x.unsqueeze(dim=1)
         if len(self.shape) > 1 and reshape_dim is None:
             reshape_dim = self.shape
-        if reshape_dim is not None:
-            x = x.view(*x.shape[:-1], *reshape_dim)
-        return x
+        return super().get_in_canonical_shape(
+            indices=indices,
+            reshape_dim=reshape_dim,
+        )
