@@ -11,10 +11,9 @@ from torch import nn
 from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
-from .. import EntityEmbeddingModel
 from ..base import ERModel
 from ...losses import Loss
-from ...nn import Embedding, RepresentationModule
+from ...nn import Embedding, Interaction, RepresentationModule
 from ...nn.modules import DistMultInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -432,31 +431,6 @@ class RGCN(ERModel):
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
     """
 
-    #: Interaction model used as decoder
-    base_model: EntityEmbeddingModel
-
-    #: The blocks of the relation-specific weight matrices
-    #: shape: (num_relations, num_blocks, embedding_dim//num_blocks, embedding_dim//num_blocks)
-    blocks: Optional[nn.ParameterList]
-
-    #: The base weight matrices to generate relation-specific weights
-    #: shape: (num_bases, embedding_dim, embedding_dim)
-    bases: Optional[nn.ParameterList]
-
-    #: The relation-specific weights for each base
-    #: shape: (num_relations, num_bases)
-    att: Optional[nn.ParameterList]
-
-    #: The biases for each layer (if used)
-    #: shape of each element: (embedding_dim,)
-    biases: Optional[nn.ParameterList]
-
-    #: Batch normalization for each layer (if used)
-    batch_norms: Optional[nn.ModuleList]
-
-    #: Activations for each layer (if used)
-    activations: Optional[nn.ModuleList]
-
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=1000, q=50),
@@ -480,6 +454,7 @@ class RGCN(ERModel):
     def __init__(
         self,
         triples_factory: TriplesFactory,
+        interaction: Optional[Interaction] = None,
         embedding_dim: int = 500,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
@@ -504,6 +479,8 @@ class RGCN(ERModel):
     ):
         if triples_factory.create_inverse_triples:
             raise ValueError('R-GCN handles edges in an undirected manner.')
+        if interaction is None:
+            interaction = DistMultInteraction()
 
         entity_representations = RGCNRepresentations(
             triples_factory=triples_factory,
@@ -533,7 +510,7 @@ class RGCN(ERModel):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            interaction=DistMultInteraction(),
+            interaction=interaction,
             entity_representations=entity_representations,
             relation_representations=relation_representations,
         )
