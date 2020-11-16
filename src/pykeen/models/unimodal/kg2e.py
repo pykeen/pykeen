@@ -12,7 +12,6 @@ from ..base import TwoVectorEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import KG2EInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import clamp_norm

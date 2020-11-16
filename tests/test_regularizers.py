@@ -209,15 +209,18 @@ class TransHRegularizerTest(unittest.TestCase):
         self.num_entities = 10
         self.num_relations = 5
         self.regularizer_kwargs = {'weight': .5, 'epsilon': 1e-5}
-        self.entities_weight = nn.Parameter(torch.rand(self.num_entities, 10, device=self.device, generator=self.generator))
-        self.relations_weight = nn.Parameter(torch.rand(self.num_relations, 20, device=self.device, generator=self.generator))
-        self.normal_vector_weight = nn.Parameter(torch.rand(self.num_relations, 20, device=self.device, generator=self.generator))
+        self.entities_weight = self._rand_param(10)
+        self.relations_weight = self._rand_param(20)
+        self.normal_vector_weight = self._rand_param(20)
         self.regularizer_kwargs["entity_embeddings"] = self.entities_weight
         self.regularizer_kwargs["normal_vector_embeddings"] = self.normal_vector_weight
         self.regularizer_kwargs["relation_embeddings"] = self.relations_weight
         self.regularizer = TransHRegularizer(
             **(self.regularizer_kwargs or {}),
         )
+
+    def _rand_param(self, n):
+        return nn.Parameter(torch.rand(self.num_entities, 10, device=self.device, generator=self.generator))
 
     def test_update(self):
         """Test update function of TransHRegularizer."""

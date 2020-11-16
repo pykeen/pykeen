@@ -91,6 +91,7 @@ class NoRegularizer(Regularizer):
 
     Used to simplify code.
     """
+
     # TODO: Deprecated
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
