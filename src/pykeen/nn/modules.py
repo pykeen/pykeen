@@ -457,8 +457,7 @@ def _calculate_missing_shape_information(
     width: Optional[int] = None,
     height: Optional[int] = None,
 ) -> Tuple[int, int, int]:
-    """
-    Automatically calculates missing dimensions for ConvE.
+    """Automatically calculates missing dimensions for ConvE.
 
     :param embedding_dim:
     :param input_channels:
@@ -473,26 +472,29 @@ def _calculate_missing_shape_information(
     # Store initial input for error message
     original = (input_channels, width, height)
 
-    # All are None
-    if all(factor is None for factor in [input_channels, width, height]):
+    # All are None -> try and make closest to square
+    if input_channels is None and width is None and height is None:
         input_channels = 1
         result_sqrt = math.floor(math.sqrt(embedding_dim))
         height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
         width = embedding_dim // height
-
-    # input_channels is None, and any of height or width is None -> set input_channels=1
-    if input_channels is None and any(remaining is None for remaining in [width, height]):
-        input_channels = 1
-
-    # input channels is not None, and one of height or width is None
-    if width is None and height is not None and input_channels is not None:
+    # Only input channels is None
+    elif input_channels is None and width is not None and height is not None:
+        input_channels = embedding_dim // (width * height)
+    # Only width is None
+    elif input_channels is not None and width is None and height is not None:
         width = embedding_dim // (height * input_channels)
+    # Only height is none
     elif height is None and width is not None and input_channels is not None:
         height = embedding_dim // (width * input_channels)
-    elif input_channels is None and height is not None and width is not None:
-        input_channels = embedding_dim // (width * height)
-    else:
-        raise ValueError('More than one of width, height, and input_channels was None')
+    # Width and input_channels are None -> set input_channels to 1 and calculage height
+    elif input_channels is None and height is None and width is not None:
+        input_channels = 1
+        height = embedding_dim // width
+    # Width and input channels are None -> set input channels to 1 and calculate width
+    elif input_channels is None and height is not None and width is None:
+        input_channels = 1
+        width = embedding_dim // height
 
     if input_channels * width * height != embedding_dim:
         raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
