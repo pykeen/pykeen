@@ -3,7 +3,7 @@
 """Regularization in PyKEEN."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import torch
 from torch import nn
@@ -40,15 +40,20 @@ class Regularizer(nn.Module, ABC):
     #: The default strategy for optimizing the regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
+    #: weights which should be regularized
+    parameters: Optional[Collection[nn.Parameter]] = None
+
     def __init__(
         self,
         weight: float = 1.0,
         apply_only_once: bool = False,
+        parameters: Optional[Sequence[nn.Parameter]] = None,
     ):
         super().__init__()
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight, device=self.device))
         self.apply_only_once = apply_only_once
         self.pop_regularization_term()
+        self.parameters = parameters
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -69,6 +74,8 @@ class Regularizer(nn.Module, ABC):
 
     def pop_regularization_term(self) -> torch.FloatTensor:
         """Return the weighted regularization term, and clear it afterwards."""
+        if self.parameters is not None:
+            self.update(*self.parameters)
         term = self.regularization_term
         self.regularization_term = 0.
         self.updated = False
@@ -121,8 +128,9 @@ class LpRegularizer(Regularizer):
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
+        parameters: Optional[Sequence[nn.Parameter]] = None,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -160,8 +168,9 @@ class PowerSumRegularizer(Regularizer):
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
+        parameters: Optional[Sequence[nn.Parameter]] = None,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -186,10 +195,11 @@ class TransHRegularizer(Regularizer):
         self,
         weight: float = 0.05,
         epsilon: float = 1e-5,
+        parameters: Optional[Sequence[nn.Parameter]] = None,
     ):
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(weight=weight, apply_only_once=True)
+        super().__init__(weight=weight, apply_only_once=True, parameters=parameters)
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -225,8 +235,9 @@ class CombinedRegularizer(Regularizer):
         device: torch.device,
         total_weight: float = 1.0,
         apply_only_once: bool = False,
+        parameters: Optional[Sequence[nn.Parameter]] = None,
     ):
-        super().__init__(weight=total_weight, apply_only_once=apply_only_once)
+        super().__init__(weight=total_weight, apply_only_once=apply_only_once, parameters=parameters)
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):

@@ -83,7 +83,6 @@ class ConvKB(SingleVectorEmbeddingModel):
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
-        # TODO: regularize weight and bias
         super().__init__(
             triples_factory=triples_factory,
             interaction=ConvKBInteraction(
@@ -97,4 +96,5 @@ class ConvKB(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
+        self.regularizer = LpRegularizer(parameters=list(self.interaction.parameters()))
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
