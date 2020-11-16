@@ -5,7 +5,7 @@
 import itertools
 import logging
 import math
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Callable, Generic, List, Optional, Sequence, Tuple, Union
 
 import torch
@@ -52,7 +52,7 @@ def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
     return [x[0] if len(x) == 1 else x for x in xs]
 
 
-class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
     # Dimensions
@@ -70,6 +70,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
+    @abstractmethod
     def forward(
         self,
         h: HeadRepresentation,
@@ -336,6 +337,10 @@ class StatelessInteraction(Interaction[HeadRepresentation, RelationRepresentatio
     """Interaction function without state."""
 
     def __init__(self, f: Callable[..., torch.FloatTensor]):
+        """Instantiate the stateless interaction module.
+        
+        :param f: The interaction function, like ones from :mod:`pykeen.nn.functional`.
+        """
         super().__init__()
         self.f = f
 
@@ -346,14 +351,11 @@ class StatelessInteraction(Interaction[HeadRepresentation, RelationRepresentatio
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
         # normalization
-        h, r, t = _ensure_tuple(h, r, t)
+        h, r, t = _ensure_tuple(h, r, t)  # TODO provide example of non-simple case
         return self.f(*h, *r, *t)
 
 
-class TranslationalInteraction(
-    Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-    ABC,
-):
+class TranslationalInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -438,9 +440,7 @@ def _calculate_missing_shape_information(
     return input_channels, width, height
 
 
-class ConvEInteraction(
-    Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]],
-):
+class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
     """ConvE interaction function."""
 
     tail_entity_shape = ("d", "k")  # with k=1
@@ -546,7 +546,10 @@ class ConvEInteraction(
 
 
 class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """Interaction function of ConvKB."""
+    """Interaction function of ConvKB.
+
+    .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
+    """
 
     def __init__(
         self,
@@ -593,15 +596,14 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 class DistMultInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
-    """Interaction function of DistMult."""
+    """A module wrapping the DistMult interaction function at :func:`pykeen.nn.functional.distmult_interaction`."""
 
     def __init__(self):
         super().__init__(f=pkf.distmult_interaction)
 
 
 class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """
-    Interaction function of ER-MLP.
+    """A module wrapping the ER-MLP interaction function from :func:`pykeen.nn.functional.ermlp_interaction`.
 
     .. math ::
         f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
@@ -612,8 +614,7 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         embedding_dim: int,
         hidden_dim: int,
     ):
-        """
-        Initialize the interaction function.
+        """Initialize the interaction function.
 
         :param embedding_dim:
             The embedding vector dimension.
@@ -657,7 +658,7 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 
 class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
-    """Interaction function of ER-MLP."""
+    """Interaction function of ER-MLP (E)."""
 
     def __init__(
         self,

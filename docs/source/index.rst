@@ -24,6 +24,7 @@ PyKEEN
    :maxdepth: 2
 
    reference/pipeline
+   reference/interactions
    reference/models
    reference/datasets
    reference/triples
