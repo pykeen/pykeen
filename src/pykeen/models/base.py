@@ -1033,6 +1033,8 @@ class Model(nn.Module, ABC):
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -1052,6 +1054,8 @@ class Model(nn.Module, ABC):
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -1071,6 +1075,8 @@ class Model(nn.Module, ABC):
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -1090,6 +1096,8 @@ class Model(nn.Module, ABC):
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -1559,12 +1567,16 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return 0.5 * sum(
-            self.interaction(
+            self.interaction.score(
                 h_source.get_in_canonical_shape(indices=h_indices),
                 r_source.get_in_canonical_shape(indices=r_indices),
                 t_source.get_in_canonical_shape(indices=t_indices),
+                slice_size=slice_size,
+                slice_dim=slice_dim,
             )
             for h_source, r_source, t_source in (
                 (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
@@ -1589,6 +1601,8 @@ class MockModel(Model):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # (batch_size, num_heads, num_relations, num_tails)
         scores = torch.zeros(1, 1, 1, 1, requires_grad=True)  # for requires_grad

@@ -186,10 +186,12 @@ class ConvE(ERModel):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_representations[0].get_in_canonical_shape(indices=h_indices)
         r = self.relation_representations[0].get_in_canonical_shape(indices=r_indices)
         t = self.entity_representations[0].get_in_canonical_shape(indices=t_indices)
         t_bias = self.entity_representations[1].get_in_canonical_shape(indices=t_indices)
         self.regularize_if_necessary(h, r, t)
-        return self.interaction(h=h, r=r, t=(t, t_bias))
+        return self.interaction.score(h=h, r=r, t=(t, t_bias), slice_size=slice_size, slice_dim=slice_dim)

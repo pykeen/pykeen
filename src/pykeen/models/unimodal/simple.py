@@ -92,11 +92,15 @@ class SimplE(TwoSideEmbeddingModel):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         scores = super().forward(
             h_indices=h_indices,
             r_indices=r_indices,
             t_indices=t_indices,
+            slice_size=slice_size,
+            slice_dim=slice_dim,
         )
 
         # Note: In the code in their repository, the score is clamped to [-20, 20].

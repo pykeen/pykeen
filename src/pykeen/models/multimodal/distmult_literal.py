@@ -93,6 +93,8 @@ class LiteralModel(ERModel):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = self._get_representations(h_indices, r_indices, t_indices)
         # combine entity embeddings + literals
@@ -100,7 +102,7 @@ class LiteralModel(ERModel):
             self.combination(torch.cat(x, dim=-1))
             for x in (h, t)
         ]
-        scores = self.interaction(h=h, r=r, t=t)
+        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
 
 
