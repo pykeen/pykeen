@@ -42,12 +42,14 @@ class LiteralRepresentations(Embedding):
 class LiteralModel(ERModel):
     """Base class for models with entity literals."""
 
+    # TODO: Move to other file?
+
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int,
         interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-        dropout: float = 0.0,
+        combination: nn.Module,
         entity_specification: Optional[EmbeddingSpecification] = None,
         relation_specification: Optional[EmbeddingSpecification] = None,
         loss: Optional[Loss] = None,
@@ -84,10 +86,7 @@ class LiteralModel(ERModel):
                 specification=relation_specification,
             ),
         )
-        self.trans = nn.Sequential(
-            nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
-            nn.Dropout(dropout),
-        )
+        self.combination = combination
 
     def forward(
         self,
@@ -98,7 +97,7 @@ class LiteralModel(ERModel):
         h, r, t = self._get_representations(h_indices, r_indices, t_indices)
         # combine entity embeddings + literals
         h, t = [
-            self.trans(torch.cat(x, dim=-1))
+            self.combination(torch.cat(x, dim=-1))
             for x in (h, t)
         ]
         scores = self.interaction(h=h, r=r, t=t)
@@ -134,7 +133,10 @@ class DistMultLiteral(LiteralModel):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             interaction=DistMultInteraction(),
-            dropout=input_dropout,
+            combination=nn.Sequential(
+                nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
+                nn.Dropout(input_dropout),
+            ),
             entity_specification=EmbeddingSpecification(
                 initializer=xavier_normal_,
             ),

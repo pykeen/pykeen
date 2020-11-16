@@ -353,6 +353,14 @@ def split_complex(
     return x[..., :dim], x[..., dim:]
 
 
+def combine_complex(
+    x_re: torch.FloatTensor,
+    x_im: torch.FloatTensor,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    """Combine a complex tensor from real and imaginary part."""
+    return torch.cat([x_re, x_im], dim=-1)
+
+
 def real_part(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
