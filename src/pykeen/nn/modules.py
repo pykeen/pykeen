@@ -222,13 +222,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        return self._forward(
-            h=h,
-            r=r,
-            t=t,
-            slice_size=slice_size,
-            slice_dim=slice_dim,
-        )
+        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
     def _score(
         self,
@@ -260,7 +254,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r = self._add_dim(*r, dim=self.BATCH_DIM if r_prefix == "n" else self.NUM_DIM)
         t = self._add_dim(*t, dim=self.BATCH_DIM if t_prefix == "n" else self.NUM_DIM)
 
-        scores = self._forward(h, r, t, slice_dim, slice_size)
+        scores = self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
 
         remove_dims = [
             dim
@@ -273,19 +267,52 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         # prepare output shape
         return self._remove_dim(scores, *remove_dims)
 
-    def _forward(self, h, r, t, slice_size, slice_dim):
-        # get scores
+    def _forward_slicing_wrapper(
+        self,
+        h: Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]],
+        r: Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]],
+        t: Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]],
+        slice_size: Optional[int],
+        slice_dim: str,
+    ) -> torch.FloatTensor:
+        """
+        Compute broadcasted triple scores with optional slicing for representations in canonical shape.
+
+        .. note ::
+            Depending on the interaction function, there may be more than one representation for h/r/t. In that case,
+            a tuple of at least two tensors is passed.
+
+        :param h: shape: (batch_size, num_heads, ``*``)
+            The head representations.
+        :param r: shape: (batch_size, num_relations, ``*``)
+            The relation representations.
+        :param t: shape: (batch_size, num_tails, ``*``)
+            The tail representations.
+        :param slice_size:
+            The slice size.
+        :param slice_dim:
+            The dimension along which to slice. From {"h", "r", "t"}
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The scores.
+        """
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
         elif slice_dim == "h":
-            batch_scores = [self(h=h_batch, r=r, t=t) for h_batch in _get_batches(h, slice_size)]
-            scores = torch.cat(batch_scores, dim=self.HEAD_DIM)
+            scores = torch.cat([
+                self(h=h_batch, r=r, t=t)
+                for h_batch in _get_batches(h, slice_size)
+            ], dim=self.HEAD_DIM)
         elif slice_dim == "r":
-            batch_scores = [self(h=h, r=r_batch, t=t) for r_batch in _get_batches(r, slice_size)]
-            scores = torch.cat(batch_scores, dim=self.RELATION_DIM)
+            scores = torch.cat([
+                self(h=h, r=r_batch, t=t)
+                for r_batch in _get_batches(r, slice_size)
+            ], dim=self.RELATION_DIM)
         elif slice_dim == "t":
-            batch_scores = [self(h=h, r=r, t=t_batch) for t_batch in _get_batches(t, slice_size)]
-            scores = torch.cat(batch_scores, dim=self.TAIL_DIM)
+            scores = torch.cat([
+                self(h=h, r=r, t=t_batch)
+                for t_batch in _get_batches(t, slice_size)
+            ], dim=self.TAIL_DIM)
         else:
             raise ValueError(f'Invalid slice_dim: {slice_dim}')
         return scores
