@@ -496,10 +496,10 @@ def _calculate_missing_shape_information(
         input_channels = 1
         width = embedding_dim // height
 
-    if input_channels * width * height != embedding_dim:
+    if input_channels * width * height != embedding_dim:  # type: ignore
         raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
 
-    return input_channels, width, height
+    return input_channels, width, height  # type: ignore
 
 
 class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
