@@ -243,7 +243,11 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             if prefix == "n"
         ]
         slice_dim: Optional[str] = slice_dims[0] if len(slice_dims) == 1 else None
-        h, r, t = _ensure_tuple(h, r, t)
+
+        # FIXME typing does not work well for this
+        h = _upgrade_to_sequence(h)
+        r = _upgrade_to_sequence(r)
+        t = _upgrade_to_sequence(t)
         assert self._check_shapes(h=h, r=r, t=t, h_prefix=h_prefix, r_prefix=r_prefix, t_prefix=t_prefix)
 
         # prepare input to generic score function: bh*, br*, bt*
@@ -410,7 +414,10 @@ class StatelessInteraction(Interaction[HeadRepresentation, RelationRepresentatio
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
         # normalization
-        h, r, t = _ensure_tuple(h, r, t)  # TODO provide example of non-simple case
+        h = _upgrade_to_sequence(h)
+        r = _upgrade_to_sequence(r)
+        t = _upgrade_to_sequence(t)
+        # TODO provide example of non-simple case
         return self.f(*h, *r, *t)
 
 
