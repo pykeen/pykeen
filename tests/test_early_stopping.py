@@ -13,7 +13,7 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel, Model
+from pykeen.models.base import Model
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
@@ -102,33 +102,32 @@ class MockEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class MockModel(EntityRelationEmbeddingModel):
+class MockModel(Model):
     """A mock model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
-            interaction=None,
         )
-        num_entities = self.num_entities
-        self.scores = torch.arange(num_entities, dtype=torch.float)
 
-    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
-        batch_size = batch.shape[0]
-        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
-        assert batch_scores.shape == (batch_size, self.num_entities)
-        return batch_scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hrt_batch)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hr_batch)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=rt_batch)
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        # (batch_size, num_heads, num_relations, num_tails)
+        bss, (nh, nr, nt) = zip(*(
+            (1, num) if ind is None else (ind.shape[0], 1)
+            for ind, num in (
+                (h_indices, self.num_entities),
+                (r_indices, self.num_relations),
+                (t_indices, self.num_entities),
+            )
+        ))
+        bs = max(bss)
+        return torch.rand(bs, nh, nr, nt)
 
 
 class LogCallWrapper:
