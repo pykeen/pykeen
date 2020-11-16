@@ -1203,8 +1203,7 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         """
         h, r, t = self._get_representations(h_indices, r_indices, t_indices)
         scores = self.interaction(h=h, r=r, t=t)
-        scores = self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
-        return scores
+        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
 
     def _repeat_scores_if_necessary(
         self,

@@ -10,19 +10,102 @@ from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, Interaction
+from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
+from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import DeviceHint
-from ...utils import slice_triples
+from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
     'DistMultLiteral',
 ]
 
 
+class LiteralRepresentations(Embedding):
+    """Literal representations."""
+
+    def __init__(
+        self,
+        numeric_literals: torch.FloatTensor,
+    ):
+        num_embeddings, embedding_dim = numeric_literals.shape
+        super().__init__(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            initializer=lambda x: numeric_literals,  # initialize with the literals
+        )
+        # freeze
+        self._embeddings.requires_grad_(False)
+
+
+class LiteralModel(MultimodalModel):
+    def __init__(
+        self,
+        triples_factory: TriplesNumericLiteralsFactory,
+        embedding_dim: int,
+        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        dropout: float = 0.0,
+        entity_specification: Optional[EmbeddingSpecification] = None,
+        relation_specification: Optional[EmbeddingSpecification] = None,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ):
+        super().__init__(
+            triples_factory=triples_factory,
+            interaction=interaction,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            automatic_memory_optimization=automatic_memory_optimization,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+            regularizer=regularizer,
+            entity_representations=[
+                # entity embeddings
+                Embedding.from_specification(
+                    num_embeddings=triples_factory.num_entities,
+                    embedding_dim=embedding_dim,
+                    specification=entity_specification,
+                ),
+                # Entity literals
+                LiteralRepresentations(
+                    numeric_literals=torch.as_tensor(triples_factory.numeric_literals, dtype=torch.float32),
+                ),
+            ],
+            relation_representations=Embedding.from_specification(
+                num_embeddings=triples_factory.num_relations,
+                embedding_dim=embedding_dim,
+                specification=relation_specification,
+            ),
+        )
+        self.trans = nn.Sequential(
+            nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
+            nn.Dropout(dropout),
+        )
+
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = self._get_representations(h_indices, r_indices, t_indices)
+        # combine entity embeddings + literals
+        h, t = [
+            self.trans(torch.cat(x, dim=-1))
+            for x in (h, t)
+        ]
+        scores = self.interaction(h=h, r=r, t=t)
+        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
+
+
 # TODO: Check entire build of the model
-class DistMultLiteral(MultimodalModel):
+# TODO: There are no tests
+class DistMultLiteral(LiteralModel):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -42,124 +125,24 @@ class DistMultLiteral(MultimodalModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        predict_with_sigmoid: bool = False,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
-            interaction=DistMultInteraction(),
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
+            embedding_dim=embedding_dim,
+            interaction=DistMultInteraction(),
+            dropout=input_dropout,
+            entity_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+            ),
+            relation_specification=EmbeddingSpecification(
+                initializer=xavier_normal_,
+            ),
             loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            entity_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_entities,
-                embedding_dim=embedding_dim,
-            ),
-            relation_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_relations,
-                embedding_dim=embedding_dim,
-            ),
+            regularizer=regularizer,
         )
-
-        numeric_literals = triples_factory.numeric_literals
-
-        # Embeddings
-        self.relation_embeddings = None
-        self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
-        )
-        # Number of columns corresponds to number of literals
-        self.num_of_literals = self.numeric_literals.weight.data.shape[1]
-        self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
-        self.input_dropout = torch.nn.Dropout(input_dropout)
-        self._init_embeddings()
-
-    def _init_embeddings(self):
-        """Initialize the entities and relation embeddings based on the XAVIER initialization."""
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
-        xavier_normal_(self.entity_embeddings.weight.data)
-        xavier_normal_(self.relation_embeddings.weight.data)
-
-    @staticmethod
-    def _get_embeddings(elements, embedding_module, embedding_dim):
-        return embedding_module(elements).view(-1, embedding_dim)
-
-    def _get_literals(self, heads, tails):
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.numeric_literals,
-                embedding_dim=self.num_of_literals,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.numeric_literals,
-                embedding_dim=self.num_of_literals,
-            ),
-        )
-
-    def _get_triple_embeddings(self, heads, relations, tails):
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=relations,
-                embedding_module=self.relation_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-        )
-
-    def _apply_g_function(self, entity_embeddings, literals):
-        """Concatenate the entities with its literals and apply the g function which is a linear transformation in this model.
-
-        :param entity_embeddings: batch_size x self.embedding_dim
-        :param literals: batch_size x self.num_literals
-        :return:
-        """
-        return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        raise NotImplementedError
-
-    def score_t(self, hr_batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (tail) prediction for training with the LCWA."""
-        heads, relations, tails = slice_triples(hr_batch)
-        head_embs, relation_embs, tail_embs = self._get_triple_embeddings(
-            heads=heads,
-            relations=relations,
-            tails=tails,
-        )
-        head_literals, tail_literals = self._get_literals(heads=heads, tails=tails)
-
-        g_heads = self._apply_g_function(entity_embeddings=head_embs, literals=head_literals)
-        g_tails = self._apply_g_function(entity_embeddings=tail_embs, literals=tail_literals)
-
-        # apply dropout
-        g_heads = self.input_dropout(g_heads)
-        g_tails = self.input_dropout(g_tails)
-
-        # -, because lower score shall correspond to a more plausible triple.
-        scores = - torch.sum(g_heads * relation_embs * g_tails, dim=1)
-        return scores
-
-    # TODO check if this is the same as the BaseModule
-    def compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """Compute the mean ranking loss for the positive and negative scores."""
-        # Choose y = -1 since a smaller score is better.
-        # In TransE for example, the scores represent distances
-        if not self.compute_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of Margin Ranking losses. '
-                'Please use the compute_label_loss method instead',
-            )
-        y = torch.ones_like(negative_scores, device=self.device) * -1
-        loss = self.loss(positive_scores, negative_scores, y)
-        return loss
