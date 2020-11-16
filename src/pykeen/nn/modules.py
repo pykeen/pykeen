@@ -113,7 +113,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         raise NotImplementedError
 
     @staticmethod
-    def _add_dim(*x: torch.FloatTensor, dim: int) -> Sequence[torch.FloatTensor]:
+    def _add_dim(*x: torch.FloatTensor, dim: int) -> Union[torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor, ...]]:
         """
         Add a dimension to tensors.
 
