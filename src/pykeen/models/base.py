@@ -1008,7 +1008,11 @@ class Model(nn.Module, ABC):
 
         This method takes head, relation and tail indices and calculates the corresponding score.
 
-        All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
+        .. note ::
+            All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
+
+        .. note ::
+            If slicing is requested, the corresponding indices have to be None.
 
         :param h_indices:
             The head indices. None indicates to use all.
@@ -1019,7 +1023,7 @@ class Model(nn.Module, ABC):
         :param slice_size:
             The slice size.
         :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
+            The dimension along which to slice. From {"h", "r", "t"}.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
