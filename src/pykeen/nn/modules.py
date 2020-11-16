@@ -308,6 +308,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The relation representations.
         :param t: shape: (batch_size, d_e)
             The tail representations.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, num_entities)
             The scores.
@@ -330,6 +332,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The relation representations.
         :param t: shape: (batch_size, d_e)
             The tail representations.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, num_entities)
             The scores.
@@ -352,6 +356,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The relation representations.
         :param all_entities: shape: (num_entities, d_e)
             The tail representations.
+        :param slice_size:
+            The slice size.
 
         :return: shape: (batch_size, num_entities)
             The scores.

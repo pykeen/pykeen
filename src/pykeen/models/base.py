@@ -1026,15 +1026,13 @@ class Model(nn.Module, ABC):
         """
         raise NotImplementedError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
-        :param slice_size:
-            The slice size.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -1043,8 +1041,6 @@ class Model(nn.Module, ABC):
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
             t_indices=hrt_batch[:, 2],
-            slice_size=slice_size,
-            slice_dim="h",
         ).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
@@ -1086,7 +1082,7 @@ class Model(nn.Module, ABC):
             r_indices=rt_batch[:, 0],
             t_indices=rt_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="h",
+            slice_dim="r",
         ).view(rt_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
@@ -1107,7 +1103,7 @@ class Model(nn.Module, ABC):
             r_indices=None,
             t_indices=ht_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="h",
+            slice_dim="t",
         ).view(ht_batch.shape[0], self.num_relations)
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
