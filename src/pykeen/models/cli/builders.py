@@ -45,8 +45,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
     def _decorate_model_kwargs(command: click.Command) -> click.Command:
         for name, annotation in model.__init__.__annotations__.items():
-            parameter = signature.parameters[name]
-
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
 
@@ -56,14 +54,15 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             elif annotation in {Optional[int], Optional[str]}:
                 option = click.option(f'--{name.replace("_", "-")}', type=_OPTIONAL_MAP[annotation])
 
-            elif parameter.default is None:
-                logger.warning(
-                    f'Missing handler in {model.__name__} for {name}: '
-                    f'type={annotation} default={parameter.default}',
-                )
-                continue
-
             else:
+                parameter = signature.parameters[name]
+                if parameter.default is None:
+                    logger.warning(
+                        f'Missing handler in {model.__name__} for {name}: '
+                        f'type={annotation} default={parameter.default}',
+                    )
+                    continue
+
                 option = click.option(f'--{name.replace("_", "-")}', type=annotation, default=parameter.default)
 
             try:
