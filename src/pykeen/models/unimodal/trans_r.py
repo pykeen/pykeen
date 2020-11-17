@@ -7,7 +7,7 @@ from typing import Optional
 
 from torch.nn import functional
 
-from .. import DoubleRelationEmbeddingModel
+from ..base import DoubleRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
