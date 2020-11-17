@@ -46,18 +46,10 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
     def _decorate_model_kwargs(command: click.Command) -> click.Command:
         for name, annotation in model.__init__.__annotations__.items():
+            parameter = signature.parameters[name]
+
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
-
-            if annotation == Union[None, str, Regularizer]:  # a model that has preset regularization
-                parameter = signature.parameters[name]
-                option = click.option(
-                    '--regularizer',
-                    type=click.Choice(regularizers),
-                    default=parameter.default,
-                    show_default=True,
-                    help=f'The name of the regularizer preset for {model.__name__}',
-                )
 
             elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
@@ -65,15 +57,14 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             elif annotation in {Optional[int], Optional[str]}:
                 option = click.option(f'--{name.replace("_", "-")}', type=_OPTIONAL_MAP[annotation])
 
-            else:
-                parameter = signature.parameters[name]
-                if parameter.default is None:
-                    logger.warning(
-                        f'Missing handler in {model.__name__} for {name}: '
-                        f'type={annotation} default={parameter.default}',
-                    )
-                    continue
+            elif parameter.default is None:
+                logger.warning(
+                    f'Missing handler in {model.__name__} for {name}: '
+                    f'type={annotation} default={parameter.default}',
+                )
+                continue
 
+            else:
                 option = click.option(f'--{name.replace("_", "-")}', type=annotation, default=parameter.default)
 
             try:
@@ -84,13 +75,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
         return command
 
-    regularizer_option = click.option(
-        '--regularizer',
-        type=click.Choice(regularizers),
-        default=model.regularizer_default.get_normalized_name() if model.regularizer_default else 'no',
-        show_default=True,
-    )
-
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
     @options.device_option
     @options.dataset_option
@@ -98,7 +82,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.testing_option
     @options.valiadation_option
     @options.optimizer_option
-    @regularizer_option
     @options.training_loop_option
     @options.number_epochs_option
     @options.batch_size_option
@@ -117,7 +100,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         device,
         training_loop,
         optimizer,
-        regularizer,
         number_epochs,
         batch_size,
         learning_rate,
@@ -156,7 +138,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             device=device,
             model=model,
             model_kwargs=model_kwargs,
-            regularizer=regularizer,
             dataset=dataset,
             training=training_triples_factory,
             testing=testing_triples_factory or training_triples_factory,
