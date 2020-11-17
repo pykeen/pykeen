@@ -1349,6 +1349,7 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
         ],
         embedding_dim: int = 50,
         relation_dim: Union[None, int, Sequence[int]] = None,
+        second_relation_dim: Union[None, int, Sequence[int]] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
@@ -1360,6 +1361,8 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
     ) -> None:
         if relation_dim is None:
             relation_dim = embedding_dim
+        if second_relation_dim is None:
+            second_relation_dim = relation_dim
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,

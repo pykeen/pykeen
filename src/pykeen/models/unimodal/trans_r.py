@@ -7,9 +7,9 @@ from typing import Optional
 
 from torch.nn import functional
 
-from .. import ERModel
+from .. import DoubleRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import TransRInteraction
 from ...triples import TriplesFactory
@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-class TransR(ERModel):
+class TransR(DoubleRelationEmbeddingModel):
     r"""An implementation of TransR from [lin2015]_.
 
     TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
@@ -77,37 +77,28 @@ class TransR(ERModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            entity_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_entities,
-                shape=embedding_dim,
-                specification=EmbeddingSpecification(
-                    initializer=xavier_uniform_,
-                    constrainer=clamp_norm,  # type: ignore
-                    constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-                ),
+            # Entity embeddings
+            embedding_dim=embedding_dim,
+            embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+                constrainer=clamp_norm,  # type: ignore
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
-            relation_representations=[
-                Embedding.from_specification(
-                    triples_factory.num_relations,
-                    shape=relation_dim,
-                    specification=EmbeddingSpecification(
-                        initializer=compose(
-                            xavier_uniform_,
-                            functional.normalize,
-                        ),
-                        constrainer=clamp_norm,  # type: ignore
-                        constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-                    ),
+            # Relation embeddings
+            relation_dim=relation_dim,
+            relation_embedding_specification=EmbeddingSpecification(
+                initializer=compose(
+                    xavier_uniform_,
+                    functional.normalize,
                 ),
-                # Relation projections
-                Embedding.from_specification(
-                    triples_factory.num_relations,
-                    shape=(relation_dim, embedding_dim),
-                    specification=EmbeddingSpecification(
-                        initializer=xavier_uniform_,
-                    ),
-                ),
-            ],
+                constrainer=clamp_norm,  # type: ignore
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            # Relation projections
+            second_relation_dim=(relation_dim, embedding_dim),
+            second_relation_embedding_specification=EmbeddingSpecification(
+                initializer=xavier_uniform_,
+            ),
             interaction=TransRInteraction(
                 p=scoring_fct_norm,
             ),
