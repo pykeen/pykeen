@@ -649,3 +649,13 @@ def project_entity(
     e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
     return e_bot
+
+
+def pop_only(elements: Iterable[X]) -> X:
+    """Unpack a one element list, or raise an error."""
+    elements = tuple(elements)
+    if len(elements) == 0:
+        raise ValueError('Empty sequence given')
+    if len(elements) > 1:
+        raise ValueError(f'More than one element: {elements}')
+    return elements[0]

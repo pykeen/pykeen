@@ -13,6 +13,7 @@ from ...nn.modules import TransHInteraction
 from ...regularizers import TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
+from ...utils import pop_only
 
 __all__ = [
     'TransH',
@@ -97,8 +98,8 @@ class TransH(DoubleRelationEmbeddingModel):
                 constrainer=functional.normalize,
             ),
         )
-        self.regularizer = self._instantiate_default_regularizer(
-            entity_embeddings=list(self.entity_representations[0].parameters()).pop(),
-            relation_embeddings=list(self.relation_representations[0].parameters()).pop(),
-            normal_vector_embeddings=list(self.relation_representations[1].parameters()).pop(),
-        )
+        self.regularizer = self._instantiate_default_regularizer(parameters=[
+            pop_only(self.entity_representations[0].parameters()),
+            pop_only(self.relation_representations[0].parameters()),
+            pop_only(self.relation_representations[1].parameters()),
+        ])
