@@ -3,7 +3,6 @@
 """Base module for all KGE models."""
 
 import functools
-import inspect
 import itertools as itt
 import logging
 from abc import ABC, abstractmethod
@@ -194,10 +193,6 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
-def _can_slice(fn) -> bool:
-    return 'slice_size' in inspect.getfullargspec(fn).args
-
-
 def _track_hyperparameters(cls: Type['Model']) -> None:
     """Initialize the subclass while keeping track of hyper-parameters."""
     # Keep track of the hyper-parameters that are used across all
@@ -328,21 +323,6 @@ class Model(nn.Module, ABC):
         if not cls._is_abstract:
             _track_hyperparameters(cls)
             _add_post_reset_parameters(cls)
-
-    @property
-    def can_slice_h(self) -> bool:
-        """Whether score_h supports slicing."""
-        return _can_slice(self.score_h)
-
-    @property
-    def can_slice_r(self) -> bool:
-        """Whether score_r supports slicing."""
-        return _can_slice(self.score_r)
-
-    @property
-    def can_slice_t(self) -> bool:
-        """Whether score_t supports slicing."""
-        return _can_slice(self.score_t)
 
     @property
     def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
@@ -491,10 +471,7 @@ class Model(nn.Module, ABC):
         """
         # Enforce evaluation mode
         self.eval()
-        if slice_size is not None and self.can_slice_t:
-            scores = self.score_t(hr_batch, slice_size=slice_size)  # type: ignore
-        else:
-            scores = self.score_t(hr_batch)
+        scores = self.score_t(hr_batch, slice_size=slice_size)  # type: ignore
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -630,10 +607,7 @@ class Model(nn.Module, ABC):
         """
         # Enforce evaluation mode
         self.eval()
-        if slice_size is not None and self.can_slice_r:
-            scores = self.score_r(ht_batch, slice_size=slice_size)  # type: ignore
-        else:
-            scores = self.score_r(ht_batch)
+        scores = self.score_r(ht_batch, slice_size=slice_size)  # type: ignore
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -666,10 +640,7 @@ class Model(nn.Module, ABC):
         for a (tail, inverse_relation) pair.
         '''
         if not self.triples_factory.create_inverse_triples:
-            if slice_size is not None and self.can_slice_h:
-                scores = self.score_h(rt_batch, slice_size=slice_size)  # type: ignore
-            else:
-                scores = self.score_h(rt_batch)
+            scores = self.score_h(rt_batch, slice_size=slice_size)
             if self.predict_with_sigmoid:
                 scores = torch.sigmoid(scores)
             return scores
@@ -691,10 +662,7 @@ class Model(nn.Module, ABC):
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
         rt_batch_cloned = rt_batch_cloned.flip(1)
-        if slice_size is not None and self.can_slice_t:
-            scores = self.score_t(rt_batch_cloned, slice_size=slice_size)  # type: ignore
-        else:
-            scores = self.score_t(rt_batch_cloned)
+        scores = self.score_t(rt_batch_cloned, slice_size=slice_size)  # type: ignore
 
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)

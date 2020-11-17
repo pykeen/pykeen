@@ -258,7 +258,6 @@ class Evaluator(ABC):
             values_dict[key] = start_value
             values_dict['slice_size'] = None
         elif key == 'slice_size':
-            self._check_slicing_availability(model, batch_size=1)
             values_dict[key] = start_value
             values_dict['batch_size'] = 1
         else:
@@ -319,19 +318,6 @@ class Evaluator(ABC):
                     break
 
         return values_dict[key], evaluated_once
-
-    @staticmethod
-    def _check_slicing_availability(model: Model, batch_size: int) -> None:
-        # Test if slicing is implemented for the required functions of this model
-        if model.triples_factory.create_inverse_triples:
-            if not model.can_slice_t:
-                raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
-                                  f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
-                                  f"this model yet.")
-        elif not model.can_slice_t or not model.can_slice_h:
-            raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
-                              f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
-                              f"model yet.")
 
 
 def create_sparse_positive_filter_(

@@ -121,7 +121,6 @@ class LCWATrainingLoop(TrainingLoop):
         sub_batch_size: int,
         supports_sub_batching: bool,
     ) -> int:  # noqa: D102
-        self._check_slicing_availability(supports_sub_batching)
         reached_max = False
         evaluated_once = False
         logger.info("Trying slicing now.")
@@ -166,19 +165,3 @@ class LCWATrainingLoop(TrainingLoop):
                 evaluated_once = True
 
         return slice_size
-
-    def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.model.can_slice_t:
-            return
-        elif supports_sub_batching:
-            report = (
-                "This model supports sub-batching, but it also requires slicing,"
-                " which is not implemented for this model yet."
-            )
-        else:
-            report = (
-                "This model doesn't support sub-batching and slicing is not"
-                " implemented for this model yet."
-            )
-        logger.warning(report)
-        raise MemoryError("The current model can't be trained on this hardware with these parameters.")
