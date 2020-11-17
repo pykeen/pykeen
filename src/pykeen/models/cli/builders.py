@@ -14,8 +14,7 @@ from torch import nn
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
-from ...regularizers import Regularizer, _REGULARIZER_SUFFIX, regularizers
-from ...utils import normalize_string
+from ...regularizers import Regularizer, regularizers
 
 __all__ = [
     'build_cli_from_cls',
@@ -54,7 +53,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 parameter = signature.parameters[name]
                 option = click.option(
                     '--regularizer',
-                    type=str,
+                    type=click.Choice(regularizers),
                     default=parameter.default,
                     show_default=True,
                     help=f'The name of the regularizer preset for {model.__name__}',
@@ -88,8 +87,8 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     regularizer_option = click.option(
         '--regularizer',
         type=click.Choice(regularizers),
-        help=f'The name of the regularizer. Defaults to'
-             f' {normalize_string(model.regularizer_default.__name__, suffix=_REGULARIZER_SUFFIX)}',
+        default=model.regularizer_default.get_normalized_name() if model.regularizer_default else 'no',
+        show_default=True,
     )
 
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
