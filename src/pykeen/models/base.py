@@ -1318,6 +1318,7 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
     @property
     def embedding_dim(self) -> int:  # noqa:D401
         """The entity embedding dim."""
+        # TODO: Deprecated; directly use self.entity_representations[0].embedding_dim instead?
         embedding = self.entity_representations[0]
         assert isinstance(embedding, Embedding)
         return embedding.embedding_dim
@@ -1325,6 +1326,7 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
     @property
     def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dim."""
+        # TODO: Deprecated; directly use self.relation_representations[0].embedding_dim instead?
         embedding = self.relation_representations[0]
         assert isinstance(embedding, Embedding)
         return embedding.embedding_dim
@@ -1386,7 +1388,7 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    shape=relation_dim,
+                    shape=second_relation_dim,
                     specification=second_relation_embedding_specification,
                 ),
             ],
