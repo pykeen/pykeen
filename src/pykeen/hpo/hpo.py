@@ -57,7 +57,7 @@ class Objective:
     dataset: Union[None, str, Type[DataSet]]  # 1.
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
-    # regularizer: Type[Regularizer]  # 4.
+    regularizer: Type[Regularizer]  # 4.
     optimizer: Type[Optimizer]  # 5.
     training_loop: Type[TrainingLoop]  # 6.
     evaluator: Type[Evaluator]  # 8.
@@ -77,8 +77,8 @@ class Objective:
     loss_kwargs: Optional[Mapping[str, Any]] = None
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 4. Regularizer
-    # regularizer_kwargs: Optional[Mapping[str, Any]] = None
-    # regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None
+    regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 5. Optimizer
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
