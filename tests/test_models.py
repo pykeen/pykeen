@@ -8,7 +8,7 @@ import tempfile
 import traceback
 import unittest
 from typing import Any, ClassVar, Mapping, Optional, Type
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy
 import pytest
@@ -41,6 +41,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.nn import RepresentationModule
+from pykeen.regularizers import LpRegularizer, Regularizer, collect_regularization_terms
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, project_entity, set_random_seed
@@ -84,6 +85,48 @@ class _CustomRepresentations(RepresentationModule):
         if indices is None:
             return x.unsqueeze(dim=0)
         return x.unsqueeze(dim=1)
+
+
+class ERModelTests(unittest.TestCase):
+    """Test basic functionality of ERModel."""
+
+    def setUp(self) -> None:
+        """Setup the test instance."""
+        self.model = ERModel(
+            triples_factory=MagicMock(),
+            interaction=MagicMock(),
+        )
+
+    def test_add_weight_regularizer_non_existing(self):
+        """Test add_weight_regularizer."""
+        # try to add regularizer to non-existing weight
+        with self.assertRaises(ValueError):
+            self.model.add_weight_regularizer(
+                parameter_name="this.weight.does.not.exist",
+                regularizer=...,
+            )
+
+    def test_add_weight_regularizer(self):
+        """Test add_weight_regularizer."""
+        # add weighted submodules
+        self.model.linear = nn.Linear(3, 2)
+        self.model.sub_model = nn.Sequential(
+            nn.Linear(2, 3),
+            nn.LeakyReLU(),
+            self.model.linear,
+        )
+
+        regularizer = LpRegularizer()
+
+        # try to add regularizer to existing weight
+        self.model.add_weight_regularizer(
+            parameter_name="linear.weight",
+            regularizer=regularizer,
+        )
+
+        # check it gets found by collect
+        term = collect_regularization_terms(self.model)
+        assert torch.is_tensor(term)
 
 
 class _ModelTestCase:
@@ -385,16 +428,16 @@ Traceback
         else:
             self.assertIsInstance(d, dict)
 
-    def test_post_parameter_update_regularizer(self):
-        """Test whether post_parameter_update resets the regularization term."""
-        # set regularizer term
-        self.model.regularizer.regularization_term = None
+    def test_collect_regularization_terms(self):
+        """Test whether collect_regularization_terms resets all regularization terms."""
+        # TODO: Does this need to be tested for all models, since the code paths are the same?
+        # retrieve all regularization terms
+        collect_regularization_terms(self.model)
 
-        # call post_parameter_update
-        self.model.post_parameter_update()
-
-        # assert that the regularization term has been reset
-        assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float, device=self.model.device)
+        # check that all terms are reset
+        for module in self.model.modules():
+            if isinstance(module, Regularizer):
+                assert module.regularization_term == 0.0
 
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
