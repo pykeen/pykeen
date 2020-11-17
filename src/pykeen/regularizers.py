@@ -34,6 +34,9 @@ class Regularizer(nn.Module, ABC):
     #: The current regularization term (a scalar)
     regularization_term: Union[torch.FloatTensor, float]
 
+    #: Has this regularizer been updated?
+    updated: bool
+
     #: Should the regularization only be applied once? This was used for ConvKB and defaults to False.
     apply_only_once: bool
 
@@ -47,16 +50,12 @@ class Regularizer(nn.Module, ABC):
         self,
         weight: float = 1.0,
         apply_only_once: bool = False,
-        parameters: Optional[Sequence[nn.Parameter]] = None,
+        parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
         super().__init__()
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
-        if parameters is None:
-            parameters = []
-        else:
-            parameters = list(parameters)
-        self.tracked_parameters = parameters
+        self.tracked_parameters = list(parameters) if parameters else []
         self._clear()
 
     def _clear(self):
@@ -102,7 +101,7 @@ class NoRegularizer(Regularizer):
 
     # TODO: Deprecated
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
+    #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -120,8 +119,8 @@ class LpRegularizer(Regularizer):
     #: This allows dimensionality-independent weight tuning.
     normalize: bool
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = dict(
+    #: The default strategy for optimizing the LP regularizer's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
 
@@ -160,8 +159,8 @@ class PowerSumRegularizer(Regularizer):
     Has some nice properties, cf. e.g. https://github.com/pytorch/pytorch/issues/28119.
     """
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = dict(
+    #: The default strategy for optimizing the power sum regularizer's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
 
@@ -190,8 +189,8 @@ class PowerSumRegularizer(Regularizer):
 class TransHRegularizer(Regularizer):
     """A regularizer for the soft constraints in TransH."""
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = dict(
+    #: The default strategy for optimizing the TransH regularizer's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
 
@@ -242,7 +241,7 @@ class CombinedRegularizer(Regularizer):
         super().__init__(weight=total_weight, apply_only_once=apply_only_once, parameters=parameters)
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
-            if isinstance(r, NoRegularizer):
+            if r is None or isinstance(r, NoRegularizer):
                 raise TypeError('Can not combine a no-op regularizer')
         normalization_factor = torch.as_tensor(sum(r.weight for r in self.regularizers)).reciprocal()
         self.register_buffer(name='normalization_factor', tensor=normalization_factor)
