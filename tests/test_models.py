@@ -91,7 +91,7 @@ class ERModelTests(unittest.TestCase):
     """Test basic functionality of ERModel."""
 
     def setUp(self) -> None:
-        """Setup the test instance."""
+        """Set up the test instance."""
         self.model = ERModel(
             triples_factory=MagicMock(),
             interaction=MagicMock(),

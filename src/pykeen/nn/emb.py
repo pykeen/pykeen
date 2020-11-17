@@ -48,8 +48,8 @@ class RepresentationModule(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations in canonical shape.
 
-        The canonical shape is given by (batch_size, 1, *) if indices is not None, where batch_size=len(indices),
-        or (1, num, *) if indices is None with num equal to the total number of embeddings.
+        The canonical shape is given by (batch_size, 1, ``*``) if indices is not None, where batch_size=len(indices),
+        or (1, num, ``*``) if indices is None with num equal to the total number of embeddings.
 
 
         :param indices:
@@ -57,7 +57,7 @@ class RepresentationModule(nn.Module, ABC):
         :param reshape_dim:
             Optionally reshape the last dimension.
 
-        :return: shape: (batch_size, num_embeddings, *)
+        :return: shape: (batch_size, num_embeddings, ``*``)
         """
         x = self(indices=indices)
         if indices is None:
