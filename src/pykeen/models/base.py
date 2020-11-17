@@ -1175,7 +1175,18 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
 
-    def add_weight_regularizer(self, parameter_name: str, regularizer: Regularizer) -> None:
+    def add_weight_regularizer(
+        self,
+        parameter_name: str,
+        regularizer: Regularizer,
+    ) -> None:
+        """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
+
+        :param parameter_name:
+            The parameter name. Available parameter names are shown by `dict(self.named_parameters()).keys()`.
+        :param regularizer:
+            The regularizer instance which will regularize the weights.
+        """
         weights = dict(self.named_parameters())
         if parameter_name not in weights.keys():
             raise ValueError(f"Invalid parameter_name={parameter_name}. Available are: {sorted(weights.keys())}.")
