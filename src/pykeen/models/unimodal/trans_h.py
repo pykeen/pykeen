@@ -97,9 +97,7 @@ class TransH(DoubleRelationEmbeddingModel):
                 constrainer=functional.normalize,
             ),
         )
-        self.regularizer = TransHRegularizer(
-            weight=0.05,
-            epsilon=1e-5,
+        self.regularizer = self._instantiate_default_regularizer(
             entity_embeddings=list(self.entity_representations[0].parameters()).pop(),
             relation_embeddings=list(self.relation_representations[0].parameters()).pop(),
             normal_vector_embeddings=list(self.relation_representations[1].parameters()).pop(),

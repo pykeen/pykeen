@@ -93,7 +93,7 @@ class ComplEx(SingleVectorEmbeddingModel):
         :param random_seed: int (optional)
             An optional random seed to set before the initialization of weights.
         """
-        regularizer = LpRegularizer(weight=0.01, p=2.0, normalize=True)
+        regularizer = self._instantiate_default_regularizer()
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         if embedding_specification is None:

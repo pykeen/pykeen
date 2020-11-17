@@ -73,7 +73,7 @@ class SimplE(TwoSideEmbeddingModel):
         random_seed: Optional[int] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
     ) -> None:
-        regularizer = PowerSumRegularizer(weight=20, p=2.0, normalize=True)
+        regularizer = self._instantiate_default_regularizer()
         super().__init__(
             triples_factory=triples_factory,
             interaction=DistMultInteraction(),

@@ -420,6 +420,16 @@ class Model(nn.Module, ABC):
         """Set the Torch device to use."""
         self.device = resolve_device(device=device)
 
+    def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
+        """Instantiate the regularizer from this class's default settings.
+
+        If the default regularizer is None, None is returned.
+        Handles the corner case when the default regularizer's keyword arguments are None
+        Additional keyword arguments can be passed through to the `__init__()` function
+        """
+        if self.regularizer_default is not None:
+            return self.regularizer_default(**(self.regularizer_default_kwargs or {}), **kwargs)
+
     def to_device_(self) -> 'Model':
         """Transfer model to device."""
         self.to(self.device)

@@ -67,7 +67,7 @@ class RESCAL(SingleVectorEmbeddingModel):
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
-        regularizer = LpRegularizer(weight=10, p=2., normalize=True)
+        regularizer = self._instantiate_default_regularizer()
         super().__init__(
             triples_factory=triples_factory,
             interaction=RESCALInteraction(),

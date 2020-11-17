@@ -102,10 +102,6 @@ class DistMult(SingleVectorEmbeddingModel):
                     functional.normalize,
                 ),
                 # Only relation embeddings are regularized
-                regularizer=LpRegularizer(
-                    weight=0.1,
-                    p=2.0,
-                    normalize=True,
-                ),
+                regularizer=self._instantiate_default_regularizer(),
             ),
         )

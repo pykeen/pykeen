@@ -96,5 +96,5 @@ class ConvKB(SingleVectorEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        self.regularizer = LpRegularizer(parameters=list(self.interaction.parameters()))
+        self.regularizer = self._instantiate_default_regularizer(parameters=list(self.interaction.parameters()))
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
