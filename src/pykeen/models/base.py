@@ -254,6 +254,11 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    #: The default regularizer class
+    regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
+    #: The default parameters for the default regularizer class
+    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
