@@ -427,8 +427,12 @@ class Model(nn.Module, ABC):
         Handles the corner case when the default regularizer's keyword arguments are None
         Additional keyword arguments can be passed through to the `__init__()` function
         """
-        if self.regularizer_default is not None:
-            return self.regularizer_default(**(self.regularizer_default_kwargs or {}), **kwargs)
+        if self.regularizer_default is None:
+            return None
+
+        _kwargs = dict(self.regularizer_default_kwargs or {})
+        _kwargs.update(kwargs)
+        return self.regularizer_default(**_kwargs)
 
     def to_device_(self) -> 'Model':
         """Transfer model to device."""
