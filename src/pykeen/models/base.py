@@ -1107,6 +1107,16 @@ class Model(nn.Module, ABC):
         self.load_state_dict(torch.load(path, map_location=self.device))
 
 
+def _prepare_representation_module_list(
+    representations: Union[None, RepresentationModule, Sequence[RepresentationModule]],
+) -> Sequence[RepresentationModule]:
+    """Normalize list of representations and wrap into nn.ModuleList."""
+    # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
+    if representations is not None and not isinstance(representations, Sequence):
+        representations = [representations]
+    return nn.ModuleList(representations)
+
+
 class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
     """A commonly useful base for KGEMs using embeddings and interaction modules."""
 
@@ -1155,16 +1165,8 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-
-        # normalization
-        if entity_representations is not None and not isinstance(entity_representations, Sequence):
-            entity_representations = [entity_representations]
-        if relation_representations is not None and not isinstance(relation_representations, Sequence):
-            relation_representations = [relation_representations]
-        # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-        self.entity_representations = nn.ModuleList(entity_representations)
-        self.relation_representations = nn.ModuleList(relation_representations)
-
+        self.entity_representations = _prepare_representation_module_list(representations=entity_representations)
+        self.relation_representations = _prepare_representation_module_list(representations=relation_representations)
         self.interaction = interaction
 
     def forward(
