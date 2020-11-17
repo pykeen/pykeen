@@ -204,7 +204,7 @@ class TransHRegularizer(Regularizer):
     ):
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(weight=weight, apply_only_once=False, parameters=[])
+        super().__init__(weight=weight, apply_only_once=True, parameters=[])
         self.normal_vector_embeddings = normal_vector_embeddings
         self.relation_embeddings = relation_embeddings
         self.entity_embeddings = entity_embeddings
