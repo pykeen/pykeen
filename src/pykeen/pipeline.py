@@ -183,7 +183,7 @@ from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
 from .models.base import Model
 from .optimizers import get_optimizer_cls
-from .regularizers import Regularizer, get_regularizer_cls
+from .regularizers import Regularizer
 from .sampling import NegativeSampler, get_negative_sampler_cls
 from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .trackers import ResultTracker, get_result_tracker_cls
