@@ -50,7 +50,7 @@ class ComplexLiteralCombination(nn.Module):
         x, literal = x[..., :self.embedding_dim], x[..., self.embedding_dim:]
         x_re, x_im = split_complex(x)
         x_re = self.real(torch.cat([x_re, literal], dim=-1))
-        x_im = self.real(torch.cat([x_im, literal], dim=-1))
+        x_im = self.imag(torch.cat([x_im, literal], dim=-1))
         return combine_complex(x_re=x_re, x_im=x_im)
 
 
