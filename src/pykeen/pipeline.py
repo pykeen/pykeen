@@ -871,15 +871,13 @@ def pipeline(  # noqa: C901
     model_kwargs.setdefault('random_seed', random_seed)
 
     if regularizer is not None:
+        logger.warning('Specification of the regularizer from the pipeline() is currently under maitenance')
         # FIXME this should never happen.
-        if 'regularizer' in model_kwargs:
-            logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
-            del model_kwargs['regularizer']
-        regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
-        model_kwargs['regularizer'] = regularizer_cls(
-            device=device,
-            **(regularizer_kwargs or {}),
-        )
+        # if 'regularizer' in model_kwargs:
+        #     logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
+        #     del model_kwargs['regularizer']
+        # regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
+        # model_kwargs['regularizer'] = regularizer_cls(**(regularizer_kwargs or {}))
 
     if loss is not None:
         if 'loss' in model_kwargs:  # FIXME
@@ -983,8 +981,8 @@ def pipeline(  # noqa: C901
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
     logging.debug(f"loss_kwargs: {loss_kwargs}")
-    logging.debug(f"regularizer: {regularizer}")
-    logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
+    # logging.debug(f"regularizer: {regularizer}")
+    # logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
     logging.debug(f"optimizer: {optimizer}")
     logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
     logging.debug(f"training_loop: {training_loop}")

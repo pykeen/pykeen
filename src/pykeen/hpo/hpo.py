@@ -149,13 +149,13 @@ class Objective:
             kwargs_ranges=self.loss_kwargs_ranges,
         )
         # 4. Regularizer
-        _regularizer_kwargs = _get_kwargs(
-            trial=trial,
-            prefix='regularizer',
-            default_kwargs_ranges=self.regularizer.hpo_default,
-            kwargs=self.regularizer_kwargs,
-            kwargs_ranges=self.regularizer_kwargs_ranges,
-        )
+        # _regularizer_kwargs = _get_kwargs(
+        #     trial=trial,
+        #     prefix='regularizer',
+        #     default_kwargs_ranges=self.regularizer.hpo_default,
+        #     kwargs=self.regularizer_kwargs,
+        #     kwargs_ranges=self.regularizer_kwargs_ranges,
+        # )
         # 5. Optimizer
         _optimizer_kwargs = _get_kwargs(
             trial=trial,
@@ -205,8 +205,8 @@ class Objective:
                 loss=self.loss,
                 loss_kwargs=_loss_kwargs,
                 # 4. Regularizer
-                regularizer=self.regularizer,
-                regularizer_kwargs=_regularizer_kwargs,
+                # regularizer=self.regularizer,
+                # regularizer_kwargs=_regularizer_kwargs,
                 clear_optimizer=True,
                 # 5. Optimizer
                 optimizer=self.optimizer,
@@ -612,13 +612,15 @@ def hpo_pipeline(
     study.set_user_attr('loss', normalize_string(loss.__name__, suffix=_LOSS_SUFFIX))
     logger.info(f'Using loss: {loss}')
     # 4. Regularizer
-    regularizer: Type[Regularizer] = (
-        model.regularizer_default
-        if regularizer is None else
-        get_regularizer_cls(regularizer)
-    )
-    study.set_user_attr('regularizer', regularizer.get_normalized_name())
-    logger.info(f'Using regularizer: {regularizer}')
+    if regularizer is not None:
+        logger.warning('Usage of the regularizer with the HPO is currently under maitenance.')
+    # regularizer: Type[Regularizer] = (
+    #     model.regularizer_default
+    #     if regularizer is None else
+    #     get_regularizer_cls(regularizer)
+    # )
+    # study.set_user_attr('regularizer', regularizer.get_normalized_name())
+    # logger.info(f'Using regularizer: {regularizer}')
     # 5. Optimizer
     optimizer: Type[Optimizer] = get_optimizer_cls(optimizer)
     study.set_user_attr('optimizer', normalize_string(optimizer.__name__))
