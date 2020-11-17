@@ -6,6 +6,7 @@ import ftplib
 import json
 import logging
 import random
+from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, SupportsFloat, Tuple, Type, TypeVar, Union
 
@@ -27,13 +28,11 @@ __all__ = [
     'compact_mapping',
     'complex_normalize',
     'fix_dataclass_init_docs',
-    'imag_part',
     'invert_mapping',
     'is_cudnn_error',
     'is_cuda_oom_error',
     'l2_regularization',
     'random_non_negative_int',
-    'real_part',
     'resolve_device',
     'slice_triples',
     'slice_doubles',
@@ -327,17 +326,18 @@ def compact_mapping(
     return translated, translation
 
 
-class Result:
+class Result(ABC):
     """A superclass of results that can be saved to a directory."""
 
+    @abstractmethod
     def save_to_directory(self, directory: str, **kwargs) -> None:
         """Save the results to the directory."""
-        raise NotImplementedError
 
+    @abstractmethod
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save the results to the directory in an FTP server."""
-        raise NotImplementedError
 
+    @abstractmethod
     def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
@@ -345,7 +345,6 @@ class Result:
         :param bucket: The name of the S3 bucket
         :param s3: A client from :func:`boto3.client`, if already instantiated
         """
-        raise NotImplementedError
 
 
 def split_complex(
@@ -368,24 +367,6 @@ def combine_complex(
 ) -> torch.FloatTensor:
     """Combine a complex tensor from real and imaginary part."""
     return torch.cat([x_re, x_im], dim=-1)
-
-
-# TODO remove (unused)
-def real_part(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Get the real part from a complex tensor."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim]
-
-
-# TODO remove (unused)
-def imag_part(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Get the imaginary part from a complex tensor."""
-    dim = x.shape[-1] // 2
-    return x[..., dim:]
 
 
 def fix_dataclass_init_docs(cls: Type) -> Type:
