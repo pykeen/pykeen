@@ -7,7 +7,7 @@ import os
 import tempfile
 import traceback
 import unittest
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Optional, Sequence, Type
 from unittest.mock import MagicMock, patch
 
 import numpy
@@ -68,24 +68,27 @@ _EPSILON = 1.0e-07
 class _CustomRepresentations(RepresentationModule):
     """A custom representation module with minimal implementation."""
 
-    def __init__(self, num_entities: int, embedding_dim: int = 2):
+    def __init__(self, num_entities: int, shape: Sequence[int]):
         super().__init__()
         self.num_embeddings = num_entities
-        self.embedding_dim = embedding_dim
-        self.x = nn.Parameter(torch.rand(embedding_dim))
+        self.shape = shape
+        self.x = nn.Parameter(torch.rand(numpy.prod(shape)))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         n = self.num_embeddings if indices is None else indices.shape[0]
-        return self.x.unsqueeze(dim=0).repeat(n, 1)
+        return self.x.unsqueeze(dim=0).repeat(n, 1).view(-1, *self.shape)
 
     def get_in_canonical_shape(
         self,
         indices: Optional[torch.LongTensor] = None,
+        reshape_dim: Optional[Sequence[int]] = None,
     ) -> torch.FloatTensor:
         x = self(indices=indices)
         if indices is None:
-            return x.unsqueeze(dim=0)
-        return x.unsqueeze(dim=1)
+            x = x.unsqueeze(dim=0)
+        else:
+            x = x.unsqueeze(dim=1)
+        return x
 
 
 class ERModelTests(unittest.TestCase):
@@ -527,7 +530,7 @@ Traceback
         self.model.entity_representations = nn.ModuleList([
             _CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                embedding_dim=er.embedding_dim,
+                shape=er.shape,
             )
             for er in old_entity_reps
         ])
@@ -535,7 +538,7 @@ Traceback
         self.model.relation_representations = nn.ModuleList([
             _CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                embedding_dim=er.embedding_dim,
+                shape=er.shape,
             )
             for er in old_relation_reps
         ])
