@@ -1171,6 +1171,8 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         self.entity_representations = _prepare_representation_module_list(representations=entity_representations)
         self.relation_representations = _prepare_representation_module_list(representations=relation_representations)
         self.interaction = interaction
+        # Comment: it is important that the regularizers are stored in a module list, in order to appear in
+        # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
 
     def add_weight_regularizer(self, parameter_name: str, regularizer: Regularizer) -> None:
