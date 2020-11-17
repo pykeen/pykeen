@@ -3,7 +3,7 @@
 """Regularization in PyKEEN."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Sequence, Type, Union
 
 import torch
 from torch import nn
@@ -41,7 +41,7 @@ class Regularizer(nn.Module, ABC):
     hpo_default: ClassVar[Mapping[str, Any]]
 
     #: weights which should be regularized
-    tracked_parameters: Optional[Collection[nn.Parameter]] = None
+    tracked_parameters: List[nn.Parameter]
 
     def __init__(
         self,
@@ -52,12 +52,20 @@ class Regularizer(nn.Module, ABC):
         super().__init__()
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
+        if parameters is None:
+            parameters = []
+        else:
+            parameters = list(parameters)
         self.tracked_parameters = parameters
         self._clear()
 
     def _clear(self):
         self.regularization_term = 0.
         self.updated = False
+
+    def add_parameter(self, parameter: nn.Parameter) -> None:
+        """Add a parameter for regularization."""
+        self.tracked_parameters.append(parameter)
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -79,7 +87,7 @@ class Regularizer(nn.Module, ABC):
 
     def pop_regularization_term(self) -> torch.FloatTensor:
         """Return the weighted regularization term, and clear it afterwards."""
-        if self.tracked_parameters is not None:
+        if len(self.tracked_parameters) > 0:
             self.update(*self.tracked_parameters)
         term = self.regularization_term
         self._clear()

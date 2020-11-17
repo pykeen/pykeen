@@ -22,7 +22,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
 from ..nn.modules import Interaction
-from ..regularizers import collect_regularization_terms
+from ..regularizers import Regularizer, collect_regularization_terms
 from ..triples import TriplesFactory, TriplesNumericLiteralsFactory
 from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
@@ -1126,6 +1126,9 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
     #: The relation representations
     relation_representations: Sequence[RepresentationModule]
 
+    #: The weight regularizers
+    weight_regularizers: List[Regularizer]
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -1168,6 +1171,15 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         self.entity_representations = _prepare_representation_module_list(representations=entity_representations)
         self.relation_representations = _prepare_representation_module_list(representations=relation_representations)
         self.interaction = interaction
+        self.weight_regularizers = nn.ModuleList()
+
+    def add_weight_regularizer(self, parameter_name: str, regularizer: Regularizer) -> None:
+        weights = dict(self.named_parameters())
+        if parameter_name not in weights.keys():
+            raise ValueError(f"Invalid parameter_name={parameter_name}. Available are: {sorted(weights.keys())}.")
+        parameter: nn.Parameter = weights[parameter_name]
+        regularizer.add_parameter(parameter=parameter)
+        self.weight_regularizers.append(regularizer)
 
     def forward(
         self,
