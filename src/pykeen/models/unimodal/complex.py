@@ -105,7 +105,7 @@ class ComplEx(SingleVectorEmbeddingModel):
             relation_embedding_specification = EmbeddingSpecification(
                 initializer=nn.init.normal_,
                 regularizer=regularizer,
-            ),
+            )
         super().__init__(
             triples_factory=triples_factory,
             interaction=ComplExInteraction(),
