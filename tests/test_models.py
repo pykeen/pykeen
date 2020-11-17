@@ -40,7 +40,7 @@ from pykeen.models.unimodal.rgcn import (
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
-from pykeen.nn import RepresentationModule
+from pykeen.nn import Embedding, RepresentationModule
 from pykeen.regularizers import LpRegularizer, collect_regularization_terms
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
@@ -48,12 +48,13 @@ from pykeen.utils import all_in_bounds, clamp_norm, project_entity, set_random_s
 
 SKIP_MODULES = {
     Model.__name__,
-    'DummyModel',
+    ERModel.__name__,
     LiteralModel.__name__,
     DoubleRelationEmbeddingModel.__name__,
     SingleVectorEmbeddingModel.__name__,
     TwoVectorEmbeddingModel.__name__,
     TwoSideEmbeddingModel.__name__,
+    'DummyModel',
     'MockModel',
     'models',
     'get_model_cls',
@@ -881,19 +882,25 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
 
     def test_project_entity(self):
         """Test _project_entity."""
+        self.assertIsInstance(self.model, pykeen.models.TransD)
+
         # random entity embeddings & projections
         e = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
         e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
         e_p = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
 
         # random relation embeddings & projections
-        r_p = torch.rand(self.batch_size, 1, self.model.relation_dim, generator=self.generator)
+        relation_rep: Embedding = self.model.relation_representations[0]
+        self.assertIsInstance(relation_rep, Embedding)
+        relation_dim = relation_rep.embedding_dim
+
+        r_p = torch.rand(self.batch_size, 1, relation_dim, generator=self.generator)
 
         # project
         e_bot = project_entity(e=e, e_p=e_p, r_p=r_p)
 
         # check shape:
-        assert e_bot.shape == (self.batch_size, self.model.num_entities, self.model.relation_dim)
+        assert e_bot.shape == (self.batch_size, self.model.num_entities, relation_dim)
 
         # check normalization
         assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
