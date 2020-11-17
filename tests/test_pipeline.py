@@ -105,27 +105,3 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(possible, len(all_df.index))
         self.assertEqual(self.model.triples_factory.num_triples, all_df['in_training'].sum())
         self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
-
-
-class TestAttributes(unittest.TestCase):
-    """Test that the keywords given to the pipeline make it through."""
-
-    def test_specify_regularizer(self):
-        """Test a pipeline that uses a regularizer."""
-        for regularizer, cls in [
-            (None, pykeen.regularizers.NoRegularizer),
-            ('no', pykeen.regularizers.NoRegularizer),
-            (NoRegularizer, pykeen.regularizers.NoRegularizer),
-            ('powersum', pykeen.regularizers.PowerSumRegularizer),
-            ('lp', pykeen.regularizers.LpRegularizer),
-        ]:
-            with self.subTest(regularizer=regularizer):
-                pipeline_result = pipeline(
-                    model='TransE',
-                    dataset='Nations',
-                    regularizer=regularizer,
-                    training_kwargs=dict(num_epochs=1),
-                )
-                self.assertIsInstance(pipeline_result, PipelineResult)
-                self.assertIsInstance(pipeline_result.model, Model)
-                self.assertIsInstance(pipeline_result.model.regularizer, cls)
