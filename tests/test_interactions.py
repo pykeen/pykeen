@@ -123,7 +123,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         )
         scores = self.instance.score_h(all_entities=h, r=r, t=t, slice_size=self.num_entities // 2 + 1)
         scores_no_slice = self.instance.score_h(all_entities=h, r=r, t=t, slice_size=None)
-        assert torch.allclose(scores, scores_no_slice)
+        assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
 
     def test_score_r(self):
         """Test score_r."""
@@ -152,7 +152,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         )
         scores = self.instance.score_r(h=h, all_relations=r, t=t, slice_size=self.num_relations // 2 + 1)
         scores_no_slice = self.instance.score_r(h=h, all_relations=r, t=t, slice_size=None)
-        assert torch.allclose(scores, scores_no_slice)
+        assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
 
     def test_score_t(self):
         """Test score_t."""
@@ -175,7 +175,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         )
         scores = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=self.num_entities // 2 + 1)
         scores_no_slice = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=None)
-        assert torch.allclose(scores, scores_no_slice)
+        assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
 
     def test_forward(self):
         """Test forward."""

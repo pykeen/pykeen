@@ -605,7 +605,8 @@ def extended_einsum(
     mod_ops, mod_t = [], []
     for op, t in zip(lhs.split(","), tensors):
         mod_op = ""
-        assert len(op) == len(t.shape)
+        if len(op) != len(t.shape):
+            raise ValueError(f'Shapes not equal: op={op} and t.shape={t.shape}')
         for i, c in reversed(list(enumerate(op))):
             if t.shape[i] == 1:
                 t = t.squeeze(dim=i)
