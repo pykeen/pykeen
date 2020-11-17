@@ -734,12 +734,6 @@ class _BaseNTNTest(_ModelTestCase, unittest.TestCase):
 
     model_cls = pykeen.models.NTN
 
-    def test_can_slice(self):
-        """Test that the slicing properties are calculated correctly."""
-        self.assertTrue(self.model.can_slice_h, msg='Unable to slice on heads')
-        self.assertTrue(self.model.can_slice_r, msg='Unable to slice on relations')
-        self.assertTrue(self.model.can_slice_t, msg='Unable to slice on tails')
-
 
 class TestNTNLowMemory(_BaseNTNTest):
     """Test the NTN model with automatic memory optimization."""
