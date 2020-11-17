@@ -198,9 +198,9 @@ class TransHRegularizerTest(unittest.TestCase):
     regularizer_kwargs: Dict
     num_entities: int
     num_relations: int
-    entities_weight: torch.Tensor
-    relations_weight: torch.Tensor
-    normal_vector_weight: torch.Tensor
+    entities_weight: nn.Parameter
+    relations_weight: nn.Parameter
+    normal_vector_weight: nn.Parameter
 
     def setUp(self) -> None:
         """Set up the test case."""
@@ -208,37 +208,37 @@ class TransHRegularizerTest(unittest.TestCase):
         self.device = resolve_device()
         self.num_entities = 10
         self.num_relations = 5
-        self.regularizer_kwargs = {'weight': .5, 'epsilon': 1e-5}
         self.entities_weight = self._rand_param(10)
         self.relations_weight = self._rand_param(20)
         self.normal_vector_weight = self._rand_param(20)
-        self.regularizer_kwargs["entity_embeddings"] = self.entities_weight
-        self.regularizer_kwargs["normal_vector_embeddings"] = self.normal_vector_weight
-        self.regularizer_kwargs["relation_embeddings"] = self.relations_weight
+        self.weight = .5
+        self.epsilon = 1e-5
+        self.regularizer_kwargs = dict()
         self.regularizer = TransHRegularizer(
-            **(self.regularizer_kwargs or {}),
+            weight=self.weight, epsilon=self.epsilon,
+            entity_embeddings=self.entities_weight,
+            normal_vector_embeddings=self.normal_vector_weight,
+            relation_embeddings=self.relations_weight,
         )
 
-    def _rand_param(self, n):
-        return nn.Parameter(torch.rand(self.num_entities, 10, device=self.device, generator=self.generator))
+    def _rand_param(self, n) -> nn.Parameter:
+        return nn.Parameter(torch.rand(self.num_entities, n, device=self.device, generator=self.generator))
 
     def test_update(self):
         """Test update function of TransHRegularizer."""
         # Test that regularization term is computed correctly
         expected_term = self._expected_penalty()
-        weight = self.regularizer_kwargs.get('weight')
         observed_term = self.regularizer.pop_regularization_term()
-        assert torch.allclose(observed_term, weight * expected_term)
+        assert torch.allclose(observed_term, self.weight * expected_term)
 
     def _expected_penalty(self) -> torch.FloatTensor:  # noqa: D102
         # Entity soft constraint
         regularization_term = torch.sum(functional.relu(torch.norm(self.entities_weight, dim=-1) ** 2 - 1.0))
-        epsilon = self.regularizer_kwargs.get('epsilon')  #
 
         # Orthogonality soft constraint
         d_r_n = functional.normalize(self.relations_weight, dim=-1)
         regularization_term += torch.sum(
-            functional.relu(torch.sum((self.normal_vector_weight * d_r_n) ** 2, dim=-1) - epsilon),
+            functional.relu(torch.sum((self.normal_vector_weight * d_r_n) ** 2, dim=-1) - self.epsilon),
         )
 
         return regularization_term
