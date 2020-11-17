@@ -530,7 +530,7 @@ Traceback
         self.model.entity_representations = nn.ModuleList([
             _CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                shape=er.shape,
+                shape=er.base_embeddings.shape if isinstance(er, RGCNRepresentations) else er.shape,
             )
             for er in old_entity_reps
         ])
