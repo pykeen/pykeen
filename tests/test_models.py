@@ -98,8 +98,7 @@ class ERModelTests(unittest.TestCase):
         )
 
     def test_add_weight_regularizer_non_existing(self):
-        """Test add_weight_regularizer."""
-        # try to add regularizer to non-existing weight
+        """Test that an assertion is raised for add_weight_regularizer for a non-existing weight."""
         with self.assertRaises(ValueError):
             self.model.add_weight_regularizer(
                 parameter_name="this.weight.does.not.exist",
@@ -116,12 +115,10 @@ class ERModelTests(unittest.TestCase):
             self.model.linear,
         )
 
-        regularizer = LpRegularizer()
-
         # try to add regularizer to existing weight
         self.model.add_weight_regularizer(
             parameter_name="linear.weight",
-            regularizer=regularizer,
+            regularizer=LpRegularizer(),
         )
 
         # check it gets found by collect
