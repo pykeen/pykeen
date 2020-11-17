@@ -6,11 +6,8 @@ import unittest
 
 import pandas as pd
 
-import pykeen.regularizers
 from pykeen.datasets import Nations
-from pykeen.models.base import Model
-from pykeen.pipeline import PipelineResult, pipeline
-from pykeen.regularizers import NoRegularizer
+from pykeen.pipeline import pipeline
 
 
 class TestPipeline(unittest.TestCase):
