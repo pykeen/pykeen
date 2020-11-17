@@ -6,6 +6,7 @@
     "dataset": "fb15k",
     "model": "TransH",
     "model_kwargs": {
+      "predict_with_sigmoid": false,
       "embedding_dim": 100,
       "scoring_fct_norm": 2
     },
