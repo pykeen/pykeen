@@ -74,6 +74,8 @@ class ComplEx(SingleVectorEmbeddingModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
+        relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ) -> None:
         """Initialize ComplEx.
 
@@ -92,6 +94,18 @@ class ComplEx(SingleVectorEmbeddingModel):
             An optional random seed to set before the initialization of weights.
         """
         regularizer = LpRegularizer(weight=0.01, p=2.0, normalize=True)
+        # initialize with entity and relation embeddings with standard normal distribution, cf.
+        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
+        if embedding_specification is None:
+            embedding_specification = EmbeddingSpecification(
+                initializer=nn.init.normal_,
+                regularizer=regularizer,
+            )
+        if relation_embedding_specification is None:
+            relation_embedding_specification = EmbeddingSpecification(
+                initializer=nn.init.normal_,
+                regularizer=regularizer,
+            ),
         super().__init__(
             triples_factory=triples_factory,
             interaction=ComplExInteraction(),
@@ -100,14 +114,6 @@ class ComplEx(SingleVectorEmbeddingModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            # initialize with entity and relation embeddings with standard normal distribution, cf.
-            # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-            embedding_specification=EmbeddingSpecification(
-                initializer=nn.init.normal_,
-                regularizer=regularizer,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=nn.init.normal_,
-                regularizer=regularizer,
-            ),
+            embedding_specification=embedding_specification,
+            relation_embedding_specification=relation_embedding_specification,
         )
