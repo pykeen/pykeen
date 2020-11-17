@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import Optional, Type, Union
+from typing import Optional, Type
 
 import click
 from torch import nn
@@ -14,7 +14,6 @@ from torch import nn
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
-from ...regularizers import Regularizer, regularizers
 
 __all__ = [
     'build_cli_from_cls',
