@@ -110,6 +110,22 @@ class _RegularizerTestCase:
         else:
             assert (expected_penalty == penalty).all()
 
+    def test_pop_regularization_term(self):
+        """Test pop_regularization_term."""
+        regularization_term = self.regularizer.pop_regularization_term()
+
+        # check type
+        assert isinstance(regularization_term, float) or torch.is_tensor(regularization_term)
+
+        # float only if there is not real regularization term
+        if isinstance(regularization_term, float):
+            assert regularization_term == 0.0
+
+        # check that the regularizer has been clear
+        assert isinstance(self.regularizer.regularization_term, float)
+        assert self.regularizer.regularization_term == 0.0
+        assert self.regularizer.updated is False
+
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """Compute expected penalty for given tensor."""
         return None
