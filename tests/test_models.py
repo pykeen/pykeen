@@ -41,7 +41,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.nn import RepresentationModule
-from pykeen.regularizers import LpRegularizer, Regularizer, collect_regularization_terms
+from pykeen.regularizers import LpRegularizer, collect_regularization_terms
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, clamp_norm, project_entity, set_random_seed
@@ -424,17 +424,6 @@ Traceback
             self.fail(msg=f'{self.model_cls.__name__} is missing hpo_default class attribute')
         else:
             self.assertIsInstance(d, dict)
-
-    def test_collect_regularization_terms(self):
-        """Test whether collect_regularization_terms resets all regularization terms."""
-        # TODO: Does this need to be tested for all models, since the code paths are the same?
-        # retrieve all regularization terms
-        collect_regularization_terms(self.model)
-
-        # check that all terms are reset
-        for module in self.model.modules():
-            if isinstance(module, Regularizer):
-                assert module.regularization_term == 0.0
 
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
