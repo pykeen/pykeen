@@ -36,7 +36,7 @@ from pykeen.models.base import (
 )
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
-    inverse_indegree_edge_weights,
+    RGCNRepresentations, inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
