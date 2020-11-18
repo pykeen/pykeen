@@ -377,7 +377,7 @@ class NTNTests(InteractionTests, unittest.TestCase):
     )
 
     def _exp_score(self, h, t, w, vt, vh, b, u, activation) -> torch.FloatTensor:
-        # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
+        # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r t + b_r)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
         # remove batch/num dimension
         h, t, w, vt, vh, b, u = _strip_dim(h, t, w, vt, vh, b, u)
@@ -421,6 +421,14 @@ class KG2ETests(InteractionTests, unittest.TestCase):
     """Tests for KG2E interaction function."""
 
     cls = pykeen.nn.modules.KG2EInteraction
+
+    def _exp_score(self, exact, h_mean, h_var, r_mean, r_var, similarity, t_mean, t_var):
+        assert similarity == "KL"
+        h_mean, h_var, r_mean, r_var, t_mean, t_var = _strip_dim(h_mean, h_var, r_mean, r_var, t_mean, t_var)
+        e_mean, e_var = h_mean - t_mean, h_var + t_var
+        p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=torch.diag(e_var))
+        q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=torch.diag(r_var))
+        return torch.distributions.kl.kl_divergence(p, q)
 
 
 class TuckerTests(InteractionTests, unittest.TestCase):
