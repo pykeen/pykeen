@@ -260,6 +260,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             assert scores_f_manual == scores_f
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
+        """Compute the expected score for a single-score batch."""
         raise SkipTest("No score check implemented.")
 
 
