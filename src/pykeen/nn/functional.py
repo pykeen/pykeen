@@ -589,7 +589,7 @@ def rotate_interaction(
     # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
     return negative_norm_of_sum(
         hr.unsqueeze(dim=3),
-        t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]),
+        -t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]),
         p=2,
         power_norm=False,
     )
