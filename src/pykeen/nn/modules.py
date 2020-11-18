@@ -6,7 +6,7 @@ import itertools
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Generic, List, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import FloatTensor, nn
@@ -1030,14 +1030,19 @@ class NTNInteraction(
             non_linearity = nn.Tanh()
         self.non_linearity = non_linearity
 
+    @staticmethod
+    def unpack(h, r, t) -> Mapping[str, torch.FloatTensor]:
+        """Unpack (h, r, t) to arguments for functional ntn_interaction."""
+        w, vh, vt, b, u = r
+        return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
+
     def forward(
         self,
         h: torch.FloatTensor,
         r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa:D102
-        w, vh, vt, b, u = r
-        return pkf.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
+        return pkf.ntn_interaction(**self.unpack(h=h, r=r, t=t), activation=self.non_linearity)
 
 
 class KG2EInteraction(
