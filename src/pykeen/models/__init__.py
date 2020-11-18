@@ -9,9 +9,10 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 from typing import Mapping, Set, Type, Union
 
 from .base import (  # noqa:F401
-    DoubleRelationEmbeddingModel, ERModel, LiteralModel, Model, SingleVectorEmbeddingModel,
+    DoubleRelationEmbeddingModel, ERModel, Model, SingleVectorEmbeddingModel,
     TwoSideEmbeddingModel, TwoVectorEmbeddingModel,
 )
+from .multimodal.base import LiteralModel
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
     ComplEx,

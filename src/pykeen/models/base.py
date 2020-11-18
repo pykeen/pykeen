@@ -19,10 +19,10 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
-from ..nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
+from ..nn import Embedding, EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction
 from ..regularizers import Regularizer, collect_regularization_terms
-from ..triples import TriplesFactory, TriplesNumericLiteralsFactory
+from ..triples import TriplesFactory
 from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
 from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
@@ -36,7 +36,6 @@ __all__ = [
     'DoubleRelationEmbeddingModel',
     'TwoVectorEmbeddingModel',
     'TwoSideEmbeddingModel',
-    'LiteralModel',
 ]
 
 logger = logging.getLogger(__name__)
@@ -1546,68 +1545,3 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
                 (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
             )
         )
-
-
-class LiteralModel(ERModel, autoreset=False):
-    """Base class for models with entity literals."""
-
-    # TODO: Move to other file?
-
-    def __init__(
-        self,
-        triples_factory: TriplesNumericLiteralsFactory,
-        embedding_dim: int,
-        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-        combination: nn.Module,
-        entity_specification: Optional[EmbeddingSpecification] = None,
-        relation_specification: Optional[EmbeddingSpecification] = None,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-    ):
-        super().__init__(
-            triples_factory=triples_factory,
-            interaction=interaction,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            automatic_memory_optimization=automatic_memory_optimization,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            entity_representations=[
-                # entity embeddings
-                Embedding.from_specification(
-                    num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
-                    specification=entity_specification,
-                ),
-                # Entity literals
-                LiteralRepresentations(
-                    numeric_literals=torch.as_tensor(triples_factory.numeric_literals, dtype=torch.float32),
-                ),
-            ],
-            relation_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_relations,
-                embedding_dim=embedding_dim,
-                specification=relation_specification,
-            ),
-        )
-        self.combination = combination
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = self._get_representations(h_indices, r_indices, t_indices)
-        # combine entity embeddings + literals
-        h, t = [
-            self.combination(torch.cat(x, dim=-1))
-            for x in (h, t)
-        ]
-        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)

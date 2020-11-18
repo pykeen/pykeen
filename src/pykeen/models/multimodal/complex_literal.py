@@ -6,9 +6,8 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.nn as nn
-from torch.nn.init import xavier_normal_
 
-from ..base import LiteralModel
+from .base import LiteralModel
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
@@ -95,10 +94,10 @@ class ComplExLiteral(LiteralModel):
                 dropout=input_dropout,
             ),
             entity_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
+                initializer=nn.init.xavier_normal_,
             ),
             relation_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
+                initializer=nn.init.xavier_normal_,
             ),
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
