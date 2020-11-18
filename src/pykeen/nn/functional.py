@@ -52,19 +52,18 @@ def _extract_sizes(
     return num_heads, num_relations, num_tails, d_e, d_r
 
 
-# TODO @mberr documentation
 def _apply_optional_bn_to_tensor(
     batch_norm: Optional[nn.BatchNorm1d],
     output_dropout: nn.Dropout,
     tensor: torch.FloatTensor,
 ) -> torch.FloatTensor:
+    """Apply optional batch normalization and dropout layer. Supports multiple batch dimensions."""
     if batch_norm is not None:
         shape = tensor.shape
         tensor = tensor.reshape(-1, shape[-1])
         tensor = batch_norm(tensor)
         tensor = tensor.view(*shape)
-    tensor = output_dropout(tensor)
-    return tensor
+    return output_dropout(tensor)
 
 
 def _translational_interaction(
