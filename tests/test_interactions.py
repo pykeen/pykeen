@@ -219,7 +219,12 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             nh = nt = 1
         return batch_size, nh, nr, nt
 
-    def _prepare_functional_input(self, h, r, t) -> Mapping[str, Any]:
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:
         return dict(h=h, r=r, t=t)
 
     def test_forward(self):
