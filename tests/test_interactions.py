@@ -3,7 +3,6 @@
 """Tests for interaction functions."""
 
 import unittest
-from operator import itemgetter
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
@@ -13,7 +12,7 @@ import torch
 import pykeen.nn.modules
 from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.typing import Representation
-from pykeen.utils import get_subclasses
+from pykeen.utils import get_subclasses, split_complex
 
 T = TypeVar("T")
 
@@ -258,9 +257,9 @@ class ComplExTests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.ComplExInteraction
 
-
-def _get_key_sorted_kwargs_values(kwargs: Mapping[str, Any]) -> Sequence[Any]:
-    return list(map(itemgetter(1), sorted(kwargs.items(), key=itemgetter(0))))
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = [torch.complex(*split_complex(x)) for x in (h, r, t)]
+        return (h * r * t).sum().real
 
 
 class ConvETests(InteractionTests, unittest.TestCase):
@@ -284,8 +283,7 @@ class ConvETests(InteractionTests, unittest.TestCase):
         t_bias = torch.rand_like(t[..., 0, None])
         return h, r, (t, t_bias)
 
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
-        height, width, h, hr1d, hr2d, input_channels, r, t, t_bias = _get_key_sorted_kwargs_values(kwargs)
+    def _exp_score(self, height, width, h, hr1d, hr2d, input_channels, r, t, t_bias) -> torch.FloatTensor:
         x = torch.cat([
             h.view(1, input_channels, height, width),
             r.view(1, input_channels, height, width)
