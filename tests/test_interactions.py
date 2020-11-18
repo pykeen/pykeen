@@ -12,7 +12,7 @@ import torch
 import pykeen.nn.modules
 from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.typing import Representation
-from pykeen.utils import get_subclasses, view_complex
+from pykeen.utils import get_subclasses, project_entity, view_complex
 
 T = TypeVar("T")
 
@@ -489,6 +489,12 @@ class TransDTests(TranslationalInteractionTests, unittest.TestCase):
         # Compute Scores
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
         self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+
+    def _exp_score(self, h, r, t, h_p, r_p, t_p, p, power_norm) -> torch.FloatTensor:  # noqa: D102
+        assert power_norm
+        h_bot = project_entity(e=h, e_p=h_p, r_p=r_p)
+        t_bot = project_entity(e=t, e_p=t_p, r_p=r_p)
+        return -((h_bot + r - t_bot) ** p).sum()
 
 
 class TransETests(TranslationalInteractionTests, unittest.TestCase):
