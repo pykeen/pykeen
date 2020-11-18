@@ -95,8 +95,8 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The functional interaction form
     func: Callable[..., torch.FloatTensor]
 
+    @staticmethod
     def _prepare_hrt_for_functional(
-        self,
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
@@ -463,17 +463,14 @@ class TranslationalInteraction(Interaction[HeadRepresentation, RelationRepresent
         self.p = p
         self.power_norm = power_norm
 
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(p=self.p, power_norm=self.power_norm)
+
 
 class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """The TransE interaction function."""
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return pkf.transe_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
+    func = pkf.transe_interaction
 
 
 class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
@@ -622,8 +619,8 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
         self.embedding_width = embedding_width
         self.input_channels = input_channels
 
+    @staticmethod
     def _prepare_hrt_for_functional(
-        self,
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
@@ -697,6 +694,8 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
     """
 
+    func = pkf.ermlp_interaction
+
     def __init__(
         self,
         embedding_dim: int,
@@ -718,16 +717,8 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         self.activation = nn.ReLU()
         self.hidden_to_score = nn.Linear(in_features=hidden_dim, out_features=1, bias=True)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return pkf.ermlp_interaction(
-            h=h,
-            r=r,
-            t=t,
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(
             hidden=self.hidden,
             activation=self.activation,
             final=self.hidden_to_score,
@@ -747,6 +738,8 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of ER-MLP (E)."""
+
+    func = pkf.ermlpe_interaction
 
     def __init__(
         self,
@@ -768,13 +761,8 @@ class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             nn.ReLU(),
         )
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return pkf.ermlpe_interaction(h=h, r=r, t=t, mlp=self.mlp)
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(mlp=self.mlp)
 
 
 class TransRInteraction(
@@ -787,18 +775,18 @@ class TransRInteraction(
     """The TransR interaction function."""
 
     relation_shape = ("e", "de")
+    func = pkf.transr_interaction
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        r, m_r = r
-        return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=self.power_norm)
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(h=h, r=r, t=t, m_r=m_r)
 
 
 class RotatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
@@ -815,6 +803,8 @@ class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
 class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function for ProjE."""
+
+    func = pkf.proje_interaction
 
     def __init__(
         self,
@@ -845,16 +835,8 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         for p in self.parameters():
             nn.init.uniform_(p, a=-bound, b=bound)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return pkf.proje_interaction(
-            h=h, r=r, t=t,
-            d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity,
-        )
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
 
 
 class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
@@ -874,19 +856,21 @@ class StructuredEmbeddingInteraction(
     """Interaction function of Structured Embedding."""
 
     relation_shape = ("dd", "dd")
+    func = pkf.structured_embedding_interaction
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        rh, rt = r
-        return pkf.structured_embedding_interaction(h=h, r_h=rh, r_t=rt, t=t, p=self.p, power_norm=self.power_norm)
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(h=h, r=r, r_h=r[0], r_t=r[1])
 
 
 class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of Tucker."""
+
+    func = pkf.tucker_interaction
 
     def __init__(
         self,
@@ -933,16 +917,8 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return pkf.tucker_interaction(
-            h=h,
-            r=r,
-            t=t,
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(
             core_tensor=self.core_tensor,
             do0=self.input_dropout,
             do1=self.hidden_dropout_1,
@@ -960,16 +936,18 @@ class UnstructuredModelInteraction(
     # shapes
     relation_shape: Sequence[str] = tuple()
 
+    func = pkf.unstructured_model_interaction
+
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: None,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return pkf.unstructured_model_interaction(h, t, p=self.p, power_norm=self.power_norm)
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(h=h, t=t)
 
 
 class TransDInteraction(
@@ -983,20 +961,21 @@ class TransDInteraction(
 
     entity_shape = ("d", "d")
     relation_shape = ("e", "e")
+    func = pkf.transd_interaction
 
     def __init__(self, p: int = 2, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
 
-    def forward(
-        self,
-        h: Tuple[torch.FloatTensor, torch.FloatTensor],
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: Tuple[torch.FloatTensor, torch.FloatTensor],
-    ) -> torch.FloatTensor:  # noqa:D102
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         h, h_p = h
         r, r_p = r
         t, t_p = t
-        return pkf.transd_interaction(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p, p=self.p, power_norm=self.power_norm)
+        return dict(h=h, r=r, t=t, h_p=h_p, r_p=r_p, t_p=t_p)
 
 
 class NTNInteraction(
@@ -1009,6 +988,7 @@ class NTNInteraction(
     """The interaction function of NTN."""
 
     relation_shape = ("kdd", "kd", "kd", "k", "k")
+    func = pkf.ntn_interaction
 
     def __init__(
         self,
@@ -1020,18 +1000,16 @@ class NTNInteraction(
         self.non_linearity = non_linearity
 
     @staticmethod
-    def unpack(h, r, t) -> Mapping[str, torch.FloatTensor]:
-        """Unpack (h, r, t) to arguments for functional ntn_interaction."""
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         w, vh, vt, b, u = r
         return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa:D102
-        return pkf.ntn_interaction(**self.unpack(h=h, r=r, t=t), activation=self.non_linearity)
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(activation=self.non_linearity)
 
 
 class KG2EInteraction(
@@ -1047,6 +1025,7 @@ class KG2EInteraction(
     relation_shape = ("d", "d")
     similarity: str
     exact: bool
+    func = pkf.kg2e_interaction
 
     def __init__(
         self,
@@ -1059,22 +1038,26 @@ class KG2EInteraction(
         self.similarity = similarity
         self.exact = exact
 
-    def forward(
-        self,
-        h: Tuple[torch.FloatTensor, torch.FloatTensor],
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: Tuple[torch.FloatTensor, torch.FloatTensor],
-    ) -> torch.FloatTensor:  # noqa:D102
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
         h_mean, h_var = h
         r_mean, r_var = r
         t_mean, t_var = t
-        return pkf.kg2e_interaction(
+        return dict(
             h_mean=h_mean,
             h_var=h_var,
             r_mean=r_mean,
             r_var=r_var,
             t_mean=t_mean,
             t_var=t_var,
+        )
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(
             similarity=self.similarity,
             exact=self.exact,
         )
@@ -1084,12 +1067,12 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
     """Interaction function of TransH."""
 
     relation_shape = ("d", "d")
+    func = pkf.transh_interaction
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: Tuple[torch.FloatTensor, torch.FloatTensor],
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        w_r, d_r = r
-        return pkf.transh_interaction(h, w_r, d_r, t, p=self.p, power_norm=self.power_norm)
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(h=h, w_r=r[0], d_r=r[1], t=t)

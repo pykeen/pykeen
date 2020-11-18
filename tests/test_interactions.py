@@ -4,14 +4,13 @@
 
 import unittest
 from operator import itemgetter
-from typing import Any, Callable, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
 import numpy
 import torch
 
 import pykeen.nn.modules
-from pykeen.nn import functional as pkf
 from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.typing import Representation
 from pykeen.utils import get_subclasses
@@ -65,8 +64,6 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
     num_entities: int = 7
 
     shape_kwargs = dict()
-
-    functional_form: Callable[..., torch.FloatTensor]
 
     def _get_hrt(
         self,
@@ -221,15 +218,6 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             nh = nt = 1
         return batch_size, nh, nr, nt
 
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:
-        # TODO: Move this as class method to Interaction
-        return dict(h=h, r=r, t=t)
-
     def test_forward(self):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
@@ -242,8 +230,8 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
                 expected_shape = self._get_output_shape(hs, rs, ts)
                 self._check_scores(scores=scores, exp_shape=expected_shape)
             with self.subTest(f"forward({hs}, {rs}, {ts}) - consistency with functional"):
-                kwargs = self._prepare_functional_input(h, r, t)
-                scores_f = self.__class__.functional_form(**kwargs)
+                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
+                scores_f = self.cls.func(**kwargs)
                 assert torch.allclose(scores, scores_f)
 
     def test_scores(self):
@@ -251,10 +239,10 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         self.instance.eval()
         for _ in range(10):
             h, r, t = self._get_hrt((1, 1), (1, 1), (1, 1))
-            kwargs = self._prepare_functional_input(h, r, t)
+            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
             # calculate by functional
-            scores_f = self.__class__.functional_form(**kwargs).item()
+            scores_f = self.cls.func(**kwargs).item()
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).item()
@@ -269,7 +257,6 @@ class ComplExTests(InteractionTests, unittest.TestCase):
     """Tests for ComplEx interaction function."""
 
     cls = pykeen.nn.modules.ComplExInteraction
-    functional_form = pkf.complex_interaction
 
 
 def _get_key_sorted_kwargs_values(kwargs: Mapping[str, Any]) -> Sequence[Any]:
@@ -280,7 +267,6 @@ class ConvETests(InteractionTests, unittest.TestCase):
     """Tests for ConvE interaction function."""
 
     cls = pykeen.nn.modules.ConvEInteraction
-    functional_form = pkf.conve_interaction
     kwargs = dict(
         embedding_height=1,
         embedding_width=2,
@@ -298,24 +284,6 @@ class ConvETests(InteractionTests, unittest.TestCase):
         t_bias = torch.rand_like(t[..., 0, None])
         return h, r, (t, t_bias)
 
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(
-            h=h,
-            r=r,
-            t=t[0],
-            t_bias=t[1],
-            input_channels=self.instance.input_channels,
-            embedding_height=self.instance.embedding_height,
-            embedding_width=self.instance.embedding_width,
-            hr2d=self.instance.hr2d,
-            hr1d=self.instance.hr1d,
-        )
-
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
         height, width, h, hr1d, hr2d, input_channels, r, t, t_bias = _get_key_sorted_kwargs_values(kwargs)
         x = torch.cat([
@@ -332,34 +300,16 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
     """Tests for ConvKB interaction function."""
 
     cls = pykeen.nn.modules.ConvKBInteraction
-    functional_form = pkf.convkb_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         num_filters=2 * InteractionTests.dim - 1,
     )
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(
-            h=h,
-            r=r,
-            t=t,
-            conv=self.instance.conv,
-            activation=self.instance.activation,
-            hidden_dropout=self.instance.hidden_dropout,
-            linear=self.instance.linear,
-        )
 
 
 class DistMultTests(InteractionTests, unittest.TestCase):
     """Tests for DistMult interaction function."""
 
     cls = pykeen.nn.modules.DistMultInteraction
-    functional_form = pkf.distmult_interaction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return (h * r * t).sum(dim=-1)
@@ -369,72 +319,37 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP interaction function."""
 
     cls = pykeen.nn.modules.ERMLPInteraction
-    functional_form = pkf.ermlp_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
     )
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(
-            h=h,
-            r=r,
-            t=t,
-            hidden=self.instance.hidden,
-            activation=self.instance.activation,
-            final=self.instance.hidden_to_score,
-        )
 
 
 class ERMLPETests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP-E interaction function."""
 
     cls = pykeen.nn.modules.ERMLPEInteraction
-    functional_form = pkf.ermlpe_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
     )
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(h=h, r=r, t=t, mlp=self.instance.mlp)
 
 
 class HolETests(InteractionTests, unittest.TestCase):
     """Tests for HolE interaction function."""
 
     cls = pykeen.nn.modules.HolEInteraction
-    functional_form = pkf.hole_interaction
 
 
 class NTNTests(InteractionTests, unittest.TestCase):
     """Tests for NTN interaction function."""
 
     cls = pykeen.nn.modules.NTNInteraction
-    functional_form = pkf.ntn_interaction
 
     num_slices: int = 11
     shape_kwargs = dict(
         k=11,
     )
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(**self.cls.unpack(h=h, r=r, t=t), activation=self.instance.non_linearity)
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
@@ -454,56 +369,27 @@ class ProjETests(InteractionTests, unittest.TestCase):
     """Tests for ProjE interaction function."""
 
     cls = pykeen.nn.modules.ProjEInteraction
-    functional_form = pkf.proje_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(
-            h=h,
-            r=r,
-            t=t,
-            d_e=self.instance.d_e,
-            d_r=self.instance.d_r,
-            b_c=self.instance.b_c,
-            b_p=self.instance.b_p,
-            activation=self.instance.inner_non_linearity,
-        )
 
 
 class RESCALTests(InteractionTests, unittest.TestCase):
     """Tests for RESCAL interaction function."""
 
     cls = pykeen.nn.modules.RESCALInteraction
-    functional_form = pkf.rescal_interaction
 
 
 class KG2ETests(InteractionTests, unittest.TestCase):
     """Tests for KG2E interaction function."""
 
     cls = pykeen.nn.modules.KG2EInteraction
-    functional_form = pkf.kg2e_interaction
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(h_mean=h[0], h_var=h[1], r_mean=r[0], r_var=r[1], t_mean=t[0], t_var=t[1])
 
 
 class TuckerTests(InteractionTests, unittest.TestCase):
     """Tests for Tucker interaction function."""
 
     cls = pykeen.nn.modules.TuckerInteraction
-    functional_form = pkf.tucker_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
@@ -513,7 +399,6 @@ class RotatETests(InteractionTests, unittest.TestCase):
     """Tests for RotatE interaction function."""
 
     cls = pykeen.nn.modules.RotatEInteraction
-    functional_form = pkf.rotate_interaction
 
 
 class TranslationalInteractionTests(InteractionTests):
@@ -526,26 +411,11 @@ class TranslationalInteractionTests(InteractionTests):
     def _additional_score_checks(self, scores):
         assert (scores <= 0).all()
 
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(
-            h=h,
-            r=r,
-            t=t,
-            p=self.instance.p,
-            power_norm=self.instance.power_norm,
-        )
-
 
 class TransDTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransD interaction function."""
 
     cls = pykeen.nn.modules.TransDInteraction
-    functional_form = pkf.transd_interaction
     shape_kwargs = dict(
         e=3,
     )
@@ -579,22 +449,11 @@ class TransDTests(TranslationalInteractionTests, unittest.TestCase):
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
         self.assertAlmostEqual(scores.item(), -27, delta=0.01)
 
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
-        kwargs.update(h=h[0], r=r[0], t=t[0], h_p=h[1], r_p=r[1], t_p=t[1])
-        return kwargs
-
 
 class TransETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransE interaction function."""
 
     cls = pykeen.nn.modules.TransEInteraction
-    functional_form = pkf.transe_interaction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return -(h + r - t).norm(p=2, dim=-1)
@@ -604,39 +463,15 @@ class TransHTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransH interaction function."""
 
     cls = pykeen.nn.modules.TransHInteraction
-    functional_form = pkf.transh_interaction
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
-        w_r, d_r = kwargs.pop("r")
-        kwargs.update(w_r=w_r, d_r=d_r)
-        return kwargs
 
 
 class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransR interaction function."""
 
     cls = pykeen.nn.modules.TransRInteraction
-    functional_form = pkf.transr_interaction
     shape_kwargs = dict(
         e=3,
     )
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
-        r, m_r = kwargs.pop("r")
-        kwargs.update(r=r, m_r=m_r)
-        return kwargs
 
     def test_manual(self):
         """Manually test the value of the interaction function."""
@@ -654,35 +489,12 @@ class SETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for SE interaction function."""
 
     cls = pykeen.nn.modules.StructuredEmbeddingInteraction
-    functional_form = pkf.structured_embedding_interaction
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
-        r_h, r_t = kwargs.pop("r")
-        kwargs.update(r_h=r_h, r_t=r_t)
-        return kwargs
 
 
 class UMTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for UM interaction function."""
 
     cls = pykeen.nn.modules.UnstructuredModelInteraction
-    functional_form = pkf.unstructured_model_interaction
-
-    def _prepare_functional_input(
-        self,
-        h: Union[Representation, Sequence[Representation]],
-        r: Union[Representation, Sequence[Representation]],
-        t: Union[Representation, Sequence[Representation]],
-    ) -> Mapping[str, Any]:  # noqa: D102
-        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
-        kwargs.pop("r")
-        return kwargs
 
 
 class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
