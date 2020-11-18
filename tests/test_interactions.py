@@ -241,11 +241,11 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
             # calculate by functional
-            scores_f = self.cls.func(**kwargs).item()
+            scores_f = self.cls.func(**kwargs)
 
             # calculate manually
-            scores_f_manual = self._exp_score(**kwargs).item()
-            assert scores_f_manual == scores_f
+            scores_f_manual = self._exp_score(**kwargs)
+            assert torch.allclose(scores_f_manual, scores_f)
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
         """Compute the expected score for a single-score batch."""
