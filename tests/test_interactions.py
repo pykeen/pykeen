@@ -300,7 +300,7 @@ class NTNTests(InteractionTests, unittest.TestCase):
 
     num_slices: int = 11
     shape_kwargs = dict(
-        k=2,
+        k=11,
     )
 
 
