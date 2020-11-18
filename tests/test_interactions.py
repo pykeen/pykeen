@@ -455,8 +455,9 @@ class TransETests(TranslationalInteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.TransEInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
-        return -(h + r - t).norm(p=2, dim=-1)
+    def _exp_score(self, h, r, t, p, power_norm) -> torch.FloatTensor:
+        assert not power_norm
+        return -(h + r - t).norm(p=p, dim=-1)
 
 
 class TransHTests(TranslationalInteractionTests, unittest.TestCase):

@@ -786,7 +786,7 @@ class TransRInteraction(
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(h=h, r=r, t=t, m_r=m_r)
+        return dict(h=h, r=r[0], t=t, m_r=r[1])
 
 
 class RotatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
@@ -864,7 +864,7 @@ class StructuredEmbeddingInteraction(
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(h=h, r=r, r_h=r[0], r_t=r[1])
+        return dict(h=h, t=t, r_h=r[0], r_t=r[1])
 
 
 class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
