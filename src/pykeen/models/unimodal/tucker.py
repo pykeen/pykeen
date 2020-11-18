@@ -90,9 +90,9 @@ class TuckER(SingleVectorEmbeddingModel):
             interaction=TuckerInteraction(
                 embedding_dim=embedding_dim,
                 relation_dim=relation_dim,
-                dropout_0=dropout_0,
-                dropout_1=dropout_1,
-                dropout_2=dropout_2,
+                head_dropout=dropout_0,
+                relation_dropout=dropout_1,
+                head_relation_dropout=dropout_2,
                 apply_batch_normalization=apply_batch_normalization,
             ),
             embedding_dim=embedding_dim,

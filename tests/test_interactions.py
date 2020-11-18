@@ -453,15 +453,14 @@ class TuckerTests(InteractionTests, unittest.TestCase):
         embedding_dim=InteractionTests.dim,
     )
 
-    def _exp_score(self, bn1, bn2, core_tensor, do0, do1, do2, h, r, t) -> torch.FloatTensor:
-        # DO(BN(DO(BN(h)) x_1 DO(W x_2 r))) x_3 t
-        # = A x_3 t
-        # with A = DO(BN(B)), B = C x_1 D = , C=DO(BN(h)), D = DO(W x_2 r)
+    def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
+        # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
         h, r, t = _strip_dim(h, r, t)
-        c = do0((core_tensor * r[None, :, None]).sum(dim=1))  # shape: (embedding_dim, embedding_dim)
-        b = do1(bn1(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
-        aa = (b[:, None] * c).sum(dim=1)  # shape: (embedding_dim)
-        return do2(bn2((aa.view(1, -1))))
+        a = do_r((core_tensor * r[None, :, None]).sum(dim=1))  # shape: (embedding_dim, embedding_dim)
+        b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
+        c = (b[:, None] * a).sum(dim=1)  # shape: (embedding_dim)
+        d = do_hr(bn_hr((c.view(1, -1)))).view(-1)  # shape: (embedding_dim)
+        return (d * t).sum()
 
 
 class RotatETests(InteractionTests, unittest.TestCase):

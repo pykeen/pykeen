@@ -53,17 +53,17 @@ def _extract_sizes(
 
 
 def _apply_optional_bn_to_tensor(
-    batch_norm: Optional[nn.BatchNorm1d],
+    x: torch.FloatTensor,
     output_dropout: nn.Dropout,
-    tensor: torch.FloatTensor,
+    batch_norm: Optional[nn.BatchNorm1d] = None,
 ) -> torch.FloatTensor:
     """Apply optional batch normalization and dropout layer. Supports multiple batch dimensions."""
     if batch_norm is not None:
-        shape = tensor.shape
-        tensor = tensor.reshape(-1, shape[-1])
-        tensor = batch_norm(tensor)
-        tensor = tensor.view(*shape)
-    return output_dropout(tensor)
+        shape = x.shape
+        x = x.reshape(-1, shape[-1])
+        x = batch_norm(x)
+        x = x.view(*shape)
+    return output_dropout(x)
 
 
 def _translational_interaction(
@@ -855,18 +855,20 @@ def tucker_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
     core_tensor: torch.FloatTensor,
-    do0: nn.Dropout,
-    do1: nn.Dropout,
-    do2: nn.Dropout,
-    bn1: Optional[nn.BatchNorm1d],
-    bn2: Optional[nn.BatchNorm1d],
+    do_h: nn.Dropout,
+    do_r: nn.Dropout,
+    do_hr: nn.Dropout,
+    bn_h: Optional[nn.BatchNorm1d],
+    bn_hr: Optional[nn.BatchNorm1d],
 ) -> torch.FloatTensor:
-    """
+    r"""
     Evaluate the TuckEr interaction function.
 
     Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
 
-        DO(BN(DO(BN(h)) x_1 DO(W x_2 r))) x_3 t
+    .. math ::
+
+        DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
 
     where BN denotes BatchNorm and DO denotes Dropout
 
@@ -878,32 +880,46 @@ def tucker_interaction(
         The tail representations.
     :param core_tensor: shape: (d_e, d_r, d_e)
         The core tensor.
-    :param do1:
+    :param do_h:
         The dropout layer for the head representations.
-    :param do0:
+    :param do_r:
         The first hidden dropout.
-    :param do2:
+    :param do_hr:
         The second hidden dropout.
-    :param bn1:
+    :param bn_h:
         The first batch normalization layer.
-    :param bn2:
+    :param bn_hr:
         The second batch normalization layer.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Compute wr = DO(W x_2 r)
-    x = do0(extended_einsum("idj,brd->brij", core_tensor, r))
-
-    # Compute h_n = DO(BN(h))
-    h = _apply_optional_bn_to_tensor(batch_norm=bn1, output_dropout=do1, tensor=h)
-
-    # compute whr = DO(BN(h_n x_1 wr))
-    x = extended_einsum("brid,bhd->bhri", x, h)
-    x = _apply_optional_bn_to_tensor(batch_norm=bn2, tensor=x, output_dropout=do2)
-
-    # Compute whr x_3 t
-    return extended_einsum("bhrd,btd->bhrt", x, t)
+    return extended_einsum(
+        # x_3 contraction
+        "bhrd,btd->bhrt",
+        _apply_optional_bn_to_tensor(
+            x=extended_einsum(
+                # x_1 contraction
+                "brid,bhd->bhri",
+                _apply_optional_bn_to_tensor(
+                    x=extended_einsum(
+                        # x_2 contraction
+                        "idj,brd->brij",
+                        core_tensor,
+                        r,
+                    ),
+                    output_dropout=do_r,
+                ),
+                _apply_optional_bn_to_tensor(
+                    x=h,
+                    batch_norm=bn_h,
+                    output_dropout=do_h,
+                )),
+            batch_norm=bn_hr,
+            output_dropout=do_hr,
+        ),
+        t,
+    )
 
 
 def unstructured_model_interaction(

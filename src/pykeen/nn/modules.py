@@ -876,19 +876,25 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         self,
         embedding_dim: int = 200,
         relation_dim: Optional[int] = None,
-        dropout_0: float = 0.3,
-        dropout_1: float = 0.4,
-        dropout_2: float = 0.5,
+        head_dropout: float = 0.3,
+        relation_dropout: float = 0.4,
+        head_relation_dropout: float = 0.5,
         apply_batch_normalization: bool = True,
     ):
         """Initialize the Tucker interaction function.
 
         :param embedding_dim:
+            The entity embedding dimension.
         :param relation_dim:
-        :param dropout_0:
-        :param dropout_1:
-        :param dropout_2:
+            The relation embedding dimension.
+        :param head_dropout:
+            The dropout rate applied to the head representations.
+        :param relation_dropout:
+            The dropout rate applied to the relation representations.
+        :param head_relation_dropout:
+            The dropout rate applied to the combined head and relation representations.
         :param apply_batch_normalization:
+            Whether to use batch normalization on head representations and the combination of head and relation.
         """
         super().__init__()
 
@@ -903,28 +909,29 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         )
 
         # Dropout
-        self.input_dropout = nn.Dropout(dropout_0)
-        self.hidden_dropout_1 = nn.Dropout(dropout_1)
-        self.hidden_dropout_2 = nn.Dropout(dropout_2)
+        self.head_dropout = nn.Dropout(head_dropout)
+        self.relation_dropout = nn.Dropout(relation_dropout)
+        self.head_relation_dropout = nn.Dropout(head_relation_dropout)
 
         if apply_batch_normalization:
-            self.bn1 = nn.BatchNorm1d(embedding_dim)
-            self.bn2 = nn.BatchNorm1d(embedding_dim)
+            self.head_batch_norm = nn.BatchNorm1d(embedding_dim)
+            self.head_relation_batchnorm = nn.BatchNorm1d(embedding_dim)
         else:
-            self.bn1 = self.bn2 = None
+            self.head_batch_norm = self.head_relation_batchnorm = None
 
     def reset_parameters(self):  # noqa:D102
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
+        # batch norm gets reset automatically, since it defines reset_parameters
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(
             core_tensor=self.core_tensor,
-            do0=self.input_dropout,
-            do1=self.hidden_dropout_1,
-            do2=self.hidden_dropout_2,
-            bn1=self.bn1,
-            bn2=self.bn2,
+            do_h=self.head_dropout,
+            do_r=self.relation_dropout,
+            do_hr=self.head_relation_dropout,
+            bn_h=self.head_batch_norm,
+            bn_hr=self.head_relation_batchnorm,
         )
 
 
