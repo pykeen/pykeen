@@ -12,7 +12,7 @@ import torch
 
 import pykeen.nn.modules
 from pykeen.nn import functional as pkf
-from pykeen.nn.modules import Interaction, StatelessInteraction, TranslationalInteraction
+from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.typing import Representation
 from pykeen.utils import get_subclasses
 
@@ -692,5 +692,4 @@ class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
     base_test = InteractionTests
     skip_cls = {
         TranslationalInteraction,
-        StatelessInteraction,
     }

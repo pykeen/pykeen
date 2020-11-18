@@ -18,7 +18,6 @@ from ..utils import check_shapes
 __all__ = [
     # Base Classes
     'Interaction',
-    'StatelessInteraction',
     'TranslationalInteraction',
     # Concrete Classes
     'ComplExInteraction',
@@ -448,31 +447,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
-class StatelessInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """Interaction function without state."""
-
-    def __init__(self, f: Callable[..., torch.FloatTensor]):
-        """Instantiate the stateless interaction module.
-
-        :param f: The interaction function, like ones from :mod:`pykeen.nn.functional`.
-        """
-        super().__init__()
-        self.f = f
-
-    def forward(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # normalization
-        h = _upgrade_to_sequence(h)
-        r = _upgrade_to_sequence(r)
-        t = _upgrade_to_sequence(t)
-        # TODO provide example of non-simple case
-        return self.f(*h, *r, *t)
-
-
 class TranslationalInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
@@ -710,11 +684,10 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         )
 
 
-class DistMultInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class DistMultInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapping the DistMult interaction function at :func:`pykeen.nn.functional.distmult_interaction`."""
 
-    def __init__(self):
-        super().__init__(f=pkf.distmult_interaction)
+    func = pkf.distmult_interaction
 
 
 class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
@@ -828,18 +801,16 @@ class TransRInteraction(
         return pkf.transr_interaction(h=h, r=r, t=t, m_r=m_r, p=self.p, power_norm=self.power_norm)
 
 
-class RotatEInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class RotatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of RotatE."""
 
-    def __init__(self):
-        super().__init__(f=pkf.rotate_interaction)
+    func = pkf.rotate_interaction
 
 
-class HolEInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function for HolE."""
 
-    def __init__(self):
-        super().__init__(f=pkf.hole_interaction)
+    func = pkf.hole_interaction
 
 
 class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
@@ -886,13 +857,11 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         )
 
 
-class RESCALInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of RESCAL."""
 
     relation_shape = ("dd",)
-
-    def __init__(self):
-        super().__init__(f=pkf.rescal_interaction)
+    func = pkf.rescal_interaction
 
 
 class StructuredEmbeddingInteraction(

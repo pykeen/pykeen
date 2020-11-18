@@ -4,7 +4,7 @@
 
 from . import functional, init
 from .emb import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
-from .modules import Interaction, StatelessInteraction
+from .modules import Interaction
 
 __all__ = [
     'Embedding',
@@ -12,7 +12,6 @@ __all__ = [
     'LiteralRepresentations',
     'RepresentationModule',
     'Interaction',
-    'StatelessInteraction',
     'init',
     'functional',
 ]
