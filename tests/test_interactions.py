@@ -3,12 +3,13 @@
 """Tests for interaction functions."""
 
 import unittest
-from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
 import torch
 
 import pykeen.nn.modules
+from pykeen.nn import functional as pkf
 from pykeen.nn.modules import Interaction, StatelessInteraction, TranslationalInteraction
 from pykeen.typing import Representation
 from pykeen.utils import get_subclasses
@@ -62,6 +63,8 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
     num_entities: int = 7
 
     shape_kwargs = dict()
+
+    functional_form: Callable[..., torch.FloatTensor]
 
     def _get_hrt(
         self,
@@ -177,35 +180,63 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         scores_no_slice = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=None)
         assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
 
-    def test_forward(self):
-        """Test forward."""
-        for hs, rs, ts in [
-            [
+    def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]]:
+        """Return a set of test shapes for (h, r, t)."""
+        return (
+            (  # single score
+                (1, 1),
+                (1, 1),
+                (1, 1),
+            ),
+            (  # score_r with multi-t
                 (self.batch_size, 1),
                 (1, self.num_relations),
-                (self.batch_size, self.num_entities),
-            ],
-            [
+                (self.batch_size, self.num_entities // 2 + 1),
+            ),
+            (  # score_r with multi-t and broadcasted head
                 (1, 1),
                 (1, self.num_relations),
                 (self.batch_size, self.num_entities),
-            ],
-            [
+            ),
+            (  # full cwa
                 (1, self.num_entities),
                 (1, self.num_relations),
                 (1, self.num_entities),
-            ],
-        ]:
+            ),
+        )
+
+    def _get_output_shape(
+        self,
+        hs: Tuple[int, int],
+        rs: Tuple[int, int],
+        ts: Tuple[int, int],
+    ) -> Tuple[int, int, int, int]:
+        batch_size = max(hs[0], rs[0], ts[0])
+        nh, nr, nt = hs[1], rs[1], ts[1]
+        if len(self.cls.relation_shape) == 0:
+            nr = 1
+        if len(self.cls.entity_shape) == 0:
+            nh = nt = 1
+        return batch_size, nh, nr, nt
+
+    def _prepare_functional_input(self, h, r, t) -> Mapping[str, Any]:
+        return dict(h=h, r=r, t=t)
+
+    def test_forward(self):
+        """Test forward."""
+        for hs, rs, ts in self._get_test_shapes():
             if any(isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules()):
+                # TODO: do we need to skip this for every combination? or only if batch_size = 1?
                 continue
             with self.subTest(f"forward({hs}, {rs}, {ts})"):
-                expected_shape = [max(hs[0], rs[0], ts[0]), hs[1], rs[1], ts[1]]
-                if len(self.cls.relation_shape) == 0:
-                    expected_shape[2] = 1
-                expected_shape = tuple(expected_shape)
                 h, r, t = self._get_hrt(hs, rs, ts)
                 scores = self.instance(h=h, r=r, t=t)
+                expected_shape = self._get_output_shape(hs, rs, ts)
                 self._check_scores(scores=scores, exp_shape=expected_shape)
+            with self.subTest(f"forward({hs}, {rs}, {ts}) - consistency with functional"):
+                kwargs = self._prepare_functional_input(h, r, t)
+                scores_f = self.__class__.functional_form(**kwargs)
+                assert torch.allclose(scores, scores_f)
 
     def test_scores(self):
         """Test individual scores."""
@@ -224,12 +255,14 @@ class ComplExTests(InteractionTests, unittest.TestCase):
     """Tests for ComplEx interaction function."""
 
     cls = pykeen.nn.modules.ComplExInteraction
+    functional_form = pkf.complex_interaction
 
 
 class ConvETests(InteractionTests, unittest.TestCase):
     """Tests for ConvE interaction function."""
 
     cls = pykeen.nn.modules.ConvEInteraction
+    functional_form = pkf.conve_interaction
     kwargs = dict(
         embedding_height=1,
         embedding_width=2,
@@ -252,6 +285,7 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
     """Tests for ConvKB interaction function."""
 
     cls = pykeen.nn.modules.ConvKBInteraction
+    functional_form = pkf.convkb_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         num_filters=2 * InteractionTests.dim - 1,
@@ -262,6 +296,7 @@ class DistMultTests(InteractionTests, unittest.TestCase):
     """Tests for DistMult interaction function."""
 
     cls = pykeen.nn.modules.DistMultInteraction
+    functional_form = pkf.distmult_interaction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return (h * r * t).sum(dim=-1)
@@ -271,6 +306,7 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP interaction function."""
 
     cls = pykeen.nn.modules.ERMLPInteraction
+    functional_form = pkf.ermlp_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
@@ -281,6 +317,7 @@ class ERMLPETests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP-E interaction function."""
 
     cls = pykeen.nn.modules.ERMLPEInteraction
+    functional_form = pkf.ermlpe_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
@@ -291,12 +328,14 @@ class HolETests(InteractionTests, unittest.TestCase):
     """Tests for HolE interaction function."""
 
     cls = pykeen.nn.modules.HolEInteraction
+    functional_form = pkf.hole_interaction
 
 
 class NTNTests(InteractionTests, unittest.TestCase):
     """Tests for NTN interaction function."""
 
     cls = pykeen.nn.modules.NTNInteraction
+    functional_form = pkf.ntn_interaction
 
     num_slices: int = 11
     shape_kwargs = dict(
@@ -308,6 +347,7 @@ class ProjETests(InteractionTests, unittest.TestCase):
     """Tests for ProjE interaction function."""
 
     cls = pykeen.nn.modules.ProjEInteraction
+    functional_form = pkf.proje_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
@@ -317,18 +357,21 @@ class RESCALTests(InteractionTests, unittest.TestCase):
     """Tests for RESCAL interaction function."""
 
     cls = pykeen.nn.modules.RESCALInteraction
+    functional_form = pkf.rescal_interaction
 
 
 class KG2ETests(InteractionTests, unittest.TestCase):
     """Tests for KG2E interaction function."""
 
     cls = pykeen.nn.modules.KG2EInteraction
+    functional_form = pkf.kg2e_interaction
 
 
 class TuckerTests(InteractionTests, unittest.TestCase):
     """Tests for Tucker interaction function."""
 
     cls = pykeen.nn.modules.TuckerInteraction
+    functional_form = pkf.tucker_interaction
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
@@ -338,6 +381,7 @@ class RotatETests(InteractionTests, unittest.TestCase):
     """Tests for RotatE interaction function."""
 
     cls = pykeen.nn.modules.RotatEInteraction
+    functional_form = pkf.rotate_interaction
 
 
 class TranslationalInteractionTests(InteractionTests):
@@ -355,6 +399,7 @@ class TransDTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransD interaction function."""
 
     cls = pykeen.nn.modules.TransDInteraction
+    functional_form = pkf.transd_interaction
     shape_kwargs = dict(
         e=3,
     )
@@ -393,6 +438,7 @@ class TransETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransE interaction function."""
 
     cls = pykeen.nn.modules.TransEInteraction
+    functional_form = pkf.transe_interaction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return -(h + r - t).norm(p=2, dim=-1)
@@ -402,12 +448,14 @@ class TransHTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransH interaction function."""
 
     cls = pykeen.nn.modules.TransHInteraction
+    functional_form = pkf.transh_interaction
 
 
 class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransR interaction function."""
 
     cls = pykeen.nn.modules.TransRInteraction
+    functional_form = pkf.transr_interaction
     shape_kwargs = dict(
         e=3,
     )
@@ -428,12 +476,14 @@ class SETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for SE interaction function."""
 
     cls = pykeen.nn.modules.StructuredEmbeddingInteraction
+    functional_form = pkf.structured_embedding_interaction
 
 
 class UMTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for UM interaction function."""
 
     cls = pykeen.nn.modules.UnstructuredModelInteraction
+    functional_form = pkf.unstructured_model_interaction
 
 
 class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
