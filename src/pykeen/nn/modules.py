@@ -653,10 +653,10 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-    ) -> MutableMapping[str, torch.FloatTensor]:
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, r=r, t=t[0], t_bias=t[1])
 
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
             input_channels=self.input_channels,
             embedding_height=self.embedding_height,
@@ -671,6 +671,8 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
     """
+
+    func = pkf.convkb_interaction
 
     def __init__(
         self,
@@ -699,16 +701,8 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    def forward(
-        self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        return pkf.convkb_interaction(
-            h=h,
-            r=r,
-            t=t,
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(
             conv=self.conv,
             activation=self.activation,
             hidden_dropout=self.hidden_dropout,
