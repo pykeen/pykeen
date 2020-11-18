@@ -45,7 +45,7 @@ def _extract_sizes(
     r: torch.Tensor,
     t: torch.Tensor,
 ) -> Tuple[int, int, int, int, int]:
-    """Utility to extract size dimensions from head/relation/tail representations."""
+    """Extract size dimensions from head/relation/tail representations."""
     num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
     d_e = h.shape[-1]
     d_r = r.shape[-1]
@@ -138,11 +138,11 @@ def complex_interaction(
     return tensor_sum(*(
         factor * extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
         for factor, hh, rr, tt in [
-        (+1, h_re, r_re, t_re),
-        (+1, h_re, r_im, t_im),
-        (+1, h_im, r_re, t_im),
-        (-1, h_im, r_im, t_re),
-    ]
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
+        ]
     ))
 
 
@@ -505,7 +505,7 @@ def ntn_interaction(
         extended_einsum("bhd,brkde,bte->bhrtk", h, w, t),
         extended_einsum("brkd,bhd->bhrk", vh, h).unsqueeze(dim=3),
         extended_einsum("brkd,btd->brtk", vt, t).unsqueeze(dim=1),
-        b.view(b.shape[0], 1, num_relations, 1, num_slices)
+        b.view(b.shape[0], 1, num_relations, 1, num_slices),
     ))
     x = extended_einsum("bhrtk,brk->bhrt", x, u)
     return x
