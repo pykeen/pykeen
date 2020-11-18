@@ -327,6 +327,10 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
         hidden_dim=2 * InteractionTests.dim - 1,
     )
 
+    def _exp_score(self, h, r, t, hidden, activation, final) -> torch.FloatTensor:
+        x = torch.cat([x.view(-1) for x in (h, r, t)])
+        return final(activation(hidden(x)))
+
 
 class ERMLPETests(InteractionTests, unittest.TestCase):
     """Tests for ERMLP-E interaction function."""
