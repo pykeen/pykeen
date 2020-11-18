@@ -445,7 +445,7 @@ class KG2ETests(InteractionTests, unittest.TestCase):
         e_mean, e_var = h_mean - t_mean, h_var + t_var
         p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=torch.diag(e_var))
         q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=torch.diag(r_var))
-        return torch.distributions.kl.kl_divergence(p, q)
+        return -torch.distributions.kl.kl_divergence(p, q)
 
 
 class TuckerTests(InteractionTests, unittest.TestCase):
