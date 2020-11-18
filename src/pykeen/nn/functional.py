@@ -490,6 +490,7 @@ def ntn_interaction(
         extended_einsum("bhd,brkde,bte->bhrtk", h, w, t),
         extended_einsum("brkd,bhd->bhrk", vh, h).unsqueeze(dim=3),
         extended_einsum("brkd,btd->brtk", vt, t).unsqueeze(dim=1),
+        b.view(b.shape[0], 1, num_relations, 1, num_slices)
     ))
     x = extended_einsum("bhrtk,brk->bhrt", x, u)
     return x
