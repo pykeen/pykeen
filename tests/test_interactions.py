@@ -2,6 +2,7 @@
 
 """Tests for interaction functions."""
 
+import logging
 import unittest
 from abc import abstractmethod
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
@@ -16,6 +17,7 @@ from pykeen.typing import Representation
 from pykeen.utils import clamp_norm, get_subclasses, project_entity, view_complex
 
 T = TypeVar("T")
+logger = logging.getLogger(__name__)
 
 
 class GenericTests(Generic[T]):
@@ -221,18 +223,24 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
     def test_forward(self):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
-            if any(isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules()):
-                # TODO: do we need to skip this for every combination? or only if batch_size = 1?
-                continue
-            with self.subTest(f"forward({hs}, {rs}, {ts})"):
-                h, r, t = self._get_hrt(hs, rs, ts)
-                scores = self.instance(h=h, r=r, t=t)
-                expected_shape = self._get_output_shape(hs, rs, ts)
-                self._check_scores(scores=scores, exp_shape=expected_shape)
-            with self.subTest(f"forward({hs}, {rs}, {ts}) - consistency with functional"):
-                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
-                scores_f = self.cls.func(**kwargs)
-                assert torch.allclose(scores, scores_f)
+            try:
+                with self.subTest(f"forward({hs}, {rs}, {ts})"):
+                    h, r, t = self._get_hrt(hs, rs, ts)
+                    scores = self.instance(h=h, r=r, t=t)
+                    expected_shape = self._get_output_shape(hs, rs, ts)
+                    self._check_scores(scores=scores, exp_shape=expected_shape)
+                with self.subTest(f"forward({hs}, {rs}, {ts}) - consistency with functional"):
+                    kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
+                    scores_f = self.cls.func(**kwargs)
+                    assert torch.allclose(scores, scores_f)
+            except ValueError as error:
+                # check whether the error originates from batch norm for single element batches
+                small_batch_size = any(s[0] == 1 for s in (hs, rs, ts))
+                has_batch_norm = any(isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules())
+                if small_batch_size and has_batch_norm:
+                    logger.warning(f"Skipping test for shapes {hs}, {rs}, {ts}")
+                    continue
+                raise error
 
     def test_scores(self):
         """Test individual scores."""
