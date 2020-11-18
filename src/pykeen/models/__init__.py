@@ -12,8 +12,7 @@ from .base import (  # noqa:F401
     DoubleRelationEmbeddingModel, ERModel, Model, SingleVectorEmbeddingModel,
     TwoSideEmbeddingModel, TwoVectorEmbeddingModel,
 )
-from .multimodal.base import LiteralModel
-from .multimodal import ComplExLiteral, DistMultLiteral
+from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .unimodal import (
     ComplEx,
     ConvE,
