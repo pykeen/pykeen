@@ -902,6 +902,13 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         # check normalization
         assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
 
+        # check equivalence of re-formulation
+        # e_{\bot} = M_{re} e = (r_p e_p^T + I^{d_r \times d_e}) e
+        #                     = r_p (e_p^T e) + e'
+        M_re = (r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2) + torch.eye(relation_dim, self.embedding_dim).unsqueeze(dim=0))
+        e_vanilla = (M_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
+        assert torch.allclose(e_vanilla, e_bot)
+
 
 class TestTransE(_DistanceModelTestCase, unittest.TestCase):
     """Test the TransE model."""
