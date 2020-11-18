@@ -34,7 +34,6 @@ __all__ = [
     'resolve_device',
     'split_complex',
     'split_list_in_batches_iter',
-    'split_list_in_batches',
     'normalize_string',
     'normalized_lookup',
     'negative_norm_of_sum',
@@ -67,12 +66,6 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
 
 
 X = TypeVar('X')
-
-
-# TODO remove (unused)
-def split_list_in_batches(input_list: List[X], batch_size: int) -> List[List[X]]:
-    """Split a list of instances in batches of size batch_size."""
-    return list(split_list_in_batches_iter(input_list=input_list, batch_size=batch_size))
 
 
 def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
