@@ -575,6 +575,7 @@ def rotate_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
+    # TODO: rotate by inverse relation, if the cost(dist(h, t * r_inv)) < cost(dist(h * r, t))
     # # r expresses a rotation in complex plane.
     # # The inverse rotation is expressed by the complex conjugate of r.
     # # The score is computed as the distance of the relation-rotated head to the tail.
