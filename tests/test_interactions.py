@@ -271,6 +271,10 @@ class ComplExTests(InteractionTests, unittest.TestCase):
     functional_form = pkf.complex_interaction
 
 
+def _get_key_sorted_kwargs_values(kwargs: Mapping[str, Any]) -> Sequence[Any]:
+    return list(map(itemgetter(1), sorted(kwargs.items(), key=itemgetter(0))))
+
+
 class ConvETests(InteractionTests, unittest.TestCase):
     """Tests for ConvE interaction function."""
 
@@ -312,12 +316,10 @@ class ConvETests(InteractionTests, unittest.TestCase):
         )
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
-        # unpack
-        sorted_kwargs = list(map(itemgetter(1), sorted(kwargs.items(), key=itemgetter(0))))
-        embedding_height, embedding_width, h, hr1d, hr2d, input_channels, r, t, t_bias = sorted_kwargs
+        height, width, h, hr1d, hr2d, input_channels, r, t, t_bias = _get_key_sorted_kwargs_values(kwargs)
         x = torch.cat([
-            h.view(1, input_channels, embedding_height, embedding_width),
-            r.view(1, input_channels, embedding_height, embedding_width)
+            h.view(1, input_channels, height, width),
+            r.view(1, input_channels, height, width)
         ], dim=2)
         x = hr2d(x)
         x = x.view(-1, numpy.prod(x.shape[-3:]))
@@ -432,6 +434,21 @@ class NTNTests(InteractionTests, unittest.TestCase):
         t: Union[Representation, Sequence[Representation]],
     ) -> Mapping[str, Any]:  # noqa: D102
         return dict(h=h, t=t, w=r[0], b=r[1], u=r[2], vh=r[3], vt=r[4], activation=self.instance.non_linearity)
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+        # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
+        # shapes:
+        # w: (k, dim, dim)
+        # vh/vt: (k, dim)
+        # b/u: (k,)
+        activation, b, h, t, u, vh, vt, w = _get_key_sorted_kwargs_values(kwargs)
+        h, t = h.view(1, self.dim, 1), t.view(1, self.dim, 1)
+        w = w.view(self.num_slices, self.dim, self.dim)
+        vh, vt = [v.view(self.num_slices, 1, self.dim) for v in (vh, vt)]
+        b = b.view(self.num_slices, 1, 1)
+        u = u.view(self.num_slices, )
+        x = activation(h.transpose(-2, -1) @ w @ t + vh @ h + vt @ t + b).view(self.num_slices)
+        return (x * u).sum()
 
 
 class ProjETests(InteractionTests, unittest.TestCase):
