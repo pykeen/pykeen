@@ -7,14 +7,13 @@ import math
 import torch
 
 from ..typing import GaussianDistribution
+from ..utils import tensor_sum
 
 __all__ = [
     'expected_likelihood',
     'kullback_leibler_similarity',
     'KG2E_SIMILARITIES',
 ]
-
-from ..utils import tensor_sum
 
 
 def expected_likelihood(
@@ -76,9 +75,9 @@ def kullback_leibler_similarity(
     r"""Compute the negative KL divergence.
 
     This is done between two Gaussian distributions given by mean `mu_*` and diagonal covariance matrix `sigma_*`.
-    
+
     .. math::
-    
+
         D((\mu_0, \Sigma_0), (\mu_1, \Sigma_1)) = 0.5 * (
           tr(\Sigma_1^-1 \Sigma_0)
           + (\mu_1 - \mu_0) * \Sigma_1^-1 (\mu_1 - \mu_0)
@@ -123,9 +122,7 @@ def kullback_leibler_similarity(
     # since sigma_0, sigma_1 are diagonal matrices:
     # = sum (sigma_1^-1[i] sigma_0[i]) = sum (sigma_0[i] / sigma_1[i])
     r_var_safe = r_var.clamp_min(min=epsilon)
-    terms.append(
-        (e_var / r_var_safe).sum(dim=-1)
-    )
+    terms.append((e_var / r_var_safe).sum(dim=-1))
 
     # 2. Component
     # (mu_1 - mu_0) * Sigma_1^-1 (mu_1 - mu_0)
@@ -134,15 +131,11 @@ def kullback_leibler_similarity(
     # since Sigma_1 is diagonal
     # = mu**2 / sigma_1
     mu = r_mean - e_mean
-    terms.append(
-        (mu.pow(2) / r_var_safe).sum(dim=-1)
-    )
+    terms.append((mu.pow(2) / r_var_safe).sum(dim=-1))
 
     # 3. Component
     if exact:
-        terms.append(
-            -e_shape[-1]
-        )
+        terms.append(-e_shape[-1])
 
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
@@ -153,7 +146,7 @@ def kullback_leibler_similarity(
     e_var_safe = e_var.clamp_min(min=epsilon)
     terms.extend((
         r_var_safe.log().sum(dim=-1),
-        -e_var_safe.log().sum(dim=-1)
+        -e_var_safe.log().sum(dim=-1),
     ))
 
     result = tensor_sum(*terms)
