@@ -409,6 +409,11 @@ class RESCALTests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.RESCALInteraction
 
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        # f(h, r, t) = h @ r @ t
+        h, r, t = _strip_dim(h, r, t)
+        return h.view(1, -1) @ r @ t.view(-1, 1)
+
 
 class KG2ETests(InteractionTests, unittest.TestCase):
     """Tests for KG2E interaction function."""
