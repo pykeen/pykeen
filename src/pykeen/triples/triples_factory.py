@@ -137,10 +137,10 @@ def _map_triples_elements_to_ids(
 
     # When triples that don't exist are trying to be mapped, they get the id "-1"
     entity_getter = np.vectorize(entity_to_id.get)
-    head_column = entity_getter(triples[:, 0], [-1])
-    tail_column = entity_getter(triples[:, 2], [-1])
+    head_column = entity_getter(triples[:, 0:1], [-1])
+    tail_column = entity_getter(triples[:, 2:3], [-1])
     relation_getter = np.vectorize(relation_to_id.get)
-    relation_column = relation_getter(triples[:, 1], [-1])
+    relation_column = relation_getter(triples[:, 1:2], [-1])
 
     # Filter all non-existent triples
     head_filter = head_column < 0
