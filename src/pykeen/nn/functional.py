@@ -793,16 +793,17 @@ def transh_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
+    num_heads, num_relations, num_tails, dim = _extract_sizes(h, w_r, t)[:4]
     # Project to hyperplane
     return negative_norm_of_sum(
         # h
-        h.unsqueeze(dim=2),
+        h.view(h.shape[0], num_heads, 1, 1, dim),
         -extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r).unsqueeze(dim=3),
         # r
-        d_r.view(d_r.shape[0], 1, d_r.shape[1], 1, d_r.shape[2]),
+        d_r.view(d_r.shape[0], 1, num_relations, 1, dim),
         # -t
-        -t.unsqueeze(dim=1),
-        +extended_einsum("btd,brd,bre->brte", t, w_r, w_r).unsqueeze(dim=1),
+        -t.view(t.shape[0], 1, 1, num_tails, dim),
+        extended_einsum("btd,brd,bre->brte", t, w_r, w_r).unsqueeze(dim=1),
         p=p,
         power_norm=power_norm,
     )
