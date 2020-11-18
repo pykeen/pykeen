@@ -76,9 +76,9 @@ class KullbackLeiblerTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.e_mean = torch.rand(self.d)
-        self.e_var = torch.rand(self.d)
+        self.e_var = torch.rand(self.d).exp()
         self.r_mean = torch.rand(self.d)
-        self.r_var = torch.rand(self.d)
+        self.r_var = torch.rand(self.d).exp()
 
     def get_e(self, pre_shape=(1, 1, 1)):
         return GaussianDistribution(
@@ -102,12 +102,14 @@ class KullbackLeiblerTests(unittest.TestCase):
 
         p = torch.distributions.MultivariateNormal(loc=self.e_mean, covariance_matrix=torch.diag(self.e_var))
         q = torch.distributions.MultivariateNormal(loc=self.r_mean, covariance_matrix=torch.diag(self.r_var))
-        sim2 = torch.distributions.kl_divergence(p=p, q=q).view(-1)
+        sim2 = -torch.distributions.kl_divergence(p=p, q=q).view(-1)
         assert torch.allclose(sim, sim2)
 
     def test_self_similarity(self):
         """Check value of similarity to self."""
         # e: (batch_size, num_heads, num_tails, d)
+        # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
+        # divergence = 0 => similarity = -divergence = 0
         e = self.get_e()
         r = self.get_e(pre_shape=(1, 1))
         sim = kullback_leibler_similarity(e=e, r=r, exact=True)
@@ -115,6 +117,8 @@ class KullbackLeiblerTests(unittest.TestCase):
 
     def test_value_range(self):
         """Check the value range."""
+        # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
+        # divergence >= 0 => similarity = -divergence <= 0
         e = self.get_e()
         r = self.get_r()
         sim = kullback_leibler_similarity(e=e, r=r, exact=True)
