@@ -370,18 +370,20 @@ class NTNTests(InteractionTests, unittest.TestCase):
         k=11,
     )
 
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+    def _exp_score(self, h, t, w, vt, vh, b, u, activation) -> torch.FloatTensor:
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
-        # shapes:
-        # w: (k, dim, dim)
-        # vh/vt: (k, dim)
-        # b/u: (k,)
-        h, t = [kwargs[name].view(1, self.dim, 1) for name in "ht"]
-        w = kwargs["w"].view(self.num_slices, self.dim, self.dim)
-        vh, vt = [kwargs[name].view(self.num_slices, 1, self.dim) for name in ("vh", "vt")]
-        b = kwargs["b"].view(self.num_slices, 1, 1)
-        u = kwargs["u"].view(1, self.num_slices)
-        return u @ kwargs["activation"](h.transpose(-2, -1) @ w @ t + vh @ h + vt @ t + b).view(self.num_slices, 1)
+        # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
+        # remove batch/num dimension
+        h, t, w, vt, vh, b, u = [x.view(*x.shape[2:]) for x in (h, t, w, vt, vh, b, u)]
+        score = 0.
+        for i in range(u.shape[-1]):
+            score = score + u[i] * activation(
+                h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1) +
+                (vh[i] * h.view(-1)).sum() +
+                (vt[i] * t.view(-1)).sum() +
+                b[i]
+            )
+        return score
 
 
 class ProjETests(InteractionTests, unittest.TestCase):
