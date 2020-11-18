@@ -512,6 +512,12 @@ class TransHTests(TranslationalInteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.TransHInteraction
 
+    def _exp_score(self, h, w_r, d_r, t, p, power_norm) -> torch.FloatTensor:  # noqa: D102
+        assert not power_norm
+        h, w_r, d_r, t = _strip_dim(h, w_r, d_r, t)
+        h, t = [x - (x * w_r).sum() * w_r for x in (h, t)]
+        return -(h + d_r - t).norm(p=p)
+
 
 class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransR interaction function."""
