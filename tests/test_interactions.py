@@ -353,6 +353,12 @@ class HolETests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.HolEInteraction
 
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h, t = [torch.fft.rfft(x.view(1, -1), dim=-1) for x in (h, t)]
+        h = torch.conj(h)
+        c = torch.fft.irfft(h * t, n=h.shape[-1], dim=-1)
+        return (c * r).sum()
+
 
 class NTNTests(InteractionTests, unittest.TestCase):
     """Tests for NTN interaction function."""
