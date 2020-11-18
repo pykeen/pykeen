@@ -5,7 +5,7 @@
 import itertools
 import logging
 import math
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Callable, Generic, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
 
 import torch
@@ -93,6 +93,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
+    #: The functional interaction form
+    func: Callable[..., torch.FloatTensor]
+
     def _prepare_hrt_for_functional(
         self,
         h: HeadRepresentation,
@@ -118,7 +121,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         kwargs.update(self._prepare_state_for_functional())
         return kwargs
 
-    @abstractmethod
     def forward(
         self,
         h: HeadRepresentation,
@@ -137,7 +139,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        raise NotImplementedError
+        return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
 
     @staticmethod
     def _add_dim(*x: torch.FloatTensor, dim: int) -> Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]:
@@ -500,11 +502,10 @@ class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, Float
         return pkf.transe_interaction(h=h, r=r, t=t, p=self.p, power_norm=self.power_norm)
 
 
-class ComplExInteraction(StatelessInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     """Interaction function of ComplEx."""
 
-    def __init__(self):
-        super().__init__(f=pkf.complex_interaction)
+    func = pkf.complex_interaction
 
 
 def _calculate_missing_shape_information(
