@@ -12,7 +12,7 @@ import torch
 import pykeen.nn.modules
 from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.typing import Representation
-from pykeen.utils import get_subclasses, split_complex
+from pykeen.utils import get_subclasses, view_complex
 
 T = TypeVar("T")
 
@@ -258,7 +258,7 @@ class ComplExTests(InteractionTests, unittest.TestCase):
     cls = pykeen.nn.modules.ComplExInteraction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = [torch.complex(*split_complex(x)) for x in (h, r, t)]
+        h, r, t = [view_complex(x) for x in (h, r, t)]
         return (h * r * t).sum().real
 
 
