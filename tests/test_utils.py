@@ -192,9 +192,9 @@ def test_project_entity():
     # check equivalence of re-formulation
     # e_{\bot} = M_{re} e = (r_p e_p^T + I^{d_r \times d_e}) e
     #                     = r_p (e_p^T e) + e'
-    M_re = r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2)
-    M_re = M_re + torch.eye(relation_dim, embedding_dim).view(1, 1, relation_dim, embedding_dim)
-    assert M_re.shape == (batch_size, num_entities, relation_dim, embedding_dim)
-    e_vanilla = (M_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
+    m_re = r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2)
+    m_re = m_re + torch.eye(relation_dim, embedding_dim).view(1, 1, relation_dim, embedding_dim)
+    assert m_re.shape == (batch_size, num_entities, relation_dim, embedding_dim)
+    e_vanilla = (m_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
     e_vanilla = clamp_norm(e_vanilla, p=2, dim=-1, maxnorm=1)
     assert torch.allclose(e_vanilla, e_bot)

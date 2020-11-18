@@ -74,19 +74,19 @@ class KullbackLeiblerTests(unittest.TestCase):
 
     d: int = 3
 
-    def setUp(self) -> None:
+    def setUp(self) -> None:  # noqa: D102
         self.e_mean = torch.rand(self.d)
         self.e_var = torch.rand(self.d).exp()
         self.r_mean = torch.rand(self.d)
         self.r_var = torch.rand(self.d).exp()
 
-    def get_e(self, pre_shape=(1, 1, 1)):
+    def _get_e(self, pre_shape=(1, 1, 1)):
         return GaussianDistribution(
             mean=self.e_mean.view(*pre_shape, self.d),
             diagonal_covariance=self.e_var.view(*pre_shape, self.d),
         )
 
-    def get_r(self, pre_shape=(1, 1)):
+    def _get_r(self, pre_shape=(1, 1)):
         return GaussianDistribution(
             mean=self.r_mean.view(*pre_shape, self.d),
             diagonal_covariance=self.r_var.view(*pre_shape, self.d),
@@ -95,9 +95,9 @@ class KullbackLeiblerTests(unittest.TestCase):
     def test_against_torch_builtin(self):
         """Compare value against torch.distributions."""
         # r: (batch_size, num_heads, num_tails, d)
-        e = self.get_e()
+        e = self._get_e()
         # r: (batch_size, num_relations, d)
-        r = self.get_r()
+        r = self._get_r()
         sim = kullback_leibler_similarity(e=e, r=r, exact=True).view(-1)
 
         p = torch.distributions.MultivariateNormal(loc=self.e_mean, covariance_matrix=torch.diag(self.e_var))
@@ -110,8 +110,8 @@ class KullbackLeiblerTests(unittest.TestCase):
         # e: (batch_size, num_heads, num_tails, d)
         # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
         # divergence = 0 => similarity = -divergence = 0
-        e = self.get_e()
-        r = self.get_e(pre_shape=(1, 1))
+        e = self._get_e()
+        r = self._get_e(pre_shape=(1, 1))
         sim = kullback_leibler_similarity(e=e, r=r, exact=True)
         assert torch.allclose(sim, torch.zeros_like(sim))
 
@@ -119,7 +119,7 @@ class KullbackLeiblerTests(unittest.TestCase):
         """Check the value range."""
         # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
         # divergence >= 0 => similarity = -divergence <= 0
-        e = self.get_e()
-        r = self.get_r()
+        e = self._get_e()
+        r = self._get_r()
         sim = kullback_leibler_similarity(e=e, r=r, exact=True)
         assert (sim <= 0).all()

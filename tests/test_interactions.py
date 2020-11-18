@@ -303,11 +303,11 @@ class ConvETests(InteractionTests, unittest.TestCase):
         return h, r, (t, t_bias)
 
     def _exp_score(
-        self, embedding_height, embedding_width, h, hr1d, hr2d, input_channels, r, t, t_bias
+        self, embedding_height, embedding_width, h, hr1d, hr2d, input_channels, r, t, t_bias,
     ) -> torch.FloatTensor:
         x = torch.cat([
             h.view(1, input_channels, embedding_height, embedding_width),
-            r.view(1, input_channels, embedding_height, embedding_width)
+            r.view(1, input_channels, embedding_height, embedding_width),
         ], dim=2)
         x = hr2d(x)
         x = x.view(-1, numpy.prod(x.shape[-3:]))
@@ -403,12 +403,10 @@ class NTNTests(InteractionTests, unittest.TestCase):
         h, t, w, vt, vh, b, u = _strip_dim(h, t, w, vt, vh, b, u)
         score = 0.
         for i in range(u.shape[-1]):
-            score = score + u[i] * activation(
-                h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
-                + (vh[i] * h.view(-1)).sum()
-                + (vt[i] * t.view(-1)).sum()
-                + b[i]
-            )
+            first_part = h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
+            second_part = (vh[i] * h.view(-1)).sum()
+            third_part = (vt[i] * t.view(-1)).sum()
+            score = score + u[i] * activation(first_part + second_part + third_part + b[i])
         return score
 
 

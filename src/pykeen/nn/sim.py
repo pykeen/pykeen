@@ -103,7 +103,6 @@ def kullback_leibler_similarity(
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The similarity.
     """
-
     assert (e.diagonal_covariance > 0).all() and (r.diagonal_covariance > 0).all()
 
     # broadcast shapes to (batch_size, num_heads, num_relations, num_tails, dim)
