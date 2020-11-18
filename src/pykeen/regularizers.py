@@ -99,7 +99,7 @@ class NoRegularizer(Regularizer):
     Used to simplify code.
     """
 
-    # TODO: Deprecated
+    # TODO(cthoyt): Deprecated, but used in notebooks / README
 
     #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
