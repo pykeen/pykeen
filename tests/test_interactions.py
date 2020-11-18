@@ -280,7 +280,7 @@ class ConvETests(InteractionTests, unittest.TestCase):
         self,
         *shapes: Tuple[int, ...],
         **kwargs,
-    ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:
+    ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:  # noqa: D102
         h, r, t = super()._get_hrt(*shapes, **kwargs)
         t_bias = torch.rand_like(t[..., 0, None])
         return h, r, (t, t_bias)
@@ -295,6 +295,22 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
         embedding_dim=InteractionTests.dim,
         num_filters=2 * InteractionTests.dim - 1,
     )
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(
+            h=h,
+            r=r,
+            t=t,
+            conv=self.instance.conv,
+            activation=self.instance.activation,
+            hidden_dropout=self.instance.hidden_dropout,
+            linear=self.instance.linear,
+        )
 
 
 class DistMultTests(InteractionTests, unittest.TestCase):
@@ -316,6 +332,21 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
         embedding_dim=InteractionTests.dim,
         hidden_dim=2 * InteractionTests.dim - 1,
     )
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(
+            h=h,
+            r=r,
+            t=t,
+            hidden=self.instance.hidden,
+            activation=self.instance.activation,
+            final=self.instance.hidden_to_score,
+        )
 
 
 class ERMLPETests(InteractionTests, unittest.TestCase):
@@ -347,6 +378,14 @@ class NTNTests(InteractionTests, unittest.TestCase):
         k=11,
     )
 
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(h=h, t=t, w=r[0], b=r[1], u=r[2], vh=r[3], vt=r[4], activation=self.instance.non_linearity)
+
 
 class ProjETests(InteractionTests, unittest.TestCase):
     """Tests for ProjE interaction function."""
@@ -356,6 +395,23 @@ class ProjETests(InteractionTests, unittest.TestCase):
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(
+            h=h,
+            r=r,
+            t=t,
+            d_e=self.instance.d_e,
+            d_r=self.instance.d_r,
+            b_c=self.instance.b_c,
+            b_p=self.instance.b_p,
+            activation=self.instance.inner_non_linearity,
+        )
 
 
 class RESCALTests(InteractionTests, unittest.TestCase):
@@ -370,6 +426,14 @@ class KG2ETests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.KG2EInteraction
     functional_form = pkf.kg2e_interaction
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(h_mean=h[0], h_var=h[1], r_mean=r[0], r_var=r[1], t_mean=t[0], t_var=t[1])
 
 
 class TuckerTests(InteractionTests, unittest.TestCase):
@@ -398,6 +462,20 @@ class TranslationalInteractionTests(InteractionTests):
 
     def _additional_score_checks(self, scores):
         assert (scores <= 0).all()
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(
+            h=h,
+            r=r,
+            t=t,
+            p=self.instance.p,
+            power_norm=self.instance.power_norm,
+        )
 
 
 class TransDTests(TranslationalInteractionTests, unittest.TestCase):
@@ -438,6 +516,16 @@ class TransDTests(TranslationalInteractionTests, unittest.TestCase):
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
         self.assertAlmostEqual(scores.item(), -27, delta=0.01)
 
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
+        kwargs.update(h=h[0], r=r[0], t=t[0], h_p=h[1], r_p=r[1], t_p=t[1])
+        return kwargs
+
 
 class TransETests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransE interaction function."""
@@ -455,6 +543,17 @@ class TransHTests(TranslationalInteractionTests, unittest.TestCase):
     cls = pykeen.nn.modules.TransHInteraction
     functional_form = pkf.transh_interaction
 
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
+        w_r, d_r = kwargs.pop("r")
+        kwargs.update(w_r=w_r, d_r=d_r)
+        return kwargs
+
 
 class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for TransR interaction function."""
@@ -464,6 +563,17 @@ class TransRTests(TranslationalInteractionTests, unittest.TestCase):
     shape_kwargs = dict(
         e=3,
     )
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
+        r, m_r = kwargs.pop("r")
+        kwargs.update(r=r, m_r=m_r)
+        return kwargs
 
     def test_manual(self):
         """Manually test the value of the interaction function."""
@@ -483,12 +593,33 @@ class SETests(TranslationalInteractionTests, unittest.TestCase):
     cls = pykeen.nn.modules.StructuredEmbeddingInteraction
     functional_form = pkf.structured_embedding_interaction
 
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
+        r_h, r_t = kwargs.pop("r")
+        kwargs.update(r_h=r_h, r_t=r_t)
+        return kwargs
+
 
 class UMTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for UM interaction function."""
 
     cls = pykeen.nn.modules.UnstructuredModelInteraction
     functional_form = pkf.unstructured_model_interaction
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        kwargs = dict(super()._prepare_functional_input(h=h, r=r, t=t))
+        kwargs.pop("r")
+        return kwargs
 
 
 class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
