@@ -40,8 +40,12 @@ __all__ = [
 ]
 
 
-# TODO @mberr documentation
-def _extract_sizes(h, r, t) -> Tuple[int, int, int, int, int]:
+def _extract_sizes(
+    h: torch.Tensor,
+    r: torch.Tensor,
+    t: torch.Tensor,
+) -> Tuple[int, int, int, int, int]:
+    """Utility to extract size dimensions from head/relation/tail representations."""
     num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
     d_e = h.shape[-1]
     d_r = r.shape[-1]
