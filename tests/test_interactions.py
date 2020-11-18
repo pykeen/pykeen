@@ -360,6 +360,10 @@ class HolETests(InteractionTests, unittest.TestCase):
         return (c * r).sum()
 
 
+def _strip_dim(*x):
+    return [xx.view(xx.shape[2:]) for xx in x]
+
+
 class NTNTests(InteractionTests, unittest.TestCase):
     """Tests for NTN interaction function."""
 
@@ -374,7 +378,7 @@ class NTNTests(InteractionTests, unittest.TestCase):
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
         # remove batch/num dimension
-        h, t, w, vt, vh, b, u = [x.view(*x.shape[2:]) for x in (h, t, w, vt, vh, b, u)]
+        h, t, w, vt, vh, b, u = _strip_dim(h, t, w, vt, vh, b, u)
         score = 0.
         for i in range(u.shape[-1]):
             score = score + u[i] * activation(
@@ -393,6 +397,11 @@ class ProjETests(InteractionTests, unittest.TestCase):
     kwargs = dict(
         embedding_dim=InteractionTests.dim,
     )
+
+    def _exp_score(self, h, r, t, d_e, d_r, b_c, b_p, activation) -> torch.FloatTensor:
+        # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
+        h, r, t = _strip_dim(h, r, t)
+        return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 
 class RESCALTests(InteractionTests, unittest.TestCase):
