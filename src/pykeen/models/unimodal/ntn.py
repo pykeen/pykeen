@@ -73,14 +73,6 @@ class NTN(ERModel):
             num_embeddings=triples_factory.num_relations,
             shape=(num_slices, embedding_dim, embedding_dim),
         )
-        b = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices,
-        )
-        u = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices,
-        )
         vh = Embedding(
             num_embeddings=triples_factory.num_relations,
             shape=(num_slices, embedding_dim),
@@ -88,6 +80,14 @@ class NTN(ERModel):
         vt = Embedding(
             num_embeddings=triples_factory.num_relations,
             shape=(num_slices, embedding_dim),
+        )
+        b = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices,
+        )
+        u = Embedding(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=num_slices,
         )
         super().__init__(
             triples_factory=triples_factory,
@@ -102,5 +102,5 @@ class NTN(ERModel):
                 num_embeddings=triples_factory.num_entities,
                 embedding_dim=embedding_dim,
             ),
-            relation_representations=(w, b, u, vh, vt),
+            relation_representations=(w, vh, vt, b, u),
         )

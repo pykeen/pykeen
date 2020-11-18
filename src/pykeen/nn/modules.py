@@ -1036,7 +1036,7 @@ class NTNInteraction(
         r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa:D102
-        w, b, u, vh, vt = r
+        w, vh, vt, b, u = r
         return pkf.ntn_interaction(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt, activation=self.non_linearity)
 
 

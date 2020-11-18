@@ -446,10 +446,10 @@ def ntn_interaction(
     h: torch.FloatTensor,
     t: torch.FloatTensor,
     w: torch.FloatTensor,
-    b: torch.FloatTensor,
-    u: torch.FloatTensor,
     vh: torch.FloatTensor,
     vt: torch.FloatTensor,
+    b: torch.FloatTensor,
+    u: torch.FloatTensor,
     activation: nn.Module,
 ) -> torch.FloatTensor:
     r"""
@@ -461,12 +461,12 @@ def ntn_interaction(
 
     :param h: shape: (batch_size, num_heads, dim)
         The head representations.
+    :param w: shape: (batch_size, num_relations, k, dim, dim)
+        The relation specific transformation matrix W_r.
     :param vh: shape: (batch_size, num_relations, k, dim)
         The head transformation matrix V_h.
     :param vt: shape: (batch_size, num_relations, k, dim)
         The tail transformation matrix V_h.
-    :param w: shape: (batch_size, num_relations, k, dim, dim)
-        The relation specific transformation matrix W_r.
     :param b: shape: (batch_size, num_relations, k)
         The relation specific offset b_r.
     :param u: shape: (batch_size, num_relations, k)
