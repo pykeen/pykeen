@@ -222,6 +222,7 @@ class _ModelTestCase:
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
+        # TODO: Move score checks to Interaction tests?
         # check for finite values by default
         self.assertTrue(torch.all(torch.isfinite(scores)).item(), f'Some scores were not finite:\n{scores}')
 
