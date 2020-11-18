@@ -564,6 +564,12 @@ class UMTests(TranslationalInteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.UnstructuredModelInteraction
 
+    def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
+        assert power_norm
+        # -\|h - t\|
+        h, t = _strip_dim(h, t)
+        return -(h - t).pow(p).sum()
+
 
 class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
     """Test for tests for all interaction functions."""
