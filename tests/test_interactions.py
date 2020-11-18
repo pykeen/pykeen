@@ -303,6 +303,11 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
         num_filters=2 * InteractionTests.dim - 1,
     )
 
+    def _exp_score(self, h, r, t, conv, activation, hidden_dropout, linear) -> torch.FloatTensor:  # noqa: D102
+        # W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
+        x = torch.stack([x.view(-1) for x in (h, r, t)], dim=1).view(1, 1, -1, 3)
+        return linear(hidden_dropout(activation(conv(x).view(1, -1))))
+
 
 class DistMultTests(InteractionTests, unittest.TestCase):
     """Tests for DistMult interaction function."""
