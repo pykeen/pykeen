@@ -3,6 +3,7 @@
 """Tests for interaction functions."""
 
 import unittest
+from operator import itemgetter
 from typing import Any, Callable, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
@@ -248,11 +249,16 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         self.instance.eval()
         for _ in range(10):
             h, r, t = self._get_hrt((1, 1), (1, 1), (1, 1))
-            scores = self.instance(h=h, r=r, t=t)
-            exp_score = self._exp_score(h, r, t).item()
-            assert scores.item() == exp_score
+            kwargs = self._prepare_functional_input(h, r, t)
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+            # calculate by functional
+            scores_f = self.__class__.functional_form(**kwargs).item()
+
+            # calculate manually
+            scores_f_manual = self._exp_score(**kwargs).item()
+            assert scores_f_manual == scores_f
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:
         raise SkipTest("No score check implemented.")
 
 
@@ -284,6 +290,45 @@ class ConvETests(InteractionTests, unittest.TestCase):
         h, r, t = super()._get_hrt(*shapes, **kwargs)
         t_bias = torch.rand_like(t[..., 0, None])
         return h, r, (t, t_bias)
+
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(
+            h=h,
+            r=r,
+            t=t[0],
+            t_bias=t[1],
+            input_channels=self.instance.input_channels,
+            embedding_height=self.instance.embedding_height,
+            embedding_width=self.instance.embedding_width,
+            num_in_features=self.instance.num_in_features,
+            bn0=self.instance.bn0,
+            bn1=self.instance.bn1,
+            bn2=self.instance.bn2,
+            inp_drop=self.instance.inp_drop,
+            feature_map_drop=self.instance.feature_map_drop,
+            hidden_drop=self.instance.hidden_drop,
+            conv1=self.instance.conv1,
+            activation=self.instance.activation,
+            fc=self.instance.fc,
+        )
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+        # unpack
+        activation, bn0, bn1, bn2, conv1, embedding_height, embedding_width, fc, feature_map_drop, h, hidden_drop, \
+        inp_drop, input_channels, num_in_features, r, t, t_bias = \
+            list(map(itemgetter(0), sorted(kwargs.items(), key=itemgetter(1))))
+        bn0, bn1, bn2 = [lambda x:x if bn is None else bn for bn in (bn0, bn1, bn2)]
+        hr = torch.cat([
+            h.view(1, input_channels, embedding_height, embedding_width),
+            r.view(1, input_channels, embedding_height, embedding_width)
+        ], dim=2)
+        x = feature_map_drop(activation(bn1(conv1(inp_drop(bn0(hr))))))
+
 
 
 class ConvKBTests(InteractionTests, unittest.TestCase):

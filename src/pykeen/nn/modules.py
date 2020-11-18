@@ -538,6 +538,12 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
 
     tail_entity_shape = ("d", "k")  # with k=1
 
+    #: The head-relation encoder operating on 2D "images"
+    hr2d: nn.Module
+
+    #: The head-relation encoder operating on the 1D flattened version
+    hr1d: nn.Module
+
     def __init__(
         self,
         input_channels: Optional[int] = None,
@@ -568,46 +574,50 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
             height=embedding_height,
         )
         logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
-        self.embedding_dim = embedding_dim
+
+        if input_channels * embedding_height * embedding_width != embedding_dim:
+            raise ValueError(
+                f'Product of input channels ({input_channels}), height ({embedding_height}), and width '
+                f'({embedding_width}) does not equal target embedding dimension ({embedding_dim})',
+            )
+
+        # encoders
+        # 1: 2D encoder: BN?, DO, Conv, BN?, Act, DO
+        hr2d_layers = [
+            nn.BatchNorm2d(input_channels) if apply_batch_normalization else None,
+            nn.Dropout(input_dropout),
+            nn.Conv2d(
+                in_channels=input_channels,
+                out_channels=output_channels,
+                kernel_size=(kernel_height, kernel_width),
+                stride=1,
+                padding=0,
+                bias=True,
+            ),
+            nn.BatchNorm2d(output_channels) if apply_batch_normalization else None,
+            nn.ReLU(),
+            nn.Dropout2d(feature_map_dropout),
+        ]
+        self.hr2d = nn.Sequential(*(layer for layer in hr2d_layers if layer is not None))
+
+        # 2: 1D encoder: FC, DO, BN?, Act
+        num_in_features = (
+            output_channels
+            * (2 * embedding_height - kernel_height + 1)
+            * (embedding_width - kernel_width + 1)
+        )
+        hr1d_layers = [
+            nn.Linear(num_in_features, embedding_dim),
+            nn.Dropout(output_dropout),
+            nn.BatchNorm1d(embedding_dim) if apply_batch_normalization else None,
+            nn.ReLU(),
+        ]
+        self.hr1d = nn.Sequential(*(layer for layer in hr1d_layers if layer is not None))
+
+        # store reshaping dimensions
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
         self.input_channels = input_channels
-
-        if self.input_channels * self.embedding_height * self.embedding_width != self.embedding_dim:
-            raise ValueError(
-                f'Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width '
-                f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})',
-            )
-
-        self.inp_drop = nn.Dropout(input_dropout)
-        self.hidden_drop = nn.Dropout(output_dropout)
-        self.feature_map_drop = nn.Dropout2d(feature_map_dropout)
-
-        self.conv1 = torch.nn.Conv2d(
-            in_channels=self.input_channels,
-            out_channels=output_channels,
-            kernel_size=(kernel_height, kernel_width),
-            stride=1,
-            padding=0,
-            bias=True,
-        )
-
-        self.apply_batch_normalization = apply_batch_normalization
-        if self.apply_batch_normalization:
-            self.bn0 = nn.BatchNorm2d(self.input_channels)
-            self.bn1 = nn.BatchNorm2d(output_channels)
-            self.bn2 = nn.BatchNorm1d(self.embedding_dim)
-        else:
-            self.bn0 = None
-            self.bn1 = None
-            self.bn2 = None
-        self.num_in_features = (
-            output_channels
-            * (2 * self.embedding_height - kernel_height + 1)
-            * (self.embedding_width - kernel_width + 1)
-        )
-        self.fc = nn.Linear(self.num_in_features, self.embedding_dim)
-        self.activation = nn.ReLU()
 
     def forward(
         self,
@@ -625,16 +635,8 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
             input_channels=self.input_channels,
             embedding_height=self.embedding_height,
             embedding_width=self.embedding_width,
-            num_in_features=self.num_in_features,
-            bn0=self.bn0,
-            bn1=self.bn1,
-            bn2=self.bn2,
-            inp_drop=self.inp_drop,
-            feature_map_drop=self.feature_map_drop,
-            hidden_drop=self.hidden_drop,
-            conv1=self.conv1,
-            activation=self.activation,
-            fc=self.fc,
+            hr2d=self.hr2d,
+            hr1d=self.hr1d,
         )
 
 

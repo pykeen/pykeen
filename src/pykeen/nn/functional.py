@@ -4,6 +4,7 @@
 
 from typing import Optional, Tuple, Union
 
+import numpy
 import torch
 import torch.fft
 from torch import nn
@@ -145,16 +146,8 @@ def conve_interaction(
     input_channels: int,
     embedding_height: int,
     embedding_width: int,
-    num_in_features: int,
-    bn0: Optional[nn.BatchNorm1d],
-    bn1: Optional[nn.BatchNorm1d],
-    bn2: Optional[nn.BatchNorm1d],
-    inp_drop: nn.Dropout,
-    feature_map_drop: nn.Dropout2d,
-    hidden_drop: nn.Dropout,
-    conv1: nn.Conv2d,
-    activation: nn.Module,
-    fc: nn.Linear,
+    hr2d: nn.Module,
+    hr1d: nn.Module,
 ) -> torch.FloatTensor:
     """
     Evaluate the ConvE interaction function.
@@ -173,26 +166,10 @@ def conve_interaction(
         The height of the reshaped embedding.
     :param embedding_width:
         The width of the reshaped embedding.
-    :param num_in_features:
-        The number of output features of the final layer (calculated with kernel and embedding dimensions).
-    :param bn0:
-        The first batch normalization layer.
-    :param bn1:
-        The second batch normalization layer.
-    :param bn2:
-        The third batch normalization layer.
-    :param inp_drop:
-        The input dropout layer.
-    :param feature_map_drop:
-        The feature map dropout layer.
-    :param hidden_drop:
-        The hidden dropout layer.
-    :param conv1:
-        The convolution layer.
-    :param activation:
-        The activation function.
-    :param fc:
-        The final fully connected layer.
+    :param hr2d:
+        The first module, transforming the 2D stacked head-relation "image".
+    :param hr1d:
+        The second module, transforming the 1D flattened output of the 2D module.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
@@ -212,30 +189,12 @@ def conve_interaction(
     r = r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width)
     x = broadcast_cat(h, r, dim=-2).view(-1, input_channels, 2 * embedding_height, embedding_width)
 
-    # batch_size, num_input_channels, 2*height, width
-    if bn0 is not None:
-        x = bn0(x)
-
-    # batch_size, num_input_channels, 2*height, width
-    x = inp_drop(x)
-
-    # (N,C_out,H_out,W_out)
-    x = conv1(x)
-
-    if bn1 is not None:
-        x = bn1(x)
-
-    x = activation(x)
-    x = feature_map_drop(x)
+    # batch_size', num_input_channels, 2*height, width
+    x = hr2d(x)
 
     # batch_size', num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
-    x = x.view(-1, num_in_features)
-    x = fc(x)
-    x = hidden_drop(x)
-
-    if bn2 is not None:
-        x = bn2(x)
-    x = activation(x)
+    x = x.view(-1, numpy.prod(x.shape[-3:]))
+    x = hr1d(x)
 
     # reshape: (batch_size', embedding_dim) -> (b, h, r, 1, d)
     x = x.view(-1, num_heads, num_relations, 1, embedding_dim)
