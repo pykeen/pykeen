@@ -14,6 +14,8 @@ __all__ = [
     'KG2E_SIMILARITIES',
 ]
 
+from ..utils import tensor_sum
+
 
 def expected_likelihood(
     e: GaussianDistribution,
@@ -114,12 +116,16 @@ def kullback_leibler_similarity(
     r_mean = r.mean.view(r_shape[0], 1, r_shape[1], 1, r_shape[2])
     r_var: torch.FloatTensor = r.diagonal_covariance.view(r_shape[0], 1, r_shape[1], 1, r_shape[2])
 
+    terms = []
+
     # 1. Component
     # tr(sigma_1^-1 sigma_0) = sum (sigma_1^-1 sigma_0)[i, i]
     # since sigma_0, sigma_1 are diagonal matrices:
     # = sum (sigma_1^-1[i] sigma_0[i]) = sum (sigma_0[i] / sigma_1[i])
     r_var_safe = r_var.clamp_min(min=epsilon)
-    result = (e_var / r_var_safe).sum(dim=-1)
+    terms.append(
+        (e_var / r_var_safe).sum(dim=-1)
+    )
 
     # 2. Component
     # (mu_1 - mu_0) * Sigma_1^-1 (mu_1 - mu_0)
@@ -128,11 +134,15 @@ def kullback_leibler_similarity(
     # since Sigma_1 is diagonal
     # = mu**2 / sigma_1
     mu = r_mean - e_mean
-    result = result + (mu.pow(2) / r_var_safe).sum(dim=-1)
+    terms.append(
+        (mu.pow(2) / r_var_safe).sum(dim=-1)
+    )
 
     # 3. Component
     if exact:
-        result = result - e_shape[-1]
+        terms.append(
+            -e_shape[-1]
+        )
 
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
@@ -141,8 +151,12 @@ def kullback_leibler_similarity(
     # = ln prod Sigma_1[ii] - ln prod Sigma_0[ii]
     # = sum ln Sigma_1[ii] - sum ln Sigma_0[ii]
     e_var_safe = e_var.clamp_min(min=epsilon)
-    result = result + r_var_safe.log().sum(dim=-1) - e_var_safe.log().sum(dim=-1)
+    terms.extend((
+        r_var_safe.log().sum(dim=-1),
+        -e_var_safe.log().sum(dim=-1)
+    ))
 
+    result = tensor_sum(*terms)
     if exact:
         result = 0.5 * result
 
