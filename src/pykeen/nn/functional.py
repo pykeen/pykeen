@@ -645,7 +645,7 @@ def structured_embedding_interaction(
     Evaluate the Structured Embedding interaction function.
 
     .. math ::
-        f(h, r, t) = \|R_h r - R_t t\|
+        f(h, r, t) = -\|R_h h - R_t t\|
 
     :param h: shape: (batch_size, num_heads, dim)
         The head representations.
