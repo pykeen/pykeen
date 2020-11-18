@@ -675,8 +675,8 @@ def structured_embedding_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        extended_einsum("brde,bhd->bhre", r_h, h).unsqueeze(dim=3),
-        -extended_einsum("brde,btd->brte", r_t, t).unsqueeze(dim=1),
+        extended_einsum("bred,bhd->bhre", r_h, h).unsqueeze(dim=3),
+        -extended_einsum("bred,btd->brte", r_t, t).unsqueeze(dim=1),
         p=p,
         power_norm=power_norm,
     )
