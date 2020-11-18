@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, SupportsFloat, Tuple, Type, TypeVar, Union
 
-import numpy
 import numpy as np
 import pandas as pd
 import torch
@@ -31,7 +30,6 @@ __all__ = [
     'invert_mapping',
     'is_cudnn_error',
     'is_cuda_oom_error',
-    'l2_regularization',
     'random_non_negative_int',
     'resolve_device',
     'slice_triples',
@@ -56,30 +54,6 @@ logger = logging.getLogger(__name__)
 _CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
 
 _CUDA_OOM_ERROR = 'CUDA out of memory.'
-
-
-# TODO remove (unused)
-def l2_regularization(
-    *xs: torch.Tensor,
-    normalize: bool = False,
-) -> torch.Tensor:
-    """
-    Compute squared L2-regularization term.
-
-    :param xs: a list of torch.Tensor
-        The tensors for which to compute the regularization.
-    :param normalize:
-        Whether to divide the term by the total number of elements in the tensors.
-
-    :return: The sum of squared value across all tensors.
-    """
-    regularization_term = sum(x.pow(2).sum() for x in xs)
-
-    # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
-    if normalize:
-        regularization_term /= sum(numpy.prod(x.shape) for x in xs)
-
-    return regularization_term
 
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
