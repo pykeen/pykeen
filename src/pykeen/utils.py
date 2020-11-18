@@ -32,8 +32,6 @@ __all__ = [
     'is_cuda_oom_error',
     'random_non_negative_int',
     'resolve_device',
-    'slice_triples',
-    'slice_doubles',
     'split_complex',
     'split_list_in_batches_iter',
     'split_list_in_batches',
@@ -66,24 +64,6 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = torch.device('cpu')
         logger.warning('No cuda devices were available. The model runs on CPU')
     return device
-
-
-def slice_triples(triples):
-    """Get the heads, relations, and tails from a matrix of triples."""
-    return (
-        triples[:, 0:1],  # heads
-        triples[:, 1:2],  # relations
-        triples[:, 2:3],  # tails
-    )
-
-
-# TODO remove (unused/untested)
-def slice_doubles(doubles):
-    """Get the heads and relations from a matrix of doubles."""
-    return (
-        doubles[:, 0:1],  # heads
-        doubles[:, 1:2],  # relations
-    )
 
 
 X = TypeVar('X')

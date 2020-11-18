@@ -17,7 +17,7 @@ from tqdm.autonotebook import tqdm
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
+from ..utils import compact_mapping, invert_mapping, random_non_negative_int
 
 __all__ = [
     'TriplesFactory',
@@ -135,14 +135,12 @@ def _map_triples_elements_to_ids(
         logger.warning('Provided empty triples to map.')
         return torch.empty(0, 3, dtype=torch.long)
 
-    heads, relations, tails = slice_triples(triples)
-
     # When triples that don't exist are trying to be mapped, they get the id "-1"
     entity_getter = np.vectorize(entity_to_id.get)
-    head_column = entity_getter(heads, [-1])
-    tail_column = entity_getter(tails, [-1])
+    head_column = entity_getter(triples[:, 0], [-1])
+    tail_column = entity_getter(triples[:, 2], [-1])
     relation_getter = np.vectorize(relation_to_id.get)
-    relation_column = relation_getter(relations, [-1])
+    relation_column = relation_getter(triples[:, 1], [-1])
 
     # Filter all non-existent triples
     head_filter = head_column < 0
