@@ -256,10 +256,10 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
             # calculate by functional
-            scores_f = self.cls.func(**kwargs)
+            scores_f = self.cls.func(**kwargs).view(-1)
 
             # calculate manually
-            scores_f_manual = self._exp_score(**kwargs)
+            scores_f_manual = self._exp_score(**kwargs).view(-1)
             assert torch.allclose(scores_f_manual, scores_f)
 
     @abstractmethod
@@ -323,8 +323,11 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
 
     def _exp_score(self, h, r, t, conv, activation, hidden_dropout, linear) -> torch.FloatTensor:  # noqa: D102
         # W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
+        # prepare conv input (N, C, H, W)
         x = torch.stack([x.view(-1) for x in (h, r, t)], dim=1).view(1, 1, -1, 3)
-        return linear(hidden_dropout(activation(conv(x).view(1, -1))))
+        x = conv(x)
+        x = hidden_dropout(activation(x))
+        return linear(x.view(1, -1))
 
 
 class DistMultTests(InteractionTests, unittest.TestCase):

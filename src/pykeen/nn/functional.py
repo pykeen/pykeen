@@ -261,18 +261,18 @@ def convkb_interaction(
     conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
     conv_bias = conv.bias.view(1, 1, 1, 1, 1, num_filters)
     # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
-    h = (h.view(h.shape[0], h.shape[1], 1, 1, embedding_dim, 1) * conv_head.view(1, 1, 1, 1, 1, num_filters))
-    r = (r.view(r.shape[0], 1, r.shape[1], 1, embedding_dim, 1) * conv_rel.view(1, 1, 1, 1, 1, num_filters))
-    t = (t.view(t.shape[0], 1, 1, t.shape[1], embedding_dim, 1) * conv_tail.view(1, 1, 1, 1, 1, num_filters))
+    h = (h.view(h.shape[0], num_heads, 1, 1, embedding_dim, 1) * conv_head.view(1, 1, 1, 1, 1, num_filters))
+    r = (r.view(r.shape[0], 1, num_relations, 1, embedding_dim, 1) * conv_rel.view(1, 1, 1, 1, 1, num_filters))
+    t = (t.view(t.shape[0], 1, 1, num_tails, embedding_dim, 1) * conv_tail.view(1, 1, 1, 1, 1, num_filters))
     x = activation(tensor_sum(conv_bias, h, r, t))
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
 
     # Linear layer for final scores
-    return linear(
-        x.view(-1, embedding_dim * num_filters),
-    ).view(-1, num_heads, num_relations, num_tails)
+    x = x.view(*x.shape[:-2], embedding_dim * num_filters)
+    x = linear(x)
+    return x.view(-1, num_heads, num_relations, num_tails)
 
 
 def distmult_interaction(
