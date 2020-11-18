@@ -283,10 +283,12 @@ class ConvETests(InteractionTests, unittest.TestCase):
         t_bias = torch.rand_like(t[..., 0, None])
         return h, r, (t, t_bias)
 
-    def _exp_score(self, height, width, h, hr1d, hr2d, input_channels, r, t, t_bias) -> torch.FloatTensor:
+    def _exp_score(
+        self, embedding_height, embedding_width, h, hr1d, hr2d, input_channels, r, t, t_bias
+    ) -> torch.FloatTensor:
         x = torch.cat([
-            h.view(1, input_channels, height, width),
-            r.view(1, input_channels, height, width)
+            h.view(1, input_channels, embedding_height, embedding_width),
+            r.view(1, input_channels, embedding_height, embedding_width)
         ], dim=2)
         x = hr2d(x)
         x = x.view(-1, numpy.prod(x.shape[-3:]))
