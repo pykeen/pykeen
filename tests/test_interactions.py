@@ -7,6 +7,7 @@ from operator import itemgetter
 from typing import Any, Callable, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
+import numpy
 import torch
 
 import pykeen.nn.modules
@@ -305,30 +306,22 @@ class ConvETests(InteractionTests, unittest.TestCase):
             input_channels=self.instance.input_channels,
             embedding_height=self.instance.embedding_height,
             embedding_width=self.instance.embedding_width,
-            num_in_features=self.instance.num_in_features,
-            bn0=self.instance.bn0,
-            bn1=self.instance.bn1,
-            bn2=self.instance.bn2,
-            inp_drop=self.instance.inp_drop,
-            feature_map_drop=self.instance.feature_map_drop,
-            hidden_drop=self.instance.hidden_drop,
-            conv1=self.instance.conv1,
-            activation=self.instance.activation,
-            fc=self.instance.fc,
+            hr2d=self.instance.hr2d,
+            hr1d=self.instance.hr1d,
         )
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
         # unpack
-        activation, bn0, bn1, bn2, conv1, embedding_height, embedding_width, fc, feature_map_drop, h, hidden_drop, \
-        inp_drop, input_channels, num_in_features, r, t, t_bias = \
-            list(map(itemgetter(0), sorted(kwargs.items(), key=itemgetter(1))))
-        bn0, bn1, bn2 = [lambda x:x if bn is None else bn for bn in (bn0, bn1, bn2)]
-        hr = torch.cat([
+        sorted_kwargs = list(map(itemgetter(1), sorted(kwargs.items(), key=itemgetter(0))))
+        embedding_height, embedding_width, h, hr1d, hr2d, input_channels, r, t, t_bias = sorted_kwargs
+        x = torch.cat([
             h.view(1, input_channels, embedding_height, embedding_width),
             r.view(1, input_channels, embedding_height, embedding_width)
         ], dim=2)
-        x = feature_map_drop(activation(bn1(conv1(inp_drop(bn0(hr))))))
-
+        x = hr2d(x)
+        x = x.view(-1, numpy.prod(x.shape[-3:]))
+        x = hr1d(x)
+        return (x.view(1, -1) * t.view(1, -1)).sum() + t_bias
 
 
 class ConvKBTests(InteractionTests, unittest.TestCase):
