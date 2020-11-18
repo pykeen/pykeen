@@ -231,7 +231,10 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             except ValueError as error:
                 # check whether the error originates from batch norm for single element batches
                 small_batch_size = any(s[0] == 1 for s in (hs, rs, ts))
-                has_batch_norm = any(isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules())
+                has_batch_norm = any(
+                    isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d))
+                    for m in self.instance.modules()
+                )
                 if small_batch_size and has_batch_norm:
                     logger.warning(f"Skipping test for shapes {hs}, {rs}, {ts}")
                     continue
@@ -401,10 +404,10 @@ class NTNTests(InteractionTests, unittest.TestCase):
         score = 0.
         for i in range(u.shape[-1]):
             score = score + u[i] * activation(
-                h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1) +
-                (vh[i] * h.view(-1)).sum() +
-                (vt[i] * t.view(-1)).sum() +
-                b[i]
+                h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
+                + (vh[i] * h.view(-1)).sum()
+                + (vt[i] * t.view(-1)).sum()
+                + b[i]
             )
         return score
 
