@@ -398,6 +398,14 @@ class ERMLPETests(InteractionTests, unittest.TestCase):
         hidden_dim=2 * InteractionTests.dim - 1,
     )
 
+    def _prepare_functional_input(
+        self,
+        h: Union[Representation, Sequence[Representation]],
+        r: Union[Representation, Sequence[Representation]],
+        t: Union[Representation, Sequence[Representation]],
+    ) -> Mapping[str, Any]:  # noqa: D102
+        return dict(h=h, r=r, t=t, mlp=self.instance.mlp)
+
 
 class HolETests(InteractionTests, unittest.TestCase):
     """Tests for HolE interaction function."""
