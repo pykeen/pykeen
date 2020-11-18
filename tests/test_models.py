@@ -40,11 +40,11 @@ from pykeen.models.unimodal.rgcn import (
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
-from pykeen.nn import Embedding, RepresentationModule
+from pykeen.nn import RepresentationModule
 from pykeen.regularizers import LpRegularizer, collect_regularization_terms
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
-from pykeen.utils import all_in_bounds, clamp_norm, project_entity, set_random_seed
+from pykeen.utils import all_in_bounds, set_random_seed
 
 SKIP_MODULES = {
     Model.__name__,
@@ -876,38 +876,6 @@ class TestTransD(_DistanceModelTestCase, unittest.TestCase):
         """
         for emb in (self.model.entity_representations[0], self.model.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
-
-    def test_project_entity(self):
-        """Test _project_entity."""
-        self.assertIsInstance(self.model, pykeen.models.TransD)
-
-        # random entity embeddings & projections
-        e = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
-        e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
-        e_p = torch.rand(1, self.model.num_entities, self.embedding_dim, generator=self.generator)
-
-        # random relation embeddings & projections
-        relation_rep: Embedding = self.model.relation_representations[0]
-        self.assertIsInstance(relation_rep, Embedding)
-        relation_dim = relation_rep.embedding_dim
-
-        r_p = torch.rand(self.batch_size, 1, relation_dim, generator=self.generator)
-
-        # project
-        e_bot = project_entity(e=e, e_p=e_p, r_p=r_p)
-
-        # check shape:
-        assert e_bot.shape == (self.batch_size, self.model.num_entities, relation_dim)
-
-        # check normalization
-        assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
-
-        # check equivalence of re-formulation
-        # e_{\bot} = M_{re} e = (r_p e_p^T + I^{d_r \times d_e}) e
-        #                     = r_p (e_p^T e) + e'
-        M_re = (r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2) + torch.eye(relation_dim, self.embedding_dim).unsqueeze(dim=0))
-        e_vanilla = (M_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
-        assert torch.allclose(e_vanilla, e_bot)
 
 
 class TestTransE(_DistanceModelTestCase, unittest.TestCase):

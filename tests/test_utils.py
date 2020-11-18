@@ -10,7 +10,7 @@ import torch
 
 from pykeen.utils import (
     _CUDA_OOM_ERROR, _CUDNN_ERROR, clamp_norm, combine_complex, compact_mapping, flatten_dictionary,
-    get_until_first_blank, is_cuda_oom_error, is_cudnn_error, l2_regularization, split_complex,
+    get_until_first_blank, is_cuda_oom_error, is_cudnn_error, l2_regularization, project_entity, split_complex,
 )
 
 
@@ -189,3 +189,35 @@ class TestCudaExceptionsHandling(unittest.TestCase):
         self.assertFalse(is_cuda_oom_error(runtime_error=error))
 
         self.assertFalse(is_cudnn_error(runtime_error=self.not_cuda_error))
+
+
+def test_project_entity():
+    """Test _project_entity."""
+    batch_size = 2
+    embedding_dim = 3
+    relation_dim = 5
+    num_entities = 7
+
+    # random entity embeddings & projections
+    e = torch.rand(1, num_entities, embedding_dim)
+    e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
+    e_p = torch.rand(1, num_entities, embedding_dim)
+
+    # random relation embeddings & projections
+    r_p = torch.rand(batch_size, 1, relation_dim)
+
+    # project
+    e_bot = project_entity(e=e, e_p=e_p, r_p=r_p)
+
+    # check shape:
+    assert e_bot.shape == (batch_size, num_entities, relation_dim)
+
+    # check normalization
+    assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
+
+    # check equivalence of re-formulation
+    # e_{\bot} = M_{re} e = (r_p e_p^T + I^{d_r \times d_e}) e
+    #                     = r_p (e_p^T e) + e'
+    M_re = (r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2) + torch.eye(relation_dim, embedding_dim).unsqueeze(dim=0))
+    e_vanilla = (M_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
+    assert torch.allclose(e_vanilla, e_bot)
