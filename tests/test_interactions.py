@@ -227,6 +227,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         r: Union[Representation, Sequence[Representation]],
         t: Union[Representation, Sequence[Representation]],
     ) -> Mapping[str, Any]:
+        # TODO: Move this as class method to Interaction
         return dict(h=h, r=r, t=t)
 
     def test_forward(self):
@@ -441,14 +442,12 @@ class NTNTests(InteractionTests, unittest.TestCase):
         # w: (k, dim, dim)
         # vh/vt: (k, dim)
         # b/u: (k,)
-        activation, b, h, t, u, vh, vt, w = _get_key_sorted_kwargs_values(kwargs)
-        h, t = h.view(1, self.dim, 1), t.view(1, self.dim, 1)
-        w = w.view(self.num_slices, self.dim, self.dim)
-        vh, vt = [v.view(self.num_slices, 1, self.dim) for v in (vh, vt)]
-        b = b.view(self.num_slices, 1, 1)
-        u = u.view(self.num_slices, )
-        x = activation(h.transpose(-2, -1) @ w @ t + vh @ h + vt @ t + b).view(self.num_slices)
-        return (x * u).sum()
+        h, t = [kwargs[name].view(1, self.dim, 1) for name in "ht"]
+        w = kwargs["w"].view(self.num_slices, self.dim, self.dim)
+        vh, vt = [kwargs[name].view(self.num_slices, 1, self.dim) for name in ("vh", "vt")]
+        b = kwargs["b"].view(self.num_slices, 1, 1)
+        u = kwargs["u"].view(1, self.num_slices)
+        return u @ kwargs["activation"](h.transpose(-2, -1) @ w @ t + vh @ h + vt @ t + b).view(self.num_slices, 1)
 
 
 class ProjETests(InteractionTests, unittest.TestCase):

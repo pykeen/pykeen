@@ -6,7 +6,7 @@ import itertools
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Generic, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import FloatTensor, nn
@@ -92,6 +92,31 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
+
+    def _prepare_hrt_for_functional(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        """Conversion utility to prepare the h/r/t representations for the functional form."""
+        assert all(torch.is_tensor(x) for x in (h, r, t))
+        return dict(h=h, r=r, t=t)
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        """Conversion utility to prepare the state to be passed to the functional form."""
+        return dict()
+
+    def _prepare_for_functional(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> Mapping[str, torch.FloatTensor]:
+        """Conversion utility to prepare the arguments for the functional form."""
+        kwargs = self._prepare_hrt_for_functional(h=h, r=r, t=t)
+        kwargs.update(self._prepare_state_for_functional())
+        return kwargs
 
     @abstractmethod
     def forward(
