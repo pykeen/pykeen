@@ -550,6 +550,14 @@ class SETests(TranslationalInteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.StructuredEmbeddingInteraction
 
+    def _exp_score(self, h, t, r_h, r_t, p, power_norm) -> torch.FloatTensor:
+        assert not power_norm
+        # -\|R_h h - R_t t\|
+        h, t, r_h, r_t = _strip_dim(h, t, r_h, r_t)
+        h = r_h @ h.unsqueeze(dim=-1)
+        t = r_t @ t.unsqueeze(dim=-1)
+        return -(h - t).norm(p)
+
 
 class UMTests(TranslationalInteractionTests, unittest.TestCase):
     """Tests for UM interaction function."""
