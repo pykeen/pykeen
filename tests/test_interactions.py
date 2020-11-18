@@ -298,7 +298,7 @@ class NTNTests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.NTNInteraction
 
-    num_slices: int = 2
+    num_slices: int = 11
     shape_kwargs = dict(
         k=2,
     )
