@@ -3,6 +3,7 @@
 """Tests for interaction functions."""
 
 import unittest
+from abc import abstractmethod
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest.case import SkipTest
 
@@ -247,9 +248,10 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
             scores_f_manual = self._exp_score(**kwargs)
             assert torch.allclose(scores_f_manual, scores_f)
 
+    @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
         """Compute the expected score for a single-score batch."""
-        raise SkipTest("No score check implemented.")
+        raise NotImplementedError
 
 
 class ComplExTests(InteractionTests, unittest.TestCase):
