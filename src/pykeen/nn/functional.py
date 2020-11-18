@@ -13,7 +13,7 @@ from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
-    split_complex, view_complex,
+    split_complex, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -135,15 +135,15 @@ def complex_interaction(
     # = <h.re, r.re, t.re> - <h.re, r.im, -t.im> - <h.im, r.re, -t.im> - <h.im, r.im, t.re>
     # = <h.re, r.re, t.re> + <h.re, r.im,  t.im> + <h.im, r.re,  t.im> - <h.im, r.im, t.re>
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-    return sum(
+    return tensor_sum(*(
         factor * extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
-    )
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
+    ))
 
 
 @_add_cuda_warning
@@ -214,9 +214,7 @@ def conve_interaction(
     x = (x @ t).squeeze(dim=-2)
 
     # add bias term
-    x = x + t_bias.view(t.shape[0], 1, 1, num_tails)
-
-    return x
+    return tensor_sum(x, t_bias.view(t.shape[0], 1, 1, num_tails))
 
 
 def convkb_interaction(
@@ -266,7 +264,7 @@ def convkb_interaction(
     h = (h.view(h.shape[0], h.shape[1], 1, 1, embedding_dim, 1) * conv_head.view(1, 1, 1, 1, 1, num_filters))
     r = (r.view(r.shape[0], 1, r.shape[1], 1, embedding_dim, 1) * conv_rel.view(1, 1, 1, 1, 1, num_filters))
     t = (t.view(t.shape[0], 1, 1, t.shape[1], embedding_dim, 1) * conv_tail.view(1, 1, 1, 1, 1, num_filters))
-    x = activation(conv_bias + h + r + t)
+    x = activation(tensor_sum(conv_bias, h, r, t))
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
@@ -333,9 +331,7 @@ def ermlp_interaction(
     h = h.view(-1, num_heads, 1, 1, embedding_dim) @ head_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
     r = r.view(-1, 1, num_relations, 1, embedding_dim) @ rel_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
     t = t.view(-1, 1, 1, num_tails, embedding_dim) @ tail_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
-    # TODO: Choosing which to combine first, h/r, h/t or r/t, depending on the shape might further improve
-    #       performance in a 1:n scenario.
-    return final(activation(bias + h + r + t)).squeeze(dim=-1)
+    return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
 
 
 def ermlpe_interaction(
@@ -490,10 +486,11 @@ def ntn_interaction(
     """
     # save sizes
     num_heads, num_relations, num_tails, _, num_slices = _extract_sizes(h, b, t)
-    x = extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
-    x = x + extended_einsum("brkd,bhd->bhrk", vh, h).unsqueeze(dim=3)
-    x = x + extended_einsum("brkd,btd->brtk", vt, t).unsqueeze(dim=1)
-    x = activation(x)
+    x = activation(tensor_sum(
+        extended_einsum("bhd,brkde,bte->bhrtk", h, w, t),
+        extended_einsum("brkd,bhd->bhrk", vh, h).unsqueeze(dim=3),
+        extended_einsum("brkd,btd->brtk", vt, t).unsqueeze(dim=1),
+    ))
     x = extended_einsum("bhrtk,brk->bhrt", x, u)
     return x
 
@@ -540,7 +537,11 @@ def proje_interaction(
     h = h * d_e.view(1, 1, dim)
     r = r * d_r.view(1, 1, dim)
     # combination, shape: (b, h, r, d)
-    x = h.unsqueeze(dim=2) + r.unsqueeze(dim=1) + b_c.view(1, 1, 1, dim)
+    x = tensor_sum(
+        h.unsqueeze(dim=2),
+        r.unsqueeze(dim=1),
+        b_c.view(1, 1, 1, dim),
+    )
     x = activation(x)
     # dot product with t, shape: (b, h, r, t)
     return (x @ t.unsqueeze(dim=1).transpose(-2, -1)) + b_p
@@ -633,6 +634,7 @@ def simple_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
+    # TODO: unused
     scores = 0.5 * (distmult_interaction(h=h, r=r, t=t) + distmult_interaction(h=h_inv, r=r_inv, t=t_inv))
     # Note: In the code in their repository, the score is clamped to [-20, 20].
     #       That is not mentioned in the paper, so it is made optional here.
@@ -792,10 +794,15 @@ def transh_interaction(
         The scores.
     """
     # Project to hyperplane
-    return _translational_interaction(
-        h=(h.unsqueeze(dim=2) - extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r)).unsqueeze(dim=3),
-        r=d_r.view(d_r.shape[0], 1, d_r.shape[1], 1, d_r.shape[2]),
-        t=(t.unsqueeze(dim=1) - extended_einsum("btd,brd,bre->brte", t, w_r, w_r)).unsqueeze(dim=1),
+    return negative_norm_of_sum(
+        # h
+        h.unsqueeze(dim=2),
+        -extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r).unsqueeze(dim=3),
+        # r
+        d_r.view(d_r.shape[0], 1, d_r.shape[1], 1, d_r.shape[2]),
+        # -t
+        -t.unsqueeze(dim=1),
+        +extended_einsum("btd,brd,bre->brte", t, w_r, w_r).unsqueeze(dim=1),
         p=p,
         power_norm=power_norm,
     )

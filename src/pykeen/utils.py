@@ -493,6 +493,12 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
+def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute sum of tensors in brodcastable shape."""
+    # TODO: Optimize order
+    return sum(x)
+
+
 def negative_norm_of_sum(
     *x: torch.FloatTensor,
     p: Union[str, int] = 2,
@@ -510,7 +516,7 @@ def negative_norm_of_sum(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    d: torch.FloatTensor = sum(x)
+    d: torch.FloatTensor = tensor_sum(x)
     if power_norm:
         assert isinstance(p, SupportsFloat)
         return -(d.abs() ** p).sum(dim=-1)
