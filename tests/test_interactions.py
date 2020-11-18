@@ -433,7 +433,8 @@ class NTNTests(InteractionTests, unittest.TestCase):
         r: Union[Representation, Sequence[Representation]],
         t: Union[Representation, Sequence[Representation]],
     ) -> Mapping[str, Any]:  # noqa: D102
-        return dict(h=h, t=t, w=r[0], b=r[1], u=r[2], vh=r[3], vt=r[4], activation=self.instance.non_linearity)
+        w, vh, vt, b, u = r
+        return dict(h=h, t=t, w=w, vh=vh, vt=vt, b=b, u=u, activation=self.instance.non_linearity)
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)

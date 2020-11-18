@@ -480,10 +480,10 @@ def ntn_interaction(
         The scores.
     """
     # save sizes
-    num_heads, num_relations, num_tails, _, k = _extract_sizes(h, b, t)
+    num_heads, num_relations, num_tails, _, num_slices = _extract_sizes(h, b, t)
     x = extended_einsum("bhd,brkde,bte->bhrtk", h, w, t)
-    x = x + extended_einsum("brkd,bhd->bhk", vh, h).view(-1, num_heads, 1, 1, k)
-    x = x + extended_einsum("brkd,btd->btk", vt, t).view(-1, 1, 1, num_tails, k)
+    x = x + extended_einsum("brkd,bhd->bhrk", vh, h).view(-1, num_heads, 1, 1, num_slices)
+    x = x + extended_einsum("brkd,btd->brtk", vt, t).view(-1, 1, 1, num_tails, num_slices)
     x = activation(x)
     x = extended_einsum("bhrtk,brk->bhrt", x, u)
     return x

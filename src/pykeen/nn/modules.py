@@ -1019,7 +1019,7 @@ class NTNInteraction(
 ):
     """The interaction function of NTN."""
 
-    relation_shape = ("kdd", "k", "k", "kd", "kd")
+    relation_shape = ("kdd", "kd", "kd", "k", "k")
 
     def __init__(
         self,
