@@ -570,6 +570,9 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
     #: The head-relation encoder operating on the 1D flattened version
     hr1d: nn.Module
 
+    #: The interaction function
+    func = pkf.conve_interaction
+
     def __init__(
         self,
         input_channels: Optional[int] = None,
@@ -645,19 +648,16 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
         self.embedding_width = embedding_width
         self.input_channels = input_channels
 
-    def forward(
+    def _prepare_hrt_for_functional(
         self,
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: Tuple[torch.FloatTensor, torch.FloatTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        # get tail bias term
-        t, t_bias = t
-        return pkf.conve_interaction(
-            h=h,
-            r=r,
-            t=t,
-            t_bias=t_bias,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        return dict(h=h, r=r, t=t[0], t_bias=t[1])
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(
             input_channels=self.input_channels,
             embedding_height=self.embedding_height,
             embedding_width=self.embedding_width,
