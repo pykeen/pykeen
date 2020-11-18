@@ -1,14 +1,21 @@
 """Base classes for multi-modal models."""
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import torch
 from torch import nn
 
 from pykeen.losses import Loss
-from pykeen.models import ERModel
+from pykeen.models.base import ERModel
 from pykeen.nn import Embedding, EmbeddingSpecification, Interaction, LiteralRepresentations
 from pykeen.triples import TriplesNumericLiteralsFactory
 from pykeen.typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+
+__all__ = [
+    "LiteralModel",
+]
+
+if TYPE_CHECKING:
+    from ...typing import Representation  # noqa
 
 
 class LiteralModel(ERModel, autoreset=False):
