@@ -1335,14 +1335,6 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
         assert isinstance(embedding, Embedding)
         return embedding.embedding_dim
 
-    @property
-    def relation_dim(self) -> int:  # noqa:D401
-        """The relation embedding dim."""
-        # TODO: Deprecated; directly use self.relation_representations[0].embedding_dim instead?
-        embedding = self.relation_representations[0]
-        assert isinstance(embedding, Embedding)
-        return embedding.embedding_dim
-
 
 class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
     """A KGEM that stores one :class:`pykeen.nn.Embedding` for entities and two for relations.
