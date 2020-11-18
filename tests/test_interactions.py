@@ -435,6 +435,12 @@ class RotatETests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.RotatEInteraction
 
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = _strip_dim(*(view_complex(x) for x in (h, r, t)))
+        hr = h * r
+        d = hr - t
+        return -(d.abs() ** 2).sum().sqrt()
+
 
 class TranslationalInteractionTests(InteractionTests):
     """Common tests for translational interaction."""
