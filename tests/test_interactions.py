@@ -224,15 +224,10 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
             try:
-                with self.subTest(f"forward({hs}, {rs}, {ts})"):
-                    h, r, t = self._get_hrt(hs, rs, ts)
-                    scores = self.instance(h=h, r=r, t=t)
-                    expected_shape = self._get_output_shape(hs, rs, ts)
-                    self._check_scores(scores=scores, exp_shape=expected_shape)
-                with self.subTest(f"forward({hs}, {rs}, {ts}) - consistency with functional"):
-                    kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
-                    scores_f = self.cls.func(**kwargs)
-                    assert torch.allclose(scores, scores_f)
+                h, r, t = self._get_hrt(hs, rs, ts)
+                scores = self.instance(h=h, r=r, t=t)
+                expected_shape = self._get_output_shape(hs, rs, ts)
+                self._check_scores(scores=scores, exp_shape=expected_shape)
             except ValueError as error:
                 # check whether the error originates from batch norm for single element batches
                 small_batch_size = any(s[0] == 1 for s in (hs, rs, ts))
@@ -241,6 +236,17 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
                     logger.warning(f"Skipping test for shapes {hs}, {rs}, {ts}")
                     continue
                 raise error
+
+    def test_forward_consistency_with_functional(self):
+        """Test forward's consistency with functional."""
+        # set in eval mode (otherwise there are non-deterministic factors like Dropout
+        self.instance.eval()
+        for hs, rs, ts in self._get_test_shapes():
+            h, r, t = self._get_hrt(hs, rs, ts)
+            scores = self.instance(h=h, r=r, t=t)
+            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
+            scores_f = self.cls.func(**kwargs)
+            assert torch.allclose(scores, scores_f)
 
     def test_scores(self):
         """Test individual scores."""
