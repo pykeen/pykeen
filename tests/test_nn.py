@@ -7,6 +7,8 @@ import unittest
 import torch
 
 from pykeen.nn import Embedding
+from pykeen.nn.sim import kullback_leibler_similarity
+from pykeen.typing import GaussianDistribution
 
 
 class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
@@ -65,3 +67,55 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
             generator=self.generator,
         )
         self._test_with_indices(indices=indices)
+
+
+class KullbackLeiblerTests(unittest.TestCase):
+    """Tests for the vectorized computation of KL divergences."""
+
+    d: int = 3
+
+    def setUp(self) -> None:
+        self.e_mean = torch.rand(self.d)
+        self.e_var = torch.rand(self.d)
+        self.r_mean = torch.rand(self.d)
+        self.r_var = torch.rand(self.d)
+
+    def get_e(self, pre_shape=(1, 1, 1)):
+        return GaussianDistribution(
+            mean=self.e_mean.view(*pre_shape, self.d),
+            diagonal_covariance=self.e_var.view(*pre_shape, self.d),
+        )
+
+    def get_r(self, pre_shape=(1, 1)):
+        return GaussianDistribution(
+            mean=self.r_mean.view(*pre_shape, self.d),
+            diagonal_covariance=self.r_var.view(*pre_shape, self.d),
+        )
+
+    def test_against_torch_builtin(self):
+        """Compare value against torch.distributions."""
+        # r: (batch_size, num_heads, num_tails, d)
+        e = self.get_e()
+        # r: (batch_size, num_relations, d)
+        r = self.get_r()
+        sim = kullback_leibler_similarity(e=e, r=r, exact=True).view(-1)
+
+        p = torch.distributions.MultivariateNormal(loc=self.e_mean, covariance_matrix=torch.diag(self.e_var))
+        q = torch.distributions.MultivariateNormal(loc=self.r_mean, covariance_matrix=torch.diag(self.r_var))
+        sim2 = torch.distributions.kl_divergence(p=p, q=q).view(-1)
+        assert torch.allclose(sim, sim2)
+
+    def test_self_similarity(self):
+        """Check value of similarity to self."""
+        # e: (batch_size, num_heads, num_tails, d)
+        e = self.get_e()
+        r = self.get_e(pre_shape=(1, 1))
+        sim = kullback_leibler_similarity(e=e, r=r, exact=True)
+        assert torch.allclose(sim, torch.zeros_like(sim))
+
+    def test_value_range(self):
+        """Check the value range."""
+        e = self.get_e()
+        r = self.get_r()
+        sim = kullback_leibler_similarity(e=e, r=r, exact=True)
+        assert (sim <= 0).all()
