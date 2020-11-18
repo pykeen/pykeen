@@ -115,8 +115,11 @@ def complex_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    """
+    r"""
     Evaluate the ComplEx interaction function.
+
+    .. math ::
+        Re(\langle h, r, conj(t) \rangle)
 
     :param h: shape: (batch_size, num_heads, `2*dim`)
         The complex head representations.
@@ -128,14 +131,17 @@ def complex_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
+    # Re(<h, r, conj(t)>)
+    # = <h.re, r.re, t.re> - <h.re, r.im, -t.im> - <h.im, r.re, -t.im> - <h.im, r.im, t.re>
+    # = <h.re, r.re, t.re> + <h.re, r.im,  t.im> + <h.im, r.re,  t.im> - <h.im, r.im, t.re>
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
     return sum(
-        extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
-        for hh, rr, tt in [
-            (h_re, r_re, t_re),
-            (h_re, r_im, t_im),
-            (h_im, r_re, t_im),
-            (h_im, r_im, t_re),
+        factor * extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
+        for factor, hh, rr, tt in [
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
         ]
     )
 

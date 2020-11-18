@@ -275,7 +275,7 @@ class ComplExTests(InteractionTests, unittest.TestCase):
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         h, r, t = [view_complex(x) for x in (h, r, t)]
-        return (h * r * t).sum().real
+        return (h * r * torch.conj(t)).sum().real
 
 
 class ConvETests(InteractionTests, unittest.TestCase):
