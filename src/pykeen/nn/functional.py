@@ -258,21 +258,36 @@ def convkb_interaction(
     assert conv.weight.shape == (num_filters, 1, 1, 3)
 
     # compute conv(stack(h, r, t))
-    conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
-    conv_bias = conv.bias.view(1, 1, 1, 1, 1, num_filters)
-    # h.shape: (b, nh, d), conv_head.shape: (o), out.shape: (b, nh, d, o)
-    h = (h.view(h.shape[0], num_heads, 1, 1, embedding_dim, 1) * conv_head.view(1, 1, 1, 1, 1, num_filters))
-    r = (r.view(r.shape[0], 1, num_relations, 1, embedding_dim, 1) * conv_rel.view(1, 1, 1, 1, 1, num_filters))
-    t = (t.view(t.shape[0], 1, 1, num_tails, embedding_dim, 1) * conv_tail.view(1, 1, 1, 1, 1, num_filters))
-    x = activation(tensor_sum(conv_bias, h, r, t))
+    # prepare input shapes for broadcasting
+    h = h.view(h.shape[0], num_heads, 1, 1, 1, embedding_dim)
+    r = r.view(r.shape[0], 1, num_relations, 1, 1, embedding_dim)
+    t = t.view(t.shape[0], 1, 1, num_tails, 1, embedding_dim)
+
+    # conv.weight.shape = (C_out, C_in, kernel_size[0], kernel_size[1])
+    # here, kernel_size = (1, 3), C_in = 1, C_out = num_filters
+    # -> conv_head, conv_rel, conv_tail shapes: (num_filters,)
+    # conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
+    # conv_bias = conv.bias.view(1, 1, 1, 1, num_filters, 1)
+    conv_head, conv_rel, conv_tail, conv_bias = [
+        c.view(1, 1, 1, 1, num_filters, 1)
+        for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
+    ]
+
+    # convolve -> output.shape: (*, embedding_dim, num_filters)
+    h = conv_head @ h
+    r = conv_rel @ r
+    t = conv_tail @ t
+
+    x = tensor_sum(conv_bias, h, r, t)
+    x = activation(x)
 
     # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
     x = hidden_dropout(x)
 
-    # Linear layer for final scores
-    x = x.view(*x.shape[:-2], embedding_dim * num_filters)
+    # Linear layer for final scores; use flattened representations, shape: (b, h, r, t, d * f)
+    x = x.view(x.shape[0], num_heads, num_relations, num_tails, embedding_dim * num_filters)
     x = linear(x)
-    return x.view(-1, num_heads, num_relations, num_tails)
+    return x.squeeze(dim=-1)
 
 
 def distmult_interaction(
