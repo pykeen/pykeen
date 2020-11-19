@@ -4,6 +4,7 @@
 
 import logging
 import os
+import pathlib
 import shutil
 import tarfile
 import zipfile
@@ -228,7 +229,8 @@ class PathDataSet(LazyDataSet):
 def _name_from_url(url: str) -> str:
     """Get the filename form the end of the URL."""
     parse_result = urlparse(url)
-    return os.path.basename(parse_result.path)
+    path = pathlib.Path(parse_result.path)
+    return path.name
 
 
 def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
