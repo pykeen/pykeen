@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 
-"""The **Co**mpletion **D**atasets **Ex**tracted from Wikidata and Wikipedia (CoDEx) datasets.
+"""The **Co**mpletion **D**atasets **Ex**tracted from Wikidata and Wikipedia (CoDEx) datasets from [safavi2020]_.
 
 - GitHub Repository: https://github.com/tsafavi/codex
 - Paper: https://arxiv.org/pdf/2009.07810.pdf
-
-Citation:
-
-.. [safavi2020] Safavi, T. & Koutra, D. (2020). `CoDEx: A Comprehensive Knowledge Graph
-   Completion Benchmark <http://arxiv.org/abs/2009.07810>`_.  *arXiv* 2009.07810.
 """
 
 from .base import UnpackedRemoteDataSet
@@ -28,7 +23,7 @@ LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 
 
 class CoDExSmall(UnpackedRemoteDataSet):
-    """The CoDEx small dataset."""
+    """The `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the CoDEx small dataset.
@@ -49,7 +44,7 @@ class CoDExSmall(UnpackedRemoteDataSet):
 
 
 class CoDExMedium(UnpackedRemoteDataSet):
-    """The CoDEx medium dataset."""
+    """The `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the CoDEx medium dataset.
@@ -68,7 +63,7 @@ class CoDExMedium(UnpackedRemoteDataSet):
 
 
 class CoDExLarge(UnpackedRemoteDataSet):
-    """The CoDEx large dataset."""
+    """The `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the CoDEx large dataset.
