@@ -444,15 +444,14 @@ class TriplesFactory:
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
         logger.info(
-            '[%s] done splitting triples to groups of sizes %s',
-            self.path,
+            'done splitting triples to groups of sizes %s',
             [triples.shape[0] for triples in triples_groups],
         )
 
         # Make sure that the first element has all the right stuff in it
-        logger.info('[%s] cleaning up groups', self.path)
+        logger.debug('cleaning up groups')
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
-        logger.info('[%s] done cleaning up groups', self.path)
+        logger.debug('done cleaning up groups')
 
         for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
             actual_size = triples.shape[0]
