@@ -98,9 +98,11 @@ class TransH(DoubleRelationEmbeddingModel):
                 constrainer=functional.normalize,
             ),
         )
+
         # Note that the TransH regularizer has a different interface
-        self.regularizer = self._instantiate_default_regularizer(
+        regularizer = self._instantiate_default_regularizer(
             entity_embeddings=pop_only(self.entity_representations[0].parameters()),
             relation_embeddings=pop_only(self.relation_representations[0].parameters()),
             normal_vector_embeddings=pop_only(self.relation_representations[1].parameters()),
         )
+        self.weight_regularizers.append(regularizer)

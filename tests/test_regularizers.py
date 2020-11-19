@@ -344,11 +344,11 @@ class TestRandom(unittest.TestCase):
         ])
 
         # add weight regularizer
-        model.add_weight_regularizer(
+        model.append_weight_regularizer(
             parameter_name="sub_module.0.0.bias",
             regularizer=regularizers[2],
         )
-        model.add_weight_regularizer(
+        model.append_weight_regularizer(
             parameter_name="entity_representations.0._embeddings.weight",
             regularizer=regularizers[3],
         )
