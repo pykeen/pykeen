@@ -236,7 +236,7 @@ class Model(nn.Module, ABC):
     _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
     #: Keep track of if this is a base model
-    _is_abstract: ClassVar[bool]
+    _is_base_model: ClassVar[bool]
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
@@ -318,8 +318,8 @@ class Model(nn.Module, ABC):
         self.automatic_memory_optimization = automatic_memory_optimization
 
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
-        cls._is_abstract = not autoreset
-        if not cls._is_abstract:
+        cls._is_base_model = not autoreset
+        if not cls._is_base_model:
             _track_hyperparameters(cls)
             _add_post_reset_parameters(cls)
 

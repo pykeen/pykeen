@@ -1040,9 +1040,12 @@ class TestRandom(unittest.TestCase):
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
         for model_cls in _BASE_MODELS:
-            self.assertTrue(model_cls._is_abstract)
+            self.assertTrue(model_cls._is_base_model)
         for model_cls in _MODELS:
-            self.assertFalse(model_cls._is_abstract, msg=f'{model_cls.__name__} should not be abstract')
+            self.assertFalse(
+                model_cls._is_base_model,
+                msg=f'{model_cls.__name__} should not be marked as a a base model',
+            )
 
     def test_get_novelty_mask(self):
         """Test `get_novelty_mask()`."""
