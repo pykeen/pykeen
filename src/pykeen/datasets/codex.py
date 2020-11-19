@@ -22,6 +22,10 @@ LARGE_TEST_URL = f'{BASE_URL}/codex-l/test.txt'
 LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 
 
+# If GitHub ever gets upset from too many downloads, we can switch to
+# the data posted at https://github.com/pykeen/pykeen/pull/154#issuecomment-730462039
+
+
 class CoDExSmall(UnpackedRemoteDataSet):
     """The `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_."""
 
