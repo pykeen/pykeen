@@ -15,7 +15,7 @@ from pkg_resources import iter_entry_points
 
 from .base import (  # noqa:F401
     DataSet, EagerDataset, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset,
-    TarFileRemoteDataSet, ZipFileRemoteDataSet,
+    TarFileRemoteDataSet, UnpackedRemoteDataSet, ZipFileRemoteDataSet,
 )
 from .codex import CoDeXLarge, CoDeXMedium, CoDeXSmall
 from .freebase import FB15k, FB15k237
