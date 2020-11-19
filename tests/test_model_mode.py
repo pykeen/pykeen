@@ -3,7 +3,6 @@
 """Test that models are set in the right mode when they're training."""
 
 import unittest
-from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import torch
@@ -156,19 +155,3 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         scores_r_function = self.model.score_r(ht_batch=ht_batch).flatten()
         scores_hrt_function = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
         assert (scores_r_function == scores_hrt_function).all()
-
-
-@dataclass
-class MinimalTriplesFactory:
-    """A triples factory with minial attributes to allow the model to initiate."""
-
-    relation_to_id = {
-        "0": 0,
-        "1": 1,
-    }
-    entity_to_id = {
-        "0": 0,
-        "1": 1,
-    }
-    num_entities = 2
-    num_relations = 2

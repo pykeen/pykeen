@@ -612,3 +612,8 @@ def pop_only(elements: Iterable[X]) -> X:
     if len(elements) > 1:
         raise ValueError(f'More than one element: {elements}')
     return elements[0]
+
+
+def strip_dim(*x):
+    """Strip the last dimension."""
+    return [xx.view(xx.shape[2:]) for xx in x]

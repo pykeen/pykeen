@@ -310,57 +310,60 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         assert 0.0 == regularizer.regularization_term
 
 
-def test_collect_regularization_terms():
-    """Test whether collect_regularization_terms finds and resets all regularization terms."""
-    regularizers = [
-        LpRegularizer(),
-        PowerSumRegularizer(),
-        LpRegularizer(p=1, normalize=True, apply_only_once=True),
-        PowerSumRegularizer(normalize=True),
-    ]
-    model = ERModel(
-        triples_factory=MagicMock(),
-        interaction=MagicMock(),
-        entity_representations=EmbeddingSpecification(
-            regularizer=regularizers[0],
-        ).make(num_embeddings=3, embedding_dim=2, shape=None),
-        relation_representations=EmbeddingSpecification(
-            regularizer=regularizers[1],
-        ).make(num_embeddings=3, embedding_dim=2, shape=None),
-    )
+class TestRandom(unittest.TestCase):
+    """Test random regularization utilities."""
 
-    # add weighted modules
-    linear = nn.Linear(3, 2)
-    model.sub_module = nn.ModuleList([
-        nn.Sequential(
-            linear,
-            nn.Linear(2, 3),
-        ),
-        nn.BatchNorm1d(2),
-        linear,  # one module occuring twice
-    ])
+    def test_collect_regularization_terms(self):
+        """Test whether collect_regularization_terms finds and resets all regularization terms."""
+        regularizers = [
+            LpRegularizer(),
+            PowerSumRegularizer(),
+            LpRegularizer(p=1, normalize=True, apply_only_once=True),
+            PowerSumRegularizer(normalize=True),
+        ]
+        model = ERModel(
+            triples_factory=MagicMock(),
+            interaction=MagicMock(),
+            entity_representations=EmbeddingSpecification(
+                regularizer=regularizers[0],
+            ).make(num_embeddings=3, embedding_dim=2, shape=None),
+            relation_representations=EmbeddingSpecification(
+                regularizer=regularizers[1],
+            ).make(num_embeddings=3, embedding_dim=2, shape=None),
+        )
 
-    # add weight regularizer
-    model.add_weight_regularizer(
-        parameter_name="sub_module.0.0.bias",
-        regularizer=regularizers[2],
-    )
-    model.add_weight_regularizer(
-        parameter_name="entity_representations.0._embeddings.weight",
-        regularizer=regularizers[3],
-    )
+        # add weighted modules
+        linear = nn.Linear(3, 2)
+        model.sub_module = nn.ModuleList([
+            nn.Sequential(
+                linear,
+                nn.Linear(2, 3),
+            ),
+            nn.BatchNorm1d(2),
+            linear,  # one module occuring twice
+        ])
 
-    # retrieve all regularization terms
-    collect_regularization_terms(model)
+        # add weight regularizer
+        model.add_weight_regularizer(
+            parameter_name="sub_module.0.0.bias",
+            regularizer=regularizers[2],
+        )
+        model.add_weight_regularizer(
+            parameter_name="entity_representations.0._embeddings.weight",
+            regularizer=regularizers[3],
+        )
 
-    # check that all terms are reset
-    found_regularizers = set()
-    for module in model.modules():
-        if isinstance(module, Regularizer):
-            term = module.regularization_term
-            assert isinstance(term, float)
-            assert term == 0.0
-            found_regularizers.add(id(module))
+        # retrieve all regularization terms
+        collect_regularization_terms(model)
 
-    # check that all regularizers were found
-    assert found_regularizers == set(map(id, regularizers))
+        # check that all terms are reset
+        found_regularizers = set()
+        for module in model.modules():
+            if isinstance(module, Regularizer):
+                term = module.regularization_term
+                assert isinstance(term, float)
+                assert term == 0.0
+                found_regularizers.add(id(module))
+
+        # check that all regularizers were found
+        self.assertEqual(found_regularizers, set(map(id, regularizers)))

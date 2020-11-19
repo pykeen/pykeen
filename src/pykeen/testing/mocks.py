@@ -2,15 +2,19 @@
 
 """Mocks for testing PyKEEN."""
 
-from typing import Optional
+from typing import Optional, Sequence
 
+import numpy
 import torch
+from torch import nn
 
 from pykeen.models.base import Model
+from pykeen.nn import RepresentationModule
 from pykeen.triples import TriplesFactory
 
 __all__ = [
     'MockModel',
+    'MockRepresentations',
 ]
 
 
@@ -48,3 +52,29 @@ class MockModel(Model):
                 delta = ind
             scores = scores + delta.float().view(*shape)
         return scores
+
+
+class MockRepresentations(RepresentationModule):
+    """A custom representation module with minimal implementation."""
+
+    def __init__(self, num_entities: int, shape: Sequence[int]):
+        super().__init__()
+        self.num_embeddings = num_entities
+        self.shape = shape
+        self.x = nn.Parameter(torch.rand(numpy.prod(shape)))
+
+    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+        n = self.num_embeddings if indices is None else indices.shape[0]
+        return self.x.unsqueeze(dim=0).repeat(n, 1).view(-1, *self.shape)
+
+    def get_in_canonical_shape(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+        reshape_dim: Optional[Sequence[int]] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        x = self(indices=indices)
+        if indices is None:
+            x = x.unsqueeze(dim=0)
+        else:
+            x = x.unsqueeze(dim=1)
+        return x

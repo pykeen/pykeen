@@ -3,11 +3,12 @@
 """Test that models can be executed."""
 
 import importlib
+import itertools as itt
 import os
 import tempfile
 import traceback
 import unittest
-from typing import Any, ClassVar, Mapping, Optional, Sequence, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 from unittest.mock import MagicMock, patch
 
 import numpy
@@ -27,8 +28,6 @@ from pykeen.models.base import (
     DoubleRelationEmbeddingModel,
     ERModel,
     Model,
-    SingleVectorEmbeddingModel,
-    TwoSideEmbeddingModel,
     TwoVectorEmbeddingModel,
     _extend_batch,
     get_novelty_mask,
@@ -39,55 +38,23 @@ from pykeen.models.unimodal.rgcn import (
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
-from pykeen.nn import RepresentationModule
 from pykeen.regularizers import LpRegularizer, collect_regularization_terms
+from pykeen.testing.mocks import MockRepresentations
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.utils import all_in_bounds, set_random_seed
 
 SKIP_MODULES = {
     Model.__name__,
-    ERModel.__name__,
-    LiteralModel.__name__,
-    DoubleRelationEmbeddingModel.__name__,
-    SingleVectorEmbeddingModel.__name__,
-    TwoVectorEmbeddingModel.__name__,
-    TwoSideEmbeddingModel.__name__,
     'DummyModel',
     'MockModel',
     'models',
     'get_model_cls',
 }
-for cls in LiteralModel.__subclasses__():
+for cls in itt.chain(_BASE_MODELS, LiteralModel.__subclasses__()):
     SKIP_MODULES.add(cls.__name__)
 
 _EPSILON = 1.0e-07
-
-
-class _CustomRepresentations(RepresentationModule):
-    """A custom representation module with minimal implementation."""
-
-    def __init__(self, num_entities: int, shape: Sequence[int]):
-        super().__init__()
-        self.num_embeddings = num_entities
-        self.shape = shape
-        self.x = nn.Parameter(torch.rand(numpy.prod(shape)))
-
-    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        n = self.num_embeddings if indices is None else indices.shape[0]
-        return self.x.unsqueeze(dim=0).repeat(n, 1).view(-1, *self.shape)
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-        reshape_dim: Optional[Sequence[int]] = None,
-    ) -> torch.FloatTensor:
-        x = self(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        else:
-            x = x.unsqueeze(dim=1)
-        return x
 
 
 class ERModelTests(unittest.TestCase):
@@ -528,7 +495,7 @@ Traceback
 
         old_entity_reps = self.model.entity_representations
         self.model.entity_representations = nn.ModuleList([
-            _CustomRepresentations(
+            MockRepresentations(
                 num_entities=self.factory.num_entities,
                 shape=er.base_embeddings.shape if isinstance(er, RGCNRepresentations) else er.shape,
             )
@@ -536,7 +503,7 @@ Traceback
         ])
         old_relation_reps = self.model.relation_representations
         self.model.relation_representations = nn.ModuleList([
-            _CustomRepresentations(
+            MockRepresentations(
                 num_entities=self.factory.num_entities,
                 shape=er.shape,
             )
@@ -1025,32 +992,6 @@ class TestTesting(unittest.TestCase):
             self.fail(f'Missing experimental configuration directories for the following models:\n{_s}')
 
 
-def test_extend_batch():
-    """Test `_extend_batch()`."""
-    batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
-    all_ids = [2 * i for i in range(5)]
-
-    batch_size = batch.shape[0]
-    num_choices = len(all_ids)
-
-    for dim in range(3):
-        h_ext_batch = _extend_batch(batch=batch, all_ids=all_ids, dim=dim)
-
-        # check shape
-        assert h_ext_batch.shape == (batch_size * num_choices, 3)
-
-        # check content
-        actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
-        exp_content = set()
-        for i in all_ids:
-            for b in batch:
-                c = list(map(int, b))
-                c.insert(dim, i)
-                exp_content.add(tuple(c))
-
-        assert actual_content == exp_content
-
-
 class MessageWeightingTests(unittest.TestCase):
     """unittests for message weighting."""
 
@@ -1093,25 +1034,6 @@ class MessageWeightingTests(unittest.TestCase):
         self._test_message_weighting(weight_func=symmetric_edge_weights)
 
 
-def test_get_novelty_mask():
-    """Test `get_novelty_mask()`."""
-    num_triples = 7
-    base = torch.arange(num_triples)
-    mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
-    query_ids = torch.randperm(num_triples).numpy()[:num_triples // 2]
-    exp_novel = query_ids != 0
-    col = 2
-    other_col_ids = numpy.asarray([0, 0])
-    mask = get_novelty_mask(
-        mapped_triples=mapped_triples,
-        query_ids=query_ids,
-        col=col,
-        other_col_ids=other_col_ids,
-    )
-    assert mask.shape == query_ids.shape
-    assert (mask == exp_novel).all()
-
-
 class TestRandom(unittest.TestCase):
     """Extra tests."""
 
@@ -1121,3 +1043,46 @@ class TestRandom(unittest.TestCase):
             self.assertTrue(model_cls._is_abstract)
         for model_cls in _MODELS:
             self.assertFalse(model_cls._is_abstract, msg=f'{model_cls.__name__} should not be abstract')
+
+    def test_get_novelty_mask(self):
+        """Test `get_novelty_mask()`."""
+        num_triples = 7
+        base = torch.arange(num_triples)
+        mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
+        query_ids = torch.randperm(num_triples).numpy()[:num_triples // 2]
+        exp_novel = query_ids != 0
+        col = 2
+        other_col_ids = numpy.asarray([0, 0])
+        mask = get_novelty_mask(
+            mapped_triples=mapped_triples,
+            query_ids=query_ids,
+            col=col,
+            other_col_ids=other_col_ids,
+        )
+        assert mask.shape == query_ids.shape
+        assert (mask == exp_novel).all()
+
+    def test_extend_batch(self):
+        """Test `_extend_batch()`."""
+        batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
+        all_ids = [2 * i for i in range(5)]
+
+        batch_size = batch.shape[0]
+        num_choices = len(all_ids)
+
+        for dim in range(3):
+            h_ext_batch = _extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+
+            # check shape
+            assert h_ext_batch.shape == (batch_size * num_choices, 3)
+
+            # check content
+            actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
+            exp_content = set()
+            for i in all_ids:
+                for b in batch:
+                    c = list(map(int, b))
+                    c.insert(dim, i)
+                    exp_content.add(tuple(c))
+
+            assert actual_content == exp_content
