@@ -27,10 +27,10 @@ LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 
 
 class CoDExSmall(UnpackedRemoteDataSet):
-    """The `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_."""
+    """The CoDEx small dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the CoDEx small dataset.
+        """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
@@ -48,10 +48,10 @@ class CoDExSmall(UnpackedRemoteDataSet):
 
 
 class CoDExMedium(UnpackedRemoteDataSet):
-    """The `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_."""
+    """The CoDEx medium dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the CoDEx medium dataset.
+        """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
@@ -67,10 +67,10 @@ class CoDExMedium(UnpackedRemoteDataSet):
 
 
 class CoDExLarge(UnpackedRemoteDataSet):
-    """The `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_."""
+    """The CoDEx large dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the CoDEx large dataset.
+        """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
