@@ -1182,7 +1182,7 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             if isinstance(param, str):
                 if parameter not in weights.keys():
                     raise ValueError(f"Invalid parameter_name={parameter}. Available are: {sorted(weights.keys())}.")
-                param: nn.Parameter = weights[param]
+                param: nn.Parameter = weights[param]  # type: ignore
             regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
 
