@@ -6,6 +6,7 @@ import unittest
 from typing import Iterable, List, Optional
 
 import numpy
+import pytest
 import torch
 from torch.optim import Adam
 
@@ -231,6 +232,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         torch.manual_seed(seed=self.seed)
         numpy.random.seed(seed=self.seed)
 
+    @pytest.mark.slow
     def test_early_stopping(self):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
