@@ -19,6 +19,7 @@ from .base import (  # noqa:F401
 )
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
+from .codex import CodexMedium, CodexLarge, CodexSmall
 from .kinships import Kinships
 from .nations import Nations
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
@@ -36,6 +37,9 @@ __all__ = [
     'OpenBioLinkF1',
     'OpenBioLinkF2',
     'OpenBioLinkLQ',
+    'CodexSmall',
+    'CodexMedium',
+    'CodexLarge',
     'UMLS',
     'FB15k',
     'FB15k237',
