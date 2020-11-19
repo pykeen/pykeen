@@ -255,6 +255,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
 
     def test_scores(self):
         """Test individual scores."""
+        # set in eval mode (otherwise there are non-deterministic factors like Dropout
         self.instance.eval()
         for _ in range(10):
             h, r, t = self._get_hrt((1, 1), (1, 1), (1, 1))
