@@ -239,7 +239,7 @@ def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: boo
     :param clean_on_failure: If true, will delete the file on any exception raised during download
     """
     if not stream:
-        urlretrieve(url, path)
+        urlretrieve(url, path)  # noqa:S310
     else:
         # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
         # pattern from https://stackoverflow.com/a/39217788/5775947
@@ -253,6 +253,8 @@ def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: boo
 
 
 class UnpackedRemoteDataSet(PathDataSet):
+    """A dataset with all three of train, test, and validation sets as URLs."""
+
     def __init__(
         self,
         training_url: str,
@@ -264,6 +266,19 @@ class UnpackedRemoteDataSet(PathDataSet):
         stream: bool = True,
         force: bool = False,
     ):
+        """Initialize dataset.
+
+        :param training_url: The URL of the training file
+        :param testing_url: The URL of the testing file
+        :param validation_url: The URL of the validation file
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param stream:
+        :param force:
+        """
         if cache_root is None:
             cache_root = PYKEEN_HOME
         self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
@@ -315,6 +330,8 @@ class RemoteDataSet(PathDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         if cache_root is None:
             cache_root = PYKEEN_HOME
@@ -412,6 +429,8 @@ class PackedZipRemoteDataSet(LazyDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         if cache_root is None:
             cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
@@ -492,6 +511,8 @@ class SingleTabbedDataset(LazyDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         if cache_root is None:
             cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())

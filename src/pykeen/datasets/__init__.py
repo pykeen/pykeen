@@ -17,9 +17,9 @@ from .base import (  # noqa:F401
     DataSet, EagerDataset, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset,
     TarFileRemoteDataSet, ZipFileRemoteDataSet,
 )
+from .codex import CodexLarge, CodexMedium, CodexSmall
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
-from .codex import CodexMedium, CodexLarge, CodexSmall
 from .kinships import Kinships
 from .nations import Nations
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
