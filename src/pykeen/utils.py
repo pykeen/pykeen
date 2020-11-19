@@ -8,7 +8,7 @@ import logging
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, SupportsFloat, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -518,11 +518,11 @@ def negative_norm_of_sum(
     """
     d: torch.FloatTensor = tensor_sum(*x)
     if power_norm:
-        assert isinstance(p, SupportsFloat)
+        assert not isinstance(p, str)
         return -(d.abs() ** p).sum(dim=-1)
 
     if torch.is_complex(d):
-        assert isinstance(p, SupportsFloat)
+        assert not isinstance(p, str)
         # workaround for complex numbers: manually compute norm
         return -(d.abs() ** p).sum(dim=-1) ** (1 / p)
 
