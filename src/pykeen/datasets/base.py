@@ -70,7 +70,7 @@ class DataSet:
         """The number of relations."""
         return self.training.num_relations
 
-    def summary_str(self) -> str:
+    def summary_str(self, end='\n') -> str:
         """Make a summary string of all of the factories."""
         t = tabulate(
             [
@@ -80,7 +80,7 @@ class DataSet:
             ],
             headers=['Name', 'Entities', 'Relations', 'Triples'],
         )
-        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
+        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
     def summarize(self) -> None:
         """Print a summary of the dataset."""
