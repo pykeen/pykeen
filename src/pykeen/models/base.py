@@ -1176,7 +1176,7 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         """
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
-            parameter = list(parameter)
+            parameter = [parameter]
         weights: Mapping[str, nn.Parameter] = dict(self.named_parameters())
         for param in parameter:
             if isinstance(param, str):
