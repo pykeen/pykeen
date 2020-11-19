@@ -36,6 +36,8 @@ class CoDeXSmall(UnpackedRemoteDataSet):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
         """
+        # GitHub's raw.githubusercontent.com service rejects requests that are streamable. This is
+        # normally the default for all of PyKEEN's remote datasets, so just switch the default here.
         kwargs.setdefault('stream', False)
         super().__init__(
             training_url=SMALL_TRAIN_URL,
@@ -55,7 +57,7 @@ class CoDeXMedium(UnpackedRemoteDataSet):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
         """
-        kwargs.setdefault('stream', False)
+        kwargs.setdefault('stream', False)  # See comment in CoDeXSmall
         super().__init__(
             training_url=MEDIUM_TRAIN_URL,
             testing_url=MEDIUM_TEST_URL,
@@ -74,7 +76,7 @@ class CoDeXLarge(UnpackedRemoteDataSet):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
         """
-        kwargs.setdefault('stream', False)
+        kwargs.setdefault('stream', False)  # See comment in CoDeXSmall
         super().__init__(
             training_url=LARGE_TRAIN_URL,
             testing_url=LARGE_TEST_URL,
