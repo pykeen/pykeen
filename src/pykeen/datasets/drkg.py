@@ -11,7 +11,7 @@ from typing import Union
 import click
 import numpy as np
 
-from .base import SingleTabbedDataset
+from .base import SingleDataset
 
 __all__ = [
     'DRKG',
@@ -20,7 +20,7 @@ __all__ = [
 URL = 'https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz'
 
 
-class DRKG(SingleTabbedDataset):
+class DRKG(SingleDataset):
     """The DRKG dataset.
 
     This is a medium-sized biological knowledge graph including 97,238 entities, 13 entity types,
@@ -30,21 +30,23 @@ class DRKG(SingleTabbedDataset):
     def __init__(
         self,
         create_inverse_triples: bool = False,
-        eager: bool = False,
         random_state: Union[None, int, np.random.RandomState] = 0,
+        **kwargs,
     ):
         super().__init__(
             url=URL,
-            eager=eager,
+            relative_path='drkg.tsv',
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
+            **kwargs,
         )
 
 
 @click.command()
 def _main():
-    ds = DRKG()
-    click.echo(ds.summary_str())
+    ds = DRKG(eager=True)
+    click.secho('making summary', bold=True, fg='green')
+    ds.summarize()
 
 
 if __name__ == '__main__':

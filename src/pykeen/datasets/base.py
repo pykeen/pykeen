@@ -230,7 +230,9 @@ def _name_from_url(url: str) -> str:
     """Get the filename form the end of the URL."""
     parse_result = urlparse(url)
     path = pathlib.PurePosixPath(parse_result.path)
-    return path.name
+    name = path.name
+    logger.debug('parsed name from URL: %s', name)
+    return name
 
 
 def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
@@ -241,12 +243,14 @@ def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: boo
     :param clean_on_failure: If true, will delete the file on any exception raised during download
     """
     if not stream:
+        logger.info('downloading from %s to %s', url, path)
         urlretrieve(url, path)  # noqa:S310
     else:
         # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
         # pattern from https://stackoverflow.com/a/39217788/5775947
         try:
             with requests.get(url, stream=True) as response, open(path, 'wb') as file:
+                logger.info('downloading (streaming) from %s to %s', url, path)
                 shutil.copyfileobj(response.raw, file)
         except (Exception, KeyboardInterrupt):
             if clean_on_failure:
@@ -441,9 +445,8 @@ class PackedZipRemoteDataSet(LazyDataSet):
         logger.debug('using cache root at %s', cache_root)
 
         if name is None:
-            parse_result = urlparse(url)
-            name = os.path.basename(parse_result.path)
-            logger.info('parsed name from URL: %s', name)
+            name = _name_from_url(url)
+
         self.name = name
         self.path = os.path.join(self.cache_root, self.name)
         logger.debug('file path at %s', self.path)
@@ -489,22 +492,21 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 return rv
 
 
-
-
-
 class SingleDataset(LazyDataSet):
-    """"""
+    """Loads a dataset that's a single file inside a tar.gz archive."""
 
     ratios = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
 
     def __init__(
         self,
-        url: Optional[str] = None,
+        url: str,
+        relative_path: str,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
+        delimiter: str = '\t',
         random_state: Union[None, int, np.random.RandomState] = None,
     ):
         """Initialize dataset.
@@ -516,6 +518,12 @@ class SingleDataset(LazyDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param relative_path:
+            The path inside the archive to the contained dataset.
+        :param random_state:
+            An optional random state to make the training/testing/validation split reproducible.
+        :param delimiter:
+            The delimiter for the contained dataset.
         """
         if cache_root is None:
             cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
@@ -524,21 +532,21 @@ class SingleDataset(LazyDataSet):
         logger.debug('using cache root at %s', cache_root)
 
         if name is None:
-            parse_result = urlparse(url)
-            name = os.path.basename(parse_result.path)
-            logger.info('parsed name from URL: %s', name)
+            name = _name_from_url(url)
         self.name = name
         self.path = os.path.join(self.cache_root, self.name)
         logger.debug('file path at %s', self.path)
 
         self._triples_factory = None
         self.random_state = random_state
+        self.delimiter = delimiter
 
         self.url = url
         if not os.path.exists(self.path) and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
 
         self.create_inverse_triples = create_inverse_triples
+        self._relative_path = relative_path
         self._training = None
         self._testing = None
         self._validation = None
@@ -548,18 +556,32 @@ class SingleDataset(LazyDataSet):
 
     def _load(self) -> None:
         if not os.path.exists(self.path):
-            logger.info('downloading data from %s to %s', self.url, self.path)
             _urlretrieve(self.url, self.path)  # noqa:S310
-        df = pd.read_csv(self.path, sep='\t')
+
+        _actual_path = os.path.join(self.cache_root, self._relative_path)
+        if not os.path.exists(_actual_path):
+            logger.info(
+                '[%s] untaring from %s (%s) to %s',
+                self.__class__.__name__,
+                self.path,
+                self._relative_path,
+                _actual_path,
+            )
+            with tarfile.open(self.path) as tf:
+                tf.extract(self._relative_path, self.cache_root)
+
+        df = pd.read_csv(_actual_path, sep=self.delimiter)
         tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self.path
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
             random_state=self.random_state,
         )
+        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf.path)
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
+
 
 class SingleTabbedDataset(LazyDataSet):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
@@ -569,7 +591,7 @@ class SingleTabbedDataset(LazyDataSet):
 
     def __init__(
         self,
-        url: Optional[str] = None,
+        url: str,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
@@ -595,9 +617,7 @@ class SingleTabbedDataset(LazyDataSet):
         logger.debug('using cache root at %s', cache_root)
 
         if name is None:
-            parse_result = urlparse(url)
-            name = os.path.basename(parse_result.path)
-            logger.info('parsed name from URL: %s', name)
+            name = _name_from_url(url)
         self.name = name
         self.path = os.path.join(self.cache_root, self.name)
         logger.debug('file path at %s', self.path)
