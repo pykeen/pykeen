@@ -508,6 +508,7 @@ class SingleDataset(LazyDataSet):
         create_inverse_triples: bool = False,
         delimiter: str = '\t',
         random_state: Union[None, int, np.random.RandomState] = None,
+        randomize_cleanup: bool = False,
     ):
         """Initialize dataset.
 
@@ -540,6 +541,7 @@ class SingleDataset(LazyDataSet):
         self._triples_factory = None
         self.random_state = random_state
         self.delimiter = delimiter
+        self.randomize_cleanup = randomize_cleanup
 
         self.url = url
         if not os.path.exists(self.path) and not self.url:
@@ -576,6 +578,7 @@ class SingleDataset(LazyDataSet):
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
             random_state=self.random_state,
+            randomize_cleanup=self.randomize_cleanup,
         )
         logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf.path)
 
