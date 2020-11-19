@@ -1180,8 +1180,8 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         weights: Mapping[str, nn.Parameter] = dict(self.named_parameters())
         for param in parameter:
             if isinstance(param, str):
-                if parameter not in weights.keys():
-                    raise ValueError(f"Invalid parameter_name={parameter}. Available are: {sorted(weights.keys())}.")
+                if param not in weights:
+                    raise KeyError(f"Invalid parameter_name={parameter}. Available are: {sorted(weights.keys())}.")
                 param: nn.Parameter = weights[param]  # type: ignore
             regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
