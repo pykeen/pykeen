@@ -229,7 +229,7 @@ class PathDataSet(LazyDataSet):
 def _name_from_url(url: str) -> str:
     """Get the filename form the end of the URL."""
     parse_result = urlparse(url)
-    path = pathlib.Path(parse_result.path)
+    path = pathlib.PurePosixPath(parse_result.path)
     return path.name
 
 
