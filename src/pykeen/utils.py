@@ -18,6 +18,7 @@ from torch.nn import functional
 
 from .typing import DeviceHint
 
+# get_subclasses, project_entity, set_random_seed, strip_dim, view_complex
 __all__ = [
     'broadcast_cat',
     'compose',
@@ -27,20 +28,23 @@ __all__ = [
     'compact_mapping',
     'complex_normalize',
     'fix_dataclass_init_docs',
+    'flatten_dictionary',
+    'get_cls',
+    'get_subclasses',
+    'get_until_first_blank',
     'invert_mapping',
     'is_cudnn_error',
     'is_cuda_oom_error',
-    'random_non_negative_int',
-    'resolve_device',
-    'split_complex',
-    'split_list_in_batches_iter',
+    'project_entity',
+    'negative_norm_of_sum',
     'normalize_string',
     'normalized_lookup',
-    'negative_norm_of_sum',
-    'get_cls',
-    'get_until_first_blank',
-    'flatten_dictionary',
+    'random_non_negative_int',
+    'resolve_device',
     'set_random_seed',
+    'split_complex',
+    'split_list_in_batches_iter',
+    'view_complex',
     'NoRandomSeedNecessary',
     'Result',
 ]
