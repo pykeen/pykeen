@@ -17,7 +17,7 @@ from .base import (  # noqa:F401
     DataSet, EagerDataset, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset,
     TarFileRemoteDataSet, ZipFileRemoteDataSet,
 )
-from .codex import CodexLarge, CodexMedium, CodexSmall
+from .codex import CoDeXLarge, CoDeXMedium, CoDeXSmall
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
@@ -37,9 +37,9 @@ __all__ = [
     'OpenBioLinkF1',
     'OpenBioLinkF2',
     'OpenBioLinkLQ',
-    'CodexSmall',
-    'CodexMedium',
-    'CodexLarge',
+    'CoDeXSmall',
+    'CoDeXMedium',
+    'CoDeXLarge',
     'UMLS',
     'FB15k',
     'FB15k237',

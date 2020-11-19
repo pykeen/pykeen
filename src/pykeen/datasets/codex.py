@@ -27,7 +27,7 @@ LARGE_TEST_URL = f'{BASE_URL}/codex-l/test.txt'
 LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 
 
-class CodexSmall(UnpackedRemoteDataSet):
+class CoDeXSmall(UnpackedRemoteDataSet):
     """The CoDeX small dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
@@ -41,7 +41,7 @@ class CodexSmall(UnpackedRemoteDataSet):
         )
 
 
-class CodexMedium(UnpackedRemoteDataSet):
+class CoDeXMedium(UnpackedRemoteDataSet):
     """The CoDeX medium dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
@@ -55,7 +55,7 @@ class CodexMedium(UnpackedRemoteDataSet):
         )
 
 
-class CodexLarge(UnpackedRemoteDataSet):
+class CoDeXLarge(UnpackedRemoteDataSet):
     """The CoDeX large dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
@@ -70,7 +70,7 @@ class CodexLarge(UnpackedRemoteDataSet):
 
 
 def _main():
-    for cls in [CodexSmall, CodexMedium, CodexLarge]:
+    for cls in [CoDeXSmall, CoDeXMedium, CoDeXLarge]:
         d = cls()
         d.summarize()
 
