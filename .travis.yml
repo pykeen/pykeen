@@ -29,19 +29,6 @@ jobs:
     - name: "Test fast unit tests"
       stage: fast_tests
       env: TOXENV=py
-    # borrowed windows testing config from https://github.com/shaypal5/cachier/blob/master/.travis.yml
-    - name: "Test fast unit tests (Windows)"
-      stage: fast_tests
-      os: windows           # Windows 10.0.17134 N/A Build 17134
-      language: shell       # 'language: python' is an error on Travis CI Windows
-      before_install:
-        - choco install python --version 3.7.4
-        - python --version
-      install:
-        - pip install tox codecov coverage
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH TOXENV=py
-      after_success:
-        - tox -e coverage-report
     - name: "Test slow unit tests"
       stage: slow_tests
       env: TOXENV=integration
