@@ -33,6 +33,7 @@ __all__ = [
     'TarFileRemoteDataSet',
     'ZipFileRemoteDataSet',
     'PackedZipRemoteDataSet',
+    'SingleDataset',
     'SingleTabbedDataset',
 ]
 

@@ -8,7 +8,6 @@ Get a summary with ``python -m pykeen.datasets.drkg``
 import logging
 from typing import Union
 
-import click
 import numpy as np
 
 from .base import SingleDataset
@@ -42,10 +41,8 @@ class DRKG(SingleDataset):
         )
 
 
-@click.command()
 def _main():
     ds = DRKG(eager=True)
-    click.secho('making summary', bold=True, fg='green')
     ds.summarize()
 
 
