@@ -11,7 +11,7 @@ Citation:
    Completion Benchmark <http://arxiv.org/abs/2009.07810>`_.  *arXiv* 2009.07810.
 """
 
-from pykeen.datasets.base import UnpackedRemoteDataSet
+from .base import UnpackedRemoteDataSet
 
 BASE_URL = 'https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/'
 SMALL_VALID_URL = f'{BASE_URL}/codex-s/valid.txt'
