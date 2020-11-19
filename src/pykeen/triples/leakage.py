@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Tools for removing the leakage from datasets."""
+"""Tools for removing the leakage from datasets.
+
+Leakage is when the inverse of a given training triple appears in either
+the testing or validation set. This scenario generally leads to inflated
+and misleading evaluation because predicting an inverse triple is usually
+very easy and not a sign of the generalizability of a model to predict
+novel triples.
+"""
 
 import itertools as itt
 import logging
@@ -11,9 +18,9 @@ from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar,
 
 import numpy as np
 from tabulate import tabulate
+from tqdm.autonotebook import tqdm
 
 from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
-from ..tqdmw import tqdm
 from ..typing import LabeledTriples
 
 __all__ = [
@@ -413,16 +420,17 @@ def _main():
     logging.basicConfig(format='pykeen: %(message)s', level=logging.INFO)
 
     print('Summary FB15K')
-    train, test, validate = get_dataset(dataset='fb15k')
-    summarize(train, test, validate)
+    fb15k = get_dataset(dataset='fb15k')
+    summarize(fb15k.training, fb15k.testing, fb15k.validation)
 
     print('\nSummary FB15K (cleaned)')
-    train, test, validate = unleak(train, test, validate, n=401)  # magic 401 from the paper
+    n = 401  # magic 401 from the paper
+    train, test, validate = unleak(fb15k.training, fb15k.testing, fb15k.validation, n=n)
     summarize(train, test, validate)
 
     print('\nSummary FB15K-237')
-    train, test, validate = get_dataset(dataset='fb15k237')
-    summarize(train, test, validate)
+    fb15k237 = get_dataset(dataset='fb15k237')
+    summarize(fb15k237.training, fb15k237.testing, fb15k237.validation)
 
 
 if __name__ == '__main__':

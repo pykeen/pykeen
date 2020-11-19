@@ -4,13 +4,15 @@
 
 import logging
 import os
+import pathlib
 import shutil
 import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Optional, TextIO, Tuple, Union
+from typing import List, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
+from urllib.request import urlretrieve
 
 import numpy as np
 import pandas as pd
@@ -19,12 +21,15 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_HOME
 from ..triples import TriplesFactory
+from ..utils import normalize_string
 
 __all__ = [
     'DataSet',
+    'EagerDataset',
     'LazyDataSet',
     'PathDataSet',
     'RemoteDataSet',
+    'UnpackedRemoteDataSet',
     'TarFileRemoteDataSet',
     'ZipFileRemoteDataSet',
     'PackedZipRemoteDataSet',
@@ -39,17 +44,12 @@ class DataSet:
 
     #: A factory wrapping the training triples
     training: TriplesFactory
-    #: A factory wrapping the testing triples, that share indexes with the training triples
+    #: A factory wrapping the testing triples, that share indices with the training triples
     testing: TriplesFactory
-    #: A factory wrapping the validation triples, that share indexes with the training triples
+    #: A factory wrapping the validation triples, that share indices with the training triples
     validation: TriplesFactory
     #: All data sets should take care of inverse triple creation
     create_inverse_triples: bool
-
-    @property
-    def factories(self) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
-        """Return a tuple of three factories in order (training, testing, validation)."""
-        return self.training, self.testing, self.validation
 
     @property
     def entity_to_id(self):  # noqa: D401
@@ -71,7 +71,7 @@ class DataSet:
         """The number of relations."""
         return self.training.num_relations
 
-    def summary_str(self) -> str:
+    def summary_str(self, end='\n') -> str:
         """Make a summary string of all of the factories."""
         t = tabulate(
             [
@@ -81,7 +81,7 @@ class DataSet:
             ],
             headers=['Name', 'Entities', 'Relations', 'Triples'],
         )
-        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
+        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
     def summarize(self) -> None:
         """Print a summary of the dataset."""
@@ -89,6 +89,37 @@ class DataSet:
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
+
+    @classmethod
+    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'DataSet':
+        """Create a dataset from a single triples factory by splitting it in 3."""
+        tf = TriplesFactory(path=path)
+        return cls.from_tf(tf=tf, ratios=ratios)
+
+    @staticmethod
+    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'DataSet':
+        """Create a dataset from a single triples factory by splitting it in 3."""
+        training, testing, validation = tf.split(ratios or [0.8, 0.1, 0.1])
+        return EagerDataset(training=training, testing=testing, validation=validation)
+
+    @classmethod
+    def get_normalized_name(cls) -> str:
+        """Get the normalized name of the dataset."""
+        return normalize_string(cls.__name__)
+
+
+class EagerDataset(DataSet):
+    """A dataset that has already been loaded."""
+
+    def __init__(self, training: TriplesFactory, testing: TriplesFactory, validation: TriplesFactory) -> None:
+        self.training = training
+        self.testing = testing
+        self.validation = validation
+        self.create_inverse_triples = (
+            training.create_inverse_triples
+            and testing.create_inverse_triples
+            and self.validation.create_inverse_triples
+        )
 
 
 class LazyDataSet(DataSet):
@@ -110,14 +141,14 @@ class LazyDataSet(DataSet):
 
     @property
     def testing(self) -> TriplesFactory:  # noqa: D401
-        """The testing triples factory that shares indexes with the training triples factory."""
+        """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         return self._testing
 
     @property
     def validation(self) -> TriplesFactory:  # noqa: D401
-        """The validation triples factory that shares indexes with the training triples factory."""
+        """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         if not self._loaded_validation:
@@ -195,22 +226,90 @@ class PathDataSet(LazyDataSet):
         )
 
 
-def _urlretrieve(url, path, clean_on_failure: bool = True) -> None:
+def _name_from_url(url: str) -> str:
+    """Get the filename form the end of the URL."""
+    parse_result = urlparse(url)
+    path = pathlib.PurePosixPath(parse_result.path)
+    return path.name
+
+
+def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
     """Download a file from a given URL.
 
     :param url: URL to download
     :param path: Path to download the file to
     :param clean_on_failure: If true, will delete the file on any exception raised during download
     """
-    # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
-    # pattern from https://stackoverflow.com/a/39217788/5775947
-    try:
-        with requests.get(url, stream=True) as response, open(path, 'wb') as file:
-            shutil.copyfileobj(response.raw, file)
-    except (Exception, KeyboardInterrupt):
-        if clean_on_failure:
-            os.remove(path)
-        raise
+    if not stream:
+        urlretrieve(url, path)  # noqa:S310
+    else:
+        # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
+        # pattern from https://stackoverflow.com/a/39217788/5775947
+        try:
+            with requests.get(url, stream=True) as response, open(path, 'wb') as file:
+                shutil.copyfileobj(response.raw, file)
+        except (Exception, KeyboardInterrupt):
+            if clean_on_failure:
+                os.remove(path)
+            raise
+
+
+class UnpackedRemoteDataSet(PathDataSet):
+    """A dataset with all three of train, test, and validation sets as URLs."""
+
+    def __init__(
+        self,
+        training_url: str,
+        testing_url: str,
+        validation_url: str,
+        cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        stream: bool = True,
+        force: bool = False,
+    ):
+        """Initialize dataset.
+
+        :param training_url: The URL of the training file
+        :param testing_url: The URL of the testing file
+        :param validation_url: The URL of the validation file
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param stream:
+        :param force:
+        """
+        if cache_root is None:
+            cache_root = PYKEEN_HOME
+        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
+        os.makedirs(self.cache_root, exist_ok=True)
+
+        self.training_url = training_url
+        self.testing_url = testing_url
+        self.validation_url = validation_url
+
+        training_path = os.path.join(self.cache_root, _name_from_url(self.training_url))
+        testing_path = os.path.join(self.cache_root, _name_from_url(self.testing_url))
+        validation_path = os.path.join(self.cache_root, _name_from_url(self.validation_url))
+
+        for url, path in [
+            (self.training_url, training_path),
+            (self.testing_url, testing_path),
+            (self.validation_url, validation_path),
+        ]:
+            if os.path.exists(path) and not force:
+                continue
+            _urlretrieve(url, path, stream=stream)
+
+        super().__init__(
+            training_path=training_path,
+            testing_path=testing_path,
+            validation_path=validation_path,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+        )
 
 
 class RemoteDataSet(PathDataSet):
@@ -233,11 +332,13 @@ class RemoteDataSet(PathDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         if cache_root is None:
             cache_root = PYKEEN_HOME
         self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(cache_root, exist_ok=True)
+        os.makedirs(self.cache_root, exist_ok=True)
 
         self.url = url
         self._relative_training_path = relative_training_path
@@ -330,11 +431,13 @@ class PackedZipRemoteDataSet(LazyDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         if cache_root is None:
             cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
         self.cache_root = cache_root
-        os.makedirs(cache_root, exist_ok=True)
+        os.makedirs(self.cache_root, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
 
         if name is None:
@@ -482,11 +585,13 @@ class SingleTabbedDataset(LazyDataSet):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         if cache_root is None:
             cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
         self.cache_root = cache_root
-        os.makedirs(cache_root, exist_ok=True)
+        os.makedirs(self.cache_root, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
 
         if name is None:

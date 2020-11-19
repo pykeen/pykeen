@@ -11,12 +11,14 @@ by default.
 Pipeline Example
 ----------------
 This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` function.
+Minimally, the `tracking_uri` and `experiment_name` are required in the
+`result_tracker_kwargs`.
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='mlflow',
@@ -29,12 +31,12 @@ This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` functi
 If you navigate to the MLflow UI at http://localhost:5000, you'll see the experiment appeared
 in the left column.
 
-.. image:: ../img/mlflow_tutorial_1.png
+.. image:: ../../img/mlflow_tutorial_1.png
   :alt: MLflow home
 
 If you click on the experiment, you'll see this:
 
-.. image:: ../img/mlflow_tutorial_2.png
+.. image:: ../../img/mlflow_tutorial_2.png
   :alt: MLflow experiment view
 
 HPO Example
@@ -45,7 +47,7 @@ This example shows using MLflow with the :func:`pykeen.hpo.hpo_pipeline` functio
 
     from pykeen.hpo import hpo_pipeline
 
-    results = hpo_pipeline(
+    pipeline_result = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='mlflow',
@@ -68,13 +70,43 @@ different sub-experiments together using the ``experiment_id`` keyword argument 
     from pykeen.pipeline import pipeline
 
     experiment_id = 4  # if doesn't already exist, will throw an error!
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='mlflow'
         result_tracker_kwargs=dict(
             tracking_uri='http://localhost:5000',
             experiment_id=4,
+        ),
+    )
+
+Adding Tags
+-----------
+Tags are additional key/value information that you might want to add to the experiment
+and store in MLflow. By default, MLflow adds the tags listed on
+https://www.mlflow.org/docs/latest/tracking.html#id41.
+
+For example, if you're using custom input,  you might want to add which version
+of the input file produced the results as follows:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    data_version = ...
+
+    pipeline_result = pipeline(
+        model='RotatE',
+        training=...,
+        testing=...,
+        validation=...,
+        result_tracker='mlflow',
+        result_tracker_kwargs=dict(
+            tracking_uri='http://localhost:5000',
+            experiment_name='Tutorial Training of RotatE on Kinships',
+            tags={
+                "data_version": md5_hash,
+            },
         ),
     )
 

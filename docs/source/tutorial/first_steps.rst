@@ -2,6 +2,24 @@ First Steps
 ===========
 .. automodule:: pykeen.pipeline
 
+Loading a pre-trained Model
+---------------------------
+Many of the previous examples ended with saving the results using the
+:meth:`pykeen.pipeline.PipelineResult.save_to_directory`. One of the
+artifacts written to the given directory is the ``trained_model.pkl``
+file. Because all PyKEEN models inherit from :class:`torch.nn.Module`,
+we use the PyTorch mechanisms for saving and loading them. This means
+that you can use :func:`torch.load` to load a model like:
+
+.. code-block:: python
+
+    import torch
+
+    my_pykeen_model = torch.load('trained_model.pkl')
+
+More information on PyTorch's model persistence can be found at:
+https://pytorch.org/tutorials/beginner/saving_loading_models.html.
+
 Beyond the Pipeline
 -------------------
 While the pipeline provides a high-level interface, each aspect of the
@@ -33,11 +51,11 @@ executed with one of the previous examples.
 
     # Pick an evaluator
     from pykeen.evaluation import RankBasedEvaluator
-    evaluator = RankBasedEvaluator(model)
+    evaluator = RankBasedEvaluator()
 
     # Get triples to test
     mapped_triples = dataset.testing.mapped_triples
 
     # Evaluate
-    results = evaluator.evaluate(mapped_triples, batch_size=1024)
+    results = evaluator.evaluate(model, mapped_triples, batch_size=1024)
     print(results)

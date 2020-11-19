@@ -2,7 +2,8 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Dict, Mapping, Optional, Type, Union
+import os
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type, Union
 
 from .utils import flatten_dictionary, get_cls, normalize_string
 
@@ -12,6 +13,9 @@ __all__ = [
     'MLFlowResultTracker',
     'WANDBResultTracker',
 ]
+
+if TYPE_CHECKING:
+    import wandb.wandb_run
 
 
 class ResultTracker:
@@ -46,6 +50,7 @@ class MLFlowResultTracker(ResultTracker):
         tracking_uri: Optional[str] = None,
         experiment_id: Optional[int] = None,
         experiment_name: Optional[str] = None,
+        tags: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize result tracking via MLFlow.
@@ -58,9 +63,12 @@ class MLFlowResultTracker(ResultTracker):
         :param experiment_name:
             The experiment name. If this experiment name exists, add the current run to this experiment. Otherwise
             create an experiment of the given name.
+        :param tags:
+            The additional run details which are presented as tags to be logged
         """
         import mlflow as _mlflow
         self.mlflow = _mlflow
+        self.tags = tags
 
         self.mlflow.set_tracking_uri(tracking_uri)
         if experiment_id is not None:
@@ -71,6 +79,8 @@ class MLFlowResultTracker(ResultTracker):
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         self.mlflow.start_run(run_name=run_name)
+        if self.tags is not None:
+            self.mlflow.set_tags(tags=self.tags)
 
     def log_metrics(
         self,
@@ -95,10 +105,15 @@ class WANDBResultTracker(ResultTracker):
     Note that you have to perform wandb login beforehand.
     """
 
+    #: The WANDB run
+    run: 'wandb.wandb_run.Run'
+
     def __init__(
         self,
         project: str,
         experiment: Optional[str] = None,
+        offline: bool = False,
+        **kwargs,
     ):
         """Initialize result tracking via WANDB.
 
@@ -112,7 +127,11 @@ class WANDBResultTracker(ResultTracker):
         if project is None:
             raise ValueError('Weights & Biases requires a project name.')
         self.project = project
-        self.wandb.init(project=self.project, name=experiment)
+
+        if offline:
+            os.environ[self.wandb.env.MODE] = 'dryrun'
+
+        self.run = self.wandb.init(project=self.project, name=experiment, **kwargs)
 
     def log_metrics(
         self,

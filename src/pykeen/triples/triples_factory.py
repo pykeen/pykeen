@@ -11,12 +11,12 @@ from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
-from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, invert_mapping, slice_triples
+from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -176,10 +176,10 @@ def _map_triples_elements_to_ids(
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    #: The mapping from entities' labels to their indexes
+    #: The mapping from entities' labels to their indices
     entity_to_id: EntityMapping
 
-    #: The mapping from relations' labels to their indexes
+    #: The mapping from relations' labels to their indices
     relation_to_id: RelationMapping
 
     #: A three-column matrix where each row are the head label,
@@ -359,7 +359,7 @@ class TriplesFactory:
         )
         sp, multi_o = zip(*s_p_to_multi_tails.items())
         mapped_triples: torch.LongTensor = torch.tensor(sp, dtype=torch.long)
-        labels = np.array([np.array(item) for item in multi_o])
+        labels = np.array([np.array(item) for item in multi_o], dtype=object)
 
         return LCWAInstances(
             mapped_triples=mapped_triples,
@@ -418,7 +418,7 @@ class TriplesFactory:
         # Prepare shuffle index
         idx = np.arange(n_triples)
         if random_state is None:
-            random_state = np.random.randint(0, 2 ** 32 - 1)
+            random_state = random_non_negative_int()
             logger.warning(f'Using random_state={random_state} to split {self}')
         if isinstance(random_state, int):
             random_state = np.random.RandomState(random_state)
@@ -488,7 +488,7 @@ class TriplesFactory:
         }
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
-        """Get an np.array index for triples with the given entities."""
+        """Get np.array indices for triples with the given entities."""
         entities = np.asanyarray(entities, dtype=self.triples.dtype)
         return (
             np.isin(self.triples[:, 0], entities, invert=invert)
@@ -496,7 +496,7 @@ class TriplesFactory:
         )
 
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
-        """Get an np.array index for triples with the given relations."""
+        """Get np.array indices for triples with the given relations."""
         return np.isin(self.triples[:, 1], list(relations), invert=invert)
 
     def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:
@@ -713,7 +713,7 @@ def _tf_cleanup_randomized(
     3. Continue until move_id_mask has no true bits
     """
     if random_state is None:
-        random_state = np.random.randint(0, 2 ** 32 - 1)
+        random_state = random_non_negative_int()
         logger.warning('Using random_state=%s', random_state)
     if isinstance(random_state, int):
         random_state = np.random.RandomState(random_state)

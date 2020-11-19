@@ -13,6 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'ConvKB',
@@ -77,7 +78,7 @@ class ConvKB(EntityRelationEmbeddingModel):
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -104,14 +105,10 @@ class ConvKB(EntityRelationEmbeddingModel):
         self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
+        super()._reset_parameters_()
 
         # Use Xavier initialization for weight; bias to zero
         nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
@@ -124,9 +121,9 @@ class ConvKB(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.conv.bias)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Output layer regularization
         # In the code base only the weights of the output layer are used for regularization

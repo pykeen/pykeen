@@ -12,6 +12,11 @@
          alt="Travis CI">
   </a>
 
+  <a href="https://ci.appveyor.com/project/pykeen/pykeen/branch/master">
+    <img src="https://ci.appveyor.com/api/projects/status/lwp9cfnsa8d5yx62/branch/master?svg=true"
+         alt="AppVeyor">
+  </a>
+
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
@@ -33,7 +38,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-13">Datasets</a> •
+  <a href="#datasets-16">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -55,8 +60,8 @@ source on [GitHub](https://github.com/pykeen/pykeen) with:
 pip install git+https://github.com/pykeen/pykeen.git
 ```
 
-More information about installation extras can be found in the
-[installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
+More information about installation (e.g., development mode, Windows installation, extras)
+can be found in the [installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
@@ -78,7 +83,7 @@ result = pipeline(
 )
 ```
 
-The results are returned in an instance of the [RankBasedMetricResults](https://pykeen.readthedocs.io/en/latest/reference/evaluation/rank_based.html#pykeen.evaluation.RankBasedMetricResults)
+The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
 dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials on
 [understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
@@ -96,10 +101,13 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (13)
+### Datasets (16)
 
 | Name          | Reference                       | Description                                                                                        |
 |---------------|---------------------------------|----------------------------------------------------------------------------------------------------|
+| codexlarge    | `pykeen.datasets.CoDExLarge`    | The CoDEx large dataset.                                                                           |
+| codexmedium   | `pykeen.datasets.CoDExMedium`   | The CoDEx medium dataset.                                                                          |
+| codexsmall    | `pykeen.datasets.CoDExSmall`    | The CoDEx small dataset.                                                                           |
 | fb15k         | `pykeen.datasets.FB15k`         | The FB15k data set.                                                                                |
 | fb15k237      | `pykeen.datasets.FB15k237`      | The FB15k-237 data set.                                                                            |
 | hetionet      | `pykeen.datasets.Hetionet`      | The Hetionet dataset is a large biological network.                                                |
@@ -146,8 +154,8 @@ in ``pykeen``.
 
 | Name            | Reference                           | Description                                                                                       |
 |-----------------|-------------------------------------|---------------------------------------------------------------------------------------------------|
-| bce             | `pykeen.losses.BCELoss`             | A wrapper around the PyTorch binary cross entropy loss.                                           |
 | bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
+| bcewithlogits   | `pykeen.losses.BCEWithLogitsLoss`   | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
 | crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                      |
 | marginranking   | `pykeen.losses.MarginRankingLoss`   | A wrapper around the PyTorch margin ranking loss.                                                 |
 | mse             | `pykeen.losses.MSELoss`             | A wrapper around the PyTorch mean square error loss.                                              |

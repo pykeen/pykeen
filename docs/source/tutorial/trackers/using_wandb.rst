@@ -25,7 +25,7 @@ This example shows using WANDB with the :func:`pykeen.pipeline.pipeline` functio
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='wandb',
@@ -39,13 +39,13 @@ Further tweaking of appearance, charts, and other settings is described in the o
 `documentation <https://docs.wandb.com/>`_
 
 You can also specify an optional ``experiment`` which will appear on the website instead of randomly generated
-labels.
+labels. All further keyword arguments are passed to :func:`wandb.init`.
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
 
-    results = pipeline(
+    pipeline_result = pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='wandb',
@@ -64,13 +64,14 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
 
     from pykeen.hpo import hpo_pipeline
 
-    results = hpo_pipeline(
+    pipeline_result = hpo_pipeline(
         model='RotatE',
         dataset='Kinships',
         result_tracker='wandb',
         result_tracker_kwargs=dict(
             project='pykeen_project',
             experiment='new run',
+            reinit=True,
         ),
     )
 

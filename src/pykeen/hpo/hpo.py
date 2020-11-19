@@ -18,9 +18,10 @@ from optuna.storages import BaseStorage
 
 from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
+from ..datasets import get_dataset, has_dataset
 from ..datasets.base import DataSet
 from ..evaluation import Evaluator, get_evaluator_cls
-from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls, losses_hpo_defaults
+from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from ..models import get_model_cls
 from ..models.base import Model
 from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
@@ -64,9 +65,9 @@ class Objective:
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
-    training_triples_factory: Optional[TriplesFactory] = None
-    testing_triples_factory: Optional[TriplesFactory] = None
-    validation_triples_factory: Optional[TriplesFactory] = None
+    training: Union[None, TriplesFactory, str] = None
+    testing: Union[None, TriplesFactory, str] = None
+    validation: Union[None, TriplesFactory, str] = None
     evaluation_entity_whitelist: Optional[Collection[str]] = None
     evaluation_relation_whitelist: Optional[Collection[str]] = None
     # 2. Model
@@ -132,11 +133,18 @@ class Objective:
             kwargs=self.model_kwargs,
             kwargs_ranges=self.model_kwargs_ranges,
         )
+
+        try:
+            loss_default_kwargs_ranges = self.loss.hpo_default
+        except AttributeError:
+            logger.warning('using a loss function with no hpo_default field: %s', self.loss)
+            loss_default_kwargs_ranges = {}
+
         # 3. Loss
         _loss_kwargs = _get_kwargs(
             trial=trial,
             prefix='loss',
-            default_kwargs_ranges=losses_hpo_defaults[self.loss],
+            default_kwargs_ranges=loss_default_kwargs_ranges,
             kwargs=self.loss_kwargs,
             kwargs_ranges=self.loss_kwargs_ranges,
         )
@@ -185,9 +193,9 @@ class Objective:
                 # 1. Dataset
                 dataset=self.dataset,
                 dataset_kwargs=self.dataset_kwargs,
-                training_triples_factory=self.training_triples_factory,
-                testing_triples_factory=self.testing_triples_factory,
-                validation_triples_factory=self.validation_triples_factory,
+                training=self.training,
+                testing=self.testing,
+                validation=self.validation,
                 evaluation_entity_whitelist=self.evaluation_entity_whitelist,
                 evaluation_relation_whitelist=self.evaluation_relation_whitelist,
                 # 2. Model
@@ -266,7 +274,11 @@ class HpoPipelineResult(Result):
                 pipeline_config[k] = v
 
         for field in dataclasses.fields(self.objective):
-            if not field.name.endswith('_kwargs') or field.name in {'metric'}:
+            if (not field.name.endswith('_kwargs') and field.name not in {
+                'training',
+                'testing',
+                'validation',
+            }) or field.name in {'metric'}:
                 continue
             field_kwargs = getattr(self.objective, field.name)
             if field_kwargs:
@@ -294,7 +306,6 @@ class HpoPipelineResult(Result):
                 f' early stopping will now switch it to {int(stopped_epoch)}'
             )
             pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
-
         return dict(metadata=metadata, pipeline=pipeline_config)
 
     def save_to_directory(self, directory: str, **kwargs) -> None:
@@ -404,11 +415,13 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, Type[DataSet]],
+    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training_triples_factory: Optional[TriplesFactory] = None,
-    testing_triples_factory: Optional[TriplesFactory] = None,
-    validation_triples_factory: Optional[TriplesFactory] = None,
+    training: Union[None, str, TriplesFactory] = None,
+    testing: Union[None, str, TriplesFactory] = None,
+    validation: Union[None, str, TriplesFactory] = None,
+    evaluation_entity_whitelist: Optional[Collection[str]] = None,
+    evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -467,12 +480,20 @@ def hpo_pipeline(
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
-    :param training_triples_factory:
-        A triples factory with training instances if a a dataset was not specified
-    :param testing_triples_factory:
-        A triples factory with training instances if a dataset was not specified
-    :param validation_triples_factory:
-        A triples factory with validation instances if a dataset was not specified
+    :param training:
+        A triples factory with training instances or path to the training file if a a dataset was not specified
+    :param testing:
+        A triples factory with test instances or path to the test file if a dataset was not specified
+    :param validation:
+        A triples factory with validation instances or path to the validation file if a dataset was not specified
+    :param evaluation_entity_whitelist:
+        Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
+        is only interested in certain entities, but the relational patterns with other entities improve the entity
+        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
+    :param evaluation_relation_whitelist:
+        Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
+        is only interested in certain relation, but the relational patterns with other relations improve the entity
+        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
 
     :param model:
         The name of the model or the model class to pass to :func:`pykeen.pipeline.pipeline`
@@ -574,10 +595,14 @@ def hpo_pipeline(
     study.set_user_attr('pykeen_version', get_version())
     study.set_user_attr('pykeen_git_hash', get_git_hash())
     # 1. Dataset
-    # FIXME difference between dataset class and string
-    # FIXME how to handle if dataset or factories were set? Should have been
-    #  part of https://github.com/mali-git/POEM_develop/pull/483
-    study.set_user_attr('dataset', dataset)
+    study.set_user_attr('dataset', _get_dataset_name(
+        dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
+        training=training,
+        testing=testing,
+        validation=validation,
+    ))
+
     # 2. Model
     model: Type[Model] = get_model_cls(model)
     study.set_user_attr('model', normalize_string(model.__name__))
@@ -630,9 +655,11 @@ def hpo_pipeline(
         # 1. Dataset
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
-        training_triples_factory=training_triples_factory,
-        testing_triples_factory=testing_triples_factory,
-        validation_triples_factory=validation_triples_factory,
+        training=training,
+        testing=testing,
+        validation=validation,
+        evaluation_entity_whitelist=evaluation_entity_whitelist,
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
         # 2. Model
         model=model,
         model_kwargs=model_kwargs,
@@ -772,3 +799,23 @@ def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [2 ** i for i in range(low, high + 1)]
     return trial.suggest_categorical(name=name, choices=choices)
+
+
+def _get_dataset_name(
+    *,
+    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    training: Union[None, str, TriplesFactory] = None,
+    testing: Union[None, str, TriplesFactory] = None,
+    validation: Union[None, str, TriplesFactory] = None,
+) -> str:
+    """Make a useful name for the dataset for storage in HPO."""
+    if (
+        (isinstance(dataset, str) and has_dataset(dataset))
+        or isinstance(dataset, DataSet)
+        or (isinstance(dataset, type) and issubclass(dataset, DataSet))
+    ):
+        return get_dataset(dataset=dataset).get_normalized_name()
+
+    # TODO make more informative
+    return '<user defined>'
