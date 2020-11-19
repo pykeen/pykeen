@@ -1163,21 +1163,27 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
 
     def append_weight_regularizer(
         self,
-        parameter_name: str,
+        parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
         regularizer: Regularizer,
     ) -> None:
         """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
-        :param parameter_name:
-            The parameter name. Available parameter names are shown by `dict(self.named_parameters()).keys()`.
+        :param parameter:
+            The parameter, either as name, or as nn.Parameter object. A list of available parameter names is shown by
+             `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
             The regularizer instance which will regularize the weights.
         """
+        # normalize input
+        if isinstance(parameter, (str, nn.Parameter)):
+            parameter = list(parameter)
         weights: Mapping[str, nn.Parameter] = dict(self.named_parameters())
-        if parameter_name not in weights.keys():
-            raise ValueError(f"Invalid parameter_name={parameter_name}. Available are: {sorted(weights.keys())}.")
-        parameter: nn.Parameter = weights[parameter_name]
-        regularizer.add_parameter(parameter=parameter)
+        for param in parameter:
+            if isinstance(param, str):
+                if parameter not in weights.keys():
+                    raise ValueError(f"Invalid parameter_name={parameter}. Available are: {sorted(weights.keys())}.")
+                param: nn.Parameter = weights[param]
+            regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
 
     def forward(
