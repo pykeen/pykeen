@@ -41,7 +41,7 @@ jobs:
       install:
         - conda create --yes -n test python=3.7
         - source activate test
-        - conda install pytorch torchvisioncudatoolkit=10.2 -c pytorch --yes
+        - conda install pytorch torchvision cudatoolkit=10.2 -c pytorch --yes
         - pip install -e .
         - pip install pytest
       script:
