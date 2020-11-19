@@ -52,6 +52,25 @@ jobs:
     - name: "Test slow unit tests"
       stage: slow_tests
       env: TOXENV=integration
+    - name: "Test slow unit tests (Windows)"
+      stage: slow_tests
+      os: windows           # Windows 10.0.17134 N/A Build 17134
+      language: shell       # 'language: python' is an error on Travis CI Windows
+      before_install:
+        - choco install openssl.light
+        - choco install miniconda3
+        - conda update --yes conda
+      install:
+        - conda create --yes -n test python=3.7
+        - source activate test
+        - conda install pytorch torchvision cudatoolkit=10.2 -c pytorch --yes
+        - pip install -e .[mlflow]
+        - pip install pytest
+      script:
+        - pytest --durations=20 tests/ -m "slow"
+      env: PATH=/c/tools/miniconda3/Scripts:$PATH
+      after_success:
+        - tox -e coverage-report
   allow_failures:
     - env: TOXENV=darglint
     # - env: TOXENV=mypy
