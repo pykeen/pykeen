@@ -145,6 +145,8 @@ class Embedding(RepresentationModule):
             The number of embeddings.
         :param embedding_dim: >0
             The embedding dimensionality.
+        :param shape:
+            The embedding shape. If given, shape supersedes embedding_dim, with setting embedding_dim = prod(shape).
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
@@ -161,6 +163,9 @@ class Embedding(RepresentationModule):
             to be in-place, but the weight tensor is modified in-place.
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+
+        :raises ValueError:
+            If neither shape nor embedding_dim are given.
         """
         super().__init__()
         if shape is None and embedding_dim is None:
@@ -208,10 +213,12 @@ class Embedding(RepresentationModule):
     ) -> 'Embedding':
         """Create an embedding based on a specification.
 
-        :param num_embeddings:
+        :param num_embeddings: >0
             The number of embeddings.
-        :param embedding_dim:
+        :param embedding_dim: >0
             The embedding dimension.
+        :param shape:
+            The embedding shape. If given, shape supersedes embedding_dim, with setting embedding_dim = prod(shape).
         :param specification:
             The specification.
         :return:
