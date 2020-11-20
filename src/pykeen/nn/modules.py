@@ -488,13 +488,18 @@ def _calculate_missing_shape_information(
     """Automatically calculates missing dimensions for ConvE.
 
     :param embedding_dim:
+        The embedding dimension.
     :param input_channels:
+        The number of input channels for the convolution.
     :param width:
+        The width of the embedding "image".
     :param height:
+        The height of the embedding "image".
 
     :return: (input_channels, width, height), such that
             `embedding_dim = input_channels * width * height`
-    :raises:
+
+    :raises ValueError:
         If no factorization could be found.
     """
     # Store initial input for error message
