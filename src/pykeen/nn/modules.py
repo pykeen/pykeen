@@ -323,6 +323,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
+
+        :raises ValueError:
+            If slice_dim is invalid.
         """
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
