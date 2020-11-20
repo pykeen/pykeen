@@ -38,7 +38,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-13">Datasets</a> •
+  <a href="#datasets-16">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -101,10 +101,13 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (13)
+### Datasets (16)
 
 | Name          | Reference                       | Description                                                                                        |
 |---------------|---------------------------------|----------------------------------------------------------------------------------------------------|
+| codexlarge    | `pykeen.datasets.CoDExLarge`    | The CoDEx large dataset.                                                                           |
+| codexmedium   | `pykeen.datasets.CoDExMedium`   | The CoDEx medium dataset.                                                                          |
+| codexsmall    | `pykeen.datasets.CoDExSmall`    | The CoDEx small dataset.                                                                           |
 | fb15k         | `pykeen.datasets.FB15k`         | The FB15k data set.                                                                                |
 | fb15k237      | `pykeen.datasets.FB15k237`      | The FB15k-237 data set.                                                                            |
 | hetionet      | `pykeen.datasets.Hetionet`      | The Hetionet dataset is a large biological network.                                                |
