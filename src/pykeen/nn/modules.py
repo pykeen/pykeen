@@ -923,7 +923,6 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
         nn.init.uniform_(self.core_tensor, -1., 1.)
         # batch norm gets reset automatically, since it defines reset_parameters
-        # TODO: This is only the case if bound to a Model, but not if used without it
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(
