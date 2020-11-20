@@ -129,7 +129,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         )
         scores = self.instance.score_h(all_entities=h, r=r, t=t, slice_size=self.num_entities // 2 + 1)
         scores_no_slice = self.instance.score_h(all_entities=h, r=r, t=t, slice_size=None)
-        assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
+        self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
 
     def test_score_r(self):
         """Test score_r."""
@@ -158,7 +158,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         )
         scores = self.instance.score_r(h=h, all_relations=r, t=t, slice_size=self.num_relations // 2 + 1)
         scores_no_slice = self.instance.score_r(h=h, all_relations=r, t=t, slice_size=None)
-        assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
+        self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
 
     def test_score_t(self):
         """Test score_t."""
@@ -181,7 +181,12 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         )
         scores = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=self.num_entities // 2 + 1)
         scores_no_slice = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=None)
-        assert torch.allclose(scores, scores_no_slice), f'Differences: {scores - scores_no_slice}'
+        self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
+
+    def _check_close_scores(self, scores, scores_no_slice):
+        self.assertFalse(torch.isnan(scores).any(), msg=f'Normal scores had nan:\n\t{scores}')
+        self.assertFalse(torch.isnan(scores_no_slice).any(), msg=f'Slice scores had nan\n\t{scores}')
+        self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f'Differences: {scores - scores_no_slice}')
 
     def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]]:
         """Return a set of test shapes for (h, r, t)."""
@@ -238,7 +243,9 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
                     for m in self.instance.modules()
                 )
                 if small_batch_size and has_batch_norm:
-                    logger.warning(f"Skipping test for shapes {hs}, {rs}, {ts}")
+                    logger.warning(
+                        f"Skipping test for shapes {hs}, {rs}, {ts} becuase too small batch size for batch norm",
+                    )
                     continue
                 raise error
 
