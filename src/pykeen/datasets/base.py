@@ -74,14 +74,17 @@ class DataSet:
 
     def summary_str(self, end='\n') -> str:
         """Make a summary string of all of the factories."""
-        t = tabulate(
-            [
-                (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
-                for label, triples_factory in
-                zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
-            ],
-            headers=['Name', 'Entities', 'Relations', 'Triples'],
+        rows = [
+            (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
+            for label, triples_factory in
+            zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
+        ]
+        n_triples = sum(
+            triples_factory.num_triples
+            for triples_factory in (self.training, self.testing, self.validation)
         )
+        rows.append(('Total', '-', '-', n_triples))
+        t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
         return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
     def summarize(self) -> None:

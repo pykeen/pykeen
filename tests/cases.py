@@ -20,6 +20,11 @@ class DatasetTestCase(unittest.TestCase):
     exp_num_entities: ClassVar[int]
     #: The expected number of relations
     exp_num_relations: ClassVar[int]
+    #: The expected number of triples
+    exp_num_triples: ClassVar[Optional[int]] = None
+    #: The tolerance on expected number of triples, for randomized situations
+    exp_num_triples_tolerance: ClassVar[Optional[int]] = None
+
     #: The dataset to test
     dataset_cls: ClassVar[Type[LazyDataSet]]
     #: The instantiated dataset
@@ -65,6 +70,16 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertEqual(self.dataset.num_entities, self.exp_num_entities)
         self.assertEqual(self.dataset.num_relations, self.exp_num_relations)
+
+        if self.exp_num_triples is not None:
+            total = sum(
+                triples_factory.num_triples for
+                triples_factory in (self.dataset._training, self.dataset._testing, self.dataset._validation)
+            )
+            if self.exp_num_triples_tolerance:
+                self.assertAlmostEqual(self.exp_num_triples, total, delta=self.exp_num_triples_tolerance)
+            else:
+                self.assertEqual(self.exp_num_triples, total)
 
         # Test caching
         start = timeit.default_timer()
