@@ -248,7 +248,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
                 )
                 if small_batch_size and has_batch_norm:
                     logger.warning(
-                        f"Skipping test for shapes {hs}, {rs}, {ts} becuase too small batch size for batch norm",
+                        f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
                     )
                     continue
                 raise error
