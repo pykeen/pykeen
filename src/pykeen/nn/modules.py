@@ -915,9 +915,9 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
         if apply_batch_normalization:
             self.head_batch_norm = nn.BatchNorm1d(embedding_dim)
-            self.head_relation_batchnorm = nn.BatchNorm1d(embedding_dim)
+            self.head_relation_batch_norm = nn.BatchNorm1d(embedding_dim)
         else:
-            self.head_batch_norm = self.head_relation_batchnorm = None
+            self.head_batch_norm = self.head_relation_batch_norm = None
 
     def reset_parameters(self):  # noqa:D102
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
@@ -931,7 +931,7 @@ class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             do_r=self.relation_dropout,
             do_hr=self.head_relation_dropout,
             bn_h=self.head_batch_norm,
-            bn_hr=self.head_relation_batchnorm,
+            bn_hr=self.head_relation_batch_norm,
         )
 
 
