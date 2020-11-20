@@ -9,8 +9,8 @@ from typing import ClassVar, Optional
 
 import numpy as np
 
-from pykeen.datasets.base import LazyDataSet
-from pykeen.triples import TriplesFactory
+from .base import LazyDataSet
+from ..triples import TriplesFactory
 
 __all__ = [
     'OGBLoader',
