@@ -258,6 +258,8 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
         self.instance.eval()
         for _ in range(10):
+            # test multiple different initializations
+            self.instance.reset_parameters()
             h, r, t = self._get_hrt((1, 1), (1, 1), (1, 1))
             kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
