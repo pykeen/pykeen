@@ -145,11 +145,13 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         """
         Add a dimension to tensors.
 
-        :param x: shape: (d1, ..., dk)
-            The tensor.
+        :param x:
+            The tensors.
+        :param dim:
+            The dimension to unsqueeze.
 
-        :return: shape: (1, d1, ..., dk)
-            The tensor with batch dimension.
+        :return:
+            The tensors with an additional 1-element dimension.
         """
         out = [xx.unsqueeze(dim=dim) for xx in x]
         if len(x) == 1:
