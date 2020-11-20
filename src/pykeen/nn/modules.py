@@ -168,6 +168,10 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
         :return:
             The squeezed tensor.
+
+        :raises ValueError:
+            If there are duplicates in dims (after normalizing the dimensions, i.e. resolving negative dimension
+            indices).
         """
         # normalize dimensions
         dims = tuple(d if d >= 0 else len(x.shape) + d for d in dims)
