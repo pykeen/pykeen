@@ -138,11 +138,11 @@ def complex_interaction(
     return tensor_sum(*(
         factor * extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 
@@ -646,6 +646,8 @@ def simple_interaction(
         The relation representations.
     :param t_inv: shape: (batch_size, num_tails, dim)
         The tail representations.
+    :param clamp:
+        Clamp the scores to the given range.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
