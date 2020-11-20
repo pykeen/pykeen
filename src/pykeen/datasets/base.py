@@ -111,6 +111,14 @@ class DataSet:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
 
+    def _help_cache(self, cache_root: Optional[str]):
+        if cache_root is None:
+            cache_root = PYKEEN_HOME
+        cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
+        logger.debug('using cache root at %s', cache_root)
+        os.makedirs(cache_root, exist_ok=True)
+        return cache_root
+
 
 class EagerDataset(DataSet):
     """A dataset that has already been loaded."""
@@ -289,10 +297,7 @@ class UnpackedRemoteDataSet(PathDataSet):
         :param stream:
         :param force:
         """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(self.cache_root, exist_ok=True)
+        self.cache_root = self._help_cache(cache_root)
 
         self.training_url = training_url
         self.testing_url = testing_url
@@ -343,10 +348,7 @@ class RemoteDataSet(PathDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(self.cache_root, exist_ok=True)
+        self.cache_root = self._help_cache(cache_root)
 
         self.url = url
         self._relative_training_path = relative_training_path
@@ -444,11 +446,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(self.cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
         self.name = name or _name_from_url(url)
         self.path = os.path.join(self.cache_root, self.name)
@@ -529,11 +527,7 @@ class TarFileSingleDataset(LazyDataSet):
         :param delimiter:
             The delimiter for the contained dataset.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
         self.name = name or _name_from_url(url)
         self.random_state = random_state
@@ -607,11 +601,7 @@ class SingleTabbedDataset(LazyDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(self.cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
         self.name = name or _name_from_url(url)
 
