@@ -69,7 +69,7 @@ class ERModelTests(unittest.TestCase):
 
     def test_add_weight_regularizer_non_existing(self):
         """Test that an assertion is raised for add_weight_regularizer for a non-existing weight."""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             self.model.append_weight_regularizer(
                 parameter="this.weight.does.not.exist",
                 regularizer=...,
