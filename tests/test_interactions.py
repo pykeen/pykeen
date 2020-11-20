@@ -461,11 +461,11 @@ class TuckerTests(InteractionTests, unittest.TestCase):
     def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
         h, r, t = strip_dim(h, r, t)
-        a = do_r((core_tensor * r[None, :, None]).sum(dim=1))  # shape: (embedding_dim, embedding_dim)
+        a = do_r((core_tensor * r[None, :, None]).sum(dim=1, keepdims=True))  # shape: (embedding_dim, 1, embedding_dim)
         b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
-        c = (b[:, None] * a).sum(dim=1)  # shape: (embedding_dim)
-        d = do_hr(bn_hr((c.view(1, -1)))).view(-1)  # shape: (embedding_dim)
-        return (d * t).sum()
+        c = (b[:, None, None] * a).sum(dim=0, keepdims=True)  # shape: (1, 1, embedding_dim)
+        d = do_hr(bn_hr((c.view(1, -1)))).view(1, 1, -1)  # shape: (1, 1, 1, embedding_dim)
+        return (d * t[None, None, :]).sum()
 
 
 class RotatETests(InteractionTests, unittest.TestCase):
