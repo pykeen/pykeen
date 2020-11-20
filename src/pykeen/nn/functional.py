@@ -912,15 +912,15 @@ def tucker_interaction(
     """
     return extended_einsum(
         # x_3 contraction
-        "bhrd,btd->bhrt",
+        "bhrk,btk->bhrt",
         _apply_optional_bn_to_tensor(
             x=extended_einsum(
                 # x_1 contraction
-                "brid,bhd->bhri",
+                "brik,bhi->bhrk",
                 _apply_optional_bn_to_tensor(
                     x=extended_einsum(
                         # x_2 contraction
-                        "idj,brd->brij",
+                        "ijk,brj->brik",
                         core_tensor,
                         r,
                     ),
