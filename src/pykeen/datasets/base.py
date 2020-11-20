@@ -445,10 +445,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
         os.makedirs(self.cache_root, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
 
-        if name is None:
-            name = _name_from_url(url)
-
-        self.name = name
+        self.name = name or _name_from_url(url)
         self.path = os.path.join(self.cache_root, self.name)
         logger.debug('file path at %s', self.path)
 
