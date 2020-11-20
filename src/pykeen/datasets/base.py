@@ -33,7 +33,7 @@ __all__ = [
     'TarFileRemoteDataSet',
     'ZipFileRemoteDataSet',
     'PackedZipRemoteDataSet',
-    'SingleDataset',
+    'TarFileSingleDataset',
     'SingleTabbedDataset',
 ]
 
@@ -493,7 +493,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 return rv
 
 
-class SingleDataset(LazyDataSet):
+class TarFileSingleDataset(LazyDataSet):
     """Loads a dataset that's a single file inside a tar.gz archive."""
 
     ratios = (0.8, 0.1, 0.1)
@@ -507,7 +507,7 @@ class SingleDataset(LazyDataSet):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        delimiter: str = '\t',
+        delimiter: Optional[str] = None,
         random_state: Union[None, int, np.random.RandomState] = None,
         randomize_cleanup: bool = False,
     ):
@@ -533,49 +533,39 @@ class SingleDataset(LazyDataSet):
         os.makedirs(cache_root, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
 
-        if name is None:
-            name = _name_from_url(url)
-        self.name = name
-        self.path = os.path.join(self.cache_root, self.name)
-        logger.debug('file path at %s', self.path)
-
-        self._triples_factory = None
+        self.name = name or _name_from_url(url)
         self.random_state = random_state
-        self.delimiter = delimiter
+        self.delimiter = delimiter or '\t'
         self.randomize_cleanup = randomize_cleanup
-
         self.url = url
-        if not os.path.exists(self.path) and not self.url:
-            raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
-
         self.create_inverse_triples = create_inverse_triples
         self._relative_path = relative_path
-        self._training = None
-        self._testing = None
-        self._validation = None
 
         if eager:
             self._load()
 
+    def _get_path(self) -> str:
+        return os.path.join(self.cache_root, self.name)
+
     def _load(self) -> None:
-        if not os.path.exists(self.path):
-            _urlretrieve(self.url, self.path)  # noqa:S310
+        if not os.path.exists(self._get_path()):
+            _urlretrieve(self.url, self._get_path())  # noqa:S310
 
         _actual_path = os.path.join(self.cache_root, self._relative_path)
         if not os.path.exists(_actual_path):
-            logger.info(
+            logger.error(
                 '[%s] untaring from %s (%s) to %s',
                 self.__class__.__name__,
-                self.path,
+                self._get_path(),
                 self._relative_path,
                 _actual_path,
             )
-            with tarfile.open(self.path) as tf:
+            with tarfile.open(self._get_path()) as tf:
                 tf.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
         tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self.path
+        tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
             random_state=self.random_state,
@@ -600,6 +590,7 @@ class SingleTabbedDataset(LazyDataSet):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
+        delimiter: Optional[str] = None,
         random_state: Union[None, int, np.random.RandomState] = None,
     ):
         """Initialize dataset.
@@ -620,18 +611,15 @@ class SingleTabbedDataset(LazyDataSet):
         os.makedirs(self.cache_root, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
 
-        if name is None:
-            name = _name_from_url(url)
-        self.name = name
-        self.path = os.path.join(self.cache_root, self.name)
-        logger.debug('file path at %s', self.path)
+        self.name = name or _name_from_url(url)
 
         self._triples_factory = None
         self.random_state = random_state
+        self.delimiter = delimiter or '\t'
 
         self.url = url
-        if not os.path.exists(self.path) and not self.url:
-            raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
+        if not os.path.exists(self._get_path()) and not self.url:
+            raise ValueError(f'must specify url to download from since path does not exist: {self._get_path()}')
 
         self.create_inverse_triples = create_inverse_triples
         self._training = None
@@ -641,13 +629,16 @@ class SingleTabbedDataset(LazyDataSet):
         if eager:
             self._load()
 
+    def _get_path(self) -> str:
+        return os.path.join(self.cache_root, self.name)
+
     def _load(self) -> None:
-        if not os.path.exists(self.path):
-            logger.info('downloading data from %s to %s', self.url, self.path)
-            _urlretrieve(self.url, self.path)  # noqa:S310
-        df = pd.read_csv(self.path, sep='\t')
+        if not os.path.exists(self._get_path()):
+            logger.info('downloading data from %s to %s', self.url, self._get_path())
+            _urlretrieve(self.url, self._get_path())  # noqa:S310
+        df = pd.read_csv(self._get_path(), sep=self.delimiter)
         tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self.path
+        tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
             random_state=self.random_state,

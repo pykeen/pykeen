@@ -10,7 +10,7 @@ from typing import Union
 
 import numpy as np
 
-from .base import SingleDataset
+from .base import TarFileSingleDataset
 
 __all__ = [
     'DRKG',
@@ -19,11 +19,13 @@ __all__ = [
 URL = 'https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz'
 
 
-class DRKG(SingleDataset):
+class DRKG(TarFileSingleDataset):
     """The DRKG dataset.
 
     This is a medium-sized biological knowledge graph including 97,238 entities, 13 entity types,
     107 relations, and 5,874,261 triples.
+
+    .. seealso:: https://github.com/gnn4dr/DRKG
     """
 
     def __init__(
