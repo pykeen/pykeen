@@ -188,8 +188,8 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
 
     def _check_close_scores(self, scores, scores_no_slice):
-        self.assertFalse(torch.isnan(scores).any(), msg=f'Normal scores had nan:\n\t{scores}')
-        self.assertFalse(torch.isnan(scores_no_slice).any(), msg=f'Slice scores had nan\n\t{scores}')
+        self.assertTrue(torch.isfinite(scores).all(), msg=f'Normal scores had nan:\n\t{scores}')
+        self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f'Slice scores had nan\n\t{scores}')
         self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f'Differences: {scores - scores_no_slice}')
 
     def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]]:
