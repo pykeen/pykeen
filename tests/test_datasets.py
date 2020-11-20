@@ -3,11 +3,12 @@
 """Test that datasets can be loaded."""
 
 import os
+from io import BytesIO
 
 import pytest
 
 from pykeen.datasets import FB15k, FB15k237, Kinships, Nations, UMLS, WN18, WN18RR, YAGO310
-from pykeen.datasets.base import SingleTabbedDataset, TarFileSingleDataset
+from pykeen.datasets.base import SingleTabbedDataset, TarFileRemoteDataSet, TarFileSingleDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from tests import cases, constants
 
@@ -23,13 +24,30 @@ class MockSingleTabbedDataset(SingleTabbedDataset):
 
 
 class MockTarFileSingleDataset(TarFileSingleDataset):
-    """Mock downloading a tar.gz archive."""
+    """Mock downloading a tar.gz archive with a single file."""
 
     def __init__(self, cache_root: str):
         super().__init__(url=..., name=..., relative_path='nations/train.txt', cache_root=cache_root)
 
-    def _get_path(self):
+    def _get_path(self) -> str:
         return os.path.join(constants.RESOURCES, 'nations.tar.gz')
+
+
+class MockTarFileRemoteDataset(TarFileRemoteDataSet):
+    """Mock downloading a tar.gz archive with three pre-stratified files."""
+
+    def __init__(self, cache_root: str):
+        super().__init__(
+            url=...,
+            cache_root=cache_root,
+            relative_testing_path='nations/test.txt',
+            relative_training_path='nations/train.txt',
+            relative_validation_path='nations/valid.txt',
+        )
+
+    def _get_bytes(self) -> BytesIO:
+        with open(os.path.join(constants.RESOURCES, 'nations.tar.gz'), 'rb') as file:
+            return BytesIO(file.read())
 
 
 class TestSingle(cases.CachedDatasetCase):
@@ -60,6 +78,15 @@ class TestTarFileSingle(cases.CachedDatasetCase):
     dataset_cls = MockTarFileSingleDataset
 
 
+class TestTarRemote(cases.CachedDatasetCase):
+    """Test the :class:`pykeen.datasets.base.TarFileRemoteDataSet` class."""
+
+    exp_num_entities = 14
+    exp_num_relations = 55
+    exp_num_triples = 1992
+    dataset_cls = MockTarFileRemoteDataset
+
+
 class TestNations(cases.LocalDatasetTestCase):
     """Test the Nations dataset."""
 
@@ -74,6 +101,7 @@ class TestKinships(cases.LocalDatasetTestCase):
 
     exp_num_entities = 104
     exp_num_relations = 25
+    exp_num_triples = 10686
     dataset_cls = Kinships
 
 
@@ -82,6 +110,7 @@ class TestUMLS(cases.LocalDatasetTestCase):
 
     exp_num_entities = 135
     exp_num_relations = 46
+    exp_num_triples = 6529
     dataset_cls = UMLS
 
 
@@ -91,6 +120,7 @@ class TestFB15K(cases.CachedDatasetCase):
 
     exp_num_entities = 14951
     exp_num_relations = 1345
+    exp_num_triples = 592_213
     dataset_cls = FB15k
 
 
@@ -100,6 +130,7 @@ class TestFB15K237(cases.CachedDatasetCase):
 
     exp_num_entities = 14505
     exp_num_relations = 237
+    exp_num_triples = 310_079
     dataset_cls = FB15k237
 
 
@@ -109,6 +140,7 @@ class TestWN18(cases.CachedDatasetCase):
 
     exp_num_entities = 40943
     exp_num_relations = 18
+    exp_num_triples = 151_442
     dataset_cls = WN18
 
 
@@ -118,6 +150,7 @@ class TestWN18RR(cases.CachedDatasetCase):
 
     exp_num_entities = 40559
     exp_num_relations = 11
+    exp_num_triples = 92583
     dataset_cls = WN18RR
 
 
@@ -125,6 +158,7 @@ class TestWN18RR(cases.CachedDatasetCase):
 class TestYAGO310(cases.CachedDatasetCase):
     """Test the YAGO3-10 dataset."""
 
-    exp_num_entities = 123143
+    exp_num_entities = 123_143
     exp_num_relations = 37
+    exp_num_triples = 1_089_000
     dataset_cls = YAGO310

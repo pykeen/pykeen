@@ -375,6 +375,12 @@ class RemoteDataSet(PathDataSet):
         """Extract from the downloaded file."""
         raise NotImplementedError
 
+    def _get_bytes(self) -> BytesIO:
+        logger.info(f'Requesting dataset from {self.url}')
+        res = requests.get(url=self.url)
+        res.raise_for_status()
+        return BytesIO(res.content)
+
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(
             os.path.exists(path) and os.path.isfile(path)
@@ -382,11 +388,7 @@ class RemoteDataSet(PathDataSet):
         )
 
         if not all_unpacked:
-            logger.info(f'Requesting dataset from {self.url}')
-
-            r = requests.get(url=self.url)
-            assert r.status_code == requests.codes.ok
-            archive_file = BytesIO(r.content)
+            archive_file = self._get_bytes()
             self._extract(archive_file=archive_file)
             logger.info(f'Extracted to {self.cache_root}.')
 
