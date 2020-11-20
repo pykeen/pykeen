@@ -69,6 +69,10 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
 
     shape_kwargs = dict()
 
+    def post_instantiation_hook(self) -> None:
+        """Initialize parameters."""
+        self.instance.reset_parameters()
+
     def _get_hrt(
         self,
         *shapes: Tuple[int, ...],
