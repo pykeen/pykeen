@@ -251,12 +251,12 @@ class TestSplit(unittest.TestCase):
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = np.array([
+        training = torch.as_tensor([
             [1, 1000, 2],
             [1, 1000, 3],
             [1, 1001, 3],
         ])
-        testing = np.array([
+        testing = torch.as_tensor([
             [2, 1001, 3],
             [1, 1002, 4],
         ])
@@ -280,11 +280,11 @@ class TestSplit(unittest.TestCase):
 
     def test_cleanup_randomized(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = np.array([
+        training = torch.as_tensor([
             [1, 1000, 2],
             [1, 1000, 3],
         ])
-        testing = np.array([
+        testing = torch.as_tensor([
             [2, 1000, 3],
             [1, 1000, 4],
             [2, 1000, 4],
