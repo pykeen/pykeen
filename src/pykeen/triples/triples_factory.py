@@ -373,8 +373,11 @@ class TriplesFactory:
         inverse_relation = self.relation_to_inverse[relation]
         return self.relation_to_id[inverse_relation]
 
+    def extra_repr(self) -> str:
+        return f"num_triples={self.num_triples}, num_entities={self.num_entities}, num_relations={self.num_relations}"
+
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(num_triples={self.num_triples}, num_entities={self.num_entities}, num_relations={self.num_relations})'
+        return f'{self.__class__.__name__}({self.extra_repr()})'
 
     @staticmethod
     def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
