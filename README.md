@@ -38,7 +38,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-17">Datasets</a> •
+  <a href="#datasets-19">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -101,7 +101,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, data sets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (17)
+### Datasets (19)
 
 | Name          | Reference                       | Description                                                                                        |
 |---------------|---------------------------------|----------------------------------------------------------------------------------------------------|
@@ -114,6 +114,8 @@ in ``pykeen``.
 | hetionet      | `pykeen.datasets.Hetionet`      | The Hetionet dataset is a large biological network.                                                |
 | kinships      | `pykeen.datasets.Kinships`      | The Kinships data set.                                                                             |
 | nations       | `pykeen.datasets.Nations`       | The Nations data set.                                                                              |
+| ogbbiokg      | `pykeen.datasets.OGBBioKG`      | The OGB BioKG dataset.                                                                             |
+| ogbwikikg     | `pykeen.datasets.OGBWikiKG`     | The OGB WikiKG dataset.                                                                            |
 | openbiolink   | `pykeen.datasets.OpenBioLink`   | The OpenBioLink dataset.                                                                           |
 | openbiolinkf1 | `pykeen.datasets.OpenBioLinkF1` | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
 | openbiolinkf2 | `pykeen.datasets.OpenBioLinkF2` | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |

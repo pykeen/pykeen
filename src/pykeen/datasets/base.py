@@ -135,6 +135,8 @@ class LazyDataSet(DataSet):
     _testing: Optional[TriplesFactory] = None
     #: The actual instance of the validation factory, which is exposed to the user through `validation`
     _validation: Optional[TriplesFactory] = None
+    #: The directory in which the cached data is stored
+    cache_root: pathlib.Path
 
     @property
     def training(self) -> TriplesFactory:  # noqa: D401
@@ -172,6 +174,21 @@ class LazyDataSet(DataSet):
 
     def _load_validation(self) -> None:
         raise NotImplementedError
+
+    def _help_cache(self, cache_root: Optional[str]) -> pathlib.Path:
+        """Get the appropriate cache root directory.
+
+        :param cache_root: If none is passed, defaults to a subfolder of the
+            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
+            The subfolder is named based on the class inheriting from
+            :class:`pykeen.datasets.base.DataSet`.
+        """
+        if cache_root is None:
+            cache_root = PYKEEN_HOME
+        cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
+        cache_root.mkdir(parents=True, exist_ok=True)
+        logger.debug('using cache root at %s', cache_root)
+        return cache_root
 
 
 class PathDataSet(LazyDataSet):
@@ -289,10 +306,7 @@ class UnpackedRemoteDataSet(PathDataSet):
         :param stream:
         :param force:
         """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(self.cache_root, exist_ok=True)
+        self.cache_root = self._help_cache(cache_root)
 
         self.training_url = training_url
         self.testing_url = testing_url
@@ -343,10 +357,7 @@ class RemoteDataSet(PathDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(self.cache_root, exist_ok=True)
+        self.cache_root = self._help_cache(cache_root)
 
         self.url = url
         self._relative_training_path = relative_training_path
@@ -444,11 +455,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(self.cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
         self.name = name or _name_from_url(url)
         self.path = os.path.join(self.cache_root, self.name)
@@ -529,11 +536,7 @@ class TarFileSingleDataset(LazyDataSet):
         :param delimiter:
             The delimiter for the contained dataset.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
         self.name = name or _name_from_url(url)
         self.random_state = random_state
@@ -607,11 +610,7 @@ class SingleTabbedDataset(LazyDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(self.cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
         self.name = name or _name_from_url(url)
 
