@@ -128,7 +128,7 @@ class DataSet(Mapping[str, Triples]):
     @staticmethod
     def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'DataSet':
         """Create a dataset from a single triples factory by splitting it in 3."""
-        training, testing, validation = tf.split(ratios or [0.8, 0.1, 0.1])
+        training, testing, validation = [factory.labeled_triples for factory in tf.split(ratios or [0.8, 0.1, 0.1])]
         return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
@@ -140,15 +140,17 @@ class DataSet(Mapping[str, Triples]):
 class EagerDataset(DataSet):
     """A dataset that has already been loaded."""
 
-    def __init__(self, training: TriplesFactory, testing: TriplesFactory, validation: TriplesFactory) -> None:
+    def __init__(self, training: Triples, testing: Triples, validation: Triples) -> None:
         self.training = training
         self.testing = testing
         self.validation = validation
-        self.create_inverse_triples = (
-            training.create_inverse_triples
-            and testing.create_inverse_triples
-            and self.validation.create_inverse_triples
-        )
+        create_inverse_triples = {
+            subset: triples.contains_inverse_triples
+            for subset, triples in self.items()
+        }
+        if len(create_inverse_triples) != 1:
+            raise ValueError(f"Inconsistent usage of inverse triples: {create_inverse_triples}")
+        self.create_inverse_triples = list(create_inverse_triples)[0]
 
 
 class LazyDataSet(DataSet):

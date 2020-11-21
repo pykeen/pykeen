@@ -120,9 +120,9 @@ def get_dataset(
         if dataset_kwargs:
             logger.warning('dataset_kwargs are disregarded when passing pre-instantiated triples factories')
         return EagerDataset(
-            training=training,
-            testing=testing,
-            validation=validation,
+            training=training.triples,
+            testing=testing.triples,
+            validation=validation.triples,
         )
 
     raise TypeError('Training and testing must both be given as strings or Triples Factories')
