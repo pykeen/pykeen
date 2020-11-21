@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import List, Optional, TextIO, Tuple, Union
+from typing import Iterable, Iterator, List, Mapping, Optional, Set, TextIO, Tuple, Union
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
 
@@ -21,6 +21,7 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_HOME
 from ..triples import TriplesFactory
+from ..triples.triples_factory import LabelMapping, Triples
 from ..utils import normalize_string
 
 __all__ = [
@@ -40,51 +41,75 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class DataSet:
+class DataSet(Mapping[str, Triples]):
     """Contains a lazy reference to a training, testing, and validation data set."""
 
-    #: A factory wrapping the training triples
-    training: TriplesFactory
-    #: A factory wrapping the testing triples, that share indices with the training triples
-    testing: TriplesFactory
-    #: A factory wrapping the validation triples, that share indices with the training triples
-    validation: TriplesFactory
+    #: The shared label to ID mapping
+    label_mapping: LabelMapping
+    #: The training triples
+    training: Triples
+    #: The testing triples
+    testing: Triples
+    #: The validation triples
+    validation: Triples
     #: All data sets should take care of inverse triple creation
     create_inverse_triples: bool
 
     @property
-    def entity_to_id(self):  # noqa: D401
+    def entity_to_id(self) -> Mapping[str, int]:  # noqa: D401
         """The mapping of entity labels to IDs."""
-        return self.training.entity_to_id
+        return self.label_mapping.entity_label_to_id
 
     @property
-    def relation_to_id(self):  # noqa: D401
+    def relation_to_id(self) -> Mapping[str, int]:  # noqa: D401
         """The mapping of relation labels to IDs."""
-        return self.training.relation_to_id
+        return self.label_mapping.relation_label_to_id
 
     @property
     def num_entities(self):  # noqa: D401
         """The number of entities."""
-        return self.training.num_entities
+        return self.label_mapping.max_entity_id
 
     @property
     def num_relations(self):  # noqa: D401
         """The number of relations."""
-        return self.training.num_relations
+        return self.label_mapping.max_relation_id
+
+    @property
+    def num_triples(self):  # noqa: D401
+        """The total number of triples across all subsets."""
+        return sum(self[key].num_triples for key in self.keys())
+
+    def __getitem__(self, item: str) -> Triples:
+        if item == "training":
+            return self.training
+        elif item == "testing":
+            return self.testing
+        elif item == "validation":
+            return self.validation
+        else:
+            raise KeyError(item)
+
+    def __len__(self) -> int:
+        return len(self.keys())
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.keys())
+
+    def keys(self) -> Set[str]:
+        return {"training", "testing", "validation"}
+
+    def items(self) -> Iterable[Tuple[str, Triples]]:
+        return ((key, self[key]) for key in self.keys())
 
     def summary_str(self, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = [
-            (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
-            for label, triples_factory in
-            zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
+            (label.capitalize(), triples.num_triples)
+            for label, triples in self.items()
         ]
-        n_triples = sum(
-            triples_factory.num_triples
-            for triples_factory in (self.training, self.testing, self.validation)
-        )
-        rows.append(('Total', '-', '-', n_triples))
-        t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
+        rows.append(('Total', self.num_triples))
+        t = tabulate(rows, headers=['Name', 'Triples'])
         return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
     def summarize(self) -> None:

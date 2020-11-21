@@ -334,6 +334,11 @@ class Triples:
                 f'inferred) ({self.max_relation_id}).'
             )
 
+    @property
+    def num_triples(self) -> int:  # noqa: D401
+        """The number of triples."""
+        return self.mapped_triples.shape[0]
+
     @staticmethod
     def get_inverse_relation(
         relation: RelationID,
