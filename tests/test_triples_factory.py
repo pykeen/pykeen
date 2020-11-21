@@ -408,17 +408,22 @@ def _check_triples(
     real_max_relation_id: int,
     contains_inverse: bool,
     label_mapping: Optional[LabelMapping],
-):
+) -> None:
     # check type
-    assert torch.is_tensor(triples.mapped_triples) and triples.mapped_triples.dtype == torch.long
+    assert torch.is_tensor(triples.mapped_triples)
+    assert triples.mapped_triples.dtype == torch.long
+
     # check shape
     assert triples.mapped_triples.shape == (num_triples, 3)
+
     # check contains inverse
     assert triples.contains_inverse_triples == contains_inverse
+
     # check max ids
     assert triples.max_entity_id == max_entity_id
     assert triples.max_relation_id == max_relation_id
     assert triples.real_max_relation_id == real_max_relation_id
+
     # check label mapping
     assert triples.label_mapping is label_mapping
 
@@ -432,13 +437,17 @@ class TriplesTest(unittest.TestCase):
 
     def setUp(self) -> None:
         """Generate test data."""
-        self.mapped_triples = torch.stack([
+        self.mapped_triples: torch.LongTensor = torch.stack([
             torch.randint(self.max_entity_id, size=(self.num_triples,)),
             torch.randint(self.max_relation_id, size=(self.num_triples,)),
             torch.randint(self.max_entity_id, size=(self.num_triples,)),
         ], dim=-1)
+
+        # Update max_id to the actual observed maximum ID
         self.max_entity_id = self.mapped_triples[:, [0, 2]].max() + 1
         self.max_relation_id = self.mapped_triples[:, 1].max() + 1
+
+        # Create label-to-id mapping
         entity_label_to_id = {
             f"e_{i}": i
             for i in range(self.max_entity_id)
