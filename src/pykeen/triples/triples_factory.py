@@ -617,7 +617,7 @@ class TriplesFactory:
 
     #: A three-column matrix where each row are the head label,
     #: relation label, then tail label
-    triples: LabeledTriples
+    labeled_triples: LabeledTriples
 
     #: A three-column matrix where each row are the head identifier,
     #: relation identifier, then tail identifier
@@ -638,9 +638,20 @@ class TriplesFactory:
         """Initialize the triples factory."""
         self.entity_to_id = entity_to_id
         self.relation_to_id = relation_to_id
-        self.triples = triples
+        self.labeled_triples = triples
         self.mapped_triples = mapped_triples
         self.relation_to_inverse = relation_to_inverse
+
+    @property
+    def triples(self) -> Triples:
+        """The triples; used for transitioning."""
+        return Triples(
+            mapped_triples=self.mapped_triples,
+            label_mapping=LabelMapping(
+                entity_label_to_id=self.entity_to_id,
+                relation_label_to_id=self.relation_to_id,
+            ),
+        )
 
     @staticmethod
     def from_path(
@@ -896,7 +907,7 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        n_triples = self.triples.shape[0]
+        n_triples = self.labeled_triples.shape[0]
 
         # Prepare shuffle index
         idx = np.arange(n_triples)
@@ -925,7 +936,7 @@ class TriplesFactory:
         split_idxs = np.cumsum(sizes)
 
         # Split triples
-        triples_groups = np.vsplit(self.triples[idx], split_idxs)
+        triples_groups = np.vsplit(self.labeled_triples[idx], split_idxs)
         logger.info(
             'done splitting triples to groups of sizes %s',
             [triples.shape[0] for triples in triples_groups],
@@ -972,7 +983,7 @@ class TriplesFactory:
         elif not isinstance(n, int):
             raise TypeError('n must be either an integer or a float')
 
-        counter = Counter(self.triples[:, 1])
+        counter = Counter(self.labeled_triples[:, 1])
         return {
             relation
             for relation, _ in counter.most_common(n)
@@ -980,19 +991,19 @@ class TriplesFactory:
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
         """Get np.array indices for triples with the given entities."""
-        entities = np.asanyarray(entities, dtype=self.triples.dtype)
+        entities = np.asanyarray(entities, dtype=self.labeled_triples.dtype)
         return (
-            np.isin(self.triples[:, 0], entities, invert=invert)
-            & np.isin(self.triples[:, 2], entities, invert=invert)
+            np.isin(self.labeled_triples[:, 0], entities, invert=invert)
+            & np.isin(self.labeled_triples[:, 2], entities, invert=invert)
         )
 
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
         """Get np.array indices for triples with the given relations."""
-        return np.isin(self.triples[:, 1], list(relations), invert=invert)
+        return np.isin(self.labeled_triples[:, 1], list(relations), invert=invert)
 
     def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:
         """Get the labeled triples containing the given relations."""
-        return self.triples[self.get_idx_for_relations(relations, invert=invert)]
+        return self.labeled_triples[self.get_idx_for_relations(relations, invert=invert)]
 
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
@@ -1001,7 +1012,7 @@ class TriplesFactory:
             f'keeping {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples in {self}',
         )
-        return TriplesFactory.from_triples(triples=self.triples[idx])
+        return TriplesFactory.from_triples(triples=self.labeled_triples[idx])
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
@@ -1010,7 +1021,7 @@ class TriplesFactory:
             f'removing {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples',
         )
-        return TriplesFactory.from_triples(triples=self.triples[idx])
+        return TriplesFactory.from_triples(triples=self.labeled_triples[idx])
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
@@ -1023,7 +1034,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
-        text = [f'{h} {t}' for h, _, t in self.triples]
+        text = [f'{h} {t}' for h, _, t in self.labeled_triples]
         return self._word_cloud(text=text, top=top or 100)
 
     def relation_word_cloud(self, top: Optional[int] = None):
@@ -1037,7 +1048,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
-        text = [r for _, r, _ in self.triples]
+        text = [r for _, r, _ in self.labeled_triples]
         return self._word_cloud(text=text, top=top or 100)
 
     def _word_cloud(self, *, text: List[str], top: int):
@@ -1149,7 +1160,7 @@ class TriplesFactory:
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
         factory = TriplesFactory(
-            triples=self.triples[keep_mask],
+            triples=self.labeled_triples[keep_mask],
             create_inverse_triples=False,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

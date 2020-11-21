@@ -37,7 +37,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     for subset_name, subset_tf in zip(LABELS, sub_triples_factories):
         output_path = os.path.join(directory, f'{subset_name}.txt')
         click.echo(f'Outputing {subset_name} to {output_path}')
-        np.savetxt(output_path, subset_tf.triples, delimiter='\t', fmt='%s')
+        np.savetxt(output_path, subset_tf.labeled_triples, delimiter='\t', fmt='%s')
 
     metadata = dict(
         source=os.path.abspath(path),

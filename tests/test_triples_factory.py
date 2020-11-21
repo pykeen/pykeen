@@ -138,7 +138,7 @@ class TestTriplesFactory(unittest.TestCase):
     def test_tensor_to_df(self):
         """Test tensor_to_df()."""
         # check correct translation
-        labeled_triples = set(tuple(row) for row in self.factory.triples.tolist())
+        labeled_triples = set(tuple(row) for row in self.factory.labeled_triples.tolist())
         tensor = self.factory.mapped_triples
         scores = torch.rand(tensor.shape[0])
         df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
@@ -190,12 +190,12 @@ class TestTriplesFactory(unittest.TestCase):
 
                     # verify that triples have been filtered
                     if entity_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 0]).union(
-                            restricted_triples_factory.triples[:, 2])
+                        present_relations = set(restricted_triples_factory.labeled_triples[:, 0]).union(
+                            restricted_triples_factory.labeled_triples[:, 2])
                         assert set(entity_restriction).issuperset(present_relations)
 
                     if relation_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 1])
+                        present_relations = set(restricted_triples_factory.labeled_triples[:, 1])
                         exp_relations = set(relation_restriction)
                         if original_triples_factory.create_inverse_triples:
                             exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
