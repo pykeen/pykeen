@@ -552,11 +552,12 @@ class TriplesFactory:
             for mapped_triples in triples_groups
         ]
 
-    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[str]:
+    def get_most_frequent_relation_ids(self, n: Union[int, float]) -> Set[int]:
         """Get the n most frequent relations.
 
-        :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
-         to keep
+        :param n:
+            Either the (integer) number of top relations to keep or the (float) percentage of top
+            relationships to keep.
         """
         logger.info(f'applying cutoff of {n} to {self}')
         if isinstance(n, float):
@@ -567,9 +568,15 @@ class TriplesFactory:
 
         uniq, counts = torch.unique(self.mapped_triples, return_counts=True)
         top_idx = counts.topk(k=n, largest=True, sorted=True)
-        rel_ids = uniq[top_idx].numpy()
-        rel_labels = self._vectorized_relation_labeler(rel_ids)
-        return set(rel_labels)
+        return set(uniq[top_idx].tolist())
+
+    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[str]:
+        """Get the n most frequent relations.
+
+        :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
+         to keep
+        """
+        return set(self.relation_id_to_label[idx] for idx in self.get_most_frequent_relation_ids(n=n))
 
     def get_mask_for_entities(self, entities: Collection[str], invert: bool = False) -> torch.BoolTensor:
         """Get mask for triples with the given entities."""
@@ -580,9 +587,14 @@ class TriplesFactory:
             invert=invert,
         ).all(dim=-1)
 
-    def get_mask_for_relations(self, relations: Collection[str], invert: bool = False) -> torch.BoolTensor:
+    def get_mask_for_relations(self, relations: Collection[Union[str, int]], invert: bool = False) -> torch.BoolTensor:
         """Get mask for triples with the given relations."""
-        relation_ids = torch.as_tensor(data=[self.relation_to_id[relation] for relation in relations])
+        # normalize relations
+        relations = [
+            relation if isinstance(relation, int) else self.relation_to_id[relation]
+            for relation in relations
+        ]
+        relation_ids = torch.as_tensor(data=relations)
         return _torch_is_in_1d(
             a=self.mapped_triples[:, 1],
             b=relation_ids,
@@ -604,7 +616,7 @@ class TriplesFactory:
             relation_to_inverse=self.relation_to_inverse,
         )
 
-    def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
+    def new_with_relations(self, relations: Collection[Union[str, int]]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
         logger.info(f'Keeping {len(relations)}/{self.num_relations} relations.')
         mask = self.get_mask_for_relations(relations)

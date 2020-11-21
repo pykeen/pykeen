@@ -172,11 +172,11 @@ def unleak(
      of FB15k-237.
     """
     if n is not None:
-        frequent_relations = train.get_most_frequent_relations(n=n)
+        frequent_relations = train.get_most_frequent_relation_ids(n=n)
         logger.info(f'keeping most frequent relations from {train}')
-        train = train.new_with_relations(frequent_relations)
+        train = train.new_with_relations(relations=frequent_relations)
         triples_factories = [
-            triples_factory.new_with_relations(frequent_relations)
+            triples_factory.new_with_relations(relations=frequent_relations)
             for triples_factory in triples_factories
         ]
 
