@@ -461,7 +461,7 @@ class TriplesFactory:
         self,
         ratios: Union[float, Sequence[float]] = 0.8,
         *,
-        random_state: Union[None, int, np.random.RandomState] = None,
+        random_state: Union[None, int] = None,
         randomize_cleanup: bool = False,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
@@ -486,36 +486,35 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        n_triples = self.num_triples
-
-        # Prepare shuffle index
-        idx = np.arange(n_triples)
-        if random_state is None:
-            random_state = random_non_negative_int()
-            logger.warning(f'Using random_state={random_state} to split {self}')
-        if isinstance(random_state, int):
-            random_state = np.random.RandomState(random_state)
-        random_state.shuffle(idx)
-
         # Prepare split index
         if isinstance(ratios, float):
             ratios = [ratios]
 
         ratio_sum = sum(ratios)
-        if ratio_sum == 1.0:
-            ratios = ratios[:-1]  # vsplit doesn't take the final number into account.
+        if ratio_sum < 1.0:
+            ratios.append(1.0 - ratio_sum)
         elif ratio_sum > 1.0:
             raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
 
+        # convert to absolute sizes
+        n_triples = self.num_triples
         sizes = [
             int(split_ratio * n_triples)
             for split_ratio in ratios
         ]
-        # Take cumulative sum so the get separated properly
-        split_idxs = np.cumsum(sizes)
+
+        # Prepare shuffle index
+        if random_state is None:
+            random_state = random_non_negative_int()
+            logger.warning(f'Using random_state={random_state} to split {self}')
+        torch.manual_seed(seed=random_state)
+        index = torch.randperm(n_triples)
 
         # Split triples
-        triples_groups = np.vsplit(self.labeled_triples[idx], split_idxs)
+        triples_groups = [
+            self.mapped_triples[idx]
+            for idx in torch.split(index, split_size_or_sections=sizes, dim=0)
+        ]
         logger.info(
             'done splitting triples to groups of sizes %s',
             [triples.shape[0] for triples in triples_groups],
@@ -523,7 +522,10 @@ class TriplesFactory:
 
         # Make sure that the first element has all the right stuff in it
         logger.debug('cleaning up groups')
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        triples_groups = _tf_cleanup_all(
+            triples_groups,
+            seed=random_state if randomize_cleanup else None,
+        )
         logger.debug('done cleaning up groups')
 
         for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
@@ -537,13 +539,13 @@ class TriplesFactory:
 
         # Make new triples factories for each group
         return [
-            TriplesFactory.from_labeled_triples(
-                triples=triples,
+            TriplesFactory(
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
-                compact_id=False,
+                mapped_triples=mapped_triples,
+                relation_to_inverse=self.relation_to_inverse,
             )
-            for triples in triples_groups
+            for mapped_triples in triples_groups
         ]
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[str]:
@@ -749,61 +751,59 @@ class TriplesFactory:
 
 
 def _tf_cleanup_all(
-    triples_groups: List[np.ndarray],
+    triples_groups: List[MappedTriples],
     *,
-    random_state: Union[None, int, np.random.RandomState] = None,
-) -> List[np.ndarray]:
+    seed: Union[None, int] = None,
+) -> List[MappedTriples]:
     """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
     rv = []
     for other in others:
-        if random_state is not None:
-            reference, other = _tf_cleanup_randomized(reference, other, random_state)
+        if seed is not None:
+            reference, other = _tf_cleanup_randomized(reference, other, seed)
         else:
             reference, other = _tf_cleanup_deterministic(reference, other)
         rv.append(other)
     return [reference, *rv]
 
 
-def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -> Tuple[MappedTriples, MappedTriples]:
     """Cleanup a triples array (testing) with respect to another (training)."""
     move_id_mask = _prepare_cleanup(training, testing)
 
-    training = np.concatenate([training, testing[move_id_mask]])
+    training = torch.cat([training, testing[move_id_mask]], dim=0)
     testing = testing[~move_id_mask]
 
     return training, testing
 
 
 def _tf_cleanup_randomized(
-    training: np.ndarray,
-    testing: np.ndarray,
-    random_state: Union[None, int, np.random.RandomState] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    training: MappedTriples,
+    testing: MappedTriples,
+    seed: Union[None, int] = None,
+) -> Tuple[MappedTriples, MappedTriples]:
     """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
 
     1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
     2. Choose a triple to move, recalculate move_id_mask
     3. Continue until move_id_mask has no true bits
     """
-    if random_state is None:
-        random_state = random_non_negative_int()
-        logger.warning('Using random_state=%s', random_state)
-    if isinstance(random_state, int):
-        random_state = np.random.RandomState(random_state)
+    if seed is None:
+        seed = random_non_negative_int()
+        logger.warning('Using random_state=%s', seed)
+    torch.manual_seed(seed)
 
     move_id_mask = _prepare_cleanup(training, testing)
 
     # While there are still triples that should be moved to the training set
     while move_id_mask.any():
         # Pick a random triple to move over to the training triples
-        idx = random_state.choice(move_id_mask.nonzero()[0])
-        training = np.concatenate([training, testing[idx].reshape(1, -1)])
+        candidates, = move_id_mask.nonzero(as_tuple=True)
+        idx = candidates[torch.randint(candidates.shape[0], size=(1,), device=candidates.device)]
+        training = torch.cat([training, testing[idx].view(1, -1)])
 
         # Recalculate the testing triples without that index
-        testing_mask = np.ones_like(move_id_mask)
-        testing_mask[idx] = False
-        testing = testing[testing_mask]
+        testing = torch.cat([testing[:idx], testing[idx + 1:]])
 
         # Recalculate the training entities, testing entities, to_move, and move_id_mask
         move_id_mask = _prepare_cleanup(training, testing)
@@ -811,14 +811,25 @@ def _tf_cleanup_randomized(
     return training, testing
 
 
-def _prepare_cleanup(training: np.ndarray, testing: np.ndarray) -> np.ndarray:
+def _torch_is_in_1d(
+    a: torch.Tensor,
+    b: torch.Tensor,
+) -> torch.BoolTensor:
+    max_id = max(a.max(), b.max())
+    # TODO: This may require significant amount of memory for large max_id
+    mask = a.new_zeros(max_id + 1, dtype=torch.bool)
+    mask[b] = True
+    return mask.index_select(dim=0, index=a.view(-1)).view(*a.shape)
+
+
+def _prepare_cleanup(training: MappedTriples, testing: MappedTriples) -> MappedTriples:
     to_move_mask = None
     for col in [[0, 2], 1]:
-        training_ids, test_ids = [np.unique(triples[:, col]) for triples in [training, testing]]
-        to_move = test_ids[~np.isin(test_ids, training_ids)]
-        this_to_move_mask = np.isin(testing[:, col], to_move)
-        if this_to_move_mask.ndim > 1:
-            this_to_move_mask = this_to_move_mask.any(axis=1)
+        training_ids, test_ids = [triples[:, col].view(-1).unique() for triples in [training, testing]]
+        to_move = test_ids[~_torch_is_in_1d(test_ids, training_ids)]
+        this_to_move_mask = _torch_is_in_1d(testing[:, col], to_move)
+        if this_to_move_mask.ndimension() > 1:
+            this_to_move_mask = this_to_move_mask.any(dim=1)
         if to_move_mask is None:
             to_move_mask = this_to_move_mask
         else:
