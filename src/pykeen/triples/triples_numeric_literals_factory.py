@@ -66,6 +66,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
          specified, you should specify ``path_to_numeric_triples``.
         """
+        # TODO: fix this
         super().__init__(path=path, triples=triples)
 
         if path_to_numeric_triples is None and numeric_triples is None:

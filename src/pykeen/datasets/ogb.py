@@ -63,7 +63,7 @@ class OGBLoader(LazyDataSet):
         # FIXME these are already identifiers
         triples = triples.astype(np.str)
 
-        return TriplesFactory(
+        return TriplesFactory.from_labeled_triples(
             triples=triples,
             create_inverse_triples=self.create_inverse_triples,
             entity_to_id=entity_to_id,

@@ -32,7 +32,7 @@ class TestLeakage(unittest.TestCase):
             ['i', 'r3', 'j'],
             ['k', 'r3', 'l'],
         ]
-        triples_factory = TriplesFactory(triples=np.array(t, dtype=np.str))
+        triples_factory = TriplesFactory.from_labeled_triples(triples=np.array(t, dtype=np.str))
         frequencies = get_candidate_inverse_relations(triples_factory, minimum_frequency=0.0, symmetric=False)
         self.assertEqual(
             {
@@ -71,8 +71,8 @@ class TestLeakage(unittest.TestCase):
         test = [
             ['-2', test_relation_inverse, '-1'],  # this one was leaked!
         ]
-        train_factory = TriplesFactory(triples=np.array(train, dtype=np.str))
-        test_factory = TriplesFactory(triples=np.array(test, dtype=np.str))
+        train_factory = TriplesFactory.from_labeled_triples(triples=np.array(train, dtype=np.str))
+        test_factory = TriplesFactory.from_labeled_triples(triples=np.array(test, dtype=np.str))
 
         sealant = Sealant(train_factory, symmetric=False)
 

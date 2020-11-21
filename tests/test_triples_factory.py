@@ -66,7 +66,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a', 'e2'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=True)
+        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
         reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
 
@@ -79,7 +79,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e4', f'a{INVERSE_SUFFIX}', 'e5'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=False)
+        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
         reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
         self.assertTrue(factory.create_inverse_triples)
@@ -92,7 +92,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a.', 'e5'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=False)
+        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
         reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
         self.assertTrue(factory.create_inverse_triples)
@@ -110,7 +110,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', f'abc{INVERSE_SUFFIX}', 'e1'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=False)
+        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
         reference_relation_to_id = {
             'a': 0,
             f'a{INVERSE_SUFFIX}': 1,
@@ -137,7 +137,7 @@ class TestTriplesFactory(unittest.TestCase):
     def test_tensor_to_df(self):
         """Test tensor_to_df()."""
         # check correct translation
-        labeled_triples = set(tuple(row) for row in self.factory.triples.tolist())
+        labeled_triples = set(tuple(row) for row in self.factory.labeled_triples.tolist())
         tensor = self.factory.mapped_triples
         scores = torch.rand(tensor.shape[0])
         df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
@@ -189,12 +189,12 @@ class TestTriplesFactory(unittest.TestCase):
 
                     # verify that triples have been filtered
                     if entity_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 0]).union(
-                            restricted_triples_factory.triples[:, 2])
+                        present_relations = set(restricted_triples_factory.labeled_triples[:, 0]).union(
+                            restricted_triples_factory.labeled_triples[:, 2])
                         assert set(entity_restriction).issuperset(present_relations)
 
                     if relation_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 1])
+                        present_relations = set(restricted_triples_factory.labeled_triples[:, 1])
                         exp_relations = set(relation_restriction)
                         if original_triples_factory.create_inverse_triples:
                             exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
@@ -366,14 +366,14 @@ class TestLiterals(unittest.TestCase):
 
     def test_triples(self):
         """Test properties of the triples factory."""
-        triples_factory = TriplesFactory(triples=triples)
+        triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
         self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
         self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
         self.assertTrue((triples_factory.mapped_triples == triples_factory.map_triples_to_id(triples)).all())
 
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
-        triples_factory = TriplesFactory(triples=triples, create_inverse_triples=True)
+        triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
         self.assertEqual(0, triples_factory.num_relations % 2)
         self.assertEqual(
             set(range(triples_factory.num_entities)),

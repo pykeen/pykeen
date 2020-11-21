@@ -27,7 +27,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     """Make a dataset from the given triples."""
     os.makedirs(directory, exist_ok=True)
 
-    triples_factory = TriplesFactory(path=path)
+    triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
 
     if seed is None:
@@ -37,7 +37,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     for subset_name, subset_tf in zip(LABELS, sub_triples_factories):
         output_path = os.path.join(directory, f'{subset_name}.txt')
         click.echo(f'Outputing {subset_name} to {output_path}')
-        np.savetxt(output_path, subset_tf.triples, delimiter='\t', fmt='%s')
+        np.savetxt(output_path, subset_tf.labeled_triples, delimiter='\t', fmt='%s')
 
     metadata = dict(
         source=os.path.abspath(path),

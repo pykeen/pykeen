@@ -199,7 +199,7 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
     triples = np.concatenate(
         [
-            triples_factory.triples
+            triples_factory.labeled_triples
             for triples_factory in triples_factories
         ],
         axis=0,
@@ -208,8 +208,8 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     relation_to_id = create_relation_mapping(set(triples[:, 1]))
 
     return [
-        TriplesFactory(
-            triples=triples_factory.triples,
+        TriplesFactory.from_labeled_triples(
+            triples=triples_factory.labeled_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             # FIXME doesn't carry flag of create_inverse_triples through
@@ -261,7 +261,7 @@ def get_candidate_inverse_relations(
     relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
     # A dictionary for all of the tail/head pairs for a given relation
     candidate_inverse_relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
-    for h, r, t in triples_factory.triples:
+    for h, r, t in triples_factory.labeled_triples:
         relations[r].add((h, t))
         candidate_inverse_relations[r].add((t, h))
 
@@ -315,7 +315,7 @@ def get_candidate_duplicate_relations(
     """
     # A dictionary of all of the head/tail pairs for a given relation
     relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
-    for h, r, t in triples_factory.triples:
+    for h, r, t in triples_factory.labeled_triples:
         relations[r].add((h, t))
 
     it = itt.combinations(relations.items(), 2)
