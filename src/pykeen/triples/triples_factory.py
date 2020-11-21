@@ -4,7 +4,7 @@
 import logging
 import os
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
@@ -561,11 +561,11 @@ class TriplesFactory:
         elif not isinstance(n, int):
             raise TypeError('n must be either an integer or a float')
 
-        counter = Counter(self.labeled_triples[:, 1])
-        return {
-            relation
-            for relation, _ in counter.most_common(n)
-        }
+        uniq, counts = torch.unique(self.mapped_triples, return_counts=True)
+        top_idx = counts.topk(k=n, largest=True, sorted=True)
+        rel_ids = uniq[top_idx].numpy()
+        rel_labels = self._vectorized_relation_labeler(rel_ids)
+        return set(rel_labels)
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
         """Get np.array indices for triples with the given entities."""
