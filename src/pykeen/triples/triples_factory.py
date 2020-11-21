@@ -921,10 +921,15 @@ class TriplesFactory:
 
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
-        logger.info(f'split triples to groups of sizes {[triples.shape[0] for triples in triples_groups]}')
+        logger.info(
+            'done splitting triples to groups of sizes %s',
+            [triples.shape[0] for triples in triples_groups],
+        )
 
         # Make sure that the first element has all the right stuff in it
+        logger.debug('cleaning up groups')
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        logger.debug('done cleaning up groups')
 
         # TODO: We do not really need to re-map the triples, but could perform the same split as done for the
         #       triples also for the mapped_triples
