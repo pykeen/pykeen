@@ -330,7 +330,10 @@ class TestLiterals(unittest.TestCase):
 
     def test_create_lcwa_instances(self):
         """Test creating LCWA instances."""
-        factory = TriplesNumericLiteralsFactory(triples=triples, numeric_triples=numeric_triples)
+        factory = TriplesNumericLiteralsFactory.from_labeled_triples(
+            triples=triples,
+            numeric_triples=numeric_triples,
+        )
         instances = factory.create_lcwa_instances()
 
         id_peter = factory.entity_to_id['peter']

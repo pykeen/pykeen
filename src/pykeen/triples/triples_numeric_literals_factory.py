@@ -48,14 +48,13 @@ def create_matrix_of_literals(
 class TriplesNumericLiteralsFactory(TriplesFactory):
     """Create multi-modal instances given the path to triples."""
 
-    numeric_literals: Mapping[str, np.ndarray]
+    numeric_literals: np.ndarray
     literals_to_id: Mapping[str, int]
 
     def __init__(
         self,
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
-        triples: Optional[LabeledTriples],
         mapped_triples: MappedTriples,
         relation_to_inverse: Optional[Mapping[str, str]],
         numeric_literals: np.ndarray,
@@ -68,14 +67,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             relation_to_inverse=relation_to_inverse,
         )
         id_to_entity = invert_mapping(self.entity_to_id)
-        self.numeric_literals = {
-            id_to_entity[i]: lit
-            for i, lit in enumerate(numeric_literals)
-        }
+        self.numeric_literals = numeric_literals
         self.literals_to_id = literals_to_id
 
+    @classmethod
     def from_triples_factory(
-        self,
+        cls,
         triples_factory: TriplesFactory,
         numeric_literals: np.ndarray,
         literals_to_id: Mapping[str, int],
@@ -83,13 +80,13 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         return TriplesNumericLiteralsFactory(
             entity_to_id=triples_factory.entity_to_id,
             relation_to_id=triples_factory.relation_to_id,
-            triples=triples_factory.labeled_triples,
             mapped_triples=triples_factory.mapped_triples,
             relation_to_inverse=triples_factory.relation_to_inverse,
             numeric_literals=numeric_literals,
             literals_to_id=literals_to_id,
         )
 
+    @classmethod
     def from_path(
         cls,
         path: Union[str, TextIO],
@@ -115,6 +112,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             compact_id=compact_id,
         )
 
+    @classmethod
     def from_labeled_triples(
         cls,
         triples: np.ndarray,
@@ -125,18 +123,19 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         compact_id: bool = True,
     ) -> "TriplesNumericLiteralsFactory":
         assert numeric_triples is not None
+        triples_factory = TriplesFactory.from_labeled_triples(
+            triples=triples,
+            create_inverse_triples=create_inverse_triples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            compact_id=compact_id,
+        )
         numeric_literals, literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples,
-            entity_to_id=entity_to_id,
+            entity_to_id=triples_factory.entity_to_id,
         )
         return cls.from_triples_factory(
-            triples_factory=TriplesFactory.from_labeled_triples(
-                triples=triples,
-                create_inverse_triples=create_inverse_triples,
-                entity_to_id=entity_to_id,
-                relation_to_id=relation_to_id,
-                compact_id=compact_id,
-            ),
+            triples_factory=triples_factory,
             numeric_literals=numeric_literals,
             literals_to_id=literals_to_id,
         )

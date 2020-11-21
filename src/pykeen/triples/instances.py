@@ -78,7 +78,7 @@ class LCWAInstances(Instances):
 class MultimodalInstances(Instances):
     """Triples and mappings to their indices as well as multimodal data."""
 
-    numeric_literals: Mapping[str, np.ndarray]
+    numeric_literals: np.ndarray
     literals_to_id: Mapping[str, int]
 
 
