@@ -195,6 +195,7 @@ class TriplesFactory:
     relation_id_to_label: Mapping[int, str]
 
     #: A vectorized version of entity_label_to_id; initialized automatically
+    # TODO: Type annotation: the additional int parameter is optional
     _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray]
 
     #: A vectorized version of relation_label_to_id; initialized automatically
