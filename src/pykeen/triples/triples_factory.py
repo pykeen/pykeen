@@ -248,7 +248,7 @@ class TriplesFactory:
                     self._vectorized_entity_labeler,
                 )
             )
-        ])
+        ], axis=-1)
 
     @classmethod
     def from_path(
