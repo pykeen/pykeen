@@ -181,10 +181,6 @@ class TriplesFactory:
     #: The mapping from relations' labels to their indices
     relation_to_id: RelationMapping
 
-    #: A three-column matrix where each row are the head label,
-    #: relation label, then tail label
-    labeled_triples: LabeledTriples
-
     #: A three-column matrix where each row are the head identifier,
     #: relation identifier, then tail identifier
     mapped_triples: MappedTriples
