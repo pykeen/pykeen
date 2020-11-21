@@ -496,8 +496,8 @@ class TriplesFactory:
             ratios = [ratios]
 
         ratio_sum = sum(ratios)
-        if ratio_sum < 1.0:
-            ratios.append(1.0 - ratio_sum)
+        if ratio_sum == 1.0:
+            ratios = ratios[:-1]  # avoid rounding issues
         elif ratio_sum > 1.0:
             raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
 
@@ -507,6 +507,8 @@ class TriplesFactory:
             int(split_ratio * n_triples)
             for split_ratio in ratios
         ]
+        assert sum(sizes) <= n_triples
+        sizes = sizes + [n_triples - sum(sizes)]
 
         # Prepare shuffle index
         if random_state is None:
