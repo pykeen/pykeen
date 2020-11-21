@@ -6,6 +6,7 @@ import itertools as itt
 import unittest
 
 import numpy as np
+import torch
 
 from pykeen.triples import TriplesFactory
 from pykeen.triples.leakage import Sealant, get_candidate_inverse_relations
@@ -36,15 +37,15 @@ class TestLeakage(unittest.TestCase):
         frequencies = get_candidate_inverse_relations(triples_factory, minimum_frequency=0.0, symmetric=False)
         self.assertEqual(
             {
-                ('r2', 'r2_inverse'): (2 / 2),
-                ('r2_inverse', 'r2'): (2 / 2),
-                ('r3', 'r3_inverse'): (1 / 3),
-                ('r3_inverse', 'r3'): (1 / 1),
+                (triples_factory.relation_to_id['r2'], triples_factory.relation_to_id['r2_inverse']): (2 / 2),
+                (triples_factory.relation_to_id['r2_inverse'], triples_factory.relation_to_id['r2']): (2 / 2),
+                (triples_factory.relation_to_id['r3'], triples_factory.relation_to_id['r3_inverse']): (1 / 3),
+                (triples_factory.relation_to_id['r3_inverse'], triples_factory.relation_to_id['r3']): (1 / 1),
             },
             dict(frequencies),
         )
 
-    def test_find_leak_assymetric(self):
+    def test_find_leak_asymmetric(self):
         """Test finding test leakages with an asymmetric metric."""
         n = 100
         test_relation, test_relation_inverse = 'r', 'r_inverse'
@@ -72,7 +73,11 @@ class TestLeakage(unittest.TestCase):
             ['-2', test_relation_inverse, '-1'],  # this one was leaked!
         ]
         train_factory = TriplesFactory.from_labeled_triples(triples=np.array(train, dtype=np.str))
-        test_factory = TriplesFactory.from_labeled_triples(triples=np.array(test, dtype=np.str))
+        test_factory = TriplesFactory.from_labeled_triples(
+            triples=np.array(test, dtype=np.str),
+            entity_to_id=train_factory.entity_to_id,
+            relation_to_id=train_factory.relation_to_id,
+        )
 
         sealant = Sealant(train_factory, symmetric=False)
 
@@ -83,25 +88,31 @@ class TestLeakage(unittest.TestCase):
             expected_forwards_frequency, expected_inverse_frequency,
             msg='Forwards frequency should be higher than inverse frequency',
         )
+        test_relation_id = train_factory.relation_to_id[test_relation]
+        test_relation_inverse_id = train_factory.relation_to_id[test_relation_inverse]
         self.assertEqual(
             {
-                (test_relation, test_relation_inverse): expected_forwards_frequency,
-                (test_relation_inverse, test_relation): expected_inverse_frequency,
+                (test_relation_id, test_relation_inverse_id): expected_forwards_frequency,
+                (test_relation_inverse_id, test_relation_id): expected_inverse_frequency,
             },
             dict(sealant.candidate_inverse_relations),
         )
 
-        self.assertIn(test_relation, sealant.inverses)
-        self.assertEqual(test_relation_inverse, sealant.inverses[test_relation])
-        self.assertIn(test_relation_inverse, sealant.inverses)
-        self.assertEqual(test_relation, sealant.inverses[test_relation_inverse])
+        self.assertIn(test_relation_id, sealant.inverses)
+        self.assertEqual(test_relation_inverse_id, sealant.inverses[test_relation_id])
+        self.assertIn(test_relation_inverse_id, sealant.inverses)
+        self.assertEqual(test_relation_id, sealant.inverses[test_relation_inverse_id])
 
         self.assertIn(
-            test_relation_inverse,
+            test_relation_inverse_id,
             sealant.inverse_relations_to_delete,
             msg='The wrong relation was picked for deletion',
         )
 
         test_leaked = sealant.get_inverse_triples(test_factory)
-        self.assertEqual(1, len(test_leaked))
-        self.assertEqual(('-2', test_relation_inverse, '-1'), tuple(test_leaked[0]))
+        self.assertEqual(1, test_leaked.shape[0])
+        assert (torch.as_tensor(data=[
+            train_factory.entity_to_id["-2"],
+            test_relation_inverse_id,
+            train_factory.entity_to_id["-1"],
+        ]) == test_leaked[0]).all()

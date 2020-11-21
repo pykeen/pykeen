@@ -235,6 +235,8 @@ class TriplesFactory:
         return self._label_triples(mapped_triples=self.mapped_triples)
 
     def _label_triples(self, mapped_triples: MappedTriples) -> LabeledTriples:
+        if mapped_triples.numel() == 0:
+            return np.empty(shape=(0, 3), dtype=str)
         mapped_triples = mapped_triples.numpy().T
         return np.stack([
             labeler(col)
@@ -600,11 +602,10 @@ class TriplesFactory:
             invert=invert,
         )
 
-    def get_triples_for_relations(self, relations: Collection[Union[str, int]], invert: bool = False) -> LabeledTriples:
+    def get_triples_for_relations(self, relations: Collection[Union[str, int]], invert: bool = False) -> MappedTriples:
         """Get the labeled triples containing the given relations."""
         mask = self.get_mask_for_relations(relations, invert=invert)
-        # TODO: check whether this method's users need labeled triples.
-        return self._label_triples(mapped_triples=self.mapped_triples[mask])
+        return self.mapped_triples[mask]
 
     def _new_from_triples_mask(self, mask: torch.BoolTensor) -> 'TriplesFactory':
         logger.info(f'Keeping {mask.sum()}/{self.num_triples} triples.')

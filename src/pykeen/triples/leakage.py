@@ -21,7 +21,7 @@ from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
 from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
-from ..typing import LabeledTriples
+from ..typing import LabeledTriples, MappedTriples
 
 __all__ = [
     'Sealant',
@@ -120,7 +120,7 @@ class Sealant:
         """Relations to delete combine from both duplicates and inverses."""
         return self.duplicate_relations_to_delete.union(self.inverse_relations_to_delete)
 
-    def get_duplicate_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
+    def get_duplicate_triples(self, triples_factory: TriplesFactory) -> MappedTriples:
         """Get labeled duplicate triples."""
         # TODO: Not used
         return triples_factory.get_triples_for_relations(self.duplicate_relations_to_delete)
@@ -129,9 +129,8 @@ class Sealant:
         """Make a new triples factory not containing duplicate relationships."""
         return triples_factory.new_without_relations(self.duplicate_relations_to_delete)
 
-    def get_inverse_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
+    def get_inverse_triples(self, triples_factory: TriplesFactory) -> MappedTriples:
         """Get labeled inverse triples."""
-        # TODO: Only used in test -> use ID-based triples
         return triples_factory.get_triples_for_relations(self.inverse_relations_to_delete)
 
     def new_without_inverse_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
@@ -316,8 +315,8 @@ def get_candidate_duplicate_relations(
     :return: A counter whose keys are pairs of relations and values are similarity scores
     """
     # A dictionary of all of the head/tail pairs for a given relation
-    relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
-    for h, r, t in triples_factory.labeled_triples:
+    relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
+    for h, r, t in triples_factory.mapped_triples.tolist():
         relations[r].add((h, t))
 
     it = itt.combinations(relations.items(), 2)
