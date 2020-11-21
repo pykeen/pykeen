@@ -64,7 +64,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         super().__init__(
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            triples=triples,
             mapped_triples=mapped_triples,
             relation_to_inverse=relation_to_inverse,
         )

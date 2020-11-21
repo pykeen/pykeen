@@ -5,7 +5,7 @@ import logging
 import os
 import re
 from collections import Counter, defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -192,19 +192,61 @@ class TriplesFactory:
     #: A dictionary mapping each relation to its inverse, if inverse triples were created
     relation_to_inverse: Optional[Mapping[str, str]]
 
+    #: The mapping from entity IDs to their labels
+    entity_id_to_label: Mapping[int, str]
+
+    #: The mapping from relation IDs to their labels
+    relation_id_to_label: Mapping[int, str]
+
+    #: A vectorized version of entity_label_to_id; initialized automatically
+    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray]
+
+    #: A vectorized version of relation_label_to_id; initialized automatically
+    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray]
+
+    #: A vectorized version of entity_id_to_label; initialized automatically
+    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray]
+
+    #: A vectorized version of relation_id_to_label; initialized automatically
+    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray]
+
     def __init__(
         self,
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
-        triples: LabeledTriples,
         mapped_triples: MappedTriples,
         relation_to_inverse: Optional[Mapping[str, str]],
     ):
         self.entity_to_id = entity_to_id
         self.relation_to_id = relation_to_id
-        self.labeled_triples = triples
         self.mapped_triples = mapped_triples
         self.relation_to_inverse = relation_to_inverse
+
+        # ID to label mapping
+        self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
+        self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
+
+        # vectorized versions
+        self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
+        self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
+        self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
+        self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
+
+    @property
+    def labeled_triples(self) -> LabeledTriples:
+        """A three-column matrix where each row are the head label, relation label, then tail label."""
+        mapped_triples = self.mapped_triples.numpy()
+        return np.stack([
+            labeler(col)
+            for col, labeler in zip(
+                mapped_triples.T,
+                (
+                    self._vectorized_entity_labeler,
+                    self._vectorized_relation_labeler,
+                    self._vectorized_entity_labeler,
+                )
+            )
+        ])
 
     @classmethod
     def from_path(
@@ -350,16 +392,6 @@ class TriplesFactory:
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
-
-    @property
-    def entity_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
-        """The mapping from entity IDs to their labels."""
-        return invert_mapping(mapping=self.entity_to_id)
-
-    @property
-    def relation_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
-        """The mapping from relation IDs to their labels."""
-        return invert_mapping(mapping=self.relation_to_id)
 
     @property
     def create_inverse_triples(self) -> bool:  # noqa: D401
