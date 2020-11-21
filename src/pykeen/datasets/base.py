@@ -111,21 +111,6 @@ class DataSet:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
 
-    def _help_cache(self, cache_root: Optional[str]) -> str:
-        """Get the appropriate cache root directory.
-
-        :param cache_root: If none is passed, defaults to a subfolder of the
-            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
-            The subfolder is named based on the class inheriting from
-            :class:`pykeen.datasets.base.DataSet`.
-        """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        logger.debug('using cache root at %s', cache_root)
-        os.makedirs(cache_root, exist_ok=True)
-        return cache_root
-
 
 class EagerDataset(DataSet):
     """A dataset that has already been loaded."""
@@ -150,6 +135,8 @@ class LazyDataSet(DataSet):
     _testing: Optional[TriplesFactory] = None
     #: The actual instance of the validation factory, which is exposed to the user through `validation`
     _validation: Optional[TriplesFactory] = None
+    #: The directory in which the cached data is stored
+    cache_root: pathlib.Path
 
     @property
     def training(self) -> TriplesFactory:  # noqa: D401
@@ -187,6 +174,21 @@ class LazyDataSet(DataSet):
 
     def _load_validation(self) -> None:
         raise NotImplementedError
+
+    def _help_cache(self, cache_root: Optional[str]) -> pathlib.Path:
+        """Get the appropriate cache root directory.
+
+        :param cache_root: If none is passed, defaults to a subfolder of the
+            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
+            The subfolder is named based on the class inheriting from
+            :class:`pykeen.datasets.base.DataSet`.
+        """
+        if cache_root is None:
+            cache_root = PYKEEN_HOME
+        cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
+        cache_root.mkdir(parents=True, exist_ok=True)
+        logger.debug('using cache root at %s', cache_root)
+        return cache_root
 
 
 class PathDataSet(LazyDataSet):
