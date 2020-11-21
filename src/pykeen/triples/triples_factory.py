@@ -231,11 +231,14 @@ class TriplesFactory:
     @property
     def labeled_triples(self) -> LabeledTriples:
         """A three-column matrix where each row are the head label, relation label, then tail label."""
-        mapped_triples = self.mapped_triples.numpy()
+        return self._label_triples(mapped_triples=self.mapped_triples)
+
+    def _label_triples(self, mapped_triples: MappedTriples) -> LabeledTriples:
+        mapped_triples = mapped_triples.numpy().T
         return np.stack([
             labeler(col)
             for col, labeler in zip(
-                mapped_triples.T,
+                mapped_triples,
                 (
                     self._vectorized_entity_labeler,
                     self._vectorized_relation_labeler,
@@ -567,39 +570,50 @@ class TriplesFactory:
         rel_labels = self._vectorized_relation_labeler(rel_ids)
         return set(rel_labels)
 
-    def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
-        """Get np.array indices for triples with the given entities."""
-        entities = np.asanyarray(entities, dtype=self.labeled_triples.dtype)
-        return (
-            np.isin(self.labeled_triples[:, 0], entities, invert=invert)
-            & np.isin(self.labeled_triples[:, 2], entities, invert=invert)
-        )
+    def get_mask_for_entities(self, entities: Collection[str], invert: bool = False) -> torch.BoolTensor:
+        """Get mask for triples with the given entities."""
+        entity_ids = torch.as_tensor(data=[self.entity_to_id[entity] for entity in entities])
+        return _torch_is_in_1d(
+            a=self.mapped_triples[:, [0, 2]],
+            b=entity_ids,
+            invert=invert,
+        ).all(dim=-1)
 
-    def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
-        """Get np.array indices for triples with the given relations."""
-        return np.isin(self.labeled_triples[:, 1], list(relations), invert=invert)
+    def get_mask_for_relations(self, relations: Collection[str], invert: bool = False) -> torch.BoolTensor:
+        """Get mask for triples with the given relations."""
+        relation_ids = torch.as_tensor(data=[self.relation_to_id[relation] for relation in relations])
+        return _torch_is_in_1d(
+            a=self.mapped_triples[:, 1],
+            b=relation_ids,
+            invert=invert,
+        )
 
     def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:
         """Get the labeled triples containing the given relations."""
-        return self.labeled_triples[self.get_idx_for_relations(relations, invert=invert)]
+        mask = self.get_mask_for_relations(relations, invert=invert)
+        # TODO: check whether this method's users need labeled triples.
+        return self._label_triples(mapped_triples=self.mapped_triples[mask])
+
+    def _new_from_triples_mask(self, mask: torch.BoolTensor) -> 'TriplesFactory':
+        logger.info(f'Keeping {mask.sum()}/{self.num_triples} triples.')
+        return TriplesFactory(
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            mapped_triples=self.mapped_triples[mask],
+            relation_to_inverse=self.relation_to_inverse,
+        )
 
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
-        idx = self.get_idx_for_relations(relations)
-        logger.info(
-            f'keeping {len(relations)}/{self.num_relations} relations'
-            f' and {idx.sum()}/{self.num_triples} triples in {self}',
-        )
-        return TriplesFactory.from_labeled_triples(triples=self.labeled_triples[idx])
+        logger.info(f'Keeping {len(relations)}/{self.num_relations} relations.')
+        mask = self.get_mask_for_relations(relations)
+        return self._new_from_triples_mask(mask=mask)
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
-        idx = self.get_idx_for_relations(relations, invert=True)
-        logger.info(
-            f'removing {len(relations)}/{self.num_relations} relations'
-            f' and {idx.sum()}/{self.num_triples} triples',
-        )
-        return TriplesFactory.from_labeled_triples(triples=self.labeled_triples[idx])
+        logger.info(f'Removing {len(relations)}/{self.num_relations} relations.')
+        mask = self.get_mask_for_relations(relations, invert=True)
+        return self._new_from_triples_mask(mask=mask)
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
@@ -612,7 +626,8 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
-        text = [f'{h} {t}' for h, _, t in self.labeled_triples]
+        # TODO: this seems rather inefficient, since the word cloud likely then counts the occurrences again
+        text = [f'{h} {t}' for h, t in self._vectorized_entity_labeler(self.mapped_triples[:, [0, 2]].numpy())]
         return self._word_cloud(text=text, top=top or 100)
 
     def relation_word_cloud(self, top: Optional[int] = None):
@@ -626,7 +641,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
-        text = [r for _, r, _ in self.labeled_triples]
+        text = self._vectorized_relation_labeler(self.mapped_triples[:, 1].numpy()).tolist()
         return self._word_cloud(text=text, top=top or 100)
 
     def _word_cloud(self, *, text: List[str], top: int):
@@ -672,12 +687,10 @@ class TriplesFactory:
         data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
 
         # vectorized label lookup
-        entity_id_to_label = np.vectorize(self.entity_id_to_label.__getitem__)
-        relation_id_to_label = np.vectorize(self.relation_id_to_label.__getitem__)
         for column, id_to_label in dict(
-            head=entity_id_to_label,
-            relation=relation_id_to_label,
-            tail=entity_id_to_label,
+            head=self._vectorized_entity_labeler,
+            relation=self._vectorized_relation_labeler,
+            tail=self._vectorized_entity_labeler,
         ).items():
             data[f'{column}_label'] = id_to_label(data[f'{column}_id'])
 
@@ -723,12 +736,12 @@ class TriplesFactory:
 
         # Filter for entities
         if entities is not None:
-            keep_mask = self.get_idx_for_entities(entities=entities)
+            keep_mask = self.get_mask_for_entities(entities=entities)
             logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
 
         # Filter for relations
         if relations is not None:
-            relation_mask = self.get_idx_for_relations(relations=relations)
+            relation_mask = self.get_mask_for_relations(relations=relations)
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
@@ -737,15 +750,12 @@ class TriplesFactory:
             return self
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
-        factory = TriplesFactory.from_labeled_triples(
-            triples=self.labeled_triples[keep_mask],
+        factory = TriplesFactory(
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
+            mapped_triples=self.mapped_triples[keep_mask],
+            relation_to_inverse=self.relation_to_inverse,
         )
-
-        # manually copy the inverse relation mappings
-        if self.create_inverse_triples:
-            factory.relation_to_inverse = self.relation_to_inverse
 
         return factory
 
@@ -814,12 +824,16 @@ def _tf_cleanup_randomized(
 def _torch_is_in_1d(
     a: torch.Tensor,
     b: torch.Tensor,
+    invert: bool = False
 ) -> torch.BoolTensor:
     max_id = max(a.max(), b.max())
     # TODO: This may require significant amount of memory for large max_id
     mask = a.new_zeros(max_id + 1, dtype=torch.bool)
     mask[b] = True
-    return mask.index_select(dim=0, index=a.view(-1)).view(*a.shape)
+    result = mask.index_select(dim=0, index=a.view(-1)).view(*a.shape)
+    if invert:
+        result = ~result
+    return result
 
 
 def _prepare_cleanup(training: MappedTriples, testing: MappedTriples) -> MappedTriples:
