@@ -839,6 +839,8 @@ def _torch_is_in_1d(
     b: torch.Tensor,
     invert: bool = False
 ) -> torch.BoolTensor:
+    if a.numel() == 0 or b.numel() == 0:
+        return a.new_zeros(a.shape, dtype=torch.bool)
     max_id = max(a.max(), b.max())
     # TODO: This may require significant amount of memory for large max_id
     mask = a.new_zeros(max_id + 1, dtype=torch.bool)
