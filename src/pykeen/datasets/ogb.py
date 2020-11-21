@@ -37,16 +37,16 @@ class OGBLoader(LazyDataSet):
                 f'Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.',
             ) from e
 
-        self.dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
-        self.edge_split = self.dataset.get_edge_split()
-        self._training = self._make_tf(self.edge_split["train"])
+        dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
+        edge_split = dataset.get_edge_split()
+        self._training = self._make_tf(edge_split["train"])
         self._testing = self._make_tf(
-            self.edge_split["test"],
+            edge_split["test"],
             entity_to_id=self._training.entity_to_id,
             relation_to_id=self._training.relation_to_id,
         )
         self._validation = self._make_tf(
-            self.edge_split["valid"],
+            edge_split["valid"],
             entity_to_id=self._training.entity_to_id,
             relation_to_id=self._training.relation_to_id,
         )
