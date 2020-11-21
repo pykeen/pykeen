@@ -240,7 +240,7 @@ def get_candidate_inverse_relations(
     skip_self: bool = True,
     use_tqdm: bool = True,
     use_multiprocessing=False,
-) -> Mapping[Tuple[str, str], float]:
+) -> Mapping[Tuple[int, int], float]:
     """Count which relationships might be inverses of each other.
 
     :param symmetric: Should set similarity be calculated as the Jaccard index (symmetric) or as the
@@ -258,10 +258,10 @@ def get_candidate_inverse_relations(
     :return: A counter whose keys are pairs of relations and values are similarity scores
     """
     # A dictionary of all of the head/tail pairs for a given relation
-    relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
+    relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
     # A dictionary for all of the tail/head pairs for a given relation
-    candidate_inverse_relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
-    for h, r, t in triples_factory.labeled_triples:
+    candidate_inverse_relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
+    for h, r, t in triples_factory.mapped_triples.tolist():
         relations[r].add((h, t))
         candidate_inverse_relations[r].add((t, h))
 
