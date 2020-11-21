@@ -42,8 +42,8 @@ class Sealant:
 
     triples_factory: TriplesFactory
     minimum_frequency: float
-    inverses: Mapping[str, str]
-    inverse_relations_to_delete: Set[str]
+    inverses: Mapping[int, int]
+    inverse_relations_to_delete: Set[int]
 
     def __init__(
         self,
@@ -116,12 +116,13 @@ class Sealant:
         logger.info(f'identified {len(self.inverse_relations_to_delete)} from {self.triples_factory} to delete')
 
     @property
-    def relations_to_delete(self) -> Set[str]:
+    def relations_to_delete(self) -> Set[int]:
         """Relations to delete combine from both duplicates and inverses."""
         return self.duplicate_relations_to_delete.union(self.inverse_relations_to_delete)
 
     def get_duplicate_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
         """Get labeled duplicate triples."""
+        # TODO: Not used
         return triples_factory.get_triples_for_relations(self.duplicate_relations_to_delete)
 
     def new_without_duplicate_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
@@ -130,6 +131,7 @@ class Sealant:
 
     def get_inverse_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
         """Get labeled inverse triples."""
+        # TODO: Only used in test -> use ID-based triples
         return triples_factory.get_triples_for_relations(self.inverse_relations_to_delete)
 
     def new_without_inverse_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
@@ -141,7 +143,7 @@ class Sealant:
         return triples_factory.new_without_relations(self.relations_to_delete)
 
 
-def prioritize_mapping(d: Mapping[Tuple[str, str], float]) -> Set[str]:
+def prioritize_mapping(d: Mapping[Tuple[X, X], float]) -> Set[X]:
     """Prioritize elements from a two way mapping."""
     return {
         b
@@ -299,7 +301,7 @@ def get_candidate_duplicate_relations(
     symmetric: bool = True,
     use_tqdm: bool = True,
     use_multiprocessing: bool = False,
-):
+) -> Mapping[Tuple[int, int], float]:
     """Count which relationships might be duplicates.
 
     :param symmetric: Should set similarity be calculated as the Jaccard index (symmetric) or as the

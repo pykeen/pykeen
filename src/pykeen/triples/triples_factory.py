@@ -601,7 +601,7 @@ class TriplesFactory:
             invert=invert,
         )
 
-    def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:
+    def get_triples_for_relations(self, relations: Collection[Union[str, int]], invert: bool = False) -> LabeledTriples:
         """Get the labeled triples containing the given relations."""
         mask = self.get_mask_for_relations(relations, invert=invert)
         # TODO: check whether this method's users need labeled triples.
@@ -622,7 +622,7 @@ class TriplesFactory:
         mask = self.get_mask_for_relations(relations)
         return self._new_from_triples_mask(mask=mask)
 
-    def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
+    def new_without_relations(self, relations: Collection[Union[str, int]]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
         logger.info(f'Removing {len(relations)}/{self.num_relations} relations.')
         mask = self.get_mask_for_relations(relations, invert=True)
