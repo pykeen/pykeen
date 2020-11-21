@@ -204,12 +204,31 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_repr(self):
         """Test repr() for triples factories."""
-        t = Nations().training
-        self.assertEqual(f'TriplesFactory(path="{NATIONS_TRAIN_PATH}")', repr(t))
+        triples_factory = Nations().training
+        self.assertEqual(f'TriplesFactory(path="{NATIONS_TRAIN_PATH}")', repr(triples_factory))
 
-        first = list(t.entity_to_id)[0]
-        x = t.new_with_restriction(entities=[first])
-        self.assertEqual(f'''TriplesFactory(path="{NATIONS_TRAIN_PATH}", entities=['{first}'])''', repr(x))
+        for sl in [slice(0, 1), slice(0, 4), slice(3, 5)]:
+            entities = list(triples_factory.entity_to_id)[sl]
+            self.assertIsInstance(entities, list)
+            x = triples_factory.new_with_restriction(entities=entities)
+            self.assertEqual(
+                f'TriplesFactory(path="{NATIONS_TRAIN_PATH}", entity_restrictions={len(entities)})',
+                repr(x),
+            )
+
+            relations = list(triples_factory.relation_to_id)[sl]
+            self.assertIsInstance(relations, list)
+            x = triples_factory.new_with_restriction(relations=relations)
+            self.assertEqual(
+                f'TriplesFactory(path="{NATIONS_TRAIN_PATH}", relation_restrictions={len(relations)})',
+                repr(x),
+            )
+
+        x = triples_factory.new_with_restriction(entities=['poland'], relations=['embassy'])
+        self.assertEqual(
+            f'TriplesFactory(path="{NATIONS_TRAIN_PATH}", entity_restrictions=1, relation_restrictions=1)',
+            repr(x),
+        )
 
 
 class TestSplit(unittest.TestCase):

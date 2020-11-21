@@ -334,7 +334,11 @@ class TriplesFactory:
 
     def __repr__(self):  # noqa: D105
         tags = ''.join(
-            f', {k}="{v}"' if isinstance(v, str) else f', {k}={v}'
+            (
+                f', {k}="{v}"' if isinstance(v, str) else
+                f', {k}={len(v)}' if isinstance(v, Collection) else
+                f', {k}={v}'
+            )
             for k, v in self._tags.items()
         )
         return f'{self.__class__.__name__}(path="{self.path}"{tags})'
@@ -650,13 +654,13 @@ class TriplesFactory:
         # Filter for entities
         if entities is not None:
             keep_mask = self.get_idx_for_entities(entities=entities)
-            tags['entities'] = sorted(set(entities))
+            tags['entity_restrictions'] = sorted(set(entities))
             logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
 
         # Filter for relations
         if relations is not None:
             relation_mask = self.get_idx_for_relations(relations=relations)
-            tags['relations'] = sorted(set(relations))
+            tags['relation_restrictions'] = sorted(set(relations))
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
@@ -672,6 +676,7 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             compact_id=False,
         )
+        factory.path = self.path
         factory._tags.update(tags)
 
         # manually copy the inverse relation mappings
