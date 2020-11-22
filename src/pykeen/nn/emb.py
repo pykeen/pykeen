@@ -32,9 +32,13 @@ class RepresentationModule(nn.Module, ABC):
     #: The shape of a single representation
     shape: Sequence[int]
 
-    def __init__(self, shape: Sequence[int]):
+    #: The maximum admissible ID (excl.)
+    max_id: int
+
+    def __init__(self, shape: Sequence[int], max_id: int):
         super().__init__()
         self.shape = shape
+        self.max_id = max_id
 
     @abstractmethod
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
@@ -184,7 +188,7 @@ class Embedding(RepresentationModule):
         else:
             assert embedding_dim is not None
             shape = (embedding_dim,)
-        super().__init__(shape=shape)
+        super().__init__(shape=shape, max_id=num_embeddings)
 
         if initializer is None:
             initializer = nn.init.normal_
@@ -241,7 +245,7 @@ class Embedding(RepresentationModule):
     @property
     def num_embeddings(self) -> int:  # noqa: D401
         """The total number of representations (i.e. the maximum ID)."""
-        return self._embeddings.num_embeddings
+        return self.max_id
 
     @property
     def embedding_dim(self) -> int:  # noqa: D401
