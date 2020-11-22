@@ -3,6 +3,7 @@
 """Test that training loops work correctly."""
 
 import unittest
+from datetime import datetime
 from typing import Optional
 
 import torch
@@ -12,10 +13,10 @@ from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model
-from pykeen.training import SLCWATrainingLoop
+from pykeen.optimizers import get_optimizer_cls
+from pykeen.training import SLCWATrainingLoop, LCWATrainingLoop
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
-
 
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
@@ -86,6 +87,9 @@ class TrainingLoopTests(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
+        self.random_seed = 123
+        self.checkpoint_file = f"{datetime.utcnow().isoformat().replace('.', '_')}.pt"
+        self.num_epochs = 10
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
@@ -121,3 +125,51 @@ class TrainingLoopTests(unittest.TestCase):
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
             NaNTrainingLoop(model=model, patience=2)
+
+    # Add docu
+    def test_checkpoints(self):
+        """Test whether interrupting the training loop and resuming it using checkpoints yields the same results as
+        running the training loop in one shot with equal settings."""
+        # Train a model in one shot
+        model = TransE(
+            triples_factory=self.triples_factory,
+            automatic_memory_optimization=False,
+            random_seed=self.random_seed,
+        )
+        optimizer = get_optimizer_cls(None)
+        optimizer = optimizer(
+            params=model.get_grad_params())
+        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
+        losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
+
+        # Train a model for the first half
+        model = TransE(
+            triples_factory=self.triples_factory,
+            automatic_memory_optimization=False,
+            random_seed=self.random_seed
+        )
+        optimizer = get_optimizer_cls(None)
+        optimizer = optimizer(
+            params=model.get_grad_params())
+        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop.train(
+            num_epochs=int(self.num_epochs//2),
+            batch_size=self.batch_size,
+            checkpoint_file=self.checkpoint_file,
+            checkpoint_frequency=0
+        )
+
+        # Continue training of the first part
+        model = TransE(triples_factory=self.triples_factory, automatic_memory_optimization=False, random_seed=123)
+        optimizer = get_optimizer_cls(None)
+        optimizer = optimizer(
+            params=model.get_grad_params())
+        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
+        losses_2 = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            checkpoint_file=self.checkpoint_file,
+            checkpoint_frequency=0
+        )
+
+        self.assertEqual(losses, losses_2)
