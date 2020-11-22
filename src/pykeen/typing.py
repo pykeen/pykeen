@@ -23,6 +23,10 @@ __all__ = [
     'GaussianDistribution',
 ]
 
+# utility type
+X = TypeVar("X")
+OneOrMany = Union[X, Sequence[X]]
+
 LabeledTriples = np.ndarray
 MappedTriples = torch.LongTensor
 EntityMapping = Mapping[str, int]

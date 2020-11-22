@@ -6,14 +6,14 @@ import itertools
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Generic, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Collection, Generic, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, Union
 
 import torch
 from torch import FloatTensor, nn
 
 from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
-from ..utils import check_shapes
+from ..utils import check_shapes, get_cls, get_subclasses, normalize_string, upgrade_to_sequence
 
 __all__ = [
     # Base Classes
@@ -44,12 +44,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _upgrade_to_sequence(x: Union[FloatTensor, Sequence[FloatTensor]]) -> Sequence[FloatTensor]:
-    return x if isinstance(x, Sequence) else (x,)
-
-
 def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Sequence[Sequence[Representation]]:
-    return tuple(_upgrade_to_sequence(xx) for xx in x)
+    return tuple(upgrade_to_sequence(xx) for xx in x)
 
 
 def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
@@ -278,9 +274,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         slice_dim: Optional[str] = slice_dims[0] if len(slice_dims) == 1 else None
 
         # FIXME typing does not work well for this
-        h = _upgrade_to_sequence(h)
-        r = _upgrade_to_sequence(r)
-        t = _upgrade_to_sequence(t)
+        h = upgrade_to_sequence(h)
+        r = upgrade_to_sequence(r)
+        t = upgrade_to_sequence(t)
         assert self._check_shapes(h=h, r=r, t=t, h_prefix=h_prefix, r_prefix=r_prefix, t_prefix=t_prefix)
 
         # prepare input to generic score function: bh*, br*, bt*
@@ -1097,3 +1093,54 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, w_r=r[0], d_r=r[1], t=t)
+
+
+_INTERACTIONS: Collection[Type[Interaction]] = set(get_subclasses(cls=Interaction)).difference({
+    # Abstract class
+    TranslationalInteraction,
+})
+
+#: A mapping of interaction names to their implementations
+interactions: Mapping[str, Type[Interaction]] = {
+    normalize_string(cls.__name__): cls
+    for cls in _INTERACTIONS
+}
+
+
+def get_interaction_cls(query: Union[str, Type[Interaction]]) -> Type[Interaction]:
+    """Look up an interaction class by name (case/punctuation insensitive) in :data:`pykeen.nn.modules`.
+
+    :param query:
+        The name of the interaction (case insensitive, punctuation insensitive).
+
+    :return:
+        The interaction class.
+    """
+    return get_cls(
+        query,
+        base=Interaction,  # type: ignore
+        lookup_dict=interactions,
+    )
+
+
+def resolve_interaction(
+    interaction: Union[str, Type[Interaction], Interaction],
+    interaction_kwargs: Optional[Mapping[str, Any]],
+) -> Interaction:
+    """
+    Resolve an interaction.
+
+    :param interaction:
+        The interaction. Can either be an already instantiated interaction, an interaction class, or a string of the class name.
+    :param interaction_kwargs:
+        Key-word based arguments passed to the constructor. Not effective, if an already instantiated interaction is passed.
+
+    :return:
+        A interaction instance.
+    """
+    # already instantiated
+    if isinstance(interaction, Interaction):
+        return interaction
+    if isinstance(interaction, str):
+        interaction = get_interaction_cls(interaction)
+    return interaction(**(interaction_kwargs or dict()))

@@ -170,7 +170,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Type, Union
 
 import pandas as pd
 import torch
@@ -180,8 +180,10 @@ from .datasets import get_dataset
 from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
-from .models import get_model_cls
+from .models import ERModel
 from .models.base import Model
+from .nn import EmbeddingSpecification, Interaction, RepresentationModule
+from .nn.modules import resolve_interaction
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer
 from .sampling import NegativeSampler, get_negative_sampler_cls
@@ -189,10 +191,10 @@ from .stoppers import EarlyStopper, Stopper, get_stopper_cls
 from .trackers import ResultTracker, get_result_tracker_cls
 from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
 from .triples import TriplesFactory
+from .typing import OneOrMany
 from .utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, normalize_string,
-    random_non_negative_int, resolve_device, set_random_seed,
-)
+    random_non_negative_int, resolve_device, set_random_seed, )
 from .version import get_git_hash, get_version
 
 __all__ = [
@@ -699,6 +701,47 @@ def pipeline_from_config(
     )
 
 
+def _resolve_representations(
+    num_representations: int,
+    shape: Sequence[str],
+    representations: OneOrMany[Union[None, RepresentationModule, EmbeddingSpecification]],
+    dimensions: Mapping[str, int],
+) -> Sequence[RepresentationModule]:
+    if not isinstance(representations, Sequence):
+        if isinstance(representations, RepresentationModule):
+            raise ValueError
+        representations = [representations] * len(shape)
+
+    dimensions = dict(**dimensions)
+    result = []
+    for symbolic_shape, representation in zip(shape, representations):
+        if representation is None:
+            representation = EmbeddingSpecification()
+        if isinstance(representation, RepresentationModule):
+            if representation.max_id < num_representations:
+                raise ValueError
+            elif representation.max_id > num_representations:
+                # TODO: warning?
+                pass
+            for name, size in zip(symbolic_shape, representation.shape):
+                expected_dimension = dimensions.get(name)
+                if expected_dimension is not None and expected_dimension != size:
+                    raise ValueError
+                dimensions[name] = size
+        elif isinstance(representation, EmbeddingSpecification):
+            actual_shape = tuple([dimensions[name] for name in symbolic_shape])
+            representation = representation.make(
+                num_embeddings=num_representations,
+                embedding_dim=None,
+                shape=actual_shape,
+            )
+        else:
+            raise AssertionError
+        result.append(representation)
+
+    return result
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -709,6 +752,12 @@ def pipeline(  # noqa: C901
     validation: Union[None, TriplesFactory, str] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
+    # Interaction
+    interaction: Union[str, Type[Interaction], Interaction],
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    # Representations
+    entity_representations: OneOrMany[Union[None, RepresentationModule, EmbeddingSpecification]],
+    relation_representations: OneOrMany[Union[None, RepresentationModule, EmbeddingSpecification]],
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
@@ -865,10 +914,39 @@ def pipeline(  # noqa: C901
                 relations=evaluation_relation_whitelist,
             )
 
+    # Resolve interaction
+    interaction = resolve_interaction(
+        interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
+    )
+
+    # Given an interaction, we know which representations are needed
+    # interaction.entity_shape, interaction.relation_shape
+    entity_representations = _resolve_representations(
+        num_representations=training.num_entities,
+        shape=interaction.entity_shape,
+        representations=entity_representations,
+        dimensions=dict(d=...),  # TODO
+    )
+    relation_representations = _resolve_representations(
+        num_representations=training.num_relations,
+        shape=interaction.relation_shape,
+        representations=relation_representations,
+        dimensions=dict(),  # TODO
+    )
+
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs.update(preferred_device=device)
     model_kwargs.setdefault('random_seed', random_seed)
+
+    if loss is not None:
+        if 'loss' in model_kwargs:  # FIXME
+            logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
+            del model_kwargs['loss']
+        loss_cls = get_loss_cls(loss)
+        _loss = loss_cls(**(loss_kwargs or {}))
+        model_kwargs.setdefault('loss', _loss)
 
     if regularizer is not None:
         logger.warning('Specification of the regularizer from the pipeline() is currently under maitenance')
@@ -879,19 +957,17 @@ def pipeline(  # noqa: C901
         # regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
         # model_kwargs['regularizer'] = regularizer_cls(**(regularizer_kwargs or {}))
 
-    if loss is not None:
-        if 'loss' in model_kwargs:  # FIXME
-            logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
-            del model_kwargs['loss']
-        loss_cls = get_loss_cls(loss)
-        _loss = loss_cls(**(loss_kwargs or {}))
-        model_kwargs.setdefault('loss', _loss)
-
-    model = get_model_cls(model)
-    model_instance: Model = model(
+    # Compose model
+    # TODO: What about custom models, not subclassing from ERModel
+    model_instance = ERModel(
         triples_factory=training,
+        interaction=interaction,
+        loss=loss,
+        entity_representations=entity_representations,
+        relation_representations=relation_representations,
         **model_kwargs,
     )
+
     # Log model parameters
     result_tracker.log_params(params=dict(cls=model.__name__, kwargs=model_kwargs), prefix='model')
 

@@ -8,7 +8,7 @@ import logging
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -621,3 +621,16 @@ def pop_only(elements: Iterable[X]) -> X:
 def strip_dim(*x):
     """Strip the last dimension."""
     return [xx.view(xx.shape[2:]) for xx in x]
+
+
+def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
+    """
+    Ensure sequence, by wrapping a non-sequence into a 1-element tuple.
+
+    :param x:
+        The input.
+
+    :return:
+        A sequence.
+    """
+    return x if isinstance(x, Sequence) else (x,)
