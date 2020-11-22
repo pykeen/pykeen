@@ -837,7 +837,7 @@ def pipeline(  # noqa: C901
             if random_seed is None:
                 random_seed = random_non_negative_int()
                 logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-            torch.save({'random_seed': random_seed}, path=pipeline_checkpoint_helper_file)
+            torch.save({'random_seed': random_seed}, pipeline_checkpoint_helper_file)
     else:
         if random_seed is None:
             random_seed = random_non_negative_int()
