@@ -699,22 +699,6 @@ def pipeline_from_config(
     )
 
 
-def save_pipeline_checkpoint_helper_file(path: str, random_seed: int) -> None:
-    """Save the pipeline checkpoint helper file.
-
-    :param path:
-        Save the state of the pipeline.
-    :param random_seed:
-        The random_seed that was used for the pipeline.
-    """
-    torch.save(
-        {
-            'random_seed': random_seed,
-        },
-        path,
-    )
-
-
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -853,7 +837,7 @@ def pipeline(  # noqa: C901
             if random_seed is None:
                 random_seed = random_non_negative_int()
                 logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-            save_pipeline_checkpoint_helper_file(path=pipeline_checkpoint_helper_file, random_seed=random_seed)
+            torch.save({'random_seed': random_seed}, path=pipeline_checkpoint_helper_file)
     else:
         if random_seed is None:
             random_seed = random_non_negative_int()
