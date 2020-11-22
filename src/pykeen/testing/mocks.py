@@ -58,10 +58,9 @@ class MockRepresentations(RepresentationModule):
     """A custom representation module with minimal implementation."""
 
     def __init__(self, num_entities: int, shape: Sequence[int]):
-        super().__init__()
+        super().__init__(shape=shape)
         self.num_embeddings = num_entities
-        self.shape = shape
-        self.x = nn.Parameter(torch.rand(numpy.prod(shape)))
+        self.x = nn.Parameter(torch.rand(numpy.prod(self.shape)))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         n = self.num_embeddings if indices is None else indices.shape[0]

@@ -29,6 +29,13 @@ logger = logging.getLogger(__name__)
 class RepresentationModule(nn.Module, ABC):
     """A base class for obtaining representations for entities/relations."""
 
+    #: The shape of a single representation
+    shape: Sequence[int]
+
+    def __init__(self, shape: Sequence[int]):
+        super().__init__()
+        self.shape = shape
+
     @abstractmethod
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
         """Get representations for indices.
@@ -121,7 +128,6 @@ class Embedding(RepresentationModule):
     can be used throughout PyKEEN as a more fully featured drop-in replacement.
     """
 
-    shape: Sequence[int]
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
     regularizer: Optional[Regularizer]
@@ -167,18 +173,18 @@ class Embedding(RepresentationModule):
         :raises ValueError:
             If neither shape nor embedding_dim are given.
         """
-        super().__init__()
         if shape is None and embedding_dim is None:
             raise ValueError('Missing both shape and embedding_dim')
         elif shape is not None:
             if isinstance(shape, int):
-                self.shape = (shape,)
+                shape = (shape,)
             else:
-                self.shape = shape
+                shape = shape
             embedding_dim = numpy.prod(shape)
         else:
             assert embedding_dim is not None
-            self.shape = (embedding_dim,)
+            shape = (embedding_dim,)
+        super().__init__(shape=shape)
 
         if initializer is None:
             initializer = nn.init.normal_
