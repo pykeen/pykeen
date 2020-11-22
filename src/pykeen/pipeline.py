@@ -721,8 +721,10 @@ def _resolve_representations(
             if representation.max_id < num_representations:
                 raise ValueError
             elif representation.max_id > num_representations:
-                # TODO: warning?
-                pass
+                logger.warning(
+                    f"{representation} does provide representations for more than the requested {num_representations}."
+                    f"While this is not necessarily an error, be aware that these representations will not be trained."
+                )
             for name, size in zip(symbolic_shape, representation.shape):
                 expected_dimension = dimensions.get(name)
                 if expected_dimension is not None and expected_dimension != size:
