@@ -715,18 +715,6 @@ def save_pipeline_checkpoint_helper_file(path: str, random_seed: int) -> None:
     )
 
 
-def load_pipeline_checkpoint_helper_file(path: str) -> Mapping[str, Any]:
-    """Load the pipeline checkpoint helper file.
-
-    :param path:
-        Save the state of the pipeline.
-
-    :return:
-        The pipeline checkpoint helper file dictionary loaded from the pipeline helper file.
-    """
-    return torch.load(path)
-
-
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -857,7 +845,7 @@ def pipeline(  # noqa: C901
         checkpoint_file = training_kwargs.get('checkpoint_file')
         pipeline_checkpoint_helper_file = f"{checkpoint_file}_pipeline_helper_file"
         if os.path.isfile(pipeline_checkpoint_helper_file):
-            pipeline_checkpoint_helper_dict = load_pipeline_checkpoint_helper_file(pipeline_checkpoint_helper_file)
+            pipeline_checkpoint_helper_dict = torch.load(pipeline_checkpoint_helper_file)
             random_seed = pipeline_checkpoint_helper_dict['random_seed']
             logger.info(f'Loaded random seed {random_seed} from checkpoint.')
         else:
