@@ -198,6 +198,7 @@ def unleak(
 
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
+    # TODO: Use compaction of LabelMapping instead.
     triples = np.concatenate(
         [
             triples_factory.labeled_triples
