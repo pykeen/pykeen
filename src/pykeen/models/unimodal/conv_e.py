@@ -134,31 +134,6 @@ class ConvE(ERModel):
             )
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            entity_representations=[
-                Embedding.from_specification(
-                    num_embeddings=triples_factory.num_entities,
-                    specification=EmbeddingSpecification(
-                        initializer=xavier_normal_,
-                    ),
-                ),
-                # ConvE uses one bias for each entity
-                Embedding.from_specification(
-                    num_embeddings=triples_factory.num_entities,
-                    specification=EmbeddingSpecification(
-                        initializer=nn.init.zeros_,
-                    ),
-                ),
-            ],
-            relation_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_relations,
-                specification=EmbeddingSpecification(
-                    initializer=xavier_normal_,
-                ),
-            ),
             interaction=ConvEInteraction(
                 input_channels=input_channels,
                 output_channels=output_channels,
@@ -172,6 +147,25 @@ class ConvE(ERModel):
                 embedding_dim=embedding_dim,
                 apply_batch_normalization=apply_batch_normalization,
             ),
+            entity_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=xavier_normal_,
+                ),
+                # ConvE uses one bias for each entity
+                EmbeddingSpecification(
+                    embedding_dim=1,
+                    initializer=nn.init.zeros_,
+                ),
+            ],
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+            ),
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
         )
 
     def forward(
