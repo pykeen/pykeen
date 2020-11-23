@@ -516,12 +516,12 @@ def proje_interaction(
     # global projections
     h = h * d_e.view(1, 1, 1, 1, dim)
     r = r * d_r.view(1, 1, 1, 1, dim)
-    # combination, shape: (b, h, r, d)
+    # combination, shape: (b, h, r, 1, d)
     x = tensor_sum(h, r, b_c)
-    x = activation(x)
+    x = activation(x) # shape: (b, h, r, 1, d)
     # dot product with t, shape: (b, h, r, t)
-    t = t.transpose(-2, -1)
-    return (x @ t) + b_p
+    t = t.transpose(-2, -1)  # shape: (b, 1, 1, d, t)
+    return (x @ t).squeeze(dim=-2) + b_p
 
 
 def rescal_interaction(
