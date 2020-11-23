@@ -111,11 +111,11 @@ def complex_interaction(
     return tensor_sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 
@@ -518,7 +518,7 @@ def proje_interaction(
     r = r * d_r.view(1, 1, 1, 1, dim)
     # combination, shape: (b, h, r, 1, d)
     x = tensor_sum(h, r, b_c)
-    x = activation(x) # shape: (b, h, r, 1, d)
+    x = activation(x)  # shape: (b, h, r, 1, d)
     # dot product with t, shape: (b, h, r, t)
     t = t.transpose(-2, -1)  # shape: (b, 1, 1, d, t)
     return (x @ t).squeeze(dim=-2) + b_p
@@ -638,9 +638,9 @@ def structured_embedding_interaction(
 
     :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r_h: shape: (batch_size, 1, num_relations, 1, dim, rel_dim)
+    :param r_h: shape: (batch_size, 1, num_relations, 1, rel_dim, dim)
         The relation-specific head projection.
-    :param r_t: shape: (batch_size, 1, num_relations, 1, dim, rel_dim)
+    :param r_t: shape: (batch_size, 1, num_relations, 1, rel_dim, dim)
         The relation-specific tail projection.
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
@@ -653,8 +653,8 @@ def structured_embedding_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        (h @ r_h.squeeze(dim=-3)),
-        -(t @ r_t.squeeze(dim=-3)),
+        (r_h @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
+        -(r_t @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
         p=p,
         power_norm=power_norm,
     )
