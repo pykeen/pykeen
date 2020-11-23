@@ -119,6 +119,7 @@ class RepresentationModule(nn.Module, ABC):
 class EmbeddingSpecification:
     """An embedding specification."""
 
+    embedding_dim: Optional[int] = None
     shape: Optional[Sequence[int]] = None
 
     initializer: Optional[Initializer] = None
@@ -139,6 +140,8 @@ class EmbeddingSpecification:
         """Create an embedding with this specification."""
         return Embedding(
             num_embeddings=num_embeddings,
+            embedding_dim=self.embedding_dim,
+            shape=self.shape,
             initializer=self.initializer,
             initializer_kwargs=self.initializer_kwargs,
             normalizer=self.normalizer,

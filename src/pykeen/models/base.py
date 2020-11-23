@@ -1094,12 +1094,22 @@ class Model(nn.Module, ABC):
 
 
 def _prepare_representation_module_list(
-    representations: Union[None, RepresentationModule, Sequence[RepresentationModule]],
+    representations: Union[
+        None,
+        EmbeddingSpecification,
+        RepresentationModule,
+        Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+    ],
+    num_embeddings: int,
 ) -> Sequence[RepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
     if representations is not None and not isinstance(representations, Sequence):
         representations = [representations]
+    representations = [
+        r if isinstance(r, RepresentationModule) else r.make(num_embeddings=num_embeddings)
+        for r in representations
+    ]
     return nn.ModuleList(representations)
 
 
@@ -1119,13 +1129,23 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         self,
         triples_factory: TriplesFactory,
         interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        entity_representations: Union[
+            None,
+            EmbeddingSpecification,
+            RepresentationModule,
+            Sequence[Union[EmbeddingSpecification, RepresentationModule]]
+        ] = None,
+        relation_representations: Union[
+            None,
+            EmbeddingSpecification,
+            RepresentationModule,
+            Sequence[Union[EmbeddingSpecification, RepresentationModule]]
+        ] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        entity_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
-        relation_representations: Union[None, RepresentationModule, Sequence[RepresentationModule]] = None,
     ) -> None:
         """Initialize the module.
 
@@ -1154,8 +1174,14 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_representations = _prepare_representation_module_list(representations=entity_representations)
-        self.relation_representations = _prepare_representation_module_list(representations=relation_representations)
+        self.entity_representations = _prepare_representation_module_list(
+            representations=entity_representations,
+            num_embeddings=triples_factory.num_entities,
+        )
+        self.relation_representations = _prepare_representation_module_list(
+            representations=relation_representations,
+            num_embeddings=triples_factory.num_relations,
+        )
         self.interaction = interaction
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
