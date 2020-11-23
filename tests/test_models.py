@@ -671,7 +671,6 @@ class _TestKG2E(_ModelTestCase):
         * Entity and relation embeddings have to have at most unit L2 norm.
         * Covariances have to have values between c_min and c_max
         """
-        self.model: TwoVectorEmbeddingModel
         low = self.model.entity_representations[1].constrainer.keywords['min']
         high = self.model.entity_representations[1].constrainer.keywords['max']
 
@@ -867,7 +866,6 @@ class TestTransH(_DistanceModelTestCase, unittest.TestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        self.model: DoubleRelationEmbeddingModel
         entity_norms = self.model.relation_representations[1](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
