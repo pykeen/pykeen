@@ -66,33 +66,6 @@ def _apply_optional_bn_to_tensor(
     return output_dropout(x)
 
 
-def _translational_interaction(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-    p: Union[int, str] = 2,
-    power_norm: bool = False,
-) -> torch.FloatTensor:
-    """
-    Evaluate a translational distance interaction function on already broadcasted representations.
-
-    :param h: shape: (batch_size, num_heads, num_relations, num_tails, dim)
-        The head representations.
-    :param r: shape: (batch_size, num_heads, num_relations, num_tails, dim)
-        The relation representations.
-    :param t: shape: (batch_size, num_heads, num_relations, num_tails, dim)
-        The tail representations.
-    :param p:
-        The p for the norm. cf. torch.norm.
-    :param power_norm:
-        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
-
-    :return: shape: (batch_size, num_heads, num_relations, num_tails)
-        The scores.
-    """
-    return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
-
-
 def _add_cuda_warning(func):
     def wrapped(*args, **kwargs):
         try:
@@ -746,7 +719,7 @@ def transd_interaction(
         e_p=t_p,
         r_p=r_p,
     )
-    return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)
+    return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
 def transe_interaction(
@@ -773,7 +746,7 @@ def transe_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _translational_interaction(h=h, r=r, t=t, p=p, power_norm=power_norm)
+    return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
 
 
 def transh_interaction(
@@ -846,7 +819,7 @@ def transr_interaction(
     # project to relation specific subspace and ensure constraints
     h_bot = clamp_norm(h @ m_r, p=2, dim=-1, maxnorm=1.)
     t_bot = clamp_norm(t @ m_r, p=2, dim=-1, maxnorm=1.)
-    return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)
+    return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
 def tucker_interaction(
