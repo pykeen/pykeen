@@ -1104,14 +1104,14 @@ class SimplEInteraction(
     Interaction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor]
-    ]
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+    ],
 ):
     """Interaction function of SimplE."""
 
     func = pkf.simple_interaction
 
-    def __init__(self, clamp_score: Optional[Union[float, Tuple[float, float]]] = None, ):
+    def __init__(self, clamp_score: Union[None, float, Tuple[float, float]] = None):
         super().__init__()
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)

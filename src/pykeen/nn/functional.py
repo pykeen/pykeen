@@ -111,11 +111,11 @@ def complex_interaction(
     return tensor_sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-        (+1, h_re, r_re, t_re),
-        (+1, h_re, r_im, t_im),
-        (+1, h_im, r_re, t_im),
-        (-1, h_im, r_im, t_re),
-    ]
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
+        ]
     ))
 
 
@@ -131,8 +131,7 @@ def conve_interaction(
     hr2d: nn.Module,
     hr1d: nn.Module,
 ) -> torch.FloatTensor:
-    """
-    Evaluate the ConvE interaction function.
+    """Evaluate the ConvE interaction function.
 
     :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
@@ -198,8 +197,7 @@ def convkb_interaction(
     hidden_dropout: nn.Dropout,
     linear: nn.Linear,
 ) -> torch.FloatTensor:
-    r"""
-    Evaluate the ConvKB interaction function.
+    r"""Evaluate the ConvKB interaction function.
 
     .. math::
         W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L

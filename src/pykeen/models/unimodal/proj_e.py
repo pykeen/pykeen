@@ -56,13 +56,26 @@ class ProjE(ERModel):
     def __init__(
         self,
         triples_factory: TriplesFactory,
+        # ProjE parameters
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
+        # Loss
+        loss: Optional[Loss] = None,
+        # Model parameters
+        preferred_device: DeviceHint = None,
+        automatic_memory_optimization: Optional[bool] = None,
+        random_seed: Optional[int] = None,
     ) -> None:
+        """Initialize :class:`ERModel` using :class:`ProjEInteraction`.
+
+        :param triples_factory:
+        :param embedding_dim:
+        :param inner_non_linearity:
+        :param loss:
+        :param automatic_memory_optimization:
+        :param preferred_device:
+        :param random_seed:
+        """
         super().__init__(
             triples_factory=triples_factory,
             interaction=ProjEInteraction(

@@ -506,7 +506,7 @@ def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
 
 
 def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """"Compute elementwise product of tensors in broadcastable shape."""
+    """Compute elementwise product of tensors in broadcastable shape."""
     # TODO: Optimize order
     return functools.reduce(operator.mul, x[1:], x[0])
 

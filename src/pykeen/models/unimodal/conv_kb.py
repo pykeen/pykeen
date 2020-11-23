@@ -92,7 +92,7 @@ class ConvKB(ERModel):
                 num_filters=num_filters,
             ),
             entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim
+                embedding_dim=embedding_dim,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
