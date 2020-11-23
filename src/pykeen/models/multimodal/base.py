@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from ...typing import Representation  # noqa
 
 
-class LiteralModel(ERModel, autoreset=False):
+class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
     """Base class for models with entity literals."""
 
     def __init__(
