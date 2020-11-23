@@ -1260,13 +1260,13 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
     ]:
         h, r, t = [
             [
-                representation.get_in_canonical_shape(indices=indices)
+                representation.get_in_canonical_shape(dim=dim, indices=indices)
                 for representation in representations
             ]
-            for indices, representations in (
-                (h_indices, self.entity_representations),
-                (r_indices, self.relation_representations),
-                (t_indices, self.entity_representations),
+            for dim, indices, representations in (
+                ("h", h_indices, self.entity_representations),
+                ("r", r_indices, self.relation_representations),
+                ("t", t_indices, self.entity_representations),
             )
         ]
         # normalization
