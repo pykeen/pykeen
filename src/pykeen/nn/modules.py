@@ -1115,7 +1115,7 @@ class SimplEInteraction(
         super().__init__()
         if isinstance(clamp_score, float):
             clamp_score = (-clamp_score, clamp_score)
-        self.clamp = clamp_score
+        self.clamp_score = clamp_score
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(clamp=self.clamp_score)
