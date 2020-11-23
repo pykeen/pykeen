@@ -32,6 +32,7 @@ __all__ = [
     'ProjEInteraction',
     'RESCALInteraction',
     'RotatEInteraction',
+    'SimplEInteraction',
     'StructuredEmbeddingInteraction',
     'TransDInteraction',
     'TransEInteraction',
@@ -1097,3 +1098,32 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, w_r=r[0], d_r=r[1], t=t)
+
+
+class SimplEInteraction(
+    Interaction[
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor]
+    ]
+):
+    """Interaction function of SimplE."""
+
+    func = pkf.simple_interaction
+
+    def __init__(self, clamp_score: Optional[Union[float, Tuple[float, float]]] = None, ):
+        super().__init__()
+        if isinstance(clamp_score, float):
+            clamp_score = (-clamp_score, clamp_score)
+        self.clamp = clamp_score
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(clamp=self.clamp_score)
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])

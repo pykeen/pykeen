@@ -625,7 +625,6 @@ def simple_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # TODO: unused
     scores = 0.5 * (distmult_interaction(h=h, r=r, t=t) + distmult_interaction(h=h_inv, r=r_inv, t=t_inv))
     # Note: In the code in their repository, the score is clamped to [-20, 20].
     #       That is not mentioned in the paper, so it is made optional here.

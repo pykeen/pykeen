@@ -4,12 +4,12 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Tuple, Union
 
-import torch.autograd
+import torch
 
-from ..base import TwoSideEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss, SoftplusLoss
 from ...nn import EmbeddingSpecification
-from ...nn.modules import DistMultInteraction
+from ...nn.modules import SimplEInteraction
 from ...regularizers import PowerSumRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class SimplE(TwoSideEmbeddingModel):
+class SimplE(ERModel):
     r"""An implementation of SimplE [kazemi2018]_.
 
     SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
@@ -76,28 +76,32 @@ class SimplE(TwoSideEmbeddingModel):
         regularizer = self._instantiate_default_regularizer()
         super().__init__(
             triples_factory=triples_factory,
-            interaction=DistMultInteraction(),
-            embedding_dim=embedding_dim,
+            interaction=SimplEInteraction(clamp_score=clamp_score),
+            entity_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    regularizer=regularizer,
+                ),
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    regularizer=regularizer,
+                )
+            ],
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    regularizer=regularizer,
+                ),
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    regularizer=regularizer,
+                ),
+            ],
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                regularizer=regularizer,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                regularizer=regularizer,
-            ),
-            second_embedding_specification=EmbeddingSpecification(
-                regularizer=regularizer,
-            ),
-            second_relation_embedding_specification=EmbeddingSpecification(
-                regularizer=regularizer,
-            ),
         )
-        if isinstance(clamp_score, float):
-            clamp_score = (-clamp_score, clamp_score)
-        self.clamp = clamp_score
 
     def forward(
         self,
@@ -107,18 +111,16 @@ class SimplE(TwoSideEmbeddingModel):
         slice_size: Optional[int] = None,
         slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        scores = super().forward(
-            h_indices=h_indices,
-            r_indices=r_indices,
-            t_indices=t_indices,
-            slice_size=slice_size,
-            slice_dim=slice_dim,
-        )
-
-        # Note: In the code in their repository, the score is clamped to [-20, 20].
-        #       That is not mentioned in the paper, so it is omitted here.
-        if self.clamp is not None:
-            min_, max_ = self.clamp
-            scores = scores.clamp(min=min_, max=max_)
-
-        return scores
+        h, r, t = zip(*(
+            (
+                h_source.get_in_canonical_shape(dim="h", indices=h_indices),
+                r_source.get_in_canonical_shape(dim="r", indices=r_indices),
+                t_source.get_in_canonical_shape(dim="t", indices=t_indices),
+            )
+            for h_source, r_source, t_source in (
+                (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
+                (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
+            )
+        ))
+        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
+        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
