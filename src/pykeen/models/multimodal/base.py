@@ -1,14 +1,17 @@
+# -*- coding: utf-8 -*-
+
 """Base classes for multi-modal models."""
+
 from typing import Optional, TYPE_CHECKING
 
 import torch
 from torch import nn
 
-from pykeen.losses import Loss
-from pykeen.models.base import ERModel
-from pykeen.nn import Embedding, EmbeddingSpecification, Interaction, LiteralRepresentations
-from pykeen.triples import TriplesNumericLiteralsFactory
-from pykeen.typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..base import ERModel
+from ...losses import Loss
+from ...nn import Embedding, EmbeddingSpecification, Interaction, LiteralRepresentations
+from ...triples import TriplesNumericLiteralsFactory
+from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
     "LiteralModel",
