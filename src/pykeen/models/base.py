@@ -1277,6 +1277,8 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
 class SingleVectorEmbeddingModel(ERModel, autoreset=False):
     """A KGEM that stores one :class:`pykeen.nn.Embedding` for each entities and relations."""
 
+    # TODO: Get rid of it
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -1322,12 +1324,10 @@ class SingleVectorEmbeddingModel(ERModel, autoreset=False):
             interaction=interaction,
             entity_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_entities,
-                shape=embedding_dim,
                 specification=embedding_specification,
             ),
             relation_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_relations,
-                shape=relation_dim,
                 specification=relation_embedding_specification,
             ),
         )
@@ -1349,6 +1349,8 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
         - :class:`pykeen.models.StructuredEmbedding`
         - :class:`pykeen.models.TransH`
     """
+
+    # TODO: Get rid of it
 
     def __init__(
         self,
@@ -1385,19 +1387,16 @@ class DoubleRelationEmbeddingModel(ERModel, autoreset=False):
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    shape=embedding_dim,
                     specification=embedding_specification,
                 ),
             ],
             relation_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    shape=relation_dim,
                     specification=relation_embedding_specification,
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    shape=second_relation_dim,
                     specification=second_relation_embedding_specification,
                 ),
             ],
@@ -1412,6 +1411,8 @@ class TwoVectorEmbeddingModel(ERModel, autoreset=False):
         - :class:`pykeen.models.KG2E`
         - :class:`pykeen.models.TransD`
     """
+
+    # TODO: Get rid of it
 
     def __init__(
         self,
@@ -1445,24 +1446,20 @@ class TwoVectorEmbeddingModel(ERModel, autoreset=False):
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
                     specification=embedding_specification,
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
                     specification=second_embedding_specification,
                 ),
             ],
             relation_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    embedding_dim=relation_dim,
                     specification=relation_embedding_specification,
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    embedding_dim=relation_dim,
                     specification=second_relation_embedding_specification,
                 ),
             ],
@@ -1494,6 +1491,7 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
         second_embedding_specification: Optional[EmbeddingSpecification] = None,
         second_relation_embedding_specification: Optional[EmbeddingSpecification] = None,
     ):
+        # TODO: Get rid of it
         if relation_dim is None:
             relation_dim = embedding_dim
         super().__init__(
@@ -1506,24 +1504,20 @@ class TwoSideEmbeddingModel(ERModel, autoreset=False):
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
                     specification=embedding_specification,
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
                     specification=second_embedding_specification,
                 ),
             ],
             relation_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    embedding_dim=relation_dim,
                     specification=relation_embedding_specification,
                 ),
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_relations,
-                    embedding_dim=relation_dim,
                     specification=second_relation_embedding_specification,
                 ),
             ],

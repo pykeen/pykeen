@@ -47,7 +47,6 @@ class LiteralModel(ERModel, autoreset=False):
                 # entity embeddings
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
                     specification=entity_specification,
                 ),
                 # Entity literals
@@ -57,7 +56,6 @@ class LiteralModel(ERModel, autoreset=False):
             ],
             relation_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_relations,
-                embedding_dim=embedding_dim,
                 specification=relation_specification,
             ),
         )

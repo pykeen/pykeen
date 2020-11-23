@@ -141,7 +141,6 @@ class ConvE(ERModel):
             entity_representations=[
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=embedding_dim,
                     specification=EmbeddingSpecification(
                         initializer=xavier_normal_,
                     ),
@@ -149,7 +148,6 @@ class ConvE(ERModel):
                 # ConvE uses one bias for each entity
                 Embedding.from_specification(
                     num_embeddings=triples_factory.num_entities,
-                    embedding_dim=1,
                     specification=EmbeddingSpecification(
                         initializer=nn.init.zeros_,
                     ),
@@ -157,7 +155,6 @@ class ConvE(ERModel):
             ],
             relation_representations=Embedding.from_specification(
                 num_embeddings=triples_factory.num_relations,
-                embedding_dim=embedding_dim,
                 specification=EmbeddingSpecification(
                     initializer=xavier_normal_,
                 ),
@@ -185,8 +182,8 @@ class ConvE(ERModel):
         slice_size: Optional[int] = None,
         slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_representations[0].get_in_canonical_shape(indices=h_indices)
-        r = self.relation_representations[0].get_in_canonical_shape(indices=r_indices)
-        t = self.entity_representations[0].get_in_canonical_shape(indices=t_indices)
-        t_bias = self.entity_representations[1].get_in_canonical_shape(indices=t_indices)
+        h = self.entity_representations[0].get_in_canonical_shape(dim="h", indices=h_indices)
+        r = self.relation_representations[0].get_in_canonical_shape(dim="r", indices=r_indices)
+        t = self.entity_representations[0].get_in_canonical_shape(dim="t", indices=t_indices)
+        t_bias = self.entity_representations[1].get_in_canonical_shape(dim="t", indices=t_indices)
         return self.interaction.score(h=h, r=r, t=(t, t_bias), slice_size=slice_size, slice_dim=slice_dim)

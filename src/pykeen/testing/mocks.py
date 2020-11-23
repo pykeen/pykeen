@@ -63,16 +63,4 @@ class MockRepresentations(RepresentationModule):
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
         n = self.max_id if indices is None else indices.shape[0]
-        return self.x.unsqueeze(dim=0).repeat(n, 1).view(-1, *self.shape)
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-        reshape_dim: Optional[Sequence[int]] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        x = self(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        else:
-            x = x.unsqueeze(dim=1)
-        return x
+        return self.x.unsqueeze(dim=0).repeat(n, 1)

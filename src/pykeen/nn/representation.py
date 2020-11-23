@@ -25,6 +25,18 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+HEAD_DIM = 1
+RELATION_DIM = 2
+TAIL_DIM = 3
+DIMS = dict(h=HEAD_DIM, r=RELATION_DIM, t=TAIL_DIM)
+
+
+def _normalize_dim(dim: Union[int, str]) -> int:
+    """Normalize the dimension selection."""
+    if isinstance(dim, int):
+        return dim
+    return DIMS[dim.lower()[0]]
+
 
 class RepresentationModule(nn.Module, ABC):
     """A base class for obtaining representations for entities/relations."""
@@ -54,30 +66,47 @@ class RepresentationModule(nn.Module, ABC):
 
     def get_in_canonical_shape(
         self,
+        dim: Union[int, str],
         indices: Optional[torch.LongTensor] = None,
-        reshape_dim: Optional[Sequence[int]] = None,
     ) -> torch.FloatTensor:
         """Get representations in canonical shape.
+
+        The canonical shape is given as
+
+        (batch_size, d_1, d_2, d_3, ``*``)
+
+        fulfilling the following properties:
+
+        Let i = dim. If indices is None, the return shape is (1, d_1, d_2, d_3) with d_i = num_representations,
+        d_i = 1 else. If indices is not None, then batch_size = indices.shape[0], and d_i = 1 if
+        indices.ndimension() = 1 else d_i = indices.shape[1]
 
         The canonical shape is given by (batch_size, 1, ``*``) if indices is not None, where batch_size=len(indices),
         or (1, num, ``*``) if indices is None with num equal to the total number of embeddings.
 
 
+        :param dim:
+            The dimension along which to expand for indices = None, or indices.ndimension() == 2.
         :param indices:
-            The indices. If None, return all embeddings.
-        :param reshape_dim:
-            Optionally reshape the last dimension.
+            The indices. Either None, in which care all embeddings are returned, or a 1 or 2 dimensional index tensor.
 
-        :return: shape: (batch_size, num_embeddings, ``*``)
+        :return: shape: (batch_size, d1, d2, d3, *self.shape)
         """
-        x = self(indices=indices)
+        dim = _normalize_dim(dim=dim)
         if indices is None:
-            x = x.unsqueeze(dim=0)
+            x = self(indices=indices)
+            r_shape = (1, self.max_id)
         else:
-            x = x.unsqueeze(dim=1)
-        if reshape_dim is not None:
-            x = x.view(*x.shape[:-1], *reshape_dim)
-        return x
+            flat_indices = indices.view(-1)
+            x = self(indices=flat_indices)
+            if indices.ndimension() > 1:
+                x = x.view(*indices.shape, -1)
+            r_shape = tuple(indices.shape)
+            if len(r_shape) < 2:
+                r_shape = r_shape + (1,)
+        shape = [r_shape[0], 1, 1, 1]
+        shape[dim] = r_shape[1]
+        return x.view(*shape, *self.shape)
 
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
@@ -90,8 +119,7 @@ class RepresentationModule(nn.Module, ABC):
 class EmbeddingSpecification:
     """An embedding specification."""
 
-    # embedding_dim: int
-    # shape: Optional[Sequence[int]] = None
+    shape: Optional[Sequence[int]] = None
 
     initializer: Optional[Initializer] = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
@@ -107,14 +135,10 @@ class EmbeddingSpecification:
     def make(
         self,
         num_embeddings: int,
-        embedding_dim: Optional[int],
-        shape: Optional[Union[int, Sequence[int]]],
     ) -> 'Embedding':
         """Create an embedding with this specification."""
         return Embedding(
             num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            shape=shape,
             initializer=self.initializer,
             initializer_kwargs=self.initializer_kwargs,
             normalizer=self.normalizer,
@@ -178,16 +202,13 @@ class Embedding(RepresentationModule):
             If neither shape nor embedding_dim are given.
         """
         if shape is None and embedding_dim is None:
-            raise ValueError('Missing both shape and embedding_dim')
-        elif shape is not None:
-            if isinstance(shape, int):
-                shape = (shape,)
-            else:
-                shape = shape
+            raise ValueError('Missing both, shape and embedding_dim')
+        elif shape is None:
+            shape = (embedding_dim,)
+        elif embedding_dim is None:
             embedding_dim = numpy.prod(shape)
         else:
-            assert embedding_dim is not None
-            shape = (embedding_dim,)
+            raise ValueError('Provided both, shape and embedding_dim')
         super().__init__(shape=shape, max_id=num_embeddings)
 
         if initializer is None:
@@ -217,18 +238,12 @@ class Embedding(RepresentationModule):
     def from_specification(
         cls,
         num_embeddings: int,
-        embedding_dim: Optional[int] = None,
-        shape: Optional[Union[int, Sequence[int]]] = None,
         specification: Optional[EmbeddingSpecification] = None,
     ) -> 'Embedding':
         """Create an embedding based on a specification.
 
         :param num_embeddings: >0
             The number of embeddings.
-        :param embedding_dim: >0
-            The embedding dimension.
-        :param shape:
-            The embedding shape. If given, shape supersedes embedding_dim, with setting embedding_dim = prod(shape).
         :param specification:
             The specification.
         :return:
@@ -238,8 +253,6 @@ class Embedding(RepresentationModule):
             specification = EmbeddingSpecification()
         return specification.make(
             num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            shape=shape,
         )
 
     @property
@@ -276,27 +289,6 @@ class Embedding(RepresentationModule):
         if self.regularizer is not None:
             self.regularizer.update(x)
         return x
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-        reshape_dim: Optional[Sequence[int]] = None,
-    ) -> torch.FloatTensor:
-        """Get embedding in canonical shape.
-
-        :param indices:
-            The indices. If None, return all embeddings.
-        :param reshape_dim:
-            Optionally reshape the last dimension.
-
-        :return: shape: (batch_size, num_embeddings, d)
-        """
-        if len(self.shape) > 1 and reshape_dim is None:
-            reshape_dim = self.shape
-        return super().get_in_canonical_shape(
-            indices=indices,
-            reshape_dim=reshape_dim,
-        )
 
 
 class LiteralRepresentations(Embedding):
