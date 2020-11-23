@@ -155,12 +155,6 @@ def conve_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # bind sizes
-    num_heads = h.shape[1]
-    num_relations = r.shape[2]
-    # num_tails = t.shape[3]  # FIXME unused!
-    embedding_dim = h.shape[-1]
-
     # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
     # with batch_size' = batch_size * num_heads * num_relations
     x = broadcast_cat(
@@ -177,7 +171,7 @@ def conve_interaction(
     x = hr1d(x)
 
     # reshape: (batch_size', embedding_dim) -> (b, h, r, 1, d)
-    x = x.view(x.shape[0], num_heads, num_relations, 1, embedding_dim)
+    x = x.view(x.shape[0], h.shape[1], r.shape[2], 1, h.shape[-1])
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: (batch_size, num_heads, num_relations, num_tails)
