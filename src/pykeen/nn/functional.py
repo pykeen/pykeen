@@ -379,11 +379,11 @@ def hole_interaction(
     # inverse real FFT, shape: (b, h, 1, t, d)
     composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
 
-    # transpose r, (b, 1, r, 1, d) -> (b, 1, 1, d, r)
-    r = r.permute(0, 1, 3, 4, 2)
+    # transpose composite: (b, h, 1, d, t)
+    composite = composite.transpose(-2, -1)
 
     # inner product with relation embedding
-    return (composite @ r).squeeze(dim=-1)
+    return (r @ composite).squeeze(dim=-2)
 
 
 def kg2e_interaction(
