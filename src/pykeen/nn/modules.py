@@ -180,7 +180,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :param slice_dim: ...
         :return: shape: (b, h, r, t)
         """
-        kwargs = dict()
+        args = []
         for key, x in zip("hrt", (h, r, t)):
             value = []
             for xx in upgrade_to_sequence(x):
@@ -198,8 +198,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             # unpack singleton
             if len(value) == 1:
                 value = value[0]
-            kwargs[key] = value
-        return self._forward_slicing_wrapper(**kwargs, slice_dim=slice_dim, slice_size=slice_size)
+            args.append(value)
+        h, r, t = args
+        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
 
     def _forward_slicing_wrapper(
         self,
