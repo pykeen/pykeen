@@ -832,6 +832,8 @@ def pipeline(  # noqa: C901
             pipeline_checkpoint_helper_dict = torch.load(pipeline_checkpoint_helper_file)
             random_seed = pipeline_checkpoint_helper_dict['random_seed']
             logger.info(f'Loaded random seed {random_seed} from checkpoint.')
+            # We have to set clear optimizer to False since training should be continued
+            clear_optimizer = False
         else:
             logger.info(f"=> no pipeline checkpoint helper file found at '{checkpoint_file}'. Creating a new file.")
             if random_seed is None:

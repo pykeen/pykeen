@@ -3,7 +3,6 @@
 """Test that training loops work correctly."""
 
 import unittest
-from datetime import datetime
 from typing import Optional
 
 import torch
@@ -88,7 +87,7 @@ class TrainingLoopTests(unittest.TestCase):
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
         self.random_seed = 123
-        self.checkpoint_file = f"{datetime.utcnow().isoformat().replace('.', '_')}.pt"
+        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
         self.num_epochs = 10
 
     def test_sub_batching(self):
@@ -127,7 +126,7 @@ class TrainingLoopTests(unittest.TestCase):
             NaNTrainingLoop(model=model, patience=2)
 
     # Add docu
-    def test_checkpoints(self):
+    def test_lcwa_checkpoints(self):
         """Test whether interrupting the training loop and resuming it using checkpoints yields the same results as
         running the training loop in one shot with equal settings."""
         # Train a model in one shot
@@ -146,7 +145,7 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             automatic_memory_optimization=False,
-            random_seed=self.random_seed
+            random_seed=self.random_seed,
         )
         optimizer = get_optimizer_cls(None)
         optimizer = optimizer(
@@ -156,11 +155,15 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=int(self.num_epochs//2),
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
-            checkpoint_frequency=0
+            checkpoint_frequency=0,
         )
 
         # Continue training of the first part
-        model = TransE(triples_factory=self.triples_factory, automatic_memory_optimization=False, random_seed=123)
+        model = TransE(
+            triples_factory=self.triples_factory,
+            automatic_memory_optimization=False,
+            random_seed=self.random_seed,
+        )
         optimizer = get_optimizer_cls(None)
         optimizer = optimizer(
             params=model.get_grad_params())
@@ -170,6 +173,57 @@ class TrainingLoopTests(unittest.TestCase):
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
             checkpoint_frequency=0
+        )
+
+        self.assertEqual(losses, losses_2)
+
+    def test_slcwa_checkpoints(self):
+        """Test whether interrupting the training loop and resuming it using checkpoints yields the same results as
+        running the training loop in one shot with equal settings."""
+        # Train a model in one shot
+        model = TransE(
+            triples_factory=self.triples_factory,
+            automatic_memory_optimization=False,
+            random_seed=self.random_seed,
+        )
+        optimizer = get_optimizer_cls(None)
+        optimizer = optimizer(
+            params=model.get_grad_params())
+        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+        losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
+
+        # Train a model for the first half
+        model = TransE(
+            triples_factory=self.triples_factory,
+            automatic_memory_optimization=False,
+            random_seed=self.random_seed
+        )
+        optimizer = get_optimizer_cls(None)
+        optimizer = optimizer(
+            params=model.get_grad_params())
+        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop.train(
+            num_epochs=int(self.num_epochs//2),
+            batch_size=self.batch_size,
+            checkpoint_file=self.checkpoint_file,
+            checkpoint_frequency=0,
+        )
+
+        # Continue training of the first part
+        model = TransE(
+            triples_factory=self.triples_factory,
+            automatic_memory_optimization=False,
+            random_seed=123
+        )
+        optimizer = get_optimizer_cls(None)
+        optimizer = optimizer(
+            params=model.get_grad_params())
+        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+        losses_2 = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            checkpoint_file=self.checkpoint_file,
+            checkpoint_frequency=0,
         )
 
         self.assertEqual(losses, losses_2)

@@ -107,6 +107,73 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
 
 
+class TestPipelineCheckpoints(unittest.TestCase):
+    """Test the pipeline with checkpoints."""
+
+    def setUp(self) -> None:
+        """Set up a shared result as standard to compare to."""
+        self.random_seed = 123
+        self.model = 'TransE'
+        self.dataset = 'nations'
+        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
+
+    def test_pipeline_lcwa_resumption(self):
+        """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
+        resultStandard = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop='LCWA',
+            training_kwargs=dict(num_epochs=10),
+            random_seed=self.random_seed,
+        )
+
+        # Set up a shared result that runs two pipelines that should replicate the results of the standard pipeline.
+        _ = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop='LCWA',
+            training_kwargs=dict(num_epochs=5, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
+            random_seed=self.random_seed,
+        )
+
+        # Resume the previous pipeline
+        resultSplit = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop='LCWA',
+            training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
+        )
+        self.assertEqual(resultStandard.losses, resultSplit.losses)
+
+    def test_pipeline_slcwa_resumption(self):
+        """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
+        resultStandard = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop='sLCWA',
+            training_kwargs=dict(num_epochs=10),
+            random_seed=self.random_seed,
+        )
+
+        # Set up a shared result that runs two pipelines that should replicate the results of the standard pipeline.
+        _ = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop='sLCWA',
+            training_kwargs=dict(num_epochs=5, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
+            random_seed=self.random_seed,
+        )
+
+        # Resume the previous pipeline
+        resultSplit = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop='sLCWA',
+            training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
+        )
+        self.assertEqual(resultStandard.losses, resultSplit.losses)
+
+
 class TestAttributes(unittest.TestCase):
     """Test that the keywords given to the pipeline make it through."""
 

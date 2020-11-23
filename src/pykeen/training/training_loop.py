@@ -319,7 +319,12 @@ class TrainingLoop(ABC):
                 batch_size = 256
 
         # This will find necessary parameters to optimize the use of the hardware at hand
-        if not only_size_probing and self.model.automatic_memory_optimization and not batch_size_sufficient:
+        if (
+                not only_size_probing
+                and self.model.automatic_memory_optimization
+                and not batch_size_sufficient
+                and not continue_training
+        ):
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
 
@@ -773,6 +778,7 @@ class TrainingLoop(ABC):
                 'random_state': random.getstate(),
                 'np_random_state': np.random.get_state(),
                 'torch_random_state': torch.random.get_rng_state(),
+                'torch_cuda_random_state': torch.cuda.get_rng_state(),
             },
             path,
         )
@@ -804,5 +810,6 @@ class TrainingLoop(ABC):
         random.setstate(checkpoint['random_state'])
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
+        torch.cuda.set_rng_state(checkpoint['torch_cuda_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         return checkpoint['stopper_dict']
