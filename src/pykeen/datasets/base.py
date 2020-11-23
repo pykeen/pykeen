@@ -33,6 +33,7 @@ __all__ = [
     'TarFileRemoteDataSet',
     'ZipFileRemoteDataSet',
     'PackedZipRemoteDataSet',
+    'TarFileSingleDataset',
     'SingleTabbedDataset',
 ]
 
@@ -73,14 +74,17 @@ class DataSet:
 
     def summary_str(self, end='\n') -> str:
         """Make a summary string of all of the factories."""
-        t = tabulate(
-            [
-                (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
-                for label, triples_factory in
-                zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
-            ],
-            headers=['Name', 'Entities', 'Relations', 'Triples'],
+        rows = [
+            (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
+            for label, triples_factory in
+            zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
+        ]
+        n_triples = sum(
+            triples_factory.num_triples
+            for triples_factory in (self.training, self.testing, self.validation)
         )
+        rows.append(('Total', '-', '-', n_triples))
+        t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
         return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
     def summarize(self) -> None:
@@ -131,6 +135,8 @@ class LazyDataSet(DataSet):
     _testing: Optional[TriplesFactory] = None
     #: The actual instance of the validation factory, which is exposed to the user through `validation`
     _validation: Optional[TriplesFactory] = None
+    #: The directory in which the cached data is stored
+    cache_root: pathlib.Path
 
     @property
     def training(self) -> TriplesFactory:  # noqa: D401
@@ -168,6 +174,21 @@ class LazyDataSet(DataSet):
 
     def _load_validation(self) -> None:
         raise NotImplementedError
+
+    def _help_cache(self, cache_root: Optional[str]) -> pathlib.Path:
+        """Get the appropriate cache root directory.
+
+        :param cache_root: If none is passed, defaults to a subfolder of the
+            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
+            The subfolder is named based on the class inheriting from
+            :class:`pykeen.datasets.base.DataSet`.
+        """
+        if cache_root is None:
+            cache_root = PYKEEN_HOME
+        cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
+        cache_root.mkdir(parents=True, exist_ok=True)
+        logger.debug('using cache root at %s', cache_root)
+        return cache_root
 
 
 class PathDataSet(LazyDataSet):
@@ -230,7 +251,9 @@ def _name_from_url(url: str) -> str:
     """Get the filename form the end of the URL."""
     parse_result = urlparse(url)
     path = pathlib.PurePosixPath(parse_result.path)
-    return path.name
+    name = path.name
+    logger.debug('parsed name from URL: %s', name)
+    return name
 
 
 def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
@@ -241,12 +264,14 @@ def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: boo
     :param clean_on_failure: If true, will delete the file on any exception raised during download
     """
     if not stream:
+        logger.info('downloading from %s to %s', url, path)
         urlretrieve(url, path)  # noqa:S310
     else:
         # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
         # pattern from https://stackoverflow.com/a/39217788/5775947
         try:
             with requests.get(url, stream=True) as response, open(path, 'wb') as file:
+                logger.info('downloading (streaming) from %s to %s', url, path)
                 shutil.copyfileobj(response.raw, file)
         except (Exception, KeyboardInterrupt):
             if clean_on_failure:
@@ -281,10 +306,7 @@ class UnpackedRemoteDataSet(PathDataSet):
         :param stream:
         :param force:
         """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(self.cache_root, exist_ok=True)
+        self.cache_root = self._help_cache(cache_root)
 
         self.training_url = training_url
         self.testing_url = testing_url
@@ -335,10 +357,7 @@ class RemoteDataSet(PathDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = PYKEEN_HOME
-        self.cache_root = os.path.join(cache_root, self.__class__.__name__.lower())
-        os.makedirs(self.cache_root, exist_ok=True)
+        self.cache_root = self._help_cache(cache_root)
 
         self.url = url
         self._relative_training_path = relative_training_path
@@ -367,6 +386,12 @@ class RemoteDataSet(PathDataSet):
         """Extract from the downloaded file."""
         raise NotImplementedError
 
+    def _get_bytes(self) -> BytesIO:
+        logger.info(f'Requesting dataset from {self.url}')
+        res = requests.get(url=self.url)
+        res.raise_for_status()
+        return BytesIO(res.content)
+
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(
             os.path.exists(path) and os.path.isfile(path)
@@ -374,11 +399,7 @@ class RemoteDataSet(PathDataSet):
         )
 
         if not all_unpacked:
-            logger.info(f'Requesting dataset from {self.url}')
-
-            r = requests.get(url=self.url)
-            assert r.status_code == requests.codes.ok
-            archive_file = BytesIO(r.content)
+            archive_file = self._get_bytes()
             self._extract(archive_file=archive_file)
             logger.info(f'Extracted to {self.cache_root}.')
 
@@ -434,17 +455,9 @@ class PackedZipRemoteDataSet(LazyDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(self.cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
-        if name is None:
-            parse_result = urlparse(url)
-            name = os.path.basename(parse_result.path)
-            logger.info('parsed name from URL: %s', name)
-        self.name = name
+        self.name = name or _name_from_url(url)
         self.path = os.path.join(self.cache_root, self.name)
         logger.debug('file path at %s', self.path)
 
@@ -489,6 +502,86 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 return rv
 
 
+class TarFileSingleDataset(LazyDataSet):
+    """Loads a dataset that's a single file inside a tar.gz archive."""
+
+    ratios = (0.8, 0.1, 0.1)
+    _triples_factory: Optional[TriplesFactory]
+
+    def __init__(
+        self,
+        url: str,
+        relative_path: str,
+        name: Optional[str] = None,
+        cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        delimiter: Optional[str] = None,
+        random_state: Union[None, int, np.random.RandomState] = None,
+        randomize_cleanup: bool = False,
+    ):
+        """Initialize dataset.
+
+        :param url:
+            The url where to download the dataset from
+        :param name:
+            The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param relative_path:
+            The path inside the archive to the contained dataset.
+        :param random_state:
+            An optional random state to make the training/testing/validation split reproducible.
+        :param delimiter:
+            The delimiter for the contained dataset.
+        """
+        self.cache_root = self._help_cache(cache_root)
+
+        self.name = name or _name_from_url(url)
+        self.random_state = random_state
+        self.delimiter = delimiter or '\t'
+        self.randomize_cleanup = randomize_cleanup
+        self.url = url
+        self.create_inverse_triples = create_inverse_triples
+        self._relative_path = relative_path
+
+        if eager:
+            self._load()
+
+    def _get_path(self) -> str:
+        return os.path.join(self.cache_root, self.name)
+
+    def _load(self) -> None:
+        if not os.path.exists(self._get_path()):
+            _urlretrieve(self.url, self._get_path())  # noqa:S310
+
+        _actual_path = os.path.join(self.cache_root, self._relative_path)
+        if not os.path.exists(_actual_path):
+            logger.error(
+                '[%s] untaring from %s (%s) to %s',
+                self.__class__.__name__,
+                self._get_path(),
+                self._relative_path,
+                _actual_path,
+            )
+            with tarfile.open(self._get_path()) as tf:
+                tf.extract(self._relative_path, self.cache_root)
+
+        df = pd.read_csv(_actual_path, sep=self.delimiter)
+        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf.path = self._get_path()
+        self._training, self._testing, self._validation = tf.split(
+            ratios=self.ratios,
+            random_state=self.random_state,
+            randomize_cleanup=self.randomize_cleanup,
+        )
+        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf.path)
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
 class SingleTabbedDataset(LazyDataSet):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
@@ -497,11 +590,12 @@ class SingleTabbedDataset(LazyDataSet):
 
     def __init__(
         self,
-        url: Optional[str] = None,
+        url: str,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
+        delimiter: Optional[str] = None,
         random_state: Union[None, int, np.random.RandomState] = None,
     ):
         """Initialize dataset.
@@ -516,26 +610,17 @@ class SingleTabbedDataset(LazyDataSet):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        if cache_root is None:
-            cache_root = os.path.join(PYKEEN_HOME, self.__class__.__name__.lower())
-        self.cache_root = cache_root
-        os.makedirs(self.cache_root, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        self.cache_root = self._help_cache(cache_root)
 
-        if name is None:
-            parse_result = urlparse(url)
-            name = os.path.basename(parse_result.path)
-            logger.info('parsed name from URL: %s', name)
-        self.name = name
-        self.path = os.path.join(self.cache_root, self.name)
-        logger.debug('file path at %s', self.path)
+        self.name = name or _name_from_url(url)
 
         self._triples_factory = None
         self.random_state = random_state
+        self.delimiter = delimiter or '\t'
 
         self.url = url
-        if not os.path.exists(self.path) and not self.url:
-            raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
+        if not os.path.exists(self._get_path()) and not self.url:
+            raise ValueError(f'must specify url to download from since path does not exist: {self._get_path()}')
 
         self.create_inverse_triples = create_inverse_triples
         self._training = None
@@ -545,13 +630,16 @@ class SingleTabbedDataset(LazyDataSet):
         if eager:
             self._load()
 
+    def _get_path(self) -> str:
+        return os.path.join(self.cache_root, self.name)
+
     def _load(self) -> None:
-        if not os.path.exists(self.path):
-            logger.info('downloading data from %s to %s', self.url, self.path)
-            _urlretrieve(self.url, self.path)  # noqa:S310
-        df = pd.read_csv(self.path, sep='\t')
+        if not os.path.exists(self._get_path()):
+            logger.info('downloading data from %s to %s', self.url, self._get_path())
+            _urlretrieve(self.url, self._get_path())  # noqa:S310
+        df = pd.read_csv(self._get_path(), sep=self.delimiter)
         tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self.path
+        tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
             random_state=self.random_state,

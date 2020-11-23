@@ -22,6 +22,7 @@ from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
 from .nations import Nations
+from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
 from .umls import UMLS
 from .wordnet import WN18, WN18RR
@@ -40,6 +41,8 @@ __all__ = [
     'CoDExSmall',
     'CoDExMedium',
     'CoDExLarge',
+    'OGBBioKG',
+    'OGBWikiKG',
     'UMLS',
     'FB15k',
     'FB15k237',
