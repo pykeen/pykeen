@@ -159,7 +159,7 @@ def conve_interaction(
     # bind sizes
     num_heads = h.shape[1]
     num_relations = r.shape[2]
-    num_tails = t.shape[3]
+    # num_tails = t.shape[3]  # FIXME unused!
     embedding_dim = h.shape[-1]
 
     # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
