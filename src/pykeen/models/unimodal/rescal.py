@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from ..base import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import RESCALInteraction
@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-class RESCAL(SingleVectorEmbeddingModel):
+class RESCAL(ERModel):
     r"""An implementation of RESCAL from [nickel2011]_.
 
     This model represents relations as matrices and models interactions between latent features.
@@ -71,16 +71,16 @@ class RESCAL(SingleVectorEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=RESCALInteraction(),
-            embedding_dim=embedding_dim,
-            relation_dim=(embedding_dim, embedding_dim),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                regularizer=regularizer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                shape=(embedding_dim, embedding_dim),
+                regularizer=regularizer,
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                regularizer=regularizer,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                regularizer=regularizer,
-            ),
         )

@@ -13,7 +13,7 @@ from torch.nn import functional
 from . import ComplEx, DistMult, ERMLP
 from ..base import ERModel
 from ...losses import Loss
-from ...nn import Embedding, Interaction, RepresentationModule
+from ...nn import Embedding, EmbeddingSpecification, Interaction, RepresentationModule
 from ...nn.modules import DistMultInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -499,10 +499,6 @@ class RGCN(ERModel):
             buffer_messages=buffer_messages,
             base_representations=None,
         )
-        relation_representations = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
-        )
         super().__init__(
             triples_factory=triples_factory,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -512,5 +508,7 @@ class RGCN(ERModel):
             random_seed=random_seed,
             interaction=interaction,
             entity_representations=entity_representations,
-            relation_representations=relation_representations,
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
         )

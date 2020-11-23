@@ -6,9 +6,9 @@ from typing import Optional
 
 from torch import nn
 
-from .. import ERModel
+from ..base import ERModel
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import EmbeddingSpecification
 from ...nn.modules import NTNInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -69,38 +69,28 @@ class NTN(ERModel):
         :param non_linearity: A non-linear activation function. Defaults to the hyperbolic
          tangent :class:`torch.nn.Tanh`.
         """
-        w = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            shape=(num_slices, embedding_dim, embedding_dim),
-        )
-        vh = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            shape=(num_slices, embedding_dim),
-        )
-        vt = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            shape=(num_slices, embedding_dim),
-        )
-        b = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices,
-        )
-        u = Embedding(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=num_slices,
-        )
         super().__init__(
             triples_factory=triples_factory,
+            interaction=NTNInteraction(
+                non_linearity=non_linearity,
+            ),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=[
+                # w: (k, d, d)
+                EmbeddingSpecification(shape=(num_slices, embedding_dim, embedding_dim)),
+                # vh: (k, d)
+                EmbeddingSpecification(shape=(num_slices, embedding_dim)),
+                # vt: (k, d)
+                EmbeddingSpecification(shape=(num_slices, embedding_dim)),
+                # b: (k,)
+                EmbeddingSpecification(shape=(num_slices,)),
+                # u: (k,)
+                EmbeddingSpecification(shape=(num_slices,)),
+            ],
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            interaction=NTNInteraction(
-                non_linearity=non_linearity,
-            ),
-            entity_representations=Embedding(
-                num_embeddings=triples_factory.num_entities,
-                embedding_dim=embedding_dim,
-            ),
-            relation_representations=(w, vh, vt, b, u),
         )

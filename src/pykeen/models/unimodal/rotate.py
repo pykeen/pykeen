@@ -4,7 +4,9 @@
 
 from typing import Optional
 
-from .. import SingleVectorEmbeddingModel
+import torch
+
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
@@ -18,7 +20,7 @@ __all__ = [
 ]
 
 
-class RotatE(SingleVectorEmbeddingModel):
+class RotatE(ERModel):
     r"""An implementation of RotatE from [sun2019]_.
 
     RotatE models relations as rotations from head to tail entities in complex space:
@@ -60,16 +62,19 @@ class RotatE(SingleVectorEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=RotatEInteraction(),
-            embedding_dim=2 * embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+                dtype=torch.complex64,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=init_phases,
+                constrainer=complex_normalize,
+                dtype=torch.complex64,
+            ),
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=init_phases,
-                constrainer=complex_normalize,
-            ),
         )

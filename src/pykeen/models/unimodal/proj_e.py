@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch import nn
 
-from .. import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class ProjE(SingleVectorEmbeddingModel):
+class ProjE(ERModel):
     r"""An implementation of ProjE from [shi2017]_.
 
     ProjE is a neural network-based approach with a *combination* and a *projection* layer. The interaction model
@@ -69,15 +69,16 @@ class ProjE(SingleVectorEmbeddingModel):
                 embedding_dim=embedding_dim,
                 inner_non_linearity=inner_non_linearity,
             ),
-            embedding_dim=embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-            ),
         )
