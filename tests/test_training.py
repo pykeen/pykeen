@@ -13,9 +13,10 @@ from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model
 from pykeen.optimizers import get_optimizer_cls
-from pykeen.training import SLCWATrainingLoop, LCWATrainingLoop
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
+
 
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
@@ -127,8 +128,7 @@ class TrainingLoopTests(unittest.TestCase):
 
     # Add docu
     def test_lcwa_checkpoints(self):
-        """Test whether interrupting the training loop and resuming it using checkpoints yields the same results as
-        running the training loop in one shot with equal settings."""
+        """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
         # Train a model in one shot
         model = TransE(
             triples_factory=self.triples_factory,
@@ -152,7 +152,7 @@ class TrainingLoopTests(unittest.TestCase):
             params=model.get_grad_params())
         training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
         training_loop.train(
-            num_epochs=int(self.num_epochs//2),
+            num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
             checkpoint_frequency=0,
@@ -172,14 +172,13 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
-            checkpoint_frequency=0
+            checkpoint_frequency=0,
         )
 
         self.assertEqual(losses, losses_2)
 
     def test_slcwa_checkpoints(self):
-        """Test whether interrupting the training loop and resuming it using checkpoints yields the same results as
-        running the training loop in one shot with equal settings."""
+        """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
         # Train a model in one shot
         model = TransE(
             triples_factory=self.triples_factory,
@@ -196,14 +195,14 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             automatic_memory_optimization=False,
-            random_seed=self.random_seed
+            random_seed=self.random_seed,
         )
         optimizer = get_optimizer_cls(None)
         optimizer = optimizer(
             params=model.get_grad_params())
         training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
         training_loop.train(
-            num_epochs=int(self.num_epochs//2),
+            num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
             checkpoint_frequency=0,
@@ -213,7 +212,7 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             automatic_memory_optimization=False,
-            random_seed=123
+            random_seed=123,
         )
         optimizer = get_optimizer_cls(None)
         optimizer = optimizer(

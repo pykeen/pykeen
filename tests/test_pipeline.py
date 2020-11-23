@@ -119,7 +119,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
 
     def test_pipeline_lcwa_resumption(self):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
-        resultStandard = pipeline(
+        result_standard = pipeline(
             model=self.model,
             dataset=self.dataset,
             training_loop='LCWA',
@@ -137,17 +137,17 @@ class TestPipelineCheckpoints(unittest.TestCase):
         )
 
         # Resume the previous pipeline
-        resultSplit = pipeline(
+        result_split = pipeline(
             model=self.model,
             dataset=self.dataset,
             training_loop='LCWA',
             training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
         )
-        self.assertEqual(resultStandard.losses, resultSplit.losses)
+        self.assertEqual(result_standard.losses, result_split.losses)
 
     def test_pipeline_slcwa_resumption(self):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
-        resultStandard = pipeline(
+        result_standard = pipeline(
             model=self.model,
             dataset=self.dataset,
             training_loop='sLCWA',
@@ -165,13 +165,13 @@ class TestPipelineCheckpoints(unittest.TestCase):
         )
 
         # Resume the previous pipeline
-        resultSplit = pipeline(
+        result_split = pipeline(
             model=self.model,
             dataset=self.dataset,
             training_loop='sLCWA',
             training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
         )
-        self.assertEqual(resultStandard.losses, resultSplit.losses)
+        self.assertEqual(result_standard.losses, result_split.losses)
 
 
 class TestAttributes(unittest.TestCase):
