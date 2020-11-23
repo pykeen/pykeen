@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch.nn import functional
 
-from ..base import DoubleRelationEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class TransH(DoubleRelationEmbeddingModel):
+class TransH(ERModel):
     r"""An implementation of TransH [wang2014]_.
 
     This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
@@ -85,18 +85,24 @@ class TransH(DoubleRelationEmbeddingModel):
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
-            embedding_dim=embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                ),
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    # Normalise the normal vectors by their l2 norms
+                    constrainer=functional.normalize,
+                ),
+            ],
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
-            embedding_specification=None,
-            relation_embedding_specification=None,
-            second_relation_embedding_specification=EmbeddingSpecification(
-                # Normalise the normal vectors by their l2 norms
-                constrainer=functional.normalize,
-            ),
         )
         # Note that the TransH regularizer has a different interface
         self.regularizer = self._instantiate_default_regularizer(

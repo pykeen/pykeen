@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from ..base import TwoVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class TransD(TwoVectorEmbeddingModel):
+class TransD(ERModel):
     r"""An implementation of TransD from [ji2015]_.
 
     TransD is an extension of :class:`pykeen.models.TransR` that, like TransR, considers entities and relations
@@ -69,20 +69,20 @@ class TransD(TwoVectorEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=TransDInteraction(p=2, power_norm=True),
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+                constrainer=clamp_norm,  # type: ignore
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim,
+                initializer=xavier_normal_,
+                constrainer=clamp_norm,  # type: ignore
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
         )

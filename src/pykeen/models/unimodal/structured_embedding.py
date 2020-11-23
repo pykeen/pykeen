@@ -9,7 +9,7 @@ import numpy as np
 from torch import nn
 from torch.nn import functional
 
-from ..base import DoubleRelationEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 
-class StructuredEmbedding(DoubleRelationEmbeddingModel):
+class StructuredEmbedding(ERModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 
     SE applies role- and relation-specific projection matrices
@@ -73,20 +73,23 @@ class StructuredEmbedding(DoubleRelationEmbeddingModel):
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
-            embedding_dim=embedding_dim,
-            relation_dim=(embedding_dim, embedding_dim),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+                constrainer=functional.normalize,
+            ),
+            relation_representations=[
+                EmbeddingSpecification(
+                    shape=(embedding_dim, embedding_dim),
+                    initializer=relation_initializer,
+                ),
+                EmbeddingSpecification(
+                    shape=(embedding_dim, embedding_dim),
+                    initializer=relation_initializer,
+                ),
+            ],
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-                constrainer=functional.normalize,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=relation_initializer,
-            ),
-            second_relation_embedding_specification=EmbeddingSpecification(
-                initializer=relation_initializer,
-            ),
         )

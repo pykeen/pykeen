@@ -4,9 +4,9 @@
 
 from typing import Optional
 
-from .. import ERModel
+from ..base import ERModel
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import UnstructuredModelInteraction
 from ...triples import TriplesFactory
@@ -66,8 +66,7 @@ class UnstructuredModel(ERModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
-            entity_representations=Embedding(
-                num_embeddings=triples_factory.num_entities,
+            entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=xavier_normal_,
             ),

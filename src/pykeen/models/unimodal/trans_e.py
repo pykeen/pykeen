@@ -6,7 +6,7 @@ from typing import Optional
 
 from torch.nn import functional
 
-from .. import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class TransE(SingleVectorEmbeddingModel):
+class TransE(ERModel):
     r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}` [bordes2013]_.
 
     .. math::
@@ -68,19 +68,20 @@ class TransE(SingleVectorEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=TransEInteraction(p=scoring_fct_norm, power_norm=False),
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=xavier_uniform_,
                 constrainer=functional.normalize,
             ),
-            relation_embedding_specification=EmbeddingSpecification(
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=compose(
                     xavier_uniform_,
                     functional.normalize,
                 ),
             ),
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
         )

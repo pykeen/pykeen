@@ -4,7 +4,7 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
-from .. import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-class TuckER(SingleVectorEmbeddingModel):
+class TuckER(ERModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
     TuckER is a linear model that is based on the tensor factorization method Tucker in which a three-mode tensor
@@ -95,16 +95,16 @@ class TuckER(SingleVectorEmbeddingModel):
                 head_relation_dropout=dropout_2,
                 apply_batch_normalization=apply_batch_normalization,
             ),
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim,
+                initializer=xavier_normal_,
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=xavier_normal_,
-            ),
         )

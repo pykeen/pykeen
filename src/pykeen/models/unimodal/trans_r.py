@@ -7,7 +7,7 @@ from typing import Optional
 
 from torch.nn import functional
 
-from ..base import DoubleRelationEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-class TransR(DoubleRelationEmbeddingModel):
+class TransR(ERModel):
     r"""An implementation of TransR from [lin2015]_.
 
     TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
@@ -73,34 +73,36 @@ class TransR(DoubleRelationEmbeddingModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
+            interaction=TransRInteraction(
+                p=scoring_fct_norm,
+            ),
+            # Entity embeddings
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+                constrainer=clamp_norm,  # type: ignore
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            relation_representations=[
+                # Relation embeddings
+                EmbeddingSpecification(
+                    embedding_dim=relation_dim,
+                    initializer=compose(
+                        xavier_uniform_,
+                        functional.normalize,
+                    ),
+                    constrainer=clamp_norm,  # type: ignore
+                    constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                ),
+                # Relation projections
+                EmbeddingSpecification(
+                    shape=(relation_dim, embedding_dim),
+                    initializer=xavier_uniform_,
+                ),
+            ],
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            # Entity embeddings
-            embedding_dim=embedding_dim,
-            embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            # Relation embeddings
-            relation_dim=relation_dim,
-            relation_embedding_specification=EmbeddingSpecification(
-                initializer=compose(
-                    xavier_uniform_,
-                    functional.normalize,
-                ),
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            # Relation projections
-            second_relation_dim=(relation_dim, embedding_dim),
-            second_relation_embedding_specification=EmbeddingSpecification(
-                initializer=xavier_uniform_,
-            ),
-            interaction=TransRInteraction(
-                p=scoring_fct_norm,
-            ),
         )
         logging.warning("Initialize from TransE")
