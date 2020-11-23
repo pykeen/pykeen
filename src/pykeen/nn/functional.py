@@ -231,6 +231,7 @@ def convkb_interaction(
 
     # compute conv(stack(h, r, t))
     # prepare input shapes for broadcasting
+    # (b, h, r, t, 1, d)
     h = h.unsqueeze(dim=-2)
     r = r.unsqueeze(dim=-2)
     t = t.unsqueeze(dim=-2)
@@ -238,8 +239,7 @@ def convkb_interaction(
     # conv.weight.shape = (C_out, C_in, kernel_size[0], kernel_size[1])
     # here, kernel_size = (1, 3), C_in = 1, C_out = num_filters
     # -> conv_head, conv_rel, conv_tail shapes: (num_filters,)
-    # conv_head, conv_rel, conv_tail = conv.weight[:, 0, 0, :].t()
-    # conv_bias = conv.bias.view(1, 1, 1, 1, num_filters, 1)
+    # reshape to (1, 1, 1, 1, f, 1)
     conv_head, conv_rel, conv_tail, conv_bias = [
         c.view(1, 1, 1, 1, num_filters, 1)
         for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
@@ -257,7 +257,7 @@ def convkb_interaction(
     x = hidden_dropout(x)
 
     # Linear layer for final scores; use flattened representations, shape: (b, h, r, t, d * f)
-    x = x.view(x.shape[:-2], embedding_dim * num_filters)
+    x = x.view(*x.shape[:-2], embedding_dim * num_filters)
     x = linear(x)
     return x.squeeze(dim=-1)
 
