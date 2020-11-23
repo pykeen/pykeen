@@ -1131,7 +1131,7 @@ def _prepare_representation_module_list(
     return nn.ModuleList(modules)
 
 
-class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
+class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], Model, autoreset=False):
     """A commonly useful base for KGEMs using embeddings and interaction modules."""
 
     #: The entity representations
