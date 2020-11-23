@@ -1100,13 +1100,13 @@ def _prepare_representation_module_list(
 ) -> Sequence[RepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-    if representations is not None and not isinstance(representations, Sequence):
-        representations = [representations]
-    representations = [
-        r if isinstance(r, RepresentationModule) else r.make(num_embeddings=num_embeddings)
-        for r in representations
-        if representations is not None
-    ]
+    if representations is not None:
+        if not isinstance(representations, Sequence):
+            representations = [representations]
+        representations = [
+            r if isinstance(r, RepresentationModule) else r.make(num_embeddings=num_embeddings)
+            for r in representations
+        ]
     return nn.ModuleList(representations)
 
 
