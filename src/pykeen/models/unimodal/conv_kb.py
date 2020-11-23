@@ -5,8 +5,9 @@
 import logging
 from typing import Optional
 
-from ..base import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer
 from ...triples import TriplesFactory
@@ -19,7 +20,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(SingleVectorEmbeddingModel):
+class ConvKB(ERModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
     ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
@@ -90,7 +91,12 @@ class ConvKB(SingleVectorEmbeddingModel):
                 embedding_dim=embedding_dim,
                 num_filters=num_filters,
             ),
-            embedding_dim=embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
             loss=loss,
             automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
