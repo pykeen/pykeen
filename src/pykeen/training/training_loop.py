@@ -198,7 +198,8 @@ class TrainingLoop(ABC):
             to continue training.
         :param checkpoint_root:
             An optional directory to store the checkpoint files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+            This is defined either by the environment variable ``PYKEEN_HOME/checkpoints`` or defaults to
+            ``~/.pykeen/checkpoints``.
         :param checkpoint_frequency:
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
 
@@ -214,8 +215,9 @@ class TrainingLoop(ABC):
 
         # A checkpoint root is always created to ensure a fallback checkpoint can be saved
         if checkpoint_root is None:
-            checkpoint_root = PYKEEN_HOME
-        checkpoint_root = pathlib.Path(checkpoint_root).joinpath("checkpoints")
+            checkpoint_root = pathlib.Path(PYKEEN_HOME).joinpath("checkpoints")
+        else:
+            checkpoint_root = pathlib.Path(checkpoint_root)
         checkpoint_root.mkdir(parents=True, exist_ok=True)
         logger.debug('using checkpoint_root at %s', checkpoint_root)
 
