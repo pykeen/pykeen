@@ -86,7 +86,6 @@ class ComplExLiteral(LiteralModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=2 * embedding_dim,  # complex
             interaction=ComplExInteraction(),
             combination=ComplexLiteralCombination(
                 embedding_dim=embedding_dim,
@@ -94,10 +93,14 @@ class ComplExLiteral(LiteralModel):
                 dropout=input_dropout,
             ),
             entity_specification=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=nn.init.xavier_normal_,
+                dtype=torch.complex64,
             ),
             relation_specification=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=nn.init.xavier_normal_,
+                dtype=torch.complex64,
             ),
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,

@@ -27,7 +27,6 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
-        embedding_dim: int,
         interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         combination: nn.Module,
         entity_specification: Optional[EmbeddingSpecification] = None,
