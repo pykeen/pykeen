@@ -466,7 +466,7 @@ def ntn_interaction(
         The scores.
     """
     x = activation(tensor_sum(
-        extended_einsum("bhrtd,brkde,bhrte->bhrtk", h, w, t),
+        extended_einsum("bhrtd,bhrtkde,bhrte->bhrtk", h, w, t),
         (vh @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
         (vt @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
         b,
