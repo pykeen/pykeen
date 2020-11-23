@@ -9,3 +9,4 @@ __all__ = [
 ]
 
 PYKEEN_HOME = os.environ.get('PYKEEN_HOME') or os.path.join(os.path.expanduser('~'), '.pykeen')
+PYKEEN_DEFAULT_CHECKPOINT = "PyKEEN_just_saved_my_day.pt"

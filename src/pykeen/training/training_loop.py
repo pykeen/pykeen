@@ -4,7 +4,7 @@
 
 import gc
 import logging
-import os
+import pathlib
 import random
 import time
 from abc import ABC, abstractmethod
@@ -17,6 +17,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
+from ..constants import PYKEEN_DEFAULT_CHECKPOINT, PYKEEN_HOME
 from ..losses import Loss
 from ..models.base import Model
 from ..stoppers import Stopper
@@ -157,6 +158,7 @@ class TrainingLoop(ABC):
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
         checkpoint_file: Optional[str] = None,
+        checkpoint_root: Optional[str] = None,
         checkpoint_frequency: Optional[int] = None,
     ) -> List[float]:
         """Train the KGE model.
@@ -194,8 +196,11 @@ class TrainingLoop(ABC):
         :param checkpoint_file:
             The filename for saving checkpoints. If the given filename exists already, that file will be loaded and used
             to continue training.
+        :param checkpoint_root:
+            An optional directory to store the checkpoint files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param checkpoint_frequency:
-            The frequency of saving checkpoints in minutes.
+            The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -207,16 +212,38 @@ class TrainingLoop(ABC):
         # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
         torch.cuda.empty_cache()
 
-        # If a checkpoint file is given we check whether it exists already and load it, if it does
+        # A checkpoint root is always created to ensure a fallback checkpoint can be saved
+        if checkpoint_root is None:
+            checkpoint_root = PYKEEN_HOME
+        checkpoint_root = pathlib.Path(checkpoint_root).joinpath("checkpoints")
+        checkpoint_root.mkdir(parents=True, exist_ok=True)
+        logger.debug('using checkpoint_root at %s', checkpoint_root)
+
+        # If a checkpoint file is given, it must be loaded if it exists already
+        save_checkpoints = False
         if checkpoint_file:
-            if os.path.isfile(checkpoint_file):
-                stopper_dict = self._load_state(path=checkpoint_file)
+            checkpoint_file_path = checkpoint_root.joinpath(checkpoint_file)
+            if checkpoint_file_path.is_file():
+                stopper_dict = self._load_state(path=checkpoint_file_path)
                 # If the stopper dict has any keys, those are written back to the stopper
                 if stopper_dict:
                     stopper._write_from_summary_dict(**stopper_dict)
                 continue_training = True
             else:
-                logger.info(f"=> no checkpoint found at '{checkpoint_file}'. Creating a new file.")
+                logger.info(f"=> no checkpoint found at '{checkpoint_file_path}'. Creating a new file.")
+            # The checkpoint frequency needs to be set to save checkpoints
+            if checkpoint_frequency is None:
+                checkpoint_frequency = 30
+            save_checkpoints = True
+        # If no checkpoint_file is given
+        else:
+            # In case a checkpoint frequency was set, we warn that no checkpoints will be saved
+            if checkpoint_frequency is not None:
+                logger.warning(
+                    "A checkpoint frequency was set, but no checkpoint file was given. No checkpoints will be created",
+                )
+            # If no checkpoints were requested, a fallback checkpoint is set in case the training loop crashes
+            checkpoint_file_path = checkpoint_root.joinpath(PYKEEN_DEFAULT_CHECKPOINT)
 
         # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
         if getattr(stopper, 'stopped', False):
@@ -237,8 +264,9 @@ class TrainingLoop(ABC):
                 result_tracker=result_tracker,
                 sub_batch_size=sub_batch_size,
                 num_workers=num_workers,
-                checkpoint_file=checkpoint_file,
+                checkpoint_file_path=checkpoint_file_path,
                 checkpoint_frequency=checkpoint_frequency,
+                save_checkpoints=save_checkpoints,
             )
 
         # Ensure the release of memory
@@ -266,8 +294,9 @@ class TrainingLoop(ABC):
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
-        checkpoint_file: Optional[str] = None,
+        checkpoint_file_path: Optional[str] = None,
         checkpoint_frequency: int = None,
+        save_checkpoints: bool = False,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -302,10 +331,12 @@ class TrainingLoop(ABC):
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
             The number of child CPU workers used for loading data. If None, data are loaded in the main process.
-        :param checkpoint_file:
-            The filename for saving checkpoints.
+        :param checkpoint_file_path:
+            The full filepath for saving checkpoints.
         :param checkpoint_frequency:
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
+        :param save_checkpoints:
+            Activate saving checkpoints.
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -396,97 +427,112 @@ class TrainingLoop(ABC):
 
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
-        if checkpoint_frequency is None:
-            checkpoint_frequency = 30
 
         # Training Loop
         for epoch in epochs:
-            # Enforce training mode
-            self.model.train()
+            # When training with an early stopper the memory pressure changes, which may allow for errors each epoch
+            try:
+                # Enforce training mode
+                self.model.train()
 
-            # Accumulate loss over epoch
-            current_epoch_loss = 0.
+                # Accumulate loss over epoch
+                current_epoch_loss = 0.
 
-            # Batching
-            # Only create a progress bar when not in size probing mode
-            if not only_size_probing and use_tqdm_batch:
-                batches = tqdm(train_data_loader, desc=f'Training batches on {self.device}', leave=False, unit='batch')
-            else:
-                batches = train_data_loader
-
-            # Flag to check when to quit the size probing
-            evaluated_once = False
-
-            for batch in batches:
-                # Recall that torch *accumulates* gradients. Before passing in a
-                # new instance, you need to zero out the gradients from the old instance
-                self.optimizer.zero_grad()
-
-                # Get batch size of current batch (last batch may be incomplete)
-                current_batch_size = self._get_batch_size(batch)
-
-                # accumulate gradients for whole batch
-                for start in range(0, current_batch_size, sub_batch_size):
-                    stop = min(start + sub_batch_size, current_batch_size)
-
-                    # forward pass call
-                    current_epoch_loss += self._forward_pass(
-                        batch,
-                        start,
-                        stop,
-                        current_batch_size,
-                        label_smoothing,
-                        slice_size,
+                # Batching
+                # Only create a progress bar when not in size probing mode
+                if not only_size_probing and use_tqdm_batch:
+                    batches = tqdm(
+                        train_data_loader,
+                        desc=f'Training batches on {self.device}',
+                        leave=False,
+                        unit='batch',
                     )
+                else:
+                    batches = train_data_loader
 
-                # when called by batch_size_search(), the parameter update should not be applied.
-                if not only_size_probing:
-                    # update parameters according to optimizer
-                    self.optimizer.step()
+                # Flag to check when to quit the size probing
+                evaluated_once = False
 
-                # After changing applying the gradients to the embeddings, the model is notified that the forward
-                # constraints are no longer applied
-                self.model.post_parameter_update()
+                for batch in batches:
+                    # Recall that torch *accumulates* gradients. Before passing in a
+                    # new instance, you need to zero out the gradients from the old instance
+                    self.optimizer.zero_grad()
 
-                # For testing purposes we're only interested in processing one batch
-                if only_size_probing and evaluated_once:
-                    break
+                    # Get batch size of current batch (last batch may be incomplete)
+                    current_batch_size = self._get_batch_size(batch)
 
-                evaluated_once = True
+                    # accumulate gradients for whole batch
+                    for start in range(0, current_batch_size, sub_batch_size):
+                        stop = min(start + sub_batch_size, current_batch_size)
 
-            del batch
-            del batches
-            gc.collect()
-            self.optimizer.zero_grad()
-            self._free_graph_and_cache()
+                        # forward pass call
+                        current_epoch_loss += self._forward_pass(
+                            batch,
+                            start,
+                            stop,
+                            current_batch_size,
+                            label_smoothing,
+                            slice_size,
+                        )
 
-            # When size probing we don't need the losses
-            if only_size_probing:
-                return None
+                    # when called by batch_size_search(), the parameter update should not be applied.
+                    if not only_size_probing:
+                        # update parameters according to optimizer
+                        self.optimizer.step()
 
-            # Track epoch loss
-            epoch_loss = current_epoch_loss / num_training_instances
-            self.losses_per_epochs.append(epoch_loss)
-            result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+                    # After changing applying the gradients to the embeddings, the model is notified that the forward
+                    # constraints are no longer applied
+                    self.model.post_parameter_update()
 
-            # Print loss information to console
-            epochs.set_postfix({
-                'loss': self.losses_per_epochs[-1],
-                'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
-            })
+                    # For testing purposes we're only interested in processing one batch
+                    if only_size_probing and evaluated_once:
+                        break
 
-            # Save the last successful finished epoch
-            self._epoch = epoch
+                    evaluated_once = True
 
-            should_stop = False
-            if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                should_stop = True
+                del batch
+                del batches
+                gc.collect()
+                self.optimizer.zero_grad()
+                self._free_graph_and_cache()
+
+                # When size probing we don't need the losses
+                if only_size_probing:
+                    return None
+
+                # Track epoch loss
+                epoch_loss = current_epoch_loss / num_training_instances
+                self.losses_per_epochs.append(epoch_loss)
+                result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+
+                # Print loss information to console
+                epochs.set_postfix({
+                    'loss': self.losses_per_epochs[-1],
+                    'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
+                })
+
+                # Save the last successful finished epoch
+                self._epoch = epoch
+
+                should_stop = False
+                if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
+                    should_stop = True
+            # When the training loop failed, a fallback checkpoint is created to resume training.
+            except (MemoryError, RuntimeError) as e:
+                logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
+                self._save_state(path=checkpoint_file_path, stopper=stopper)
+                logger.warning(
+                    "However, don't worry we got you covered. PyKEEN just saved a checkpoint before this happened"
+                    f"at '{checkpoint_file_path}'. To resume training from the checkpoint file just restart your code"
+                    "and pass this file path to the training loop or pipeline you used as 'checkpoint_file' argument.",
+                )
+                raise e
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
-            if checkpoint_file:
+            if save_checkpoints:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 if minutes_since_last_checkpoint >= checkpoint_frequency:
-                    self._save_state(path=checkpoint_file, stopper=stopper)
+                    self._save_state(path=checkpoint_file_path, stopper=stopper)
                     last_checkpoint = time.time()
 
             if should_stop:
