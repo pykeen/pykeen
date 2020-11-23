@@ -6,7 +6,7 @@ import dataclasses
 import functools
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Sequence, Union
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy
 import torch
@@ -47,9 +47,9 @@ class RepresentationModule(nn.Module, ABC):
     #: The maximum admissible ID (excl.)
     max_id: int
 
-    def __init__(self, shape: Sequence[int], max_id: int):
+    def __init__(self, shape: Iterable[int], max_id: int):
         super().__init__()
-        self.shape = shape
+        self.shape = tuple(shape)
         self.max_id = max_id
 
     @abstractmethod
@@ -93,6 +93,7 @@ class RepresentationModule(nn.Module, ABC):
         :return: shape: (batch_size, d1, d2, d3, *self.shape)
         """
         dim = _normalize_dim(dim=dim)
+        r_shape: Tuple[int, ...]
         if indices is None:
             x = self(indices=indices)
             r_shape = (1, self.max_id)
@@ -210,19 +211,28 @@ class Embedding(RepresentationModule):
         """
         if shape is None and embedding_dim is None:
             raise ValueError('Missing both, shape and embedding_dim')
-        elif shape is None:
+        elif shape is not None and embedding_dim is not None:
+            raise ValueError('Provided both, shape and embedding_dim')
+        elif shape is None and embedding_dim is not None:
             shape = (embedding_dim,)
-        elif embedding_dim is None:
+        elif isinstance(shape, int) and embedding_dim is None:
+            embedding_dim = shape
+            shape = (shape,)
+        elif isinstance(shape, Sequence) and embedding_dim is None:
+            shape = tuple(shape)
             embedding_dim = numpy.prod(shape)
         else:
-            raise ValueError('Provided both, shape and embedding_dim')
+            raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
+
+        assert isinstance(shape, tuple)
+        assert isinstance(embedding_dim, int)
+
         if dtype is None:
             dtype = torch.get_default_dtype()
 
         # work-around until full complex support
         # TODO: verify that this is our understanding of complex!
         if dtype.is_complex:
-            shape = tuple(shape)
             shape = shape[:-1] + (2 * shape[-1],)
             embedding_dim = embedding_dim * 2
         super().__init__(shape=shape, max_id=num_embeddings)

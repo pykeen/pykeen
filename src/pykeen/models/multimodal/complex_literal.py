@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA) training approach."""
+"""Implementation of the ComplexLiteral model."""
 
 from typing import Any, ClassVar, Mapping, Optional
 
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-class ComplexLiteralCombination(nn.Module):
+class ComplExLiteralCombination(nn.Module):
     """Separately transform real and imaginary part."""
 
     def __init__(
@@ -87,7 +87,7 @@ class ComplExLiteral(LiteralModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=ComplExInteraction(),
-            combination=ComplexLiteralCombination(
+            combination=ComplExLiteralCombination(
                 embedding_dim=embedding_dim,
                 num_of_literals=triples_factory.numeric_literals.shape[-1],
                 dropout=input_dropout,
