@@ -171,7 +171,7 @@ def conve_interaction(
     x = hr1d(x)
 
     # reshape: (batch_size', embedding_dim) -> (b, h, r, 1, d)
-    x = x.view(x.shape[0], h.shape[1], r.shape[2], 1, h.shape[-1])
+    x = x.view(-1, h.shape[1], r.shape[2], 1, h.shape[-1])
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: (batch_size, num_heads, num_relations, num_tails)
