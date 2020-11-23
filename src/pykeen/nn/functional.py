@@ -280,7 +280,7 @@ def distmult_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return tensor_product(h, r, t)
+    return tensor_product(h, r, t).sum(dim=-1)
 
 
 def ermlp_interaction(

@@ -25,10 +25,8 @@ from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
 from pykeen.models import LiteralModel, _BASE_MODELS, _MODELS
 from pykeen.models.base import (
-    DoubleRelationEmbeddingModel,
     ERModel,
     Model,
-    TwoVectorEmbeddingModel,
     _extend_batch,
     get_novelty_mask,
 )
