@@ -1107,6 +1107,15 @@ def _prepare_representation_module_list(
             r if isinstance(r, RepresentationModule) else r.make(num_embeddings=num_embeddings)
             for r in representations
         ]
+        for r in representations:
+            if r.max_id < num_embeddings:
+                raise ValueError(f"{r} only provides {r.max_id} representations, but should provide {num_embeddings}.")
+            elif r.max_id > num_embeddings:
+                logger.warning(
+                    f"{r} provides {r.max_id} representations, although only {num_embeddings} are needed. While this "
+                    f"is not necessarily wrong, it can indicate an error where the number of representations was chosen"
+                    f" wrong."
+                )
     return nn.ModuleList(representations)
 
 
