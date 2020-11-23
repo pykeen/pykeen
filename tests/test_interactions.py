@@ -5,7 +5,7 @@
 import logging
 import unittest
 from abc import abstractmethod
-from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Collection, Sequence, Tuple, TypeVar, Union
 from unittest.case import SkipTest
 
 import numpy
@@ -13,50 +13,11 @@ import torch
 
 import pykeen.nn.modules
 from pykeen.nn.modules import Interaction, TranslationalInteraction
+from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.typing import Representation
-from pykeen.utils import clamp_norm, get_subclasses, project_entity, set_random_seed, strip_dim, view_complex
+from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 
-T = TypeVar("T")
 logger = logging.getLogger(__name__)
-
-
-class GenericTests(Generic[T]):
-    """Generic tests."""
-
-    cls: Type[T]
-    kwargs: Optional[Mapping[str, Any]] = None
-    instance: T
-
-    def setUp(self) -> None:
-        """Set up the generic testing method."""
-        # fix seeds for reproducibility
-        set_random_seed(seed=42)
-        kwargs = self.kwargs or {}
-        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
-        self.instance = self.cls(**kwargs)
-        self.post_instantiation_hook()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Perform actions before instantiation, potentially modyfing kwargs."""
-        return kwargs
-
-    def post_instantiation_hook(self) -> None:
-        """Perform actions after instantiation."""
-
-
-class TestsTest(Generic[T]):
-    """A generic test for tests."""
-
-    base_cls: Type[T]
-    base_test: Type[GenericTests[T]]
-    skip_cls: Collection[T] = tuple()
-
-    def test_testing(self):
-        """Check that there is a test for all subclasses."""
-        to_test = set(get_subclasses(self.base_cls)).difference(self.skip_cls)
-        tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
-        not_tested = to_test.difference(tested)
-        assert not not_tested, not_tested
 
 
 class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
