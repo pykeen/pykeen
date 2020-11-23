@@ -183,9 +183,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         args = []
         for key, x in zip("hrt", (h, r, t)):
             value = []
-            for xx in upgrade_to_sequence(x):
+            for xx in upgrade_to_sequence(x):  # type: torch.FloatTensor
                 # bring to (b, n, *)
-                xx: torch.FloatTensor = xx.unsqueeze(dim=1 if key != slice_dim else 0)
+                xx = xx.unsqueeze(dim=1 if key != slice_dim else 0)
                 # bring to (b, h, r, t, *)
                 xx = convert_to_canonical_shape(
                     x=xx,
