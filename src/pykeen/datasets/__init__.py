@@ -15,12 +15,14 @@ from pkg_resources import iter_entry_points
 
 from .base import (  # noqa:F401
     DataSet, EagerDataset, LazyDataSet, PackedZipRemoteDataSet, PathDataSet, RemoteDataSet, SingleTabbedDataset,
-    TarFileRemoteDataSet, ZipFileRemoteDataSet,
+    TarFileRemoteDataSet, UnpackedRemoteDataSet, ZipFileRemoteDataSet,
 )
+from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
 from .nations import Nations
+from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
 from .umls import UMLS
 from .wordnet import WN18, WN18RR
@@ -36,6 +38,11 @@ __all__ = [
     'OpenBioLinkF1',
     'OpenBioLinkF2',
     'OpenBioLinkLQ',
+    'CoDExSmall',
+    'CoDExMedium',
+    'CoDExLarge',
+    'OGBBioKG',
+    'OGBWikiKG',
     'UMLS',
     'FB15k',
     'FB15k237',
