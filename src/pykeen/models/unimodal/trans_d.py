@@ -69,18 +69,24 @@ class TransD(ERModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=TransDInteraction(p=2, power_norm=True),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=relation_dim,
-                initializer=xavier_normal_,
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
+            entity_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=xavier_normal_,
+                    constrainer=clamp_norm,  # type: ignore
+                    constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                )
+                for _ in range(2)
+            ],
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=relation_dim,
+                    initializer=xavier_normal_,
+                    constrainer=clamp_norm,  # type: ignore
+                    constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                )
+                for _ in range(2)
+            ],
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
