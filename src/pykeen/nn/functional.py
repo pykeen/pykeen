@@ -793,7 +793,7 @@ def transr_interaction(
         Head embeddings.
     :param r: shape: (batch_size, 1, num_relations, 1, d_r)
         Relation embeddings.
-    :param m_r: shape: (batch_size, 1, num_relations, 1, d_e, d_r)
+    :param m_r: shape: (batch_size, 1, num_relations, 1, d_r, d_e)
         The relation specific linear transformations.
     :param t: shape: (batch_size, 1, 1, num_tails, d_e)
         Tail embeddings.
@@ -806,8 +806,8 @@ def transr_interaction(
         The scores.
     """
     # project to relation specific subspace and ensure constraints
-    h_bot = clamp_norm(h @ m_r, p=2, dim=-1, maxnorm=1.)
-    t_bot = clamp_norm(t @ m_r, p=2, dim=-1, maxnorm=1.)
+    h_bot = clamp_norm(m_r @ h.unsqueeze(dim=-1), p=2, dim=-1, maxnorm=1.).squeeze(dim=-1)
+    t_bot = clamp_norm(m_r @ t.unsqueeze(dim=-1), p=2, dim=-1, maxnorm=1.).squeeze(dim=-1)
     return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
