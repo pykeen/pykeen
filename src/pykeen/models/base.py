@@ -1099,6 +1099,7 @@ def _prepare_representation_module_list(
     num_embeddings: int,
     shapes: Sequence[str],
     label: str,
+    skip_checks: bool = False,
 ) -> Sequence[RepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
@@ -1106,7 +1107,7 @@ def _prepare_representation_module_list(
         representations = []
     if not isinstance(representations, Sequence):
         representations = [representations]
-    if len(representations) != len(shapes):
+    if not skip_checks and len(representations) != len(shapes):
         raise ValueError(
             f"Interaction function requires {len(shapes)} {label} representations, but "
             f"{len(representations)} were given.",
@@ -1127,10 +1128,11 @@ def _prepare_representation_module_list(
                 f"representations was chosen wrong.",
             )
         modules.append(r)
-    check_shapes(*zip(
-        (r.shape for r in modules),
-        shapes,
-    ), raise_on_errors=True)
+    if not skip_checks:
+        check_shapes(*zip(
+            (r.shape for r in modules),
+            shapes,
+        ), raise_on_errors=True)
     return nn.ModuleList(modules)
 
 
@@ -1200,6 +1202,7 @@ class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresenta
             num_embeddings=triples_factory.num_entities,
             shapes=interaction.entity_shape,
             label="entity",
+            skip_checks=interaction.tail_entity_shape is not None,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
