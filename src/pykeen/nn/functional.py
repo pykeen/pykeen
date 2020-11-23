@@ -383,7 +383,7 @@ def hole_interaction(
     r = r.permute(0, 1, 3, 4, 2)
 
     # inner product with relation embedding
-    return (composite @ r).squeeze(dim=-2)
+    return (composite @ r).squeeze(dim=-1)
 
 
 def kg2e_interaction(
