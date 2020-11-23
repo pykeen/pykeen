@@ -665,8 +665,8 @@ def structured_embedding_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        (h @ r_h),
-        -(t @ r_t),
+        (h @ r_h.squeeze(dim=-3)),
+        -(t @ r_t.squeeze(dim=-3)),
         p=p,
         power_norm=power_norm,
     )
