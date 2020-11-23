@@ -13,9 +13,9 @@ import torch
 import torch.nn
 from torch import nn
 
-from ..utils import upgrade_to_sequence
 from ..regularizers import Regularizer
 from ..typing import Constrainer, Initializer, Normalizer
+from ..utils import upgrade_to_sequence
 
 __all__ = [
     'RepresentationModule',
@@ -44,7 +44,7 @@ def convert_to_canonical_shape(
     dim: Union[int, str],
     num: Optional[int] = None,
     batch_size: int = 1,
-    suffix_shape: Union[int, Sequence[int, ...]] = -1,
+    suffix_shape: Union[int, Sequence[int]] = -1,
 ) -> torch.FloatTensor:
     """
     Convert a tensor to canonical shape.
