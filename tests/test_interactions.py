@@ -5,13 +5,14 @@
 import logging
 import unittest
 from abc import abstractmethod
-from typing import Collection, Sequence, Tuple, TypeVar, Union
+from typing import Collection, Sequence, Tuple, Union
 from unittest.case import SkipTest
 
 import numpy
 import torch
 
 import pykeen.nn.modules
+from pykeen.nn.functional import distmult_interaction
 from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.typing import Representation
@@ -582,6 +583,17 @@ class UMTests(TranslationalInteractionTests, unittest.TestCase):
         # -\|h - t\|
         h, t = strip_dim(h, t)
         return -(h - t).pow(p).sum()
+
+
+class SimplEInteractionTests(InteractionTests, unittest.TestCase):
+    """Tests for SimplE interaction function."""
+
+    cls = pykeen.nn.modules.SimplEInteraction
+
+    def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
+        h, r, t, h_inv, r_inv, t_inv = strip_dim(h, r, t, h_inv, r_inv, t_inv)
+        assert clamp is None
+        return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
 
 
 class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
