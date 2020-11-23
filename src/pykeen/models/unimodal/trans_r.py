@@ -96,7 +96,7 @@ class TransR(ERModel):
                 ),
                 # Relation projections
                 EmbeddingSpecification(
-                    shape=(relation_dim, embedding_dim),
+                    shape=(embedding_dim, relation_dim),
                     initializer=xavier_uniform_,
                 ),
             ],
