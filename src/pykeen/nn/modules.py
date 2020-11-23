@@ -169,6 +169,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         slice_dim: str = None,
     ) -> torch.FloatTensor:
         """
+        Compute scores for the score_* methods outside of models.
+
+        TODO: merge this with the Model utilities?
 
         :param h: shape: (b, h, *)
         :param r: shape: (b, r, *)

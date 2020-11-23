@@ -111,11 +111,11 @@ def complex_interaction(
     return tensor_sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-        (+1, h_re, r_re, t_re),
-        (+1, h_re, r_im, t_im),
-        (+1, h_im, r_re, t_im),
-        (-1, h_im, r_im, t_re),
-    ]
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
+        ]
     ))
 
 
