@@ -4,9 +4,10 @@
 
 from typing import Optional
 
+import torch
 import torch.nn as nn
 
-from ..base import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss, SoftplusLoss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
@@ -19,7 +20,7 @@ __all__ = [
 ]
 
 
-class ComplEx(SingleVectorEmbeddingModel):
+class ComplEx(ERModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 
     ComplEx is an extension of :class:`pykeen.models.DistMult` that uses complex valued representations for the
@@ -98,22 +99,25 @@ class ComplEx(SingleVectorEmbeddingModel):
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         if embedding_specification is None:
             embedding_specification = EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=nn.init.normal_,
                 regularizer=regularizer,
+                dtype=torch.complex64,
             )
         if relation_embedding_specification is None:
             relation_embedding_specification = EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=nn.init.normal_,
                 regularizer=regularizer,
+                dtype=torch.complex64,
             )
         super().__init__(
             triples_factory=triples_factory,
             interaction=ComplExInteraction(),
-            embedding_dim=2 * embedding_dim,  # complex embeddings
+            entity_representations=embedding_specification,
+            relation_representations=relation_embedding_specification,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=embedding_specification,
-            relation_embedding_specification=relation_embedding_specification,
         )

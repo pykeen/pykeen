@@ -122,6 +122,8 @@ class EmbeddingSpecification:
     embedding_dim: Optional[int] = None
     shape: Optional[Sequence[int]] = None
 
+    dtype: Optional[torch.dtype] = None
+
     initializer: Optional[Initializer] = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
 
@@ -142,6 +144,7 @@ class EmbeddingSpecification:
             num_embeddings=num_embeddings,
             embedding_dim=self.embedding_dim,
             shape=self.shape,
+            dtype=self.dtype,
             initializer=self.initializer,
             initializer_kwargs=self.initializer_kwargs,
             normalizer=self.normalizer,
@@ -175,6 +178,7 @@ class Embedding(RepresentationModule):
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         regularizer: Optional[Regularizer] = None,
+        dtype: Optional[torch.dtype] = None,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -212,6 +216,15 @@ class Embedding(RepresentationModule):
             embedding_dim = numpy.prod(shape)
         else:
             raise ValueError('Provided both, shape and embedding_dim')
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+
+        # work-around until full complex support
+        # TODO: verify that this is our understanding of complex!
+        if dtype.is_complex:
+            shape = tuple(shape)
+            shape = shape[:-1] + (2 * shape[-1],)
+            embedding_dim = embedding_dim * 2
         super().__init__(shape=shape, max_id=num_embeddings)
 
         if initializer is None:
