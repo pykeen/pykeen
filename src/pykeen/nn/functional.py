@@ -472,7 +472,7 @@ def ntn_interaction(
         b,
     ))
     u = u.transpose(-2, -1)
-    return (x @ u).squeeze(dim=-2)
+    return (x @ u).squeeze(dim=-1)
 
 
 def proje_interaction(
