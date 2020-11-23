@@ -473,16 +473,14 @@ def ntn_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # save sizes
-    num_heads, num_relations, num_tails, _, num_slices = _extract_sizes(h, b, t)
     x = activation(tensor_sum(
         extended_einsum("bhrtd,brkde,bhrte->bhrtk", h, w, t),
-        extended_einsum("bhrtkd,bhrtd->bhrtk", vh, h),
-        extended_einsum("bhrtkd,bhrtd->bhrtk", vt, t),
+        (vh @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
+        (vt @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
         b,
     ))
-    x = extended_einsum("bhrtk,bhrtk->bhrt", x, u)
-    return x
+    u = u.transpose(-2, -1)
+    return (x @ u).squeeze(dim=-2)
 
 
 def proje_interaction(
