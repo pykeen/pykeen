@@ -542,11 +542,7 @@ def rescal_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return torch.chain_matmul(
-        h.unsqueeze(dim=-2),
-        r,
-        t.unsqueeze(dim=-1),
-    ).view(-1, h.shape[1], r.shape[2], t.shape[3])
+    return extended_einsum("bhrtd,bhrtde,bhrte->bhrt", h, r, t)
 
 
 def rotate_interaction(
