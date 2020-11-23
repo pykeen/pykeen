@@ -36,23 +36,21 @@ def expected_likelihood(
             + \log \det \Sigma + d \log (2 \pi)
         \right)
 
-    :param e: shape: (batch_size, num_heads, num_tails, d)
+    :param e: shape: (batch_size, num_heads, 1, num_tails, d)
         The entity Gaussian distribution.
-    :param r: shape: (batch_size, num_relations, d)
+    :param r: shape: (batch_size, 1, num_relations, 1, d)
         The relation Gaussian distribution.
     :param epsilon: float (default=1.0)
         Small constant used to avoid numerical issues when dividing.
     :param exact:
         Whether to return the exact similarity, or leave out constant offsets.
 
-    :return: torch.Tensor, shape: (s_1, ..., s_k)
+    :return: torch.Tensor, shape: (batch_size, num_heads, num_relations, num_tails)
         The similarity.
     """
     # subtract, shape: (batch_size, num_heads, num_relations, num_tails, dim)
-    r_shape = r.mean.shape
-    r_shape = (r_shape[0], 1, r_shape[1], 1, r_shape[2])
-    var = r.diagonal_covariance.view(*r_shape) + e.diagonal_covariance.unsqueeze(dim=2)
-    mean = e.mean.unsqueeze(dim=2) - r.mean.view(*r_shape)
+    var = r.diagonal_covariance + e.diagonal_covariance
+    mean = e.mean - r.mean
 
     #: a = \mu^T\Sigma^{-1}\mu
     safe_sigma = torch.clamp_min(var, min=epsilon)
@@ -91,9 +89,9 @@ def kullback_leibler_similarity(
     .. seealso ::
         https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence
 
-    :param e: shape: (batch_size, num_heads, num_tails, d)
+    :param e: shape: (batch_size, num_heads, 1, num_tails, d)
         The entity Gaussian distributions, as mean/diagonal covariance pairs.
-    :param r: shape: (batch_size, num_relations, d)
+    :param r: shape: (batch_size, 1, num_relations, 1, d)
         The relation Gaussian distributions, as mean/diagonal covariance pairs.
     :param epsilon: float (default=1.0)
         Small constant used to avoid numerical issues when dividing.
@@ -105,14 +103,11 @@ def kullback_leibler_similarity(
     """
     assert (e.diagonal_covariance > 0).all() and (r.diagonal_covariance > 0).all()
 
-    # broadcast shapes to (batch_size, num_heads, num_relations, num_tails, dim)
-    e_shape = e.mean.shape  # (batch_size, num_heads, num_tails, dim)
-    e_mean = e.mean.view(e_shape[0], e_shape[1], 1, e_shape[2], e_shape[3])
-    e_var = e.diagonal_covariance.view(e_shape[0], e_shape[1], 1, e_shape[2], e_shape[3])
+    e_mean = e.mean
+    e_var = e.diagonal_covariance
 
-    r_shape = r.mean.shape  # (batch_size, num_relations, dim)
-    r_mean = r.mean.view(r_shape[0], 1, r_shape[1], 1, r_shape[2])
-    r_var: torch.FloatTensor = r.diagonal_covariance.view(r_shape[0], 1, r_shape[1], 1, r_shape[2])
+    r_mean = r.mean
+    r_var = r.diagonal_covariance
 
     terms = []
 
@@ -134,7 +129,7 @@ def kullback_leibler_similarity(
 
     # 3. Component
     if exact:
-        terms.append(-e_shape[-1])
+        terms.append(-e_mean.shape[-1])
 
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))

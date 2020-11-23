@@ -13,7 +13,7 @@ from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
-    split_complex, tensor_sum, view_complex,
+    split_complex, tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -46,7 +46,7 @@ def _extract_sizes(
     t: torch.Tensor,
 ) -> Tuple[int, int, int, int, int]:
     """Extract size dimensions from head/relation/tail representations."""
-    num_heads, num_relations, num_tails = [xx.shape[1] for xx in (h, r, t)]
+    num_heads, num_relations, num_tails = [xx.shape[i] for i, xx in enumerate((h, r, t), start=1)]
     d_e = h.shape[-1]
     d_r = r.shape[-1]
     return num_heads, num_relations, num_tails, d_e, d_r
@@ -121,11 +121,11 @@ def complex_interaction(
     .. math ::
         Re(\langle h, r, conj(t) \rangle)
 
-    :param h: shape: (batch_size, num_heads, `2*dim`)
+    :param h: shape: (batch_size, num_heads, 1, 1, `2*dim`)
         The complex head representations.
-    :param r: shape: (batch_size, num_relations, 2*dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, 2*dim)
         The complex relation representations.
-    :param t: shape: (batch_size, num_tails, 2*dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, 2*dim)
         The complex tail representations.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
@@ -136,13 +136,13 @@ def complex_interaction(
     # = <h.re, r.re, t.re> + <h.re, r.im,  t.im> + <h.im, r.re,  t.im> - <h.im, r.im, t.re>
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
     return tensor_sum(*(
-        factor * extended_einsum("bhd,brd,btd->bhrt", hh, rr, tt)
+        factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 
@@ -161,13 +161,13 @@ def conve_interaction(
     """
     Evaluate the ConvE interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
-    :param t_bias: shape: (batch_size, num_tails, dim)
+    :param t_bias: shape: (batch_size, 1, 1, num_tails, 1)
         The tail entity bias.
     :param input_channels:
         The number of input channels.
@@ -185,15 +185,15 @@ def conve_interaction(
     """
     # bind sizes
     num_heads = h.shape[1]
-    num_relations = r.shape[1]
-    num_tails = t.shape[1]
+    num_relations = r.shape[2]
+    num_tails = t.shape[3]
     embedding_dim = h.shape[-1]
 
     # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
     # with batch_size' = batch_size * num_heads * num_relations
     x = broadcast_cat(
-        h.view(h.shape[0], num_heads, 1, input_channels, embedding_height, embedding_width),
-        r.view(r.shape[0], 1, num_relations, input_channels, embedding_height, embedding_width),
+        h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
+        r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
         dim=-2,
     ).view(-1, input_channels, 2 * embedding_height, embedding_width)
 
@@ -209,11 +209,11 @@ def conve_interaction(
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: (batch_size, num_heads, num_relations, num_tails)
-    t = t.view(t.shape[0], 1, 1, num_tails, embedding_dim).transpose(-1, -2)
+    t = t.transpose(-1, -2)
     x = (x @ t).squeeze(dim=-2)
 
     # add bias term
-    return tensor_sum(x, t_bias.view(t.shape[0], 1, 1, num_tails))
+    return tensor_sum(x, t_bias.squeeze(dim=-1))
 
 
 def convkb_interaction(
@@ -231,11 +231,11 @@ def convkb_interaction(
     .. math::
         W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param conv:
         The 3x1 convolution.
@@ -258,9 +258,9 @@ def convkb_interaction(
 
     # compute conv(stack(h, r, t))
     # prepare input shapes for broadcasting
-    h = h.view(h.shape[0], num_heads, 1, 1, 1, embedding_dim)
-    r = r.view(r.shape[0], 1, num_relations, 1, 1, embedding_dim)
-    t = t.view(t.shape[0], 1, 1, num_tails, 1, embedding_dim)
+    h = h.unsqueeze(dim=-2)
+    r = r.unsqueeze(dim=-2)
+    t = t.unsqueeze(dim=-2)
 
     # conv.weight.shape = (C_out, C_in, kernel_size[0], kernel_size[1])
     # here, kernel_size = (1, 3), C_in = 1, C_out = num_filters
@@ -284,7 +284,7 @@ def convkb_interaction(
     x = hidden_dropout(x)
 
     # Linear layer for final scores; use flattened representations, shape: (b, h, r, t, d * f)
-    x = x.view(x.shape[0], num_heads, num_relations, num_tails, embedding_dim * num_filters)
+    x = x.view(x.shape[:-2], embedding_dim * num_filters)
     x = linear(x)
     return x.squeeze(dim=-1)
 
@@ -297,17 +297,17 @@ def distmult_interaction(
     """
     Evaluate the DistMult interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return extended_einsum("bhd,brd,btd->bhrt", h, r, t)
+    return tensor_product(h, r, t)
 
 
 def ermlp_interaction(
@@ -321,11 +321,11 @@ def ermlp_interaction(
     r"""
     Evaluate the ER-MLP interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param hidden:
         The first linear layer.
@@ -342,9 +342,9 @@ def ermlp_interaction(
     # split, shape: (embedding_dim, hidden_dim)
     head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(embedding_dim)
     bias = hidden.bias.view(1, 1, 1, 1, -1)
-    h = h.view(-1, num_heads, 1, 1, embedding_dim) @ head_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
-    r = r.view(-1, 1, num_relations, 1, embedding_dim) @ rel_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
-    t = t.view(-1, 1, 1, num_tails, embedding_dim) @ tail_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    h = h @ head_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    r = r @ rel_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    t = t @ tail_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
     return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
 
 
@@ -357,11 +357,11 @@ def ermlpe_interaction(
     r"""
     Evaluate the ER-MLPE interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param mlp:
         The MLP.
@@ -369,19 +369,18 @@ def ermlpe_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 2 * embedding_dim)
-    x = broadcast_cat(h.unsqueeze(dim=2), r.unsqueeze(dim=1), dim=-1)
+    # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
+    x = broadcast_cat(h, r, dim=-1)
 
     # Predict t embedding, shape: (b, h, r, 1, d)
     shape = x.shape
-    x = mlp(x.view(-1, shape[-1])).view(*shape[:-1], -1).unsqueeze(dim=-2)
+    x = mlp(x.view(-1, shape[-1])).view(*shape[:-1], -1)
 
     # transpose t, (b, 1, 1, d, t)
-    t = t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]).transpose(-2, -1)
+    t = t.transpose(-2, -1)
 
     # dot product, (b, h, r, 1, t)
-    x = (x @ t).squeeze(dim=-2)
-    return x
+    return (x @ t).squeeze(dim=-2)
 
 
 def hole_interaction(
@@ -392,11 +391,11 @@ def hole_interaction(
     """
     Evaluate the HolE interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
@@ -406,17 +405,20 @@ def hole_interaction(
     a_fft = torch.fft.rfft(h, dim=-1)
     b_fft = torch.fft.rfft(t, dim=-1)
 
-    # complex conjugate, shape = (b, h, d)
+    # complex conjugate
     a_fft = torch.conj(a_fft)
 
-    # Hadamard product in frequency domain, shape: (b, h, t, d)
-    p_fft = a_fft.unsqueeze(dim=2) * b_fft.unsqueeze(dim=1)
+    # Hadamard product in frequency domain
+    p_fft = a_fft * b_fft
 
-    # inverse real FFT, shape: (b, h, t, d)
+    # inverse real FFT, shape: (b, h, 1, t, d)
     composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
 
+    # transpose r, (b, 1, r, 1, d) -> (b, 1, 1, d, r)
+    r = r.permute(0, 1, 3, 4, 2)
+
     # inner product with relation embedding
-    return extended_einsum("bhtd,brd->bhrt", composite, r)
+    return (composite @ r).squeeze(dim=-2)
 
 
 def kg2e_interaction(
@@ -432,17 +434,17 @@ def kg2e_interaction(
     """
     Evaluate the KG2E interaction function.
 
-    :param h_mean: shape: (batch_size, num_heads, d)
+    :param h_mean: shape: (batch_size, num_heads, 1, 1, d)
         The head entity distribution mean.
-    :param h_var: shape: (batch_size, num_heads, d)
+    :param h_var: shape: (batch_size, num_heads, 1, 1, d)
         The head entity distribution variance.
-    :param r_mean: shape: (batch_size, num_relations, d)
+    :param r_mean: shape: (batch_size, 1, num_relations, 1, d)
         The relation distribution mean.
-    :param r_var: shape: (batch_size, num_relations, d)
+    :param r_var: shape: (batch_size, 1, num_relations, 1, d)
         The relation distribution variance.
-    :param t_mean: shape: (batch_size, num_tails, d)
+    :param t_mean: shape: (batch_size, 1, 1, num_tails, d)
         The tail entity distribution mean.
-    :param t_var: shape: (batch_size, num_tails, d)
+    :param t_var: shape: (batch_size, 1, 1, num_tails, d)
         The tail entity distribution variance.
     :param similarity:
         The similarity measures for gaussian distributions. From {"KL", "EL"}.
@@ -454,8 +456,8 @@ def kg2e_interaction(
     """
     similarity_fn = KG2E_SIMILARITIES[similarity]
     # Compute entity distribution
-    e_mean = h_mean.unsqueeze(dim=2) - t_mean.unsqueeze(dim=1)
-    e_var = h_var.unsqueeze(dim=2) + t_var.unsqueeze(dim=1)
+    e_mean = h_mean - t_mean
+    e_var = h_var + t_var
     e = GaussianDistribution(mean=e_mean, diagonal_covariance=e_var)
     r = GaussianDistribution(mean=r_mean, diagonal_covariance=r_var)
     return similarity_fn(e=e, r=r, exact=exact)
@@ -478,19 +480,19 @@ def ntn_interaction(
 
         f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r' t + b_r)
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param w: shape: (batch_size, num_relations, k, dim, dim)
+    :param w: shape: (batch_size, 1, num_relations, 1, k, dim, dim)
         The relation specific transformation matrix W_r.
-    :param vh: shape: (batch_size, num_relations, k, dim)
+    :param vh: shape: (batch_size, 1, num_relations, 1, k, dim)
         The head transformation matrix V_h.
-    :param vt: shape: (batch_size, num_relations, k, dim)
+    :param vt: shape: (batch_size, 1, num_relations, 1, k, dim)
         The tail transformation matrix V_h.
-    :param b: shape: (batch_size, num_relations, k)
+    :param b: shape: (batch_size, 1, num_relations, 1, k)
         The relation specific offset b_r.
-    :param u: shape: (batch_size, num_relations, k)
+    :param u: shape: (batch_size, 1, num_relations, 1, k)
         The relation specific final linear transformation b_r.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param activation:
         The activation function.
@@ -501,12 +503,12 @@ def ntn_interaction(
     # save sizes
     num_heads, num_relations, num_tails, _, num_slices = _extract_sizes(h, b, t)
     x = activation(tensor_sum(
-        extended_einsum("bhd,brkde,bte->bhrtk", h, w, t),
-        extended_einsum("brkd,bhd->bhrk", vh, h).unsqueeze(dim=3),
-        extended_einsum("brkd,btd->brtk", vt, t).unsqueeze(dim=1),
-        b.view(b.shape[0], 1, num_relations, 1, num_slices),
+        extended_einsum("bhrtd,brkde,bhrte->bhrtk", h, w, t),
+        extended_einsum("bhrtkd,bhrtd->bhrtk", vh, h),
+        extended_einsum("bhrtkd,bhrtd->bhrtk", vt, t),
+        b,
     ))
-    x = extended_einsum("bhrtk,brk->bhrt", x, u)
+    x = extended_einsum("bhrtk,bhrtk->bhrt", x, u)
     return x
 
 
@@ -527,11 +529,11 @@ def proje_interaction(
 
         f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param d_e: shape: (dim,)
         Global entity projection.
@@ -549,17 +551,14 @@ def proje_interaction(
     """
     num_heads, num_relations, num_tails, dim, _ = _extract_sizes(h, r, t)
     # global projections
-    h = h * d_e.view(1, 1, dim)
-    r = r * d_r.view(1, 1, dim)
+    h = h * d_e.view(1, 1, 1, 1, dim)
+    r = r * d_r.view(1, 1, 1, 1, dim)
     # combination, shape: (b, h, r, d)
-    x = tensor_sum(
-        h.unsqueeze(dim=2),
-        r.unsqueeze(dim=1),
-        b_c.view(1, 1, 1, dim),
-    )
+    x = tensor_sum(h, r, b_c)
     x = activation(x)
     # dot product with t, shape: (b, h, r, t)
-    return (x @ t.unsqueeze(dim=1).transpose(-2, -1)) + b_p
+    t = t.transpose(-2, -1)
+    return (x @ t) + b_p
 
 
 def rescal_interaction(
@@ -570,17 +569,21 @@ def rescal_interaction(
     """
     Evaluate the RESCAL interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return extended_einsum("bhd,brde,bte->bhrt", h, r, t)
+    return torch.chain_matmul(
+        h.unsqueeze(dim=-2),
+        r,
+        t.unsqueeze(dim=-1),
+    ).view(-1, h.shape[1], r.shape[2], t.shape[3])
 
 
 def rotate_interaction(
@@ -590,11 +593,11 @@ def rotate_interaction(
 ) -> torch.FloatTensor:
     """Evaluate the interaction function of RotatE for given embeddings.
 
-    :param h: shape: (batch_size, num_heads, 2*dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, 2*dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, 2*dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, 2*dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, 2*dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, 2*dim)
         The tail representations.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
@@ -610,12 +613,12 @@ def rotate_interaction(
     h, r, t = [view_complex(x) for x in (h, r, t)]
 
     # Rotate (=Hadamard product in complex space).
-    hr = extended_einsum("bhd,brd->bhrd", h, r)
+    hr = h * r
 
     # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
     return negative_norm_of_sum(
-        hr.unsqueeze(dim=3),
-        -t.view(t.shape[0], 1, 1, t.shape[1], t.shape[2]),
+        hr,
+        -t,
         p=2,
         power_norm=False,
     )
@@ -633,17 +636,17 @@ def simple_interaction(
     """
     Evaluate the SimplE interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
-    :param h_inv: shape: (batch_size, num_heads, dim)
+    :param h_inv: shape: (batch_size, num_heads, 1, 1, dim)
         The inverse head representations.
-    :param r_inv: shape: (batch_size, num_relations, dim, dim)
+    :param r_inv: shape: (batch_size, 1, num_relations, 1, dim, dim)
         The relation representations.
-    :param t_inv: shape: (batch_size, num_tails, dim)
+    :param t_inv: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param clamp:
         Clamp the scores to the given range.
@@ -675,13 +678,13 @@ def structured_embedding_interaction(
     .. math ::
         f(h, r, t) = -\|R_h h - R_t t\|
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r_h: shape: (batch_size, num_relations, dim, rel_dim)
+    :param r_h: shape: (batch_size, 1, num_relations, 1, dim, rel_dim)
         The relation-specific head projection.
-    :param r_t: shape: (batch_size, num_relations, dim, rel_dim)
+    :param r_t: shape: (batch_size, 1, num_relations, 1, dim, rel_dim)
         The relation-specific tail projection.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
         The p for the norm. cf. torch.norm.
@@ -692,8 +695,8 @@ def structured_embedding_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        extended_einsum("bred,bhd->bhre", r_h, h).unsqueeze(dim=3),
-        -extended_einsum("bred,btd->brte", r_t, t).unsqueeze(dim=1),
+        (h @ r_h),
+        -(t @ r_t),
         p=p,
         power_norm=power_norm,
     )
@@ -712,17 +715,17 @@ def transd_interaction(
     """
     Evaluate the TransD interaction function.
 
-    :param h: shape: (batch_size, num_heads, d_e)
+    :param h: shape: (batch_size, num_heads, 1, 1, d_e)
         The head representations.
-    :param r: shape: (batch_size, num_relations, d_r)
+    :param r: shape: (batch_size, 1, num_relations, 1, d_r)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, d_e)
+    :param t: shape: (batch_size, 1, 1, num_tails, d_e)
         The tail representations.
-    :param h_p: shape: (batch_size, num_heads, d_e)
+    :param h_p: shape: (batch_size, num_heads, 1, 1, d_e)
         The head projections.
-    :param r_p: shape: (batch_size, num_relations, d_r)
+    :param r_p: shape: (batch_size, 1, num_relations, 1, d_r)
         The relation projections.
-    :param t_p: shape: (batch_size, num_tails, d_e)
+    :param t_p: shape: (batch_size, 1, 1, num_tails, d_e)
         The tail projections.
     :param p:
         The parameter p for selecting the norm.
@@ -733,19 +736,16 @@ def transd_interaction(
         The scores.
     """
     # Project entities
-    # shape: (b, h, r, 1, d_r)
     h_bot = project_entity(
-        e=h.unsqueeze(dim=2),
-        e_p=h_p.unsqueeze(dim=2),
-        r_p=r_p.unsqueeze(dim=1),
-    ).unsqueeze(dim=-2)
-    # shape: (b, 1, r, t, d_r)
+        e=h,
+        e_p=h_p,
+        r_p=r_p,
+    )
     t_bot = project_entity(
-        e=t.unsqueeze(dim=1),
-        e_p=t_p.unsqueeze(dim=1),
-        r_p=r_p.unsqueeze(dim=2),
-    ).unsqueeze(dim=1)
-    r = r.view(r.shape[0], 1, r.shape[1], 1, r.shape[2])
+        e=t,
+        e_p=t_p,
+        r_p=r_p,
+    )
     return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)
 
 
@@ -759,11 +759,11 @@ def transe_interaction(
     """
     Evaluate the TransE interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param r: shape: (batch_size, num_relations, dim)
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
         The p for the norm.
@@ -773,14 +773,7 @@ def transe_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
-    return _translational_interaction(
-        h=h.view(-1, num_heads, 1, 1, embedding_dim),
-        r=r.view(-1, 1, num_relations, 1, embedding_dim),
-        t=t.view(-1, 1, 1, num_tails, embedding_dim),
-        p=p,
-        power_norm=power_norm,
-    )
+    return _translational_interaction(h=h, r=r, t=t, p=p, power_norm=power_norm)
 
 
 def transh_interaction(
@@ -794,13 +787,13 @@ def transh_interaction(
     """
     Evaluate the DistMult interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param w_r: shape: (batch_size, num_relations, dim)
+    :param w_r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation normal vector representations.
-    :param d_r: shape: (batch_size, num_relations, dim)
+    :param d_r: shape: (batch_size, 1, num_relations, 1, dim)
         The relation difference vector representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
         The p for the norm. cf. torch.norm.
@@ -810,17 +803,15 @@ def transh_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, dim = _extract_sizes(h, w_r, t)[:4]
-    # Project to hyperplane
     return negative_norm_of_sum(
-        # h
-        h.view(h.shape[0], num_heads, 1, 1, dim),
-        -extended_einsum("bhd,brd,bre->bhre", h, w_r, w_r).unsqueeze(dim=3),
+        # h projection to hyperplane
+        h,
+        -(h * w_r).sum(dim=-1, keepdims=True) * w_r,
         # r
-        d_r.view(d_r.shape[0], 1, num_relations, 1, dim),
-        # -t
-        -t.view(t.shape[0], 1, 1, num_tails, dim),
-        extended_einsum("btd,brd,bre->brte", t, w_r, w_r).unsqueeze(dim=1),
+        d_r,
+        # -t projection to hyperplane
+        -t,
+        (t * w_r).sum(dim=-1, keepdims=True) * w_r,
         p=p,
         power_norm=power_norm,
     )
@@ -836,13 +827,13 @@ def transr_interaction(
 ) -> torch.FloatTensor:
     """Evaluate the interaction function for given embeddings.
 
-    :param h: shape: (batch_size, num_heads, d_e)
+    :param h: shape: (batch_size, num_heads, 1, 1, d_e)
         Head embeddings.
-    :param r: shape: (batch_size, num_relations, d_r)
+    :param r: shape: (batch_size, 1, num_relations, 1, d_r)
         Relation embeddings.
-    :param m_r: shape: (batch_size, num_relations, d_e, d_r)
+    :param m_r: shape: (batch_size, 1, num_relations, 1, d_e, d_r)
         The relation specific linear transformations.
-    :param t: shape: (batch_size, num_tails, d_e)
+    :param t: shape: (batch_size, 1, 1, num_tails, d_e)
         Tail embeddings.
     :param p:
         The parameter p for selecting the norm.
@@ -852,18 +843,9 @@ def transr_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, d_e, d_r = _extract_sizes(h=h, r=r, t=t)
     # project to relation specific subspace and ensure constraints
-    # head, shape: (b, h, r, 1, d_r)
-    h_bot = h.view(-1, num_heads, 1, 1, d_e) @ m_r.view(-1, 1, num_relations, d_e, d_r)
-    h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
-
-    # head, shape: (b, 1, r, t, d_r)
-    t_bot = t.view(-1, 1, 1, num_tails, d_e) @ m_r.view(-1, 1, num_relations, d_e, d_r)
-    t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
-
-    # evaluate score function, shape: (b, h, r, t)
-    r = r.view(-1, 1, num_relations, 1, d_r)
+    h_bot = clamp_norm(h @ m_r, p=2, dim=-1, maxnorm=1.)
+    t_bot = clamp_norm(t @ m_r, p=2, dim=-1, maxnorm=1.)
     return _translational_interaction(h=h_bot, r=r, t=t_bot, p=p, power_norm=power_norm)
 
 
@@ -889,11 +871,11 @@ def tucker_interaction(
 
     where BN denotes BatchNorm and DO denotes Dropout
 
-    :param h: shape: (batch_size, num_heads, d_e)
+    :param h: shape: (batch_size, num_heads, 1, 1, d_e)
         The head representations.
-    :param r: shape: (batch_size, num_relations, d_r)
+    :param r: shape: (batch_size, 1, num_relations, 1, d_r)
         The relation representations.
-    :param t: shape: (batch_size, num_tails, d_e)
+    :param t: shape: (batch_size, 1, 1, num_tails, d_e)
         The tail representations.
     :param core_tensor: shape: (d_e, d_r, d_e)
         The core tensor.
@@ -913,15 +895,15 @@ def tucker_interaction(
     """
     return extended_einsum(
         # x_3 contraction
-        "bhrk,btk->bhrt",
+        "bhrtk,bhrtk->bhrt",
         _apply_optional_bn_to_tensor(
             x=extended_einsum(
                 # x_1 contraction
-                "brik,bhi->bhrk",
+                "bhrtik,bhrti->bhrtk",
                 _apply_optional_bn_to_tensor(
                     x=extended_einsum(
                         # x_2 contraction
-                        "ijk,brj->brik",
+                        "ijk,bhrtj->bhrtik",
                         core_tensor,
                         r,
                     ),
@@ -948,9 +930,9 @@ def unstructured_model_interaction(
     """
     Evaluate the SimplE interaction function.
 
-    :param h: shape: (batch_size, num_heads, dim)
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param t: shape: (batch_size, num_tails, dim)
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
         The parameter p for selecting the norm.
@@ -960,6 +942,4 @@ def unstructured_model_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    h = h.unsqueeze(dim=2).unsqueeze(dim=3)
-    t = t.unsqueeze(dim=1).unsqueeze(dim=2)
     return negative_norm_of_sum(h, -t, p=p, power_norm=power_norm)

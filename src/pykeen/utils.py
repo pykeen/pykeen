@@ -3,8 +3,10 @@
 """Utilities for PyKEEN."""
 
 import ftplib
+import functools
 import json
 import logging
+import operator
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
@@ -498,9 +500,15 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
 
 
 def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute sum of tensors in brodcastable shape."""
+    """Compute elementwise sum of tensors in brodcastable shape."""
     # TODO: Optimize order
     return sum(x)
+
+
+def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
+    """"Compute elementwise product of tensors in broadcastable shape."""
+    # TODO: Optimize order
+    return functools.reduce(operator.mul, x[1:], x[0])
 
 
 def negative_norm_of_sum(
@@ -545,6 +553,7 @@ def extended_einsum(
         mod_op = ""
         if len(op) != len(t.shape):
             raise ValueError(f'Shapes not equal: op={op} and t.shape={t.shape}')
+        # TODO: t_shape = list(t.shape); del t_shape[i]; t.view(*shape) -> only one reshape operation
         for i, c in reversed(list(enumerate(op))):
             if t.shape[i] == 1:
                 t = t.squeeze(dim=i)
