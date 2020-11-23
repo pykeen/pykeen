@@ -47,16 +47,17 @@ class DistMultLiteral(LiteralModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             interaction=DistMultInteraction(),
             combination=nn.Sequential(
                 nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
                 nn.Dropout(input_dropout),
             ),
             entity_specification=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=nn.init.xavier_normal_,
             ),
             relation_specification=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=nn.init.xavier_normal_,
             ),
             loss=loss,
