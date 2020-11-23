@@ -2,18 +2,18 @@
 
 """Stateful interaction functions."""
 
-import itertools
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Generic, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import FloatTensor, nn
 
 from . import functional as pkf
+from .representation import DIMS, convert_to_canonical_shape
 from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
-from ..utils import check_shapes, upgrade_to_sequence
+from ..utils import upgrade_to_sequence
 
 __all__ = [
     # Base Classes
@@ -73,13 +73,6 @@ def _get_batches(z, slice_size):
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
-    # Dimensions
-    BATCH_DIM: int = 0
-    NUM_DIM: int = 1
-    HEAD_DIM: int = 1
-    RELATION_DIM: int = 2
-    TAIL_DIM: int = 3
-
     #: The symbolic shapes for entity representations
     entity_shape: Sequence[str] = ("d",)
 
@@ -137,94 +130,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         """
         return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
 
-    @staticmethod
-    def _add_dim(*x: torch.FloatTensor, dim: int) -> Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]]:
-        """
-        Add a dimension to tensors.
-
-        :param x:
-            The tensors.
-        :param dim:
-            The dimension to unsqueeze.
-
-        :return:
-            The tensors with an additional 1-element dimension.
-        """
-        out = [xx.unsqueeze(dim=dim) for xx in x]
-        if len(x) == 1:
-            return out[0]
-        return tuple(out)
-
-    @staticmethod
-    def _remove_dim(x: torch.FloatTensor, *dims: int) -> torch.FloatTensor:
-        """
-        Remove dimensions from a tensor.
-
-        :param x:
-            The tensor.
-        :param dims:
-            The dimensions to remove.
-
-        :return:
-            The squeezed tensor.
-
-        :raises ValueError:
-            If there are duplicates in dims (after normalizing the dimensions, i.e. resolving negative dimension
-            indices).
-        """
-        # normalize dimensions
-        dims = tuple(d if d >= 0 else len(x.shape) + d for d in dims)
-        if len(set(dims)) != len(dims):
-            raise ValueError(f"Duplicate dimensions: {dims}")
-        assert all(0 <= d < len(x.shape) for d in dims)
-        for dim in sorted(dims, reverse=True):
-            x = x.squeeze(dim=dim)
-        return x
-
-    def _check_shapes(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-        h_prefix: str = "b",
-        r_prefix: str = "b",
-        t_prefix: str = "b",
-        raise_on_errors: bool = True,
-    ) -> bool:
-        entity_shape = self.entity_shape
-        if isinstance(entity_shape, str):
-            entity_shape = (entity_shape,)
-        relation_shape = self.relation_shape
-        if isinstance(relation_shape, str):
-            relation_shape = (relation_shape,)
-        tail_entity_shape = self.tail_entity_shape
-        if tail_entity_shape is None:
-            tail_entity_shape = entity_shape
-        if isinstance(tail_entity_shape, str):
-            tail_entity_shape = (tail_entity_shape,)
-        if len(h) != len(entity_shape):
-            if raise_on_errors:
-                raise ValueError
-            return False
-        if len(r) != len(relation_shape):
-            if raise_on_errors:
-                raise ValueError
-            return False
-        if len(t) != len(tail_entity_shape):
-            if raise_on_errors:
-                raise ValueError
-            return False
-
-        # TODO make helper function + unit test
-        a = ((hh, h_prefix + hs) for hh, hs in zip(h, entity_shape))  # type: ignore
-        b = ((rr, r_prefix + rs) for rr, rs in zip(r, relation_shape))  # type: ignore
-        c = ((tt, t_prefix + ts) for tt, ts in zip(t, tail_entity_shape))  # type: ignore
-
-        return check_shapes(
-            *itertools.chain(a, b, c),
-            raise_on_errors=raise_on_errors,
-        )
-
     def score(
         self,
         h: HeadRepresentation,
@@ -239,11 +144,11 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         .. note ::
             At most one of the slice sizes may be not None.
 
-        :param h: shape: (batch_size, num_heads, ``*``)
+        :param h: shape: (batch_size, num_heads, `1, 1, `*``)
             The head representations.
-        :param r: shape: (batch_size, num_relations, ``*``)
+        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
             The relation representations.
-        :param t: shape: (batch_size, num_tails, ``*``)
+        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
             The tail representations.
         :param slice_size:
             The slice size.
@@ -253,7 +158,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        # TODO: fix shapes
         return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
     def _score(
@@ -261,44 +165,32 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-        h_prefix: str = "b",
-        r_prefix: str = "b",
-        t_prefix: str = "b",
         slice_size: Optional[int] = None,
+        slice_dim: str = None,
     ) -> torch.FloatTensor:
-        assert {h_prefix, r_prefix, t_prefix}.issubset(list("bn"))
-        # at most one of h_prefix, r_prefix, t_prefix equals n
-        slice_dims: List[str] = [
-            dim
-            for dim, prefix in zip("hrt", (h_prefix, r_prefix, t_prefix))
-            if prefix == "n"
-        ]
-        slice_dim: Optional[str] = slice_dims[0] if len(slice_dims) == 1 else None
+        """
 
-        # FIXME typing does not work well for this
-        h = upgrade_to_sequence(h)
-        r = upgrade_to_sequence(r)
-        t = upgrade_to_sequence(t)
-        assert self._check_shapes(h=h, r=r, t=t, h_prefix=h_prefix, r_prefix=r_prefix, t_prefix=t_prefix)
-
-        # prepare input to generic score function: bh*, br*, bt*
-        h = self._add_dim(*h, dim=self.BATCH_DIM if h_prefix == "n" else self.NUM_DIM)
-        r = self._add_dim(*r, dim=self.BATCH_DIM if r_prefix == "n" else self.NUM_DIM)
-        t = self._add_dim(*t, dim=self.BATCH_DIM if t_prefix == "n" else self.NUM_DIM)
-
-        # TODO: fix shapes
-        scores = self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
-
-        remove_dims = [
-            dim
-            for dim, prefix in zip(
-                (self.HEAD_DIM, self.RELATION_DIM, self.TAIL_DIM),
-                (h_prefix, r_prefix, t_prefix),
-            )
-            if prefix == "b"
-        ]
-        # prepare output shape
-        return self._remove_dim(scores, *remove_dims)
+        :param h: shape: (b, h, *)
+        :param r: shape: (b, r, *)
+        :param t: shape: (b, t, *)
+        :param slice_size: ...
+        :param slice_dim: ...
+        :return: shape: (b, h, r, t)
+        """
+        h, r, t = _unpack_singletons(*(
+            [
+                convert_to_canonical_shape(
+                    x=x.unsqueeze(dim=0 if dim != slice_dim else 1),
+                    dim=dim,
+                    num=x.shape[1],
+                    batch_size=x.shape[0],
+                    suffix_shape=x.shape[2:],
+                )
+                for x in upgrade_to_sequence(xx)
+            ]
+            for xx, dim in zip((h, r, t), "hrt")
+        ))
+        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
 
     def _forward_slicing_wrapper(
         self,
@@ -315,11 +207,11 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             Depending on the interaction function, there may be more than one representation for h/r/t. In that case,
             a tuple of at least two tensors is passed.
 
-        :param h: shape: (batch_size, num_heads, ``*``)
+        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
             The head representations.
-        :param r: shape: (batch_size, num_relations, ``*``)
+        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
             The relation representations.
-        :param t: shape: (batch_size, num_tails, ``*``)
+        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
             The tail representations.
         :param slice_size:
             The slice size.
@@ -332,24 +224,23 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :raises ValueError:
             If slice_dim is invalid.
         """
-        # TODO: fix shapes
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
         elif slice_dim == "h":
             scores = torch.cat([
                 self(h=h_batch, r=r, t=t)
                 for h_batch in _get_batches(h, slice_size)
-            ], dim=self.HEAD_DIM)
+            ], dim=DIMS[slice_dim])
         elif slice_dim == "r":
             scores = torch.cat([
                 self(h=h, r=r_batch, t=t)
                 for r_batch in _get_batches(r, slice_size)
-            ], dim=self.RELATION_DIM)
+            ], dim=DIMS[slice_dim])
         elif slice_dim == "t":
             scores = torch.cat([
                 self(h=h, r=r, t=t_batch)
                 for t_batch in _get_batches(t, slice_size)
-            ], dim=self.TAIL_DIM)
+            ], dim=DIMS[slice_dim])
         else:
             raise ValueError(f'Invalid slice_dim: {slice_dim}')
         return scores
@@ -373,7 +264,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, 1)
             The scores.
         """
-        return self._score(h=h, r=r, t=t).unsqueeze(dim=-1)
+        return self._score(h=h, r=r, t=t)[:, 0, 0, 0, None]
 
     def score_h(
         self,
@@ -397,7 +288,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=all_entities, r=r, t=t, h_prefix="n", slice_size=slice_size)
+        return self._score(h=all_entities, r=r, t=t, slice_dim="h", slice_size=slice_size)[:, :, 0, 0]
 
     def score_r(
         self,
@@ -421,7 +312,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=h, r=all_relations, t=t, r_prefix="n", slice_size=slice_size)
+        return self._score(h=h, r=all_relations, t=t, slice_dim="r", slice_size=slice_size)[:, 0, :, 0]
 
     def score_t(
         self,
@@ -445,7 +336,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=h, r=r, t=all_entities, t_prefix="n", slice_size=slice_size)
+        return self._score(h=h, r=r, t=all_entities, slice_dim="t", slice_size=slice_size)[:, 0, 0, :]
 
     def reset_parameters(self):
         """Reset parameters the interaction function may have."""
