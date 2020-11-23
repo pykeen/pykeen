@@ -85,7 +85,7 @@ class SimplE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     regularizer=regularizer,
-                )
+                ),
             ],
             relation_representations=[
                 EmbeddingSpecification(

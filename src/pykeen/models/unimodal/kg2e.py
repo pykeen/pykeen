@@ -61,13 +61,13 @@ class KG2E(ERModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,
         c_max: float = 5.,
+        loss: Optional[Loss] = None,
+        automatic_memory_optimization: Optional[bool] = None,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
     ) -> None:
         r"""Initialize KG2E.
 

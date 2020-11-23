@@ -1130,13 +1130,13 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
             None,
             EmbeddingSpecification,
             RepresentationModule,
-            Sequence[Union[EmbeddingSpecification, RepresentationModule]]
+            Sequence[Union[EmbeddingSpecification, RepresentationModule]],
         ] = None,
         relation_representations: Union[
             None,
             EmbeddingSpecification,
             RepresentationModule,
-            Sequence[Union[EmbeddingSpecification, RepresentationModule]]
+            Sequence[Union[EmbeddingSpecification, RepresentationModule]],
         ] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
