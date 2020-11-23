@@ -257,6 +257,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
+        # TODO: fix shapes
         return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
     def _score(
@@ -289,6 +290,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r = self._add_dim(*r, dim=self.BATCH_DIM if r_prefix == "n" else self.NUM_DIM)
         t = self._add_dim(*t, dim=self.BATCH_DIM if t_prefix == "n" else self.NUM_DIM)
 
+        # TODO: fix shapes
         scores = self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
 
         remove_dims = [
@@ -334,6 +336,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :raises ValueError:
             If slice_dim is invalid.
         """
+        # TODO: fix shapes
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
         elif slice_dim == "h":

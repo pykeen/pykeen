@@ -220,7 +220,7 @@ class Embedding(RepresentationModule):
             shape = (shape,)
         elif isinstance(shape, Sequence) and embedding_dim is None:
             shape = tuple(shape)
-            embedding_dim = numpy.prod(shape)
+            embedding_dim = int(numpy.prod(shape))
         else:
             raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
 

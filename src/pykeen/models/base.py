@@ -5,6 +5,7 @@
 import functools
 import itertools as itt
 import logging
+import string
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
@@ -24,7 +25,7 @@ from ..nn.modules import Interaction
 from ..regularizers import Regularizer, collect_regularization_terms
 from ..triples import TriplesFactory
 from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, check_shapes, resolve_device, set_random_seed
 
 if TYPE_CHECKING:
     from ..typing import Representation  # noqa
@@ -1097,26 +1098,37 @@ def _prepare_representation_module_list(
         Sequence[Union[EmbeddingSpecification, RepresentationModule]],
     ],
     num_embeddings: int,
+    shapes: Sequence[str],
 ) -> Sequence[RepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
-    if representations is not None:
-        if not isinstance(representations, Sequence):
-            representations = [representations]
-        representations = [
-            r if isinstance(r, RepresentationModule) else r.make(num_embeddings=num_embeddings)
-            for r in representations
-        ]
-        for r in representations:
-            if r.max_id < num_embeddings:
-                raise ValueError(f"{r} only provides {r.max_id} representations, but should provide {num_embeddings}.")
-            elif r.max_id > num_embeddings:
-                logger.warning(
-                    f"{r} provides {r.max_id} representations, although only {num_embeddings} are needed. While this "
-                    f"is not necessarily wrong, it can indicate an error where the number of representations was chosen"
-                    f" wrong."
-                )
-    return nn.ModuleList(representations)
+    if representations is None:
+        representations = []
+    if not isinstance(representations, Sequence):
+        representations = [representations]
+    if len(representations) != len(shapes):
+        raise ValueError(
+            f"Interaction function requires {len(shapes)} representations, but {len(representations)} were given."
+        )
+    modules = []
+    for r in representations:
+        if not isinstance(r, RepresentationModule):
+            assert isinstance(r, EmbeddingSpecification)
+            r = r.make(num_embeddings=num_embeddings)
+        if r.max_id < num_embeddings:
+            raise ValueError(f"{r} only provides {r.max_id} representations, but should provide {num_embeddings}.")
+        elif r.max_id > num_embeddings:
+            logger.warning(
+                f"{r} provides {r.max_id} representations, although only {num_embeddings} are needed. While this "
+                f"is not necessarily wrong, it can indicate an error where the number of representations was chosen"
+                f" wrong."
+            )
+        modules.append(r)
+    check_shapes(*zip(
+        (r.shape for r in modules),
+        shapes
+    ), raise_on_errors=True)
+    return nn.ModuleList(modules)
 
 
 class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
@@ -1183,10 +1195,12 @@ class ERModel(Model, Generic[HeadRepresentation, RelationRepresentation, TailRep
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
             num_embeddings=triples_factory.num_entities,
+            shapes=interaction.entity_shape,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             num_embeddings=triples_factory.num_relations,
+            shapes=interaction.relation_shape,
         )
         self.interaction = interaction
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in

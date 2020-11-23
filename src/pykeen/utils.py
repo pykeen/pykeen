@@ -392,7 +392,7 @@ def random_non_negative_int() -> int:
 
 
 def check_shapes(
-    *x: Tuple[torch.Tensor, str],
+    *x: Tuple[Union[torch.Tensor, Tuple[int, ...]], str],
     raise_on_errors: bool = True,
 ) -> bool:
     """
@@ -413,11 +413,13 @@ def check_shapes(
     """
     dims: Dict[str, Tuple[int, ...]] = dict()
     errors = []
-    for tensor, shape in x:
-        if tensor.ndimension() != len(shape):
-            errors.append(f"Invalid number of dimensions: {tensor.shape} vs. {shape}")
+    for actual_shape, shape in x:
+        if torch.is_tensor(actual_shape):
+            actual_shape = actual_shape.shape
+        if len(actual_shape) != len(shape):
+            errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
             continue
-        for dim, name in zip(tensor.shape, shape):
+        for dim, name in zip(actual_shape, shape):
             exp_dim = dims.get(name)
             if exp_dim is not None and exp_dim != dim:
                 errors.append(f"{name}: {dim} vs. {exp_dim}")
