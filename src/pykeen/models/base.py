@@ -1109,7 +1109,7 @@ def _prepare_representation_module_list(
     if len(representations) != len(shapes):
         raise ValueError(
             f"Interaction function requires {len(shapes)} {label} representations, but "
-            f"{len(representations)} were given."
+            f"{len(representations)} were given.",
         )
     modules = []
     for r in representations:
@@ -1118,18 +1118,18 @@ def _prepare_representation_module_list(
             r = r.make(num_embeddings=num_embeddings)
         if r.max_id < num_embeddings:
             raise ValueError(
-                f"{r} only provides {r.max_id} {label} representations, but should provide {num_embeddings}."
+                f"{r} only provides {r.max_id} {label} representations, but should provide {num_embeddings}.",
             )
         elif r.max_id > num_embeddings:
             logger.warning(
                 f"{r} provides {r.max_id} {label} representations, although only {num_embeddings} are needed."
                 f"While this is not necessarily wrong, it can indicate an error where the number of {label} "
-                f"representations was chosen wrong."
+                f"representations was chosen wrong.",
             )
         modules.append(r)
     check_shapes(*zip(
         (r.shape for r in modules),
-        shapes
+        shapes,
     ), raise_on_errors=True)
     return nn.ModuleList(modules)
 

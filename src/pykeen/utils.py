@@ -8,6 +8,7 @@ import json
 import logging
 import operator
 import random
+import typing
 from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
@@ -16,7 +17,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn
-from torch._C import FloatTensor
 from torch.nn import functional
 
 from .typing import DeviceHint
@@ -415,7 +415,7 @@ def check_shapes(
     dims: Dict[str, Tuple[int, ...]] = dict()
     errors = []
     for actual_shape, shape in x:
-        if torch.is_tensor(actual_shape):
+        if isinstance(actual_shape, torch.Tensor):
             actual_shape = actual_shape.shape
         if len(actual_shape) != len(shape):
             errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
