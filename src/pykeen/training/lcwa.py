@@ -43,19 +43,13 @@ class LCWATrainingLoop(TrainingLoop):
 
         # Send batch to device
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
+        predictions = self.model.score_t(hr_batch=batch_pairs)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
-
-        if slice_size is None:
-            predictions = self.model.score_t(hr_batch=batch_pairs)
-        else:
-            predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)
-
-        loss = self._loss_helper(
+        return self._loss_helper(
             predictions,
             batch_labels_full,
             label_smoothing,
         )
-        return loss
 
     def _label_loss_helper(
         self,
