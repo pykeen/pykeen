@@ -13,7 +13,7 @@ from torch import FloatTensor, nn
 
 from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
-from ..utils import check_shapes
+from ..utils import check_shapes, upgrade_to_sequence
 
 __all__ = [
     # Base Classes
@@ -45,12 +45,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _upgrade_to_sequence(x: Union[FloatTensor, Sequence[FloatTensor]]) -> Sequence[FloatTensor]:
-    return x if isinstance(x, Sequence) else (x,)
-
-
 def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Sequence[Sequence[Representation]]:
-    return tuple(_upgrade_to_sequence(xx) for xx in x)
+    return tuple(upgrade_to_sequence(xx) for xx in x)
 
 
 def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
@@ -280,9 +276,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         slice_dim: Optional[str] = slice_dims[0] if len(slice_dims) == 1 else None
 
         # FIXME typing does not work well for this
-        h = _upgrade_to_sequence(h)
-        r = _upgrade_to_sequence(r)
-        t = _upgrade_to_sequence(t)
+        h = upgrade_to_sequence(h)
+        r = upgrade_to_sequence(r)
+        t = upgrade_to_sequence(t)
         assert self._check_shapes(h=h, r=r, t=t, h_prefix=h_prefix, r_prefix=r_prefix, t_prefix=t_prefix)
 
         # prepare input to generic score function: bh*, br*, bt*

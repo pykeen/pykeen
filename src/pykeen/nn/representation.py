@@ -13,6 +13,7 @@ import torch
 import torch.nn
 from torch import nn
 
+from ..utils import upgrade_to_sequence
 from ..regularizers import Regularizer
 from ..typing import Constrainer, Initializer, Normalizer
 
@@ -36,6 +37,39 @@ def _normalize_dim(dim: Union[int, str]) -> int:
     if isinstance(dim, int):
         return dim
     return DIMS[dim.lower()[0]]
+
+
+def convert_to_canonical_shape(
+    x: torch.FloatTensor,
+    dim: Union[int, str],
+    num: Optional[int] = None,
+    batch_size: int = 1,
+    suffix_shape: Union[int, Sequence[int, ...]] = -1,
+) -> torch.FloatTensor:
+    """
+    Convert a tensor to canonical shape.
+
+    :param x:
+        The tensor in compatible shape.
+    :param dim:
+        The "num" dimension.
+    :param batch_size:
+        The batch size.
+    :param num:
+        The number.
+    :param suffix_shape:
+        The suffix shape.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails, ``*``)
+        A tensor in canonical shape.
+    """
+    if num is None:
+        num = x.shape[0]
+    suffix_shape = upgrade_to_sequence(suffix_shape)
+    shape = [batch_size, 1, 1, 1]
+    dim = _normalize_dim(dim=dim)
+    shape[dim] = num
+    return x.view(*shape, *suffix_shape)
 
 
 class RepresentationModule(nn.Module, ABC):
@@ -92,7 +126,6 @@ class RepresentationModule(nn.Module, ABC):
 
         :return: shape: (batch_size, d1, d2, d3, *self.shape)
         """
-        dim = _normalize_dim(dim=dim)
         r_shape: Tuple[int, ...]
         if indices is None:
             x = self(indices=indices)
@@ -105,9 +138,7 @@ class RepresentationModule(nn.Module, ABC):
             r_shape = tuple(indices.shape)
             if len(r_shape) < 2:
                 r_shape = r_shape + (1,)
-        shape = [r_shape[0], 1, 1, 1]
-        shape[dim] = r_shape[1]
-        return x.view(*shape, *self.shape)
+        return convert_to_canonical_shape(x=x, dim=dim, num=r_shape[1], batch_size=r_shape[0], suffix_shape=self.shape)
 
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
