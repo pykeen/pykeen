@@ -126,13 +126,13 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> torch.FloatTensor:
-        """Compute broadcasted triple scores given representations for head, relation and tails.
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, ``*``)
+        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
             The head representations.
-        :param r: shape: (batch_size, num_relations, ``*``)
+        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
             The relation representations.
-        :param t: shape: (batch_size, num_tails, ``*``)
+        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
             The tail representations.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)

@@ -3,7 +3,7 @@
 """PyKEEN internal "nn" module."""
 
 from . import functional, init
-from .emb import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
+from .representation import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
 from .modules import Interaction
 
 __all__ = [
