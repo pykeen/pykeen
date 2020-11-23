@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from ..base import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class HolE(SingleVectorEmbeddingModel):
+class HolE(ERModel):
     r"""An implementation of HolE [nickel2016]_.
 
     Holographic embeddings (HolE) make use of the circular correlation operator to compute interactions between
@@ -63,19 +63,20 @@ class HolE(SingleVectorEmbeddingModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            loss=loss,
             interaction=HolEInteraction(),
-            automatic_memory_optimization=automatic_memory_optimization,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
             # Initialization, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-            embedding_specification=EmbeddingSpecification(
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=xavier_uniform_,
                 constrainer=clamp_norm,  # type: ignore
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
-            relation_embedding_specification=EmbeddingSpecification(
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 initializer=xavier_uniform_,
             ),
+            loss=loss,
+            automatic_memory_optimization=automatic_memory_optimization,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
         )

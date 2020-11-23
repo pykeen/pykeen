@@ -4,8 +4,9 @@
 
 from typing import Optional
 
-from ..base import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...nn.modules import ERMLPInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -15,7 +16,7 @@ __all__ = [
 ]
 
 
-class ERMLP(SingleVectorEmbeddingModel):
+class ERMLP(ERModel):
     r"""An implementation of ERMLP from [dong2014]_.
 
     ERMLP is a multi-layer perceptron based approach that uses a single hidden layer and represents entities and
@@ -57,7 +58,12 @@ class ERMLP(SingleVectorEmbeddingModel):
                 embedding_dim=embedding_dim,
                 hidden_dim=hidden_dim,
             ),
-            embedding_dim=embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,

@@ -8,7 +8,7 @@ from typing import Optional
 import torch
 import torch.autograd
 
-from ..base import TwoVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import KG2EInteraction
@@ -23,7 +23,7 @@ __all__ = [
 _LOG_2_PI = math.log(math.tau)
 
 
-class KG2E(TwoVectorEmbeddingModel):
+class KG2E(ERModel):
     r"""An implementation of KG2E from [he2015]_.
 
     KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
@@ -76,32 +76,32 @@ class KG2E(TwoVectorEmbeddingModel):
         :param c_min:
         :param c_max:
         """
+        # Both, entities and relations, are represented as d-dimensional Normal distributions with diagonal covariance
+        # matrix
+        representation_spec = [
+            # mean of Normal distribution
+            EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                constrainer=clamp_norm,  # type: ignore
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            # diagonal covariance of Normal distribution
+            # Ensure positive definite covariances matrices and appropriate size by clamping
+            EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                constrainer=torch.clamp,
+                constrainer_kwargs=dict(min=c_min, max=c_max),
+            ),
+        ]
         super().__init__(
             triples_factory=triples_factory,
             interaction=KG2EInteraction(
                 similarity=dist_similarity,
             ),
-            embedding_dim=embedding_dim,
+            entity_representations=representation_spec,
+            relation_representations=representation_spec,
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            relation_embedding_specification=EmbeddingSpecification(
-                constrainer=clamp_norm,  # type: ignore
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            ),
-            # Ensure positive definite covariances matrices and appropriate size by clamping
-            second_embedding_specification=EmbeddingSpecification(
-                constrainer=torch.clamp,
-                constrainer_kwargs=dict(min=c_min, max=c_max),
-            ),
-            second_relation_embedding_specification=EmbeddingSpecification(
-                # Ensure positive definite covariances matrices and appropriate size by clamping
-                constrainer=torch.clamp,
-                constrainer_kwargs=dict(min=c_min, max=c_max),
-            ),
         )

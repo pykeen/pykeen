@@ -4,8 +4,9 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Type
 
-from ..base import SingleVectorEmbeddingModel
+from ..base import ERModel
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import EmbeddingSpecification
 from ...nn.modules import ERMLPEInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -15,7 +16,7 @@ __all__ = [
 ]
 
 
-class ERMLPE(SingleVectorEmbeddingModel):
+class ERMLPE(ERModel):
     r"""An extension of ERMLP proposed by [sharifzadeh2019]_.
 
     This model uses a neural network-based approach similar to ERMLP and with slight modifications.
@@ -70,7 +71,12 @@ class ERMLPE(SingleVectorEmbeddingModel):
                 hidden_dropout=hidden_dropout,
                 embedding_dim=embedding_dim,
             ),
-            embedding_dim=embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
             automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
