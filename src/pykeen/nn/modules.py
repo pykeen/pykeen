@@ -1006,6 +1006,8 @@ class SimplEInteraction(
     """Interaction function of SimplE."""
 
     func = pkf.simple_interaction
+    entity_shape = ("d", "d")
+    relation_shape = ("d", "d")
 
     def __init__(self, clamp_score: Union[None, float, Tuple[float, float]] = None):
         super().__init__()
