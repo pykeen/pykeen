@@ -26,7 +26,7 @@ jobs:
         run: tox -e flake8
 
       - name: Check typing with MyPy
-        env: tox -e mypy
+        run: tox -e mypy
 
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
