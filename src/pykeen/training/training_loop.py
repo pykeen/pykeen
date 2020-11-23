@@ -15,11 +15,11 @@ import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
+from tqdm.autonotebook import tqdm, trange
 
 from ..losses import Loss
 from ..models.base import Model
 from ..stoppers import Stopper
-from ..tqdmw import tqdm, trange
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory

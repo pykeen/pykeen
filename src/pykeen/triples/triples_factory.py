@@ -11,10 +11,10 @@ from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
-from ..tqdmw import tqdm
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
 from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
 
@@ -176,10 +176,10 @@ def _map_triples_elements_to_ids(
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    #: The mapping from entities' labels to their indexes
+    #: The mapping from entities' labels to their indices
     entity_to_id: EntityMapping
 
-    #: The mapping from relations' labels to their indexes
+    #: The mapping from relations' labels to their indices
     relation_to_id: RelationMapping
 
     #: A three-column matrix where each row are the head label,
@@ -443,10 +443,15 @@ class TriplesFactory:
 
         # Split triples
         triples_groups = np.vsplit(self.triples[idx], split_idxs)
-        logger.info(f'split triples to groups of sizes {[triples.shape[0] for triples in triples_groups]}')
+        logger.info(
+            'done splitting triples to groups of sizes %s',
+            [triples.shape[0] for triples in triples_groups],
+        )
 
         # Make sure that the first element has all the right stuff in it
+        logger.debug('cleaning up groups')
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        logger.debug('done cleaning up groups')
 
         for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
             actual_size = triples.shape[0]
@@ -488,7 +493,7 @@ class TriplesFactory:
         }
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
-        """Get an np.array index for triples with the given entities."""
+        """Get np.array indices for triples with the given entities."""
         entities = np.asanyarray(entities, dtype=self.triples.dtype)
         return (
             np.isin(self.triples[:, 0], entities, invert=invert)
@@ -496,7 +501,7 @@ class TriplesFactory:
         )
 
     def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
-        """Get an np.array index for triples with the given relations."""
+        """Get np.array indices for triples with the given relations."""
         return np.isin(self.triples[:, 1], list(relations), invert=invert)
 
     def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:

@@ -7,18 +7,20 @@ import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
 import pandas as pd
 import torch
-from torch import nn
+import torch.nn
+
+from .typing import DeviceHint
 
 __all__ = [
+    'compose',
     'clamp_norm',
     'compact_mapping',
-    'get_embedding',
     'imag_part',
     'invert_mapping',
     'l2_regularization',
@@ -36,7 +38,6 @@ __all__ = [
     'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
-    'get_embedding_in_canonical_shape',
     'set_random_seed',
     'NoRandomSeedNecessary',
     'Result',
@@ -74,7 +75,7 @@ def l2_regularization(
     return regularization_term
 
 
-def resolve_device(device: Union[None, str, torch.device] = None) -> torch.device:
+def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
     if device is None or device == 'gpu':
         device = 'cuda'
@@ -202,24 +203,6 @@ def _flatten_dictionary(
     return result
 
 
-def get_embedding_in_canonical_shape(
-    embedding: nn.Embedding,
-    ind: Optional[torch.LongTensor],
-) -> torch.FloatTensor:
-    """Get embedding in canonical shape.
-
-    :param embedding: The embedding.
-    :param ind: The indices. If None, return all embeddings.
-
-    :return: shape: (batch_size, num_embeddings, d)
-    """
-    if ind is None:
-        e = embedding.weight.unsqueeze(dim=0)
-    else:
-        e = embedding(ind).unsqueeze(dim=1)
-    return e
-
-
 def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
@@ -246,6 +229,19 @@ def clamp_norm(
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+
+
+def compose(
+    *op_: Callable[[torch.Tensor], torch.Tensor],
+) -> Callable[[torch.Tensor], torch.Tensor]:
+    """Compose functions working on a single tensor."""
+
+    def chained_op(x: torch.Tensor):
+        for op in op_:
+            x = op(x)
+        return x
+
+    return chained_op
 
 
 def set_random_seed(seed: int):
@@ -341,46 +337,6 @@ class Result:
         :param s3: A client from :func:`boto3.client`, if already instantiated
         """
         raise NotImplementedError
-
-
-def get_embedding(
-    num_embeddings: int,
-    embedding_dim: int,
-    device: torch.device,
-    initializer_: Optional = None,
-    initializer_kwargs: Optional[Mapping[str, Any]] = None,
-) -> nn.Embedding:
-    """Create an embedding object on a device.
-
-    This method is a hotfix for not being able to pass a device during initialization of nn.Embedding. Instead the
-    weight is always initialized on CPU and has to be moved to GPU afterwards.
-
-    :param num_embeddings: >0
-        The number of embeddings.
-    :param embedding_dim: >0
-        The embedding dimensionality.
-    :param device:
-        The device.
-    :param initializer_:
-        An optional initializer, which takes a (num_embeddings, embedding_dim) tensor as input, and modifies the weights
-        in-place.
-    :param initializer_kwargs:
-        Additional keyword arguments passed to the initializer
-
-    :return:
-        The embedding.
-    """
-    # Allocate weight on device
-    weight = torch.empty(num_embeddings, embedding_dim, device=device)
-
-    # Initialize if initializer is provided
-    if initializer_ is not None:
-        if initializer_kwargs is None:
-            initializer_kwargs = {}
-        initializer_(weight, **initializer_kwargs)
-
-    # Wrap embedding around it.
-    return nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, _weight=weight)
 
 
 def split_complex(
