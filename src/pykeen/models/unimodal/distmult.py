@@ -7,7 +7,7 @@ from typing import Optional
 from torch import nn
 from torch.nn import functional
 
-from ..base import SingleVectorEmbeddingModel
+from .. import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-class DistMult(SingleVectorEmbeddingModel):
+class DistMult(ERModel):
     r"""An implementation of DistMult from [yang2014]_.
 
     This model simplifies RESCAL by restricting matrices representing relations as diagonal matrices.
@@ -83,19 +83,16 @@ class DistMult(SingleVectorEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=DistMultInteraction(),
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            embedding_specification=EmbeddingSpecification(
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 # xavier uniform, cf.
                 # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
                 initializer=nn.init.xavier_uniform_,
                 # Constrain entity embeddings to unit length
                 constrainer=functional.normalize,
             ),
-            relation_embedding_specification=EmbeddingSpecification(
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
                 # relations are initialized to unit length (but not constraint)
                 initializer=compose(
                     nn.init.xavier_uniform_,
@@ -104,4 +101,8 @@ class DistMult(SingleVectorEmbeddingModel):
                 # Only relation embeddings are regularized
                 regularizer=self._instantiate_default_regularizer(),
             ),
+            automatic_memory_optimization=automatic_memory_optimization,
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
         )
