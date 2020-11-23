@@ -192,44 +192,47 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f'Slice scores had nan\n\t{scores}')
         self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f'Differences: {scores - scores_no_slice}')
 
-    def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]]:
+    def _get_test_shapes(self) -> Collection[Tuple[
+        Tuple[int, int, int, int],
+        Tuple[int, int, int, int],
+        Tuple[int, int, int, int],
+    ]]:
         """Return a set of test shapes for (h, r, t)."""
         return (
             (  # single score
-                (1, 1),
-                (1, 1),
-                (1, 1),
+                (1, 1, 1, 1),
+                (1, 1, 1, 1),
+                (1, 1, 1, 1),
             ),
             (  # score_r with multi-t
-                (self.batch_size, 1),
-                (1, self.num_relations),
-                (self.batch_size, self.num_entities // 2 + 1),
+                (self.batch_size, 1, 1, 1),
+                (1, 1, self.num_relations, 1),
+                (self.batch_size, 1, 1, self.num_entities // 2 + 1),
             ),
             (  # score_r with multi-t and broadcasted head
-                (1, 1),
-                (1, self.num_relations),
-                (self.batch_size, self.num_entities),
+                (1, 1, 1, 1),
+                (1, 1, self.num_relations, 1),
+                (self.batch_size, 1, 1, self.num_entities),
             ),
             (  # full cwa
-                (1, self.num_entities),
-                (1, self.num_relations),
-                (1, self.num_entities),
+                (1, self.num_entities, 1, 1),
+                (1, 1, self.num_relations, 1),
+                (1, 1, 1, self.num_entities),
             ),
         )
 
     def _get_output_shape(
         self,
-        hs: Tuple[int, int],
-        rs: Tuple[int, int],
-        ts: Tuple[int, int],
+        hs: Tuple[int, int, int, int],
+        rs: Tuple[int, int, int, int],
+        ts: Tuple[int, int, int, int],
     ) -> Tuple[int, int, int, int]:
-        batch_size = max(hs[0], rs[0], ts[0])
-        nh, nr, nt = hs[1], rs[1], ts[1]
-        if len(self.cls.relation_shape) == 0:
-            nr = 1
-        if len(self.cls.entity_shape) == 0:
-            nh = nt = 1
-        return batch_size, nh, nr, nt
+        result = [max(ds) for ds in zip(hs, rs, ts)]
+        if len(self.instance.entity_shape) == 0:
+            result[1] = result[3] = 1
+        if len(self.instance.relation_shape) == 0:
+            result[2] = 1
+        return tuple(result)
 
     def test_forward(self):
         """Test forward."""
@@ -271,7 +274,7 @@ class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
         for _ in range(10):
             # test multiple different initializations
             self.instance.reset_parameters()
-            h, r, t = self._get_hrt((1, 1), (1, 1), (1, 1))
+            h, r, t = self._get_hrt((1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1))
             kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
             # calculate by functional

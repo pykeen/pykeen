@@ -177,20 +177,26 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :param slice_dim: ...
         :return: shape: (b, h, r, t)
         """
-        h, r, t = _unpack_singletons(*(
-            [
-                convert_to_canonical_shape(
-                    x=x.unsqueeze(dim=0 if dim != slice_dim else 1),
-                    dim=dim,
-                    num=x.shape[1],
-                    batch_size=x.shape[0],
-                    suffix_shape=x.shape[2:],
+        kwargs = dict()
+        for key, x in zip("hrt", (h, r, t)):
+            value = []
+            for xx in upgrade_to_sequence(x):
+                # bring to (b, n, *)
+                xx = xx.unsqueeze(dim=1 if key != slice_dim else 0)
+                # bring to (b, h, r, t, *)
+                xx = convert_to_canonical_shape(
+                    x=xx,
+                    dim=key,
+                    num=xx.shape[1],
+                    batch_size=xx.shape[0],
+                    suffix_shape=xx.shape[2:],
                 )
-                for x in upgrade_to_sequence(xx)
-            ]
-            for xx, dim in zip((h, r, t), "hrt")
-        ))
-        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
+                value.append(xx)
+            # unpack singleton
+            if len(value) == 1:
+                value = value[0]
+            kwargs[key] = value
+        return self._forward_slicing_wrapper(**kwargs, slice_dim=slice_dim, slice_size=slice_size)
 
     def _forward_slicing_wrapper(
         self,
