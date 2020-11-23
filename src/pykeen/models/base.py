@@ -5,7 +5,6 @@
 import functools
 import itertools as itt
 import logging
-import string
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
@@ -1099,6 +1098,7 @@ def _prepare_representation_module_list(
     ],
     num_embeddings: int,
     shapes: Sequence[str],
+    label: str,
 ) -> Sequence[RepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
@@ -1108,7 +1108,8 @@ def _prepare_representation_module_list(
         representations = [representations]
     if len(representations) != len(shapes):
         raise ValueError(
-            f"Interaction function requires {len(shapes)} representations, but {len(representations)} were given."
+            f"Interaction function requires {len(shapes)} {label} representations, but "
+            f"{len(representations)} were given."
         )
     modules = []
     for r in representations:
@@ -1116,12 +1117,14 @@ def _prepare_representation_module_list(
             assert isinstance(r, EmbeddingSpecification)
             r = r.make(num_embeddings=num_embeddings)
         if r.max_id < num_embeddings:
-            raise ValueError(f"{r} only provides {r.max_id} representations, but should provide {num_embeddings}.")
+            raise ValueError(
+                f"{r} only provides {r.max_id} {label} representations, but should provide {num_embeddings}."
+            )
         elif r.max_id > num_embeddings:
             logger.warning(
-                f"{r} provides {r.max_id} representations, although only {num_embeddings} are needed. While this "
-                f"is not necessarily wrong, it can indicate an error where the number of representations was chosen"
-                f" wrong."
+                f"{r} provides {r.max_id} {label} representations, although only {num_embeddings} are needed."
+                f"While this is not necessarily wrong, it can indicate an error where the number of {label} "
+                f"representations was chosen wrong."
             )
         modules.append(r)
     check_shapes(*zip(
@@ -1196,11 +1199,13 @@ class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresenta
             representations=entity_representations,
             num_embeddings=triples_factory.num_entities,
             shapes=interaction.entity_shape,
+            label="entity",
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             num_embeddings=triples_factory.num_relations,
             shapes=interaction.relation_shape,
+            label="relation",
         )
         self.interaction = interaction
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
