@@ -174,7 +174,7 @@ class TrainingLoop(ABC):
         """
         # Create training instances
         # During size probing the training instances should not show the tqdm progress bar
-        self.training_instances = self._create_instances(use_tqdm=not only_size_probing)
+        self.training_instances = self._create_instances(use_tqdm=use_tqdm and not only_size_probing)
 
         # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
         torch.cuda.empty_cache()
