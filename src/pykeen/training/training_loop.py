@@ -822,6 +822,7 @@ class TrainingLoop(ABC):
                 'model_state_dict': self.model.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'checksum': self.checksum,
+                'random_seed': self.model._random_seed,
                 'stopper_dict': stopper_dict,
                 'random_state': random.getstate(),
                 'np_random_state': np.random.get_state(),

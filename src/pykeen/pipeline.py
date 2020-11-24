@@ -168,6 +168,7 @@ import ftplib
 import json
 import logging
 import os
+import pathlib
 import time
 from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
@@ -176,6 +177,7 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
+from .constants import PYKEEN_HOME
 from .datasets import get_dataset
 from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
@@ -823,23 +825,25 @@ def pipeline(  # noqa: C901
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
-    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to store a helper file
-    # containing the used random_seed to ensure reproducible results
+    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
+    # used random_seed to ensure reproducible results
     if training_kwargs and training_kwargs.get('checkpoint_file'):
-        checkpoint_file = training_kwargs.get('checkpoint_file')
-        pipeline_checkpoint_helper_file = f"{checkpoint_file}_pipeline_helper_file"
-        if os.path.isfile(pipeline_checkpoint_helper_file):
-            pipeline_checkpoint_helper_dict = torch.load(pipeline_checkpoint_helper_file)
-            random_seed = pipeline_checkpoint_helper_dict['random_seed']
+        if training_kwargs.get('checkpoint_root'):
+            checkpoint_root = pathlib.Path(training_kwargs.get('checkpoint_root'))
+        else:
+            checkpoint_root = pathlib.Path(PYKEEN_HOME).joinpath("checkpoints")
+        checkpoint_file = checkpoint_root.joinpath(training_kwargs.get('checkpoint_file'))
+        if checkpoint_file.is_file():
+            checkpoint_dict = torch.load(checkpoint_file)
+            random_seed = checkpoint_dict['random_seed']
             logger.info(f'Loaded random seed {random_seed} from checkpoint.')
             # We have to set clear optimizer to False since training should be continued
             clear_optimizer = False
         else:
-            logger.info(f"=> no pipeline checkpoint helper file found at '{checkpoint_file}'. Creating a new file.")
+            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_file}'. Creating a new file.")
             if random_seed is None:
                 random_seed = random_non_negative_int()
                 logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-            torch.save({'random_seed': random_seed}, pipeline_checkpoint_helper_file)
     else:
         if random_seed is None:
             random_seed = random_non_negative_int()
