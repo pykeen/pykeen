@@ -111,6 +111,19 @@ def _complex_interaction_optimized_broadcasted(
     ))
 
 
+def _complex_interaction_direct(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Manually split into real/imag, and directly evaluate interaction."""
+    (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+    return (h_re * r_re * t_re).sum(dim=-1) + \
+           (h_re * r_im * t_im).sum(dim=-1) + \
+           (h_im * r_re * t_im).sum(dim=-1) - \
+           (h_im * r_im * t_re).sum(dim=-1)
+
+
 def complex_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
