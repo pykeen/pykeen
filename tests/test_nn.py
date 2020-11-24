@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock
 import numpy
 import pytest
 import torch
+from torch.nn import functional
 
 from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
 from pykeen.nn.representation import DIMS, get_expected_canonical_shape
@@ -139,45 +140,93 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
                     shape=shape,
                 )
 
-    def _test_initializer(
+    def _test_func_with_kwargs(
         self,
-        initializer=torch.nn.init.normal_,
+        name: str,
+        func,
+        reset_parameters_call: bool,
+        forward_call: bool,
         kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Test initializer usage."""
         # wrap to check calls
-        wrapped_initializer = MagicMock(side_effect=initializer)
+        wrapped = MagicMock(side_effect=func)
 
         # instantiate embedding
-        embedding_kwargs = dict()
+        embedding_kwargs = {name: wrapped}
         if kwargs is not None:
-            embedding_kwargs["initializer_kwargs"] = kwargs
+            embedding_kwargs[f"{name}_kwargs"] = kwargs
         embedding = Embedding(
             num_embeddings=self.num,
             shape=self.exp_shape,
-            initializer=wrapped_initializer,
             **embedding_kwargs,
         )
-        # check that initializer gets not called before reset_parameters
-        wrapped_initializer.assert_not_called()
 
-        # check that initializer gets called exactly once in reset_parameters
+        # check that nothing gets called in constructor
+        wrapped.assert_not_called()
+        exp_call_count = 0
+
+        # check call in reset_parameters
         embedding.reset_parameters()
-        wrapped_initializer.assert_called_once()
+        if reset_parameters_call:
+            exp_call_count += 1
 
-        # .. with one positional argument ...
-        assert len(wrapped_initializer.call_args.args) == 1
+            # called with one positional argument ...
+            assert len(wrapped.call_args.args) == 1
 
-        # .. and additional key-word based arguments.
-        assert len(wrapped_initializer.call_args.kwargs) == len(kwargs or {})
+            # .. and additional key-word based arguments.
+            assert len(wrapped.call_args.kwargs) == len(kwargs or {})
+        assert wrapped.call_count == exp_call_count
+
+        # check call in forward
+        embedding.forward(indices=None)
+        if forward_call:
+            exp_call_count += 1
+
+            # called with one positional argument ...
+            assert len(wrapped.call_args.args) == 1
+
+            # .. and additional key-word based arguments.
+            assert len(wrapped.call_args.kwargs) == len(kwargs or {})
+        assert wrapped.call_count == exp_call_count
 
     def test_initializer(self):
         """Test initializer."""
-        self._test_initializer()
+        self._test_func_with_kwargs(
+            name="initializer",
+            func=torch.nn.init.normal_,
+            reset_parameters_call=True,
+            forward_call=False,
+        )
 
     def test_initializer_with_kwargs(self):
         """Test initializer with kwargs."""
-        self._test_initializer(kwargs=dict(mean=3))
+        self._test_func_with_kwargs(
+            name="initializer",
+            func=torch.nn.init.normal_,
+            reset_parameters_call=True,
+            forward_call=False,
+            kwargs=dict(mean=3)
+        )
+
+    def test_normalizer(self):
+        """Test normalizer."""
+        self._test_func_with_kwargs(
+            name="normalizer",
+            func=functional.normalize,
+            reset_parameters_call=False,
+            forward_call=True,
+        )
+
+    def test_normalizer_kwargs(self):
+        """Test normalizer with kwargs."""
+        self._test_func_with_kwargs(
+            name="normalizer",
+            func=functional.normalize,
+            reset_parameters_call=False,
+            forward_call=True,
+            kwargs=dict(p=1),
+        )
 
 
 class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
