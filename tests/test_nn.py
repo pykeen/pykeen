@@ -223,7 +223,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
 
         # check call in post_parameter_update
         embedding.post_parameter_update()
-        call_count = _check_call(
+        _check_call(
             call_count=call_count,
             should_be_called=post_parameter_update_call,
             wrapped=wrapped,
