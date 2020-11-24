@@ -7,9 +7,13 @@ import torch
 import tqdm
 
 from pykeen.nn import Interaction
-from pykeen.nn.functional import _complex_interaction_complex_native, _complex_interaction_direct, _complex_interaction_optimized_broadcasted
+from pykeen.nn.functional import (
+    _complex_interaction_complex_native, _complex_interaction_direct,
+    _complex_interaction_optimized_broadcasted,
+)
 from pykeen.nn.modules import ComplExInteraction, _unpack_singletons
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from pykeen.version import get_git_hash
 
 
 def _use_case_to_shape(use_case: str, b: int, n: int) -> Tuple[
@@ -107,12 +111,13 @@ def main():
         "n_samples",
         "time_per_sample",
     ])
-    df.to_csv("measurement.tsv", sep="\t", index=False)
-    print(
-        df.groupby(
-            by=["batch_size", "num_entities", "dimension", "use_case", "variant"]
-        ).agg({"time_per_sample": "mean"}).unstack()
-    )
+    git_hash = get_git_hash()
+    df.to_csv(f"{git_hash}_measurement.tsv", sep="\t", index=False)
+    df_agg = df.groupby(
+        by=["batch_size", "num_entities", "dimension", "use_case", "variant"]
+    ).agg({"time_per_sample": "mean"}).unstack()
+    df_agg.to_csv(f"{git_hash}_measurement_agg.tsv", sep="\t", index=False)
+    print(df_agg)
 
 
 if __name__ == '__main__':
