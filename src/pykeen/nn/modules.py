@@ -5,7 +5,7 @@
 import logging
 import math
 from abc import ABC
-from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, Union
 
 import torch
 from torch import FloatTensor, nn
@@ -84,6 +84,18 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The functional interaction form
     func: Callable[..., torch.FloatTensor]
+
+    @classmethod
+    def from_func(cls, f) -> 'Interaction':
+        """Create an instance of a stateless interaction class."""
+        return cls.cls_from_func(f)()
+
+    @classmethod
+    def cls_from_func(cls, f) -> Type['Interaction']:
+        """Create a stateless interaction class."""
+        class StatelessInteraction(cls):
+            func = f
+        return StatelessInteraction
 
     @staticmethod
     def _prepare_hrt_for_functional(

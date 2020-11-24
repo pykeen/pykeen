@@ -57,7 +57,6 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
 
 
 def main():
-    base_interaction: Interaction = ComplExInteraction()
     variants = [
         _complex_interaction_complex_native,
         _complex_interaction_optimized_broadcasted,
@@ -82,17 +81,17 @@ def main():
     progress = tqdm.tqdm(variants, unit="variant", unit_scale=True)
     for variant in progress:
         # create variant
-        base_interaction.__class__.func = variant
+        interaction = Interaction.from_func(variant)
         for (b, n, d, ul, prefix_shapes) in tqdm.tqdm(tasks, unit="task", unit_scale=True):
             result_shape = _get_result_shape(prefix_shapes)
             n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
             if max_result_elements is None or numpy.prod(result_shape) < max_result_elements:
-                h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=base_interaction, dim=d)
+                h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=interaction, dim=d)
                 try:
                     # TODO: cuda sync
                     timer = timeit.Timer(
                         stmt="interaction(h=h, r=r, t=t)",
-                        globals=dict(interaction=base_interaction, h=h, r=r, t=t),
+                        globals=dict(interaction=interaction, h=h, r=r, t=t),
                     )
                     n_samples, total_time = timer.autorange()
                     time_per_sample = total_time / n_samples
