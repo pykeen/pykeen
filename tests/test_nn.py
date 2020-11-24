@@ -4,11 +4,13 @@
 import itertools
 import unittest
 from typing import Any, Iterable, MutableMapping, Optional, Sequence
+from unittest.mock import Mock
 
+import numpy
 import pytest
 import torch
 
-from pykeen.nn import Embedding, LiteralRepresentations, RepresentationModule
+from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
 from pykeen.nn.representation import DIMS, get_expected_canonical_shape
 from pykeen.nn.sim import kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
@@ -159,6 +161,45 @@ class RepresentationModuleTestsTest(TestsTest[RepresentationModule], unittest.Te
 
     base_cls = RepresentationModule
     base_test = RepresentationModuleTests
+
+
+class EmbeddingSpecificationTests(unittest.TestCase):
+    """Tests for EmbeddingSpecification."""
+
+    #: The number of embeddings
+    num: int = 3
+
+    def test_make(self):
+        """Test make."""
+        initializer = Mock()
+        normalizer = Mock()
+        constrainer = Mock()
+        regularizer = Mock()
+        for embedding_dim, shape in [
+            (None, (3,)),
+            (None, (3, 5)),
+            (3, None),
+        ]:
+            spec = EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                shape=shape,
+                initializer=initializer,
+                normalizer=normalizer,
+                constrainer=constrainer,
+                regularizer=regularizer,
+            )
+            emb = spec.make(num_embeddings=self.num)
+
+            # check shape
+            assert emb.embedding_dim == (embedding_dim or int(numpy.prod(shape)))
+            assert emb.shape == (shape or (embedding_dim,))
+            assert emb.num_embeddings == self.num
+
+            # check attributes
+            assert emb.initializer is initializer
+            assert emb.normalizer is normalizer
+            assert emb.constrainer is constrainer
+            assert emb.regularizer is regularizer
 
 
 class KullbackLeiblerTests(unittest.TestCase):
