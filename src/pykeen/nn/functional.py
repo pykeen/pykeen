@@ -12,7 +12,7 @@ from torch import nn
 from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
-    broadcast_cat, clamp_norm, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
+    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
     split_complex, tensor_product, tensor_sum, view_complex,
 )
 
@@ -103,11 +103,11 @@ def _complex_interaction_optimized_broadcasted(
     return tensor_sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 
@@ -591,21 +591,22 @@ def rotate_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # TODO: rotate by inverse relation, if the cost(dist(h, t * r_inv)) < cost(dist(h * r, t))
-    # # r expresses a rotation in complex plane.
-    # # The inverse rotation is expressed by the complex conjugate of r.
-    # # The score is computed as the distance of the relation-rotated head to the tail.
-    # # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
-    # # |h * r - t| = |h - conj(r) * t|
-    # r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1]], dim=-1)
+    # r expresses a rotation in complex plane.
     h, r, t = [view_complex(x) for x in (h, r, t)]
-
-    # Rotate (=Hadamard product in complex space).
-    hr = h * r
+    if estimate_cost_of_sequence(h.shape, r.shape) < estimate_cost_of_sequence(r.shape, t.shape):
+        # rotate head by relation (=Hadamard product in complex space)
+        h = h * r
+    else:
+        # rotate tail by inverse of relation
+        # The inverse rotation is expressed by the complex conjugate of r.
+        # The score is computed as the distance of the relation-rotated head to the tail.
+        # Equivalently, we can rotate the tail by the inverse relation, and measure the distance to the head, i.e.
+        # |h * r - t| = |h - conj(r) * t|
+        t = t * torch.conj(r)
 
     # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
     return negative_norm_of_sum(
-        hr,
+        h,
         -t,
         p=2,
         power_norm=False,
