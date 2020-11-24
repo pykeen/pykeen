@@ -1,0 +1,33 @@
+name: Tests on request
+
+on: [ issue_comment ]
+
+jobs:
+  lint:
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'Run integration tests!'}}
+    name: Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.6, 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check manifest
+        run: tox -e manifest
+
+      - name: Check code quality with flake8
+        run: tox -e flake8
+
+      - name: Check package metadata with Pyroma
+        run: tox -e pyroma
+      # - name: Check static typing with MyPy
+      #  run: tox -e mypy
+      #  # Allow failure, see https://github.community/t/continue-on-error-allow-failure-ui-indication/16773
+      #  if: succeeded() || failed()

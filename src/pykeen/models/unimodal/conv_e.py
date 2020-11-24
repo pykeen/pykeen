@@ -12,11 +12,13 @@ from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_normal_
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import Embedding
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding, is_cudnn_error
+from ...typing import DeviceHint
+from ...utils import is_cudnn_error
 
 __all__ = [
     'ConvE',
@@ -177,7 +179,7 @@ class ConvE(EntityRelationEmbeddingModel):
         embedding_dim: int = 200,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
@@ -199,13 +201,16 @@ class ConvE(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
         )
 
         # ConvE uses one bias for each entity
-        self.bias_term = get_embedding(
+        self.bias_term = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=1,
             device=self.device,
+            initializer=nn.init.zeros_,
         )
 
         # Automatic calculation of remaining dimensions
@@ -261,14 +266,10 @@ class ConvE(EntityRelationEmbeddingModel):
         )
         self.fc = nn.Linear(num_in_features, self.embedding_dim)
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
-        # embeddings
-        embedding_xavier_normal_(self.entity_embeddings)
-        embedding_xavier_normal_(self.relation_embeddings)
-        nn.init.zeros_(self.bias_term.weight)
+        super()._reset_parameters_()
+
+        self.bias_term.reset_parameters()
 
         # weights
         for module in [
@@ -326,19 +327,19 @@ class ConvE(EntityRelationEmbeddingModel):
         return x
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -353,25 +354,25 @@ class ConvE(EntityRelationEmbeddingModel):
         one tail item for each head and relation. Accordingly the relevant bias for each tail item and triple has to be
         looked up.
         """
-        x = x + self.bias_term(hrt_batch[:, 2])
+        x = x + self.bias_term(indices=hrt_batch[:, 2])
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).view(
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        r = self.relation_embeddings(hr_batch[:, 1]).view(
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings.weight.transpose(1, 0)
+        t = self.entity_embeddings(indices=None).transpose(1, 0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -379,21 +380,21 @@ class ConvE(EntityRelationEmbeddingModel):
         x = self._convolve_entity_relation(h, r)
 
         x = x @ t
-        x = x + self.bias_term.weight.t()
+        x = x + self.bias_term(indices=None).t()
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         rt_batch_size = rt_batch.shape[0]
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0]).view(
+        h = self.entity_embeddings(indices=None)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings(rt_batch[:, 1])
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -424,7 +425,7 @@ class ConvE(EntityRelationEmbeddingModel):
         the same tail for many different heads, meaning that these items have to be looked up for each tail of each row
         and only then can be added correctly.
         """
-        x = x + self.bias_term(rt_batch[:, 1])
+        x = x + self.bias_term(indices=rt_batch[:, 1])
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x

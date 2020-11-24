@@ -12,6 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'ERMLP',
@@ -46,7 +47,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         embedding_dim: int = 50,
         automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         hidden_dim: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -77,13 +78,9 @@ class ERMLP(EntityRelationEmbeddingModel):
             self.linear2,
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # The authors do not specify which initialization was used. Hence, we use the pytorch default.
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
+        super()._reset_parameters_()
 
         # weight initialization
         nn.init.zeros_(self.linear1.bias)
@@ -93,9 +90,9 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -108,9 +105,9 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0])
-        r = self.relation_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -134,9 +131,9 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0])
-        t = self.entity_embeddings(rt_batch[:, 1])
+        h = self.entity_embeddings(indices=None)
+        r = self.relation_embeddings(indices=rt_batch[:, 0])
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

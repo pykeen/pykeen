@@ -111,6 +111,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
+    @click.option('--silent', is_flag=True)
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
         *,
@@ -132,6 +133,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         validation_triples_factory,
         num_workers,
         random_seed,
+        silent: bool,
         **model_kwargs,
     ):
         """CLI for PyKEEN."""
@@ -180,8 +182,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             random_seed=random_seed,
         )
 
-        json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
-        click.echo('')
+        if not silent:
+            json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
+            click.echo('')
         return sys.exit(0)
 
     return main

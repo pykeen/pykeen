@@ -16,9 +16,10 @@ from itertools import starmap
 from multiprocessing import Pool, cpu_count
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
+from tqdm.autonotebook import tqdm
+
 from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
 from .utils import concatenate_triples_factories, summarize
-from ..tqdmw import tqdm
 from ..typing import LabeledTriples
 
 __all__ = [
