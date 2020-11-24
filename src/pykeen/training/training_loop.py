@@ -884,8 +884,5 @@ class TrainingLoop(ABC):
         random.setstate(checkpoint['random_state'])
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
-        torch_cuda_random_state = checkpoint.get('torch_cuda_random_state')
-        if torch_cuda_random_state is not None:
-            torch.cuda.set_rng_state(torch_cuda_random_state)
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         return checkpoint['stopper_dict']
