@@ -13,7 +13,7 @@ from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
-    split_complex, tensor_product, tensor_sum, view_complex,
+    tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -104,19 +104,8 @@ def complex_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Re(<h, r, conj(t)>)
-    # = <h.re, r.re, t.re> - <h.re, r.im, -t.im> - <h.im, r.re, -t.im> - <h.im, r.im, t.re>
-    # = <h.re, r.re, t.re> + <h.re, r.im,  t.im> + <h.im, r.re,  t.im> - <h.im, r.im, t.re>
-    (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-    return tensor_sum(*(
-        factor * tensor_product(hh, rr, tt).sum(dim=-1)
-        for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
-    ))
+    h, r, t = [view_complex(x=x) for x in (h, r, t)]
+    return torch.real((h * r * torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
