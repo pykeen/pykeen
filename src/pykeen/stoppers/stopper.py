@@ -31,6 +31,9 @@ class Stopper(ABC):
         """Get a summary dict."""
         raise NotImplementedError
 
+    def _write_from_summary_dict(self, **kwargs):
+        pass
+
 
 class NopStopper(Stopper):
     """A stopper that does nothing."""
