@@ -51,11 +51,11 @@ executed with one of the previous examples.
 
     # Pick an evaluator
     from pykeen.evaluation import RankBasedEvaluator
-    evaluator = RankBasedEvaluator(model)
+    evaluator = RankBasedEvaluator()
 
     # Get triples to test
     mapped_triples = dataset.testing.mapped_triples
 
     # Evaluate
-    results = evaluator.evaluate(mapped_triples, batch_size=1024)
+    results = evaluator.evaluate(model, mapped_triples, batch_size=1024)
     print(results)

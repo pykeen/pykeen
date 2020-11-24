@@ -8,10 +8,11 @@ import torch
 import torch.autograd
 
 from ..base import EntityEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'UnstructuredModel',
@@ -49,7 +50,7 @@ class UnstructuredModel(EntityEmbeddingModel):
         automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -66,29 +67,21 @@ class UnstructuredModel(EntityEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
         )
         self.scoring_fct_norm = scoring_fct_norm
 
-        # Finalize initialization
-        self.reset_parameters_()
-
-    def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_uniform_(self.entity_embeddings)
-
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        t = self.entity_embeddings(hrt_batch[:, 2])
-
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm, keepdim=True) ** 2
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.weight.view(1, -1, self.embedding_dim)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-
+        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
         return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2

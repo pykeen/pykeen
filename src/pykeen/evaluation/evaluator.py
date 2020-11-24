@@ -13,9 +13,9 @@ from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
 
 import torch
 from dataclasses_json import dataclass_json
+from tqdm.autonotebook import tqdm
 
 from ..models.base import Model
-from ..tqdmw import tqdm
 from ..triples.triples_factory import get_unique_entity_ids_from_triples_tensor
 from ..typing import MappedTriples
 from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter

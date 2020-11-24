@@ -11,6 +11,8 @@ by default.
 Pipeline Example
 ----------------
 This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` function.
+Minimally, the `tracking_uri` and `experiment_name` are required in the
+`result_tracker_kwargs`.
 
 .. code-block:: python
 
@@ -75,6 +77,36 @@ different sub-experiments together using the ``experiment_id`` keyword argument 
         result_tracker_kwargs=dict(
             tracking_uri='http://localhost:5000',
             experiment_id=4,
+        ),
+    )
+
+Adding Tags
+-----------
+Tags are additional key/value information that you might want to add to the experiment
+and store in MLflow. By default, MLflow adds the tags listed on
+https://www.mlflow.org/docs/latest/tracking.html#id41.
+
+For example, if you're using custom input,  you might want to add which version
+of the input file produced the results as follows:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    data_version = ...
+
+    pipeline_result = pipeline(
+        model='RotatE',
+        training=...,
+        testing=...,
+        validation=...,
+        result_tracker='mlflow',
+        result_tracker_kwargs=dict(
+            tracking_uri='http://localhost:5000',
+            experiment_name='Tutorial Training of RotatE on Kinships',
+            tags={
+                "data_version": md5_hash,
+            },
         ),
     )
 
