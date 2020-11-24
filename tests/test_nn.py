@@ -1,72 +1,108 @@
 # -*- coding: utf-8 -*-
 
 """Unittest for the :mod:`pykeen.nn` module."""
-
+import itertools
 import unittest
+from typing import Iterable, Optional, Sequence
 
 import torch
 
-from pykeen.nn import Embedding
+from pykeen.nn import Embedding, RepresentationModule
 from pykeen.nn.sim import kullback_leibler_similarity
+from pykeen.testing.base import GenericTests
 from pykeen.typing import GaussianDistribution
 
 
-class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
-    """Test get_embedding_in_canonical_shape()."""
+class RepresentationModuleTests(GenericTests[RepresentationModule]):
+    """Tests for RepresentationModule."""
 
-    #: The number of embeddings
-    num_embeddings: int = 3
+    batch_size: int = 3
+    num: int = 5
+    exp_shape: Sequence[int] = (5,)
 
-    #: The embedding dimension
-    embedding_dim: int = 2
+    def test_max_id(self):
+        assert self.instance.max_id == self.num
 
-    def setUp(self) -> None:
-        """Initialize embedding."""
-        self.embedding = Embedding(num_embeddings=self.num_embeddings, embedding_dim=self.embedding_dim)
-        self.generator = torch.manual_seed(42)
-        self.embedding._embeddings.weight.data = torch.rand(
-            self.num_embeddings,
-            self.embedding_dim,
-            generator=self.generator,
+    def test_shape(self):
+        assert self.instance.shape == self.exp_shape
+
+    def _test_forward(self, indices: Optional[torch.LongTensor]):
+        """Test the forward method."""
+        assert indices is None or (
+            torch.is_tensor(indices)
+            and indices.dtype == torch.long
+            and indices.ndimension() == 1
         )
+        x = self.instance(indices=indices)
+        assert torch.is_tensor(x)
+        assert x.dtype == torch.float32
+        n = self.num if indices is None else indices.shape[0]
+        assert x.shape == tuple([n, *self.instance.shape])
 
-    def test_no_indices(self):
-        """Test getting all embeddings."""
-        emb = self.embedding.get_in_canonical_shape(indices=None)
+    def _test_indices(self) -> Iterable[torch.LongTensor]:
+        return [
+            torch.randint(self.num, size=(self.batch_size,)),
+            torch.randperm(self.num),
+            torch.randperm(self.num).repeat(2),
+        ]
 
-        # check shape
-        assert emb.shape == (1, self.num_embeddings, self.embedding_dim)
+    def test_forward_without_indices(self):
+        self._test_forward(indices=None)
 
-        # check values
-        exp = self.embedding(indices=None).view(1, self.num_embeddings, self.embedding_dim)
-        assert torch.allclose(emb, exp)
+    def test_forward_with_indices(self):
+        for indices in self._test_indices():
+            self._test_forward(indices=indices)
 
-    def _test_with_indices(self, indices: torch.Tensor) -> None:
-        """Help tests with index."""
-        emb = self.embedding.get_in_canonical_shape(indices=indices)
+    def _test_in_canonical_shape(self, indices):
+        name_to_shape = dict(h=1, r=2, t=3)
+        for dim in itertools.chain(name_to_shape.keys(), name_to_shape.values()):
+            # batch_size, d1, d2, d3, *
+            x = self.instance.get_in_canonical_shape(dim=dim, indices=indices)
+            assert torch.is_tensor(x)
+            assert x.dtype == torch.float32
+            assert x.ndimension() == 4 + len(self.exp_shape)
+            exp_shape = [1, 1, 1, 1] + list(self.exp_shape)
+            if isinstance(dim, str):
+                dim = name_to_shape[dim]
+            if indices is None:  # 1-n scoring
+                exp_shape[dim] = self.num
+            if indices is not None:  # batch dimension
+                exp_shape[0] = indices.shape[0]
+                if indices.ndimension() > 1:  # multi-target batching
+                    exp_shape[dim] = indices.shape[1]
+            assert x.shape == tuple(exp_shape)
 
-        # check shape
-        num_ind = indices.shape[0]
-        assert emb.shape == (num_ind, 1, self.embedding_dim)
+    def test_get_in_canonical_shape_without_indices(self):
+        self._test_in_canonical_shape(indices=None)
 
-        # check values
-        exp = torch.stack([self.embedding(i) for i in indices], dim=0).view(num_ind, 1, self.embedding_dim)
-        assert torch.allclose(emb, exp)
+    def test_get_in_canonical_shape_with_indices(self):
+        for indices in self._test_indices():
+            self._test_in_canonical_shape(indices=indices)
 
-    def test_with_consecutive_indices(self):
-        """Test to retrieve all embeddings with consecutive indices."""
-        indices = torch.arange(self.num_embeddings, dtype=torch.long)
-        self._test_with_indices(indices=indices)
+    def test_get_in_canonical_shape_with_2d_indices(self):
+        indices = torch.randint(self.num, size=(self.batch_size, 2))
+        self._test_in_canonical_shape(indices=indices)
 
-    def test_with_indices_with_duplicates(self):
-        """Test to retrieve embeddings at random positions with duplicate indices."""
-        indices = torch.randint(
-            self.num_embeddings,
-            size=(2 * self.num_embeddings,),
-            dtype=torch.long,
-            generator=self.generator,
-        )
-        self._test_with_indices(indices=indices)
+
+class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
+    """Tests for Embedding."""
+
+    cls = Embedding
+    kwargs = dict(
+        num_embeddings=RepresentationModuleTests.num,
+        shape=RepresentationModuleTests.exp_shape,
+    )
+
+
+class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
+    """Tests for Embedding with 2-dimensional shape."""
+
+    cls = Embedding
+    exp_shape = (3, 7)
+    kwargs = dict(
+        num_embeddings=RepresentationModuleTests.num,
+        shape=(3, 7),
+    )
 
 
 class KullbackLeiblerTests(unittest.TestCase):
