@@ -3,8 +3,8 @@
 """Unittest for the :mod:`pykeen.nn` module."""
 import itertools
 import unittest
-from typing import Any, Iterable, MutableMapping, Optional, Sequence
-from unittest.mock import Mock
+from typing import Any, Iterable, Mapping, MutableMapping, Optional, Sequence
+from unittest.mock import MagicMock, Mock
 
 import numpy
 import pytest
@@ -138,6 +138,37 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
                     embedding_dim=embedding_dim,
                     shape=shape,
                 )
+
+    def _test_initializer(
+        self,
+        initializer=torch.nn.init.normal_,
+        kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        wrapped_initializer = MagicMock(side_effect=initializer)
+        embedding_kwargs = dict()
+        if kwargs is not None:
+            embedding_kwargs["initializer_kwargs"] = kwargs
+        embedding = Embedding(
+            num_embeddings=self.num,
+            shape=self.exp_shape,
+            initializer=wrapped_initializer,
+            **embedding_kwargs
+        )
+        wrapped_initializer.assert_not_called()
+        embedding.reset_parameters()
+        wrapped_initializer.assert_called_once()
+        # one positional
+        assert len(wrapped_initializer.call_args.args) == 1
+        # additional key-word based
+        assert len(wrapped_initializer.call_args.kwargs) == len(kwargs or {})
+
+    def test_initializer(self):
+        """Test initializer."""
+        self._test_initializer()
+
+    def test_initializer_with_kwargs(self):
+        """Test initializer with kwargs."""
+        self._test_initializer(kwargs=dict(mean=3))
 
 
 class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
