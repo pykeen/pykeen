@@ -11,11 +11,12 @@ import unittest
 from typing import Iterable, Tuple
 
 import numpy
+import pytest
 import torch
 
 from pykeen.utils import (
     _CUDA_OOM_ERROR, _CUDNN_ERROR, calculate_broadcasted_elementwise_result_shape, clamp_norm, combine_complex, compact_mapping, estimate_cost_of_sequence, flatten_dictionary,
-    get_optimal_sequence, get_until_first_blank, is_cuda_oom_error, is_cudnn_error, project_entity, split_complex, tensor_product, tensor_sum,
+    get_optimal_sequence, get_until_first_blank, is_cuda_oom_error, is_cudnn_error, project_entity, set_random_seed, split_complex, tensor_product, tensor_sum,
 )
 
 
@@ -248,8 +249,10 @@ def _generate_shapes(
         yield tuple(shapes)
 
 
+@pytest.mark.slow
 def test_estimate_cost_of_add_sequence():
     """Test ``estimate_cost_of_add_sequence()``."""
+    set_random_seed(seed=42)
     # create random array, estimate the costs of addition, and measure some execution times.
     # then, compute correlation between the estimated cost, and the measured time.
     data = []
