@@ -126,6 +126,19 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         shape=RepresentationModuleTests.exp_shape,
     )
 
+    def test_constructor_errors(self):
+        """Test error cases for constructor call."""
+        for embedding_dim, shape in (
+            (None, None),  # neither
+            (3, (5, 3)),  # both
+        ):
+            with pytest.raises(ValueError):
+                Embedding(
+                    num_embeddings=self.num,
+                    embedding_dim=embedding_dim,
+                    shape=shape,
+                )
+
 
 class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
     """Tests for Embedding with 2-dimensional shape."""
