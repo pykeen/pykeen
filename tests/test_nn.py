@@ -118,6 +118,42 @@ class RepresentationModuleTests(GenericTests[RepresentationModule]):
         self._test_in_canonical_shape(indices=indices)
 
 
+def _check_call(
+    call_count: int,
+    should_be_called: bool,
+    wrapped: MagicMock,
+    kwargs: Optional[Mapping[str, Any]],
+) -> int:
+    """
+    Check whether a wrapped method is called.
+
+    :param call_count:
+        The previous call count.
+    :param should_be_called:
+        Whether it should be called.
+    :param wrapped:
+        The wrapped method.
+    :param kwargs:
+        The expected kwargs when called.
+
+    :return:
+        The updated counter.
+    """
+    if should_be_called:
+        call_count += 1
+
+        assert wrapped.call_count == call_count
+
+        # called with one positional argument ...
+        assert len(wrapped.call_args.args) == 1
+
+        # .. and additional key-word based arguments.
+        assert len(wrapped.call_args.kwargs) == len(kwargs or {})
+    else:
+        assert wrapped.call_count == call_count
+    return call_count
+
+
 class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
     """Tests for Embedding."""
 
@@ -169,7 +205,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
 
         # check call in reset_parameters
         embedding.reset_parameters()
-        call_count = self._check_call(
+        call_count = _check_call(
             call_count=call_count,
             should_be_called=reset_parameters_call,
             wrapped=wrapped,
@@ -178,7 +214,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
 
         # check call in forward
         embedding.forward(indices=None)
-        call_count = self._check_call(
+        call_count = _check_call(
             call_count=call_count,
             should_be_called=forward_call,
             wrapped=wrapped,
@@ -187,33 +223,12 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
 
         # check call in post_parameter_update
         embedding.post_parameter_update()
-        call_count = self._check_call(
+        call_count = _check_call(
             call_count=call_count,
             should_be_called=post_parameter_update_call,
             wrapped=wrapped,
             kwargs=kwargs,
         )
-
-    def _check_call(
-        self,
-        call_count: int,
-        should_be_called: bool,
-        wrapped: MagicMock,
-        kwargs: Optional[Mapping[str, Any]],
-    ) -> int:
-        if should_be_called:
-            call_count += 1
-
-            assert wrapped.call_count == call_count
-
-            # called with one positional argument ...
-            assert len(wrapped.call_args.args) == 1
-
-            # .. and additional key-word based arguments.
-            assert len(wrapped.call_args.kwargs) == len(kwargs or {})
-        else:
-            assert wrapped.call_count == call_count
-        return call_count
 
     def test_initializer(self):
         """Test initializer."""
