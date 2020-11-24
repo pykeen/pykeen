@@ -1,4 +1,3 @@
-import timeit
 from typing import Mapping, Optional, Tuple
 
 import click
@@ -7,6 +6,7 @@ import numpy
 import pandas
 import seaborn as sns
 import torch
+from torch.utils.benchmark import Timer
 from tqdm import tqdm
 
 from pykeen.nn import Interaction
@@ -38,12 +38,13 @@ def _generate_hrt(
     prefix_shapes: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]],
     interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
     dim: int,
+    device: torch.device,
     additional_dims: Optional[Mapping[str, int]] = None,
 ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
     additional_dims = additional_dims or dict()
     additional_dims.setdefault("d", dim)
     return _unpack_singletons(*(
-        torch.rand(*prefix_shape, *(additional_dims[s] for s in suffix_shape), requires_grad=True)
+        torch.rand(*prefix_shape, *(additional_dims[s] for s in suffix_shape), requires_grad=True, device=device)
         for prefix_shape, suffix_shape in zip(
         prefix_shapes,
         (
@@ -68,6 +69,8 @@ def main(
     max_batch_size_power: int,
     max_vector_dimension_power: int,
 ):
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print(f"Running on {device}.")
     variants = [
         _complex_interaction_complex_native,
         _complex_interaction_optimized_broadcasted,
@@ -96,10 +99,14 @@ def main(
             n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
             if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
                 continue
-            h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=interaction, dim=d)
+            h, r, t = _generate_hrt(
+                prefix_shapes=prefix_shapes,
+                interaction=interaction,
+                dim=d,
+                device=device,
+            )
             try:
-                # TODO: cuda sync
-                timer = timeit.Timer(
+                timer = Timer(
                     stmt="interaction(h=h, r=r, t=t)",
                     globals=dict(interaction=interaction, h=h, r=r, t=t),
                 )
@@ -123,6 +130,7 @@ def main(
         "n_samples",
         "time_per_sample",
     ])
+    df["device"] = device.type
     df.to_csv(f"{git_hash}_measurement.tsv", sep="\t", index=False)
 
     df_agg = df.groupby(
