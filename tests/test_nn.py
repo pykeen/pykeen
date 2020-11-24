@@ -293,13 +293,14 @@ class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
     )
 
 
-class LiteralRepresentationsTests(RepresentationModuleTests, unittest.TestCase):
+class LiteralRepresentationsTests(EmbeddingTests, unittest.TestCase):
     """Tests for literal embeddings."""
 
     cls = LiteralRepresentations
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        # requires own kwargs
+        kwargs.clear()
         self.numeric_literals = torch.rand(self.num, *self.exp_shape)
         kwargs["numeric_literals"] = self.numeric_literals
         return kwargs
