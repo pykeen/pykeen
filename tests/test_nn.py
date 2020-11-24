@@ -144,9 +144,10 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         self,
         name: str,
         func,
-        reset_parameters_call: bool,
-        forward_call: bool,
         kwargs: Optional[Mapping[str, Any]] = None,
+        reset_parameters_call: bool = False,
+        forward_call: bool = False,
+        post_parameter_update_call: bool = False,
     ):
         """Test initializer usage."""
         # wrap to check calls
@@ -164,31 +165,55 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
 
         # check that nothing gets called in constructor
         wrapped.assert_not_called()
-        exp_call_count = 0
+        call_count = 0
 
         # check call in reset_parameters
         embedding.reset_parameters()
-        if reset_parameters_call:
-            exp_call_count += 1
-
-            # called with one positional argument ...
-            assert len(wrapped.call_args.args) == 1
-
-            # .. and additional key-word based arguments.
-            assert len(wrapped.call_args.kwargs) == len(kwargs or {})
-        assert wrapped.call_count == exp_call_count
+        call_count = self._check_call(
+            call_count=call_count,
+            should_be_called=reset_parameters_call,
+            wrapped=wrapped,
+            kwargs=kwargs,
+        )
 
         # check call in forward
         embedding.forward(indices=None)
-        if forward_call:
-            exp_call_count += 1
+        call_count = self._check_call(
+            call_count=call_count,
+            should_be_called=forward_call,
+            wrapped=wrapped,
+            kwargs=kwargs,
+        )
+
+        # check call in post_parameter_update
+        embedding.post_parameter_update()
+        call_count = self._check_call(
+            call_count=call_count,
+            should_be_called=post_parameter_update_call,
+            wrapped=wrapped,
+            kwargs=kwargs,
+        )
+
+    def _check_call(
+        self,
+        call_count: int,
+        should_be_called: bool,
+        wrapped: MagicMock,
+        kwargs: Optional[Mapping[str, Any]],
+    ) -> int:
+        if should_be_called:
+            call_count += 1
+
+            assert wrapped.call_count == call_count
 
             # called with one positional argument ...
             assert len(wrapped.call_args.args) == 1
 
             # .. and additional key-word based arguments.
             assert len(wrapped.call_args.kwargs) == len(kwargs or {})
-        assert wrapped.call_count == exp_call_count
+        else:
+            assert wrapped.call_count == call_count
+        return call_count
 
     def test_initializer(self):
         """Test initializer."""
@@ -196,7 +221,6 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
             name="initializer",
             func=torch.nn.init.normal_,
             reset_parameters_call=True,
-            forward_call=False,
         )
 
     def test_initializer_with_kwargs(self):
@@ -204,9 +228,8 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         self._test_func_with_kwargs(
             name="initializer",
             func=torch.nn.init.normal_,
+            kwargs=dict(mean=3),
             reset_parameters_call=True,
-            forward_call=False,
-            kwargs=dict(mean=3)
         )
 
     def test_normalizer(self):
@@ -214,7 +237,6 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         self._test_func_with_kwargs(
             name="normalizer",
             func=functional.normalize,
-            reset_parameters_call=False,
             forward_call=True,
         )
 
@@ -223,9 +245,25 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         self._test_func_with_kwargs(
             name="normalizer",
             func=functional.normalize,
-            reset_parameters_call=False,
-            forward_call=True,
             kwargs=dict(p=1),
+            forward_call=True,
+        )
+
+    def test_constrainer(self):
+        """Test constrainer."""
+        self._test_func_with_kwargs(
+            name="constrainer",
+            func=functional.normalize,
+            post_parameter_update_call=True,
+        )
+
+    def test_constrainer_kwargs(self):
+        """Test constrainer with kwargs."""
+        self._test_func_with_kwargs(
+            name="constrainer",
+            func=functional.normalize,
+            kwargs=dict(p=1),
+            post_parameter_update_call=True,
         )
 
 
