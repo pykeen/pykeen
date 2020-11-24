@@ -3,6 +3,7 @@
 """Test the PyKEEN pipeline function."""
 
 import unittest
+from datetime import datetime
 
 import pandas as pd
 
@@ -115,7 +116,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
         self.random_seed = 123
         self.model = 'TransE'
         self.dataset = 'nations'
-        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
+        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{str(datetime.now()).replace('.', '_')}.pt"
 
     def test_pipeline_lcwa_resumption(self):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
