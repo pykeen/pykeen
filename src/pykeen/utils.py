@@ -502,16 +502,25 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
+def _tensor_elementwise(
+    op: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
+    *x: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Combine tensors elementwise in optimal order."""
+    if len(x) < 2:
+        return x[0]
+    # TODO: Optimize order
+    return functools.reduce(op, x[1:], x[0])
+
+
 def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
     """Compute elementwise sum of tensors in brodcastable shape."""
-    # TODO: Optimize order
-    return sum(x)
+    return _tensor_elementwise(operator.add, *x)
 
 
 def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
     """Compute elementwise product of tensors in broadcastable shape."""
-    # TODO: Optimize order
-    return functools.reduce(operator.mul, x[1:], x[0])
+    return _tensor_elementwise(operator.mul, *x)
 
 
 def negative_norm_of_sum(
