@@ -3,6 +3,7 @@
 """Test that training loops work correctly."""
 
 import unittest
+from datetime import datetime
 from typing import Optional
 
 import torch
@@ -88,7 +89,7 @@ class TrainingLoopTests(unittest.TestCase):
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
         self.random_seed = 123
-        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{da}.pt"
+        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{str(datetime.now()).replace('.', '_')}.pt"
         self.num_epochs = 10
 
     def test_sub_batching(self):

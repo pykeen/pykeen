@@ -865,9 +865,9 @@ class TrainingLoop(ABC):
             )
         # Cuda requires its own random state, which can only be set when a cuda device is available
         torch_cuda_random_state = checkpoint['torch_cuda_random_state']
-        if torch_cuda_random_state and torch.cuda.is_available():
+        if torch_cuda_random_state is not None and torch.cuda.is_available():
             torch.cuda.set_rng_state(torch_cuda_random_state)
-        elif torch_cuda_random_state and not torch.cuda.is_available():
+        elif torch_cuda_random_state is not None and not torch.cuda.is_available():
             logger.warning(
                 "You're currently trying to resume the training loop on a CPU from a checkpoint that was saved "
                 "with a GPU. Therefore, the random state for the CUDA devices can't be set and results may not "
