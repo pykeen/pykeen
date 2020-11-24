@@ -13,6 +13,8 @@ from uuid import uuid4
 
 import click
 
+from .remixing import remix as remixing_main
+
 __all__ = [
     'experiments',
 ]
@@ -211,6 +213,8 @@ def ablation(
         discard_replicates=discard_replicates,
     )
 
+
+experiments.add_command(remixing_main)
 
 if __name__ == '__main__':
     experiments()

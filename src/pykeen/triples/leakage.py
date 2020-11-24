@@ -16,10 +16,8 @@ from itertools import starmap
 from multiprocessing import Pool, cpu_count
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
-import numpy as np
-from tabulate import tabulate
-
 from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
+from .utils import concatenate_triples_factories, summarize
 from ..tqdmw import tqdm
 from ..typing import LabeledTriples
 
@@ -29,7 +27,6 @@ __all__ = [
     'get_candidate_duplicate_relations',
     'unleak',
     'reindex',
-    'summarize',
 ]
 
 logger = logging.getLogger(__name__)
@@ -197,13 +194,7 @@ def unleak(
 
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
-    triples = np.concatenate(
-        [
-            triples_factory.triples
-            for triples_factory in triples_factories
-        ],
-        axis=0,
-    )
+    triples = concatenate_triples_factories(*triples_factories)
     entity_to_id = create_entity_mapping(triples)
     relation_to_id = create_relation_mapping(set(triples[:, 1]))
 
@@ -216,19 +207,6 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
         )
         for triples_factory in triples_factories
     ]
-
-
-def summarize(training, testing, validation) -> None:
-    """Summarize the dataset."""
-    headers = ['Set', 'Entities', 'Relations', 'Triples']
-    print(tabulate(
-        [
-            ['Train', training.num_entities, training.num_relations, training.num_triples],
-            ['Test', testing.num_entities, testing.num_relations, testing.num_triples],
-            ['Valid', validation.num_entities, validation.num_relations, validation.num_triples],
-        ],
-        headers=headers,
-    ))
 
 
 def get_candidate_inverse_relations(
