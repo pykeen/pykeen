@@ -12,7 +12,7 @@ import torch
 from torch.nn import functional
 
 from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
-from pykeen.nn.representation import DIMS, RGCNRepresentations, get_expected_canonical_shape
+from pykeen.nn.representation import CANONICAL_DIMENSIONS, RGCNRepresentations, get_expected_canonical_shape
 from pykeen.nn.sim import kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.triples import TriplesFactory
@@ -86,7 +86,7 @@ class RepresentationModuleTests(GenericTests[RepresentationModule]):
     def _test_in_canonical_shape(self, indices: Optional[torch.LongTensor]):
         """Test get_in_canonical_shape with the given indices."""
         # test both, using the actual dimension, and its name
-        for dim in itertools.chain(DIMS.keys(), DIMS.values()):
+        for dim in itertools.chain(CANONICAL_DIMENSIONS.keys(), CANONICAL_DIMENSIONS.values()):
             # batch_size, d1, d2, d3, *
             x = self.instance.get_in_canonical_shape(dim=dim, indices=indices)
 

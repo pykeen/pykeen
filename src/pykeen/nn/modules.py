@@ -11,7 +11,7 @@ import torch
 from torch import FloatTensor, nn
 
 from . import functional as pkf
-from .representation import DIMS, convert_to_canonical_shape
+from .representation import CANONICAL_DIMENSIONS, convert_to_canonical_shape
 from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
 from ..utils import upgrade_to_sequence
 
@@ -240,17 +240,17 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             scores = torch.cat([
                 self(h=h_batch, r=r, t=t)
                 for h_batch in _get_batches(h, slice_size)
-            ], dim=DIMS[slice_dim])
+            ], dim=CANONICAL_DIMENSIONS[slice_dim])
         elif slice_dim == "r":
             scores = torch.cat([
                 self(h=h, r=r_batch, t=t)
                 for r_batch in _get_batches(r, slice_size)
-            ], dim=DIMS[slice_dim])
+            ], dim=CANONICAL_DIMENSIONS[slice_dim])
         elif slice_dim == "t":
             scores = torch.cat([
                 self(h=h, r=r, t=t_batch)
                 for t_batch in _get_batches(t, slice_size)
-            ], dim=DIMS[slice_dim])
+            ], dim=CANONICAL_DIMENSIONS[slice_dim])
         else:
             raise ValueError(f'Invalid slice_dim: {slice_dim}')
         return scores

@@ -29,14 +29,14 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-DIMS = dict(h=1, r=2, t=3)
+CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
 
 
 def _normalize_dim(dim: Union[int, str]) -> int:
     """Normalize the dimension selection."""
     if isinstance(dim, int):
         return dim
-    return DIMS[dim.lower()[0]]
+    return CANONICAL_DIMENSIONS[dim.lower()[0]]
 
 
 def get_expected_canonical_shape(
