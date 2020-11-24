@@ -1,17 +1,20 @@
 import timeit
 from typing import Mapping, Optional, Tuple
 
+import click
+import matplotlib.pyplot as plt
 import numpy
 import pandas
+import seaborn as sns
 import torch
-import tqdm
+from tqdm import tqdm
 
 from pykeen.nn import Interaction
 from pykeen.nn.functional import (
     _complex_interaction_complex_native, _complex_interaction_direct,
     _complex_interaction_optimized_broadcasted,
 )
-from pykeen.nn.modules import ComplExInteraction, _unpack_singletons
+from pykeen.nn.modules import _unpack_singletons
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from pykeen.version import get_git_hash
 
@@ -56,7 +59,9 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
     return (max(s[0] for s in prefix_shapes),) + tuple([s[1] for s in prefix_shapes])
 
 
-def main():
+@click.command()
+@click.option('-m', '--max-result-elements-power', type=int, default=30, show_default=True)
+def main(max_result_elements_power: int):
     variants = [
         _complex_interaction_complex_native,
         _complex_interaction_optimized_broadcasted,
@@ -67,7 +72,7 @@ def main():
     # batch_sizes = [2 ** i for i in range(5, 7)]
     num_entities = (100, 15_000)
     # num_entities = (100,)
-    max_result_elements = 2 ** 30
+    max_result_elements = 2 ** max_result_elements_power
     vector_dimensions = [2 ** i for i in range(5, 10 + 1)]
     # vector_dimensions = [2 ** i for i in range(5, 7)]
     data = []
@@ -78,28 +83,32 @@ def main():
         for n in num_entities
         for d in vector_dimensions
     ]
-    progress = tqdm.tqdm(variants, unit="variant", unit_scale=True)
+    progress = tqdm(variants, unit="variant")
     for variant in progress:
         # create variant
         interaction = Interaction.from_func(variant)
-        for (b, n, d, ul, prefix_shapes) in tqdm.tqdm(tasks, unit="task", unit_scale=True):
+        for i, (b, n, d, ul, prefix_shapes) in enumerate(tqdm(tasks, unit="task"), start=1):
             result_shape = _get_result_shape(prefix_shapes)
             n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
-            if max_result_elements is None or numpy.prod(result_shape) < max_result_elements:
-                h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=interaction, dim=d)
-                try:
-                    # TODO: cuda sync
-                    timer = timeit.Timer(
-                        stmt="interaction(h=h, r=r, t=t)",
-                        globals=dict(interaction=interaction, h=h, r=r, t=t),
-                    )
-                    n_samples, total_time = timer.autorange()
-                    time_per_sample = total_time / n_samples
-                except Exception as error:
-                    progress.write(f"ERROR: {error}")
+            if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
+                continue
+            h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=interaction, dim=d)
+            try:
+                # TODO: cuda sync
+                timer = timeit.Timer(
+                    stmt="interaction(h=h, r=r, t=t)",
+                    globals=dict(interaction=interaction, h=h, r=r, t=t),
+                )
+                n_samples, total_time = timer.autorange()
+                time_per_sample = total_time / n_samples
+            except Exception as error:
+                progress.write(f"ERROR: {error}")
             progress.set_postfix(dict(shape=prefix_shapes, time=time_per_sample))
-            data.append((b, n, d, prefix_shapes, ul, variant.__name__, total_time, n_samples, time_per_sample))
+            data.append((i, b, n, d, prefix_shapes, ul, variant.__name__, total_time, n_samples, time_per_sample))
+
+    git_hash = get_git_hash()
     df = pandas.DataFrame(data=data, columns=[
+        "experiment_number",
         "batch_size",
         "num_entities",
         "dimension",
@@ -110,13 +119,19 @@ def main():
         "n_samples",
         "time_per_sample",
     ])
-    git_hash = get_git_hash()
     df.to_csv(f"{git_hash}_measurement.tsv", sep="\t", index=False)
+
     df_agg = df.groupby(
         by=["batch_size", "num_entities", "dimension", "use_case", "variant"]
-    ).agg({"time_per_sample": "mean"}).unstack()
+    ).agg({"time_per_sample": "mean"}).unstack().reset_index().dropna()
     df_agg.to_csv(f"{git_hash}_measurement_agg.tsv", sep="\t", index=False)
     print(df_agg)
+
+    viz_df = df[df['total_time'].notna()]
+    viz_df['variant'] = viz_df['variant'].map(lambda s: ' '.join(s.split('_')[3:]).capitalize())
+    plt.figure(figsize=(14, 6))
+    sns.lineplot(data=viz_df, x='experiment_number', y='total_time', hue='variant')
+    plt.savefig(f"{git_hash}_measurement.png", dpi=300)
 
 
 if __name__ == '__main__':
