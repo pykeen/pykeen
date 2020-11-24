@@ -29,10 +29,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-HEAD_DIM = 1
-RELATION_DIM = 2
-TAIL_DIM = 3
-DIMS = dict(h=HEAD_DIM, r=RELATION_DIM, t=TAIL_DIM)
+DIMS = dict(h=1, r=2, t=3)
 
 
 def _normalize_dim(dim: Union[int, str]) -> int:
