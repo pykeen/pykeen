@@ -5,9 +5,11 @@ import itertools
 import unittest
 from typing import Any, Iterable, MutableMapping, Optional, Sequence
 
+import pytest
 import torch
 
 from pykeen.nn import Embedding, LiteralRepresentations, RepresentationModule
+from pykeen.nn.representation import DIMS, get_expected_canonical_shape
 from pykeen.nn.sim import kullback_leibler_similarity
 from pykeen.testing.base import GenericTests
 from pykeen.typing import GaussianDistribution
@@ -16,26 +18,28 @@ from pykeen.typing import GaussianDistribution
 class RepresentationModuleTests(GenericTests[RepresentationModule]):
     """Tests for RepresentationModule."""
 
+    #: The batch size
     batch_size: int = 3
+
+    #: The number of representations
     num: int = 5
+
+    #: The expected shape of an individual representation
     exp_shape: Sequence[int] = (5,)
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
         self.instance.reset_parameters()
 
     def test_max_id(self):
+        """Test the maximum ID."""
         assert self.instance.max_id == self.num
 
     def test_shape(self):
+        """Test the shape."""
         assert self.instance.shape == self.exp_shape
 
     def _test_forward(self, indices: Optional[torch.LongTensor]):
         """Test the forward method."""
-        assert indices is None or (
-            torch.is_tensor(indices)
-            and indices.dtype == torch.long
-            and indices.ndimension() == 1
-        )
         x = self.instance(indices=indices)
         assert torch.is_tensor(x)
         assert x.dtype == torch.float32
@@ -47,47 +51,66 @@ class RepresentationModuleTests(GenericTests[RepresentationModule]):
         """Additional verification."""
         assert x.requires_grad
 
-    def _test_indices(self) -> Iterable[torch.LongTensor]:
+    def _valid_indices(self) -> Iterable[torch.LongTensor]:
         return [
             torch.randint(self.num, size=(self.batch_size,)),
             torch.randperm(self.num),
             torch.randperm(self.num).repeat(2),
         ]
 
+    def _invalid_indices(self) -> Iterable[torch.LongTensor]:
+        return [
+            torch.as_tensor([self.num], dtype=torch.long),  # too high index
+            torch.randint(self.num, size=(2, 3)),  # too many indices
+        ]
+
     def test_forward_without_indices(self):
+        """Test forward without providing indices."""
         self._test_forward(indices=None)
 
     def test_forward_with_indices(self):
-        for indices in self._test_indices():
+        """Test forward with providing indices."""
+        for indices in self._valid_indices():
             self._test_forward(indices=indices)
 
-    def _test_in_canonical_shape(self, indices):
-        name_to_shape = dict(h=1, r=2, t=3)
-        for dim in itertools.chain(name_to_shape.keys(), name_to_shape.values()):
+    def test_forward_with_invalid_indices(self):
+        """Test whether passing invalid indices crashes."""
+        for indices in self._invalid_indices():
+            with pytest.raises((IndexError, RuntimeError)):
+                self._test_forward(indices=indices)
+
+    def _test_in_canonical_shape(self, indices: Optional[torch.LongTensor]):
+        """Test get_in_canonical_shape with the given indices."""
+        # test both, using the actual dimension, and its name
+        for dim in itertools.chain(DIMS.keys(), DIMS.values()):
             # batch_size, d1, d2, d3, *
             x = self.instance.get_in_canonical_shape(dim=dim, indices=indices)
+
+            # data type
             assert torch.is_tensor(x)
-            assert x.dtype == torch.float32
+            assert x.dtype == torch.float32  # todo: adjust?
             assert x.ndimension() == 4 + len(self.exp_shape)
-            exp_shape = [1, 1, 1, 1] + list(self.exp_shape)
-            if isinstance(dim, str):
-                dim = name_to_shape[dim]
-            if indices is None:  # 1-n scoring
-                exp_shape[dim] = self.num
-            if indices is not None:  # batch dimension
-                exp_shape[0] = indices.shape[0]
-                if indices.ndimension() > 1:  # multi-target batching
-                    exp_shape[dim] = indices.shape[1]
-            assert x.shape == tuple(exp_shape)
+
+            # get expected shape
+            exp_shape = get_expected_canonical_shape(
+                indices=indices,
+                dim=dim,
+                suffix_shape=self.exp_shape,
+                num=self.num,
+            )
+            assert x.shape == exp_shape
 
     def test_get_in_canonical_shape_without_indices(self):
+        """Test get_in_canonical_shape without indices, i.e. with 1-n scoring."""
         self._test_in_canonical_shape(indices=None)
 
     def test_get_in_canonical_shape_with_indices(self):
-        for indices in self._test_indices():
+        """Test get_in_canonical_shape with 1-dimensional indices."""
+        for indices in self._valid_indices():
             self._test_in_canonical_shape(indices=indices)
 
     def test_get_in_canonical_shape_with_2d_indices(self):
+        """Test get_in_canonical_shape with 2-dimensional indices."""
         indices = torch.randint(self.num, size=(self.batch_size, 2))
         self._test_in_canonical_shape(indices=indices)
 
