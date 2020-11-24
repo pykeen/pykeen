@@ -105,7 +105,7 @@ def complex_interaction(
         The scores.
     """
     h, r, t = [view_complex(x=x) for x in (h, r, t)]
-    return torch.real((h * r * torch.conj(t)).sum(dim=-1))
+    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
 @_add_cuda_warning
