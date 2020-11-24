@@ -341,6 +341,7 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             x = self._embeddings(indices)
+        x = x.view(x.shape[0], *self.shape)
         if self.normalizer is not None:
             x = self.normalizer(x)
         if self.regularizer is not None:
