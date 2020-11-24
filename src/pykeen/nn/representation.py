@@ -39,6 +39,38 @@ def _normalize_dim(dim: Union[int, str]) -> int:
     return DIMS[dim.lower()[0]]
 
 
+def get_expected_canonical_shape(
+    indices_shape: Union[None, int, Tuple[int, int]],
+    dim: Union[str, int],
+    suffix_shape: Union[int, Sequence[int]],
+    num: Optional[int] = None,
+) -> Tuple[int, ...]:
+    """
+    Calculate the expected canonical shape for the given parameters.
+
+    :param indices_shape:
+        The shape of the indices, or None, if no indices are to be provided.
+    :param dim:
+        The dimension, either symbolic, or numeric.
+    :param suffix_shape:
+        The suffix-shape.
+    :param num:
+        The number of representations, if indices_shape is None, i.e. 1-n scoring.
+
+    :return: (batch_size, num_heads, num_relations, num_tails, ``*``).
+        The expected shape, a tuple of at least 5 positive integers.
+    """
+    exp_shape = [1, 1, 1, 1] + list(suffix_shape)
+    dim = _normalize_dim(dim=dim)
+    if indices_shape is None:  # 1-n scoring
+        exp_shape[dim] = num
+    else:  # batch dimension
+        exp_shape[0] = indices_shape[0]
+        if len(indices_shape) > 1:  # multi-target batching
+            exp_shape[dim] = indices_shape[1]
+    return tuple(exp_shape)
+
+
 def convert_to_canonical_shape(
     x: torch.FloatTensor,
     dim: Union[int, str],
