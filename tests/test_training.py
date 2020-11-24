@@ -135,9 +135,8 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
-        optimizer = get_optimizer_cls(None)
-        optimizer = optimizer(
-            params=model.get_grad_params())
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
         losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
 
@@ -147,9 +146,8 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
-        optimizer = get_optimizer_cls(None)
-        optimizer = optimizer(
-            params=model.get_grad_params())
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
         training_loop.train(
             num_epochs=int(self.num_epochs // 2),
@@ -164,9 +162,8 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
-        optimizer = get_optimizer_cls(None)
-        optimizer = optimizer(
-            params=model.get_grad_params())
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
         losses_2 = training_loop.train(
             num_epochs=self.num_epochs,
@@ -185,9 +182,8 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
-        optimizer = get_optimizer_cls(None)
-        optimizer = optimizer(
-            params=model.get_grad_params())
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
         losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
 
@@ -197,9 +193,8 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
-        optimizer = get_optimizer_cls(None)
-        optimizer = optimizer(
-            params=model.get_grad_params())
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
         training_loop.train(
             num_epochs=int(self.num_epochs // 2),
@@ -214,9 +209,8 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
             random_seed=123,
         )
-        optimizer = get_optimizer_cls(None)
-        optimizer = optimizer(
-            params=model.get_grad_params())
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
         losses_2 = training_loop.train(
             num_epochs=self.num_epochs,
