@@ -116,7 +116,8 @@ class TestPipelineCheckpoints(unittest.TestCase):
         self.random_seed = 123
         self.model = 'TransE'
         self.dataset = 'nations'
-        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{str(datetime.now()).replace('.', '_')}.pt"
+        date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
+        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{date_string}.pt"
 
     def test_pipeline_lcwa_resumption(self):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""

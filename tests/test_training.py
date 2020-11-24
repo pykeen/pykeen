@@ -89,7 +89,8 @@ class TrainingLoopTests(unittest.TestCase):
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
         self.random_seed = 123
-        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{str(datetime.now()).replace('.', '_')}.pt"
+        date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
+        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{date_string}.pt"
         self.num_epochs = 10
 
     def test_sub_batching(self):
