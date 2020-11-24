@@ -7,9 +7,9 @@
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/pykeen/pykeen">
-    <img src="https://travis-ci.com/pykeen/pykeen.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
-         alt="Travis CI">
+  <a href="https://github.com/pykeen/pykeen/actions">
+    <img src="https://github.com/pykeen/pykeen/workflows/Tests/badge.svg"
+         alt="GitHub Actions">
   </a>
 
   <a href="https://ci.appveyor.com/project/pykeen/pykeen/branch/master">
