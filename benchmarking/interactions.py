@@ -78,7 +78,7 @@ def main():
     progress = tqdm.tqdm(variants, unit="variant", unit_scale=True)
     for variant in progress:
         # create variant
-        base_interaction.func = variant
+        base_interaction.__class__.func = variant
         for (b, n, d, ul, prefix_shapes) in tqdm.tqdm(tasks, unit="task", unit_scale=True):
             result_shape = _get_result_shape(prefix_shapes)
             n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
@@ -94,6 +94,7 @@ def main():
                     time_per_sample = total_time / n_samples
                 except Exception as error:
                     progress.write(f"ERROR: {error}")
+            progress.set_postfix(dict(shape=prefix_shapes, time=time_per_sample))
             data.append((b, n, d, prefix_shapes, ul, variant.__name__, total_time, n_samples, time_per_sample))
     df = pandas.DataFrame(data=data, columns=[
         "batch_size",
