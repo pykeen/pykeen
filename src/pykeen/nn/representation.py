@@ -124,7 +124,7 @@ class RepresentationModule(nn.Module, ABC):
         :param indices:
             The indices. Either None, in which care all embeddings are returned, or a 1 or 2 dimensional index tensor.
 
-        :return: shape: (batch_size, d1, d2, d3, *self.shape)
+        :return: shape: (batch_size, d1, d2, d3, ``*self.shape``)
         """
         r_shape: Tuple[int, ...]
         if indices is None:
