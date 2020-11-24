@@ -11,7 +11,7 @@ import torch
 from pykeen.nn import Embedding, LiteralRepresentations, RepresentationModule
 from pykeen.nn.representation import DIMS, get_expected_canonical_shape
 from pykeen.nn.sim import kullback_leibler_similarity
-from pykeen.testing.base import GenericTests
+from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.typing import GaussianDistribution
 
 
@@ -152,6 +152,13 @@ class LiteralRepresentationsTests(RepresentationModuleTests, unittest.TestCase):
         if indices is not None:
             exp_x = exp_x[indices]
         assert torch.allclose(x, exp_x)
+
+
+class RepresentationModuleTestsTest(TestsTest[RepresentationModule], unittest.TestCase):
+    """Test that there are tests for all representation modules."""
+
+    base_cls = RepresentationModule
+    base_test = RepresentationModuleTests
 
 
 class KullbackLeiblerTests(unittest.TestCase):
