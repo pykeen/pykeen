@@ -13,7 +13,7 @@ from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
-    tensor_product, tensor_sum, view_complex,
+    split_complex, tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -83,6 +83,34 @@ def _add_cuda_warning(func):
     return wrapped
 
 
+def _complex_interaction_complex_native(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Use torch built-ins for computation with complex numbers."""
+    h, r, t = [view_complex(x=x) for x in (h, r, t)]
+    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
+
+
+def _complex_interaction_optimized_broadcasted(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Manually split into real/imag, and used optimized broadcasted combination."""
+    (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+    return tensor_sum(*(
+        factor * tensor_product(hh, rr, tt).sum(dim=-1)
+        for factor, hh, rr, tt in [
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
+        ]
+    ))
+
+
 def complex_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -104,8 +132,7 @@ def complex_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    h, r, t = [view_complex(x=x) for x in (h, r, t)]
-    return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
+    return _complex_interaction_complex_native(h, r, t)
 
 
 @_add_cuda_warning
