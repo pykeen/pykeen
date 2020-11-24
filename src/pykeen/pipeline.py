@@ -998,33 +998,12 @@ def pipeline(  # noqa: C901
 
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
-    while True:
-        try:
-            losses = training_loop_instance.train(
-                stopper=stopper,
-                result_tracker=result_tracker,
-                clear_optimizer=clear_optimizer,
-                **training_kwargs,
-            )
-        except (MemoryError, RuntimeError) as e:
-            # If the training failed due to OOM on the GPU, the training is reverted to CPU training.
-            if training_loop_instance.device.type == 'cuda':
-                logging.warning("Tried to train the current model on GPU, but the model is too big for the GPU")
-                logging.warning("Reverting to CPU now, which will increase the training time significantly.")
-                model_instance.to_cpu_()
-                # We have to create a new optimizer when changing the device of the model
-                # https://github.com/pytorch/pytorch/pull/3463#issuecomment-341673802
-                training_loop_instance.optimizer = optimizer(
-                    params=model_instance.get_grad_params(),
-                    **optimizer_kwargs,
-                )
-                training_loop_instance.model.reset_parameters_()
-                training_loop_instance.model.regularizer.reset()
-            # If the training still fails using the CPU, the error is finally raised
-            else:
-                raise e
-        else:
-            break
+    losses = training_loop_instance.train(
+        stopper=stopper,
+        result_tracker=result_tracker,
+        clear_optimizer=clear_optimizer,
+        **training_kwargs,
+    )
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
