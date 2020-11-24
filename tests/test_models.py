@@ -31,11 +31,7 @@ from pykeen.models.base import (
     get_novelty_mask,
 )
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.unimodal.rgcn import (
-    RGCNRepresentations, inverse_indegree_edge_weights,
-    inverse_outdegree_edge_weights,
-    symmetric_edge_weights,
-)
+from pykeen.nn.representation import RGCNRepresentations, inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
 from pykeen.regularizers import LpRegularizer, collect_regularization_terms
 from pykeen.testing.mocks import MockRepresentations
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
