@@ -1,6 +1,7 @@
 import timeit
 from typing import Mapping, Optional, Tuple
 
+import numpy
 import pandas
 import torch
 import tqdm
@@ -47,6 +48,10 @@ def _generate_hrt(
     ))
 
 
+def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
+    return (max(s[0] for s in prefix_shapes),) + tuple([s[1] for s in prefix_shapes])
+
+
 def main():
     base_interaction: Interaction = ComplExInteraction()
     variants = [
@@ -59,6 +64,7 @@ def main():
     # batch_sizes = [2 ** i for i in range(5, 7)]
     num_entities = (100, 15_000)
     # num_entities = (100,)
+    max_result_elements = 2 ** 30
     vector_dimensions = [2 ** i for i in range(5, 10 + 1)]
     # vector_dimensions = [2 ** i for i in range(5, 7)]
     data = []
@@ -69,20 +75,25 @@ def main():
         for n in num_entities
         for d in vector_dimensions
     ]
-    for variant in tqdm.tqdm(variants, unit="variant", unit_scale=True):
+    progress = tqdm.tqdm(variants, unit="variant", unit_scale=True)
+    for variant in progress:
         # create variant
         base_interaction.func = variant
         for (b, n, d, ul, prefix_shapes) in tqdm.tqdm(tasks, unit="task", unit_scale=True):
-            h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=base_interaction, dim=d)
-            try:
-                timer = timeit.Timer(
-                    stmt="interaction(h=h, r=r, t=t)",
-                    globals=dict(interaction=base_interaction, h=h, r=r, t=t),
-                )
-                n_samples, total_time = timer.autorange()
-                time_per_sample = total_time / n_samples
-            except Exception as error:
-                n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
+            result_shape = _get_result_shape(prefix_shapes)
+            n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
+            if max_result_elements is None or numpy.prod(result_shape) < max_result_elements:
+                h, r, t = _generate_hrt(prefix_shapes=prefix_shapes, interaction=base_interaction, dim=d)
+                try:
+                    # TODO: cuda sync
+                    timer = timeit.Timer(
+                        stmt="interaction(h=h, r=r, t=t)",
+                        globals=dict(interaction=base_interaction, h=h, r=r, t=t),
+                    )
+                    n_samples, total_time = timer.autorange()
+                    time_per_sample = total_time / n_samples
+                except Exception as error:
+                    progress.write(f"ERROR: {error}")
             data.append((b, n, d, prefix_shapes, ul, variant.__name__, total_time, n_samples, time_per_sample))
     df = pandas.DataFrame(data=data, columns=[
         "batch_size",
