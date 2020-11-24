@@ -8,6 +8,7 @@ import pathlib
 import random
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from hashlib import md5
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
@@ -524,8 +525,8 @@ class TrainingLoop(ABC):
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
                 self._save_state(path=checkpoint_file_path, stopper=stopper)
                 logger.warning(
-                    "However, don't worry we got you covered. PyKEEN just saved a checkpoint before this happened"
-                    f"at '{checkpoint_file_path}'. To resume training from the checkpoint file just restart your code"
+                    "However, don't worry we got you covered. PyKEEN just saved a checkpoint before this happened "
+                    f"at '{checkpoint_file_path}'. To resume training from the checkpoint file just restart your code "
                     "and pass this file path to the training loop or pipeline you used as 'checkpoint_file' argument.",
                 )
                 raise e
@@ -815,6 +816,12 @@ class TrainingLoop(ABC):
         else:
             stopper_dict = stopper.get_summary_dict()
 
+        # Only if a cuda device is available, the random state is accessed
+        if torch.cuda.is_available():
+            torch_cuda_random_state = torch.cuda.get_rng_state()
+        else:
+            torch_cuda_random_state = None
+
         torch.save(
             {
                 'epoch': self._epoch,
@@ -827,7 +834,7 @@ class TrainingLoop(ABC):
                 'random_state': random.getstate(),
                 'np_random_state': np.random.get_state(),
                 'torch_random_state': torch.random.get_rng_state(),
-                'torch_cuda_random_state': torch.cuda.get_rng_state(),
+                'torch_cuda_random_state': torch_cuda_random_state,
             },
             path,
         )
@@ -852,6 +859,25 @@ class TrainingLoop(ABC):
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
                 f"from a different training loop setup.",
             )
+        # Cuda requires its own random state, which can only be set when a cuda device is available
+        torch_cuda_random_state = checkpoint['torch_cuda_random_state']
+        if torch_cuda_random_state:
+            if torch.cuda.is_available():
+                torch.cuda.set_rng_state(torch_cuda_random_state)
+            else:
+                logger.warning(
+                    "You're currently trying to resume the training loop on a CPU from a checkpoint that was saved "
+                    "with a GPU. Therefore, the random state for the CUDA devices can't be set and results may not "
+                    "be deterministic.",
+                )
+        else:
+            if torch.cuda.is_available():
+                logger.warning(
+                    "You're currently trying to resume the training loop on a GPU from a checkpoint that was saved "
+                    "without a GPU. Therefore, the random state for the CUDA devices won't be set and results may not "
+                    "be deterministic.",
+                )
+
         self._epoch = checkpoint['epoch']
         self.losses_per_epochs = checkpoint['loss']
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -859,6 +885,5 @@ class TrainingLoop(ABC):
         random.setstate(checkpoint['random_state'])
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
-        torch.cuda.set_rng_state(checkpoint['torch_cuda_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
         return checkpoint['stopper_dict']
