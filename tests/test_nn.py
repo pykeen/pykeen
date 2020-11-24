@@ -319,6 +319,7 @@ class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
     cls = RGCNRepresentations
     kwargs = dict(
         num_bases_or_blocks=2,
+        embedding_dim=RepresentationModuleTests.exp_shape[0],
     )
     num_relations: int = 7
     num_triples: int = 31
