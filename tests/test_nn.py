@@ -12,9 +12,10 @@ import torch
 from torch.nn import functional
 
 from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
-from pykeen.nn.representation import DIMS, get_expected_canonical_shape
+from pykeen.nn.representation import DIMS, RGCNRepresentations, get_expected_canonical_shape
 from pykeen.nn.sim import kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
+from pykeen.triples import TriplesFactory
 from pykeen.typing import GaussianDistribution
 
 
@@ -310,6 +311,37 @@ class LiteralRepresentationsTests(EmbeddingTests, unittest.TestCase):
         if indices is not None:
             exp_x = exp_x[indices]
         assert torch.allclose(x, exp_x)
+
+
+class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
+    """Test RGCN representations."""
+
+    cls = RGCNRepresentations
+    kwargs = dict(
+        num_bases_or_blocks=2,
+    )
+    num_relations: int = 7
+    num_triples: int = 31
+    num_bases: int = 2
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        # generate random triples
+        mapped_triples = numpy.stack([
+            numpy.random.randint(max_id, size=(self.num_triples,))
+            for max_id in (self.num, self.num_relations, self.num)
+        ], axis=-1)
+        entity_names = [f"e_{i}" for i in range(self.num)]
+        relation_names = [f"r_{i}" for i in range(self.num_relations)]
+        triples = numpy.stack([
+            [names[i] for i in col.tolist()]
+            for col, names in zip(
+                mapped_triples.T,
+                (entity_names, relation_names, entity_names),
+            )
+        ])
+        kwargs["triples_factory"] = TriplesFactory(triples=triples)
+        return kwargs
 
 
 class RepresentationModuleTestsTest(TestsTest[RepresentationModule], unittest.TestCase):
