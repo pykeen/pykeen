@@ -144,7 +144,11 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         initializer=torch.nn.init.normal_,
         kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """Test initializer usage."""
+        # wrap to check calls
         wrapped_initializer = MagicMock(side_effect=initializer)
+
+        # instantiate embedding
         embedding_kwargs = dict()
         if kwargs is not None:
             embedding_kwargs["initializer_kwargs"] = kwargs
@@ -154,12 +158,17 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
             initializer=wrapped_initializer,
             **embedding_kwargs
         )
+        # check that initializer gets not called before reset_parameters
         wrapped_initializer.assert_not_called()
+
+        # check that initializer gets called exactly once in reset_parameters
         embedding.reset_parameters()
         wrapped_initializer.assert_called_once()
-        # one positional
+
+        # .. with one positional argument ...
         assert len(wrapped_initializer.call_args.args) == 1
-        # additional key-word based
+
+        # .. and additional key-word based arguments.
         assert len(wrapped_initializer.call_args.kwargs) == len(kwargs or {})
 
     def test_initializer(self):
