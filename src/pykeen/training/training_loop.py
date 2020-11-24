@@ -18,7 +18,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from ..constants import PYKEEN_DEFAULT_CHECKPOINT, PYKEEN_HOME
+from ..constants import PYKEEN_DEFAULT_CHECKPOINT, PYKEEN_DEFAULT_CHECKPOINT_DIR
 from ..losses import Loss
 from ..models.base import Model
 from ..stoppers import Stopper
@@ -159,7 +159,7 @@ class TrainingLoop(ABC):
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
         checkpoint_file: Optional[str] = None,
-        checkpoint_root: Optional[str] = None,
+        checkpoint_root: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
     ) -> List[float]:
         """Train the KGE model.
@@ -216,9 +216,8 @@ class TrainingLoop(ABC):
 
         # A checkpoint root is always created to ensure a fallback checkpoint can be saved
         if checkpoint_root is None:
-            checkpoint_root = pathlib.Path(PYKEEN_HOME).joinpath("checkpoints")
-        else:
-            checkpoint_root = pathlib.Path(checkpoint_root)
+            checkpoint_root = PYKEEN_DEFAULT_CHECKPOINT_DIR
+        checkpoint_root = pathlib.Path(checkpoint_root)
         checkpoint_root.mkdir(parents=True, exist_ok=True)
         logger.debug('using checkpoint_root at %s', checkpoint_root)
 
@@ -354,10 +353,10 @@ class TrainingLoop(ABC):
 
         # This will find necessary parameters to optimize the use of the hardware at hand
         if (
-                not only_size_probing
-                and self.model.automatic_memory_optimization
-                and not batch_size_sufficient
-                and not continue_training
+            not only_size_probing
+            and self.model.automatic_memory_optimization
+            and not batch_size_sufficient
+            and not continue_training
         ):
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
@@ -800,7 +799,7 @@ class TrainingLoop(ABC):
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 
-    def _save_state(self, path: str, stopper: Optional[Stopper] = None) -> None:
+    def _save_state(self, path: Union[str, pathlib.Path], stopper: Optional[Stopper] = None) -> None:
         """Save the state of the training loop.
 
         :param path:

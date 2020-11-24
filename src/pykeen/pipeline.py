@@ -177,7 +177,7 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .constants import PYKEEN_HOME
+from .constants import PYKEEN_DEFAULT_CHECKPOINT_DIR
 from .datasets import get_dataset
 from .datasets.base import DataSet
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
@@ -825,30 +825,30 @@ def pipeline(  # noqa: C901
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
+    if training_kwargs is None:
+        training_kwargs = {}
+
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
     # used random_seed to ensure reproducible results
-    if training_kwargs and training_kwargs.get('checkpoint_file'):
-        if training_kwargs.get('checkpoint_root'):
-            checkpoint_root = pathlib.Path(training_kwargs.get('checkpoint_root'))
-        else:
-            checkpoint_root = pathlib.Path(PYKEEN_HOME).joinpath("checkpoints")
-        checkpoint_file = checkpoint_root.joinpath(training_kwargs.get('checkpoint_file'))
-        if checkpoint_file.is_file():
-            checkpoint_dict = torch.load(checkpoint_file)
+    checkpoint_file_name = training_kwargs.get('checkpoint_file')
+    if checkpoint_file_name is not None:
+        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_root', PYKEEN_DEFAULT_CHECKPOINT_DIR))
+        checkpoint_directory.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_directory / checkpoint_file_name
+        if checkpoint_path.is_file():
+            checkpoint_dict = torch.load(checkpoint_path)
             random_seed = checkpoint_dict['random_seed']
-            logger.info(f'Loaded random seed {random_seed} from checkpoint.')
+            logger.info('loaded random seed %s from checkpoint.', random_seed)
             # We have to set clear optimizer to False since training should be continued
             clear_optimizer = False
         else:
-            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_file}'. Creating a new file.")
+            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
             if random_seed is None:
                 random_seed = random_non_negative_int()
                 logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-    else:
-        if random_seed is None:
-            random_seed = random_non_negative_int()
-            logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-
+    elif random_seed is None:
+        random_seed = random_non_negative_int()
+        logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
     result_tracker_cls: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
@@ -961,9 +961,6 @@ def pipeline(  # noqa: C901
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
-
-    if training_kwargs is None:
-        training_kwargs = {}
 
     # Stopping
     if 'stopper' in training_kwargs and stopper is not None:
