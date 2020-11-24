@@ -156,7 +156,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
             num_embeddings=self.num,
             shape=self.exp_shape,
             initializer=wrapped_initializer,
-            **embedding_kwargs
+            **embedding_kwargs,
         )
         # check that initializer gets not called before reset_parameters
         wrapped_initializer.assert_not_called()
