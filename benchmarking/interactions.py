@@ -61,20 +61,24 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
 
 @click.command()
 @click.option('-m', '--max-result-elements-power', type=int, default=30, show_default=True)
-def main(max_result_elements_power: int):
+@click.option('-b', '--max-batch-size-power', type=int, default=10, show_default=True)
+@click.option('-d', '--max-vector-dimension-power', type=int, default=10, show_default=True)
+def main(
+    max_result_elements_power: int,
+    max_batch_size_power: int,
+    max_vector_dimension_power: int,
+):
     variants = [
         _complex_interaction_complex_native,
         _complex_interaction_optimized_broadcasted,
         _complex_interaction_direct,
     ]
     use_case_labels = ["hrt", "t", "h"]
-    batch_sizes = [2 ** i for i in range(5, 10 + 1)]
-    # batch_sizes = [2 ** i for i in range(5, 7)]
+    batch_sizes = [2 ** i for i in range(5, max_batch_size_power + 1)]
     num_entities = (100, 15_000)
     # num_entities = (100,)
     max_result_elements = 2 ** max_result_elements_power
-    vector_dimensions = [2 ** i for i in range(5, 10 + 1)]
-    # vector_dimensions = [2 ** i for i in range(5, 7)]
+    vector_dimensions = [2 ** i for i in range(5, max_vector_dimension_power + 1)]
     data = []
     tasks = [
         (b, n, d, ul, _use_case_to_shape(use_case=ul, b=b, n=n))
