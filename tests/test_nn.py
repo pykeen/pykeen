@@ -3,11 +3,11 @@
 """Unittest for the :mod:`pykeen.nn` module."""
 import itertools
 import unittest
-from typing import Iterable, Optional, Sequence
+from typing import Any, Iterable, MutableMapping, Optional, Sequence
 
 import torch
 
-from pykeen.nn import Embedding, RepresentationModule
+from pykeen.nn import Embedding, LiteralRepresentations, RepresentationModule
 from pykeen.nn.sim import kullback_leibler_similarity
 from pykeen.testing.base import GenericTests
 from pykeen.typing import GaussianDistribution
@@ -19,6 +19,9 @@ class RepresentationModuleTests(GenericTests[RepresentationModule]):
     batch_size: int = 3
     num: int = 5
     exp_shape: Sequence[int] = (5,)
+
+    def post_instantiation_hook(self) -> None:  # noqa: D102
+        self.instance.reset_parameters()
 
     def test_max_id(self):
         assert self.instance.max_id == self.num
@@ -38,6 +41,11 @@ class RepresentationModuleTests(GenericTests[RepresentationModule]):
         assert x.dtype == torch.float32
         n = self.num if indices is None else indices.shape[0]
         assert x.shape == tuple([n, *self.instance.shape])
+        self._verify_content(x=x, indices=indices)
+
+    def _verify_content(self, x, indices):
+        """Additional verification."""
+        assert x.requires_grad
 
     def _test_indices(self) -> Iterable[torch.LongTensor]:
         return [
@@ -103,6 +111,24 @@ class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         num_embeddings=RepresentationModuleTests.num,
         shape=(3, 7),
     )
+
+
+class LiteralRepresentationsTests(RepresentationModuleTests, unittest.TestCase):
+    """Tests for literal embeddings."""
+
+    cls = LiteralRepresentations
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.numeric_literals = torch.rand(self.num, *self.exp_shape)
+        kwargs["numeric_literals"] = self.numeric_literals
+        return kwargs
+
+    def _verify_content(self, x, indices):  # noqa: D102
+        exp_x = self.numeric_literals
+        if indices is not None:
+            exp_x = exp_x[indices]
+        assert torch.allclose(x, exp_x)
 
 
 class KullbackLeiblerTests(unittest.TestCase):
