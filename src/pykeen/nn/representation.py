@@ -630,6 +630,8 @@ class RGCNRepresentations(RepresentationModule):
         # use buffered messages if applicable
         if indices is None and self.enriched_embeddings is not None:
             return self.enriched_embeddings
+        if indices is not None and indices.ndimension() > 1:
+            raise RuntimeError("indices must be None, or 1-dimensional.")
 
         # Bind fields
         # shape: (num_entities, embedding_dim)
