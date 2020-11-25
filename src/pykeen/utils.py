@@ -51,6 +51,8 @@ __all__ = [
     'set_random_seed',
     'split_complex',
     'split_list_in_batches_iter',
+    'tensor_sum',
+    'tensor_product',
     'upgrade_to_sequence',
     'view_complex',
     'NoRandomSeedNecessary',
