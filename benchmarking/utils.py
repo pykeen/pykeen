@@ -42,19 +42,23 @@ def tqdm_itertools_product(*args, **kwargs):
 
 def check_tensor_sum_performance():
     """Test whether tensor_sum actually offers any performance benefits."""
-    batch_sizes = [2 ** i for i in range(5, 10 + 1)]
-    nums = [2 ** i for i in range(10, 15)]  # 2**15 ~ 15k
-    dims = [2 ** i for i in range(5, 10 + 1)]
-    use_cases = ["b", "bh", "br", "bt"]  # score_hrt, score_h, score_t, score_t
     data = []
     progress = tqdm_itertools_product(
-        batch_sizes,
-        nums,
-        dims,
-        use_cases,
+        [2 ** i for i in range(5, 10 + 1)],
+        [2 ** i for i in range(10, 15)],  # 2**15 ~ 15k
+        [2 ** i for i in range(5, 10 + 1)],
+        ["b", "bh", "br", "bt"],  # score_hrt, score_h, score_t, score_t
         (
-            ("TransE/TransD", "bh", "br", "bt"),  # h, r, t
+            ("ConvKB/ERMLP", "", "bh", "br", "bt"),  # conv_bias, h, r, t
+            ("NTN", "bhrt", "bhr", "bht", "br"),  # h w t, vh h, vt t, b
+            ("ProjE", "bh", "br", ""),  # h, r, b_c
+            ("RotatE", "bhr", "bt"),  # hr, -t,
+            ("RotatE-inv", "bh", "brt"),  # h, -(r_inv)t,
+            ("StructuredEmbedding", "bhr", "brt"),  # r h, r t
+            ("TransE/TransD/KG2E", "bh", "br", "bt"),  # h, r, t
             ("TransH", "bh", "bhr", "br", "bt", "brt"),  # h, -<h, w_r> w_r, d_r, -t,, <t, w_r> w_r
+            ("TransR", "bhr", "br", "brt"),  # h m_r, r, -t m_r
+            ("UnstructuredModel", "bh", "bt"),  # h, r
         ),
         unit="configuration",
         unit_scale=True,
