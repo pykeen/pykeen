@@ -16,6 +16,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+
 class Stopper(ABC):
     """A harness for stopping training."""
 
