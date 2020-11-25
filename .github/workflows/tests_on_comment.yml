@@ -1,0 +1,57 @@
+name: Tests on request
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  lint:
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'Run integration tests!'}}
+    name: Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/github-script@v3
+        id: get-pr
+        with:
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+            try {
+              const result = await github.pulls.get(request)
+              return result.data
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            }
+
+      - uses: actions/checkout@v2
+        if: ${{ success() }}
+        with:
+          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check manifest
+        run: tox -e manifest
+
+      - name: Check code quality with flake8
+        run: tox -e flake8
+
+      - name: Check package metadata with Pyroma
+        run: tox -e pyroma
+      # - name: Check static typing with MyPy
+      #  run: tox -e mypy
+      #  # Allow failure, see https://github.community/t/continue-on-error-allow-failure-ui-indication/16773
+      #  if: succeeded() || failed()

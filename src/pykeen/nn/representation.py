@@ -60,13 +60,16 @@ def get_expected_canonical_shape(
     :return: (batch_size, num_heads, num_relations, num_tails, ``*``).
         The expected shape, a tuple of at least 5 positive integers.
     """
-    if torch.is_tensor(indices):
-        indices = indices.shape
-    exp_shape = [1, 1, 1, 1] + list(suffix_shape)
+    if isinstance(suffix_shape, int):
+        exp_shape = [1, 1, 1, 1, suffix_shape]
+    else:
+        exp_shape = [1, 1, 1, 1, *suffix_shape]
     dim = _normalize_dim(dim=dim)
     if indices is None:  # 1-n scoring
-        exp_shape[dim] = num
+        exp_shape[dim] = num  # type: ignore
     else:  # batch dimension
+        if isinstance(indices, torch.Tensor):
+            indices = indices.shape
         exp_shape[0] = indices[0]
         if len(indices) > 1:  # multi-target batching
             exp_shape[dim] = indices[1]
@@ -623,7 +626,7 @@ class RGCNRepresentations(RepresentationModule):
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         # use buffered messages if applicable
         if indices is None and self.enriched_embeddings is not None:
             return self.enriched_embeddings
@@ -726,7 +729,7 @@ class RGCNRepresentations(RepresentationModule):
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
-    def reset_parameters(self):
+    def reset_parameters(self):  # noqa:D102
         self.base_embeddings.reset_parameters()
 
         gain = nn.init.calculate_gain(nonlinearity=self.activation_cls.__name__.lower())

@@ -11,7 +11,10 @@ import operator
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import (
+    Any, Callable, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar,
+    Union,
+)
 
 import numpy
 import numpy as np
@@ -196,17 +199,18 @@ def clamp_norm(
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
 
 
-def compose(
-    *op_: Callable[[torch.Tensor], torch.Tensor],
-) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Compose functions working on a single tensor."""
+class compose(Generic[X]):  # noqa:N801
+    """A class representing the composition of several functions."""
 
-    def chained_op(x: torch.Tensor):
-        for op in op_:
-            x = op(x)
+    def __init__(self, *operations: Callable[[X], X]):
+        """Initialize the composition with a sequence of operations."""
+        self.operations = operations
+
+    def __call__(self, x: X) -> X:
+        """Apply the operations in order to the given tensor."""
+        for operation in self.operations:
+            x = operation(x)
         return x
-
-    return chained_op
 
 
 def set_random_seed(seed: int) -> Tuple[None, torch._C.Generator, None]:
@@ -517,20 +521,18 @@ def estimate_cost_of_sequence(
     *other_shapes: Tuple[int, ...],
 ) -> int:
     """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
-    return sum(
-        map(
-            numpy.prod,
-            itertools.islice(
-                itertools.accumulate(
-                    other_shapes,
-                    calculate_broadcasted_elementwise_result_shape,
-                    initial=shape,
-                ),
-                1,
-                None,
-            )
-        )
-    )
+    return sum(map(
+        numpy.prod,
+        itertools.islice(
+            itertools.accumulate(
+                other_shapes,
+                calculate_broadcasted_elementwise_result_shape,
+                initial=shape,
+            ),
+            1,
+            None,
+        ),
+    ))
 
 
 @functools.lru_cache(maxsize=32)
@@ -538,6 +540,7 @@ def _get_optimal_sequence(
     *sorted_shapes: Tuple[int, ...],
 ) -> Tuple[int, Tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors element-wise based on the shapes.
+
     The shapes should be sorted to enable efficient caching.
     :param sorted_shapes:
         The shapes of the tensors to combine.
@@ -552,6 +555,7 @@ def _get_optimal_sequence(
 
 def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors elementwise based on the shapes.
+
     :param shapes:
         The shapes of the tensors to combine.
     :return:
@@ -575,6 +579,7 @@ def _multi_combine(
     op: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
 ) -> torch.FloatTensor:
     """Broadcasted element-wise combination of tensors.
+
     The optimal execution plan gets cached so that the optimization is only performed once for a fixed set of shapes.
 
     :param tensors:
@@ -586,9 +591,9 @@ def _multi_combine(
         The elementwise combination evaluated in optimal processing order.
     """
     # determine optimal processing order
-    order = get_optimal_sequence(*(t.shape for t in tensors))[1]
-    tensors = [tensors[i] for i in order]
-    return functools.reduce(op, tensors[1:], tensors[0])
+    _, order = get_optimal_sequence(*(t.shape for t in tensors))
+    head, *rest = [tensors[i] for i in order]
+    return functools.reduce(op, rest, head)
 
 
 def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:

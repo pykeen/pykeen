@@ -445,5 +445,6 @@ class TestEvaluationStructure(unittest.TestCase):
             model=self.model,
             mapped_triples=self.triples_factory.mapped_triples,
             batch_size=1,
+            use_tqdm=False,
         )
         assert eval_results.mean_rank == self.counter, 'Should end at the same value as it started'

@@ -12,8 +12,8 @@ from torch import nn
 from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
-    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm_of_sum, project_entity,
-    split_complex, tensor_product, tensor_sum, view_complex,
+    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm_of_sum,
+    project_entity, split_complex, tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -103,11 +103,11 @@ def _complex_interaction_optimized_broadcasted(
     return tensor_sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-        (+1, h_re, r_re, t_re),
-        (+1, h_re, r_im, t_im),
-        (+1, h_im, r_re, t_im),
-        (-1, h_im, r_im, t_re),
-    ]
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
+        ]
     ))
 
 
@@ -118,10 +118,12 @@ def _complex_interaction_direct(
 ) -> torch.FloatTensor:
     """Manually split into real/imag, and directly evaluate interaction."""
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-    return (h_re * r_re * t_re).sum(dim=-1) + \
-           (h_re * r_im * t_im).sum(dim=-1) + \
-           (h_im * r_re * t_im).sum(dim=-1) - \
-           (h_im * r_im * t_re).sum(dim=-1)
+    return (
+        (h_re * r_re * t_re).sum(dim=-1)
+        + (h_re * r_im * t_im).sum(dim=-1)
+        + (h_im * r_re * t_im).sum(dim=-1)
+        - (h_im * r_im * t_re).sum(dim=-1)
+    )
 
 
 def complex_interaction(

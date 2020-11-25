@@ -93,7 +93,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     @classmethod
     def cls_from_func(cls, f) -> Type['Interaction']:
         """Create a stateless interaction class."""
-        class StatelessInteraction(cls):
+        class StatelessInteraction(cls):  # type: ignore
             func = f
         return StatelessInteraction
 
