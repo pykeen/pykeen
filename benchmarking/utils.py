@@ -3,8 +3,9 @@ import functools
 import itertools
 import operator
 import timeit
-from typing import Sequence
+from typing import Sequence, Tuple
 
+import click
 import pandas
 import torch
 from tqdm.auto import tqdm
@@ -12,26 +13,29 @@ from tqdm.auto import tqdm
 from pykeen.utils import tensor_sum
 
 
-def _generate_tensors(
+def _generate_shapes(
     batch_size: int,
     num: int,
     dim: int,
     use_case: str,
     shapes: Sequence[str],
-) -> Sequence[torch.FloatTensor]:
+) -> Sequence[Tuple[int, ...]]:
     dims = dict(b=batch_size, h=num, r=num, t=num, d=dim)
     canonical = "bhrtd"
     return [
-        torch.rand(
-            *(
-                dims[c] if (
-                    c in use_case and c in shape
-                ) else 1
-                for c in canonical
-            ),
-            dtype=torch.float32,
-            requires_grad=True,
+        tuple(
+            dims[c] if (
+                c in use_case and c in shape
+            ) else 1
+            for c in canonical
         )
+        for shape in shapes
+    ]
+
+
+def _generate_tensors(*shapes: Tuple[int, ...]) -> Sequence[torch.FloatTensor]:
+    return [
+        torch.rand(shape, requires_grad=True, dtype=torch.float32)
         for shape in shapes
     ]
 
@@ -40,13 +44,24 @@ def tqdm_itertools_product(*args, **kwargs):
     return tqdm(itertools.product(*args), **kwargs, total=functools.reduce(operator.mul, map(len, args), 1))
 
 
-def check_tensor_sum_performance():
+@click.command()
+@click.option('-m', '--max-result-power', type=int, default=30, show_default=True)
+@click.option('-b', '--max-batch-size-power', type=int, default=10, show_default=True)
+@click.option('-n', '--max-num-power', type=int, default=14, show_default=True)
+@click.option('-d', '--max-dim-power', type=int, default=10, show_default=True)
+def main(
+    max_result_power: int,
+    max_batch_size_power: int,
+    max_dim_power: int,
+    max_num_power: int,
+):
     """Test whether tensor_sum actually offers any performance benefits."""
+    max_size = 2 ** max_result_power
     data = []
     progress = tqdm_itertools_product(
-        [2 ** i for i in range(5, 10 + 1)],
-        [2 ** i for i in range(10, 15)],  # 2**15 ~ 15k
-        [2 ** i for i in range(5, 10 + 1)],
+        [2 ** i for i in range(5, max_batch_size_power + 1)],
+        [2 ** i for i in range(10, max_num_power + 1)],  # 2**15 ~ 15k
+        [2 ** i for i in range(5, max_dim_power + 1)],
         ["b", "bh", "br", "bt"],  # score_hrt, score_h, score_t, score_t
         (
             ("ConvKB/ERMLP", "", "bh", "br", "bt"),  # conv_bias, h, r, t
@@ -64,14 +79,18 @@ def check_tensor_sum_performance():
         unit_scale=True,
     )
     for batch_size, num, dim, use_case, (models, *shapes) in progress:
-        tensors = _generate_tensors(
+        this_shapes = _generate_shapes(
             batch_size=batch_size,
             num=num,
             dim=dim,
             use_case=use_case,
             shapes=shapes,
         )
-        result_shape = [max(ds) for ds in zip(*(t.shape for t in tensors))]
+        result_shape = _get_result_shape(tensors)
+        num_result_elements = functools.reduce(operator.mul, result_shape, 1)
+        if num_result_elements > max_size:
+            continue
+        tensors = _generate_tensors(*this_shapes)
 
         # using normal sum
         n_samples, time_baseline = timeit.Timer(
@@ -105,5 +124,6 @@ def check_tensor_sum_performance():
     )
 
 
-if __name__ == '__main__':
-    check_tensor_sum_performance()
+def _get_result_shape(tensors):
+    result_shape = [max(ds) for ds in zip(*(t.shape for t in tensors))]
+    return result_shape
