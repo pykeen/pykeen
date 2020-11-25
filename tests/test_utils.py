@@ -10,12 +10,27 @@ import torch
 
 from pykeen.nn import Embedding
 from pykeen.utils import (
-    clamp_norm,
-    compact_mapping,
-    flatten_dictionary,
-    get_until_first_blank,
-    l2_regularization,
+    clamp_norm, compact_mapping, compose, flatten_dictionary, get_until_first_blank, l2_regularization,
 )
+
+
+class TestCompose(unittest.TestCase):
+    """Tests for composition."""
+
+    def test_compose(self):
+        """Test composition."""
+
+        def _f(x):
+            return x + 2
+
+        def _g(x):
+            return 2 * x
+
+        fog = compose(_f, _g)
+        for i in range(5):
+            with self.subTest(i=i):
+                self.assertEqual(_g(_f(i)), fog(i))
+                self.assertEqual(_g(_f(i ** 2)), fog(i ** 2))
 
 
 class L2RegularizationTest(unittest.TestCase):
