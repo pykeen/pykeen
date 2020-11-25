@@ -602,11 +602,6 @@ def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
     return sum(_reorder(tensors=x))
 
 
-def tensor_sum_(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute elementwise sum of tensors in brodcastable shape."""
-    return sum(x[i] for i in get_optimal_sequence(*(t.shape for t in x))[1])
-
-
 def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
     """Compute elementwise product of tensors in broadcastable shape."""
     head, *rest = _reorder(tensors=x)
