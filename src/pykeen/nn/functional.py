@@ -103,11 +103,11 @@ def _complex_interaction_optimized_broadcasted(
     return tensor_sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 
@@ -450,13 +450,12 @@ def kg2e_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    similarity_fn = KG2E_SIMILARITIES[similarity]
-    # Compute entity distribution
-    e_mean = h_mean - t_mean
-    e_var = h_var + t_var
-    e = GaussianDistribution(mean=e_mean, diagonal_covariance=e_var)
-    r = GaussianDistribution(mean=r_mean, diagonal_covariance=r_var)
-    return similarity_fn(e=e, r=r, exact=exact)
+    return KG2E_SIMILARITIES[similarity](
+        h=GaussianDistribution(mean=h_mean, diagonal_covariance=h_var),
+        r=GaussianDistribution(mean=r_mean, diagonal_covariance=r_var),
+        t=GaussianDistribution(mean=t_mean, diagonal_covariance=t_var),
+        exact=exact,
+    )
 
 
 def ntn_interaction(

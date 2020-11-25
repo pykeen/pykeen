@@ -18,8 +18,9 @@ __all__ = [
 
 
 def expected_likelihood(
-    e: GaussianDistribution,
+    h: GaussianDistribution,
     r: GaussianDistribution,
+    t: GaussianDistribution,
     epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
@@ -37,10 +38,14 @@ def expected_likelihood(
             + \log \det \Sigma + d \log (2 \pi)
         \right)
 
-    :param e: shape: (batch_size, num_heads, 1, num_tails, d)
-        The entity Gaussian distribution.
+    with :math:`\mu_e = \mu_h - \mu_t` and :math:`\Sigma_e = \Sigma_h + \Sigma_t`.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, d)
+        The head entity Gaussian distribution.
     :param r: shape: (batch_size, 1, num_relations, 1, d)
         The relation Gaussian distribution.
+    :param t: shape: (batch_size, 1, 1, num_tails, d)
+        The tail entity Gaussian distribution.
     :param epsilon: float (default=1.0)
         Small constant used to avoid numerical issues when dividing.
     :param exact:
@@ -50,8 +55,8 @@ def expected_likelihood(
         The similarity.
     """
     # subtract, shape: (batch_size, num_heads, num_relations, num_tails, dim)
-    var = r.diagonal_covariance + e.diagonal_covariance
-    mean = e.mean - r.mean
+    var = tensor_sum(*(d.diagonal_covariance for d in (h, r, t)))
+    mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
     #: a = \mu^T\Sigma^{-1}\mu
     safe_sigma = torch.clamp_min(var, min=epsilon)
@@ -68,8 +73,9 @@ def expected_likelihood(
 
 
 def kullback_leibler_similarity(
-    e: GaussianDistribution,
+    h: GaussianDistribution,
     r: GaussianDistribution,
+    t: GaussianDistribution,
     epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
@@ -86,16 +92,20 @@ def kullback_leibler_similarity(
           + ln (det(\Sigma_1) / det(\Sigma_0))
         )
 
+    with :math:`\mu_e = \mu_h - \mu_t` and :math:`\Sigma_e = \Sigma_h + \Sigma_t`.
+
     .. note ::
         This methods assumes diagonal covariance matrices :math:`\Sigma`.
 
     .. seealso ::
         https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence
 
-    :param e: shape: (batch_size, num_heads, 1, num_tails, d)
-        The entity Gaussian distributions, as mean/diagonal covariance pairs.
+    :param h: shape: (batch_size, num_heads, 1, 1, d)
+        The head entity Gaussian distribution.
     :param r: shape: (batch_size, 1, num_relations, 1, d)
-        The relation Gaussian distributions, as mean/diagonal covariance pairs.
+        The relation Gaussian distribution.
+    :param t: shape: (batch_size, 1, 1, num_tails, d)
+        The tail entity Gaussian distribution.
     :param epsilon: float (default=1.0)
         Small constant used to avoid numerical issues when dividing.
     :param exact:
@@ -104,13 +114,10 @@ def kullback_leibler_similarity(
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The similarity.
     """
-    assert (e.diagonal_covariance > 0).all() and (r.diagonal_covariance > 0).all()
+    assert all((d.diagonal_covariance > 0).all() for d in (h, r, t))
 
-    e_mean = e.mean
-    e_var = e.diagonal_covariance
-
-    r_mean = r.mean
-    r_var = r.diagonal_covariance
+    e_var = (h.diagonal_covariance + t.diagonal_covariance)
+    r_var_safe = r.diagonal_covariance.clamp_min(min=epsilon)
 
     terms = []
 
@@ -118,7 +125,6 @@ def kullback_leibler_similarity(
     # tr(sigma_1^-1 sigma_0) = sum (sigma_1^-1 sigma_0)[i, i]
     # since sigma_0, sigma_1 are diagonal matrices:
     # = sum (sigma_1^-1[i] sigma_0[i]) = sum (sigma_0[i] / sigma_1[i])
-    r_var_safe = r_var.clamp_min(min=epsilon)
     var_safe_reciprocal = r_var_safe.reciprocal()
     terms.append(batched_dot(e_var, var_safe_reciprocal))
 
@@ -128,12 +134,12 @@ def kullback_leibler_similarity(
     # = mu * Sigma_1^-1 mu
     # since Sigma_1 is diagonal
     # = mu**2 / sigma_1
-    mu = r_mean - e_mean
+    mu = tensor_sum(r.mean, -h.mean, t.mean)
     terms.append(batched_dot(mu.pow(2), r_var_safe))
 
     # 3. Component
     if exact:
-        terms.append(-e_mean.shape[-1])
+        terms.append(-h.mean.shape[-1])
 
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
