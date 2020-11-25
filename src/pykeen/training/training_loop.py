@@ -225,7 +225,8 @@ class TrainingLoop(ABC):
         if checkpoint_file:
             checkpoint_file_path = checkpoint_root.joinpath(checkpoint_file)
             if checkpoint_file_path.is_file():
-                stopper_dict = self._load_state(path=checkpoint_file_path)
+                self._load_state(path=checkpoint_file_path)
+                stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_file_path)
                 # If the stopper dict has any keys, those are written back to the stopper
                 if stopper_dict:
                     if stopper is None:
@@ -844,14 +845,11 @@ class TrainingLoop(ABC):
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
-    def _load_state(self, path: str) -> Mapping[str, Any]:
+    def _load_state(self, path: str) -> None:
         """Load the state of the training loop from a checkpoint.
 
         :param path:
             Path of the file where to load the state from.
-
-        :return:
-            The summary dict of the stopper at the time of saving the checkpoint.
 
         :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
@@ -888,4 +886,3 @@ class TrainingLoop(ABC):
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
-        return checkpoint['stopper_dict']
