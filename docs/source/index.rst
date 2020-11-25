@@ -17,6 +17,7 @@ PyKEEN
    tutorial/trackers/index
    tutorial/making_predictions
    tutorial/performance
+   extending/index
 
 .. toctree::
    :caption: Reference
