@@ -587,9 +587,9 @@ def _multi_combine(
         The elementwise combination evaluated in optimal processing order.
     """
     # determine optimal processing order
-    order = get_optimal_sequence(*(t.shape for t in tensors))[1]
-    tensors = [tensors[i] for i in order]
-    return functools.reduce(op, tensors[1:], tensors[0])
+    _, order = get_optimal_sequence(*(t.shape for t in tensors))
+    head, *rest = [tensors[i] for i in order]
+    return functools.reduce(op, rest, head)
 
 
 def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:

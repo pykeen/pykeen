@@ -60,13 +60,16 @@ def get_expected_canonical_shape(
     :return: (batch_size, num_heads, num_relations, num_tails, ``*``).
         The expected shape, a tuple of at least 5 positive integers.
     """
-    if torch.is_tensor(indices):
-        indices = indices.shape
-    exp_shape = [1, 1, 1, 1] + list(suffix_shape)
+    if isinstance(suffix_shape, int):
+        exp_shape = [1, 1, 1, 1, suffix_shape]
+    else:
+        exp_shape = [1, 1, 1, 1, *suffix_shape]
     dim = _normalize_dim(dim=dim)
     if indices is None:  # 1-n scoring
-        exp_shape[dim] = num
+        exp_shape[dim] = num  # type: ignore
     else:  # batch dimension
+        if isinstance(indices, torch.Tensor):
+            indices = indices.shape
         exp_shape[0] = indices[0]
         if len(indices) > 1:  # multi-target batching
             exp_shape[dim] = indices[1]
