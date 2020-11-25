@@ -226,16 +226,16 @@ class TrainingLoop(ABC):
             checkpoint_file_path = checkpoint_root.joinpath(checkpoint_file)
             if checkpoint_file_path.is_file():
                 self._load_state(path=checkpoint_file_path)
-                stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_file_path)
-                # If the stopper dict has any keys, those are written back to the stopper
-                if stopper_dict:
-                    if stopper is None:
-                        logger.warning(
-                            'stopper configuration was saved in the checkpoint but no stopper is available'
-                            'to load it into',
-                        )
-                    else:
+                if stopper is not None:
+                    stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_file_path)
+                    # If the stopper dict has any keys, those are written back to the stopper
+                    if stopper_dict:
                         stopper._write_from_summary_dict(**stopper_dict)
+                    else:
+                        logger.warning(
+                            'the training loop was configured with a stopper but no stopper configuration was '
+                            'saved in the checkpoint',
+                        )
                 continue_training = True
             else:
                 logger.info(f"=> no checkpoint found at '{checkpoint_file_path}'. Creating a new file.")
