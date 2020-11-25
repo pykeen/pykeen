@@ -555,6 +555,7 @@ def _get_optimal_sequence(
     )
 
 
+@functools.lru_cache(maxsize=64)
 def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors elementwise based on the shapes.
 
@@ -576,36 +577,40 @@ def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]
     return cost, optimal_order
 
 
-def _multi_combine(
+def _reorder(
     tensors: Tuple[torch.FloatTensor, ...],
-    op: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
-) -> torch.FloatTensor:
-    """Broadcasted element-wise combination of tensors.
+) -> Tuple[torch.FloatTensor, ...]:
+    """Re-order tensors for broadcasted element-wise combination of tensors.
 
     The optimal execution plan gets cached so that the optimization is only performed once for a fixed set of shapes.
 
     :param tensors:
         The tensors, in broadcastable shape.
-    :param op:
-        The elementwise operator.
 
     :return:
-        The elementwise combination evaluated in optimal processing order.
+        The re-ordered tensors in optimal processing order.
     """
+    if len(tensors) < 3:
+        return tensors
     # determine optimal processing order
-    _, order = get_optimal_sequence(*(t.shape for t in tensors))
-    head, *rest = [tensors[i] for i in order]
-    return functools.reduce(op, rest, head)
+    order = get_optimal_sequence(*(t.shape for t in tensors))[1]
+    return tuple(tensors[i] for i in order)
 
 
 def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
     """Compute elementwise sum of tensors in brodcastable shape."""
-    return _multi_combine(tensors=x, op=operator.add)
+    return sum(_reorder(tensors=x))
+
+
+def tensor_sum_(*x: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute elementwise sum of tensors in brodcastable shape."""
+    return sum(x[i] for i in get_optimal_sequence(*(t.shape for t in x))[1])
 
 
 def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
     """Compute elementwise product of tensors in broadcastable shape."""
-    return _multi_combine(tensors=x, op=operator.mul)
+    head, *rest = _reorder(tensors=x)
+    return functools.reduce(operator.mul, rest, head)
 
 
 def negative_norm_of_sum(
