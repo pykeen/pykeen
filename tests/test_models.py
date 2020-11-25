@@ -182,6 +182,11 @@ class _ModelTestCase:
         # check whether a gradient can be back-propgated
         scores.mean().backward()
 
+    def test_save(self) -> None:
+        """Test that the model can be saved properly."""
+        with tempfile.TemporaryDirectory() as temp_directory:
+            torch.save(self.model, os.path.join(temp_directory, 'model.pickle'))
+
     def test_score_hrt(self) -> None:
         """Test the model's ``score_hrt()`` function."""
         batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
