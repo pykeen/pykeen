@@ -7,8 +7,6 @@ import timeit
 import unittest
 from typing import ClassVar, Optional, Type
 
-from requests.exceptions import ConnectionError
-
 from pykeen.datasets.base import LazyDataSet
 from pykeen.triples import TriplesFactory
 
@@ -47,7 +45,7 @@ class DatasetTestCase(unittest.TestCase):
         # Load
         try:
             self.dataset._load()
-        except (ConnectionError, EOFError, IOError):
+        except (EOFError, IOError):
             self.skipTest('Problem with connection. Try this test again later.')
 
         self.assertIsInstance(self.dataset.training, TriplesFactory)
