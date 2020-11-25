@@ -1,3 +1,4 @@
+"""Compute kernels for common sub-tasks."""
 import torch
 
 
@@ -26,4 +27,5 @@ def batched_dot(
     a: torch.FloatTensor,
     b: torch.FloatTensor,
 ) -> torch.FloatTensor:
+    """Compute "element-wise" dot-product between batched vectors."""
     return _batched_dot_manual(a, b)
