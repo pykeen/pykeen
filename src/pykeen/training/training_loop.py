@@ -154,6 +154,8 @@ class TrainingLoop(ABC):
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:
             The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
+        :param use_tqdm: Should a progress bar be shown for epochs?
+        :param use_tqdm_batch: Should a progress bar be shown for batching (inside the epoch progress bar)?
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
         :param stopper:
