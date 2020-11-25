@@ -210,7 +210,7 @@ def conve_interaction(
     x = (x @ t).squeeze(dim=-2)
 
     # add bias term
-    return tensor_sum(x, t_bias.squeeze(dim=-1))
+    return x + t_bias.squeeze(dim=-1)
 
 
 def convkb_interaction(
