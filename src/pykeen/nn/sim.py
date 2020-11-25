@@ -6,6 +6,7 @@ import math
 
 import torch
 
+from .compute_kernel import batched_dot
 from ..typing import GaussianDistribution
 from ..utils import tensor_sum
 
@@ -54,8 +55,10 @@ def expected_likelihood(
 
     #: a = \mu^T\Sigma^{-1}\mu
     safe_sigma = torch.clamp_min(var, min=epsilon)
-    sigma_inv = torch.reciprocal(safe_sigma)
-    sim = torch.sum(sigma_inv * mean ** 2, dim=-1)
+    sim = batched_dot(
+        a=safe_sigma.reciprocal(),
+        b=(mean ** 2),
+    )
 
     #: b = \log \det \Sigma
     sim = sim + safe_sigma.log().sum(dim=-1)
@@ -116,7 +119,8 @@ def kullback_leibler_similarity(
     # since sigma_0, sigma_1 are diagonal matrices:
     # = sum (sigma_1^-1[i] sigma_0[i]) = sum (sigma_0[i] / sigma_1[i])
     r_var_safe = r_var.clamp_min(min=epsilon)
-    terms.append((e_var / r_var_safe).sum(dim=-1))
+    var_safe_reciprocal = r_var_safe.reciprocal()
+    terms.append(batched_dot(e_var, var_safe_reciprocal))
 
     # 2. Component
     # (mu_1 - mu_0) * Sigma_1^-1 (mu_1 - mu_0)
@@ -125,7 +129,7 @@ def kullback_leibler_similarity(
     # since Sigma_1 is diagonal
     # = mu**2 / sigma_1
     mu = r_mean - e_mean
-    terms.append((mu.pow(2) / r_var_safe).sum(dim=-1))
+    terms.append(batched_dot(mu.pow(2), r_var_safe))
 
     # 3. Component
     if exact:

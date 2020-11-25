@@ -1,0 +1,29 @@
+import torch
+
+
+def _batched_dot_manual(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    return (a * b).sum(dim=-1)
+
+
+def _batched_dot_matmul(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    return (a.unsqueeze(dim=-2) @ b.unsqueeze(dim=-1)).view(a.shape[:-1])
+
+
+def _batched_dot_einsum(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    return torch.einsum("...i,...i->...", a, b)
+
+
+def batched_dot(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    return _batched_dot_manual(a, b)
