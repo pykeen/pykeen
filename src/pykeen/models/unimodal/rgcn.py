@@ -12,7 +12,10 @@ from ..base import ERModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification, Interaction
 from ...nn.modules import DistMultInteraction
-from ...nn.representation import RGCNRepresentations, inverse_indegree_edge_weights, inverse_outdegree_edge_weights, symmetric_edge_weights
+from ...nn.representation import (
+    RGCNRepresentations, inverse_indegree_edge_weights, inverse_outdegree_edge_weights,
+    symmetric_edge_weights,
+)
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 

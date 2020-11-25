@@ -623,7 +623,7 @@ class RGCNRepresentations(RepresentationModule):
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa:D102
         # use buffered messages if applicable
         if indices is None and self.enriched_embeddings is not None:
             return self.enriched_embeddings
@@ -726,7 +726,7 @@ class RGCNRepresentations(RepresentationModule):
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
-    def reset_parameters(self):
+    def reset_parameters(self):  # noqa:D102
         self.base_embeddings.reset_parameters()
 
         gain = nn.init.calculate_gain(nonlinearity=self.activation_cls.__name__.lower())

@@ -517,20 +517,18 @@ def estimate_cost_of_sequence(
     *other_shapes: Tuple[int, ...],
 ) -> int:
     """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
-    return sum(
-        map(
-            numpy.prod,
-            itertools.islice(
-                itertools.accumulate(
-                    other_shapes,
-                    calculate_broadcasted_elementwise_result_shape,
-                    initial=shape,
-                ),
-                1,
-                None,
-            )
-        )
-    )
+    return sum(map(
+        numpy.prod,
+        itertools.islice(
+            itertools.accumulate(
+                other_shapes,
+                calculate_broadcasted_elementwise_result_shape,
+                initial=shape,
+            ),
+            1,
+            None,
+        ),
+    ))
 
 
 @functools.lru_cache(maxsize=32)
@@ -538,6 +536,7 @@ def _get_optimal_sequence(
     *sorted_shapes: Tuple[int, ...],
 ) -> Tuple[int, Tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors element-wise based on the shapes.
+
     The shapes should be sorted to enable efficient caching.
     :param sorted_shapes:
         The shapes of the tensors to combine.
@@ -552,6 +551,7 @@ def _get_optimal_sequence(
 
 def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]]:
     """Find the optimal sequence in which to combine tensors elementwise based on the shapes.
+
     :param shapes:
         The shapes of the tensors to combine.
     :return:
@@ -575,6 +575,7 @@ def _multi_combine(
     op: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor],
 ) -> torch.FloatTensor:
     """Broadcasted element-wise combination of tensors.
+
     The optimal execution plan gets cached so that the optimization is only performed once for a fixed set of shapes.
 
     :param tensors:

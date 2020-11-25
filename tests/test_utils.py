@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Tests for the :mod:`pykeen.utils` module."""
+
 import functools
 import itertools
 import operator
@@ -15,8 +16,9 @@ import pytest
 import torch
 
 from pykeen.utils import (
-    _CUDA_OOM_ERROR, _CUDNN_ERROR, calculate_broadcasted_elementwise_result_shape, clamp_norm, combine_complex, compact_mapping, estimate_cost_of_sequence, flatten_dictionary,
-    get_optimal_sequence, get_until_first_blank, is_cuda_oom_error, is_cudnn_error, project_entity, set_random_seed, split_complex, tensor_product, tensor_sum,
+    _CUDA_OOM_ERROR, _CUDNN_ERROR, calculate_broadcasted_elementwise_result_shape, clamp_norm, combine_complex,
+    compact_mapping, estimate_cost_of_sequence, flatten_dictionary, get_optimal_sequence, get_until_first_blank,
+    is_cuda_oom_error, is_cudnn_error, project_entity, set_random_seed, split_complex, tensor_product, tensor_sum,
 )
 
 
@@ -209,7 +211,7 @@ class TestCudaExceptionsHandling(unittest.TestCase):
 def test_calculate_broadcasted_elementwise_result_shape():
     """Test calculate_broadcasted_elementwise_result_shape."""
     max_dim = 64
-    for n_dim, i in itertools.product(range(2, 5), range(10)):
+    for n_dim, _ in itertools.product(range(2, 5), range(10)):
         a_shape = [1 for _ in range(n_dim)]
         b_shape = [1 for _ in range(n_dim)]
         for j in range(n_dim):
@@ -234,7 +236,7 @@ def _generate_shapes(
 ) -> Iterable[Tuple[Tuple[int, ...], ...]]:
     """Generate shapes."""
     max_shape = torch.randint(low=2, high=32, size=(128,))
-    for _i in range(iterations):
+    for _ in range(iterations):
         # create broadcastable shapes
         idx = torch.randperm(max_shape.shape[0])[:n_dim]
         this_max_shape = max_shape[idx]
