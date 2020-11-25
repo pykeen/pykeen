@@ -2,7 +2,6 @@
 
 """Implementation of KG2E."""
 
-import math
 from typing import Optional
 
 import torch
@@ -19,8 +18,6 @@ from ...utils import clamp_norm
 __all__ = [
     'KG2E',
 ]
-
-_LOG_2_PI = math.log(math.tau)
 
 
 class KG2E(ERModel):
