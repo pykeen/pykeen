@@ -47,7 +47,7 @@ class DatasetTestCase(unittest.TestCase):
         # Load
         try:
             self.dataset._load()
-        except (ConnectionError, EOFError):
+        except (ConnectionError, EOFError, IOError):
             self.skipTest('Problem with connection. Try this test again later.')
 
         self.assertIsInstance(self.dataset.training, TriplesFactory)
