@@ -11,7 +11,10 @@ import operator
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import (
+    Any, Callable, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar,
+    Union,
+)
 
 import numpy
 import numpy as np
@@ -196,17 +199,18 @@ def clamp_norm(
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
 
 
-def compose(
-    *op_: Callable[[torch.Tensor], torch.Tensor],
-) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Compose functions working on a single tensor."""
+class compose(Generic[X]):  # noqa:N801
+    """A class representing the composition of several functions."""
 
-    def chained_op(x: torch.Tensor):
-        for op in op_:
-            x = op(x)
+    def __init__(self, *operations: Callable[[X], X]):
+        """Initialize the composition with a sequence of operations."""
+        self.operations = operations
+
+    def __call__(self, x: X) -> X:
+        """Apply the operations in order to the given tensor."""
+        for operation in self.operations:
+            x = operation(x)
         return x
-
-    return chained_op
 
 
 def set_random_seed(seed: int) -> Tuple[None, torch._C.Generator, None]:
