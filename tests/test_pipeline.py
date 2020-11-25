@@ -19,7 +19,8 @@ class TestPipeline(unittest.TestCase):
         cls.result = pipeline(
             model='TransE',
             dataset='nations',
-            training_kwargs=dict(num_epochs=5),
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
         )
         cls.model = cls.result.model
         nations = Nations()
