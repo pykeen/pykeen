@@ -44,6 +44,10 @@ def tqdm_itertools_product(*args, **kwargs):
     return tqdm(itertools.product(*args), **kwargs, total=functools.reduce(operator.mul, map(len, args), 1))
 
 
+def _get_result_shape(shapes: Sequence[Tuple[int, ...]]) -> Tuple[int, ...]:
+    return tuple(max(ds) for ds in zip(*shapes))
+
+
 @click.command()
 @click.option('-m', '--max-result-power', type=int, default=30, show_default=True)
 @click.option('-b', '--max-batch-size-power', type=int, default=10, show_default=True)
@@ -86,7 +90,7 @@ def main(
             use_case=use_case,
             shapes=shapes,
         )
-        result_shape = _get_result_shape(tensors)
+        result_shape = _get_result_shape(this_shapes)
         num_result_elements = functools.reduce(operator.mul, result_shape, 1)
         if num_result_elements > max_size:
             continue
@@ -124,6 +128,5 @@ def main(
     )
 
 
-def _get_result_shape(tensors):
-    result_shape = [max(ds) for ds in zip(*(t.shape for t in tensors))]
-    return result_shape
+if __name__ == '__main__':
+    main()
