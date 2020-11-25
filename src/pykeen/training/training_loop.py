@@ -519,10 +519,11 @@ class TrainingLoop(ABC):
                 result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
                 # Print loss information to console
-                if _use_outer_tqdm:epochs.set_postfix({
-                    'loss': self.losses_per_epochs[-1],
-                    'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
-                })
+                if _use_outer_tqdm:
+                    epochs.set_postfix({
+                        'loss': self.losses_per_epochs[-1],
+                        'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
+                    })
 
                 # Save the last successful finished epoch
                 self._epoch = epoch
