@@ -289,6 +289,25 @@ def test_estimate_cost_of_add_sequence():
     assert (numpy.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
 
 
+@pytest.mark.slow
+def test_get_optimal_add_sequence_caching():
+    """Test caching of ``get_optimal_add_sequence()``."""
+    for shapes in _generate_shapes(iterations=10):
+        # get optimal sequence
+        first_time = timeit.default_timer()
+        get_optimal_sequence(*shapes)
+        first_time = timeit.default_timer() - first_time
+
+        # check caching
+        samples, second_time = timeit.Timer(stmt="get_optimal_sequence(*shapes)", globals=dict(
+            get_optimal_sequence=get_optimal_sequence,
+            shapes=shapes,
+        )).autorange()
+        second_time /= samples
+        
+        assert second_time < first_time
+
+
 def test_get_optimal_add_sequence():
     """Test ``get_optimal_add_sequence()``."""
     for shapes in _generate_shapes():
