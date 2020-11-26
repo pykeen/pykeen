@@ -152,11 +152,25 @@ def prioritize_mapping(d: Mapping[Tuple[str, str], float]) -> Set[str]:
     }
 
 
+def unleak_dataset(
+    dataset,
+    n: Union[None, int, float] = None,
+    minimum_frequency: Optional[float] = None,
+    use_tqdm: bool = True,
+):
+    from ..datasets.base import EagerDataset
+    return EagerDataset(*unleak(
+        dataset.training, dataset.testing, dataset.validation,
+        n=n, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm,
+    ))
+
+
 def unleak(
     train: TriplesFactory,
     *triples_factories: TriplesFactory,
     n: Union[None, int, float] = None,
     minimum_frequency: Optional[float] = None,
+    use_tqdm: bool = True,
 ) -> Iterable[TriplesFactory]:
     """Unleak a train, test, and validate triples factory.
 
@@ -179,7 +193,7 @@ def unleak(
         ]
 
     # Calculate which relations are the inverse ones
-    sealant = Sealant(train, minimum_frequency=minimum_frequency)
+    sealant = Sealant(train, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm)
 
     if not sealant.relations_to_delete:
         logger.info(f'no relations to delete identified from {train}')

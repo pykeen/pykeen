@@ -13,7 +13,8 @@ from uuid import uuid4
 
 import click
 
-from .remixing import remix as remixing_main
+from .deteriorating import deteriorating
+from .remixing import remixing
 
 __all__ = [
     'experiments',
@@ -214,7 +215,8 @@ def ablation(
     )
 
 
-experiments.add_command(remixing_main)
+experiments.add_command(remixing)
+experiments.add_command(deteriorating)
 
 if __name__ == '__main__':
     experiments()

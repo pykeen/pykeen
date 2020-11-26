@@ -450,7 +450,7 @@ class TriplesFactory:
 
         # Make sure that the first element has all the right stuff in it
         logger.debug('cleaning up groups')
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        triples_groups = _tf_cleanup_all(triples_groups, randomize=randomize_cleanup, random_state=random_state)
         logger.debug('done cleaning up groups')
 
         for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
@@ -682,13 +682,14 @@ class TriplesFactory:
 def _tf_cleanup_all(
     triples_groups: List[np.ndarray],
     *,
+    randomize: bool = False,
     random_state: Union[None, int, np.random.RandomState] = None,
 ) -> List[np.ndarray]:
     """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
     rv = []
     for other in others:
-        if random_state is not None:
+        if randomize:
             reference, other = _tf_cleanup_randomized(reference, other, random_state)
         else:
             reference, other = _tf_cleanup_deterministic(reference, other)

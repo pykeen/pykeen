@@ -16,6 +16,8 @@ ignore =
     D107
     # FTP related stuff
     S402
+    # Pickle stuff
+    S301
 exclude =
     .tox,
     .git,
