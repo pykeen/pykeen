@@ -76,7 +76,7 @@ def deteriorate_dataset(dataset: DataSet, *, n: Union[int, float], **kwargs) -> 
     """Remove n triples from the training set and distribute them equally among the testing and validation sets.
 
     :param dataset: The dataset to deteriorate
-    :param n: The number of triples to remove from the training set
+    :param n: The number of triples to remove from the training set or ratio if a float is given
     :return: A "deteriorated" dataset
 
     .. seealso:: :func:`deteriorate`
