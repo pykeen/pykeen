@@ -9,9 +9,6 @@ jobs:
     if: ${{ github.event.issue.pull_request && github.event.comment.body == 'Run integration tests!'}}
     name: CI commit
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ 3.7, 3.8 ]
     steps:
       - uses: actions/github-script@v3
         id: get-pr
@@ -41,5 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PyKEEN_BOT }}
           FIRST_NAME: PyKEEN_bot
         run: |
+          git config --global user.email "pykeen2019@gmail.com"
+          git config --global user.name "PyKEEN_bot"
           git commit --allow-empty -m "Trigger CI"
           git push
