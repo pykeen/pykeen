@@ -593,7 +593,11 @@ def _reorder(
     if len(tensors) < 3:
         return tensors
     # determine optimal processing order
-    order = get_optimal_sequence(*(t.shape for t in tensors))[1]
+    shapes = tuple(tuple(t.shape) for t in tensors)
+    if len(set(s[0] for s in shapes)) < 2:
+        # heuristic
+        return tensors
+    order = get_optimal_sequence(*shapes)[1]
     return tuple(tensors[i] for i in order)
 
 
