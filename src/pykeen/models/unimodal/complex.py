@@ -70,7 +70,6 @@ class ComplEx(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -97,7 +96,6 @@ class ComplEx(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

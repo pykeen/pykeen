@@ -231,7 +231,6 @@ class Model(nn.Module, ABC):
         triples_factory: TriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -268,9 +267,6 @@ class Model(nn.Module, ABC):
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
 
-        if automatic_memory_optimization is None:
-            automatic_memory_optimization = True
-
         # Loss
         if loss is None:
             self.loss = self.loss_default(**self.loss_default_kwargs)
@@ -298,9 +294,6 @@ class Model(nn.Module, ABC):
         also for predictions after training, but has no effect on the training.
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
-
-        # This allows to store the optimized parameters
-        self.automatic_memory_optimization = automatic_memory_optimization
 
     @classmethod
     def _is_abstract(cls) -> bool:
