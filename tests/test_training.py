@@ -21,9 +21,12 @@ class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
 
     def __init__(self, model: Model, sub_batch_size: int, automatic_memory_optimization: bool = False):
-        super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
+        super().__init__(
+            model=model,
+            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
         self.sub_batch_size = sub_batch_size
-        self.automatic_memory_optimization = automatic_memory_optimization
 
     def _process_batch(
         self,
@@ -52,9 +55,12 @@ class NaNTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop returning NaN losses."""
 
     def __init__(self, model: Model, patience: int, automatic_memory_optimization: bool = False):
-        super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
+        super().__init__(
+            model=model,
+            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
         self.patience = patience
-        self.automatic_memory_optimization = automatic_memory_optimization
 
     def _process_batch(
         self,
