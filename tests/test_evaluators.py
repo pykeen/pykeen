@@ -462,7 +462,7 @@ class TestEvaluationStructure(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the evaluation structure."""
         self.counter = 1337
-        self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, )
+        self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
         self.triples_factory = Nations().training
         self.model = DummyModel(triples_factory=self.triples_factory)
 

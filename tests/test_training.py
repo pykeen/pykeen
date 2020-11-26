@@ -127,4 +127,4 @@ class TrainingLoopTests(unittest.TestCase):
             loss=CrossEntropyLoss(),
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
-            NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False, )
+            NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False)

@@ -2,11 +2,11 @@
 
 """Training loops for KGE models using multi-modal information."""
 
+import gc
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
-import gc
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
