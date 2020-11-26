@@ -44,10 +44,11 @@ def test_is_improvement():
 class MockEvaluator(Evaluator):
     """A mock evaluator for testing early stopping."""
 
-    def __init__(self, losses: Iterable[float]) -> None:
+    def __init__(self, losses: Iterable[float], automatic_memory_optimization: bool = True) -> None:
         super().__init__()
         self.losses = tuple(losses)
         self.losses_iter = iter(self.losses)
+        self.automatic_memory_optimization = automatic_memory_optimization
 
     def process_tail_scores_(
         self,
@@ -105,8 +106,8 @@ class MockEvaluator(Evaluator):
 class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
-    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
-        super().__init__(triples_factory=triples_factory, automatic_memory_optimization=automatic_memory_optimization)
+    def __init__(self, triples_factory: TriplesFactory):
+        super().__init__(triples_factory=triples_factory)
         num_entities = self.num_entities
         self.scores = torch.arange(num_entities, dtype=torch.float)
 
@@ -167,10 +168,10 @@ class TestEarlyStopping(unittest.TestCase):
 
     def setUp(self):
         """Prepare for testing the early stopper."""
-        self.mock_evaluator = MockEvaluator(self.mock_losses)
         # Set automatic_memory_optimization to false for tests
+        self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=False)
         nations = Nations()
-        self.model = MockModel(triples_factory=nations.training, automatic_memory_optimization=False)
+        self.model = MockModel(triples_factory=nations.training)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
@@ -253,8 +254,8 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
         nations = Nations()
-        model: Model = TransE(triples_factory=nations.training, automatic_memory_optimization=False)
-        evaluator = RankBasedEvaluator()
+        model: Model = TransE(triples_factory=nations.training)
+        evaluator = RankBasedEvaluator(automatic_memory_optimization=False)
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,

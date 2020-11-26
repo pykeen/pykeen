@@ -710,7 +710,6 @@ class TestNTNLowMemory(_BaseNTNTest):
 
     model_kwargs = {
         'num_slices': 2,
-        'automatic_memory_optimization': True,
     }
 
 
@@ -719,7 +718,6 @@ class TestNTNHighMemory(_BaseNTNTest):
 
     model_kwargs = {
         'num_slices': 2,
-        'automatic_memory_optimization': False,
     }
 
 
@@ -815,17 +813,9 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 class TestSELowMemory(_BaseTestSE):
     """Tests SE with low memory."""
 
-    model_kwargs = dict(
-        automatic_memory_optimization=True,
-    )
-
 
 class TestSEHighMemory(_BaseTestSE):
     """Tests SE with low memory."""
-
-    model_kwargs = dict(
-        automatic_memory_optimization=False,
-    )
 
 
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):

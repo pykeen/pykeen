@@ -89,14 +89,22 @@ class TrainingLoopTests(unittest.TestCase):
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
-        model = TransE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
-        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+        model = TransE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(
+            model=model,
+            sub_batch_size=self.sub_batch_size,
+            automatic_memory_optimization=False,
+        )
         training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
-        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+        model = ConvE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(
+            model=model,
+            sub_batch_size=self.sub_batch_size,
+            automatic_memory_optimization=False,
+        )
 
         def _try_train():
             """Call train method."""
@@ -117,7 +125,6 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             loss=CrossEntropyLoss(),
-            automatic_memory_optimization=False,
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
-            NaNTrainingLoop(model=model, patience=2)
+            NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False, )
