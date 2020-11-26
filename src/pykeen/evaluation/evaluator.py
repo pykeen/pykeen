@@ -65,8 +65,8 @@ class Evaluator(ABC):
         self,
         filtered: bool = False,
         requires_positive_mask: bool = False,
-        batch_size: int = None,
-        slice_size: int = None,
+        batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
     ):
         self.filtered = filtered

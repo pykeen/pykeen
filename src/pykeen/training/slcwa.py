@@ -44,7 +44,7 @@ class SLCWATrainingLoop(TrainingLoop):
         :param negative_sampler_cls: The class of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
          for every positive one
-        :param automatic_memory_optimization: bool
+        :param automatic_memory_optimization:
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
         """
