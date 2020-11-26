@@ -76,11 +76,6 @@ class TuckER(EntityRelationEmbeddingModel):
     #: The default parameters for the default loss function class
     loss_default_kwargs = {}
 
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1., 1.)
-
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -133,6 +128,11 @@ class TuckER(EntityRelationEmbeddingModel):
         if self.apply_batch_normalization:
             self.bn_0 = nn.BatchNorm1d(self.embedding_dim)
             self.bn_1 = nn.BatchNorm1d(self.embedding_dim)
+
+    def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
+        # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
+        nn.init.uniform_(self.core_tensor, -1., 1.)
 
     def _scoring_function(
         self,
