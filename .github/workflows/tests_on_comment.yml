@@ -27,15 +27,13 @@ jobs:
               core.setFailed(`Request failed with error ${err}`)
             }
 
-      - uses: actions/checkout@v2
+      - name: Push CI commit to Pull Request
+        uses: actions/checkout@v2
         if: ${{ success() }}
         with:
           repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
-
-      - name: Push CI commit to Pull Request
-        with:
-          github_token: ${{ secrets.PyKEEN_BOT }}
+          token: ${{ secrets.PyKEEN_BOT }}
         run: |
           git config --global user.email "pykeen2019@gmail.com"
           git config --global user.name "PyKEEN_bot"
