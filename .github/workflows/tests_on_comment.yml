@@ -37,9 +37,9 @@ jobs:
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
 
       - name: Push CI commit to Pull Request
-          env:
-            GITHUB_TOKEN: ${{ secrets.PyKEEN_BOT }}
-            FIRST_NAME: PyKEEN_bot
-          run: |
-            git commit --allow-empty -m "Trigger CI"
-            git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.PyKEEN_BOT }}
+          FIRST_NAME: PyKEEN_bot
+        run: |
+          git commit --allow-empty -m "Trigger CI"
+          git push
