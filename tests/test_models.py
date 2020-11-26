@@ -327,6 +327,16 @@ class _ModelTestCase:
         for k, v in kwargs.items():
             extras.append('--' + k.replace('_', '-'))
             extras.append(str(v))
+
+        # For the high/low memory test cases of NTN, SE, etc.
+        if self.training_loop_kwargs and 'automatic_memory_optimization' in self.training_loop_kwargs:
+            automatic_memory_optimization = self.training_loop_kwargs.get('automatic_memory_optimization')
+            if automatic_memory_optimization is True:
+                extras.append('--automatic-memory-optimization')
+            elif automatic_memory_optimization is False:
+                extras.append('--no-automatic-memory-optimization')
+            # else, leave to default
+
         extras += [
             '--number-epochs', self.train_num_epochs,
             '--embedding-dim', self.embedding_dim,

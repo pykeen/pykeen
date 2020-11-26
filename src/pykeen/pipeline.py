@@ -738,6 +738,7 @@ def pipeline(  # noqa: C901
     result_tracker: Union[None, str, Type[ResultTracker]] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
+    automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -915,6 +916,7 @@ def pipeline(  # noqa: C901
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
             optimizer=optimizer_instance,
+            automatic_memory_optimization=automatic_memory_optimization,
         )
     elif training_loop is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
@@ -927,14 +929,20 @@ def pipeline(  # noqa: C901
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
+            automatic_memory_optimization=automatic_memory_optimization,
             negative_sampler_cls=negative_sampler,
             negative_sampler_kwargs=negative_sampler_kwargs,
         )
 
     evaluator = get_evaluator_cls(evaluator)
-    evaluator_instance: Evaluator = evaluator(
-        **(evaluator_kwargs or {}),
-    )
+    # TODO @mehdi is setting the automatic memory optimization as an attribute
+    #  of the class appropriate, since it doesn't cause any state to be stored?
+    #  I think it might be better to have this as an argument to the
+    #  Evaluator.evaluate() function instead
+    if evaluation_kwargs is None:
+        evaluator_kwargs = {}
+    evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
+    evaluator_instance: Evaluator = evaluator(**evaluator_kwargs)
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
