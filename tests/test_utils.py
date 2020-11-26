@@ -290,8 +290,8 @@ def test_estimate_cost_of_add_sequence():
 
 
 @pytest.mark.slow
-def test_get_optimal_add_sequence_caching():
-    """Test caching of ``get_optimal_add_sequence()``."""
+def test_get_optimal_sequence_caching():
+    """Test caching of ``get_optimal_sequence()``."""
     for shapes in _generate_shapes(iterations=10):
         # get optimal sequence
         first_time = timeit.default_timer()
@@ -304,12 +304,12 @@ def test_get_optimal_add_sequence_caching():
             shapes=shapes,
         )).autorange()
         second_time /= samples
-        
+
         assert second_time < first_time
 
 
-def test_get_optimal_add_sequence():
-    """Test ``get_optimal_add_sequence()``."""
+def test_get_optimal_sequence():
+    """Test ``get_optimal_sequence()``."""
     for shapes in _generate_shapes():
         # get optimal sequence
         opt_cost, opt_seq = get_optimal_sequence(*shapes)
