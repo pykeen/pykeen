@@ -8,14 +8,13 @@ jobs:
   CI_commit:
     if: >-
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, 'Please test this!') &&
-      github.event.comment.user.site_admin
+      contains(github.event.comment.body, 'Please test this!')
     name: CI commit
     runs-on: ubuntu-latest
     steps:
       - name: Log information
         run: |
-          echo "Comment ${{ github.event.comment.body }}
+          echo "Comment ${{ github.event.comment.body }} and site_admin ${{ github.event.comment.user.site_admin }}"
       - name: Comment on request
         uses: khan/pull-request-comment-trigger@master
         id: check
