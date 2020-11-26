@@ -12,7 +12,7 @@ from torch import nn
 from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
-    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm_of_sum,
+    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm, negative_norm_of_sum,
     project_entity, split_complex, tensor_product, tensor_sum, view_complex,
 )
 
@@ -103,11 +103,11 @@ def _complex_interaction_optimized_broadcasted(
     return sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 
@@ -606,12 +606,7 @@ def rotate_interaction(
         t = t * torch.conj(r)
 
     # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
-    return negative_norm_of_sum(
-        h,
-        -t,
-        p=2,
-        power_norm=False,
-    )
+    return negative_norm(h - t, p=2, power_norm=False)
 
 
 def simple_interaction(
@@ -683,9 +678,8 @@ def structured_embedding_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return negative_norm_of_sum(
-        (r_h @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
-        -(r_t @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
+    return negative_norm(
+        (r_h @ h.unsqueeze(dim=-1) - r_t @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
         p=p,
         power_norm=power_norm,
     )
@@ -931,4 +925,4 @@ def unstructured_model_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return negative_norm_of_sum(h, -t, p=p, power_norm=power_norm)
+    return negative_norm(h - t, p=p, power_norm=power_norm)

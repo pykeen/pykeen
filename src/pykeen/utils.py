@@ -625,17 +625,36 @@ def negative_norm_of_sum(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    d: torch.FloatTensor = tensor_sum(*x)
+    return negative_norm(tensor_sum(*x), p=p, power_norm=power_norm)
+
+
+def negative_norm(
+    x: torch.FloatTensor,
+    p: Union[str, int] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate negative norm of a vector.
+
+    :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The vectors.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     if power_norm:
         assert not isinstance(p, str)
-        return -(d.abs() ** p).sum(dim=-1)
+        return -(x.abs() ** p).sum(dim=-1)
 
-    if torch.is_complex(d):
+    if torch.is_complex(x):
         assert not isinstance(p, str)
         # workaround for complex numbers: manually compute norm
-        return -(d.abs() ** p).sum(dim=-1) ** (1 / p)
+        return -(x.abs() ** p).sum(dim=-1) ** (1 / p)
 
-    return -d.norm(p=p, dim=-1)
+    return -x.norm(p=p, dim=-1)
 
 
 def extended_einsum(
