@@ -34,9 +34,8 @@ jobs:
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
 
       - name: Push CI commit to Pull Request
-        env:
-          GITHUB_TOKEN: ${{ secrets.PyKEEN_BOT }}
-          FIRST_NAME: PyKEEN_bot
+        with:
+          github_token: ${{ secrets.PyKEEN_BOT }}
         run: |
           git config --global user.email "pykeen2019@gmail.com"
           git config --global user.name "PyKEEN_bot"
