@@ -182,6 +182,11 @@ class _ModelTestCase:
         # check whether a gradient can be back-propgated
         scores.mean().backward()
 
+    def test_save(self) -> None:
+        """Test that the model can be saved properly."""
+        with tempfile.TemporaryDirectory() as temp_directory:
+            torch.save(self.model, os.path.join(temp_directory, 'model.pickle'))
+
     def test_score_hrt(self) -> None:
         """Test the model's ``score_hrt()`` function."""
         batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
@@ -265,7 +270,7 @@ class _ModelTestCase:
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
-            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler)
+            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler, use_tqdm=False)
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
