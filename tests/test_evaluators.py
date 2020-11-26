@@ -395,9 +395,8 @@ class DummyEvaluator(Evaluator):
     """A dummy evaluator for testing the structure of the evaluation function."""
 
     def __init__(self, *, counter: int, filtered: bool, automatic_memory_optimization: bool = True) -> None:
-        super().__init__(filtered=filtered)
+        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
         self.counter = counter
-        self.automatic_memory_optimization = automatic_memory_optimization
 
     def process_tail_scores_(
         self,
