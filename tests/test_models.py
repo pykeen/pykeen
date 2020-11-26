@@ -92,6 +92,9 @@ class _ModelTestCase:
     #: Additional arguments passed to the model's constructor method
     model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
+    #: Additional arguments passed to the training loop's constructor method
+    training_loop_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
     #: The triples factory instance
     factory: TriplesFactory
 
@@ -244,6 +247,7 @@ class _ModelTestCase:
         loop = SLCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+            **(self.training_loop_kwargs or {}),
         )
         losses = self._safe_train_loop(
             loop,
@@ -259,6 +263,7 @@ class _ModelTestCase:
         loop = LCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+            **(self.training_loop_kwargs or {}),
         )
         losses = self._safe_train_loop(
             loop,
@@ -712,12 +717,20 @@ class TestNTNLowMemory(_BaseNTNTest):
         'num_slices': 2,
     }
 
+    training_loop_kwargs = {
+        'automatic_memory_optimization': True,
+    }
+
 
 class TestNTNHighMemory(_BaseNTNTest):
     """Test the NTN model without automatic memory optimization."""
 
     model_kwargs = {
         'num_slices': 2,
+    }
+
+    training_loop_kwargs = {
+        'automatic_memory_optimization': False,
     }
 
 
@@ -813,9 +826,17 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 class TestSELowMemory(_BaseTestSE):
     """Tests SE with low memory."""
 
+    training_loop_kwargs = {
+        'automatic_memory_optimization': True,
+    }
+
 
 class TestSEHighMemory(_BaseTestSE):
     """Tests SE with low memory."""
+
+    training_loop_kwargs = {
+        'automatic_memory_optimization': False,
+    }
 
 
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):
