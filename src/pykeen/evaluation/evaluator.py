@@ -67,11 +67,13 @@ class Evaluator(ABC):
         requires_positive_mask: bool = False,
         batch_size: int = None,
         slice_size: int = None,
+        automatic_memory_optimization: bool = True
     ):
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
+        self.automatic_memory_optimization = automatic_memory_optimization
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -122,7 +124,6 @@ class Evaluator(ABC):
     def evaluate(
         self,
         model: Model,
-        automatic_memory_optimization: bool = True,
         mapped_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -136,7 +137,7 @@ class Evaluator(ABC):
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
-        if batch_size is None and automatic_memory_optimization:
+        if batch_size is None and self.automatic_memory_optimization:
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,
