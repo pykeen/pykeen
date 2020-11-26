@@ -62,6 +62,8 @@ class EarlyStopper(Stopper):
     model: Model = dataclasses.field(repr=False)
     #: The evaluator
     evaluator: Evaluator
+    #: Whether to automatically optimize the sub-batch size during evaluation with regards to the hardware at hand.
+    automatic_memory_optimization = True
     #: The triples to use for evaluation
     evaluation_triples_factory: Optional[TriplesFactory]
     #: Size of the evaluation batches
@@ -127,6 +129,7 @@ class EarlyStopper(Stopper):
         metric_results = self.evaluator.evaluate(
             model=self.model,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
+            automatic_memory_optimization=self.automatic_memory_optimization,
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
