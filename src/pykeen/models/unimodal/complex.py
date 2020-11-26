@@ -81,9 +81,6 @@ class ComplEx(EntityRelationEmbeddingModel):
             The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
-            regards to the hardware at hand.
         :param loss: OptionalLoss (optional)
             The loss to use. Defaults to SoftplusLoss.
         :param preferred_device: str (optional)
