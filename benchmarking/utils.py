@@ -71,13 +71,13 @@ def main(
             ("ConvKB/ERMLP", "", "bh", "br", "bt"),  # conv_bias, h, r, t
             ("NTN", "bhrt", "bhr", "bht", "br"),  # h w t, vh h, vt t, b
             ("ProjE", "bh", "br", ""),  # h, r, b_c
-            ("RotatE", "bhr", "bt"),  # hr, -t,
-            ("RotatE-inv", "bh", "brt"),  # h, -(r_inv)t,
+            # ("RotatE", "bhr", "bt"),  # hr, -t,
+            # ("RotatE-inv", "bh", "brt"),  # h, -(r_inv)t,
             ("StructuredEmbedding", "bhr", "brt"),  # r h, r t
             ("TransE/TransD/KG2E", "bh", "br", "bt"),  # h, r, t
             ("TransH", "bh", "bhr", "br", "bt", "brt"),  # h, -<h, w_r> w_r, d_r, -t,, <t, w_r> w_r
             ("TransR", "bhr", "br", "brt"),  # h m_r, r, -t m_r
-            ("UnstructuredModel", "bh", "bt"),  # h, r
+            # ("UnstructuredModel", "bh", "bt"),  # h, r
         ),
         unit="configuration",
         unit_scale=True,
