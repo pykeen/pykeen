@@ -6,10 +6,24 @@ on:
 
 jobs:
   CI_commit:
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'Run integration tests!'}}
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'Please test this!') &&
+      github.event.comment.user.site_admin
     name: CI commit
     runs-on: ubuntu-latest
     steps:
+      - name: Log information
+        run: |
+          echo "Comment ${{ github.event.comment.body }}
+      - name: Comment on request
+        uses: khan/pull-request-comment-trigger@master
+        id: check
+        with:
+          trigger: 'Please test this!'
+          reaction: rocket
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
       - uses: actions/github-script@v3
         id: get-pr
         with:
