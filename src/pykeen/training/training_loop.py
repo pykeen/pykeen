@@ -212,6 +212,7 @@ class TrainingLoop(ABC):
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
+        automatic_memory_optimization: bool = True,
         label_smoothing: float = 0.0,
         sampler: Optional[str] = None,
         continue_training: bool = False,
@@ -264,13 +265,13 @@ class TrainingLoop(ABC):
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
-            if self.model.automatic_memory_optimization:
+            if automatic_memory_optimization:
                 batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
 
         # This will find necessary parameters to optimize the use of the hardware at hand
-        if not only_size_probing and self.model.automatic_memory_optimization and not batch_size_sufficient:
+        if not only_size_probing and automatic_memory_optimization and not batch_size_sufficient:
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
 
