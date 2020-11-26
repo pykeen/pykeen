@@ -45,10 +45,9 @@ class MockEvaluator(Evaluator):
     """A mock evaluator for testing early stopping."""
 
     def __init__(self, losses: Iterable[float], automatic_memory_optimization: bool = True) -> None:
-        super().__init__()
+        super().__init__(automatic_memory_optimization=automatic_memory_optimization)
         self.losses = tuple(losses)
         self.losses_iter = iter(self.losses)
-        self.automatic_memory_optimization = automatic_memory_optimization
 
     def process_tail_scores_(
         self,
