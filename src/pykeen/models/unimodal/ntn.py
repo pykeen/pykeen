@@ -55,7 +55,6 @@ class NTN(EntityEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 100,
-        automatic_memory_optimization: Optional[bool] = None,
         num_slices: int = 4,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
@@ -73,7 +72,6 @@ class NTN(EntityEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

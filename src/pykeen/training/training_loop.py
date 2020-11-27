@@ -79,16 +79,21 @@ class TrainingLoop(ABC):
         self,
         model: Model,
         optimizer: Optional[Optimizer] = None,
+        automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
 
         :param model: The model to train
         :param optimizer: The optimizer to use while training the model
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during
+            training and batch size during evaluation with regards to the hardware at hand.
         """
         self.model = model
         self.optimizer = optimizer
         self.training_instances = None
         self.losses_per_epochs = []
+        self.automatic_memory_optimization = automatic_memory_optimization
 
         if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
             raise TrainingApproachLossMismatchError(
@@ -146,6 +151,9 @@ class TrainingLoop(ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing. This is only possible for LCWA training loops in
             general and only for models that have the slicing capability implemented.
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
+            regards to the hardware at hand.
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
@@ -264,13 +272,13 @@ class TrainingLoop(ABC):
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
-            if self.model.automatic_memory_optimization:
+            if self.automatic_memory_optimization:
                 batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
 
         # This will find necessary parameters to optimize the use of the hardware at hand
-        if not only_size_probing and self.model.automatic_memory_optimization and not batch_size_sufficient:
+        if not only_size_probing and self.automatic_memory_optimization and not batch_size_sufficient:
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
 
