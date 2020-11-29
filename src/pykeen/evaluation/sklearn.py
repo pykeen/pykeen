@@ -68,8 +68,13 @@ class SklearnMetricResults(MetricResults):
 class SklearnEvaluator(Evaluator):
     """An evaluator that uses a Scikit-learn metric."""
 
-    def __init__(self, **kwargs):
-        super().__init__(filtered=False, requires_positive_mask=True, **kwargs)
+    def __init__(self, automatic_memory_optimization: bool = True, **kwargs):
+        super().__init__(
+            filtered=False,
+            requires_positive_mask=True,
+            automatic_memory_optimization=automatic_memory_optimization,
+            **kwargs,
+        )
         self.all_scores = {}
         self.all_positives = {}
 

@@ -231,7 +231,6 @@ class Model(nn.Module, ABC):
         triples_factory: TriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -246,10 +245,6 @@ class Model(nn.Module, ABC):
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param automatic_memory_optimization:
-            If set to `True`, the model derives the maximum possible batch sizes for the scoring of triples during
-            evaluation and also training (if no batch size was given). This allows to fully utilize the hardware at hand
-            and achieves the fastest calculations possible.
         :param preferred_device:
             The preferred device for model training and inference.
         :param random_seed:
@@ -269,9 +264,6 @@ class Model(nn.Module, ABC):
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
             self._random_seed = random_seed
-
-        if automatic_memory_optimization is None:
-            automatic_memory_optimization = True
 
         # Loss
         if loss is None:
@@ -300,9 +292,6 @@ class Model(nn.Module, ABC):
         also for predictions after training, but has no effect on the training.
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
-
-        # This allows to store the optimized parameters
-        self.automatic_memory_optimization = automatic_memory_optimization
 
     @classmethod
     def _is_abstract(cls) -> bool:
@@ -1043,7 +1032,6 @@ class EntityEmbeddingModel(Model):
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -1064,7 +1052,6 @@ class EntityEmbeddingModel(Model):
         """
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -1107,7 +1094,6 @@ class EntityRelationEmbeddingModel(Model):
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -1135,7 +1121,6 @@ class EntityRelationEmbeddingModel(Model):
         """
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

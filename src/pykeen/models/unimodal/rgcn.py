@@ -486,7 +486,6 @@ class RGCN(Model):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 500,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -511,7 +510,6 @@ class RGCN(Model):
             raise ValueError('R-GCN handles edges in an undirected manner.')
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,

@@ -51,7 +51,6 @@ class StructuredEmbedding(EntityEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
@@ -66,7 +65,6 @@ class StructuredEmbedding(EntityEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
