@@ -121,39 +121,19 @@ class TestPipelineCheckpoints(unittest.TestCase):
         self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{date_string}.pt"
 
     def test_pipeline_lcwa_resumption(self):
-        """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
-        result_standard = pipeline(
-            model=self.model,
-            dataset=self.dataset,
-            training_loop='LCWA',
-            training_kwargs=dict(num_epochs=10),
-            random_seed=self.random_seed,
-        )
-
-        # Set up a shared result that runs two pipelines that should replicate the results of the standard pipeline.
-        _ = pipeline(
-            model=self.model,
-            dataset=self.dataset,
-            training_loop='LCWA',
-            training_kwargs=dict(num_epochs=5, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
-            random_seed=self.random_seed,
-        )
-
-        # Resume the previous pipeline
-        result_split = pipeline(
-            model=self.model,
-            dataset=self.dataset,
-            training_loop='LCWA',
-            training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
-        )
-        self.assertEqual(result_standard.losses, result_split.losses)
+        """Test whether the resumed LCWA pipeline creates the same results as the one shot pipeline."""
+        self._test_pipeline_x_resumption(training_loop_type='LCWA')
 
     def test_pipeline_slcwa_resumption(self):
+        """Test whether the resumed sLCWA pipeline creates the same results as the one shot pipeline."""
+        self._test_pipeline_x_resumption(training_loop_type='sLCWA')
+
+    def _test_pipeline_x_resumption(self, training_loop_type: str):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
         result_standard = pipeline(
             model=self.model,
             dataset=self.dataset,
-            training_loop='sLCWA',
+            training_loop=training_loop_type,
             training_kwargs=dict(num_epochs=10),
             random_seed=self.random_seed,
         )
@@ -162,7 +142,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
         _ = pipeline(
             model=self.model,
             dataset=self.dataset,
-            training_loop='sLCWA',
+            training_loop=training_loop_type,
             training_kwargs=dict(num_epochs=5, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
             random_seed=self.random_seed,
         )
@@ -171,7 +151,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
         result_split = pipeline(
             model=self.model,
             dataset=self.dataset,
-            training_loop='sLCWA',
+            training_loop=training_loop_type,
             training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
         )
         self.assertEqual(result_standard.losses, result_split.losses)
