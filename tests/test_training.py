@@ -14,7 +14,7 @@ from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model
 from pykeen.optimizers import get_optimizer_cls
-from pykeen.training import get_training_loop_cls, LCWATrainingLoop, SLCWATrainingLoop
+from pykeen.training import SLCWATrainingLoop, get_training_loop_cls
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
 
@@ -153,7 +153,7 @@ class TrainingLoopTests(unittest.TestCase):
 
     def _test_checkpoints(self, training_loop_type: str):
         """Test whether interrupting the given training loop type can be resumed using checkpoints."""
-        training_loop_class= get_training_loop_cls(training_loop_type)
+        training_loop_class = get_training_loop_cls(training_loop_type)
 
         # Train a model in one shot
         model = TransE(
