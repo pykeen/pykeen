@@ -143,29 +143,26 @@ class TrainingLoopTests(unittest.TestCase):
         with self.assertRaises(TrainingApproachLossMismatchError):
             NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False)
 
-    # Add docu
     def test_lcwa_checkpoints(self):
         """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
         # Train a model in one shot
         model = TransE(
             triples_factory=self.triples_factory,
-            automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
 
         # Train a model for the first half
         model = TransE(
             triples_factory=self.triples_factory,
-            automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         training_loop.train(
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
@@ -176,12 +173,11 @@ class TrainingLoopTests(unittest.TestCase):
         # Continue training of the first part
         model = TransE(
             triples_factory=self.triples_factory,
-            automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop = LCWATrainingLoop(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         losses_2 = training_loop.train(
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
@@ -196,23 +192,21 @@ class TrainingLoopTests(unittest.TestCase):
         # Train a model in one shot
         model = TransE(
             triples_factory=self.triples_factory,
-            automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
 
         # Train a model for the first half
         model = TransE(
             triples_factory=self.triples_factory,
-            automatic_memory_optimization=False,
             random_seed=self.random_seed,
         )
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         training_loop.train(
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
@@ -223,12 +217,11 @@ class TrainingLoopTests(unittest.TestCase):
         # Continue training of the first part
         model = TransE(
             triples_factory=self.triples_factory,
-            automatic_memory_optimization=False,
             random_seed=123,
         )
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+        training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         losses_2 = training_loop.train(
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
