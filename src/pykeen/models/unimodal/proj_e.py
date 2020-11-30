@@ -63,19 +63,9 @@ class ProjE(ERModel):
         loss: Optional[Loss] = None,
         # Model parameters
         preferred_device: DeviceHint = None,
-        automatic_memory_optimization: Optional[bool] = None,
         random_seed: Optional[int] = None,
     ) -> None:
-        """Initialize :class:`ERModel` using :class:`ProjEInteraction`.
-
-        :param triples_factory:
-        :param embedding_dim:
-        :param inner_non_linearity:
-        :param loss:
-        :param automatic_memory_optimization:
-        :param preferred_device:
-        :param random_seed:
-        """
+        """Initialize :class:`ERModel` using :class:`ProjEInteraction`."""
         super().__init__(
             triples_factory=triples_factory,
             interaction=ProjEInteraction(
@@ -90,7 +80,6 @@ class ProjE(ERModel):
                 embedding_dim=embedding_dim,
                 initializer=xavier_uniform_,
             ),
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

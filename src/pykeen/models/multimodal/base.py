@@ -33,7 +33,6 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         relation_specification: Optional[EmbeddingSpecification] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ):
@@ -42,7 +41,6 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
             interaction=interaction,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             entity_representations=[

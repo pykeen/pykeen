@@ -58,7 +58,6 @@ class ERMLPE(ERModel):
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -77,7 +76,6 @@ class ERMLPE(ERModel):
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
             ),
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

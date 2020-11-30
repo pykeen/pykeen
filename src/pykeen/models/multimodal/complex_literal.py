@@ -76,7 +76,6 @@ class ComplExLiteral(LiteralModel):
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.2,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -104,7 +103,6 @@ class ComplExLiteral(LiteralModel):
             ),
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )

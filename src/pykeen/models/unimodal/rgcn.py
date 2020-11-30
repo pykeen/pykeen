@@ -62,7 +62,6 @@ class RGCN(ERModel):
         triples_factory: TriplesFactory,
         interaction: Optional[Interaction] = None,
         embedding_dim: int = 500,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -107,7 +106,6 @@ class RGCN(ERModel):
         )
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,

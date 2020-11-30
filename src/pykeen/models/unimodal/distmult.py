@@ -71,7 +71,6 @@ class DistMult(ERModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -101,7 +100,6 @@ class DistMult(ERModel):
                 # Only relation embeddings are regularized
                 regularizer=self._instantiate_default_regularizer(),
             ),
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

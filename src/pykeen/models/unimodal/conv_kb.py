@@ -74,7 +74,6 @@ class ConvKB(ERModel):
         triples_factory: TriplesFactory,
         hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         num_filters: int = 400,
@@ -98,7 +97,6 @@ class ConvKB(ERModel):
                 embedding_dim=embedding_dim,
             ),
             loss=loss,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
         )

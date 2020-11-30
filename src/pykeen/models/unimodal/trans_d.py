@@ -60,7 +60,6 @@ class TransD(ERModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         relation_dim: int = 30,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
@@ -87,7 +86,6 @@ class TransD(ERModel):
                 )
                 for _ in range(2)
             ],
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

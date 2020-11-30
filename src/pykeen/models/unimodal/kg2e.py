@@ -62,7 +62,6 @@ class KG2E(ERModel):
         c_min: float = 0.05,
         c_max: float = 5.,
         loss: Optional[Loss] = None,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
@@ -97,7 +96,6 @@ class KG2E(ERModel):
             ),
             entity_representations=representation_spec,
             relation_representations=representation_spec,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

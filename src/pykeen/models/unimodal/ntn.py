@@ -55,7 +55,6 @@ class NTN(ERModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 100,
-        automatic_memory_optimization: Optional[bool] = None,
         num_slices: int = 4,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
@@ -89,7 +88,6 @@ class NTN(ERModel):
                 # u: (k,)
                 EmbeddingSpecification(shape=(num_slices,)),
             ],
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

@@ -21,10 +21,9 @@ __all__ = [
 class MockModel(Model):
     """A mock model returning fake scores."""
 
-    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool = True):
+    def __init__(self, triples_factory: TriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
         )
 
     def forward(

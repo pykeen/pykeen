@@ -45,7 +45,6 @@ class UnstructuredModel(ERModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -60,7 +59,6 @@ class UnstructuredModel(ERModel):
         self.embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
