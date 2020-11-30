@@ -17,6 +17,7 @@ from pykeen.nn.representation import (
 )
 from pykeen.nn.sim import _torch_kl_similarity, kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
+from pykeen.testing.mocks import MockRepresentations
 from pykeen.triples import TriplesFactory
 from pykeen.typing import GaussianDistribution
 
@@ -352,6 +353,7 @@ class RepresentationModuleTestsTest(TestsTest[RepresentationModule], unittest.Te
 
     base_cls = RepresentationModule
     base_test = RepresentationModuleTests
+    skip_cls = {MockRepresentations}
 
 
 class EmbeddingSpecificationTests(unittest.TestCase):
