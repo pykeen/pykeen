@@ -322,14 +322,16 @@ class TestRandom(unittest.TestCase):
             PowerSumRegularizer(normalize=True),
         ]
         model = ERModel(
-            triples_factory=MagicMock(),
-            interaction=MagicMock(),
+            triples_factory=MagicMock(num_entities=3, num_relations=2),
+            interaction=MagicMock(relation_shape=("d",), entity_shape=("d",)),
             entity_representations=EmbeddingSpecification(
                 regularizer=regularizers[0],
-            ).make(num_embeddings=3, embedding_dim=2, shape=None),
+                embedding_dim=2,
+            ),
             relation_representations=EmbeddingSpecification(
                 regularizer=regularizers[1],
-            ).make(num_embeddings=3, embedding_dim=2, shape=None),
+                embedding_dim=2,
+            ),
         )
 
         # add weighted modules
