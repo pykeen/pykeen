@@ -5,14 +5,24 @@ on:
     types: [created]
 
 jobs:
-  lint:
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'Run integration tests!'}}
-    name: Lint
+  CI_commit:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'Please test this!')
+    name: CI commit
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ 3.7, 3.8 ]
     steps:
+      - name: Log information
+        run: |
+          echo "Comment ${{ github.event.comment.body }} and site_admin ${{ github.event.comment.user.site_admin }}"
+      - name: Comment on request
+        uses: khan/pull-request-comment-trigger@master
+        id: check
+        with:
+          trigger: 'Please test this!'
+          reaction: rocket
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
       - uses: actions/github-script@v3
         id: get-pr
         with:
@@ -30,28 +40,16 @@ jobs:
               core.setFailed(`Request failed with error ${err}`)
             }
 
-      - uses: actions/checkout@v2
+      - name: Set environment
+        uses: actions/checkout@v2
         if: ${{ success() }}
         with:
           repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: pip install tox
-
-      - name: Check manifest
-        run: tox -e manifest
-
-      - name: Check code quality with flake8
-        run: tox -e flake8
-
-      - name: Check package metadata with Pyroma
-        run: tox -e pyroma
-      # - name: Check static typing with MyPy
-      #  run: tox -e mypy
-      #  # Allow failure, see https://github.community/t/continue-on-error-allow-failure-ui-indication/16773
-      #  if: succeeded() || failed()
+          token: ${{ secrets.PyKEEN_BOT }}
+      - name: Push CI commit to Pull Request
+        run: |
+          git config --global user.email "pykeen2019@gmail.com"
+          git config --global user.name "PyKEEN_bot"
+          git commit --allow-empty -m "Trigger CI"
+          git push
