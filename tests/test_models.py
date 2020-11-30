@@ -102,6 +102,9 @@ class _ModelTestCase:
     #: Additional arguments passed to the model's constructor method
     model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
+    #: Additional arguments passed to the training loop's constructor method
+    training_loop_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
     #: The triples factory instance
     factory: TriplesFactory
 
@@ -255,6 +258,7 @@ class _ModelTestCase:
         loop = SLCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+            **(self.training_loop_kwargs or {}),
         )
         losses = self._safe_train_loop(
             loop,
@@ -270,6 +274,7 @@ class _ModelTestCase:
         loop = LCWATrainingLoop(
             model=self.model,
             optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+            **(self.training_loop_kwargs or {}),
         )
         losses = self._safe_train_loop(
             loop,
@@ -335,6 +340,16 @@ class _ModelTestCase:
         for k, v in kwargs.items():
             extras.append('--' + k.replace('_', '-'))
             extras.append(str(v))
+
+        # For the high/low memory test cases of NTN, SE, etc.
+        if self.training_loop_kwargs and 'automatic_memory_optimization' in self.training_loop_kwargs:
+            automatic_memory_optimization = self.training_loop_kwargs.get('automatic_memory_optimization')
+            if automatic_memory_optimization is True:
+                extras.append('--automatic-memory-optimization')
+            elif automatic_memory_optimization is False:
+                extras.append('--no-automatic-memory-optimization')
+            # else, leave to default
+
         extras += [
             '--number-epochs', self.train_num_epochs,
             '--embedding-dim', self.embedding_dim,
@@ -711,6 +726,9 @@ class TestNTNLowMemory(_BaseNTNTest):
 
     model_kwargs = {
         'num_slices': 2,
+    }
+
+    training_loop_kwargs = {
         'automatic_memory_optimization': True,
     }
 
@@ -720,6 +738,9 @@ class TestNTNHighMemory(_BaseNTNTest):
 
     model_kwargs = {
         'num_slices': 2,
+    }
+
+    training_loop_kwargs = {
         'automatic_memory_optimization': False,
     }
 
@@ -816,17 +837,17 @@ class _BaseTestSE(_ModelTestCase, unittest.TestCase):
 class TestSELowMemory(_BaseTestSE):
     """Tests SE with low memory."""
 
-    model_kwargs = dict(
-        automatic_memory_optimization=True,
-    )
+    training_loop_kwargs = {
+        'automatic_memory_optimization': True,
+    }
 
 
 class TestSEHighMemory(_BaseTestSE):
     """Tests SE with low memory."""
 
-    model_kwargs = dict(
-        automatic_memory_optimization=False,
-    )
+    training_loop_kwargs = {
+        'automatic_memory_optimization': False,
+    }
 
 
 class TestTransD(_DistanceModelTestCase, unittest.TestCase):

@@ -103,12 +103,6 @@ CLI_OPTIONS = {
         default='distmult',
         show_default=True,
     ),
-    'automatic_memory_optimization': click.option(
-        '--automatic-memory-optimization',
-        type=bool,
-        default=True,
-        show_default=True,
-    ),
 }
 
 device_option = click.option(
@@ -135,6 +129,11 @@ training_loop_option = click.option(
     type=click.Choice(list(training_loops)),
     callback=_make_callback(get_training_loop_cls),
     default=_get_default(get_training_loop_cls, suffix=_TRAINING_LOOP_SUFFIX),
+    show_default=True,
+)
+automatic_memory_optimization_option = click.option(
+    '--automatic-memory-optimization/--no-automatic-memory-optimization',
+    default=True,
     show_default=True,
 )
 stopper_option = click.option(

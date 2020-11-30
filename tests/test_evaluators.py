@@ -395,8 +395,8 @@ class EvaluatorUtilsTests(unittest.TestCase):
 class DummyEvaluator(Evaluator):
     """A dummy evaluator for testing the structure of the evaluation function."""
 
-    def __init__(self, *, counter: int, filtered: bool) -> None:
-        super().__init__(filtered=filtered)
+    def __init__(self, *, counter: int, filtered: bool, automatic_memory_optimization: bool = True) -> None:
+        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
         self.counter = counter
 
     def process_tail_scores_(
@@ -437,7 +437,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
         self.triples_factory = Nations().training
-        self.model = MockModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
+        self.model = MockModel(triples_factory=self.triples_factory)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""

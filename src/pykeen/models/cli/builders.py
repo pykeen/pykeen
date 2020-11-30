@@ -81,6 +81,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.valiadation_option
     @options.optimizer_option
     @options.training_loop_option
+    @options.automatic_memory_optimization_option
     @options.number_epochs_option
     @options.batch_size_option
     @options.learning_rate_option
@@ -107,6 +108,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         mlflow_tracking_uri,
         title,
         dataset,
+        automatic_memory_optimization,
         training_triples_factory,
         testing_triples_factory,
         validation_triples_factory,
@@ -158,6 +160,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 title=title,
             ),
             random_seed=random_seed,
+            automatic_memory_optimization=automatic_memory_optimization,
         )
 
         if not silent:

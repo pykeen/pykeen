@@ -55,8 +55,8 @@ class TestRandom(unittest.TestCase):
 class MockEvaluator(Evaluator):
     """A mock evaluator for testing early stopping."""
 
-    def __init__(self, losses: Iterable[float]) -> None:
-        super().__init__()
+    def __init__(self, losses: Iterable[float], automatic_memory_optimization: bool = True) -> None:
+        super().__init__(automatic_memory_optimization=automatic_memory_optimization)
         self.losses = tuple(losses)
         self.losses_iter = iter(self.losses)
 
@@ -150,10 +150,10 @@ class TestEarlyStopping(unittest.TestCase):
 
     def setUp(self):
         """Prepare for testing the early stopper."""
-        self.mock_evaluator = MockEvaluator(self.mock_losses)
+        self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=True)
         # Set automatic_memory_optimization to false for tests
         nations = Nations()
-        self.model = MockModel(triples_factory=nations.training, automatic_memory_optimization=False)
+        self.model = MockModel(triples_factory=nations.training)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
@@ -237,8 +237,8 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
         nations = Nations()
-        model: Model = TransE(triples_factory=nations.training, automatic_memory_optimization=False)
-        evaluator = RankBasedEvaluator()
+        model: Model = TransE(triples_factory=nations.training)
+        evaluator = RankBasedEvaluator(automatic_memory_optimization=False)
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
@@ -250,6 +250,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         training_loop = SLCWATrainingLoop(
             model=model,
             optimizer=Adam(params=model.get_grad_params()),
+            automatic_memory_optimization=False,
         )
         losses = training_loop.train(
             num_epochs=self.max_num_epochs,
