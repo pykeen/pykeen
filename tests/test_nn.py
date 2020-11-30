@@ -13,7 +13,7 @@ from torch.nn import functional
 
 from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
 from pykeen.nn.representation import CANONICAL_DIMENSIONS, RGCNRepresentations, convert_to_canonical_shape, get_expected_canonical_shape
-from pykeen.nn.sim import kullback_leibler_similarity
+from pykeen.nn.sim import _torch_kl_similarity, kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.triples import TriplesFactory
 from pykeen.typing import GaussianDistribution
@@ -430,22 +430,13 @@ class KullbackLeiblerTests(unittest.TestCase):
             raise ValueError
         return GaussianDistribution(mean=mean, diagonal_covariance=var)
 
-    def test_against_torch_builtin(self):
-        """Compare value against torch.distributions."""
-        # compute using pykeen
-        sim = kullback_leibler_similarity(
-            h=self._get(name="h"),
-            r=self._get(name="r"),
-            t=self._get(name="t"),
-            exact=True,
-        )
-
+    def _get_kl_similarity_torch(self):
         # compute using pytorch
         e_mean = self.h_mean - self.t_mean
         e_var = self.h_var + self.t_var
         r_mean, r_var = self.r_var, self.r_mean
         assert (e_var > 0).all()
-        sim2 = torch.empty_like(sim)
+        sim2 = torch.empty(self.batch_size, self.num_heads, self.num_relations, self.num_tails)
         for bi, hi, ri, ti in itertools.product(
             range(self.batch_size),
             range(self.num_heads),
@@ -466,6 +457,14 @@ class KullbackLeiblerTests(unittest.TestCase):
                 covariance_matrix=r_cov,
             )
             sim2[bi, hi, ri, ti] = -torch.distributions.kl_divergence(p=p, q=q).view(-1)
+        return sim2
+
+    def test_against_torch_builtin(self):
+        """Compare value against torch.distributions."""
+        # compute using pykeen
+        h, r, t = [self._get(name=name) for name in "hrt"]
+        sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
+        sim2 = _torch_kl_similarity(h=h, r=r, t=t)
         assert torch.allclose(sim, sim2), (sim - sim2).abs()
 
     def test_self_similarity(self):

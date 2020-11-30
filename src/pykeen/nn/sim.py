@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """Similarity functions."""
-
+import itertools
 import math
 
 import torch
 
 from .compute_kernel import batched_dot
 from ..typing import GaussianDistribution
-from ..utils import tensor_sum
+from ..utils import calculate_broadcasted_elementwise_result_shape, tensor_sum
 
 __all__ = [
     'expected_likelihood',
@@ -115,19 +115,26 @@ def kullback_leibler_similarity(
         The similarity.
     """
     assert all((d.diagonal_covariance > 0).all() for d in (h, r, t))
+    return _vectorized_kl_similarity(h=h, r=r, t=t, epsilon=epsilon, exact=exact)
 
+
+def _vectorized_kl_similarity(
+    h: GaussianDistribution,
+    r: GaussianDistribution,
+    t: GaussianDistribution,
+    epsilon: float = 1.0e-10,
+    exact: bool = True,
+) -> torch.FloatTensor:
+    """Vectorized implementation."""
     e_var = (h.diagonal_covariance + t.diagonal_covariance)
     r_var_safe = r.diagonal_covariance.clamp_min(min=epsilon)
-
     terms = []
-
     # 1. Component
     # tr(sigma_1^-1 sigma_0) = sum (sigma_1^-1 sigma_0)[i, i]
     # since sigma_0, sigma_1 are diagonal matrices:
     # = sum (sigma_1^-1[i] sigma_0[i]) = sum (sigma_0[i] / sigma_1[i])
     var_safe_reciprocal = r_var_safe.reciprocal()
     terms.append(batched_dot(e_var, var_safe_reciprocal))
-
     # 2. Component
     # (mu_1 - mu_0) * Sigma_1^-1 (mu_1 - mu_0)
     # with mu = (mu_1 - mu_0)
@@ -136,11 +143,9 @@ def kullback_leibler_similarity(
     # = mu**2 / sigma_1
     mu = tensor_sum(r.mean, -h.mean, t.mean)
     terms.append(batched_dot(mu.pow(2), r_var_safe))
-
     # 3. Component
     if exact:
         terms.append(-torch.as_tensor(data=[h.mean.shape[-1]]))
-
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
     # = ln det Sigma_1 - ln det Sigma_0
@@ -152,11 +157,52 @@ def kullback_leibler_similarity(
         r_var_safe.log().sum(dim=-1),
         -e_var_safe.log().sum(dim=-1),
     ))
-
     result = tensor_sum(*terms)
     if exact:
         result = 0.5 * result
+    return -result
 
+
+def _torch_kl_similarity(
+    h: GaussianDistribution,
+    r: GaussianDistribution,
+    t: GaussianDistribution,
+) -> torch.FloatTensor:
+    """
+    Implementation delegating to torch.distributions.
+
+    .. note ::
+        Do not use this method in production code.
+    """
+    e_mean = h.mean - t.mean
+    e_var = h.diagonal_covariance + t.diagonal_covariance
+
+    # allocate result
+    batch_size, num_heads, num_relations, num_tails = calculate_broadcasted_elementwise_result_shape(
+        e_mean.shape,
+        r.mean.shape
+    )[:-1]
+    result = h.mean.new_empty(batch_size, num_heads, num_relations, num_tails)
+    for bi, hi, ri, ti in itertools.product(
+        range(batch_size),
+        range(num_heads),
+        range(num_relations),
+        range(num_tails),
+    ):
+        # prepare distributions
+        e_loc = e_mean[bi, hi, 0, ti, :]
+        r_loc = r.mean[bi, 0, ri, 0, :]
+        e_cov = torch.diag(e_var[bi, hi, 0, ti, :])
+        r_cov = torch.diag(r.diagonal_covariance[bi, 0, ri, 0, :])
+        p = torch.distributions.MultivariateNormal(
+            loc=e_loc,
+            covariance_matrix=e_cov,
+        )
+        q = torch.distributions.MultivariateNormal(
+            loc=r_loc,
+            covariance_matrix=r_cov,
+        )
+        result[bi, hi, ri, ti] = torch.distributions.kl_divergence(p=p, q=q).view(-1)
     return -result
 
 
