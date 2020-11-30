@@ -448,6 +448,11 @@ class KullbackLeiblerTests(unittest.TestCase):
             e_var = torch.diag(self.h_var[bi, hi, 0, 0, :] + self.t_var[bi, 0, 0, ti, :])
             r_mean = self.r_mean[bi, 0, ri, 0, :]
             r_var = torch.diag(self.r_var[bi, 0, ri, 0, :])
+            # check for correct slicing
+            assert e_mean.shape == (self.d,)
+            assert r_mean.shape == (self.d,)
+            assert e_var.shape == (self.d, self.d)
+            assert r_var.shape == (self.d, self.d)
             p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=e_var)
             q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=r_var)
             sim2[bi, hi, ri, ti] = -torch.distributions.kl_divergence(p=p, q=q).view(-1)
