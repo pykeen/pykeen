@@ -527,9 +527,8 @@ def estimate_cost_of_sequence(
         numpy.prod,
         itertools.islice(
             itertools.accumulate(
-                other_shapes,
+                (shape,) + other_shapes,
                 calculate_broadcasted_elementwise_result_shape,
-                initial=shape,
             ),
             1,
             None,
