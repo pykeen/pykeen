@@ -8,7 +8,8 @@ jobs:
   CI_commit:
     if: >-
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@PyKEEN-bot Please test this!')
+      contains(github.event.comment.body, '@PyKEEN-bot') &&
+      contains(github.event.comment.body, 'test')
     name: CI commit
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +20,7 @@ jobs:
         uses: khan/pull-request-comment-trigger@master
         id: check
         with:
-          trigger: 'Please test this!'
+          trigger: '@PyKEEN-bot'
           reaction: rocket
         env:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
