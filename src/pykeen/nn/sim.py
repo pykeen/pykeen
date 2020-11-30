@@ -115,26 +115,76 @@ def kullback_leibler_similarity(
         The similarity.
     """
     assert all((d.diagonal_covariance > 0).all() for d in (h, r, t))
-    return _vectorized_kl_similarity(h=h, r=r, t=t, epsilon=epsilon, exact=exact)
+    return -_vectorized_kl_divergence(
+        h=h,
+        r=r,
+        t=t,
+        epsilon=epsilon,
+        exact=exact,
+    )
 
 
-def _vectorized_kl_similarity(
+def _vectorized_kl_divergence(
     h: GaussianDistribution,
     r: GaussianDistribution,
     t: GaussianDistribution,
     epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
-    """Vectorized implementation."""
+    r"""
+    Vectorized implementation of KL-divergence.
+
+    Computes the divergence between :math:`\mathcal{N}(\mu_e, \Sigma_e)` and :math:`\mathcal{N}(\mu_r, \Sigma_r)`
+    given by
+
+    .. math ::
+        \mu_e = \mu_h - \mu_t
+
+        \Sigma_e = \Sigma_h + \Sigma_t
+
+    where all covariance matrices are diagonal. Hence we can simplify
+
+    .. math ::
+        D(\mathcal{N}(\mu_e, \Sigma_e), \mathcal{N}(\mu_r, \Sigma_r))
+        =
+        0.5 * (
+          \trace(\Sigma_r^-1 \Sigma_e)
+          + (\mu_r - \mu_e) * \Sigma_r^-1 (\mu_r - \mu_e)
+          - k
+          + \ln (\det(\Sigma_r) / \det(\Sigma_e))
+        )
+        = 0.5 * (
+          \sum_i \Sigma_e[i] / Sigma_r[i]
+          + \sum_i \mu[i]^2 / \Sigma_r[i]
+          + \sum_i \ln Sigma_r[i]
+          - \sum_i \ln Sigma_e[i]
+          - k
+        )
+
+    where :math:`\mu = \mu_r - \mu_e = \mu_r - \mu_h + \mu_t`
+
+    :param h: shape: (batch_size, num_heads, 1, 1, d)
+        The head entity Gaussian distribution.
+    :param r: shape: (batch_size, 1, num_relations, 1, d)
+        The relation Gaussian distribution.
+    :param t: shape: (batch_size, 1, 1, num_tails, d)
+        The tail entity Gaussian distribution.
+    :param epsilon: float (default=1.0)
+        Small constant used to avoid numerical issues when dividing.
+    :param exact:
+        Whether to return the exact similarity, or leave out constant offsets.
+
+    :return: torch.Tensor, shape: (s_1, ..., s_k)
+        The KL-divergence.
+    """
+    num_heads, num_relations, num_tails = [x.mean.shape[d] for d, x in enumerate((h, r, t))]
     e_var = (h.diagonal_covariance + t.diagonal_covariance)
     r_var_safe = r.diagonal_covariance.clamp_min(min=epsilon)
     terms = []
     # 1. Component
-    # tr(sigma_1^-1 sigma_0) = sum (sigma_1^-1 sigma_0)[i, i]
-    # since sigma_0, sigma_1 are diagonal matrices:
-    # = sum (sigma_1^-1[i] sigma_0[i]) = sum (sigma_0[i] / sigma_1[i])
-    var_safe_reciprocal = r_var_safe.reciprocal()
-    terms.append(batched_dot(e_var, var_safe_reciprocal))
+    # \sum_i \Sigma_e[i] / Sigma_r[i]
+    r_var_safe_reciprocal = r_var_safe.reciprocal()
+    terms.append(batched_dot(e_var, r_var_safe_reciprocal))
     # 2. Component
     # (mu_1 - mu_0) * Sigma_1^-1 (mu_1 - mu_0)
     # with mu = (mu_1 - mu_0)
@@ -142,7 +192,7 @@ def _vectorized_kl_similarity(
     # since Sigma_1 is diagonal
     # = mu**2 / sigma_1
     mu = tensor_sum(r.mean, -h.mean, t.mean)
-    terms.append(batched_dot(mu.pow(2), r_var_safe))
+    terms.append(batched_dot(mu.pow(2), r_var_safe_reciprocal))
     # 3. Component
     if exact:
         terms.append(-torch.as_tensor(data=[h.mean.shape[-1]]))
@@ -160,7 +210,7 @@ def _vectorized_kl_similarity(
     result = tensor_sum(*terms)
     if exact:
         result = 0.5 * result
-    return -result
+    return result
 
 
 def _torch_kl_similarity(
