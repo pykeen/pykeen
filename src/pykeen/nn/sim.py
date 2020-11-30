@@ -218,7 +218,7 @@ def _torch_kl_similarity(
     t: GaussianDistribution,
 ) -> torch.FloatTensor:
     """
-    Implementation delegating to torch.distributions.
+    Compute KL similarity using torch.distributions.
 
     .. note ::
         Do not use this method in production code.
@@ -229,7 +229,7 @@ def _torch_kl_similarity(
     # allocate result
     batch_size, num_heads, num_relations, num_tails = calculate_broadcasted_elementwise_result_shape(
         e_mean.shape,
-        r.mean.shape
+        r.mean.shape,
     )[:-1]
     result = h.mean.new_empty(batch_size, num_heads, num_relations, num_tails)
     for bi, hi, ri, ti in itertools.product(

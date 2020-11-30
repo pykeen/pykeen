@@ -12,7 +12,9 @@ import torch
 from torch.nn import functional
 
 from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
-from pykeen.nn.representation import CANONICAL_DIMENSIONS, RGCNRepresentations, convert_to_canonical_shape, get_expected_canonical_shape
+from pykeen.nn.representation import (
+    CANONICAL_DIMENSIONS, RGCNRepresentations, convert_to_canonical_shape, get_expected_canonical_shape,
+)
 from pykeen.nn.sim import _torch_kl_similarity, kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.triples import TriplesFactory
