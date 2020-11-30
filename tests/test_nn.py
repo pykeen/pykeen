@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Unittest for the :mod:`pykeen.nn` module."""
+
 import itertools
 import unittest
 from typing import Any, Iterable, Mapping, MutableMapping, Optional, Sequence
@@ -16,13 +17,13 @@ from pykeen.nn.representation import (
     CANONICAL_DIMENSIONS, RGCNRepresentations, convert_to_canonical_shape, get_expected_canonical_shape,
 )
 from pykeen.nn.sim import _torch_kl_similarity, kullback_leibler_similarity
-from pykeen.testing.base import GenericTests, TestsTest
+from pykeen.testing import base as ptb
 from pykeen.testing.mocks import MockRepresentations
 from pykeen.triples import TriplesFactory
 from pykeen.typing import GaussianDistribution
 
 
-class RepresentationModuleTests(GenericTests[RepresentationModule]):
+class RepresentationModuleTests(ptb.GenericTests[RepresentationModule]):
     """Tests for RepresentationModule."""
 
     #: The batch size
@@ -123,6 +124,7 @@ class RepresentationModuleTests(GenericTests[RepresentationModule]):
 
 
 def _check_call(
+    self: unittest.TestCase,
     call_count: int,
     should_be_called: bool,
     wrapped: MagicMock,
@@ -131,6 +133,8 @@ def _check_call(
     """
     Check whether a wrapped method is called.
 
+    :param self:
+        The test cas calling the check
     :param call_count:
         The previous call count.
     :param should_be_called:
@@ -146,15 +150,15 @@ def _check_call(
     if should_be_called:
         call_count += 1
 
-        assert wrapped.call_count == call_count
+        self.assertEqual(wrapped.call_count, call_count)
 
         # called with one positional argument ...
-        assert len(wrapped.call_args.args) == 1
+        self.assertEqual(1, len(wrapped.call_args.args))
 
         # .. and additional key-word based arguments.
-        assert len(wrapped.call_args.kwargs) == len(kwargs or {})
+        self.assertEqual(len(wrapped.call_args.kwargs), len(kwargs or {}))
     else:
-        assert wrapped.call_count == call_count
+        self.assertEqual(wrapped.call_count, call_count)
     return call_count
 
 
@@ -210,6 +214,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         # check call in reset_parameters
         embedding.reset_parameters()
         call_count = _check_call(
+            self,
             call_count=call_count,
             should_be_called=reset_parameters_call,
             wrapped=wrapped,
@@ -219,6 +224,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         # check call in forward
         embedding.forward(indices=None)
         call_count = _check_call(
+            self,
             call_count=call_count,
             should_be_called=forward_call,
             wrapped=wrapped,
@@ -228,6 +234,7 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         # check call in post_parameter_update
         embedding.post_parameter_update()
         _check_call(
+            self,
             call_count=call_count,
             should_be_called=post_parameter_update_call,
             wrapped=wrapped,
@@ -313,7 +320,7 @@ class LiteralRepresentationsTests(EmbeddingTests, unittest.TestCase):
         exp_x = self.numeric_literals
         if indices is not None:
             exp_x = exp_x[indices]
-        assert torch.allclose(x, exp_x)
+        self.assertTrue(torch.allclose(x, exp_x))
 
 
 class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
@@ -348,7 +355,7 @@ class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTest(TestsTest[RepresentationModule], unittest.TestCase):
+class RepresentationModuleTestsTest(ptb.TestsTest[RepresentationModule], unittest.TestCase):
     """Test that there are tests for all representation modules."""
 
     base_cls = RepresentationModule
@@ -384,15 +391,15 @@ class EmbeddingSpecificationTests(unittest.TestCase):
             emb = spec.make(num_embeddings=self.num)
 
             # check shape
-            assert emb.embedding_dim == (embedding_dim or int(numpy.prod(shape)))
-            assert emb.shape == (shape or (embedding_dim,))
-            assert emb.num_embeddings == self.num
+            self.assertEqual(emb.embedding_dim, (embedding_dim or int(numpy.prod(shape))))
+            self.assertEqual(emb.shape, (shape or (embedding_dim,)))
+            self.assertEqual(emb.num_embeddings, self.num)
 
             # check attributes
-            assert emb.initializer is initializer
-            assert emb.normalizer is normalizer
-            assert emb.constrainer is constrainer
-            assert emb.regularizer is regularizer
+            self.assertIs(emb.initializer, initializer)
+            self.assertIs(emb.normalizer, normalizer)
+            self.assertIs(emb.constrainer, constrainer)
+            self.assertIs(emb.regularizer, regularizer)
 
 
 class KullbackLeiblerTests(unittest.TestCase):
@@ -439,7 +446,7 @@ class KullbackLeiblerTests(unittest.TestCase):
         e_mean = self.h_mean - self.t_mean
         e_var = self.h_var + self.t_var
         r_mean, r_var = self.r_var, self.r_mean
-        assert (e_var > 0).all()
+        self.assertTrue((e_var > 0).all())
         sim2 = torch.empty(self.batch_size, self.num_heads, self.num_relations, self.num_tails)
         for bi, hi, ri, ti in itertools.product(
             range(self.batch_size),
@@ -469,7 +476,7 @@ class KullbackLeiblerTests(unittest.TestCase):
         h, r, t = [self._get(name=name) for name in "hrt"]
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
         sim2 = _torch_kl_similarity(h=h, r=r, t=t)
-        assert torch.allclose(sim, sim2), (sim - sim2).abs()
+        self.assertTrue(torch.allclose(sim, sim2), msg=f'Difference: {(sim - sim2).abs()}')
 
     def test_self_similarity(self):
         """Check value of similarity to self."""
@@ -481,7 +488,7 @@ class KullbackLeiblerTests(unittest.TestCase):
         h = GaussianDistribution(mean=2 * r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
         t = GaussianDistribution(mean=r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
-        assert torch.allclose(sim, torch.zeros_like(sim))
+        self.assertTrue(torch.allclose(sim, torch.zeros_like(sim)), msg=f'Sim: {sim}')
 
     def test_value_range(self):
         """Check the value range."""
@@ -489,4 +496,4 @@ class KullbackLeiblerTests(unittest.TestCase):
         # divergence >= 0 => similarity = -divergence <= 0
         h, r, t = [self._get(name=name) for name in "hrt"]
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
-        assert (sim <= 0).all()
+        self.assertTrue((sim <= 0).all())

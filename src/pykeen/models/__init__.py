@@ -8,8 +8,8 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 
 from typing import Mapping, Set, Type, Union
 
-from .base import ERModel, Model
-from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
+from .base import ERModel, Model  # noqa:F401
+from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel  # noqa:F401
 from .unimodal import (
     ComplEx,
     ConvE,
@@ -63,15 +63,10 @@ __all__ = [
     'get_model_cls',
 ]
 
-_BASE_MODELS = {
-    ERModel,
-    LiteralModel,
-}
-
 
 def _concrete_subclasses(cls: Type[Model]):
     for subcls in cls.__subclasses__():
-        if not subcls._is_base_model and subcls not in _BASE_MODELS:
+        if not subcls._is_base_model:
             yield subcls
         yield from _concrete_subclasses(subcls)
 

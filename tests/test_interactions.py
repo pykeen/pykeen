@@ -14,14 +14,14 @@ import torch
 import pykeen.nn.modules
 from pykeen.nn.functional import distmult_interaction
 from pykeen.nn.modules import Interaction, TranslationalInteraction
-from pykeen.testing.base import GenericTests, TestsTest
+from pykeen.testing import base as ptb
 from pykeen.typing import Representation
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 
 logger = logging.getLogger(__name__)
 
 
-class InteractionTests(GenericTests[pykeen.nn.modules.Interaction]):
+class InteractionTests(ptb.GenericTests[pykeen.nn.modules.Interaction]):
     """Generic test for interaction functions."""
 
     dim: int = 2
@@ -605,7 +605,7 @@ class SimplEInteractionTests(InteractionTests, unittest.TestCase):
         return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
 
 
-class InteractionTestsTest(TestsTest[Interaction], unittest.TestCase):
+class InteractionTestsTest(ptb.TestsTest[Interaction], unittest.TestCase):
     """Test for tests for all interaction functions."""
 
     base_cls = Interaction

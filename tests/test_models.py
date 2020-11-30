@@ -3,7 +3,6 @@
 """Test that models can be executed."""
 
 import importlib
-import itertools as itt
 import os
 import tempfile
 import traceback
@@ -23,7 +22,7 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models import LiteralModel, _BASE_MODELS, _MODELS
+from pykeen.models import _MODELS
 from pykeen.models.base import (
     ERModel,
     Model,
@@ -31,6 +30,7 @@ from pykeen.models.base import (
     get_novelty_mask,
 )
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.multimodal.base import LiteralModel
 from pykeen.nn.representation import (
     RGCNRepresentations, inverse_indegree_edge_weights, inverse_outdegree_edge_weights,
     symmetric_edge_weights,
@@ -43,13 +43,17 @@ from pykeen.utils import all_in_bounds, set_random_seed
 
 SKIP_MODULES = {
     Model.__name__,
+    ERModel.__name__,
+    LiteralModel.__name__,
     'DummyModel',
     'MockModel',
     'models',
     'get_model_cls',
 }
-for cls in itt.chain(_BASE_MODELS, LiteralModel.__subclasses__()):
-    SKIP_MODULES.add(cls.__name__)
+SKIP_MODULES.update({
+    cls.__name__
+    for cls in LiteralModel.__subclasses__()
+})
 
 _EPSILON = 1.0e-07
 
@@ -935,7 +939,7 @@ class TestTesting(unittest.TestCase):
     def test_testing(self):
         """Check that there's a test for all models.
 
-        For now, this is excluding multimodel models. Not sure how to test those yet.
+        For now, this is excluding multimodal models. Not sure how to test those yet.
         """
         model_names = {
             cls.__name__
@@ -1060,8 +1064,8 @@ class TestModelUtilities(unittest.TestCase):
 
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
-        for model_cls in _BASE_MODELS:
-            self.assertTrue(model_cls._is_base_model)
+        self.assertTrue(ERModel._is_base_model)
+        self.assertTrue(LiteralModel._is_base_model)
         for model_cls in _MODELS:
             self.assertFalse(
                 model_cls._is_base_model,
