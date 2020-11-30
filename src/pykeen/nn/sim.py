@@ -139,7 +139,7 @@ def kullback_leibler_similarity(
 
     # 3. Component
     if exact:
-        terms.append(-h.mean.shape[-1])
+        terms.append(-torch.as_tensor(data=[h.mean.shape[-1]]))
 
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
