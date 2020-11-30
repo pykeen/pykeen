@@ -449,11 +449,20 @@ class RotatETests(InteractionTests, unittest.TestCase):
 
     cls = pykeen.nn.modules.RotatEInteraction
 
+    def _get_hrt(self, *shapes):  # noqa: D102
+        # normalize length of r
+        h, r, t = super()._get_hrt(*shapes)
+        rc = view_complex(r)
+        rl = (rc.abs() ** 2).sum(dim=-1).sqrt()
+        r = r / rl.unsqueeze(dim=-1)
+        return h, r, t
+
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         h, r, t = strip_dim(*(view_complex(x) for x in (h, r, t)))
-        hr = h * r
-        d = hr - t
-        return -(d.abs() ** 2).sum().sqrt()
+        # check for unit length
+        assert torch.allclose((r.abs() ** 2).sum(dim=-1).sqrt(), torch.ones(1))
+        d = h * r - t
+        return -(d.abs() ** 2).sum(dim=-1).sqrt()
 
 
 class TranslationalInteractionTests(InteractionTests):
