@@ -177,7 +177,6 @@ def _vectorized_kl_divergence(
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The KL-divergence.
     """
-    num_heads, num_relations, num_tails = [x.mean.shape[d] for d, x in enumerate((h, r, t))]
     e_var = (h.diagonal_covariance + t.diagonal_covariance)
     r_var_safe = r.diagonal_covariance.clamp_min(min=epsilon)
     terms = []
