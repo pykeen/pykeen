@@ -12,7 +12,7 @@ import torch
 from torch.nn import functional
 
 from pykeen.nn import Embedding, EmbeddingSpecification, LiteralRepresentations, RepresentationModule
-from pykeen.nn.representation import CANONICAL_DIMENSIONS, RGCNRepresentations, get_expected_canonical_shape
+from pykeen.nn.representation import CANONICAL_DIMENSIONS, RGCNRepresentations, convert_to_canonical_shape, get_expected_canonical_shape
 from pykeen.nn.sim import kullback_leibler_similarity
 from pykeen.testing.base import GenericTests, TestsTest
 from pykeen.triples import TriplesFactory
@@ -394,54 +394,81 @@ class EmbeddingSpecificationTests(unittest.TestCase):
 class KullbackLeiblerTests(unittest.TestCase):
     """Tests for the vectorized computation of KL divergences."""
 
-    d: int = 3
+    batch_size: int = 2
+    num_heads: int = 3
+    num_relations: int = 5
+    num_tails: int = 7
+    d: int = 11
 
     def setUp(self) -> None:  # noqa: D102
-        self.e_mean = torch.rand(self.d)
-        self.e_var = torch.rand(self.d).exp()
-        self.r_mean = torch.rand(self.d)
-        self.r_var = torch.rand(self.d).exp()
+        dims = dict(h=self.num_heads, r=self.num_relations, t=self.num_tails)
+        (self.h_mean, self.r_mean, self.t_mean), (self.h_var, self.r_var, self.t_var) = [
+            [
+                convert_to_canonical_shape(
+                    x=torch.rand(self.batch_size, num, self.d),
+                    dim=dim,
+                    num=num,
+                    batch_size=self.batch_size,
+                )
+                for dim, num in dims.items()
+            ]
+            for _ in ("mean", "diagonal_covariance")
+        ]
+        # ensure positivity
+        self.h_var, self.r_var, self.t_var = [x.exp() for x in (self.h_var, self.r_var, self.t_var)]
 
-    def _get_e(self, pre_shape=(1, 1, 1)):
-        return GaussianDistribution(
-            mean=self.e_mean.view(*pre_shape, self.d),
-            diagonal_covariance=self.e_var.view(*pre_shape, self.d),
-        )
-
-    def _get_r(self, pre_shape=(1, 1)):
-        return GaussianDistribution(
-            mean=self.r_mean.view(*pre_shape, self.d),
-            diagonal_covariance=self.r_var.view(*pre_shape, self.d),
-        )
+    def _get(self, name: str):
+        if name == "h":
+            mean, var = self.h_mean, self.h_var
+        elif name == "r":
+            mean, var = self.r_mean, self.r_var
+        elif name == "t":
+            mean, var = self.t_mean, self.t_var
+        elif name == "e":
+            mean, var = self.h_mean - self.t_mean, self.h_var + self.t_var
+        else:
+            raise ValueError
+        return GaussianDistribution(mean=mean, diagonal_covariance=var)
 
     def test_against_torch_builtin(self):
         """Compare value against torch.distributions."""
-        # r: (batch_size, num_heads, num_tails, d)
-        e = self._get_e()
-        # r: (batch_size, num_relations, d)
-        r = self._get_r()
-        sim = kullback_leibler_similarity(e=e, r=r, exact=True).view(-1)
+        # compute using pykeen
+        sim = kullback_leibler_similarity(
+            h=self._get(name="h"),
+            r=self._get(name="r"),
+            t=self._get(name="t"),
+            exact=True,
+        )
 
-        p = torch.distributions.MultivariateNormal(loc=self.e_mean, covariance_matrix=torch.diag(self.e_var))
-        q = torch.distributions.MultivariateNormal(loc=self.r_mean, covariance_matrix=torch.diag(self.r_var))
-        sim2 = -torch.distributions.kl_divergence(p=p, q=q).view(-1)
-        assert torch.allclose(sim, sim2)
+        # compute using pytorch
+        sim2 = torch.empty_like(sim)
+        for bi, hi, ri, ti in itertools.product(range(self.batch_size), range(self.num_heads), range(self.num_relations), range(self.num_tails)):
+            # prepare distributions
+            e_mean = self.h_mean[bi, hi, 0, 0, :] - self.t_mean[bi, 0, 0, ti, :]
+            e_var = torch.diag(self.h_var[bi, hi, 0, 0, :] + self.t_var[bi, 0, 0, ti, :])
+            r_mean = self.r_mean[bi, 0, ri, 0, :]
+            r_var = torch.diag(self.r_var[bi, 0, ri, 0, :])
+            p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=e_var)
+            q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=r_var)
+            sim2[bi, hi, ri, ti] = -torch.distributions.kl_divergence(p=p, q=q).view(-1)
+        assert torch.allclose(sim, sim2), (sim - sim2).abs()
 
     def test_self_similarity(self):
         """Check value of similarity to self."""
         # e: (batch_size, num_heads, num_tails, d)
         # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
         # divergence = 0 => similarity = -divergence = 0
-        e = self._get_e()
-        r = self._get_e(pre_shape=(1, 1))
-        sim = kullback_leibler_similarity(e=e, r=r, exact=True)
+        # (h - t), r
+        r = self._get(name="r")
+        h = GaussianDistribution(mean=2 * r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
+        t = GaussianDistribution(mean=r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
+        sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
         assert torch.allclose(sim, torch.zeros_like(sim))
 
     def test_value_range(self):
         """Check the value range."""
         # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
         # divergence >= 0 => similarity = -divergence <= 0
-        e = self._get_e()
-        r = self._get_r()
-        sim = kullback_leibler_similarity(e=e, r=r, exact=True)
+        h, r, t = [self._get(name=name) for name in "hrt"]
+        sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
         assert (sim <= 0).all()
