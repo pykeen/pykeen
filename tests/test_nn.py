@@ -446,7 +446,12 @@ class KullbackLeiblerTests(unittest.TestCase):
         r_mean, r_var = self.r_var, self.r_mean
         assert (e_var > 0).all()
         sim2 = torch.empty_like(sim)
-        for bi, hi, ri, ti in itertools.product(range(self.batch_size), range(self.num_heads), range(self.num_relations), range(self.num_tails)):
+        for bi, hi, ri, ti in itertools.product(
+            range(self.batch_size),
+            range(self.num_heads),
+            range(self.num_relations),
+            range(self.num_tails),
+        ):
             # prepare distributions
             e_loc = e_mean[bi, hi, 0, ti, :]
             r_loc = r_mean[bi, 0, ri, 0, :]
