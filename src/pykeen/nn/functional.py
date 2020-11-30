@@ -12,8 +12,8 @@ from torch import nn
 from .sim import KG2E_SIMILARITIES
 from ..typing import GaussianDistribution
 from ..utils import (
-    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm, negative_norm_of_sum,
-    project_entity, split_complex, tensor_product, tensor_sum, view_complex,
+    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
+    negative_norm_of_sum, project_entity, split_complex, tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [

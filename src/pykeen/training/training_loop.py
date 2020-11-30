@@ -239,6 +239,9 @@ class TrainingLoop(ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing. This is only possible for LCWA training loops in
             general and only for models that have the slicing capability implemented.
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
+            regards to the hardware at hand.
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
