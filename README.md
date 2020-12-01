@@ -242,6 +242,10 @@ in ``pykeen``.
 | random | `optuna.samplers.RandomSampler` | Sampler using random sampling.                                  |
 | tpe    | `optuna.samplers.TPESampler`    | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
 
+Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
+such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
+algorithm, can also be used.
+
 ## Experimentation
 
 ### Reproduction

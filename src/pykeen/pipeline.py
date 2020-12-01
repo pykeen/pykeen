@@ -154,7 +154,9 @@ Arguments for the model can be given as a dictionary using ``model_kwargs``.
 
 The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
-model that explain what kwargs are possible.
+model that explain what kwargs are possible. Each model's default hyper-parameters were chosen based on the
+best reported values from the paper originally publishing the model unless otherwise noted on the model's
+reference page.
 
 Because the pipeline takes care of looking up classes and instantiating them,
 there are several other parameters to :func:`pykeen.pipeline.pipeline` that
