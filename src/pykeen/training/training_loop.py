@@ -553,7 +553,7 @@ class TrainingLoop(ABC):
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
-                if minutes_since_last_checkpoint >= checkpoint_frequency:
+                if minutes_since_last_checkpoint >= checkpoint_frequency or should_stop or epoch == num_epochs:
                     self._save_state(path=checkpoint_file_path, stopper=stopper)
                     last_checkpoint = time.time()
 
