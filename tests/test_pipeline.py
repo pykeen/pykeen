@@ -118,19 +118,26 @@ class TestPipelineCheckpoints(unittest.TestCase):
         self.model = 'TransE'
         self.dataset = 'nations'
         self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
+        self.temporary_directory = tempfile.TemporaryDirectory()
 
-    def test_pipeline_lcwa_resumption(self):
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.temporary_directory.cleanup()
+
+    def test_pipeline_resumption(self):
         """Test whether the resumed LCWA pipeline creates the same results as the one shot pipeline."""
-        with tempfile.TemporaryDirectory() as tempdir:
-            self._test_pipeline_x_resumption(training_loop_type='LCWA', checkpoint_root=tempdir)
+        self._test_pipeline_x_resumption(training_loop_type='LCWA')
 
     def test_pipeline_slcwa_resumption(self):
         """Test whether the resumed sLCWA pipeline creates the same results as the one shot pipeline."""
-        with tempfile.TemporaryDirectory() as tempdir:
-            self._test_pipeline_x_resumption(training_loop_type='sLCWA', checkpoint_root=tempdir)
+        self._test_pipeline_x_resumption(training_loop_type='sLCWA')
 
-    def _test_pipeline_x_resumption(self, training_loop_type: str, checkpoint_root: str):
+    def _test_pipeline_x_resumption(self, training_loop_type: str):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
+        checkpoint_root = self.temporary_directory.name
+
+        # TODO check that there aren't any checkpoint files already existing in the right place
+
         result_standard = pipeline(
             model=self.model,
             dataset=self.dataset,
