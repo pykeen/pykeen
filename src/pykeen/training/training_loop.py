@@ -8,6 +8,7 @@ import pathlib
 import random
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from hashlib import md5
 from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
@@ -165,6 +166,7 @@ class TrainingLoop(ABC):
         checkpoint_file: Optional[str] = None,
         checkpoint_root: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
+        checkpoint_on_failure: bool = False,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -212,6 +214,13 @@ class TrainingLoop(ABC):
             ``~/.pykeen/checkpoints``.
         :param checkpoint_frequency:
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
+        :param checkpoint_on_failure:
+            Whether to save a checkpoint in cases of a RuntimeError or MemoryError. This option differs from ordinary
+            checkpoints, since ordinary checkpoints are only saved after a successful epoch. When saving checkpoints
+            due to failure of the training loop there is no guarantee that all random states can be recovered correctly,
+            which might cause problems with regards to the reproducibility of that specific training loop. Therefore,
+            these checkpoints are saved with a distinct checkpoint name, which will be
+            PyKEEN_just_saved_my_day_{datetime}.pt in the given checkpoint_root.
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -253,15 +262,19 @@ class TrainingLoop(ABC):
             if checkpoint_frequency is None:
                 checkpoint_frequency = 30
             save_checkpoints = True
-        # If no checkpoint_file is given
         else:
-            # In case a checkpoint frequency was set, we warn that no checkpoints will be saved
             if checkpoint_frequency is not None:
                 logger.warning(
                     "A checkpoint frequency was set, but no checkpoint file was given. No checkpoints will be created",
                 )
+
+        if checkpoint_on_failure:
+            # In case a checkpoint frequency was set, we warn that no checkpoints will be saved
+            date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
             # If no checkpoints were requested, a fallback checkpoint is set in case the training loop crashes
-            checkpoint_file_path = checkpoint_root.joinpath(PYKEEN_DEFAULT_CHECKPOINT)
+            checkpoint_on_failure_file_path = checkpoint_root.joinpath(
+                PYKEEN_DEFAULT_CHECKPOINT.replace('.', f"_{date_string}."),
+            )
 
         # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
         if getattr(stopper, 'stopped', False):
@@ -285,6 +298,7 @@ class TrainingLoop(ABC):
                 checkpoint_file_path=checkpoint_file_path,
                 checkpoint_frequency=checkpoint_frequency,
                 save_checkpoints=save_checkpoints,
+                checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
             )
 
         # Ensure the release of memory
@@ -315,6 +329,7 @@ class TrainingLoop(ABC):
         checkpoint_file_path: Optional[str] = None,
         checkpoint_frequency: int = None,
         save_checkpoints: bool = False,
+        checkpoint_on_failure_file_path: Optional[str] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -355,6 +370,8 @@ class TrainingLoop(ABC):
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param save_checkpoints:
             Activate saving checkpoints.
+        :param checkpoint_on_failure_file_path:
+            Moin
 
         :return:
             A pair of the KGE model and the losses per epoch.
@@ -542,12 +559,14 @@ class TrainingLoop(ABC):
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
-                self._save_state(path=checkpoint_file_path, stopper=stopper)
-                logger.warning(
-                    "However, don't worry we got you covered. PyKEEN just saved a checkpoint before this happened "
-                    f"at '{checkpoint_file_path}'. To resume training from the checkpoint file just restart your code "
-                    "and pass this file path to the training loop or pipeline you used as 'checkpoint_file' argument.",
-                )
+                if checkpoint_on_failure_file_path:
+                    self._save_state(path=checkpoint_on_failure_file_path, stopper=stopper)
+                    logger.warning(
+                        "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this happened "
+                        f"at '{checkpoint_on_failure_file_path}'. To resume training from the checkpoint file just "
+                        f"restart your code and pass this file path to the training loop or pipeline you used "
+                        f"as 'checkpoint_file' argument.",
+                    )
                 raise e
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
