@@ -241,6 +241,7 @@ class TrainingLoop(ABC):
 
         # If a checkpoint file is given, it must be loaded if it exists already
         save_checkpoints = False
+        checkpoint_file_path = None
         if checkpoint_file:
             checkpoint_file_path = checkpoint_root.joinpath(checkpoint_file)
             if checkpoint_file_path.is_file():
@@ -268,6 +269,7 @@ class TrainingLoop(ABC):
                     "A checkpoint frequency was set, but no checkpoint file was given. No checkpoints will be created",
                 )
 
+        checkpoint_on_failure_file_path = None
         if checkpoint_on_failure:
             # In case a checkpoint frequency was set, we warn that no checkpoints will be saved
             date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
