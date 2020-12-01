@@ -11,7 +11,8 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding_in_canonical_shape, split_complex
+from ...typing import DeviceHint
+from ...utils import split_complex
 
 __all__ = [
     'ComplEx',
@@ -69,9 +70,8 @@ class ComplEx(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -81,9 +81,6 @@ class ComplEx(EntityRelationEmbeddingModel):
             The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
-            regards to the hardware at hand.
         :param loss: OptionalLoss (optional)
             The loss to use. Defaults to SoftplusLoss.
         :param preferred_device: str (optional)
@@ -96,18 +93,15 @@ class ComplEx(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            # initialize with entity and relation embeddings with standard normal distribution, cf.
+            # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
+            entity_initializer=nn.init.normal_,
+            relation_initializer=nn.init.normal_,
         )
-
-    def _reset_parameters_(self):  # noqa: D102
-        # initialize with entity and relation embeddings with standard normal distribution, cf.
-        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-        nn.init.normal_(tensor=self.entity_embeddings.weight, mean=0., std=1.)
-        nn.init.normal_(tensor=self.relation_embeddings.weight, mean=0., std=1.)
 
     @staticmethod
     def interaction_function(
@@ -144,21 +138,32 @@ class ComplEx(EntityRelationEmbeddingModel):
             ]
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:
+        """Unified score function."""
         # get embeddings
-        h, r, t = [
-            get_embedding_in_canonical_shape(embedding=e, ind=ind)
-            for e, ind in [
-                (self.entity_embeddings, hrt_batch[:, 0]),
-                (self.relation_embeddings, hrt_batch[:, 1]),
-                (self.entity_embeddings, hrt_batch[:, 2]),
-            ]
-        ]
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
-        return scores
+        # Compute scores
+        return self.interaction_function(h=h, r=r, t=t)
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
+
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

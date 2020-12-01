@@ -1,0 +1,93 @@
+name: Tests
+
+on: [ push ]
+
+jobs:
+  lint:
+    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    name: Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check manifest
+        run: tox -e manifest
+
+      - name: Check code quality with flake8
+        run: tox -e flake8
+
+      - name: Check package metadata with Pyroma
+        run: tox -e pyroma
+      # - name: Check static typing with MyPy
+      #  run: tox -e mypy
+      #  # Allow failure, see https://github.community/t/continue-on-error-allow-failure-ui-indication/16773
+      #  if: succeeded() || failed()
+  docs:
+    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    name: Documentation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check RST conformity with doc8
+        run: tox -e doc8
+
+      - name: Check README.rst
+        run: tox -e readme
+
+      - name: Check documentation build with Sphinx
+        run: |
+          sudo apt-get install graphviz
+          tox -e docs
+  tests:
+    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+      - name: Run fast tests
+        run: tox -e py
+      - name: Run slow tests
+        run: tox -e integration
+  tests_completed:
+    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 1
+        id: PR-check
+        run: echo ::set-output name=status::pending
+        continue-on-error: true
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Check on failures
+        if: steps.PR-check.outputs.status == 'pending'
+        run: exit 1

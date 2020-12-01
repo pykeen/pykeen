@@ -35,6 +35,7 @@ class SLCWATrainingLoop(TrainingLoop):
         optimizer: Optional[Optimizer] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
+        automatic_memory_optimization: bool = True,
     ):
         """Initialize the training loop.
 
@@ -43,10 +44,14 @@ class SLCWATrainingLoop(TrainingLoop):
         :param negative_sampler_cls: The class of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
          for every positive one
+        :param automatic_memory_optimization:
+            Whether to automatically optimize the sub-batch size during
+            training and batch size during evaluation with regards to the hardware at hand.
         """
         super().__init__(
             model=model,
             optimizer=optimizer,
+            automatic_memory_optimization=automatic_memory_optimization,
         )
 
         if negative_sampler_cls is None:

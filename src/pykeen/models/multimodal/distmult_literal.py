@@ -11,6 +11,7 @@ from torch.nn.init import xavier_normal_
 from ..base import MultimodalModel
 from ...losses import Loss
 from ...triples import TriplesNumericLiteralsFactory
+from ...typing import DeviceHint
 from ...utils import slice_triples
 
 
@@ -30,16 +31,14 @@ class DistMultLiteral(MultimodalModel):
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.0,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -110,6 +109,9 @@ class DistMultLiteral(MultimodalModel):
         :return:
         """
         return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        raise NotImplementedError
 
     def score_t(self, hr_batch: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (tail) prediction for training with the LCWA."""

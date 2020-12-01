@@ -6,7 +6,7 @@ import functools
 import inspect
 import itertools as itt
 import logging
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
@@ -16,12 +16,11 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, NSSALoss
+from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
-from ..tqdmw import tqdm
 from ..triples import TriplesFactory
-from ..typing import MappedTriples
-from ..utils import NoRandomSeedNecessary, get_embedding, resolve_device, set_random_seed
-from ..version import get_version
+from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -206,7 +205,7 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
     cls.__init__ = _new_init
 
 
-class Model(nn.Module):
+class Model(nn.Module, ABC):
     """A base module for all of the KGE models."""
 
     #: A dictionary of hyper-parameters to the models that use them
@@ -232,8 +231,7 @@ class Model(nn.Module):
         triples_factory: TriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -247,10 +245,6 @@ class Model(nn.Module):
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param automatic_memory_optimization:
-            If set to `True`, the model derives the maximum possible batch sizes for the scoring of triples during
-            evaluation and also training (if no batch size was given). This allows to fully utilize the hardware at hand
-            and achieves the fastest calculations possible.
         :param preferred_device:
             The preferred device for model training and inference.
         :param random_seed:
@@ -268,9 +262,6 @@ class Model(nn.Module):
             logger.warning('No random seed is specified. This may lead to non-reproducible results.')
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
-
-        if automatic_memory_optimization is None:
-            automatic_memory_optimization = True
 
         # Loss
         if loss is None:
@@ -300,8 +291,15 @@ class Model(nn.Module):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-        # This allows to store the optimized parameters
-        self.automatic_memory_optimization = automatic_memory_optimization
+    @classmethod
+    def _is_abstract(cls) -> bool:
+        return inspect.isabstract(cls)
+
+    def __init_subclass__(cls, reset_parameters_post_init: bool = True, **kwargs):  # noqa:D105
+        if not cls._is_abstract():
+            _track_hyperparameters(cls)
+            if reset_parameters_post_init:
+                _add_post_reset_parameters(cls)
 
     @property
     def can_slice_h(self) -> bool:
@@ -354,7 +352,7 @@ class Model(nn.Module):
         """The number of unique relation types in the knowledge graph."""
         return self.triples_factory.num_relations
 
-    def _set_device(self, device: Union[None, str, torch.device] = None) -> None:
+    def _set_device(self, device: DeviceHint = None) -> None:
         """Set the Torch device to use."""
         self.device = resolve_device(device=device)
 
@@ -600,7 +598,7 @@ class Model(nn.Module):
             return scores
 
         '''
-        The PyKEEN package handles _inverse relations_ by adding the number of relations to the index of the
+        The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
         _native relation_.
         Example:
         The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
@@ -777,12 +775,12 @@ class Model(nn.Module):
 
                 # reduce size if necessary
                 if result.shape[0] > k:
-                    scores, ind = scores.topk(k=k, largest=True, sorted=False)
-                    result = result[ind]
+                    scores, indices = scores.topk(k=k, largest=True, sorted=False)
+                    result = result[indices]
 
             # Sort final result
-            scores, ind = torch.sort(scores, descending=True)
-            result = result[ind]
+            scores, indices = torch.sort(scores, descending=True)
+            result = result[indices]
 
         if return_tensors:
             return result, scores
@@ -1001,44 +999,6 @@ class Model(nn.Module):
         # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
         return filter(lambda p: p.requires_grad, self.parameters())
 
-    def to_embeddingdb(self, session=None, use_tqdm: bool = False):
-        """Upload to the embedding database.
-
-        :param session: Optional SQLAlchemy session
-        :param use_tqdm: Use :mod:`tqdm` progress bar?
-        :rtype: embeddingdb.sql.models.Collection
-        """
-        from embeddingdb.sql.models import Embedding, Collection
-
-        if session is None:
-            from embeddingdb.sql.models import get_session
-            session = get_session()
-
-        collection = Collection(
-            package_name='pykeen',
-            package_version=get_version(),
-            dimensions=self.embedding_dim,
-        )
-
-        embeddings = self.entity_embeddings.weight.detach().cpu().numpy()
-        names = sorted(
-            self.triples_factory.entity_to_id,
-            key=self.triples_factory.entity_to_id.get,
-        )
-
-        if use_tqdm:
-            names = tqdm(names, desc='Building SQLAlchemy models')
-        for name, embedding in zip(names, embeddings):
-            embedding = Embedding(
-                collection=collection,
-                curie=name,
-                vector=list(embedding),
-            )
-            session.add(embedding)
-        session.add(collection)
-        session.commit()
-        return collection
-
     @property
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
@@ -1070,10 +1030,16 @@ class EntityEmbeddingModel(Model):
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1084,27 +1050,36 @@ class EntityEmbeddingModel(Model):
         """
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.embedding_dim = embedding_dim
-        self.entity_embeddings = get_embedding(
+        self.entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=embedding_dim,
             device=self.device,
+            initializer=entity_initializer,
+            initializer_kwargs=entity_initializer_kwargs,
+            normalizer=entity_normalizer,
+            normalizer_kwargs=entity_normalizer_kwargs,
+            constrainer=entity_constrainer,
+            constrainer_kwargs=entity_constrainer_kwargs,
         )
 
-    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
-        _track_hyperparameters(cls)
-        if auto_reset_parameters:
-            _add_post_reset_parameters(cls)
+    @property
+    def embedding_dim(self) -> int:  # noqa:D401
+        """The entity embedding dimension."""
+        return self.entity_embeddings.embedding_dim
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # make sure to call this first, to reset regularizer state!
+        super().post_parameter_update()
+        self.entity_embeddings.post_parameter_update()
 
 
 class EntityRelationEmbeddingModel(Model):
@@ -1117,10 +1092,21 @@ class EntityRelationEmbeddingModel(Model):
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Optional[Initializer] = None,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer: Optional[Normalizer] = None,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer: Optional[Constrainer] = None,
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Optional[Initializer] = None,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_normalizer: Optional[Normalizer] = None,
+        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer: Optional[Constrainer] = None,
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -1133,39 +1119,59 @@ class EntityRelationEmbeddingModel(Model):
         """
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.embedding_dim = embedding_dim
-        self.entity_embeddings = get_embedding(
+        self.entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=self.embedding_dim,
+            embedding_dim=embedding_dim,
             device=self.device,
+            initializer=entity_initializer,
+            initializer_kwargs=entity_initializer_kwargs,
+            normalizer=entity_normalizer,
+            normalizer_kwargs=entity_normalizer_kwargs,
+            constrainer=entity_constrainer,
+            constrainer_kwargs=entity_constrainer_kwargs,
         )
 
         # Default for relation dimensionality
         if relation_dim is None:
             relation_dim = embedding_dim
 
-        self.relation_dim = relation_dim
-        self.relation_embeddings = get_embedding(
+        self.relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=self.relation_dim,
+            embedding_dim=relation_dim,
             device=self.device,
+            initializer=relation_initializer,
+            initializer_kwargs=relation_initializer_kwargs,
+            normalizer=relation_normalizer,
+            normalizer_kwargs=relation_normalizer_kwargs,
+            constrainer=relation_constrainer,
+            constrainer_kwargs=relation_constrainer_kwargs,
         )
 
-    def __init_subclass__(cls, auto_reset_parameters: bool = True, **kwargs):  # noqa: D105
-        _track_hyperparameters(cls)
-        if auto_reset_parameters:
-            _add_post_reset_parameters(cls)
+    @property
+    def embedding_dim(self) -> int:  # noqa:D401
+        """The entity embedding dimension."""
+        return self.entity_embeddings.embedding_dim
+
+    @property
+    def relation_dim(self):  # noqa:D401
+        """The relation embedding dimension."""
+        return self.relation_embeddings.embedding_dim
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
         self.relation_embeddings.reset_parameters()
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # make sure to call this first, to reset regularizer state!
+        super().post_parameter_update()
+        self.entity_embeddings.post_parameter_update()
+        self.relation_embeddings.post_parameter_update()
 
 
 def _can_slice(fn) -> bool:

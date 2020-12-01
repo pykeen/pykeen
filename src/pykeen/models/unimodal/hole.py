@@ -8,10 +8,11 @@ import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
 from ...losses import Loss
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 from ...utils import clamp_norm
 
 __all__ = [
@@ -56,9 +57,8 @@ class HolE(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -67,23 +67,15 @@ class HolE(EntityRelationEmbeddingModel):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             loss=loss,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
+            entity_initializer=xavier_uniform_,
+            relation_initializer=xavier_uniform_,
+            entity_constrainer=clamp_norm,
+            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-
-    def _reset_parameters_(self):  # noqa: D102
-        # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        embedding_xavier_uniform_(self.entity_embeddings)
-        embedding_xavier_uniform_(self.relation_embeddings)
 
     @staticmethod
     def interaction_function(
@@ -124,9 +116,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(dim=1)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -136,9 +128,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings.weight.unsqueeze(dim=0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -148,9 +140,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.weight.unsqueeze(dim=0)
-        r = self.relation_embeddings(rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(dim=1)
+        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

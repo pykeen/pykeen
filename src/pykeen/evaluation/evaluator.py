@@ -13,9 +13,9 @@ from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
 
 import torch
 from dataclasses_json import dataclass_json
+from tqdm.autonotebook import tqdm
 
 from ..models.base import Model
-from ..tqdmw import tqdm
 from ..triples.triples_factory import get_unique_entity_ids_from_triples_tensor
 from ..typing import MappedTriples
 from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
@@ -65,13 +65,15 @@ class Evaluator(ABC):
         self,
         filtered: bool = False,
         requires_positive_mask: bool = False,
-        batch_size: int = None,
-        slice_size: int = None,
+        batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
+        automatic_memory_optimization: bool = True,
     ):
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
+        self.automatic_memory_optimization = automatic_memory_optimization
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -135,7 +137,7 @@ class Evaluator(ABC):
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
-        if batch_size is None and model.automatic_memory_optimization:
+        if batch_size is None and self.automatic_memory_optimization:
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,

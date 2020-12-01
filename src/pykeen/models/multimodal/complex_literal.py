@@ -11,6 +11,7 @@ from torch.nn.init import xavier_normal_
 from ..base import MultimodalModel
 from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
+from ...typing import DeviceHint
 from ...utils import slice_doubles
 
 
@@ -36,17 +37,15 @@ class ComplExLiteral(MultimodalModel):
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         input_dropout: float = 0.2,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -94,6 +93,9 @@ class ComplExLiteral(MultimodalModel):
         real = self.real_non_lin_transf(torch.cat([real_embs, literals], 1))
         img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
         return real, img
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        raise NotImplementedError
 
     def score_t(self, doubles: torch.Tensor) -> torch.Tensor:
         """Forward pass using right side (tail) prediction for training with the LCWA."""

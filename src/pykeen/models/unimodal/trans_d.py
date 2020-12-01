@@ -8,11 +8,13 @@ import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_normal_
 from ...losses import Loss
+from ...nn import Embedding
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding, get_embedding_in_canonical_shape
+from ...typing import DeviceHint
+from ...utils import clamp_norm
 
 __all__ = [
     'TransD',
@@ -108,10 +110,9 @@ class TransD(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         relation_dim: int = 30,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -119,42 +120,35 @@ class TransD(EntityRelationEmbeddingModel):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             relation_dim=relation_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
+            entity_constrainer=clamp_norm,
+            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_constrainer=clamp_norm,
+            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 
-        self.entity_projections = get_embedding(
+        self.entity_projections = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
+            initializer=xavier_normal_,
         )
-        self.relation_projections = get_embedding(
+        self.relation_projections = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=relation_dim,
             device=self.device,
-        )
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-        self.relation_embeddings.weight.data = clamp_norm(
-            x=self.relation_embeddings.weight.data,
-            maxnorm=1.,
-            p=2,
-            dim=-1,
+            initializer=xavier_normal_,
         )
 
     def _reset_parameters_(self):  # noqa: D102
-        embedding_xavier_normal_(self.entity_embeddings)
-        embedding_xavier_normal_(self.entity_projections)
-        embedding_xavier_normal_(self.relation_embeddings)
-        embedding_xavier_normal_(self.relation_projections)
+        super()._reset_parameters_()
+        self.entity_projections.reset_parameters()
+        self.relation_projections.reset_parameters()
 
     @staticmethod
     def interaction_function(
@@ -194,39 +188,39 @@ class TransD(EntityRelationEmbeddingModel):
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
+        h_indices: Optional[torch.LongTensor] = None,
+        r_indices: Optional[torch.LongTensor] = None,
+        t_indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """
         Evaluate the interaction function.
 
-        :param h_ind: shape: (batch_size,)
-            The indices for head entities. If None, score against all.
-        :param r_ind: shape: (batch_size,)
-            The indices for relations. If None, score against all.
-        :param t_ind: shape: (batch_size,)
-            The indices for tail entities. If None, score against all.
+        :param h_indices: shape: (batch_size,)
+            The indices of head entities. If None, score against all.
+        :param r_indices: shape: (batch_size,)
+            The indices of relations. If None, score against all.
+        :param t_indices: shape: (batch_size,)
+            The indices of tail entities. If None, score against all.
 
         :return: The scores, shape: (batch_size, num_entities)
         """
         # Head
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        h_p = get_embedding_in_canonical_shape(embedding=self.entity_projections, ind=h_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        h_p = self.entity_projections.get_in_canonical_shape(indices=h_indices)
 
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        r_p = get_embedding_in_canonical_shape(embedding=self.relation_projections, ind=r_ind)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        r_p = self.relation_projections.get_in_canonical_shape(indices=r_indices)
 
-        t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-        t_p = get_embedding_in_canonical_shape(embedding=self.entity_projections, ind=t_ind)
+        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        t_p = self.entity_projections.get_in_canonical_shape(indices=t_indices)
 
         return self.interaction_function(h=h, h_p=h_p, r=r, r_p=r_p, t=t, t_p=t_p)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2])
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2])
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None)
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

@@ -11,6 +11,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'ERMLPE',
@@ -59,16 +60,14 @@ class ERMLPE(EntityRelationEmbeddingModel):
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
@@ -105,9 +104,9 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -127,9 +126,9 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings.weight.transpose(1, 0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(indices=None).transpose(1, 0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -147,9 +146,9 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim)
+        h = self.entity_embeddings(indices=None)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

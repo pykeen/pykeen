@@ -13,6 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint
 
 __all__ = [
     'ConvKB',
@@ -75,9 +76,8 @@ class ConvKB(EntityRelationEmbeddingModel):
         triples_factory: TriplesFactory,
         hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
@@ -90,7 +90,6 @@ class ConvKB(EntityRelationEmbeddingModel):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             loss=loss,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
@@ -120,9 +119,9 @@ class ConvKB(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.conv.bias)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Output layer regularization
         # In the code base only the weights of the output layer are used for regularization

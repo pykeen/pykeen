@@ -101,6 +101,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.optimizer_option
     @regularizer_option
     @options.training_loop_option
+    @options.automatic_memory_optimization_option
     @options.number_epochs_option
     @options.batch_size_option
     @options.learning_rate_option
@@ -111,6 +112,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
+    @click.option('--silent', is_flag=True)
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
         *,
@@ -127,11 +129,13 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         mlflow_tracking_uri,
         title,
         dataset,
+        automatic_memory_optimization,
         training_triples_factory,
         testing_triples_factory,
         validation_triples_factory,
         num_workers,
         random_seed,
+        silent: bool,
         **model_kwargs,
     ):
         """CLI for PyKEEN."""
@@ -178,10 +182,12 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 title=title,
             ),
             random_seed=random_seed,
+            automatic_memory_optimization=automatic_memory_optimization,
         )
 
-        json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
-        click.echo('')
+        if not silent:
+            json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
+            click.echo('')
         return sys.exit(0)
 
     return main

@@ -18,9 +18,9 @@ from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar,
 
 import numpy as np
 from tabulate import tabulate
+from tqdm.autonotebook import tqdm
 
 from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
-from ..tqdmw import tqdm
 from ..typing import LabeledTriples
 
 __all__ = [
