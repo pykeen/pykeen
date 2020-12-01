@@ -150,15 +150,27 @@ def _check_call(
     if should_be_called:
         call_count += 1
 
-        self.assertEqual(wrapped.call_count, call_count)
+        self.assertEqual(call_count, wrapped.call_count)
+
+        # Lets check the tuple
+        self.assertIsInstance(wrapped.call_args, tuple)
+
+        call_size = len(wrapped.call_args)
+        # Make sure tuple at least has positional arguments, could be 3 if kwargs available
+        self.assertLessEqual(2, call_size)
+
+        if call_size == 2:
+            args_idx, kwargs_idx = 0, 1
+        else:  # call_size == 3:
+            args_idx, kwargs_idx = 1, 2
 
         # called with one positional argument ...
-        self.assertEqual(1, len(wrapped.call_args.args))
-
+        self.assertEqual(1, len(wrapped.call_args[args_idx]),
+                         msg=f'Args: {wrapped.call_args[args_idx]} Kwargs: {wrapped.call_args[kwargs_idx]}')
         # .. and additional key-word based arguments.
-        self.assertEqual(len(wrapped.call_args.kwargs), len(kwargs or {}))
+        self.assertEqual(len(kwargs or {}), len(wrapped.call_args[kwargs_idx]))
     else:
-        self.assertEqual(wrapped.call_count, call_count)
+        self.assertEqual(call_count, wrapped.call_count)
     return call_count
 
 
