@@ -45,8 +45,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
         hidden_dim=dict(type=int, low=50, high=450, q=25),
-        input_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
-        hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
+        input_dropout=dict(type=float, low=0.0, high=0.5, q=0.1),
+        hidden_dropout=dict(type=float, low=0.0, high=0.5, q=0.1),
     )
     #: The default loss function class
     loss_default: Type[Loss] = BCEAfterSigmoidLoss

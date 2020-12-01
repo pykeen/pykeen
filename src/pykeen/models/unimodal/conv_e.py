@@ -149,9 +149,9 @@ class ConvE(EntityRelationEmbeddingModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         output_channels=dict(type=int, low=16, high=64),
-        input_dropout=dict(type=float, low=0.0, high=1.0),
-        output_dropout=dict(type=float, low=0.0, high=1.0),
-        feature_map_dropout=dict(type=float, low=0.0, high=1.0),
+        input_dropout=dict(type=float, low=0.0, high=0.5),
+        output_dropout=dict(type=float, low=0.0, high=0.5),
+        feature_map_dropout=dict(type=float, low=0.0, high=0.5, q=0.1),
     )
     #: The default loss function class
     loss_default: Type[Loss] = BCEAfterSigmoidLoss

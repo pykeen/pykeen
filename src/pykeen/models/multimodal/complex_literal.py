@@ -22,11 +22,7 @@ class ComplExLiteral(MultimodalModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
-        input_dropout={
-            'type': float,
-            'low': 0.1,
-            'high': 0.3,
-        },
+        input_dropout=dict(type=float, low=0.0, high=0.5, q=0.1)
     )
     #: The default loss function class
     loss_default = BCEWithLogitsLoss

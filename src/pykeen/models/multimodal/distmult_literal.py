@@ -22,7 +22,7 @@ class DistMultLiteral(MultimodalModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=350, q=25),
-        input_dropout=dict(type=float, low=0, high=1.0),
+        input_dropout=dict(type=float, low=0, high=0.5, q=0.1),
     )
     #: The default parameters for the default loss function class
     loss_default_kwargs = dict(margin=0.0)

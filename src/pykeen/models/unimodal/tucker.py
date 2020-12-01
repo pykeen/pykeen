@@ -67,9 +67,9 @@ class TuckER(EntityRelationEmbeddingModel):
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
         relation_dim=dict(type=int, low=30, high=200, q=25),
-        dropout_0=dict(type=float, low=0.1, high=0.4),
-        dropout_1=dict(type=float, low=0.1, high=0.5),
-        dropout_2=dict(type=float, low=0.1, high=0.6),
+        dropout_0=dict(type=float, low=0.0, high=0.5, q=0.1),
+        dropout_1=dict(type=float, low=0.0, high=0.5, q=0.1),
+        dropout_2=dict(type=float, low=0.0, high=0.5, q=0.1),
     )
     #: The default loss function class
     loss_default = BCEAfterSigmoidLoss

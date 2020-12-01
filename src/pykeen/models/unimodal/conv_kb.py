@@ -58,7 +58,7 @@ class ConvKB(EntityRelationEmbeddingModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
-        hidden_dropout_rate=dict(type=float, low=0.1, high=0.9),
+        hidden_dropout_rate=dict(type=float, low=0.0, high=0.5, q=0.1),
         num_filters=dict(type=int, low=300, high=500, q=50),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
