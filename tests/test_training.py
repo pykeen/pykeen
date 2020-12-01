@@ -2,8 +2,8 @@
 
 """Test that training loops work correctly."""
 
+import tempfile
 import unittest
-from datetime import datetime
 from typing import Optional
 
 import torch
@@ -97,8 +97,7 @@ class TrainingLoopTests(unittest.TestCase):
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
         self.random_seed = 123
-        date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
-        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{date_string}.pt"
+        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint.pt"
         self.num_epochs = 10
 
     def test_sub_batching(self):
@@ -145,13 +144,15 @@ class TrainingLoopTests(unittest.TestCase):
 
     def test_lcwa_checkpoints(self):
         """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
-        self._test_checkpoints(training_loop_type='LCWA')
+        with tempfile.TemporaryDirectory() as tempdir:
+            self._test_checkpoints(training_loop_type='LCWA', checkpoint_root=tempdir)
 
     def test_slcwa_checkpoints(self):
         """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
-        self._test_checkpoints(training_loop_type='sLCWA')
+        with tempfile.TemporaryDirectory() as tempdir:
+            self._test_checkpoints(training_loop_type='sLCWA', checkpoint_root=tempdir)
 
-    def _test_checkpoints(self, training_loop_type: str):
+    def _test_checkpoints(self, training_loop_type: str, checkpoint_root: str):
         """Test whether interrupting the given training loop type can be resumed using checkpoints."""
         training_loop_class = get_training_loop_cls(training_loop_type)
 
@@ -177,6 +178,7 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
+            checkpoint_root=checkpoint_root,
             checkpoint_frequency=0,
         )
 
@@ -192,6 +194,7 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
             checkpoint_file=self.checkpoint_file,
+            checkpoint_root=checkpoint_root,
             checkpoint_frequency=0,
         )
 

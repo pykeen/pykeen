@@ -2,8 +2,8 @@
 
 """Test the PyKEEN pipeline function."""
 
+import tempfile
 import unittest
-from datetime import datetime
 
 import pandas as pd
 
@@ -117,18 +117,19 @@ class TestPipelineCheckpoints(unittest.TestCase):
         self.random_seed = 123
         self.model = 'TransE'
         self.dataset = 'nations'
-        date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
-        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint_{date_string}.pt"
+        self.checkpoint_file = f"PyKEEN_training_loop_test_checkpoint.pt"
 
     def test_pipeline_lcwa_resumption(self):
         """Test whether the resumed LCWA pipeline creates the same results as the one shot pipeline."""
-        self._test_pipeline_x_resumption(training_loop_type='LCWA')
+        with tempfile.TemporaryDirectory() as tempdir:
+            self._test_pipeline_x_resumption(training_loop_type='LCWA', checkpoint_root=tempdir)
 
     def test_pipeline_slcwa_resumption(self):
         """Test whether the resumed sLCWA pipeline creates the same results as the one shot pipeline."""
-        self._test_pipeline_x_resumption(training_loop_type='sLCWA')
+        with tempfile.TemporaryDirectory() as tempdir:
+            self._test_pipeline_x_resumption(training_loop_type='sLCWA', checkpoint_root=tempdir)
 
-    def _test_pipeline_x_resumption(self, training_loop_type: str):
+    def _test_pipeline_x_resumption(self, training_loop_type: str, checkpoint_root: str):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
         result_standard = pipeline(
             model=self.model,
@@ -143,7 +144,12 @@ class TestPipelineCheckpoints(unittest.TestCase):
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs=dict(num_epochs=5, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
+            training_kwargs=dict(
+                num_epochs=5,
+                checkpoint_file=self.checkpoint_file,
+                checkpoint_root=checkpoint_root,
+                checkpoint_frequency=0,
+            ),
             random_seed=self.random_seed,
         )
 
@@ -152,7 +158,12 @@ class TestPipelineCheckpoints(unittest.TestCase):
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs=dict(num_epochs=10, checkpoint_file=self.checkpoint_file, checkpoint_frequency=0),
+            training_kwargs=dict(
+                num_epochs=10,
+                checkpoint_file=self.checkpoint_file,
+                checkpoint_root=checkpoint_root,
+                checkpoint_frequency=0,
+            ),
         )
         self.assertEqual(result_standard.losses, result_split.losses)
 
