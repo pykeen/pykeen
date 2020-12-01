@@ -164,7 +164,12 @@ class TrainingLoopTests(unittest.TestCase):
         optimizer_cls = get_optimizer_cls(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
-        losses = training_loop.train(num_epochs=self.num_epochs, batch_size=self.batch_size)
+        losses = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            use_tqdm=False,
+            use_tqdm_batch=False,
+        )
 
         # Train a model for the first half
         model = TransE(

@@ -135,7 +135,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs=dict(num_epochs=10),
+            training_kwargs=dict(num_epochs=10, use_tqdm=False, use_tqdm_batch=False),
             random_seed=self.random_seed,
         )
 
@@ -146,6 +146,8 @@ class TestPipelineCheckpoints(unittest.TestCase):
             training_loop=training_loop_type,
             training_kwargs=dict(
                 num_epochs=5,
+                use_tqdm=False,
+                use_tqdm_batch=False,
                 checkpoint_file=self.checkpoint_file,
                 checkpoint_root=checkpoint_root,
                 checkpoint_frequency=0,
@@ -160,6 +162,8 @@ class TestPipelineCheckpoints(unittest.TestCase):
             training_loop=training_loop_type,
             training_kwargs=dict(
                 num_epochs=10,
+                use_tqdm=False,
+                use_tqdm_batch=False,
                 checkpoint_file=self.checkpoint_file,
                 checkpoint_root=checkpoint_root,
                 checkpoint_frequency=0,
