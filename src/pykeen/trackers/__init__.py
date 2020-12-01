@@ -6,6 +6,7 @@ from typing import Mapping, Type, Union
 
 from .base import ResultTracker
 from .mlflow import MLFlowResultTracker
+from .neptune import NeptuneResultTracker
 from .wandb import WANDBResultTracker
 from ..utils import get_cls, normalize_string
 
@@ -13,6 +14,7 @@ __all__ = [
     'ResultTracker',
     'get_result_tracker_cls',
     'MLFlowResultTracker',
+    'NeptuneResultTracker',
     'WANDBResultTracker',
 ]
 
