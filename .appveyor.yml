@@ -1,5 +1,8 @@
 # Configuration for AppVeyor builds
 
+only_commits:
+  message: /Trigger CI/
+
 environment:
   # Appveyor machines come with miniconda already installed.
   CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\continuous-integration\\appveyor\\run_with_env.cmd"
