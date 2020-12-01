@@ -26,9 +26,9 @@ The only implementation we have to provide is of the `score_hrt` member function
     class ModifiedDistMult(EntityRelationEmbeddingModel):
         def score_hrt(self, hrt_batch):
             # Get embeddings
-            h = self.entity_embeddings(  hrt_batch[:, 0])
+            h = self.entity_embeddings(hrt_batch[:, 0])
             r = self.relation_embeddings(hrt_batch[:, 1])
-            t = self.entity_embeddings(  hrt_batch[:, 2])
+            t = self.entity_embeddings(hrt_batch[:, 2])
             # evaluate interaction function
             return h * r.sigmoid() * t
 
@@ -40,8 +40,8 @@ The ``hrt_batch`` is a long tensor representing the internal indices of the edge
 The above example shows a very common way of slicing it to get separate lists of
 head indices (``hrt_batch[:, 0]``), relation indices (``hrt_batch[:, 1]``), and
 tail indices (``hrt_batch[:, 2]``). Then, they are passed to the embeddings to
-look up the actual values. This is vectorized, so the results are also lists
-of embeddings (2-tensors) on which vectorized math can be applied.
+look up the actual values. This is vectorized, so the results are also 2-tensors
+(tensors of embeddings) on which vectorized math can be applied.
 
 Using a Custom Model with the Pipeline
 --------------------------------------
@@ -63,9 +63,9 @@ classes in the ``model`` argument.
 Adding Defaults
 ---------------
 You'll notice that this model is not compatible with :class:`pykeen.losses.MarginRankingLoss`
-because the sigmoid causes it to be non-finite in some cases. If you have a preferred
-loss function for your model, you can add the ``loss_default`` class variable
-where the value is the loss class.
+because the application of the sigmoid to the relation causes some resulting scores to be
+non-finite in some cases. If you have a preferred loss function for your model, you can add
+the ``loss_default`` class variable where the value is the loss class.
 
 .. code-block:: python
 
@@ -201,7 +201,8 @@ for integers as in:
 
     class ModifiedLinearDistMult(EntityRelationEmbeddingModel):
         hpo_default = {
-            'hidden_dim': dict(type=int, low=15, high=50, scale='power_two')
+            # will uniformly give 2, 4, 8 (left inclusive, right exclusive)
+            'hidden_dim': dict(type=int, low=2, high=4, scale='power_two')
         }
         ...
 
