@@ -281,7 +281,8 @@ def test_estimate_cost_of_add_sequence():
     for shapes in _generate_shapes():
         arrays = [torch.empty(*shape) for shape in shapes]
         cost = estimate_cost_of_sequence(*(a.shape for a in arrays))
-        consumption = timeit.timeit(stmt='sum(arrays)', globals=locals(), number=25)
+        n_samples, time = timeit.Timer(stmt='sum(arrays)', globals=dict(arrays=arrays)).autorange()
+        consumption = time / n_samples
         data.append((cost, consumption))
     a = numpy.asarray(data)
 
