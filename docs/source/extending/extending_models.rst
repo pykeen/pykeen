@@ -15,8 +15,8 @@ From the reference documentation on base models (:mod:`pykeen.models.base`), we 
 :class:`pykeen.models.base.EntityRelationEmbeddingModel` is a good candidate for a base class
 since we want to have embeddings for entities *and* relations.
 
-Implementing `score_hrt()`
---------------------------
+Implementing ``score_hrt()``
+----------------------------
 The only implementation we have to provide is of the `score_hrt` member function:
 
 .. code-block:: python
