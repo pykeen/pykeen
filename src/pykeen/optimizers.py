@@ -53,29 +53,22 @@ optimizers: Mapping[str, Type[Optimizer]] = {
 #: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
 optimizers_hpo_defaults: Mapping[Type[Optimizer], Mapping[str, Any]] = {
     Adadelta: dict(
-        lr=dict(type=float, low=0.001, high=0.1, scale='log'),
         weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
     ),
     Adagrad: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        lr_decay=dict(type=float, low=0.001, high=0.1, scale='log'),
-        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
     ),
     Adam: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
     ),
     Adamax: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
     ),
     AdamW: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
     ),
     SGD: dict(
         lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        weight_decay=dict(type=float, low=0., high=1.0, q=0.1),
     ),
 }
 
