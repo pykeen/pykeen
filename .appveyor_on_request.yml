@@ -1,12 +1,11 @@
 # Configuration for AppVeyor builds
 
 branches:
-  only:
+  except:
     - master
 
-# Skipping commits with 'skip ci' messages
-skip_commits:
-  message: skip ci
+only_commits:
+  message: Trigger CI
 
 environment:
   # Appveyor machines come with miniconda already installed.
