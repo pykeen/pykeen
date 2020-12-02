@@ -79,26 +79,6 @@ def _split_triples(
     return triples_groups
 
 
-def _select_to_cover(
-    index: Mapping[int, Sequence[int]],
-    covered: Set[int],
-    covered_relations: Set[int],
-    covered_entities: Set[int],
-    all_triples: np.ndarray,
-    seed_mask: np.ndarray,
-) -> None:
-    for i, triple_ids in index.items():
-        if i in covered:
-            continue
-        # randomly select triple
-        tr_id = random.choice(triple_ids)
-        seed_mask[tr_id] = True
-        # update coverage
-        h_id, r_id, t_id = all_triples[tr_id]
-        covered_entities.update(h_id, t_id)
-        covered_relations.add(r_id)
-
-
 def split(
     triples,
     ratios,
@@ -156,7 +136,7 @@ def _split_triples_with_train_coverage(
     :return:
         The groups, where the first group is guaranteed to contain each entity and relation at least once.
     """
-    seed_mask = _get_cover(all_triples)
+    seed_mask = _get_cover_randomized_greedy(all_triples)
     train_seed = all_triples[seed_mask]
     remaining_triples = all_triples[~seed_mask]
     # TODO: what to do if train_seed.shape[0] > sizes[0]
@@ -165,7 +145,16 @@ def _split_triples_with_train_coverage(
     return np.concatenate([train_seed, train]), *rest
 
 
-def _get_cover_deterministic(all_triples):
+def _get_cover_deterministic(all_triples: np.ndarray) -> np.ndarray:
+    """
+    Get a coverage mask for all entities and relations.
+
+    :param all_triples: shape: (n, 3)
+        The triples.
+
+    :return: shape: (n,)
+        A boolean mask indicating whether the triple is part of the cover.
+    """
     num_entities = all_triples[:, [0, 2]].max() + 1
     num_relations = all_triples[:, 1].max() + 1
     num_triples = all_triples.shape[0]
@@ -185,7 +174,27 @@ def _get_cover_deterministic(all_triples):
     return seed_mask
 
 
-def _get_cover(all_triples):
+def _select_to_cover(
+    index: Mapping[int, Sequence[int]],
+    covered: Set[int],
+    covered_relations: Set[int],
+    covered_entities: Set[int],
+    all_triples: np.ndarray,
+    seed_mask: np.ndarray,
+) -> None:
+    for i, triple_ids in index.items():
+        if i in covered:
+            continue
+        # randomly select triple
+        tr_id = random.choice(triple_ids)
+        seed_mask[tr_id] = True
+        # update coverage
+        h_id, r_id, t_id = all_triples[tr_id]
+        covered_entities.update(h_id, t_id)
+        covered_relations.add(r_id)
+
+
+def _get_cover_randomized_greedy(all_triples):
     # TODO: Relative split sizes?
     num_triples = all_triples.shape[0]
     # index triples
