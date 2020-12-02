@@ -54,7 +54,7 @@ def main(replicates: int):
         'OGBBioKG',
         'hetionet',
         'OGBWikiKG',
-        'openbiolink'
+        'openbiolink',
         'drkg',
     ]
 
