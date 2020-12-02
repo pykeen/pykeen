@@ -17,7 +17,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 @click.command()
-@click.option('-r', '--replicates', type=int, default=10, show_default=True)
+@click.option('-r', '--replicates', type=int, default=5, show_default=True)
 def main(replicates: int):
     import pykeen.triples.splitting
     pykeen.triples.splitting.logger.setLevel(logging.ERROR)
@@ -36,6 +36,7 @@ def main(replicates: int):
         'codexmedium',
         'codexlarge',
         'wn18rr',
+        'FB15k237',
     ]
 
     rows = []
