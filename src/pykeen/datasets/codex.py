@@ -6,7 +6,7 @@
 - Paper: https://arxiv.org/pdf/2009.07810.pdf
 """
 
-from .base import UnpackedRemoteDataSet
+from .base import UnpackedRemoteDataset
 
 BASE_URL = 'https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/'
 SMALL_VALID_URL = f'{BASE_URL}/codex-s/valid.txt'
@@ -26,14 +26,14 @@ LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 # the data posted at https://github.com/pykeen/pykeen/pull/154#issuecomment-730462039
 
 
-class CoDExSmall(UnpackedRemoteDataSet):
+class CoDExSmall(UnpackedRemoteDataset):
     """The CoDEx small dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         # GitHub's raw.githubusercontent.com service rejects requests that are streamable. This is
         # normally the default for all of PyKEEN's remote datasets, so just switch the default here.
@@ -47,14 +47,14 @@ class CoDExSmall(UnpackedRemoteDataSet):
         )
 
 
-class CoDExMedium(UnpackedRemoteDataSet):
+class CoDExMedium(UnpackedRemoteDataset):
     """The CoDEx medium dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         kwargs.setdefault('stream', False)  # See comment in CoDExSmall
         super().__init__(
@@ -66,14 +66,14 @@ class CoDExMedium(UnpackedRemoteDataSet):
         )
 
 
-class CoDExLarge(UnpackedRemoteDataSet):
+class CoDExLarge(UnpackedRemoteDataset):
     """The CoDEx large dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataSet`.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         kwargs.setdefault('stream', False)  # See comment in CoDExSmall
         super().__init__(

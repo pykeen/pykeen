@@ -65,7 +65,7 @@ can be found in the [installation documentation](https://pykeen.readthedocs.io/e
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
-This example shows how to train a model on a data set and test on another data set.
+This example shows how to train a model on a dataset and test on another dataset.
 
 The fastest way to get up and running is to use the pipeline function. It
 provides a high-level entry into the extensible functionality of this package.
@@ -98,7 +98,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 
 ## Implementation
 
-Below are the models, data sets, training modes, evaluators, and metrics implemented
+Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
@@ -166,7 +166,7 @@ experiments. They can be accessed and run like:
 pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
-Where the three arguments are the model name, the reference, and the data set.
+Where the three arguments are the model name, the reference, and the dataset.
 The output directory can be optionally set with `-d`.
 
 ### Ablation

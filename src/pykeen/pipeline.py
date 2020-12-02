@@ -35,8 +35,8 @@ could be used as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
-In this example, the data set was given as a string. A list of available data sets can be found in
-:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.DataSet` could be
+In this example, the dataset was given as a string. A list of available datasets can be found in
+:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
@@ -179,7 +179,7 @@ import torch
 from torch.optim.optimizer import Optimizer
 
 from .datasets import get_dataset
-from .datasets.base import DataSet
+from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
@@ -704,7 +704,7 @@ def pipeline_from_config(
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
-    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, TriplesFactory, str] = None,
     testing: Union[None, TriplesFactory, str] = None,
@@ -749,7 +749,7 @@ def pipeline(  # noqa: C901
     """Train and evaluate a model.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.DataSet`
+        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
@@ -843,7 +843,7 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    dataset_instance: DataSet = get_dataset(
+    dataset_instance: Dataset = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
