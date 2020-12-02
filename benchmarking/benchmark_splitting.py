@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from humanize import intword
 from tqdm import tqdm
 
 from pykeen.datasets import get_dataset
@@ -37,6 +38,13 @@ def main(replicates: int):
         'codexlarge',
         'wn18rr',
         'FB15k237',
+        'wn18',
+        'fb15k',
+        'hetionet',
+        'YAGO310',
+        'OGBBioKG',
+        'OGBWikiKG',
+        'drkg',
     ]
 
     rows = []
@@ -52,25 +60,39 @@ def main(replicates: int):
         inner_it = tqdm(
             inner_it,
             total=len(methods) * len(ratios) * replicates,
-            desc=f'{_dataset} ({triples.shape[0]})',
+            desc=f'{dataset.__class__.__name__} ({intword(triples.shape[0])})',
         )
         for method, ratio, replicate in inner_it:
             t = time.time()
-            split(
+            results = split(
                 triples=triples,
                 ratios=[ratio, (1 - ratio) / 2],
                 method=method,
                 random_state=replicate,
             )
             total = time.time() - t
-            rows.append((dataset.__class__.__name__, method, ratio, replicate, total))
+            rows.append((
+                dataset.__class__.__name__,
+                triples.shape[0],
+                method,
+                ratio,
+                replicate,
+                total,
+                results[0].shape[0],
+                results[1].shape[0],
+                results[2].shape[0],
+            ))
 
     df = pd.DataFrame(rows, columns=[
         'dataset',
+        'dataset_size',
         'method',
         'ratio',
         'replicate',
         'time',
+        'training_size',
+        'testing_size',
+        'validation_size',
     ])
     tsv_path = os.path.join(HERE, 'split_benchmark.tsv')
     df.to_csv(tsv_path, sep='\t', index=False)
