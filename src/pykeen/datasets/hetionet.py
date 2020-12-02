@@ -6,12 +6,11 @@ Get a summary with ``python -m pykeen.datasets.hetionet``
 """
 
 import logging
-from typing import Union
 
 import click
-import numpy as np
 
 from .base import SingleTabbedDataset
+from ..typing import RandomHint
 
 __all__ = [
     'Hetionet',
@@ -41,7 +40,7 @@ class Hetionet(SingleTabbedDataset):
         self,
         create_inverse_triples: bool = False,
         eager: bool = False,
-        random_state: Union[None, int, np.random.RandomState] = 0,
+        random_state: RandomHint = 0,
     ):
         super().__init__(
             url=URL,
