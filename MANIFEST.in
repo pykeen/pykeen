@@ -14,4 +14,5 @@ include config/config.ini
 global-exclude *.py[cod] __pycache__ *.so *.dylib .DS_Store *.gpickle
 
 exclude .appveyor.yml .bumpversion.cfg .coveragerc .flake8 .travis.yml .readthedocs.yml tox.ini .pre-commit-config.yaml
+exclude .appveyor_on_request.yml
 include LICENSE *.md *.rst
