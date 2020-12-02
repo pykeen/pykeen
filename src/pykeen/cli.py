@@ -345,12 +345,10 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
                 ref = name
                 doc = value.__class__.__doc__
 
-            reference = f'pykeen.{submodule}.{ref}'
+            reference = f'`pykeen.{submodule}.{ref}`'
             if link_fmt:
                 link = link_fmt.format(reference)
                 reference = f'[{reference}]({link})'
-            else:
-                reference = f'`{reference}`'
 
             yield name, reference, doc
         else:
