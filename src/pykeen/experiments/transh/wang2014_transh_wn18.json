@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with TransH as described by Wang et al., 2014"
+    "title": "Learn WN18 Dataset with TransH as described by Wang et al., 2014"
   },
   "pipeline": {
     "dataset": "wn18",

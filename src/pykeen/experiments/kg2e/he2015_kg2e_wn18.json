@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with KG2E as described by He et al., 2015"
+    "title": "Learn WN18 Dataset with KG2E as described by He et al., 2015"
   },
   "pipeline": {
     "dataset": "wn18",

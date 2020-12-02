@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with TransE as described by Bordes et al., 2013",
+    "title": "Learn FB15K Dataset with TransE as described by Bordes et al., 2013",
     "comments": "Batch_size is not mentioned in the paper. We found out that this value works."
   },
   "pipeline": {

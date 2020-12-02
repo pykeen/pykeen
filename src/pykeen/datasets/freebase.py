@@ -9,7 +9,7 @@
 import os
 from typing import Optional
 
-from .base import TarFileRemoteDataSet, ZipFileRemoteDataSet
+from .base import TarFileRemoteDataset, ZipFileRemoteDataset
 
 __all__ = [
     'FB15k',
@@ -17,8 +17,8 @@ __all__ = [
 ]
 
 
-class FB15k(TarFileRemoteDataSet):
-    """The FB15k data set."""
+class FB15k(TarFileRemoteDataset):
+    """The FB15k dataset."""
 
     def __init__(self, cache_root: Optional[str] = None, **kwargs):
         super().__init__(
@@ -31,8 +31,8 @@ class FB15k(TarFileRemoteDataSet):
         )
 
 
-class FB15k237(ZipFileRemoteDataSet):
-    """The FB15k-237 data set."""
+class FB15k237(ZipFileRemoteDataset):
+    """The FB15k-237 dataset."""
 
     def __init__(self, cache_root: Optional[str] = None, **kwargs):
         super().__init__(
