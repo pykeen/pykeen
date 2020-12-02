@@ -391,7 +391,7 @@ class TriplesFactory:
         *,
         random_state: RandomHint = None,
         randomize_cleanup: bool = False,
-        new_method: bool = False,
+        method: str = 'old',
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
@@ -420,7 +420,7 @@ class TriplesFactory:
             ratios=ratios,
             random_state=random_state,
             randomize_cleanup=randomize_cleanup,
-            method='new' if new_method else 'old',
+            method=method,
         )
         return [
             TriplesFactory(
