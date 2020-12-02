@@ -268,8 +268,7 @@ class TrainingLoop(ABC):
         checkpoint_on_failure_file_path = None
         if checkpoint_on_failure:
             # In case a checkpoint frequency was set, we warn that no checkpoints will be saved
-            # TODO there's a method for this: datetime.now().strftime('your fmt string')
-            date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
+            date_string = datetime.now().strftime('%Y%m%d_%H_%M_%S')
             # If no checkpoints were requested, a fallback checkpoint is set in case the training loop crashes
             checkpoint_on_failure_file_path = checkpoint_directory.joinpath(
                 PYKEEN_DEFAULT_CHECKPOINT.replace('.', f"_{date_string}."),
