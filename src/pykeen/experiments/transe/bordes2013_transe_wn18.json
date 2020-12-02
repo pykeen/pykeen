@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WordNet Data Set with TransE as described by Bordes et al., 2013",
+    "title": "Learn WordNet Dataset with TransE as described by Bordes et al., 2013",
     "comments": "Num_epochs varies from the value reported in the paper, and batch_size is not mentioned in the paper. We found out that these values work."
   },
   "pipeline": {

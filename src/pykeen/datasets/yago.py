@@ -4,15 +4,15 @@
 
 from typing import Optional
 
-from .base import TarFileRemoteDataSet
+from .base import TarFileRemoteDataset
 
 __all__ = [
     'YAGO310',
 ]
 
 
-class YAGO310(TarFileRemoteDataSet):
-    """The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations."""
+class YAGO310(TarFileRemoteDataset):
+    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations."""
 
     def __init__(self, cache_root: Optional[str] = None, **kwargs):
         super().__init__(

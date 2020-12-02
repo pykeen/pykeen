@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with HolE as described by Nickel et al., 2016",
+    "title": "Learn FB15K Dataset with HolE as described by Nickel et al., 2016",
     "comments": " We use same setting as for WN18 (based on https://github.com/mnick/holographic-embeddings/blob/c2db6e1554e671ab8e6acace78ec1fd91d6a4b90/run_hole_wn18.sh, however it is not sure whether this is the correct setting) since we couldn't find the setting for FB15k. The evaluation uses the non-deterministic rank, as seen from https://github.com/mnick/holographic-embeddings/blob/c2db6e1554e671ab8e6acace78ec1fd91d6a4b90/kg/base.py#L198."
   },
   "pipeline": {
