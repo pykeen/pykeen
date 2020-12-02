@@ -768,6 +768,8 @@ def _split_triples_with_train_coverage(
         entities[h].add(i)
         relations[r].add(i)
         entities[t].add(i)
+
+    # convert to lists; needed for random.choice
     entities = {
         e_id: list(triple_ids)
         for e_id, triple_ids in entities.items()
