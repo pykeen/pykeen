@@ -14,13 +14,13 @@ from typing import List, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
 
-import numpy as np
 import pandas as pd
 import requests
 from tabulate import tabulate
 
 from ..constants import PYKEEN_HOME
 from ..triples import TriplesFactory
+from ..typing import RandomHint
 from ..utils import normalize_string
 
 __all__ = [
@@ -517,7 +517,7 @@ class TarFileSingleDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: Union[None, int, np.random.RandomState] = None,
+        random_state: RandomHint = None,
         randomize_cleanup: bool = False,
     ):
         """Initialize dataset.
@@ -596,7 +596,7 @@ class SingleTabbedDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: Union[None, int, np.random.RandomState] = None,
+        random_state: RandomHint = None,
     ):
         """Initialize dataset.
 
