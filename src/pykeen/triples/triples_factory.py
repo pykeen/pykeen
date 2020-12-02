@@ -14,7 +14,7 @@ import torch
 from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
-from .splitting import _split_impl
+from .splitting import split
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RandomHint, RelationMapping
 from ..utils import compact_mapping, invert_mapping, slice_triples
@@ -415,7 +415,7 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        triples_groups = _split_impl(
+        triples_groups = split(
             triples=self.triples,
             ratios=ratios,
             random_state=random_state,

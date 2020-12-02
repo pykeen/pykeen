@@ -99,13 +99,15 @@ def _select_to_cover(
         covered_relations.add(r_id)
 
 
-def _split_impl(
+def split(
     triples,
     ratios,
-    random_state,
+    random_state: RandomHint = None,
     randomize_cleanup: bool = False,
     method: str = 'old',
 ):
+    """Split the triples into clean groups."""
+    random_state = ensure_random_state(random_state)
     ratios = _cleanup_ratios(ratios)
     sizes = _get_group_sizes(triples, ratios)
 
