@@ -127,31 +127,31 @@ in ``pykeen``.
 
 ### Models (23)
 
-| Name                | Reference                                                                                                                  | Citation                     |
-|---------------------|----------------------------------------------------------------------------------------------------------------------------|------------------------------|
-| ComplEx             | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ComplEx`.html                         | Trouillon *et al.*, 2016     |
-| ComplExLiteral      | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ComplExLiteral`.html           | Agustinus *et al.*, 2018     |
-| ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ConvE`.html                             | Dettmers *et al.*, 2018      |
-| ConvKB              | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ConvKB`.html                           | Nguyen *et al.*, 2018        |
-| DistMult            | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.DistMult`.html                       | Yang *et al.*, 2014          |
-| DistMultLiteral     | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.DistMultLiteral`.html         | Agustinus *et al.*, 2018     |
-| ERMLP               | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ERMLP`.html                             | Dong *et al.*, 2014          |
-| ERMLPE              | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ERMLPE`.html                           | Sharifzadeh *et al.*, 2019   |
-| HolE                | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.HolE`.html                               | Nickel *et al.*, 2016        |
-| KG2E                | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.KG2E`.html                               | He *et al.*, 2015            |
-| NTN                 | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.NTN`.html                                 | Socher *et al.*, 2013        |
-| ProjE               | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ProjE`.html                             | Shi *et al.*, 2017           |
-| RESCAL              | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RESCAL`.html                           | Nickel *et al.*, 2011        |
-| RGCN                | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RGCN`.html                               | Schlichtkrull *et al.*, 2018 |
-| RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RotatE`.html                           | Sun *et al.*, 2019           |
-| SimplE              | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.SimplE`.html                           | Kazemi *et al.*, 2018        |
-| StructuredEmbedding | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.StructuredEmbedding`.html | Bordes *et al.*, 2011        |
-| TransD              | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransD`.html                           | Ji *et al.*, 2015            |
-| TransE              | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransE`.html                           | Bordes *et al.*, 2013        |
-| TransH              | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransH`.html                           | Wang *et al.*, 2014          |
-| TransR              | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransR`.html                           | Lin *et al.*, 2015           |
-| TuckER              | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TuckER`.html                           | Balazevic *et al.*, 2019     |
-| UnstructuredModel   | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.UnstructuredModel`.html     | Bordes *et al.*, 2014        |
+| Name                | Reference                                                                                                                   | Citation                     |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------|------------------------------|
+| ComplEx             | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ComplEx`.html)                         | Trouillon *et al.*, 2016     |
+| ComplExLiteral      | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ComplExLiteral`.html)           | Agustinus *et al.*, 2018     |
+| ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ConvE`.html)                             | Dettmers *et al.*, 2018      |
+| ConvKB              | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ConvKB`.html)                           | Nguyen *et al.*, 2018        |
+| DistMult            | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.DistMult`.html)                       | Yang *et al.*, 2014          |
+| DistMultLiteral     | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.DistMultLiteral`.html)         | Agustinus *et al.*, 2018     |
+| ERMLP               | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ERMLP`.html)                             | Dong *et al.*, 2014          |
+| ERMLPE              | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ERMLPE`.html)                           | Sharifzadeh *et al.*, 2019   |
+| HolE                | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.HolE`.html)                               | Nickel *et al.*, 2016        |
+| KG2E                | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.KG2E`.html)                               | He *et al.*, 2015            |
+| NTN                 | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.NTN`.html)                                 | Socher *et al.*, 2013        |
+| ProjE               | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ProjE`.html)                             | Shi *et al.*, 2017           |
+| RESCAL              | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RESCAL`.html)                           | Nickel *et al.*, 2011        |
+| RGCN                | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RGCN`.html)                               | Schlichtkrull *et al.*, 2018 |
+| RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RotatE`.html)                           | Sun *et al.*, 2019           |
+| SimplE              | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.SimplE`.html)                           | Kazemi *et al.*, 2018        |
+| StructuredEmbedding | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.StructuredEmbedding`.html) | Bordes *et al.*, 2011        |
+| TransD              | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransD`.html)                           | Ji *et al.*, 2015            |
+| TransE              | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransE`.html)                           | Bordes *et al.*, 2013        |
+| TransH              | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransH`.html)                           | Wang *et al.*, 2014          |
+| TransR              | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransR`.html)                           | Lin *et al.*, 2015           |
+| TuckER              | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TuckER`.html)                           | Balazevic *et al.*, 2019     |
+| UnstructuredModel   | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.UnstructuredModel`.html)     | Bordes *et al.*, 2014        |
 
 ### Losses (7)
 

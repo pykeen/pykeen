@@ -84,7 +84,7 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
             author, year = line[1 + l: r - 4], line[r - 4: r]
             reference = f'`pykeen.models.{model.__name__}`'
             if link_fmt:
-                reference = f'[{reference}]({link_fmt.format(reference)}'
+                reference = f'[{reference}]({link_fmt.format(reference)})'
             yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
         else:
             author, year = line[1 + l: r - 4], line[r - 4: r]
