@@ -17,6 +17,7 @@ import inspect
 import os
 import sys
 from itertools import chain
+from typing import Optional
 
 import click
 from click_default_group import DefaultGroup
@@ -124,8 +125,8 @@ def datasets(tablefmt: str):
     click.echo(_help_datasets(tablefmt))
 
 
-def _help_datasets(tablefmt):
-    lines = _get_lines(datasets_dict, tablefmt, 'datasets')
+def _help_datasets(tablefmt, link_fmt: Optional[str]=None):
+    lines = _get_lines(datasets_dict, tablefmt, 'datasets', link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -327,13 +328,15 @@ def _get_metrics_lines(tablefmt: str):
                 yield field.name, field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
 
 
-def _get_lines(d, tablefmt, submodule):
+def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
     for name, value in sorted(d.items()):
         if tablefmt == 'rst':
             if isinstance(value, type):
-                yield name, f':class:`pykeen.{submodule}.{value.__name__}`'
+                reference = f':class:`pykeen.{submodule}.{value.__name__}`'
             else:
-                yield name, f':class:`pykeen.{submodule}.{name}`'
+                reference = f':class:`pykeen.{submodule}.{name}`'
+
+            yield name, reference
         elif tablefmt == 'github':
             try:
                 ref = value.__name__
@@ -342,7 +345,14 @@ def _get_lines(d, tablefmt, submodule):
                 ref = name
                 doc = value.__class__.__doc__
 
-            yield name, f'`pykeen.{submodule}.{ref}`', doc
+            reference = f'pykeen.{submodule}.{ref}'
+            if link_fmt:
+                link = link_fmt.format(reference)
+                reference = f'[{reference}]({link})'
+            else:
+                reference = f'`{reference}`'
+
+            yield name, reference, doc
         else:
             yield name, value.__doc__.splitlines()[0]
 
@@ -391,7 +401,7 @@ def get_readme() -> str:
         n_regularizers=len(regularizers_dict),
         losses=_help_losses(tablefmt),
         n_losses=len(losses_dict),
-        datasets=_help_datasets(tablefmt),
+        datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_datasets=len(datasets_dict),
         training_loops=_help_training(tablefmt),
         n_training_loops=len(training_dict),

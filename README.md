@@ -103,27 +103,27 @@ in ``pykeen``.
 
 ### Datasets (19)
 
-| Name          | Reference                       | Description                                                                                        |
-|---------------|---------------------------------|----------------------------------------------------------------------------------------------------|
-| codexlarge    | `pykeen.datasets.CoDExLarge`    | The CoDEx large dataset.                                                                           |
-| codexmedium   | `pykeen.datasets.CoDExMedium`   | The CoDEx medium dataset.                                                                          |
-| codexsmall    | `pykeen.datasets.CoDExSmall`    | The CoDEx small dataset.                                                                           |
-| drkg          | `pykeen.datasets.DRKG`          | The DRKG dataset.                                                                                  |
-| fb15k         | `pykeen.datasets.FB15k`         | The FB15k data set.                                                                                |
-| fb15k237      | `pykeen.datasets.FB15k237`      | The FB15k-237 data set.                                                                            |
-| hetionet      | `pykeen.datasets.Hetionet`      | The Hetionet dataset is a large biological network.                                                |
-| kinships      | `pykeen.datasets.Kinships`      | The Kinships data set.                                                                             |
-| nations       | `pykeen.datasets.Nations`       | The Nations data set.                                                                              |
-| ogbbiokg      | `pykeen.datasets.OGBBioKG`      | The OGB BioKG dataset.                                                                             |
-| ogbwikikg     | `pykeen.datasets.OGBWikiKG`     | The OGB WikiKG dataset.                                                                            |
-| openbiolink   | `pykeen.datasets.OpenBioLink`   | The OpenBioLink dataset.                                                                           |
-| openbiolinkf1 | `pykeen.datasets.OpenBioLinkF1` | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
-| openbiolinkf2 | `pykeen.datasets.OpenBioLinkF2` | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
-| openbiolinklq | `pykeen.datasets.OpenBioLinkLQ` | The low-quality variant of the OpenBioLink dataset.                                                |
-| umls          | `pykeen.datasets.UMLS`          | The UMLS data set.                                                                                 |
-| wn18          | `pykeen.datasets.WN18`          | The WN18 data set.                                                                                 |
-| wn18rr        | `pykeen.datasets.WN18RR`        | The WN18-RR data set.                                                                              |
-| yago310       | `pykeen.datasets.YAGO310`       | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| Name          | Reference                                                                                                       | Description                                                                                        |
+|---------------|-----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| codexlarge    | [pykeen.datasets.CoDExLarge](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                           |
+| codexmedium   | [pykeen.datasets.CoDExMedium](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                          |
+| codexsmall    | [pykeen.datasets.CoDExSmall](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                           |
+| drkg          | [pykeen.datasets.DRKG](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                  |
+| fb15k         | [pykeen.datasets.FB15k](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k data set.                                                                                |
+| fb15k237      | [pykeen.datasets.FB15k237](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 data set.                                                                            |
+| hetionet      | [pykeen.datasets.Hetionet](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Hetionet.html)           | The Hetionet dataset is a large biological network.                                                |
+| kinships      | [pykeen.datasets.Kinships](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Kinships.html)           | The Kinships data set.                                                                             |
+| nations       | [pykeen.datasets.Nations](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html)             | The Nations data set.                                                                              |
+| ogbbiokg      | [pykeen.datasets.OGBBioKG](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBBioKG.html)           | The OGB BioKG dataset.                                                                             |
+| ogbwikikg     | [pykeen.datasets.OGBWikiKG](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBWikiKG.html)         | The OGB WikiKG dataset.                                                                            |
+| openbiolink   | [pykeen.datasets.OpenBioLink](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)     | The OpenBioLink dataset.                                                                           |
+| openbiolinkf1 | [pykeen.datasets.OpenBioLinkF1](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF1.html) | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
+| openbiolinkf2 | [pykeen.datasets.OpenBioLinkF2](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF2.html) | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
+| openbiolinklq | [pykeen.datasets.OpenBioLinkLQ](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | The low-quality variant of the OpenBioLink dataset.                                                |
+| umls          | [pykeen.datasets.UMLS](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | The UMLS data set.                                                                                 |
+| wn18          | [pykeen.datasets.WN18](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                   | The WN18 data set.                                                                                 |
+| wn18rr        | [pykeen.datasets.WN18RR](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | The WN18-RR data set.                                                                              |
+| yago310       | [pykeen.datasets.YAGO310](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Models (23)
 
