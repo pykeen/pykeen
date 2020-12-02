@@ -15,8 +15,8 @@ from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, invert_mapping, random_non_negative_int, slice_triples
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RandomHint, RelationMapping
+from ..utils import compact_mapping, ensure_random_state, invert_mapping, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -388,7 +388,7 @@ class TriplesFactory:
         self,
         ratios: Union[float, Sequence[float]] = 0.8,
         *,
-        random_state: Union[None, int, np.random.RandomState] = None,
+        random_state: RandomHint = None,
         randomize_cleanup: bool = False,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
@@ -417,11 +417,7 @@ class TriplesFactory:
 
         # Prepare shuffle index
         idx = np.arange(n_triples)
-        if random_state is None:
-            random_state = random_non_negative_int()
-            logger.warning(f'Using random_state={random_state} to split {self}')
-        if isinstance(random_state, int):
-            random_state = np.random.RandomState(random_state)
+        random_state = ensure_random_state(random_state)
         random_state.shuffle(idx)
 
         # Prepare split index
@@ -682,7 +678,7 @@ class TriplesFactory:
 def _tf_cleanup_all(
     triples_groups: List[np.ndarray],
     *,
-    random_state: Union[None, int, np.random.RandomState] = None,
+    random_state: RandomHint = None,
 ) -> List[np.ndarray]:
     """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
@@ -709,7 +705,7 @@ def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tupl
 def _tf_cleanup_randomized(
     training: np.ndarray,
     testing: np.ndarray,
-    random_state: Union[None, int, np.random.RandomState] = None,
+    random_state: RandomHint = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
 
@@ -717,11 +713,7 @@ def _tf_cleanup_randomized(
     2. Choose a triple to move, recalculate move_id_mask
     3. Continue until move_id_mask has no true bits
     """
-    if random_state is None:
-        random_state = random_non_negative_int()
-        logger.warning('Using random_state=%s', random_state)
-    if isinstance(random_state, int):
-        random_state = np.random.RandomState(random_state)
+    random_state = ensure_random_state(random_state)
 
     move_id_mask = _prepare_cleanup(training, testing)
 

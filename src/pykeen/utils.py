@@ -15,7 +15,7 @@ import pandas as pd
 import torch
 import torch.nn
 
-from .typing import DeviceHint
+from .typing import DeviceHint, RandomHint
 
 __all__ = [
     'compose',
@@ -42,6 +42,7 @@ __all__ = [
     'NoRandomSeedNecessary',
     'Result',
     'fix_dataclass_init_docs',
+    'ensure_random_state',
 ]
 
 logger = logging.getLogger(__name__)
@@ -431,3 +432,15 @@ def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
     return int(sq.generate_state(1)[0])
+
+
+def ensure_random_state(random_state: RandomHint) -> np.random.RandomState:
+    """Prepare a random state."""
+    if random_state is None:
+        random_state = random_non_negative_int()
+        logger.warning(f'using automatically assigned random_state={random_state}')
+    if isinstance(random_state, int):
+        random_state = np.random.RandomState(random_state)
+    if not isinstance(random_state, np.random.RandomState):
+        raise TypeError
+    return random_state
