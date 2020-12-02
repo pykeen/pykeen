@@ -369,7 +369,7 @@ class TrainingLoop(ABC):
         :param checkpoint_frequency:
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param checkpoint_on_failure_file_path:
-            TODO
+            The full filepath for saving checkpoints on failure.
 
         :return:
             The losses per epoch.
