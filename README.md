@@ -65,7 +65,7 @@ can be found in the [installation documentation](https://pykeen.readthedocs.io/e
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
-This example shows how to train a model on a data set and test on another data set.
+This example shows how to train a model on a dataset and test on another dataset.
 
 The fastest way to get up and running is to use the pipeline function. It
 provides a high-level entry into the extensible functionality of this package.
@@ -98,32 +98,32 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 
 ## Implementation
 
-Below are the models, data sets, training modes, evaluators, and metrics implemented
+Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
 ### Datasets (19)
 
-| Name          | Reference                                                                                                         | Description                                                                                        |
-|---------------|-------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                           |
-| codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                          |
-| codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                           |
-| drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                  |
-| fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k data set.                                                                                |
-| fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 data set.                                                                            |
-| hetionet      | [`pykeen.datasets.Hetionet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Hetionet.html)           | The Hetionet dataset is a large biological network.                                                |
-| kinships      | [`pykeen.datasets.Kinships`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Kinships.html)           | The Kinships data set.                                                                             |
-| nations       | [`pykeen.datasets.Nations`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html)             | The Nations data set.                                                                              |
-| ogbbiokg      | [`pykeen.datasets.OGBBioKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBBioKG.html)           | The OGB BioKG dataset.                                                                             |
-| ogbwikikg     | [`pykeen.datasets.OGBWikiKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBWikiKG.html)         | The OGB WikiKG dataset.                                                                            |
-| openbiolink   | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)     | The OpenBioLink dataset.                                                                           |
-| openbiolinkf1 | [`pykeen.datasets.OpenBioLinkF1`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF1.html) | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
-| openbiolinkf2 | [`pykeen.datasets.OpenBioLinkF2`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF2.html) | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
-| openbiolinklq | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | The low-quality variant of the OpenBioLink dataset.                                                |
-| umls          | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | The UMLS data set.                                                                                 |
-| wn18          | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                   | The WN18 data set.                                                                                 |
-| wn18rr        | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | The WN18-RR data set.                                                                              |
-| yago310       | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| Name          | Reference                                                                                                         | Description                                                                                       |
+|---------------|-------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                          |
+| codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                         |
+| codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                          |
+| drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                 |
+| fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k dataset.                                                                                |
+| fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 dataset.                                                                            |
+| hetionet      | [`pykeen.datasets.Hetionet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Hetionet.html)           | The Hetionet dataset is a large biological network.                                               |
+| kinships      | [`pykeen.datasets.Kinships`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Kinships.html)           | The Kinships dataset.                                                                             |
+| nations       | [`pykeen.datasets.Nations`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html)             | The Nations dataset.                                                                              |
+| ogbbiokg      | [`pykeen.datasets.OGBBioKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBBioKG.html)           | The OGB BioKG dataset.                                                                            |
+| ogbwikikg     | [`pykeen.datasets.OGBWikiKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBWikiKG.html)         | The OGB WikiKG dataset.                                                                           |
+| openbiolink   | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)     | The OpenBioLink dataset.                                                                          |
+| openbiolinkf1 | [`pykeen.datasets.OpenBioLinkF1`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF1.html) | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                               |
+| openbiolinkf2 | [`pykeen.datasets.OpenBioLinkF2`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF2.html) | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                              |
+| openbiolinklq | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | The low-quality variant of the OpenBioLink dataset.                                               |
+| umls          | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | The UMLS dataset.                                                                                 |
+| wn18          | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                   | The WN18 dataset.                                                                                 |
+| wn18rr        | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | The WN18-RR dataset.                                                                              |
+| yago310       | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Models (23)
 
@@ -253,7 +253,7 @@ experiments. They can be accessed and run like:
 pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
-Where the three arguments are the model name, the reference, and the data set.
+Where the three arguments are the model name, the reference, and the dataset.
 The output directory can be optionally set with `-d`.
 
 ### Ablation

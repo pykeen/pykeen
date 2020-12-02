@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with DistMult as described by Yang et al., 2014",
+    "title": "Learn WN18 Dataset with DistMult as described by Yang et al., 2014",
     "comments": "For each positive triple, DistMult create two negatives where head and tail are corrupted"
   },
   "pipeline": {

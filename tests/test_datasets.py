@@ -8,7 +8,7 @@ from io import BytesIO
 import pytest
 
 from pykeen.datasets import FB15k, FB15k237, Kinships, Nations, UMLS, WN18, WN18RR, YAGO310
-from pykeen.datasets.base import SingleTabbedDataset, TarFileRemoteDataSet, TarFileSingleDataset
+from pykeen.datasets.base import SingleTabbedDataset, TarFileRemoteDataset, TarFileSingleDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from tests import cases, constants
 
@@ -33,7 +33,7 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
         return os.path.join(constants.RESOURCES, 'nations.tar.gz')
 
 
-class MockTarFileRemoteDataset(TarFileRemoteDataSet):
+class MockTarFileRemoteDataset(TarFileRemoteDataset):
     """Mock downloading a tar.gz archive with three pre-stratified files."""
 
     def __init__(self, cache_root: str):
@@ -79,7 +79,7 @@ class TestTarFileSingle(cases.CachedDatasetCase):
 
 
 class TestTarRemote(cases.CachedDatasetCase):
-    """Test the :class:`pykeen.datasets.base.TarFileRemoteDataSet` class."""
+    """Test the :class:`pykeen.datasets.base.TarFileRemoteDataset` class."""
 
     exp_num_entities = 14
     exp_num_relations = 55

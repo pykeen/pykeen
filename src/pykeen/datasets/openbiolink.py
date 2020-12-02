@@ -9,7 +9,7 @@ import logging
 
 import click
 
-from .base import PackedZipRemoteDataSet
+from .base import PackedZipRemoteDataset
 
 __all__ = [
     'OpenBioLink',
@@ -24,13 +24,13 @@ F2_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filt
 LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
 
 
-class OpenBioLink(PackedZipRemoteDataSet):
+class OpenBioLink(PackedZipRemoteDataset):
     """The OpenBioLink dataset.
 
     OpenBioLink is an open-source, reproducible framework for generating biological
     knowledge graphs for benchmarking link prediction. It is available on GitHub
     at https://github.com/openbiolink/openbiolink and published in [breit2020]_. There are four
-    available data sets - this class represents the high quality, directed set.
+    available datasets - this class represents the high quality, directed set.
 
     .. [breit2020] Breit, A. (2020) `OpenBioLink: A benchmarking framework for large-scale biomedical link
        prediction <https://doi.org/10.1093/bioinformatics/btaa274>`_, *Bioinformatics*
@@ -48,7 +48,7 @@ class OpenBioLink(PackedZipRemoteDataSet):
         )
 
 
-class OpenBioLinkF1(PackedZipRemoteDataSet):
+class OpenBioLinkF1(PackedZipRemoteDataset):
     """The PyKEEN First Filtered OpenBioLink 2020 Dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, eager: bool = False):
@@ -63,7 +63,7 @@ class OpenBioLinkF1(PackedZipRemoteDataSet):
         )
 
 
-class OpenBioLinkF2(PackedZipRemoteDataSet):
+class OpenBioLinkF2(PackedZipRemoteDataset):
     """The PyKEEN Second Filtered OpenBioLink 2020 Dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, eager: bool = False):
@@ -78,7 +78,7 @@ class OpenBioLinkF2(PackedZipRemoteDataSet):
         )
 
 
-class OpenBioLinkLQ(PackedZipRemoteDataSet):
+class OpenBioLinkLQ(PackedZipRemoteDataset):
     """The low-quality variant of the OpenBioLink dataset."""
 
     def __init__(self, create_inverse_triples: bool = False, eager: bool = False):
