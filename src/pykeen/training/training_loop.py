@@ -220,10 +220,10 @@ class TrainingLoop(ABC):
             due to failure of the training loop there is no guarantee that all random states can be recovered correctly,
             which might cause problems with regards to the reproducibility of that specific training loop. Therefore,
             these checkpoints are saved with a distinct checkpoint name, which will be
-            PyKEEN_just_saved_my_day_{datetime}.pt in the given checkpoint_root.
+            ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
 
         :return:
-            A pair of the KGE model and the losses per epoch.
+            The losses per epoch.
         """
         # Create training instances
         # During size probing the training instances should not show the tqdm progress bar
@@ -376,7 +376,7 @@ class TrainingLoop(ABC):
             Moin
 
         :return:
-            A pair of the KGE model and the losses per epoch.
+            The losses per epoch.
         """
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
