@@ -163,8 +163,8 @@ class TrainingLoop(ABC):
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
-        checkpoint_file: Optional[str] = None,
-        checkpoint_root: Union[None, str, pathlib.Path] = None,
+        checkpoint_directory: Union[None, str, pathlib.Path] = None,
+        checkpoint_name: Optional[str] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
     ) -> List[float]:
@@ -178,9 +178,6 @@ class TrainingLoop(ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing. This is only possible for LCWA training loops in
             general and only for models that have the slicing capability implemented.
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
-            regards to the hardware at hand.
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
@@ -205,13 +202,13 @@ class TrainingLoop(ABC):
         :param clear_optimizer:
             Whether to delete the optimizer instance after training (as the optimizer might have additional memory
             consumption due to e.g. moments in Adam).
-        :param checkpoint_file:
+        :param checkpoint_directory:
+            An optional directory to store the checkpoint files. If None, a subdirectory named ``checkpoints`` in the
+            directory defined by :data:`pykeen.constants.PYKEEN_HOME` is used. Unless the environment variable
+            ``PYKEEN_HOME`` is overridden, this will be ``~/.pykeen/checkpoints``.
+        :param checkpoint_name:
             The filename for saving checkpoints. If the given filename exists already, that file will be loaded and used
             to continue training.
-        :param checkpoint_root:
-            An optional directory to store the checkpoint files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME/checkpoints`` or defaults to
-            ``~/.pykeen/checkpoints``.
         :param checkpoint_frequency:
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param checkpoint_on_failure:
@@ -233,21 +230,21 @@ class TrainingLoop(ABC):
         torch.cuda.empty_cache()
 
         # A checkpoint root is always created to ensure a fallback checkpoint can be saved
-        if checkpoint_root is None:
-            checkpoint_root = PYKEEN_DEFAULT_CHECKPOINT_DIR
-        checkpoint_root = pathlib.Path(checkpoint_root)
-        checkpoint_root.mkdir(parents=True, exist_ok=True)
-        logger.debug('using checkpoint_root at %s', checkpoint_root)
+        if checkpoint_directory is None:
+            checkpoint_directory = PYKEEN_DEFAULT_CHECKPOINT_DIR
+        checkpoint_directory = pathlib.Path(checkpoint_directory)
+        checkpoint_directory.mkdir(parents=True, exist_ok=True)
+        logger.debug('using checkpoint_root at %s', checkpoint_directory)
 
         # If a checkpoint file is given, it must be loaded if it exists already
         save_checkpoints = False
-        checkpoint_file_path = None
-        if checkpoint_file:
-            checkpoint_file_path = checkpoint_root.joinpath(checkpoint_file)
-            if checkpoint_file_path.is_file():
-                self._load_state(path=checkpoint_file_path)
+        checkpoint_path = None
+        if checkpoint_name:
+            checkpoint_path = checkpoint_directory.joinpath(checkpoint_name)
+            if checkpoint_path.is_file():
+                self._load_state(path=checkpoint_path)
                 if stopper is not None:
-                    stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_file_path)
+                    stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_path)
                     # If the stopper dict has any keys, those are written back to the stopper
                     if stopper_dict:
                         stopper._write_from_summary_dict(**stopper_dict)
@@ -258,23 +255,23 @@ class TrainingLoop(ABC):
                         )
                 continue_training = True
             else:
-                logger.info(f"=> no checkpoint found at '{checkpoint_file_path}'. Creating a new file.")
+                logger.info(f"=> no checkpoint found at '{checkpoint_path}'. Creating a new file.")
             # The checkpoint frequency needs to be set to save checkpoints
             if checkpoint_frequency is None:
                 checkpoint_frequency = 30
             save_checkpoints = True
-        else:
-            if checkpoint_frequency is not None:
-                logger.warning(
-                    "A checkpoint frequency was set, but no checkpoint file was given. No checkpoints will be created",
-                )
+        elif checkpoint_frequency is not None:
+            logger.warning(
+                "A checkpoint frequency was set, but no checkpoint file was given. No checkpoints will be created",
+            )
 
         checkpoint_on_failure_file_path = None
         if checkpoint_on_failure:
             # In case a checkpoint frequency was set, we warn that no checkpoints will be saved
+            # TODO there's a method for this: datetime.now().strftime('your fmt string')
             date_string = str(datetime.now()).replace('.', '_').replace(':', '_')
             # If no checkpoints were requested, a fallback checkpoint is set in case the training loop crashes
-            checkpoint_on_failure_file_path = checkpoint_root.joinpath(
+            checkpoint_on_failure_file_path = checkpoint_directory.joinpath(
                 PYKEEN_DEFAULT_CHECKPOINT.replace('.', f"_{date_string}."),
             )
 
@@ -297,9 +294,9 @@ class TrainingLoop(ABC):
                 result_tracker=result_tracker,
                 sub_batch_size=sub_batch_size,
                 num_workers=num_workers,
-                checkpoint_file_path=checkpoint_file_path,
-                checkpoint_frequency=checkpoint_frequency,
                 save_checkpoints=save_checkpoints,
+                checkpoint_path=checkpoint_path,
+                checkpoint_frequency=checkpoint_frequency,
                 checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
             )
 
@@ -328,9 +325,9 @@ class TrainingLoop(ABC):
         result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
-        checkpoint_file_path: Optional[str] = None,
-        checkpoint_frequency: int = None,
         save_checkpoints: bool = False,
+        checkpoint_path: Union[None, str, pathlib.Path] = None,
+        checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Optional[str] = None,
     ) -> List[float]:
         """Train the KGE model.
@@ -366,14 +363,14 @@ class TrainingLoop(ABC):
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
             The number of child CPU workers used for loading data. If None, data are loaded in the main process.
-        :param checkpoint_file_path:
+        :param save_checkpoints:
+            Activate saving checkpoints.
+        :param checkpoint_path:
             The full filepath for saving checkpoints.
         :param checkpoint_frequency:
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
-        :param save_checkpoints:
-            Activate saving checkpoints.
         :param checkpoint_on_failure_file_path:
-            Moin
+            TODO
 
         :return:
             The losses per epoch.
@@ -575,7 +572,7 @@ class TrainingLoop(ABC):
             if save_checkpoints:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 if minutes_since_last_checkpoint >= checkpoint_frequency or should_stop or epoch == num_epochs:
-                    self._save_state(path=checkpoint_file_path, stopper=stopper)
+                    self._save_state(path=checkpoint_path, stopper=stopper)
                     last_checkpoint = time.time()
 
             if should_stop:
@@ -880,7 +877,7 @@ class TrainingLoop(ABC):
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
-    def _load_state(self, path: str) -> None:
+    def _load_state(self, path: Union[str, pathlib.Path]) -> None:
         """Load the state of the training loop from a checkpoint.
 
         :param path:

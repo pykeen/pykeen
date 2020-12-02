@@ -831,11 +831,11 @@ def pipeline(  # noqa: C901
 
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
     # used random_seed to ensure reproducible results
-    checkpoint_file_name = training_kwargs.get('checkpoint_file')
-    if checkpoint_file_name is not None:
-        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_root', PYKEEN_DEFAULT_CHECKPOINT_DIR))
+    checkpoint_name = training_kwargs.get('checkpoint_name')
+    if checkpoint_name is not None:
+        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_directory', PYKEEN_DEFAULT_CHECKPOINT_DIR))
         checkpoint_directory.mkdir(parents=True, exist_ok=True)
-        checkpoint_path = checkpoint_directory / checkpoint_file_name
+        checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
             checkpoint_dict = torch.load(checkpoint_path)
             random_seed = checkpoint_dict['random_seed']

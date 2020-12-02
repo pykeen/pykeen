@@ -30,9 +30,9 @@ For fixing possible errors and safety fallbacks please also look at :ref:`word_o
 At this point we have a model, dataset and optimizer all setup in a training loop and are ready to train the model with
 the ``training_loop``'s method :func:`pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
 setting the function argument ``checkpoint_file`` to the name you would like it to have.
-Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_root``
+Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path. If you didn't set the
-``checkpoint_root`` argument, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in
+``checkpoint_directory`` argument, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in
 :mod:`pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.pykeen/checkpoints``.
 Furthermore, you can set the checkpoint frequency, i.e. how often checkpoints should be saved given in minutes, by
 setting the argument ``checkpoint_frequency`` with an integer. The default frequency is 30 minutes and setting it to
@@ -44,13 +44,13 @@ Here is an example:
 
     losses = training_loop.train(
         num_epochs=1000,
-        checkpoint_file='my_checkpoint.pt',
+        checkpoint_name='my_checkpoint.pt',
         checkpoint_frequency=5,
     )
 
 With this code we have started the training loop with the above defined KGEM. The training loop will save a checkpoint
 in the ``my_checkpoint.pt`` file, which will be saved in the ``~/.pykeen/checkpoints/`` directory, since we haven't
-set the argument ``checkpoint_root``.
+set the argument ``checkpoint_directory``.
 The checkpoint file will be saved after 5 minutes since starting the training loop or the last time a checkpoint was
 saved and the epoch finishes, i.e. when one epoch takes 10 minutes the checkpoint will be saved after 10 minutes.
 In addition, checkpoints are always saved when the early stopper stops the training loop or the last epoch was finished.
@@ -71,7 +71,7 @@ train the same model from that state for 2000 epochs. All you have have to do is
 
     losses = training_loop.train(
         num_epochs=2000,
-        checkpoint_file='my_checkpoint.pt',
+        checkpoint_name='my_checkpoint.pt',
         checkpoint_frequency=5,
     )
 
@@ -87,7 +87,7 @@ define a pipeline like this:
         dataset='Nations',
         model='TransE',
         optimizer='Adam',
-        training_kwargs=dict(num_epochs=1000, checkpoint_file='my_checkpoint.pt', checkpoint_frequency=5),
+        training_kwargs=dict(num_epochs=1000, checkpoint_name='my_checkpoint.pt', checkpoint_frequency=5),
     )
 
 Again, assuming that e.g. this pipeline crashes after 200 epochs, you can simply execute **the same code** and the
@@ -111,14 +111,14 @@ This option differs from ordinary checkpoints, since ordinary checkpoints are on
 after a successful epoch. When saving checkpoints due to failure of the training loop there is no guarantee that all
 random states can be recovered correctly, which might cause problems with regards to the reproducibility of that
 specific training loop. Therefore, these checkpoints are saved with a distinct checkpoint name, which will be
-``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root, even when you also opted to use ordinary
-checkpoints as defined above, e.g. with this code:
+``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given ``checkpoint_directory``, even when you also opted to use
+ordinary checkpoints as defined above, e.g. with this code:
 
 .. code-block:: python
 
     losses = training_loop.train(
         num_epochs=2000,
-        checkpoint_file='my_checkpoint.pt',
+        checkpoint_name='my_checkpoint.pt',
         checkpoint_frequency=5,
         checkpoint_on_failure=True,
     )
@@ -131,7 +131,7 @@ Word of Caution and Possible Errors
 -----------------------------------
 When using checkpoints and trying out several configurations, which in return result in multiple different checkpoints,
 the inherent risk of overwriting checkpoints arises. This would naturally happen when you change the configuration of
-the KGEM, but don't change the ``checkpoint_file`` argument.
+the KGEM, but don't change the ``checkpoint_name`` argument.
 To prevent this from happening, PyKEEN makes a hash-sum comparison of the configurations of the checkpoint and
 the one of the current configuration at hand. When these don't match, PyKEEN won't accept the checkpoint and raise
 an error.

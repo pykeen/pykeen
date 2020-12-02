@@ -144,15 +144,15 @@ class TrainingLoopTests(unittest.TestCase):
 
     def test_lcwa_checkpoints(self):
         """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
-        with tempfile.TemporaryDirectory() as tempdir:
-            self._test_checkpoints(training_loop_type='LCWA', checkpoint_root=tempdir)
+        with tempfile.TemporaryDirectory() as checkpoint_directory:
+            self._test_checkpoints(training_loop_type='LCWA', checkpoint_directory=checkpoint_directory)
 
     def test_slcwa_checkpoints(self):
         """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
-        with tempfile.TemporaryDirectory() as tempdir:
-            self._test_checkpoints(training_loop_type='sLCWA', checkpoint_root=tempdir)
+        with tempfile.TemporaryDirectory() as checkpoint_directory:
+            self._test_checkpoints(training_loop_type='sLCWA', checkpoint_directory=checkpoint_directory)
 
-    def _test_checkpoints(self, training_loop_type: str, checkpoint_root: str):
+    def _test_checkpoints(self, training_loop_type: str, checkpoint_directory: str):
         """Test whether interrupting the given training loop type can be resumed using checkpoints."""
         training_loop_class = get_training_loop_cls(training_loop_type)
 
@@ -182,8 +182,8 @@ class TrainingLoopTests(unittest.TestCase):
         training_loop.train(
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
-            checkpoint_file=self.checkpoint_file,
-            checkpoint_root=checkpoint_root,
+            checkpoint_name=self.checkpoint_file,
+            checkpoint_directory=checkpoint_directory,
             checkpoint_frequency=0,
         )
 
@@ -198,8 +198,8 @@ class TrainingLoopTests(unittest.TestCase):
         losses_2 = training_loop.train(
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
-            checkpoint_file=self.checkpoint_file,
-            checkpoint_root=checkpoint_root,
+            checkpoint_name=self.checkpoint_file,
+            checkpoint_directory=checkpoint_directory,
             checkpoint_frequency=0,
         )
 

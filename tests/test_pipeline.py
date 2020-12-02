@@ -117,7 +117,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
         self.random_seed = 123
         self.model = 'TransE'
         self.dataset = 'nations'
-        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
+        self.checkpoint_name = "PyKEEN_training_loop_test_checkpoint.pt"
         self.temporary_directory = tempfile.TemporaryDirectory()
 
     def tearDown(self) -> None:
@@ -134,7 +134,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
 
     def _test_pipeline_x_resumption(self, training_loop_type: str):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
-        checkpoint_root = self.temporary_directory.name
+        checkpoint_directory = self.temporary_directory.name
 
         # TODO check that there aren't any checkpoint files already existing in the right place
 
@@ -155,8 +155,8 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 num_epochs=5,
                 use_tqdm=False,
                 use_tqdm_batch=False,
-                checkpoint_file=self.checkpoint_file,
-                checkpoint_root=checkpoint_root,
+                checkpoint_name=self.checkpoint_name,
+                checkpoint_directory=checkpoint_directory,
                 checkpoint_frequency=0,
             ),
             random_seed=self.random_seed,
@@ -171,8 +171,8 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 num_epochs=10,
                 use_tqdm=False,
                 use_tqdm_batch=False,
-                checkpoint_file=self.checkpoint_file,
-                checkpoint_root=checkpoint_root,
+                checkpoint_name=self.checkpoint_name,
+                checkpoint_directory=checkpoint_directory,
                 checkpoint_frequency=0,
             ),
         )
