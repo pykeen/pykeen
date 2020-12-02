@@ -156,9 +156,39 @@ def _split_triples_with_train_coverage(
     :return:
         The groups, where the first group is guaranteed to contain each entity and relation at least once.
     """
-    # TODO: Relative split sizes?
+    seed_mask = _get_cover(all_triples)
+    train_seed = all_triples[seed_mask]
+    remaining_triples = all_triples[~seed_mask]
+    # TODO: what to do if train_seed.shape[0] > sizes[0]
+    remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
+    train, *rest = _split_triples(remaining_triples, remaining_sizes)
+    return np.concatenate([train_seed, train]), *rest
+
+
+def _get_cover_deterministic(all_triples):
+    num_entities = all_triples[:, [0, 2]].max() + 1
+    num_relations = all_triples[:, 1].max() + 1
     num_triples = all_triples.shape[0]
 
+    # index
+    entities = numpy.full(shape=(num_entities,), fill_value=-1, dtype=numpy.int64)
+    relations = numpy.full(shape=(num_relations,), fill_value=-1, dtype=numpy.int64)
+    h, r, t = all_triples.T
+    triple_id = numpy.arange(num_triples)
+    entities[h] = triple_id
+    relations[r] = triple_id
+    entities[t] = triple_id
+
+    # select
+    seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
+    seed_mask[entities] = True
+    seed_mask[relations] = True
+    return seed_mask
+
+
+def _get_cover(all_triples):
+    # TODO: Relative split sizes?
+    num_triples = all_triples.shape[0]
     # index triples
     entities = defaultdict(set)
     relations = defaultdict(set)
@@ -166,7 +196,6 @@ def _split_triples_with_train_coverage(
         entities[h].add(i)
         relations[r].add(i)
         entities[t].add(i)
-
     # convert to lists; needed for random.choice
     entities = {
         e_id: list(triple_ids)
@@ -176,7 +205,6 @@ def _split_triples_with_train_coverage(
         r_id: list(triple_ids)
         for r_id, triple_ids in relations.items()
     }
-
     # randomized greedy cover
     covered_entities = set()
     covered_relations = set()
@@ -197,12 +225,7 @@ def _split_triples_with_train_coverage(
         all_triples=all_triples,
         seed_mask=seed_mask,
     )
-    train_seed = all_triples[seed_mask]
-    remaining_triples = all_triples[~seed_mask]
-    # TODO: what to do if train_seed.shape[0] > sizes[0]
-    remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
-    train, *rest = _split_triples(remaining_triples, remaining_sizes)
-    return np.concatenate([train_seed, train]), *rest
+    return seed_mask
 
 
 def _tf_cleanup_all(
