@@ -4,10 +4,12 @@
 
 import logging
 import os
+import random
 import re
 from collections import Counter, defaultdict
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
+import numpy
 import numpy as np
 import pandas as pd
 import torch
@@ -677,6 +679,129 @@ class TriplesFactory:
             factory._num_relations = self._num_relations
 
         return factory
+
+
+def _split_triples(
+    triples: np.ndarray,
+    sizes: Sequence[int],
+    random_state=None,
+) -> Sequence[np.ndarray]:
+    """
+    Randomly split triples into groups of given sizes.
+
+    :param triples: shape: (n, 3)
+        The triples.
+    :param sizes:
+        The sizes. Need to sum up to the number of triples.
+    :param random_state:
+        The random state for reproducible splits.
+
+    :return:
+        The splitted triples.
+    """
+    # TODO: check size usage
+    n_triples = triples.shape[0]
+
+    # Prepare shuffle index
+    idx = np.arange(n_triples)
+    if random_state is None:
+        random_state = random_non_negative_int()
+        logger.warning(f'Using random_state={random_state} to split triples.')
+    if isinstance(random_state, int):
+        random_state = np.random.RandomState(random_state)
+    random_state.shuffle(idx)
+
+    # Take cumulative sum so the get separated properly
+    split_idxs = np.cumsum(sizes)
+
+    # Split triples
+    triples_groups = np.vsplit(triples[idx], split_idxs)
+    logger.info(
+        'done splitting triples to groups of sizes %s',
+        [triples.shape[0] for triples in triples_groups],
+    )
+
+    return triples_groups
+
+
+def _select_to_cover(
+    index: Mapping[int, Sequence[int]],
+    covered: Set[int],
+    covered_relations: Set[int],
+    covered_entities: Set[int],
+    all_triples: np.ndarray,
+    seed_mask: np.ndarray,
+) -> None:
+    for i, triple_ids in index.items():
+        if i not in covered:
+            # randomly select triple
+            tr_id = random.choice(triple_ids)
+            seed_mask[tr_id] = True
+            # update coverage
+            h_id, r_id, t_id = all_triples[tr_id]
+            covered_entities.update(h_id, t_id)
+            covered_relations.add(r_id)
+
+
+def _split_triples_with_train_coverage(
+    all_triples: np.ndarray,
+    sizes: Sequence[int],
+) -> Sequence[np.ndarray]:
+    """
+    Split triples into groups ensuring that all entities and relations occur in the first group of triples.
+
+    :param all_triples: shape: (num_triples, 3)
+        The triples.
+    :param sizes:
+        The group sizes.
+
+    :return:
+        The groups, where the first group is guaranteed to contain each entity and relation at least once.
+    """
+    # TODO: Relative split sizes?
+    num_triples = all_triples.shape[0]
+
+    # index triples
+    entities = defaultdict(set)
+    relations = defaultdict(set)
+    for i, (h, r, t) in enumerate(all_triples.tolist()):
+        entities[h].add(i)
+        relations[r].add(i)
+        entities[t].add(i)
+    entities = {
+        e_id: list(triple_ids)
+        for e_id, triple_ids in entities.items()
+    }
+    relations = {
+        r_id: list(triple_ids)
+        for r_id, triple_ids in relations.items()
+    }
+
+    # randomized greedy cover
+    covered_entities = set()
+    covered_relations = set()
+    seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
+    _select_to_cover(
+        index=entities,
+        covered=covered_entities,
+        covered_relations=covered_relations,
+        covered_entities=covered_entities,
+        all_triples=all_triples,
+        seed_mask=seed_mask,
+    )
+    _select_to_cover(
+        index=relations,
+        covered=covered_relations,
+        covered_relations=covered_relations,
+        covered_entities=covered_entities,
+        all_triples=all_triples,
+        seed_mask=seed_mask,
+    )
+    seed_triples = all_triples[seed_mask]
+    remaining_triples = all_triples[~seed_mask]
+    remaining_sizes = (sizes[0] - seed_triples.shape[0],) + tuple(sizes[1:])
+    train, *rest = _split_triples(remaining_triples, remaining_sizes)
+    return np.concatenate([seed_triples, train]), *rest
 
 
 def _tf_cleanup_all(
