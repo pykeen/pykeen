@@ -7,6 +7,7 @@ from typing import Optional, Tuple, Union
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
+from ...hpo.search_spaces import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding
 from ...regularizers import PowerSumRegularizer, Regularizer
@@ -45,7 +46,7 @@ class SimplE(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
     loss_default = SoftplusLoss

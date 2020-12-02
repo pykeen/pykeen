@@ -13,7 +13,7 @@ from torch.nn import functional
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityEmbeddingModel
 from ..base import Model
-from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE
+from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
 from ...triples import TriplesFactory
@@ -465,7 +465,7 @@ class RGCN(Model):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=1000, q=50),
+        embedding_dim=dict(type=int, low=5, high=10, scale='power_two'),
         num_bases_or_blocks=dict(type=int, low=2, high=20, q=1),
         num_layers=dict(type=int, low=1, high=5, q=1),
         use_bias=dict(type='bool'),

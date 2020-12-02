@@ -10,7 +10,7 @@ import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
-from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE
+from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -58,9 +58,9 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
-        num_filters=dict(type=int, low=300, high=500, q=50),
+        num_filters=dict(type=int, low=7, high=9, scale='power_two'),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
     regularizer_default = LpRegularizer

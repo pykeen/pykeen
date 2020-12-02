@@ -149,7 +149,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        output_channels=dict(type=int, low=16, high=64),
+        output_channels=dict(type=int, low=4, high=6, scale='power_two'),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
