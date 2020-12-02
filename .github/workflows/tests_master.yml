@@ -30,10 +30,9 @@ jobs:
 
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
-      # - name: Check static typing with MyPy
-      #  run: tox -e mypy
-      #  # Allow failure, see https://github.community/t/continue-on-error-allow-failure-ui-indication/16773
-      #  if: succeeded() || failed()
+
+      - name: Check static typing with MyPy
+        run: tox -e mypy
   docs:
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Documentation
