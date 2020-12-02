@@ -13,6 +13,7 @@ from torch.nn import functional
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityEmbeddingModel
 from ..base import Model
+from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
 from ...triples import TriplesFactory
@@ -471,8 +472,8 @@ class RGCN(Model):
         use_batch_norm=dict(type='bool'),
         activation_cls=dict(type='categorical', choices=[None, nn.ReLU, nn.LeakyReLU]),
         base_model_cls=dict(type='categorical', choices=[DistMult, ComplEx, ERMLP]),
-        edge_dropout=dict(type=float, low=0.0, high=.9),
-        self_loop_dropout=dict(type=float, low=0.0, high=.9),
+        edge_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        self_loop_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         edge_weighting=dict(type='categorical', choices=[
             None,
             inverse_indegree_edge_weights,

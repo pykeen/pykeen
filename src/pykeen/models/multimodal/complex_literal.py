@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
+from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
@@ -22,7 +23,7 @@ class ComplExLiteral(MultimodalModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=50, high=300, q=50),
-        input_dropout=dict(type=float, low=0.0, high=0.5, q=0.1)
+        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
     loss_default = BCEWithLogitsLoss
