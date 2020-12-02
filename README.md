@@ -103,77 +103,77 @@ in ``pykeen``.
 
 ### Datasets (19)
 
-| Name          | Reference                                                                                                           | Description                                                                                        |
-|---------------|---------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.CoDExLarge`.html)       | The CoDEx large dataset.                                                                           |
-| codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.CoDExMedium`.html)     | The CoDEx medium dataset.                                                                          |
-| codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.CoDExSmall`.html)       | The CoDEx small dataset.                                                                           |
-| drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.DRKG`.html)                   | The DRKG dataset.                                                                                  |
-| fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.FB15k`.html)                 | The FB15k data set.                                                                                |
-| fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.FB15k237`.html)           | The FB15k-237 data set.                                                                            |
-| hetionet      | [`pykeen.datasets.Hetionet`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.Hetionet`.html)           | The Hetionet dataset is a large biological network.                                                |
-| kinships      | [`pykeen.datasets.Kinships`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.Kinships`.html)           | The Kinships data set.                                                                             |
-| nations       | [`pykeen.datasets.Nations`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.Nations`.html)             | The Nations data set.                                                                              |
-| ogbbiokg      | [`pykeen.datasets.OGBBioKG`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.OGBBioKG`.html)           | The OGB BioKG dataset.                                                                             |
-| ogbwikikg     | [`pykeen.datasets.OGBWikiKG`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.OGBWikiKG`.html)         | The OGB WikiKG dataset.                                                                            |
-| openbiolink   | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.OpenBioLink`.html)     | The OpenBioLink dataset.                                                                           |
-| openbiolinkf1 | [`pykeen.datasets.OpenBioLinkF1`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.OpenBioLinkF1`.html) | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
-| openbiolinkf2 | [`pykeen.datasets.OpenBioLinkF2`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.OpenBioLinkF2`.html) | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
-| openbiolinklq | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.OpenBioLinkLQ`.html) | The low-quality variant of the OpenBioLink dataset.                                                |
-| umls          | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.UMLS`.html)                   | The UMLS data set.                                                                                 |
-| wn18          | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.WN18`.html)                   | The WN18 data set.                                                                                 |
-| wn18rr        | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.WN18RR`.html)               | The WN18-RR data set.                                                                              |
-| yago310       | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.datasets.YAGO310`.html)             | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
+| Name          | Reference                                                                                                         | Description                                                                                        |
+|---------------|-------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                           |
+| codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                          |
+| codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                           |
+| drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                  |
+| fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k data set.                                                                                |
+| fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 data set.                                                                            |
+| hetionet      | [`pykeen.datasets.Hetionet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Hetionet.html)           | The Hetionet dataset is a large biological network.                                                |
+| kinships      | [`pykeen.datasets.Kinships`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Kinships.html)           | The Kinships data set.                                                                             |
+| nations       | [`pykeen.datasets.Nations`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Nations.html)             | The Nations data set.                                                                              |
+| ogbbiokg      | [`pykeen.datasets.OGBBioKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBBioKG.html)           | The OGB BioKG dataset.                                                                             |
+| ogbwikikg     | [`pykeen.datasets.OGBWikiKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OGBWikiKG.html)         | The OGB WikiKG dataset.                                                                            |
+| openbiolink   | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)     | The OpenBioLink dataset.                                                                           |
+| openbiolinkf1 | [`pykeen.datasets.OpenBioLinkF1`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF1.html) | The PyKEEN First Filtered OpenBioLink 2020 Dataset.                                                |
+| openbiolinkf2 | [`pykeen.datasets.OpenBioLinkF2`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkF2.html) | The PyKEEN Second Filtered OpenBioLink 2020 Dataset.                                               |
+| openbiolinklq | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | The low-quality variant of the OpenBioLink dataset.                                                |
+| umls          | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | The UMLS data set.                                                                                 |
+| wn18          | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                   | The WN18 data set.                                                                                 |
+| wn18rr        | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | The WN18-RR data set.                                                                              |
+| yago310       | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | The YAGO3-10 data set is a subset of YAGO3 that only contains entities with at least 10 relations. |
 
 ### Models (23)
 
-| Name                | Reference                                                                                                                   | Citation                     |
-|---------------------|-----------------------------------------------------------------------------------------------------------------------------|------------------------------|
-| ComplEx             | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ComplEx`.html)                         | Trouillon *et al.*, 2016     |
-| ComplExLiteral      | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ComplExLiteral`.html)           | Agustinus *et al.*, 2018     |
-| ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ConvE`.html)                             | Dettmers *et al.*, 2018      |
-| ConvKB              | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ConvKB`.html)                           | Nguyen *et al.*, 2018        |
-| DistMult            | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.DistMult`.html)                       | Yang *et al.*, 2014          |
-| DistMultLiteral     | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.DistMultLiteral`.html)         | Agustinus *et al.*, 2018     |
-| ERMLP               | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ERMLP`.html)                             | Dong *et al.*, 2014          |
-| ERMLPE              | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ERMLPE`.html)                           | Sharifzadeh *et al.*, 2019   |
-| HolE                | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.HolE`.html)                               | Nickel *et al.*, 2016        |
-| KG2E                | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.KG2E`.html)                               | He *et al.*, 2015            |
-| NTN                 | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.NTN`.html)                                 | Socher *et al.*, 2013        |
-| ProjE               | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.ProjE`.html)                             | Shi *et al.*, 2017           |
-| RESCAL              | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RESCAL`.html)                           | Nickel *et al.*, 2011        |
-| RGCN                | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RGCN`.html)                               | Schlichtkrull *et al.*, 2018 |
-| RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.RotatE`.html)                           | Sun *et al.*, 2019           |
-| SimplE              | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.SimplE`.html)                           | Kazemi *et al.*, 2018        |
-| StructuredEmbedding | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.StructuredEmbedding`.html) | Bordes *et al.*, 2011        |
-| TransD              | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransD`.html)                           | Ji *et al.*, 2015            |
-| TransE              | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransE`.html)                           | Bordes *et al.*, 2013        |
-| TransH              | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransH`.html)                           | Wang *et al.*, 2014          |
-| TransR              | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TransR`.html)                           | Lin *et al.*, 2015           |
-| TuckER              | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.TuckER`.html)                           | Balazevic *et al.*, 2019     |
-| UnstructuredModel   | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/`pykeen.models.UnstructuredModel`.html)     | Bordes *et al.*, 2014        |
+| Name                | Reference                                                                                                                 | Citation                     |
+|---------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------|
+| ComplEx             | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplEx.html)                         | Trouillon *et al.*, 2016     |
+| ComplExLiteral      | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplExLiteral.html)           | Agustinus *et al.*, 2018     |
+| ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvE.html)                             | Dettmers *et al.*, 2018      |
+| ConvKB              | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvKB.html)                           | Nguyen *et al.*, 2018        |
+| DistMult            | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMult.html)                       | Yang *et al.*, 2014          |
+| DistMultLiteral     | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteral.html)         | Agustinus *et al.*, 2018     |
+| ERMLP               | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                             | Dong *et al.*, 2014          |
+| ERMLPE              | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLPE.html)                           | Sharifzadeh *et al.*, 2019   |
+| HolE                | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HolE.html)                               | Nickel *et al.*, 2016        |
+| KG2E                | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                               | He *et al.*, 2015            |
+| NTN                 | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                 | Socher *et al.*, 2013        |
+| ProjE               | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ProjE.html)                             | Shi *et al.*, 2017           |
+| RESCAL              | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RESCAL.html)                           | Nickel *et al.*, 2011        |
+| RGCN                | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RGCN.html)                               | Schlichtkrull *et al.*, 2018 |
+| RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RotatE.html)                           | Sun *et al.*, 2019           |
+| SimplE              | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.SimplE.html)                           | Kazemi *et al.*, 2018        |
+| StructuredEmbedding | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.StructuredEmbedding.html) | Bordes *et al.*, 2011        |
+| TransD              | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransD.html)                           | Ji *et al.*, 2015            |
+| TransE              | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html)                           | Bordes *et al.*, 2013        |
+| TransH              | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransH.html)                           | Wang *et al.*, 2014          |
+| TransR              | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransR.html)                           | Lin *et al.*, 2015           |
+| TuckER              | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                           | Balazevic *et al.*, 2019     |
+| UnstructuredModel   | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UnstructuredModel.html)     | Bordes *et al.*, 2014        |
 
 ### Losses (7)
 
-| Name            | Reference                           | Description                                                                                       |
-|-----------------|-------------------------------------|---------------------------------------------------------------------------------------------------|
-| bceaftersigmoid | `pykeen.losses.BCEAfterSigmoidLoss` | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
-| bcewithlogits   | `pykeen.losses.BCEWithLogitsLoss`   | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
-| crossentropy    | `pykeen.losses.CrossEntropyLoss`    | Evaluate cross entropy after softmax output.                                                      |
-| marginranking   | `pykeen.losses.MarginRankingLoss`   | A wrapper around the PyTorch margin ranking loss.                                                 |
-| mse             | `pykeen.losses.MSELoss`             | A wrapper around the PyTorch mean square error loss.                                              |
-| nssa            | `pykeen.losses.NSSALoss`            | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
-| softplus        | `pykeen.losses.SoftplusLoss`        | A loss function for the softplus.                                                                 |
+| Name            | Reference                                                                                                                 | Description                                                                                       |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| bceaftersigmoid | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html) | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
+| bcewithlogits   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
+| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | Evaluate cross entropy after softmax output.                                                      |
+| marginranking   | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A wrapper around the PyTorch margin ranking loss.                                                 |
+| mse             | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A wrapper around the PyTorch mean square error loss.                                              |
+| nssa            | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                       | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
+| softplus        | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)               | A loss function for the softplus.                                                                 |
 
 ### Regularizers (5)
 
-| Name     | Reference                                 | Description                                              |
-|----------|-------------------------------------------|----------------------------------------------------------|
-| combined | `pykeen.regularizers.CombinedRegularizer` | A convex combination of regularizers.                    |
-| lp       | `pykeen.regularizers.LpRegularizer`       | A simple L_p norm based regularizer.                     |
-| no       | `pykeen.regularizers.NoRegularizer`       | A regularizer which does not perform any regularization. |
-| powersum | `pykeen.regularizers.PowerSumRegularizer` | A simple x^p based regularizer.                          |
-| transh   | `pykeen.regularizers.TransHRegularizer`   | A regularizer for the soft constraints in TransH.        |
+| Name     | Reference                                                                                                                             | Description                                              |
+|----------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------|
+| combined | [`pykeen.regularizers.CombinedRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.CombinedRegularizer.html) | A convex combination of regularizers.                    |
+| lp       | [`pykeen.regularizers.LpRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.LpRegularizer.html)             | A simple L_p norm based regularizer.                     |
+| no       | [`pykeen.regularizers.NoRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NoRegularizer.html)             | A regularizer which does not perform any regularization. |
+| powersum | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html) | A simple x^p based regularizer.                          |
+| transh   | [`pykeen.regularizers.TransHRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.TransHRegularizer.html)     | A regularizer for the soft constraints in TransH.        |
 
 ### Optimizers (6)
 
@@ -188,24 +188,24 @@ in ``pykeen``.
 
 ### Training Loops (2)
 
-| Name   | Reference                           | Description                                                                               |
-|--------|-------------------------------------|-------------------------------------------------------------------------------------------|
-| lcwa   | `pykeen.training.LCWATrainingLoop`  | A training loop that uses the local closed world assumption training approach.            |
-| slcwa  | `pykeen.training.SLCWATrainingLoop` | A training loop that uses the stochastic local closed world assumption training approach. |
+| Name   | Reference                                                                                                                                | Description                                                                               |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that uses the local closed world assumption training approach.            |
+| slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
 
 ### Negative Samplers (2)
 
-| Name      | Reference                                  | Description                                                                            |
-|-----------|--------------------------------------------|----------------------------------------------------------------------------------------|
-| basic     | `pykeen.sampling.BasicNegativeSampler`     | A basic negative sampler.                                                              |
-| bernoulli | `pykeen.sampling.BernoulliNegativeSampler` | An implementation of the bernoulli negative sampling approach proposed by [wang2014]_. |
+| Name      | Reference                                                                                                                               | Description                                                                            |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| basic     | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)         | A basic negative sampler.                                                              |
+| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the bernoulli negative sampling approach proposed by [wang2014]_. |
 
 ### Stoppers (2)
 
-| Name   | Reference                      | Description                   |
-|--------|--------------------------------|-------------------------------|
-| early  | `pykeen.stoppers.EarlyStopper` | A harness for early stopping. |
-| nop    | `pykeen.stoppers.NopStopper`   | A stopper that does nothing.  |
+| Name   | Reference                                                                                                                      | Description                   |
+|--------|--------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
+| early  | [`pykeen.stoppers.EarlyStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.EarlyStopper) | A harness for early stopping. |
+| nop    | [`pykeen.stoppers.NopStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.NopStopper)     | A stopper that does nothing.  |
 
 ### Evaluators (2)
 
@@ -227,10 +227,10 @@ in ``pykeen``.
 
 ### Trackers (2)
 
-| Name   | Reference                             | Description                       |
-|--------|---------------------------------------|-----------------------------------|
-| mlflow | `pykeen.trackers.MLFlowResultTracker` | A tracker for MLFlow.             |
-| wandb  | `pykeen.trackers.WANDBResultTracker`  | A tracker for Weights and Biases. |
+| Name   | Reference                                                                                                                     | Description                       |
+|--------|-------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|
+| mlflow | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html) | A tracker for MLFlow.             |
+| wandb  | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)   | A tracker for Weights and Biases. |
 
 ## Hyper-parameter Optimization
 

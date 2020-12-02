@@ -64,7 +64,7 @@ def models(tablefmt: str):
     click.echo(_help_models(tablefmt))
 
 
-def _help_models(tablefmt, link_fmt: Optional[str] = None):
+def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
     lines = list(_get_model_lines(tablefmt=tablefmt, link_fmt=link_fmt))
     headers = ['Name', 'Reference', 'Citation'] if tablefmt in {'rst', 'github'} else ['Name', 'Citation']
     return tabulate(
@@ -82,9 +82,11 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
             yield model.__name__, f':class:`pykeen.models.{model.__name__}`', line[l: r + 2]
         elif tablefmt == 'github':
             author, year = line[1 + l: r - 4], line[r - 4: r]
-            reference = f'`pykeen.models.{model.__name__}`'
+            reference = f'pykeen.models.{model.__name__}'
             if link_fmt:
-                reference = f'[{reference}]({link_fmt.format(reference)})'
+                reference = f'[`{reference}`]({link_fmt.format(reference)})'
+            else:
+                reference = f'`{reference}`'
             yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
         else:
             author, year = line[1 + l: r - 4], line[r - 4: r]
@@ -128,7 +130,7 @@ def datasets(tablefmt: str):
     click.echo(_help_datasets(tablefmt))
 
 
-def _help_datasets(tablefmt, link_fmt: Optional[str]=None):
+def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
     lines = _get_lines(datasets_dict, tablefmt, 'datasets', link_fmt)
     return tabulate(
         lines,
@@ -144,8 +146,8 @@ def training_loops(tablefmt: str):
     click.echo(_help_training(tablefmt))
 
 
-def _help_training(tablefmt):
-    lines = _get_lines(training_dict, tablefmt, 'training')
+def _help_training(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines(training_dict, tablefmt, 'training', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -160,8 +162,8 @@ def negative_samplers(tablefmt: str):
     click.echo(_help_negative_samplers(tablefmt))
 
 
-def _help_negative_samplers(tablefmt):
-    lines = _get_lines(negative_samplers_dict, tablefmt, 'sampling')
+def _help_negative_samplers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines(negative_samplers_dict, tablefmt, 'sampling', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -176,8 +178,8 @@ def stoppers(tablefmt: str):
     click.echo(_help_stoppers(tablefmt))
 
 
-def _help_stoppers(tablefmt):
-    lines = _get_lines(stoppers_dict, tablefmt, 'stoppers')
+def _help_stoppers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines(stoppers_dict, tablefmt, 'stoppers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -208,8 +210,8 @@ def losses(tablefmt: str):
     click.echo(_help_losses(tablefmt))
 
 
-def _help_losses(tablefmt):
-    lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'pykeen.losses')
+def _help_losses(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'pykeen.losses', link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -240,8 +242,8 @@ def regularizers(tablefmt: str):
     click.echo(_help_regularizers(tablefmt))
 
 
-def _help_regularizers(tablefmt):
-    lines = _get_lines(regularizers_dict, tablefmt, 'regularizers')
+def _help_regularizers(tablefmt, link_fmt: Optional[str] = None):
+    lines = _get_lines(regularizers_dict, tablefmt, 'regularizers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -249,7 +251,7 @@ def _help_regularizers(tablefmt):
     )
 
 
-def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix):
+def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: Optional[str] = None):
     for name, submodule in sorted(d.items()):
         if any(
             submodule.__module__.startswith(_prefix)
@@ -263,7 +265,12 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix):
             yield name, f':class:`{path}`'
         elif tablefmt == 'github':
             doc = submodule.__doc__
-            yield name, f'`{path}`', get_until_first_blank(doc)
+            if link_fmt:
+                reference = f'[`{path}`]({link_fmt.format(path)})'
+            else:
+                reference = f'`{path}`'
+
+            yield name, reference, get_until_first_blank(doc)
         else:
             doc = submodule.__doc__
             yield name, path, get_until_first_blank(doc)
@@ -291,8 +298,8 @@ def trackers(tablefmt: str):
     click.echo(_help_trackers(tablefmt))
 
 
-def _help_trackers(tablefmt):
-    lines = _get_lines(trackers_dict, tablefmt, 'trackers')
+def _help_trackers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines(trackers_dict, tablefmt, 'trackers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -348,10 +355,11 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
                 ref = name
                 doc = value.__class__.__doc__
 
-            reference = f'`pykeen.{submodule}.{ref}`'
+            reference = f'pykeen.{submodule}.{ref}'
             if link_fmt:
-                link = link_fmt.format(reference)
-                reference = f'[{reference}]({link})'
+                reference = f'[`{reference}`]({link_fmt.format(reference)})'
+            else:
+                reference = f'`{reference}`'
 
             yield name, reference, doc
         else:
@@ -398,25 +406,34 @@ def get_readme() -> str:
     return readme_template.render(
         models=_help_models(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_models=len(models_dict),
-        regularizers=_help_regularizers(tablefmt),
+        regularizers=_help_regularizers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_regularizers=len(regularizers_dict),
-        losses=_help_losses(tablefmt),
+        losses=_help_losses(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_losses=len(losses_dict),
         datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_datasets=len(datasets_dict),
-        training_loops=_help_training(tablefmt),
+        training_loops=_help_training(
+            tablefmt,
+            link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
+        ),
         n_training_loops=len(training_dict),
-        negative_samplers=_help_negative_samplers(tablefmt),
+        negative_samplers=_help_negative_samplers(
+            tablefmt,
+            link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html',
+        ),
         n_negative_samplers=len(negative_samplers_dict),
         optimizers=_help_optimizers(tablefmt),
         n_optimizers=len(optimizers_dict),
-        stoppers=_help_stoppers(tablefmt),
+        stoppers=_help_stoppers(
+            tablefmt,
+            link_fmt='https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}',
+        ),
         n_stoppers=len(stoppers_dict),
         evaluators=_help_evaluators(tablefmt),
         n_evaluators=len(evaluators_dict),
         metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
-        trackers=_help_trackers(tablefmt),
+        trackers=_help_trackers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_trackers=len(trackers_dict),
         hpo_samplers=_help_hpo_samplers(tablefmt),
         n_hpo_samplers=len(hpo_samplers_dict),
