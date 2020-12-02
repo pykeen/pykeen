@@ -62,10 +62,8 @@ classes in the ``model`` argument.
 
 Adding Defaults
 ---------------
-You'll notice that this model is not compatible with :class:`pykeen.losses.MarginRankingLoss`
-because the application of the sigmoid to the relation causes some resulting scores to be
-non-finite in some cases. If you have a preferred loss function for your model, you can add
-the ``loss_default`` class variable where the value is the loss class.
+If you have a preferred loss function for your model, you can add the ``loss_default`` class variable
+where the value is the loss class.
 
 .. code-block:: python
 
