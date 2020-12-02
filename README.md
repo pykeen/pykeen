@@ -225,12 +225,13 @@ in ``pykeen``.
 | Mean Reciprocal Rank    | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
 
-### Trackers (2)
+### Trackers (3)
 
-| Name   | Reference                                                                                                                     | Description                       |
-|--------|-------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|
-| mlflow | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html) | A tracker for MLFlow.             |
-| wandb  | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)   | A tracker for Weights and Biases. |
+| Name    | Reference                                                                                                                       | Description                       |
+|---------|---------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|
+| mlflow  | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)   | A tracker for MLflow.             |
+| neptune | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html) | A tracker for Neptune.ai.         |
+| wandb   | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)     | A tracker for Weights and Biases. |
 
 ## Hyper-parameter Optimization
 
