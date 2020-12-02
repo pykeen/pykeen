@@ -801,6 +801,7 @@ def _split_triples_with_train_coverage(
     )
     train_seed = all_triples[seed_mask]
     remaining_triples = all_triples[~seed_mask]
+    # TODO: what to do if train_seed.shape[0] > sizes[0]
     remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
     train, *rest = _split_triples(remaining_triples, remaining_sizes)
     return np.concatenate([train_seed, train]), *rest
