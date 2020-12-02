@@ -175,14 +175,13 @@ def _get_cover_deterministic(all_triples):
     relations = numpy.full(shape=(num_relations,), fill_value=-1, dtype=numpy.int64)
     h, r, t = all_triples.T
     triple_id = numpy.arange(num_triples)
-    entities[h] = triple_id
-    relations[r] = triple_id
-    entities[t] = triple_id
+    entities[h] = relations[r] = entities[t] = triple_id
+    assert entities.min() >= 0
+    assert relations.min() >= 0
 
     # select
     seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
-    seed_mask[entities] = True
-    seed_mask[relations] = True
+    seed_mask[np.r_[entities, relations]] = True
     return seed_mask
 
 
