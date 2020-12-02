@@ -79,7 +79,7 @@ class TestTarFileSingle(cases.CachedDatasetCase):
 
 
 class TestTarRemote(cases.CachedDatasetCase):
-    """Test the :class:`pykeen.datasets.base.TarFileRemoteDataSet` class."""
+    """Test the :class:`pykeen.datasets.base.TarFileRemoteDataset` class."""
 
     exp_num_entities = 14
     exp_num_relations = 55
