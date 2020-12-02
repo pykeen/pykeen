@@ -799,11 +799,11 @@ def _split_triples_with_train_coverage(
         all_triples=all_triples,
         seed_mask=seed_mask,
     )
-    seed_triples = all_triples[seed_mask]
+    train_seed = all_triples[seed_mask]
     remaining_triples = all_triples[~seed_mask]
-    remaining_sizes = (sizes[0] - seed_triples.shape[0],) + tuple(sizes[1:])
+    remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
     train, *rest = _split_triples(remaining_triples, remaining_sizes)
-    return np.concatenate([seed_triples, train]), *rest
+    return np.concatenate([train_seed, train]), *rest
 
 
 def _tf_cleanup_all(
