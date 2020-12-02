@@ -245,13 +245,12 @@ class compose(Generic[X]):  # noqa:N801
         return x
 
 
-def set_random_seed(seed: int):
+def set_random_seed(seed: int) -> Tuple[None, torch.Generator, None]:
     """Set the random seed on numpy, torch, and python."""
-    return (
-        np.random.seed(seed=seed),
-        torch.manual_seed(seed=seed),
-        random.seed(seed),
-    )
+    np.random.seed(seed=seed)
+    generator = torch.manual_seed(seed=seed)
+    random.seed(seed)
+    return None, generator, None
 
 
 class NoRandomSeedNecessary:
