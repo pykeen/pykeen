@@ -177,14 +177,14 @@ in ``pykeen``.
 
 ### Optimizers (6)
 
-| Name     | Reference              | Description                                                             |
-|----------|------------------------|-------------------------------------------------------------------------|
-| adadelta | `torch.optim.Adadelta` | Implements Adadelta algorithm.                                          |
-| adagrad  | `torch.optim.Adagrad`  | Implements Adagrad algorithm.                                           |
-| adam     | `torch.optim.Adam`     | Implements Adam algorithm.                                              |
-| adamax   | `torch.optim.Adamax`   | Implements Adamax algorithm (a variant of Adam based on infinity norm). |
-| adamw    | `torch.optim.AdamW`    | Implements AdamW algorithm.                                             |
-| sgd      | `torch.optim.SGD`      | Implements stochastic gradient descent (optionally with momentum).      |
+| Name     | Reference                                                                                 | Description                                                             |
+|----------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| adadelta | [`torch.optim.Adadelta`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adadelta) | Implements Adadelta algorithm.                                          |
+| adagrad  | [`torch.optim.Adagrad`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adagrad)   | Implements Adagrad algorithm.                                           |
+| adam     | [`torch.optim.Adam`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adam)         | Implements Adam algorithm.                                              |
+| adamax   | [`torch.optim.Adamax`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adamax)     | Implements Adamax algorithm (a variant of Adam based on infinity norm). |
+| adamw    | [`torch.optim.AdamW`](https://pytorch.org/docs/stable/optim.html#torch.optim.AdamW)       | Implements AdamW algorithm.                                             |
+| sgd      | [`torch.optim.SGD`](https://pytorch.org/docs/stable/optim.html#torch.optim.SGD)           | Implements stochastic gradient descent (optionally with momentum).      |
 
 ### Training Loops (2)
 
@@ -236,11 +236,11 @@ in ``pykeen``.
 
 ### Samplers (3)
 
-| Name   | Reference                       | Description                                                     |
-|--------|---------------------------------|-----------------------------------------------------------------|
-| grid   | `optuna.samplers.GridSampler`   | Sampler using grid search.                                      |
-| random | `optuna.samplers.RandomSampler` | Sampler using random sampling.                                  |
-| tpe    | `optuna.samplers.TPESampler`    | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
+| Name   | Reference                                                                                                                         | Description                                                     |
+|--------|-----------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------|
+| grid   | [`optuna.samplers.GridSampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.GridSampler.html)     | Sampler using grid search.                                      |
+| random | [`optuna.samplers.RandomSampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.RandomSampler.html) | Sampler using random sampling.                                  |
+| tpe    | [`optuna.samplers.TPESampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.TPESampler.html)       | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
 
 ## Experimentation
 

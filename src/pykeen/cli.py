@@ -226,8 +226,8 @@ def optimizers(tablefmt: str):
     click.echo(_help_optimizers(tablefmt))
 
 
-def _help_optimizers(tablefmt):
-    lines = _get_lines_alternative(tablefmt, optimizers_dict, 'torch.optim', 'pykeen.optimizers')
+def _help_optimizers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines_alternative(tablefmt, optimizers_dict, 'torch.optim', 'pykeen.optimizers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -314,8 +314,10 @@ def hpo_samplers(tablefmt: str):
     click.echo(_help_hpo_samplers(tablefmt))
 
 
-def _help_hpo_samplers(tablefmt):
-    lines = _get_lines_alternative(tablefmt, hpo_samplers_dict, 'optuna.samplers', 'pykeen.hpo.samplers')
+def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines_alternative(
+        tablefmt, hpo_samplers_dict, 'optuna.samplers', 'pykeen.hpo.samplers', link_fmt=link_fmt,
+    )
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -413,20 +415,17 @@ def get_readme() -> str:
         datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_datasets=len(datasets_dict),
         training_loops=_help_training(
-            tablefmt,
-            link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
+            tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
         ),
         n_training_loops=len(training_dict),
         negative_samplers=_help_negative_samplers(
-            tablefmt,
-            link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html',
+            tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html',
         ),
         n_negative_samplers=len(negative_samplers_dict),
-        optimizers=_help_optimizers(tablefmt),
+        optimizers=_help_optimizers(tablefmt, link_fmt='https://pytorch.org/docs/stable/optim.html#{}'),
         n_optimizers=len(optimizers_dict),
         stoppers=_help_stoppers(
-            tablefmt,
-            link_fmt='https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}',
+            tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}',
         ),
         n_stoppers=len(stoppers_dict),
         evaluators=_help_evaluators(tablefmt),
@@ -435,7 +434,9 @@ def get_readme() -> str:
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_trackers=len(trackers_dict),
-        hpo_samplers=_help_hpo_samplers(tablefmt),
+        hpo_samplers=_help_hpo_samplers(
+            tablefmt, link_fmt='https://optuna.readthedocs.io/en/stable/reference/generated/{}.html',
+        ),
         n_hpo_samplers=len(hpo_samplers_dict),
     )
 
