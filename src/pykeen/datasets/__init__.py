@@ -18,6 +18,7 @@ from .base import (  # noqa:F401
     TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
 )
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
+from .conceptnet import ConceptNet
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
@@ -51,6 +52,7 @@ __all__ = [
     'WN18RR',
     'YAGO310',
     'DRKG',
+    'ConceptNet',
     'get_dataset',
     'has_dataset',
 ]
