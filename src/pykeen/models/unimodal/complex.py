@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -51,7 +52,7 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
     loss_default = SoftplusLoss
