@@ -8,6 +8,7 @@ import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
@@ -102,8 +103,8 @@ class TransD(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=20, high=300, q=50),
-        relation_dim=dict(type=int, low=20, high=300, q=50),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 
     def __init__(
