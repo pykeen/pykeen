@@ -74,8 +74,8 @@ def _split_triples(
 
 
 def split(
-    triples,
-    ratios,
+    triples: np.ndarray,
+    ratios: Union[float, Sequence[float]],
     random_state: RandomHint = None,
     randomize_cleanup: bool = False,
     method: Optional[str] = None,
