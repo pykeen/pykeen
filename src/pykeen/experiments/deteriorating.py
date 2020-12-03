@@ -14,7 +14,7 @@ import pandas as pd
 import seaborn as sns
 from tqdm.autonotebook import tqdm
 
-from pykeen.constants import PYKEEN_HOME
+from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import DataSet, get_dataset
 from pykeen.models import Model, get_model_cls
 from pykeen.pipeline import pipeline
@@ -25,8 +25,8 @@ __all__ = [
     'deteriorating',
 ]
 
-DETERIORATION_DIR = os.path.join(PYKEEN_HOME, 'experiments', 'deteriorating')
-os.makedirs(DETERIORATION_DIR, exist_ok=True)
+DETERIORATION_DIR = PYKEEN_EXPERIMENTS / 'deteriorating'
+DETERIORATION_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def _helper(*, dataset: str, model: str, device):

@@ -18,7 +18,7 @@ import seaborn as sns
 from tqdm.autonotebook import tqdm
 
 import pykeen.triples.triples_factory
-from pykeen.constants import PYKEEN_HOME
+from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import CoDExLarge, CoDExMedium, CoDExSmall, FB15k237, WN18RR, get_dataset
 from pykeen.datasets.base import DataSet
 from pykeen.triples.remix import cleanup_dataset, dataset_splits_distance, deteriorate_dataset, starmap_ctx
@@ -27,8 +27,8 @@ __all__ = [
     'deteriorating',
 ]
 
-DETERIORATION_DIR = os.path.join(PYKEEN_HOME, 'experiments', 'deterleak')
-os.makedirs(DETERIORATION_DIR, exist_ok=True)
+DETERIORATION_DIR = PYKEEN_EXPERIMENTS / 'deterleak'
+DETERIORATION_DIR.mkdir(exist_ok=True, parents=True)
 
 JITTER = 0.1
 
@@ -94,7 +94,7 @@ def helper(dataset: str, use_multiprocessing: bool = True) -> pd.DataFrame:
     return df
 
 
-def _help_loop(ratio: float,  randomize_cleanup: bool, replicate: int, *, dataset: DataSet, results_directory: str):
+def _help_loop(ratio: float, randomize_cleanup: bool, replicate: int, *, dataset: DataSet, results_directory: str):
     if dataset.__class__ in NO_RANDOM and randomize_cleanup and NO_RANDOM[dataset.__class__] < ratio:
         print('skipped', dataset, ratio, replicate)
         return

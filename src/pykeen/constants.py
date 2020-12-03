@@ -2,10 +2,12 @@
 
 """Constants for PyKEEN."""
 
-import os
+import pystow
 
 __all__ = [
     'PYKEEN_HOME',
+    'PYKEEN_EXPERIMENTS',
 ]
 
-PYKEEN_HOME = os.environ.get('PYKEEN_HOME') or os.path.join(os.path.expanduser('~'), '.pykeen')
+PYKEEN_HOME = pystow.get('pykeen')
+PYKEEN_EXPERIMENTS = pystow.get('pykeen', 'experiments')

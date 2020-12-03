@@ -19,7 +19,7 @@ from scipy import stats
 from tqdm.autonotebook import tqdm, trange
 
 import pykeen.version
-from pykeen.constants import PYKEEN_HOME
+from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import DataSet, get_dataset
 from pykeen.models import Model, get_model_cls, models
 from pykeen.pipeline import PipelineResult, pipeline
@@ -31,8 +31,8 @@ __all__ = [
     'remixing',
 ]
 
-REMIX_DIR = os.path.join(PYKEEN_HOME, 'experiments', 'remixing')
-os.makedirs(REMIX_DIR, exist_ok=True)
+REMIX_DIR = PYKEEN_EXPERIMENTS / 'remixing'
+REMIX_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def _run(*, dataset, model, device, num_epochs, stopper=None) -> PipelineResult:
