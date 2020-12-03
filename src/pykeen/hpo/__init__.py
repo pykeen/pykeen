@@ -28,18 +28,10 @@ as many trials as possible will be run in 60 seconds.
 ...    model='TransE',
 ... )
 
-Every model in PyKEEN has default values for its hyper-parameters chosen from
-the best reported values in each model's respective paper, unless otherwise
-stated on the model's reference page. Two reasons alternative hyperparameters
-were chosen as the defaults were:
-
-1. As described by [ruffinelli2020]_, some hyper-parameters could be improved
-   with trivial additional hyper-parameter optimization. Several papers have
-   present small-scale benchmarking in addition to new models that have demonstrated
-   this, as well as Ruffinelli *et al.*'s benchmarking presented in their paper.
-2. As described in our large-scale benchmarking paper ([ali2020a]_) and throughout
-   PyKEEN's documentation, some methodological improvements lead to better results
-   regardless of the hyperparameters.
+Every model in PyKEEN has default values for its hyper-parameters chosen from the best-reported values in each model's
+respective paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
+specific dataset were not available, we choose the hyper-parameters based on the findings in our
+large-scale benchmarking [ali2020a]_.
 
 
 In addition to reasonable default hyper-parameters, every model in PyKEEN has
