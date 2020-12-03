@@ -29,13 +29,13 @@ as many trials as possible will be run in 60 seconds.
 ... )
 
 Every model in PyKEEN has default values for its hyper-parameters chosen from the best-reported values in each model's
-respective paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
+original paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
 specific dataset were not available, we choose the hyper-parameters based on the findings in our
 large-scale benchmarking [ali2020a]_.
 
 
 In addition to reasonable default hyper-parameters, every model in PyKEEN has
-default "strategies" for optimizing these hyper-parameters which either consitute
+default "strategies" for optimizing these hyper-parameters which either constitute
 ranges for integer/floating point numbers or as enumerations for categorical variables
 and booleans.
 
@@ -46,6 +46,10 @@ example, the range for TransE's embedding dimension is set to optimize
 between 50 and 350 at increments of 25 in :py:attr:`pykeen.models.TransE.hpo_default`.
 TransE also has a scoring function norm that will be optimized by a categorical
 selection of {1, 2} by default.
+
+.. note ::
+   These hyperparameter ranges are chosen as reasonable defaults for the benchmark 
+   datasets FB15k-237 / WN18RR. When using different datasets, the ranges might be suboptimal.
 
 All hyper-parameters defined in the ``hpo_default`` of your chosen model will be
 optimized by default. If you already have a value that you're happy with for
