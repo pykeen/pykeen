@@ -136,13 +136,13 @@ def _split_triples_with_train_coverage(
     :return:
         The groups, where the first group is guaranteed to contain each entity and relation at least once.
     """
-    seed_mask = _get_cover_randomized_greedy(triples)
+    seed_mask = _get_cover_deterministic(triples=triples)
     train_seed = triples[seed_mask]
     remaining_triples = triples[~seed_mask]
     # TODO: what to do if train_seed.shape[0] > sizes[0]
     remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
     train, *rest = _split_triples(remaining_triples, remaining_sizes)
-    return (np.concatenate([train_seed, train]), *rest)
+    return np.concatenate([train_seed, train]), *rest
 
 
 def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
@@ -174,68 +174,6 @@ def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     # select
     seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
     seed_mask[np.r_[entities, relations]] = True
-    return seed_mask
-
-
-def _select_to_cover(
-    index: Mapping[int, Sequence[int]],
-    covered: Set[int],
-    covered_relations: Set[int],
-    covered_entities: Set[int],
-    triples: np.ndarray,
-    seed_mask: np.ndarray,
-) -> None:
-    for i, triple_ids in index.items():
-        if i in covered:
-            continue
-        # randomly select triple
-        tr_id = random.choice(triple_ids)
-        seed_mask[tr_id] = True
-        # update coverage
-        h_id, r_id, t_id = triples[tr_id]
-        covered_entities.update(h_id, t_id)
-        covered_relations.add(r_id)
-
-
-def _get_cover_randomized_greedy(triples):
-    # TODO: Relative split sizes?
-    num_triples = triples.shape[0]
-    # index triples
-    entities = defaultdict(set)
-    relations = defaultdict(set)
-    for i, (h, r, t) in enumerate(triples.tolist()):
-        entities[h].add(i)
-        relations[r].add(i)
-        entities[t].add(i)
-    # convert to lists; needed for random.choice
-    entities = {
-        e_id: list(triple_ids)
-        for e_id, triple_ids in entities.items()
-    }
-    relations = {
-        r_id: list(triple_ids)
-        for r_id, triple_ids in relations.items()
-    }
-    # randomized greedy cover
-    covered_entities = set()
-    covered_relations = set()
-    seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
-    _select_to_cover(
-        index=entities,
-        covered=covered_entities,
-        covered_relations=covered_relations,
-        covered_entities=covered_entities,
-        triples=triples,
-        seed_mask=seed_mask,
-    )
-    _select_to_cover(
-        index=relations,
-        covered=covered_relations,
-        covered_relations=covered_relations,
-        covered_entities=covered_entities,
-        triples=triples,
-        seed_mask=seed_mask,
-    )
     return seed_mask
 
 
