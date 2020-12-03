@@ -10,7 +10,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import (
-    _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
+    SPLIT_METHODS, _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
     _tf_cleanup_randomized,
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS
@@ -243,7 +243,7 @@ class TestSplit(unittest.TestCase):
     def test_split_naive(self):
         """Test splitting a factory in two with a given ratio."""
         ratio = 0.8
-        for method in ('old', 'new'):
+        for method in SPLIT_METHODS:
             with self.subTest(method=method):
                 train_triples_factory, test_triples_factory = self.triples_factory.split(ratio, method=method)
                 self._test_invariants(train_triples_factory, test_triples_factory)
@@ -251,7 +251,7 @@ class TestSplit(unittest.TestCase):
     def test_split_multi(self):
         """Test splitting a factory in three."""
         ratios = 0.80, 0.10
-        for method in ('old', 'new'):
+        for method in SPLIT_METHODS:
             with self.subTest(method=method):
                 t0, t1, t2 = self.triples_factory.split(ratios, method=method)
                 self._test_invariants(t0, t1, t2)
