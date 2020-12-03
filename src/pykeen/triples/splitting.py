@@ -181,7 +181,7 @@ class TripleCoverageError(RuntimeError):
         super().__init__(
             f"Could not cover the following {name} from the provided triples: {r}. One possible reason is that you are"
             f" working with triples from a non-compact ID mapping, i.e. where the IDs do not span the full range of "
-            f"[0, ..., num_entities]"
+            f"[0, ..., num_entities]",
         )
 
 
