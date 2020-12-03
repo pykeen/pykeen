@@ -562,7 +562,7 @@ class TriplesFactory:
             f'keeping {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples in {self}',
         )
-        return TriplesFactory(triples=self.triples[idx])
+        return TriplesFactory.from_labeled_triples(triples=self.triples[idx])
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
