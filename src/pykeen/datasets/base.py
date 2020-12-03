@@ -97,7 +97,7 @@ class Dataset:
     @classmethod
     def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
-        tf = TriplesFactory(path=path)
+        tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
 
     @staticmethod
@@ -221,11 +221,11 @@ class PathDataset(LazyDataset):
             self._load_validation()
 
     def _load(self) -> None:
-        self._training = TriplesFactory(
+        self._training = TriplesFactory.from_path(
             path=self.training_path,
             create_inverse_triples=self.create_inverse_triples,
         )
-        self._testing = TriplesFactory(
+        self._testing = TriplesFactory.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
@@ -234,7 +234,7 @@ class PathDataset(LazyDataset):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
-        self._validation = TriplesFactory(
+        self._validation = TriplesFactory.from_path(
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
@@ -494,7 +494,7 @@ class PackedZipRemoteDataset(LazyDataset):
                     header=self.header,
                     sep=self.sep,
                 )
-                rv = TriplesFactory(
+                rv = TriplesFactory.from_labeled_triples(
                     triples=df.values,
                     create_inverse_triples=self.create_inverse_triples,
                 )
@@ -569,7 +569,7 @@ class TarFileSingleDataset(LazyDataset):
                 tf.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
@@ -638,7 +638,7 @@ class SingleTabbedDataset(LazyDataset):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
