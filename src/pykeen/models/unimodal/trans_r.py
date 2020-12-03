@@ -11,6 +11,7 @@ import torch.nn.init
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_uniform_
@@ -67,8 +68,8 @@ class TransR(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=20, high=300, q=50),
-        relation_dim=dict(type=int, low=20, high=300, q=50),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
 
