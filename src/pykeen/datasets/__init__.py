@@ -18,6 +18,7 @@ from .base import (  # noqa:F401
     TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
 )
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
+from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
@@ -49,6 +50,7 @@ __all__ = [
     'WN18',
     'WN18RR',
     'YAGO310',
+    'DRKG',
     'get_dataset',
     'has_dataset',
 ]
