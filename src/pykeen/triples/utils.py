@@ -7,12 +7,10 @@ from typing import Callable, Mapping, Optional, Set, TextIO, Union
 import numpy as np
 from pkg_resources import iter_entry_points
 
-from ..typing import LabeledTriples, RandomHint
-from ..utils import ensure_random_state
+from ..typing import LabeledTriples
 
 __all__ = [
     'load_triples',
-    'generate_triples',
     'get_entities',
 ]
 
@@ -57,38 +55,6 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Opti
         delimiter=delimiter,
         encoding=encoding,
     )
-
-
-def generate_triples(
-    num_entities: int = 33,
-    num_relations: int = 7,
-    num_triples: int = 101,
-    compact: bool = True,
-    random_state: RandomHint = None,
-) -> np.ndarray:
-    """Generate random triples."""
-    random_state = ensure_random_state(random_state)
-    rv = np.stack([
-        random_state.randint(num_entities, size=(num_triples,)),
-        random_state.randint(num_relations, size=(num_triples,)),
-        random_state.randint(num_entities, size=(num_triples,)),
-    ], axis=1)
-
-    if compact:
-        new_entity_id = {
-            entity: i
-            for i, entity in enumerate(sorted(get_entities(rv)))
-        }
-        new_relation_id = {
-            relation: i
-            for i, relation in enumerate(sorted(get_relations(rv)))
-        }
-        rv = np.asarray([
-            [new_entity_id[h], new_relation_id[r], new_entity_id[t]]
-            for h, r, t in rv
-        ])
-
-    return rv
 
 
 def get_entities(triples) -> Set:

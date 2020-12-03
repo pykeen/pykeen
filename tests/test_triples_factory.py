@@ -11,12 +11,13 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
     SPLIT_METHODS, _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
     _tf_cleanup_randomized,
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS
-from pykeen.triples.utils import generate_triples, get_entities, get_relations
+from pykeen.triples.utils import get_entities, get_relations
 
 triples = np.array(
     [
