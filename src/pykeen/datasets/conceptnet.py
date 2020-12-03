@@ -6,13 +6,12 @@ Get a summary with ``python -m pykeen.datasets.conceptnet``
 """
 
 import logging
-from typing import Union
 
-import numpy as np
 import click
 
 from .base import SingleTabbedDataset
 from ..cli_utils import verbose_option
+from ..typing import RandomHint
 
 URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz'
 
@@ -31,7 +30,7 @@ class ConceptNet(SingleTabbedDataset):
     def __init__(
         self,
         create_inverse_triples: bool = False,
-        random_state: Union[None, int, np.random.RandomState] = 0,
+        random_state: RandomHint = 0,
         **kwargs,
     ):
         super().__init__(
