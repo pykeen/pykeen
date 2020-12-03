@@ -221,15 +221,13 @@ class TriplesFactory:
         :return:
             A new triples factory.
         """
-        # TODO remove
-        # _num_entities = len(set(triples[:, 0]).union(triples[:, 2]))
-
         relations = triples[:, 1]
         unique_relations = set(relations)
 
         # Check if the triples are inverted already
         relations_already_inverted = cls._check_already_inverted_relations(unique_relations)
 
+        # TODO: invert triples id-based
         if create_inverse_triples or relations_already_inverted:
             create_inverse_triples = True
             if relations_already_inverted:
@@ -257,14 +255,10 @@ class TriplesFactory:
                 )
                 # extend original triples with inverse ones
                 triples = np.concatenate([triples, inverse_triples], axis=0)
-                # TODO remove
-                # _num_relations = 2 * len(unique_relations)
 
         else:
             create_inverse_triples = False
             relation_to_inverse = None
-            # TODO remove
-            # _num_relations = len(unique_relations)
 
         # Generate entity mapping if necessary
         if entity_to_id is None:
@@ -355,10 +349,7 @@ class TriplesFactory:
     @property
     def num_relations(self) -> int:  # noqa: D401
         """The number of unique relations."""
-        num_relations = len(self.relation_to_id)
-        if self.create_inverse_triples:
-            num_relations = 2 * num_relations
-        return num_relations
+        return len(self.relation_to_id)
 
     @property
     def num_triples(self) -> int:  # noqa: D401
