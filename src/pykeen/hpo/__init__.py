@@ -39,7 +39,7 @@ default "strategies" for optimizing these hyper-parameters which either constitu
 ranges for integer/floating point numbers or as enumerations for categorical variables
 and booleans.
 
-While the default values for hyperparameters are encoded with the python syntax
+While the default values for hyper-parameters are encoded with the python syntax
 for default values of the ``__init__()`` function of each model, the ranges/scales can be
 found in the class variable :py:attr:`pykeen.models.Model.hpo_default`. For
 example, the range for TransE's embedding dimension is set to optimize
@@ -48,7 +48,8 @@ TransE also has a scoring function norm that will be optimized by a categorical
 selection of {1, 2} by default.
 
 .. note ::
-   These hyperparameter ranges are chosen as reasonable defaults for the benchmark 
+
+   These hyper-parameter ranges were chosen as reasonable defaults for the benchmark
    datasets FB15k-237 / WN18RR. When using different datasets, the ranges might be suboptimal.
 
 All hyper-parameters defined in the ``hpo_default`` of your chosen model will be
