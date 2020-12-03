@@ -67,7 +67,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a', 'e2'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=True)
+        factory = TriplesFactory.from_triples(triples=t, create_inverse_triples=True)
         reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
 
@@ -80,7 +80,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e4', f'a{INVERSE_SUFFIX}', 'e5'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=False)
+        factory = TriplesFactory.from_triples(triples=t, create_inverse_triples=False)
         reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
         self.assertTrue(factory.create_inverse_triples)
@@ -93,7 +93,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a.', 'e5'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=False)
+        factory = TriplesFactory.from_triples(triples=t, create_inverse_triples=False)
         reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
         self.assertEqual(reference_relation_to_id, factory.relation_to_id)
         self.assertTrue(factory.create_inverse_triples)
@@ -111,7 +111,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', f'abc{INVERSE_SUFFIX}', 'e1'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory(triples=t, create_inverse_triples=False)
+        factory = TriplesFactory.from_triples(triples=t, create_inverse_triples=False)
         reference_relation_to_id = {
             'a': 0,
             f'a{INVERSE_SUFFIX}': 1,
