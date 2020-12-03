@@ -596,7 +596,7 @@ class TarFileSingleDataset(LazyDataset):
                 tf.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
@@ -665,7 +665,7 @@ class SingleTabbedDataset(LazyDataset):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
