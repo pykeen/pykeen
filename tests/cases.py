@@ -188,13 +188,7 @@ class PairwiseLossTestCase(LossTestCase):
 
 
 class SetwiseLossTestCase(LossTestCase):
-    """unittests for setwise losses."""
-
-    #: Setwise do not support slcwa training loop
-    training_loop_support = dict(
-        slcwa=False,
-        lcwa=True,
-    )
+    """Unit tests for setwise losses."""
 
     #: The number of entities.
     num_entities: int = 13
