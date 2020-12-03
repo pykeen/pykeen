@@ -358,7 +358,7 @@ class TriplesFactory:
         return self.mapped_triples.shape[0]
 
     @property
-    def triples(self) -> np.ndarray:
+    def triples(self) -> np.ndarray:  # noqa: D401
         """The labeled triples."""
         # TODO: Deprecation warning. Will be replaced by re-constructing them from ID-based + mapping soon.
         return self._triples
