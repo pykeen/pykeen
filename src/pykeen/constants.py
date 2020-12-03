@@ -2,13 +2,18 @@
 
 """Constants for PyKEEN."""
 
-import os
+import pystow
 
 __all__ = [
     'PYKEEN_HOME',
+    'PYKEEN_DATASETS',
 ]
 
-PYKEEN_HOME = os.environ.get('PYKEEN_HOME') or os.path.join(os.path.expanduser('~'), '.pykeen')
+#: Can be modified by setting environment variable ``PYKEEN_HOME``
+#: For more information, see https://github.com/cthoyt/pystow
+PYKEEN_HOME = pystow.get('pykeen')
+PYKEEN_DATASETS = pystow.get('pykeen', 'datasets')
+
 DEFAULT_DROPOUT_HPO_RANGE = dict(type=float, low=0.0, high=0.5, q=0.1)
 # We define the embedding dimensions as a multiple of 16 because it is computational beneficial (on a GPU)
 # see: https://docs.nvidia.com/deeplearning/performance/index.html#optimizing-performance

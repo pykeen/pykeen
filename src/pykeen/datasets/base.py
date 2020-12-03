@@ -18,7 +18,7 @@ import pandas as pd
 import requests
 from tabulate import tabulate
 
-from ..constants import PYKEEN_HOME
+from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
 from ..typing import RandomHint
 from ..utils import normalize_string
@@ -184,7 +184,7 @@ class LazyDataset(Dataset):
             :class:`pykeen.datasets.base.Dataset`.
         """
         if cache_root is None:
-            cache_root = PYKEEN_HOME
+            cache_root = PYKEEN_DATASETS
         cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
