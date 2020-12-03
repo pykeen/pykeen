@@ -3,7 +3,7 @@
 """Implementation of triples splitting functions."""
 
 import logging
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy as np
@@ -13,8 +13,12 @@ from ..utils import ensure_random_state
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "split",
+]
 
-def _get_group_sizes(triples, ratios):
+
+def _get_group_sizes(n_triples: int, ratios: Union[float, Sequence[float]]) -> Sequence[int]:
     # Prepare split index
     if isinstance(ratios, float):
         ratios = [ratios]
@@ -23,10 +27,7 @@ def _get_group_sizes(triples, ratios):
         ratios = ratios[:-1]  # vsplit doesn't take the final number into account.
     elif ratio_sum > 1.0:
         raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
-    ratios = ratios
 
-    # Expects clean ratios!
-    n_triples = triples.shape[0]
     return [
         int(fraction * n_triples)
         for fraction in ratios
@@ -81,7 +82,7 @@ def split(
 ):
     """Split the triples into clean groups."""
     random_state = ensure_random_state(random_state)
-    sizes = _get_group_sizes(triples, ratios)
+    sizes = _get_group_sizes(n_triples=triples.shape[0], ratios=ratios)
 
     if method == 'cleanup':
         triples_groups = _split_triples(
