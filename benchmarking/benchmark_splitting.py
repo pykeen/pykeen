@@ -15,16 +15,28 @@ import seaborn as sns
 from humanize import intword
 from tqdm import tqdm
 
+from pykeen.constants import PYKEEN_BENCHMARK_HOME
 from pykeen.datasets import get_dataset
 from pykeen.triples.splitting import split
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-RESULTS = os.path.join(HERE, 'results')
-os.makedirs(RESULTS, exist_ok=True)
+SPLITTING_DIRECTORY = PYKEEN_BENCHMARK_HOME / 'splitting'
+RESULTS_DIRECTORY = SPLITTING_DIRECTORY / 'results'
+os.makedirs(RESULTS_DIRECTORY, exist_ok=True)
 
-tsv_path = os.path.join(RESULTS, 'split_benchmark.tsv')
-png_path = os.path.join(RESULTS, 'split_benchmark.png')
-scatter_png_path = os.path.join(RESULTS, 'split_benchmark_scatter.png')
+tsv_path = SPLITTING_DIRECTORY / 'split_benchmark.tsv'
+png_path = SPLITTING_DIRECTORY / 'split_benchmark.png'
+scatter_png_path = SPLITTING_DIRECTORY / 'split_benchmark_scatter.png'
+columns = [
+    'dataset',
+    'dataset_size',
+    'method',
+    'ratio',
+    'replicate',
+    'time',
+    'training_size',
+    'testing_size',
+    'validation_size',
+]
 
 
 @click.command()
@@ -47,13 +59,13 @@ def main(replicates: int):
         'codexmedium',
         'codexlarge',
         'wn18rr',
-        'FB15k237',
+        'fb15k237',
         'wn18',
         'fb15k',
-        'YAGO310',
-        'OGBBioKG',
+        'yago310',
+        'ogbbiokg',
         'hetionet',
-        'OGBWikiKG',
+        'ogbwikikg',
         'openbiolink',
         'drkg',
     ]
@@ -61,6 +73,14 @@ def main(replicates: int):
     rows = []
     outer_it = tqdm(datasets, desc='Dataset')
     for dataset in outer_it:
+        dataset_path = RESULTS_DIRECTORY / f'{dataset}.tsv'
+        if dataset_path.exists():
+            tqdm.write(f'loading pre-calculated {dataset}')
+            df = pd.read_csv(dataset_path, sep='\t')
+            rows.extend(df.values)
+            continue
+
+        tqdm.write(f'loading {dataset}')
         dataset = get_dataset(dataset=dataset)
         dataset_name = dataset.__class__.__name__
         triples = np.concatenate([
@@ -69,6 +89,9 @@ def main(replicates: int):
             dataset.validation.triples,
         ])
         del dataset
+        tqdm.write('done loading')
+
+        dataset_rows = []
         inner_it = itt.product(methods, ratios, range(1, 1 + replicates))
         inner_it = tqdm(
             inner_it,
@@ -84,7 +107,7 @@ def main(replicates: int):
                 random_state=replicate,
             )
             total = time.time() - t
-            rows.append((
+            dataset_rows.append((
                 dataset_name,
                 triples.shape[0],
                 method,
@@ -97,18 +120,10 @@ def main(replicates: int):
             ))
             del results
 
-    df = pd.DataFrame(rows, columns=[
-        'dataset',
-        'dataset_size',
-        'method',
-        'ratio',
-        'replicate',
-        'time',
-        'training_size',
-        'testing_size',
-        'validation_size',
-    ])
+        pd.DataFrame(dataset_rows, columns=columns).to_csv(dataset_path, sep='\t', index=False)
+        rows.extend(dataset_rows)
 
+    df = pd.DataFrame(rows, columns=columns)
     df.to_csv(tsv_path, sep='\t', index=False)
     _make_1(df)
     _make_2(df)
