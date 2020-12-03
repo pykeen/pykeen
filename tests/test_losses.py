@@ -111,6 +111,7 @@ class TestCustomLossFunctions(unittest.TestCase):
     def test_negative_sampling_self_adversarial_loss(self):
         """Test the negative sampling self adversarial loss function."""
         loss_fct = NSSALoss(margin=1., adversarial_temperature=1.)
+        self.assertIs(loss_fct._reduction_method, torch.mean)
 
         pos_scores = torch.tensor([0., 0., -0.5, -0.5])
         neg_scores = torch.tensor([0., 0., -1., -1.])
