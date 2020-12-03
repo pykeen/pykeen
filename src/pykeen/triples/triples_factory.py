@@ -391,7 +391,7 @@ class TriplesFactory:
         *,
         random_state: RandomHint = None,
         randomize_cleanup: bool = False,
-        method: str = 'old',
+        method: Optional[str] = None,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
@@ -403,6 +403,8 @@ class TriplesFactory:
         :param random_state: The random state used to shuffle and split the triples in this factory.
         :param randomize_cleanup: If true, uses the non-deterministic method for moving triples to the training set.
          This has the advantage that it doesn't necessarily have to move all of them, but it might be slower.
+        :param method:
+            The name of the method to use, either 'old' or 'new'. Defaults to new.
 
         .. code-block:: python
 

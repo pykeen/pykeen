@@ -5,7 +5,7 @@
 import logging
 import random
 from collections import defaultdict
-from typing import List, Mapping, Sequence, Set, Tuple
+from typing import List, Mapping, Optional, Sequence, Set, Tuple
 
 import numpy
 import numpy as np
@@ -84,7 +84,7 @@ def split(
     ratios,
     random_state: RandomHint = None,
     randomize_cleanup: bool = False,
-    method: str = 'old',
+    method: Optional[str] = None,
 ):
     """Split the triples into clean groups."""
     random_state = ensure_random_state(random_state)
@@ -101,7 +101,7 @@ def split(
         logger.debug('cleaning up groups')
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
         logger.debug('done cleaning up groups')
-    elif method == 'new':
+    elif method == 'new' or method is None:
         triples_groups = _split_triples_with_train_coverage(
             triples=triples,
             sizes=sizes,
@@ -121,7 +121,10 @@ def split(
     return triples_groups
 
 
-def _split_triples_with_train_coverage(triples: np.ndarray, sizes: Sequence[int]) -> Sequence[np.ndarray]:
+def _split_triples_with_train_coverage(
+    triples: np.ndarray,
+    sizes: Sequence[int],
+) -> Sequence[np.ndarray]:
     """
     Split triples into groups ensuring that all entities and relations occur in the first group of triples.
 
