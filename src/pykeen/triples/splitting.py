@@ -23,8 +23,7 @@ SPLIT_METHODS = (
 )
 
 
-def _get_group_sizes(n_triples: int, ratios: Union[float, Sequence[float]]) -> Sequence[int]:
-    # Prepare split index
+def _cleanup_ratios(ratios: Union[float, Sequence[float]]) -> Sequence[float]:
     if isinstance(ratios, float):
         ratios = [ratios]
     ratio_sum = sum(ratios)
@@ -32,7 +31,16 @@ def _get_group_sizes(n_triples: int, ratios: Union[float, Sequence[float]]) -> S
         ratios = ratios[:-1]  # vsplit doesn't take the final number into account.
     elif ratio_sum > 1.0:
         raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
+    return ratios
 
+
+def _get_group_sizes(
+    n_triples: int,
+    ratios: Union[float, Sequence[float]],
+    cleanup_ratios: bool = True,
+) -> Sequence[int]:
+    if cleanup_ratios:
+        ratios = _cleanup_ratios(ratios)
     return [
         int(fraction * n_triples)
         for fraction in ratios
@@ -92,7 +100,8 @@ def split(
         raise ValueError(f"Invalid split method: \"{method}\". Allowed are {SPLIT_METHODS}")
 
     random_state = ensure_random_state(random_state)
-    sizes = _get_group_sizes(n_triples=triples.shape[0], ratios=ratios)
+    ratios = _cleanup_ratios(ratios)  # cleanup is necessary for later debugging
+    sizes = _get_group_sizes(n_triples=triples.shape[0], ratios=ratios, cleanup_ratios=False)
 
     if method == 'cleanup':
         triples_groups = _split_triples(
@@ -154,18 +163,22 @@ def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     entities[h] = relations[r] = entities[t] = triple_id
 
     if entities.min() < 0:
-        raise RuntimeError(
-            f"Could not cover the following entities from the provided triples: {sorted((entities < 0).nonzero())}"
-        )
+        raise EntityCoverageError(entities)
     if relations.min() < 0:
-        raise RuntimeError(
-            f"Could not cover the following entities from the provided triples: {sorted((relations < 0).nonzero())}"
-        )
+        raise EntityCoverageError(relations)
 
     # select
     seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
     seed_mask[np.r_[entities, relations]] = True
     return seed_mask
+
+
+class EntityCoverageError(RuntimeError):
+    """An exception thrown when not all entities are covered."""
+
+    def __init__(self, arr):
+        r = sorted((arr < 0).nonzero())
+        super().__init__(f'Could not cover the following entities from the provided triples: {r}')
 
 
 def _tf_cleanup_all(
