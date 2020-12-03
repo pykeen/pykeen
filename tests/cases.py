@@ -159,7 +159,7 @@ class PointwiseLossTestCase(LossTestCase):
         """Test ``forward(logits, labels)``."""
         logits = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = functional.normalize(torch.rand(self.batch_size, self.num_entities, requires_grad=False), p=1, dim=-1)
-        loss_value = self.loss.forward(
+        loss_value = self.loss(
             logits,
             labels,
         )
@@ -180,7 +180,7 @@ class PairwiseLossTestCase(LossTestCase):
         """Test ``forward(pos_scores, neg_scores)``."""
         pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
-        loss_value = self.loss.forward(
+        loss_value = self.loss(
             pos_scores,
             neg_scores,
         )
@@ -201,7 +201,7 @@ class SetwiseLossTestCase(LossTestCase):
         """Test forward(scores, labels)."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
-        loss_value = self.loss.forward(
+        loss_value = self.loss(
             scores,
             labels,
         )
