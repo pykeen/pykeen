@@ -145,9 +145,13 @@ def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     entities[h] = relations[r] = entities[t] = triple_id
 
     if entities.min() < 0:
-        raise RuntimeError(f'unfilled entities exist: {entities}')
+        raise RuntimeError(
+            f"Could not cover the following entities from the provided triples: {sorted((entities < 0).nonzero())}"
+        )
     if relations.min() < 0:
-        raise RuntimeError(f'unfilled relations exist: {relations}')
+        raise RuntimeError(
+            f"Could not cover the following entities from the provided triples: {sorted((relations < 0).nonzero())}"
+        )
 
     # select
     seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
