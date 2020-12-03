@@ -3,99 +3,33 @@
 """Test the PyKEEN custom loss functions."""
 
 import unittest
-from typing import Any, Mapping, Optional, Type
 
 import torch
-from torch.nn import functional
 
-from pykeen.losses import BCEAfterSigmoidLoss, CrossEntropyLoss, Loss, NSSALoss, SoftplusLoss
+from pykeen.losses import BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, MSELoss, NSSALoss, SoftplusLoss
 from pykeen.pipeline import PipelineResult, pipeline
+from tests import cases
 
 
-class _LossTests:
-    """Base unittest for loss functions."""
-
-    #: The class
-    cls: Type[Loss]
-
-    #: Constructor keyword arguments
-    kwargs: Optional[Mapping[str, Any]] = None
-
-    #: The loss instance
-    instance: Loss
-
-    #: The batch size
-    batch_size: int = 3
-
-    def setUp(self) -> None:
-        """Initialize the instance."""
-        kwargs = self.kwargs
-        if kwargs is None:
-            kwargs = {}
-        self.instance = self.cls(**kwargs)
-
-    def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
-        """Check loss value dimensionality, and ability for backward."""
-        # test reduction
-        assert loss_value.ndim == 0
-
-        # Test backward
-        loss_value.backward()
-
-
-class _LabelLossTests(_LossTests):
-    """Base unit test for label-based losses."""
-
-    #: The number of entities.
-    num_entities: int = 17
-
-    def test_label_loss(self):
-        """Test ``forward(logits, labels)``."""
-        logits = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
-        labels = functional.normalize(torch.rand(self.batch_size, self.num_entities, requires_grad=False), p=1, dim=-1)
-        loss_value = self.instance.forward(
-            logits=logits,
-            labels=labels,
-        )
-        self._check_loss_value(loss_value)
-
-
-class _PairLossTests(_LossTests):
-    """Base unit test for pair-wise losses."""
-
-    #: The number of negative samples
-    num_negatives: int = 5
-
-    def test_pair_loss(self):
-        """Test ``forward(pos_scores, neg_scores)``."""
-        pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
-        neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
-        loss_value = self.instance.forward(
-            pos_scores=pos_scores,
-            neg_scores=neg_scores,
-        )
-        self._check_loss_value(loss_value)
-
-
-class CrossEntropyLossTests(_LabelLossTests, unittest.TestCase):
+class CrossEntropyLossTests(cases.SetwiseLossTestCase):
     """Unit test for CrossEntropyLoss."""
 
     cls = CrossEntropyLoss
 
 
-class BCEAfterSigmoidLossTests(_LabelLossTests, unittest.TestCase):
+class BCEAfterSigmoidLossTests(cases.PointwiseLossTestCase):
     """Unit test for BCEAfterSigmoidLoss."""
 
     cls = BCEAfterSigmoidLoss
 
 
-class SoftplusLossTests(_LabelLossTests, unittest.TestCase):
+class SoftplusLossTests(cases.PointwiseLossTestCase):
     """Unit test for SoftplusLoss."""
 
     cls = SoftplusLoss
 
 
-class NSSALossTests(_PairLossTests, unittest.TestCase):
+class NSSALossTests(cases.SetwiseLossTestCase):
     """Unit test for NSSALoss."""
 
     cls = NSSALoss
@@ -149,8 +83,23 @@ class TestCustomLossFunctions(unittest.TestCase):
             dataset='nations',
             loss=loss,
             loss_kwargs=loss_kwargs,
+            training_kwargs=dict(use_tqdm=False),
         )
         self.assertIsInstance(pipeline_results, PipelineResult)
         self.assertIsInstance(pipeline_results.model.loss, loss)
         self.assertEqual(pipeline_results.model.loss.margin, 1.)
         self.assertEqual(pipeline_results.model.loss.adversarial_temperature, 1.)
+
+
+class BCEWithLogitsLossTestCase(cases.PointwiseLossTestCase):
+    """Tests for binary cross entropy (stable) loss."""
+
+    cls = BCEWithLogitsLoss
+
+
+class MSELossTestCase(cases.PointwiseLossTestCase):
+    """Tests for mean square error loss."""
+
+    cls = MSELoss
+
+# TODO reimplement then test MarginRankingLoss using PR #18 solution
