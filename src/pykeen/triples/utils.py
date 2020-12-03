@@ -11,6 +11,7 @@ from ..typing import LabeledTriples
 
 __all__ = [
     'load_triples',
+    'generate_triples',
 ]
 
 
@@ -54,3 +55,16 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Opti
         delimiter=delimiter,
         encoding=encoding,
     )
+
+
+def generate_triples(
+    num_entities: int = 33,
+    num_relations: int = 7,
+    num_triples: int = 101,
+) -> np.ndarray:
+    """Generate random triples."""
+    return np.stack([
+        np.random.randint(num_entities, size=(num_triples,)),
+        np.random.randint(num_relations, size=(num_triples,)),
+        np.random.randint(num_entities, size=(num_triples,)),
+    ], axis=1)

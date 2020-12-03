@@ -145,28 +145,31 @@ def _split_triples_with_train_coverage(
     return (np.concatenate([train_seed, train]), *rest)
 
 
-def _get_cover_deterministic(all_triples: np.ndarray) -> np.ndarray:
+def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     """
     Get a coverage mask for all entities and relations.
 
-    :param all_triples: shape: (n, 3)
+    :param triples: shape: (n, 3)
         The triples.
 
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    num_entities = all_triples[:, [0, 2]].max() + 1
-    num_relations = all_triples[:, 1].max() + 1
-    num_triples = all_triples.shape[0]
+    num_entities = triples[:, [0, 2]].max() + 1
+    num_relations = triples[:, 1].max() + 1
+    num_triples = triples.shape[0]
 
     # index
     entities = numpy.full(shape=(num_entities,), fill_value=-1, dtype=numpy.int64)
     relations = numpy.full(shape=(num_relations,), fill_value=-1, dtype=numpy.int64)
-    h, r, t = all_triples.T
+    h, r, t = triples.T
     triple_id = numpy.arange(num_triples)
     entities[h] = relations[r] = entities[t] = triple_id
-    assert entities.min() >= 0
-    assert relations.min() >= 0
+
+    if entities.min() < 0:
+        raise RuntimeError(f'unfilled entities exist: {entities}')
+    if relations.min() < 0:
+        raise RuntimeError(f'unfilled relations exist: {relations}')
 
     # select
     seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)

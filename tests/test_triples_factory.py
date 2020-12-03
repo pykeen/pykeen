@@ -14,6 +14,7 @@ from pykeen.triples.splitting import (
     _tf_cleanup_randomized,
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS
+from pykeen.triples.utils import generate_triples
 
 triples = np.array(
     [
@@ -330,6 +331,26 @@ class TestSplit(unittest.TestCase):
         else:
             self.fail('training was not correct')
 
+    def test_get_cover_deterministic(self):
+        """Test _get_cover_deterministic."""
+        all_triples = generate_triples()
+        cover = _get_cover_deterministic(triples=all_triples)
+
+        # check type
+        self.assertIsInstance(cover, np.ndarray)
+        self.assertEqual(cover.dtype, np.bool)
+
+        # check format
+        self.assertEqual(1, len(cover.shape))
+        self.assertEqual(cover.shape, (all_triples.shape[0],))
+
+        # check coverage
+        self.assertEqual(_get_entities(all_triples), _get_entities(all_triples[cover]), msg='coverage is not full')
+
+
+def _get_entities(t):
+    return set(t[:, [0, 2]].flatten().tolist())
+
 
 class TestLiterals(unittest.TestCase):
     """Class for testing utils for processing numeric literals.tsv."""
@@ -403,33 +424,3 @@ class TestLiterals(unittest.TestCase):
         )
 
         self.assertIn(f'likes{INVERSE_SUFFIX}', triples_factory.relation_to_id)
-
-
-def _generate_triples(
-    num_entities: int = 33,
-    num_relations: int = 7,
-    num_triples: int = 101,
-) -> np.ndarray:
-    """Generate random triples."""
-    return np.stack([
-        np.random.randint(num_entities, size=(num_triples,)),
-        np.random.randint(num_relations, size=(num_triples,)),
-        np.random.randint(num_entities, size=(num_triples,)),
-    ], axis=1)
-
-
-def test_get_cover_deterministic():
-    """Test _get_cover_deterministic."""
-    all_triples = _generate_triples()
-    cover = _get_cover_deterministic(all_triples=all_triples)
-
-    # check type
-    assert isinstance(cover, np.ndarray)
-    assert cover.dtype == np.bool
-
-    # check format
-    assert cover.shape == (all_triples.shape[0],)
-
-    # check coverage
-    triples = all_triples[cover]
-    assert set(triples[:, [0, 2]].flatten().tolist()) == set(all_triples[:, [0, 2]].flatten().tolist())
