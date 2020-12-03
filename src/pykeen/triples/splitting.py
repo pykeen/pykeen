@@ -105,6 +105,7 @@ def split(
         triples_groups = _split_triples_with_train_coverage(
             triples=triples,
             sizes=sizes,
+            random_state=random_state,
         )
     else:
         raise ValueError(f'invalid method: {method}')
@@ -124,6 +125,7 @@ def split(
 def _split_triples_with_train_coverage(
     triples: np.ndarray,
     sizes: Sequence[int],
+    random_state: np.random.RandomState,
 ) -> Sequence[np.ndarray]:
     """
     Split triples into groups ensuring that all entities and relations occur in the first group of triples.
@@ -142,7 +144,7 @@ def _split_triples_with_train_coverage(
     if train_seed.shape[0] > sizes[0]:
         raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
     remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
-    train, *rest = _split_triples(remaining_triples, remaining_sizes)
+    train, *rest = _split_triples(triples=remaining_triples, sizes=remaining_sizes, random_state=random_state)
     return np.concatenate([train_seed, train]), *rest
 
 
