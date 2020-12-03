@@ -2,6 +2,7 @@
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
+import dataclasses
 import logging
 import os
 import re
@@ -173,6 +174,7 @@ def _map_triples_elements_to_ids(
     return torch.tensor(unique_mapped_triples, dtype=torch.long)
 
 
+@dataclasses.dataclass
 class TriplesFactory:
     """Create instances given the path to triples."""
 
@@ -193,121 +195,169 @@ class TriplesFactory:
     #: A dictionary mapping each relation to its inverse, if inverse triples were created
     relation_to_inverse: Optional[Mapping[str, str]]
 
-    def __init__(
-        self,
-        *,
-        path: Union[None, str, TextIO] = None,
-        triples: Optional[LabeledTriples] = None,
+    @classmethod
+    def from_labeled_triples(
+        cls,
+        triples: LabeledTriples,
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
-    ) -> None:
-        """Initialize the triples factory.
-
-        :param path: The path to a 3-column TSV file with triples in it. If not specified,
-         you should specify ``triples``.
-        :param triples:  A 3-column numpy array with triples in it. If not specified,
-         you should specify ``path``
-        :param create_inverse_triples: Should inverse triples be created? Defaults to False.
-        :param compact_id:
-            Whether to compact the IDs such that they range from 0 to (num_entities or num_relations)-1
+    ) -> "TriplesFactory":
         """
-        if path is None and triples is None:
-            raise ValueError('Must specify either triples or path')
-        elif path is not None and triples is not None:
-            raise ValueError('Must not specify both triples and path')
-        elif path is not None:
-            if isinstance(path, str):
-                self.path = os.path.abspath(path)
-            elif isinstance(path, TextIO):
-                self.path = os.path.abspath(path.name)
-            else:
-                raise TypeError(f'path is invalid type: {type(path)}')
+        Create a new triples factory from label-based triples.
 
-            # TODO: Check if lazy evaluation would make sense
-            self.triples = load_triples(path)
-        else:  # triples is not None
-            self.path = '<None>'
-            self.triples = triples
+        :param triples: shape: (n, 3), dtype: str
+            The label-based triples.
+        :param create_inverse_triples:
+            Whether to create inverse triples.
+        :param entity_to_id:
+            The mapping from entity labels to ID. If None, create a new one from the triples.
+        :param relation_to_id:
+            The mapping from relations labels to ID. If None, create a new one from the triples.
+        :param compact_id:
+            Whether to compact IDs such that the IDs are consecutive.
 
-        self._num_entities = len(set(self.triples[:, 0]).union(self.triples[:, 2]))
+        :return:
+            A new triples factory.
+        """
+        _num_entities = len(set(triples[:, 0]).union(triples[:, 2]))
 
-        relations = self.triples[:, 1]
+        relations = triples[:, 1]
         unique_relations = set(relations)
 
         # Check if the triples are inverted already
-        relations_already_inverted = self._check_already_inverted_relations(unique_relations)
+        relations_already_inverted = TriplesFactory._check_already_inverted_relations(unique_relations)
 
         if create_inverse_triples or relations_already_inverted:
-            self.create_inverse_triples = True
+            create_inverse_triples = True
             if relations_already_inverted:
                 logger.info(
                     f'Some triples already have suffix {INVERSE_SUFFIX}. '
                     f'Creating TriplesFactory based on inverse triples',
                 )
-                self.relation_to_inverse = {
+                relation_to_inverse = {
                     re.sub('_inverse$', '', relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
                     for relation in unique_relations
                 }
 
             else:
-                self.relation_to_inverse = {
+                relation_to_inverse = {
                     relation: f"{relation}{INVERSE_SUFFIX}"
                     for relation in unique_relations
                 }
                 inverse_triples = np.stack(
                     [
-                        self.triples[:, 2],
-                        np.array([self.relation_to_inverse[relation] for relation in relations], dtype=np.str),
-                        self.triples[:, 0],
+                        triples[:, 2],
+                        np.array([relation_to_inverse[relation] for relation in relations], dtype=np.str),
+                        triples[:, 0],
                     ],
                     axis=-1,
                 )
                 # extend original triples with inverse ones
-                self.triples = np.concatenate([self.triples, inverse_triples], axis=0)
-                self._num_relations = 2 * len(unique_relations)
+                triples = np.concatenate([triples, inverse_triples], axis=0)
+                _num_relations = 2 * len(unique_relations)
 
         else:
-            self.create_inverse_triples = False
-            self.relation_to_inverse = None
-            self._num_relations = len(unique_relations)
+            create_inverse_triples = False
+            relation_to_inverse = None
+            _num_relations = len(unique_relations)
 
         # Generate entity mapping if necessary
         if entity_to_id is None:
-            entity_to_id = create_entity_mapping(triples=self.triples)
+            entity_to_id = create_entity_mapping(triples=triples)
         if compact_id:
             entity_to_id = compact_mapping(mapping=entity_to_id)[0]
-        self.entity_to_id = entity_to_id
+        entity_to_id = entity_to_id
 
         # Generate relation mapping if necessary
         if relation_to_id is None:
-            if self.create_inverse_triples:
+            if create_inverse_triples:
                 relation_to_id = create_relation_mapping(
-                    set(self.relation_to_inverse.keys()).union(set(self.relation_to_inverse.values())),
+                    set(relation_to_inverse.keys()).union(set(relation_to_inverse.values())),
                 )
             else:
                 relation_to_id = create_relation_mapping(unique_relations)
         if compact_id:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
-        self.relation_to_id = relation_to_id
+        relation_to_id = relation_to_id
 
         # Map triples of labels to triples of IDs.
-        self.mapped_triples = _map_triples_elements_to_ids(
-            triples=self.triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
+        mapped_triples = _map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
         )
+
+        return TriplesFactory(
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            triples=triples,
+            mapped_triples=mapped_triples,
+            relation_to_inverse=relation_to_inverse,
+        )
+
+    @classmethod
+    def from_path(
+        cls,
+        path: Union[str, TextIO],
+        create_inverse_triples: bool = False,
+        entity_to_id: Optional[EntityMapping] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        compact_id: bool = True,
+    ) -> "TriplesFactory":
+        """
+        Create a new triples factory from triples stored in a file.
+
+        :param path:
+            The path where the label-based triples are stored.
+        :param create_inverse_triples:
+            Whether to create inverse triples.
+        :param entity_to_id:
+            The mapping from entity labels to ID. If None, create a new one from the triples.
+        :param relation_to_id:
+            The mapping from relations labels to ID. If None, create a new one from the triples.
+        :param compact_id:
+            Whether to compact IDs such that the IDs are consecutive.
+
+        :return:
+            A new triples factory.
+        """
+        if isinstance(path, str):
+            path = os.path.abspath(path)
+        elif isinstance(path, TextIO):
+            path = os.path.abspath(path.name)
+        else:
+            raise TypeError(f'path is invalid type: {type(path)}')
+
+        # TODO: Check if lazy evaluation would make sense
+        triples = load_triples(path)
+
+        return cls.from_labeled_triples(
+            triples=triples,
+            create_inverse_triples=create_inverse_triples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            compact_id=compact_id,
+        )
+
+    @property
+    def create_inverse_triples(self) -> bool:  # noqa: D401
+        """Whether inverse triples are added."""
+        return self.relation_to_inverse is not None
 
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
-        return self._num_entities
+        return len(self.entity_to_id)
 
     @property
     def num_relations(self) -> int:  # noqa: D401
         """The number of unique relations."""
-        return self._num_relations
+        num_relations = len(self.relation_to_id)
+        if self.create_inverse_triples:
+            num_relations = 2 * num_relations
+        return num_relations
 
     @property
     def num_triples(self) -> int:  # noqa: D401
@@ -332,7 +382,8 @@ class TriplesFactory:
         return self.relation_to_id[inverse_relation]
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(path="{self.path}")'
+        return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations}, ' \
+               f'num_triples={self.num_triples}, inverse_triples={self.create_inverse_triples})'
 
     @staticmethod
     def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
@@ -460,7 +511,7 @@ class TriplesFactory:
 
         # Make new triples factories for each group
         return [
-            TriplesFactory(
+            TriplesFactory.from_labeled_triples(
                 triples=triples,
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
@@ -520,7 +571,7 @@ class TriplesFactory:
             f'removing {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples',
         )
-        return TriplesFactory(triples=self.triples[idx])
+        return TriplesFactory.from_labeled_triples(triples=self.triples[idx])
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
@@ -658,7 +709,7 @@ class TriplesFactory:
             return self
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
-        factory = TriplesFactory(
+        factory = TriplesFactory.from_labeled_triples(
             triples=self.triples[keep_mask],
             create_inverse_triples=False,
             entity_to_id=self.entity_to_id,
@@ -668,9 +719,7 @@ class TriplesFactory:
 
         # manually copy the inverse relation mappings
         if self.create_inverse_triples:
-            factory.create_inverse_triples = True
             factory.relation_to_inverse = self.relation_to_inverse
-            factory._num_relations = self._num_relations
 
         return factory
 
