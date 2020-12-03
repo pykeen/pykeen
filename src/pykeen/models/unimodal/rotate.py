@@ -78,14 +78,13 @@ class RotatE(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=125, high=1000, q=100),
+        embedding_dim=dict(type=int, low=32, high=1024, q=16),
     )
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -95,7 +94,6 @@ class RotatE(EntityRelationEmbeddingModel):
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,
             loss=loss,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,

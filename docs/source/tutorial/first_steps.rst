@@ -29,7 +29,7 @@ executed with one of the previous examples.
 
 .. code-block:: python
 
-    # Get a training data set
+    # Get a training dataset
     from pykeen.datasets import Nations
     dataset = Nations()
     training_triples_factory = dataset.training

@@ -9,6 +9,7 @@ import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -38,14 +39,13 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -56,7 +56,6 @@ class ERMLP(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

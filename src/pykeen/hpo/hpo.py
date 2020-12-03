@@ -19,7 +19,7 @@ from optuna.storages import BaseStorage
 from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
 from ..datasets import get_dataset, has_dataset
-from ..datasets.base import DataSet
+from ..datasets.base import Dataset
 from ..evaluation import Evaluator, get_evaluator_cls
 from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from ..models import get_model_cls
@@ -54,7 +54,7 @@ STOPPED_EPOCH_KEY = 'stopped_epoch'
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    dataset: Union[None, str, Type[DataSet]]  # 1.
+    dataset: Union[None, str, Type[Dataset]]  # 1.
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
     regularizer: Type[Regularizer]  # 4.
@@ -415,7 +415,7 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, str, TriplesFactory] = None,
     testing: Union[None, str, TriplesFactory] = None,
@@ -476,7 +476,7 @@ def hpo_pipeline(
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.DataSet`
+        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
@@ -803,7 +803,7 @@ def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
 
 def _get_dataset_name(
     *,
-    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, str, TriplesFactory] = None,
     testing: Union[None, str, TriplesFactory] = None,
@@ -812,8 +812,8 @@ def _get_dataset_name(
     """Make a useful name for the dataset for storage in HPO."""
     if (
         (isinstance(dataset, str) and has_dataset(dataset))
-        or isinstance(dataset, DataSet)
-        or (isinstance(dataset, type) and issubclass(dataset, DataSet))
+        or isinstance(dataset, Dataset)
+        or (isinstance(dataset, type) and issubclass(dataset, Dataset))
     ):
         return get_dataset(dataset=dataset).get_normalized_name()
 

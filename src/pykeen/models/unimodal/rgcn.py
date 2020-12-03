@@ -13,6 +13,7 @@ from torch.nn import functional
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityEmbeddingModel
 from ..base import Model
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
 from ...triples import TriplesFactory
@@ -464,15 +465,15 @@ class RGCN(Model):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=1000, q=50),
+        embedding_dim=dict(type=int, low=16, high=1024, q=16),
         num_bases_or_blocks=dict(type=int, low=2, high=20, q=1),
         num_layers=dict(type=int, low=1, high=5, q=1),
         use_bias=dict(type='bool'),
         use_batch_norm=dict(type='bool'),
         activation_cls=dict(type='categorical', choices=[None, nn.ReLU, nn.LeakyReLU]),
         base_model_cls=dict(type='categorical', choices=[DistMult, ComplEx, ERMLP]),
-        edge_dropout=dict(type=float, low=0.0, high=.9),
-        self_loop_dropout=dict(type=float, low=0.0, high=.9),
+        edge_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        self_loop_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         edge_weighting=dict(type='categorical', choices=[
             None,
             inverse_indegree_edge_weights,
@@ -486,7 +487,6 @@ class RGCN(Model):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 500,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -511,7 +511,6 @@ class RGCN(Model):
             raise ValueError('R-GCN handles edges in an undirected manner.')
         super().__init__(
             triples_factory=triples_factory,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,

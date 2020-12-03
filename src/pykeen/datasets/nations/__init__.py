@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Get triples from the Nations data set."""
+"""Get triples from the Nations dataset."""
 
 import os
 
-from ..base import PathDataSet
+from ..base import PathDataset
 
 __all__ = [
     'NATIONS_TRAIN_PATH',
@@ -20,8 +20,8 @@ NATIONS_TEST_PATH = os.path.join(HERE, 'test.txt')
 NATIONS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-class Nations(PathDataSet):
-    """The Nations data set."""
+class Nations(PathDataset):
+    """The Nations dataset."""
 
     def __init__(self, **kwargs):
         super().__init__(

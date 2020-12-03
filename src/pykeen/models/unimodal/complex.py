@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -51,7 +52,7 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
     loss_default = SoftplusLoss
@@ -70,7 +71,6 @@ class ComplEx(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -82,9 +82,6 @@ class ComplEx(EntityRelationEmbeddingModel):
             The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
-            regards to the hardware at hand.
         :param loss: OptionalLoss (optional)
             The loss to use. Defaults to SoftplusLoss.
         :param preferred_device: str (optional)
@@ -97,7 +94,6 @@ class ComplEx(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=2 * embedding_dim,  # complex embeddings
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
