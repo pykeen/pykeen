@@ -79,7 +79,7 @@ def split(
     random_state: RandomHint = None,
     randomize_cleanup: bool = False,
     method: Optional[str] = None,
-):
+) -> Sequence[np.ndarray]:
     """Split the triples into clean groups."""
     random_state = ensure_random_state(random_state)
     sizes = _get_group_sizes(n_triples=triples.shape[0], ratios=ratios)
