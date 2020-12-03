@@ -14,21 +14,17 @@ from ..utils import ensure_random_state
 logger = logging.getLogger(__name__)
 
 
-def _cleanup_ratios(ratios):
+def _get_group_sizes(triples, ratios):
     # Prepare split index
     if isinstance(ratios, float):
         ratios = [ratios]
-
     ratio_sum = sum(ratios)
     if ratio_sum == 1.0:
         ratios = ratios[:-1]  # vsplit doesn't take the final number into account.
     elif ratio_sum > 1.0:
         raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
+    ratios = ratios
 
-    return ratios
-
-
-def _get_group_sizes(triples, ratios):
     # Expects clean ratios!
     n_triples = triples.shape[0]
     return [
@@ -85,7 +81,6 @@ def split(
 ):
     """Split the triples into clean groups."""
     random_state = ensure_random_state(random_state)
-    ratios = _cleanup_ratios(ratios)
     sizes = _get_group_sizes(triples, ratios)
 
     if method == 'cleanup':
