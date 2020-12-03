@@ -9,7 +9,7 @@ import torch.autograd
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ...hpo.search_spaces import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer

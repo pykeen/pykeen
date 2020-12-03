@@ -7,7 +7,7 @@ from typing import Optional, Tuple, Union
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ...hpo.search_spaces import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding
 from ...regularizers import PowerSumRegularizer, Regularizer

@@ -7,7 +7,7 @@ from typing import Optional
 import torch
 
 from ..base import EntityRelationEmbeddingModel
-from ...hpo.search_spaces import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory

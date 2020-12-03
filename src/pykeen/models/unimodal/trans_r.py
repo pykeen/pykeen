@@ -11,7 +11,7 @@ import torch.nn.init
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
-from ...hpo.search_spaces import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding
 from ...nn.init import xavier_uniform_

@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
-from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint

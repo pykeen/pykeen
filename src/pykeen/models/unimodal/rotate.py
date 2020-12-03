@@ -78,7 +78,7 @@ class RotatE(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=5, high=10, scale='power_two'),
+        embedding_dim=dict(type=int, low=32, high=1024, q=16),
     )
 
     def __init__(

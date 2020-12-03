@@ -12,7 +12,7 @@ from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
 from ..base import EntityRelationEmbeddingModel
-from ...hpo.search_spaces import DEFAULT_DROPOUT_HPO_RANGE
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
