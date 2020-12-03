@@ -4,6 +4,7 @@
 
 import itertools as itt
 import unittest
+from typing import Set
 
 import numpy as np
 import torch
@@ -15,7 +16,7 @@ from pykeen.triples.splitting import (
     _tf_cleanup_randomized,
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS
-from pykeen.triples.utils import generate_triples
+from pykeen.triples.utils import generate_triples, get_entities, get_relations
 
 triples = np.array(
     [
@@ -206,6 +207,31 @@ class TestTriplesFactory(unittest.TestCase):
                         assert exp_relations.issuperset(present_relations)
 
 
+class TestGenerate(unittest.TestCase):
+    """Tests for generation of triples."""
+
+    num_entities: int = 33
+    num_relations: int = 7
+    num_triples: int = 101
+
+    def assert_consecutive(self, x: Set[int], msg=None):
+        """Assert that all of the things in the collection are consecutive integers."""
+        self.assertEqual(set(range(len(x))), x, msg=msg)
+
+    def test_compacted(self):
+        """Test that the results are compacted."""
+        for random_state in range(100):
+            x = generate_triples(
+                num_entities=self.num_entities,
+                num_relations=self.num_relations,
+                num_triples=self.num_triples,
+                random_state=random_state,
+            )
+            self.assertEqual(self.num_triples, x.shape[0])
+            self.assert_consecutive(get_entities(x))
+            self.assert_consecutive(get_relations(x))
+
+
 class TestSplit(unittest.TestCase):
     """Test splitting."""
 
@@ -358,14 +384,10 @@ class TestSplit(unittest.TestCase):
 
         # check coverage
         self.assertEqual(
-            _get_entities(generated_triples),
-            _get_entities(generated_triples[cover]),
+            get_entities(generated_triples),
+            get_entities(generated_triples[cover]),
             msg='coverage is not full',
         )
-
-
-def _get_entities(t):
-    return set(t[:, [0, 2]].flatten().tolist())
 
 
 class TestLiterals(unittest.TestCase):
