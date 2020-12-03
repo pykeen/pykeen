@@ -91,7 +91,7 @@ def split(
     ratios = _cleanup_ratios(ratios)
     sizes = _get_group_sizes(triples, ratios)
 
-    if method == 'old':
+    if method == 'cleanup':
         triples_groups = _split_triples(
             triples,
             sizes=sizes,
@@ -101,7 +101,7 @@ def split(
         logger.debug('cleaning up groups')
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
         logger.debug('done cleaning up groups')
-    elif method == 'new' or method is None:
+    elif method == 'coverage' or method is None:
         triples_groups = _split_triples_with_train_coverage(
             triples=triples,
             sizes=sizes,
