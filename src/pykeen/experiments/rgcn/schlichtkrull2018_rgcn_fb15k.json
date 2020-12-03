@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15k Data Set with R-GCN as described by Schlichtkrull et al., 2018",
+    "title": "Learn FB15k Dataset with R-GCN as described by Schlichtkrull et al., 2018",
     "comments": ""
   },
   "pipeline": {

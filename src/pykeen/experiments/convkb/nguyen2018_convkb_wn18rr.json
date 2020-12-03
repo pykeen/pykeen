@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18RR Data Set with ConvKB as described by Nguyen et al., 2018",
+    "title": "Learn WN18RR Dataset with ConvKB as described by Nguyen et al., 2018",
     "comments": "regularization weight is set to 0.0005, because in the paper the regularization term is multiplied with (regularization weight)/2. The evaluation is done with the optimistic rank, cf. https://github.com/daiquocnguyen/ConvKB/blob/ba02c0665a80751676289a8d5570dc420465a9ff/eval.py#L207-L236."
   },
   "pipeline": {
