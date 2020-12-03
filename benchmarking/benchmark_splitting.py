@@ -6,6 +6,7 @@ import itertools as itt
 import logging
 import os
 import time
+from pathlib import Path
 
 import click
 import matplotlib.pyplot as plt
@@ -15,11 +16,12 @@ import seaborn as sns
 from humanize import intword
 from tqdm import tqdm
 
-from pykeen.constants import PYKEEN_BENCHMARK_HOME
+from pykeen.constants import PYKEEN_HOME
 from pykeen.datasets import get_dataset
 from pykeen.triples.splitting import split
 
-SPLITTING_DIRECTORY = PYKEEN_BENCHMARK_HOME / 'splitting'
+PYKEEN_BENCHMARK = Path(PYKEEN_HOME) / 'benchmarks'
+SPLITTING_DIRECTORY = PYKEEN_BENCHMARK / 'splitting'
 RESULTS_DIRECTORY = SPLITTING_DIRECTORY / 'results'
 os.makedirs(RESULTS_DIRECTORY, exist_ok=True)
 
