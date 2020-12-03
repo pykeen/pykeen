@@ -9,8 +9,10 @@ import logging
 from typing import Union
 
 import numpy as np
+import click
 
 from .base import SingleTabbedDataset
+from ..cli_utils import verbose_option
 
 URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz'
 
@@ -44,6 +46,8 @@ class ConceptNet(SingleTabbedDataset):
         )
 
 
+@click.command()
+@verbose_option
 def _main():
     ds = ConceptNet()
     ds.summarize()
