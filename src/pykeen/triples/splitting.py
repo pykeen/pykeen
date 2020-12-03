@@ -48,14 +48,13 @@ def _split_triples(
     :param triples: shape: (n, 3)
         The triples.
     :param sizes:
-        The sizes. Need to sum up to the number of triples.
+        The sizes. TODO: Need to sum up to the number of triples. / need to be at most the number of triples.
     :param random_state:
         The random state for reproducible splits.
 
     :return:
         The splitted triples.
     """
-    # TODO: check size usage
     n_triples = triples.shape[0]
 
     # Prepare shuffle index
