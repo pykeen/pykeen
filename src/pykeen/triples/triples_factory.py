@@ -184,9 +184,10 @@ class TriplesFactory:
     #: The mapping from relations' labels to their indices
     relation_to_id: RelationMapping
 
+    # TODO: Deprecation warning. Will be replaced by re-constructing them from ID-based + mapping soon.
     #: A three-column matrix where each row are the head label,
     #: relation label, then tail label
-    triples: LabeledTriples
+    _triples: LabeledTriples
 
     #: A three-column matrix where each row are the head identifier,
     #: relation identifier, then tail identifier
@@ -287,7 +288,7 @@ class TriplesFactory:
         return cls(
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            triples=triples,
+            _triples=triples,
             mapped_triples=mapped_triples,
             relation_to_inverse=relation_to_inverse,
         )
@@ -355,6 +356,12 @@ class TriplesFactory:
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
+
+    @property
+    def triples(self) -> np.ndarray:
+        """The labeled triples."""
+        # TODO: Deprecation warning. Will be replaced by re-constructing them from ID-based + mapping soon.
+        return self._triples
 
     @property
     def entity_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
