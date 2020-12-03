@@ -203,7 +203,7 @@ class TriplesFactory:
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
-    ) -> "TriplesFactory":
+    ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
 
@@ -221,13 +221,14 @@ class TriplesFactory:
         :return:
             A new triples factory.
         """
-        _num_entities = len(set(triples[:, 0]).union(triples[:, 2]))
+        # TODO remove
+        # _num_entities = len(set(triples[:, 0]).union(triples[:, 2]))
 
         relations = triples[:, 1]
         unique_relations = set(relations)
 
         # Check if the triples are inverted already
-        relations_already_inverted = TriplesFactory._check_already_inverted_relations(unique_relations)
+        relations_already_inverted = cls._check_already_inverted_relations(unique_relations)
 
         if create_inverse_triples or relations_already_inverted:
             create_inverse_triples = True
@@ -256,19 +257,20 @@ class TriplesFactory:
                 )
                 # extend original triples with inverse ones
                 triples = np.concatenate([triples, inverse_triples], axis=0)
-                _num_relations = 2 * len(unique_relations)
+                # TODO remove
+                # _num_relations = 2 * len(unique_relations)
 
         else:
             create_inverse_triples = False
             relation_to_inverse = None
-            _num_relations = len(unique_relations)
+            # TODO remove
+            # _num_relations = len(unique_relations)
 
         # Generate entity mapping if necessary
         if entity_to_id is None:
             entity_to_id = create_entity_mapping(triples=triples)
         if compact_id:
             entity_to_id = compact_mapping(mapping=entity_to_id)[0]
-        entity_to_id = entity_to_id
 
         # Generate relation mapping if necessary
         if relation_to_id is None:
@@ -280,7 +282,6 @@ class TriplesFactory:
                 relation_to_id = create_relation_mapping(unique_relations)
         if compact_id:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
-        relation_to_id = relation_to_id
 
         # Map triples of labels to triples of IDs.
         mapped_triples = _map_triples_elements_to_ids(
@@ -289,7 +290,7 @@ class TriplesFactory:
             relation_to_id=relation_to_id,
         )
 
-        return TriplesFactory(
+        return cls(
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             triples=triples,
@@ -305,7 +306,7 @@ class TriplesFactory:
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
-    ) -> "TriplesFactory":
+    ) -> 'TriplesFactory':
         """
         Create a new triples factory from triples stored in a file.
 
@@ -382,8 +383,10 @@ class TriplesFactory:
         return self.relation_to_id[inverse_relation]
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations}, ' \
-               f'num_triples={self.num_triples}, inverse_triples={self.create_inverse_triples})'
+        return (
+            f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations}, '
+            f'num_triples={self.num_triples}, inverse_triples={self.create_inverse_triples})',
+        )
 
     @staticmethod
     def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
