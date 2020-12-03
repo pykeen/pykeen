@@ -418,7 +418,8 @@ class TriplesFactory:
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
         triples_groups = split(
-            triples=self.triples,
+            # TODO: work around
+            triples=self.mapped_triples.numpy(),
             ratios=ratios,
             random_state=random_state,
             randomize_cleanup=randomize_cleanup,
@@ -426,7 +427,14 @@ class TriplesFactory:
         )
         return [
             TriplesFactory(
-                triples=triples,
+                triples=np.asarray([
+                    (
+                        self.entity_id_to_label[hi],
+                        self.relation_id_to_label[ri],
+                        self.entity_id_to_label[ti],
+                    )
+                    for hi, ri, ti in triples
+                ]),
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
                 compact_id=False,

@@ -145,8 +145,8 @@ def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     """
     Get a coverage mask for all entities and relations.
 
-    :param triples: shape: (n, 3)
-        The triples.
+    :param triples: shape: (n, 3), dtype: int
+        The triples (ID-based).
 
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
