@@ -106,8 +106,7 @@ def split(
             sizes=remaining_sizes,
             random_state=random_state,
         )
-        result = np.concatenate([train_seed, train]), *rest
-        triples_groups = result
+        triples_groups = np.concatenate([train_seed, train]), *rest
     else:
         raise ValueError(f'invalid method: {method}')
 
