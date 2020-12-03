@@ -163,9 +163,9 @@ def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     entities[h] = relations[r] = entities[t] = triple_id
 
     if entities.min() < 0:
-        raise EntityCoverageError(entities)
+        raise TripleCoverageError(arr=entities, name="entities")
     if relations.min() < 0:
-        raise EntityCoverageError(relations)
+        raise TripleCoverageError(arr=relations, name="relations")
 
     # select
     seed_mask = numpy.zeros(shape=(num_triples,), dtype=numpy.bool)
@@ -173,12 +173,16 @@ def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
     return seed_mask
 
 
-class EntityCoverageError(RuntimeError):
-    """An exception thrown when not all entities are covered."""
+class TripleCoverageError(RuntimeError):
+    """An exception thrown when not all entities/relations are covered by triples."""
 
-    def __init__(self, arr):
+    def __init__(self, arr, name: str = "ids"):
         r = sorted((arr < 0).nonzero())
-        super().__init__(f'Could not cover the following entities from the provided triples: {r}')
+        super().__init__(
+            f"Could not cover the following {name} from the provided triples: {r}. One possible reason is that you are"
+            f" working with triples from a non-compact ID mapping, i.e. where the IDs do not span the full range of "
+            f"[0, ..., num_entities]"
+        )
 
 
 def _tf_cleanup_all(
