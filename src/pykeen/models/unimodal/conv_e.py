@@ -177,7 +177,6 @@ class ConvE(EntityRelationEmbeddingModel):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -196,7 +195,6 @@ class ConvE(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

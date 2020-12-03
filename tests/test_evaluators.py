@@ -394,8 +394,8 @@ class EvaluatorUtilsTests(unittest.TestCase):
 class DummyEvaluator(Evaluator):
     """A dummy evaluator for testing the structure of the evaluation function."""
 
-    def __init__(self, *, counter: int, filtered: bool) -> None:
-        super().__init__(filtered=filtered)
+    def __init__(self, *, counter: int, filtered: bool, automatic_memory_optimization: bool = True) -> None:
+        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
         self.counter = counter
 
     def process_tail_scores_(
@@ -431,8 +431,8 @@ class DummyEvaluator(Evaluator):
 class DummyModel(EntityRelationEmbeddingModel):
     """A dummy model returning fake scores."""
 
-    def __init__(self, triples_factory: TriplesFactory, automatic_memory_optimization: bool):
-        super().__init__(triples_factory=triples_factory, automatic_memory_optimization=automatic_memory_optimization)
+    def __init__(self, triples_factory: TriplesFactory):
+        super().__init__(triples_factory=triples_factory)
         num_entities = self.num_entities
         self.scores = torch.arange(num_entities, dtype=torch.float)
 
@@ -462,9 +462,9 @@ class TestEvaluationStructure(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the evaluation structure."""
         self.counter = 1337
-        self.evaluator = DummyEvaluator(counter=self.counter, filtered=True)
+        self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
         self.triples_factory = Nations().training
-        self.model = DummyModel(triples_factory=self.triples_factory, automatic_memory_optimization=False)
+        self.model = DummyModel(triples_factory=self.triples_factory)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
@@ -472,5 +472,6 @@ class TestEvaluationStructure(unittest.TestCase):
             model=self.model,
             mapped_triples=self.triples_factory.mapped_triples,
             batch_size=1,
+            use_tqdm=False,
         )
         assert eval_results.mean_rank == self.counter, 'Should end at the same value as it started'

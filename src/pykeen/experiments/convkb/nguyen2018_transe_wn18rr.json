@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15k-237 Data Set with TransE as described by Nguyen et al., 2018",
+    "title": "Learn FB15k-237 Dataset with TransE as described by Nguyen et al., 2018",
     "commenrs": "TransE was used to initialize the emebddings. Could not find batch size and number of epochs."
   },
   "pipeline": {

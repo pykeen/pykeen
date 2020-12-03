@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Get triples from the Kinships data set."""
+"""Get triples from the Kinships dataset."""
 
 import os
 
-from ..base import PathDataSet
+from ..base import PathDataset
 
 __all__ = [
     'KINSHIPS_TRAIN_PATH',
@@ -20,8 +20,8 @@ KINSHIPS_TEST_PATH = os.path.join(HERE, 'test.txt')
 KINSHIPS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-class Kinships(PathDataSet):
-    """The Kinships data set."""
+class Kinships(PathDataset):
+    """The Kinships dataset."""
 
     def __init__(self, **kwargs):
         super().__init__(

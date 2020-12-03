@@ -50,7 +50,36 @@ is not the case, please make sure to first create these as described in
 When submitting pull requests, we encourage you to comply with these points:
  - Follow all instructions within the [pull request template](./pull_request_template.md)
  - Make sure that you create or adjust all documentation that is affected by your code changes
- - Create test scripts for non-trivial code changes, if these are not covered by existing tests
+ - Create test scripts for non-trivial code changes, if these are not covered by existing tests.
+ See also [CI & unit tests](#CI-&-unit-tests)
+
+
+### Continuous integration & unit tests
+
+To ensure code quality while developing new features this repository uses unit tests. The goal is to ensure the
+correctness of all operations as well as the compatibility of the supported platforms when merging new code into the
+master. In order to avoid overloading testing resources, the PyKEEN repository has a special syntax to invoke testing
+**only when needed**.
+
+This can be done in two ways.
+1. If you want to test a specific commit, the commit message has to include the string "Trigger CI" (case insensitive) 
+2. With the help of our @PyKEEN-bot, by simply commenting in the Pull Request-thread with a message containing 
+"@PyKEEN-bot" and "test". (This invocation is limited to administrators and collaborators of this repository)
+
+Last but not least, pushing to master will always trigger unit tests, unless you added the text "skip ci" to
+your commit message. Read The Docs will only create a build once a commit is pushed/merged to master.
+
+
+##### Technical information
+
+The reason the bot has to create a new commit to trigger unit tests has to do with the inner working of Github Actions,
+which consider a Pull Request to be part of the current master branch. A Github Action is strictly linked to the branch
+that triggered the event, which in the case of Pull Request comments always will be the current master branch.
+Accordingly, invoking unit tests straight from a Pull Request comment event would only allow to invoke unit tests for
+the current master branch. Therefore, the @PyKEEN-bot comes into play, as the bot is triggered by the
+Pull Request comment and creates a new empty commit to the branch linked to the Pull Request, which in return invokes
+unit tests that are correctly linked to the actual branch that should be tested. As the commit is empty there will be 
+no issues with merging in case you forgot to pull while working on a specific branch.
 
 
 ## Support

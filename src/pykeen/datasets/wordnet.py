@@ -5,7 +5,7 @@
 import os
 from typing import Optional
 
-from .base import TarFileRemoteDataSet
+from .base import TarFileRemoteDataset
 
 __all__ = [
     'WN18',
@@ -13,8 +13,8 @@ __all__ = [
 ]
 
 
-class WN18(TarFileRemoteDataSet):
-    """The WN18 data set."""
+class WN18(TarFileRemoteDataset):
+    """The WN18 dataset."""
 
     def __init__(self, cache_root: Optional[str] = None, **kwargs):
         super().__init__(
@@ -27,8 +27,8 @@ class WN18(TarFileRemoteDataSet):
         )
 
 
-class WN18RR(TarFileRemoteDataSet):
-    """The WN18-RR data set."""
+class WN18RR(TarFileRemoteDataset):
+    """The WN18-RR dataset."""
 
     def __init__(self, cache_root: Optional[str] = None, **kwargs):
         super().__init__(

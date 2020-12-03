@@ -1,13 +1,13 @@
-name: Tests
+name: Tests master
 
 on:
   push:
-    branches-ignore:
-      - 'master'
+    branches:
+      - master
 
 jobs:
   lint:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Lint
     runs-on: ubuntu-latest
     strategy:
@@ -34,7 +34,7 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -60,7 +60,7 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -78,18 +78,14 @@ jobs:
         run: tox -e py
       - name: Run slow tests
         run: tox -e integration
-  tests_completed:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+  readthedocs:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: Read the Docs
     runs-on: ubuntu-latest
     steps:
-      - name: Step 1
-        id: PR-check
-        run: echo ::set-output name=status::pending
-        continue-on-error: true
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Check on failures
-        if: steps.PR-check.outputs.status == 'pending'
-        run: exit 1
+      - name: Trigger RTDs build
+        uses: dfm/rtds-action@v1
+        with:
+          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+          commit_ref: ${{ github.ref }}

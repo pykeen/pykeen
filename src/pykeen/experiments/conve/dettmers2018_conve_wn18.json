@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with ConvE as described by Dettmers et al., 2018",
+    "title": "Learn WN18 Dataset with ConvE as described by Dettmers et al., 2018",
     "comment": "For evaluation, the non-deterministic rank definition is used, cf. https://github.com/TimDettmers/ConvE/blob/5feb358eb7dbd1f534978cdc4c20ee0bf919148a/evaluation.py#L67."
   },
   "pipeline": {

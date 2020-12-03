@@ -7,9 +7,7 @@ import timeit
 import unittest
 from typing import ClassVar, Optional, Type
 
-from requests.exceptions import ConnectionError
-
-from pykeen.datasets.base import LazyDataSet
+from pykeen.datasets.base import LazyDataset
 from pykeen.triples import TriplesFactory
 
 
@@ -26,16 +24,16 @@ class DatasetTestCase(unittest.TestCase):
     exp_num_triples_tolerance: ClassVar[Optional[int]] = None
 
     #: The dataset to test
-    dataset_cls: ClassVar[Type[LazyDataSet]]
+    dataset_cls: ClassVar[Type[LazyDataset]]
     #: The instantiated dataset
-    dataset: LazyDataSet
+    dataset: LazyDataset
 
     #: Should the validation be assumed to have been loaded with train/test?
     autoloaded_validation: ClassVar[bool] = False
 
     def test_dataset(self):
         """Generic test for datasets."""
-        self.assertIsInstance(self.dataset, LazyDataSet)
+        self.assertIsInstance(self.dataset, LazyDataset)
 
         # Not loaded
         self.assertIsNone(self.dataset._training)
@@ -47,7 +45,7 @@ class DatasetTestCase(unittest.TestCase):
         # Load
         try:
             self.dataset._load()
-        except (ConnectionError, EOFError):
+        except (EOFError, IOError):
             self.skipTest('Problem with connection. Try this test again later.')
 
         self.assertIsInstance(self.dataset.training, TriplesFactory)
