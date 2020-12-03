@@ -20,8 +20,12 @@ from pykeen.typing import MappedTriples
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
 
-    def __init__(self, model: Model, sub_batch_size: int):
-        super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
+    def __init__(self, model: Model, sub_batch_size: int, automatic_memory_optimization: bool = False):
+        super().__init__(
+            model=model,
+            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
         self.sub_batch_size = sub_batch_size
 
     def _process_batch(
@@ -50,8 +54,12 @@ class DummyTrainingLoop(SLCWATrainingLoop):
 class NaNTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop returning NaN losses."""
 
-    def __init__(self, model: Model, patience: int):
-        super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
+    def __init__(self, model: Model, patience: int, automatic_memory_optimization: bool = False):
+        super().__init__(
+            model=model,
+            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
         self.patience = patience
 
     def _process_batch(
@@ -89,14 +97,22 @@ class TrainingLoopTests(unittest.TestCase):
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
-        model = TransE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
-        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+        model = TransE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(
+            model=model,
+            sub_batch_size=self.sub_batch_size,
+            automatic_memory_optimization=False,
+        )
         training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
-        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+        model = ConvE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(
+            model=model,
+            sub_batch_size=self.sub_batch_size,
+            automatic_memory_optimization=False,
+        )
 
         def _try_train():
             """Call train method."""
@@ -117,7 +133,6 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             loss=CrossEntropyLoss(),
-            automatic_memory_optimization=False,
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
-            NaNTrainingLoop(model=model, patience=2)
+            NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False)

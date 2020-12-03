@@ -14,6 +14,7 @@ __all__ = [
     'RelationMapping',
     'InteractionFunction',
     'DeviceHint',
+    'RandomHint',
 ]
 
 LabeledTriples = np.ndarray
@@ -29,3 +30,4 @@ Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
+RandomHint = Union[None, int, np.random.RandomState]

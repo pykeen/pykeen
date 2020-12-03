@@ -22,7 +22,7 @@ Steps to reproduce the behavior:
 
 **Environment (please complete the following information):**
  - OS: [e.g. macOS]
- - Python version: [e.g. 3.6.8]
+ - Python version: [e.g. 3.8.1]
  - Version of this software: [e.g. 0.0.1-dev] # run ``pip list | grep -Eiw 'pykeen'`` in your environment shell
  - Versions of required Python packages: # run pip list | grep -Eiw 'torch|numpy|Click|click-default-group|tqdm'
    - Torch: [e.g. 1.1.0]

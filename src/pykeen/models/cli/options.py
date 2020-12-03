@@ -137,6 +137,11 @@ training_loop_option = click.option(
     default=_get_default(get_training_loop_cls, suffix=_TRAINING_LOOP_SUFFIX),
     show_default=True,
 )
+automatic_memory_optimization_option = click.option(
+    '--automatic-memory-optimization/--no-automatic-memory-optimization',
+    default=True,
+    show_default=True,
+)
 stopper_option = click.option(
     '--stopper',
     type=click.Choice(list(stoppers)),

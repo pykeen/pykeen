@@ -7,7 +7,7 @@ import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
@@ -15,7 +15,7 @@ import pandas as pd
 import torch
 import torch.nn
 
-from .typing import DeviceHint
+from .typing import DeviceHint, RandomHint
 
 __all__ = [
     'compose',
@@ -42,6 +42,7 @@ __all__ = [
     'NoRandomSeedNecessary',
     'Result',
     'fix_dataclass_init_docs',
+    'ensure_random_state',
 ]
 
 logger = logging.getLogger(__name__)
@@ -231,26 +232,26 @@ def clamp_norm(
     return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
 
 
-def compose(
-    *op_: Callable[[torch.Tensor], torch.Tensor],
-) -> Callable[[torch.Tensor], torch.Tensor]:
-    """Compose functions working on a single tensor."""
+class compose(Generic[X]):  # noqa:N801
+    """A class representing the composition of several functions."""
 
-    def chained_op(x: torch.Tensor):
-        for op in op_:
-            x = op(x)
+    def __init__(self, *operations: Callable[[X], X]):
+        """Initialize the composition with a sequence of operations."""
+        self.operations = operations
+
+    def __call__(self, x: X) -> X:
+        """Apply the operations in order to the given tensor."""
+        for operation in self.operations:
+            x = operation(x)
         return x
 
-    return chained_op
 
-
-def set_random_seed(seed: int):
+def set_random_seed(seed: int) -> Tuple[None, torch.Generator, None]:
     """Set the random seed on numpy, torch, and python."""
-    return (
-        np.random.seed(seed=seed),
-        torch.manual_seed(seed=seed),
-        random.seed(seed),
-    )
+    np.random.seed(seed=seed)
+    generator = torch.manual_seed(seed=seed)
+    random.seed(seed)
+    return None, generator, None
 
 
 class NoRandomSeedNecessary:
@@ -430,3 +431,15 @@ def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
     return int(sq.generate_state(1)[0])
+
+
+def ensure_random_state(random_state: RandomHint) -> np.random.RandomState:
+    """Prepare a random state."""
+    if random_state is None:
+        random_state = random_non_negative_int()
+        logger.warning(f'using automatically assigned random_state={random_state}')
+    if isinstance(random_state, int):
+        random_state = np.random.RandomState(random_state)
+    if not isinstance(random_state, np.random.RandomState):
+        raise TypeError
+    return random_state

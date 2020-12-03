@@ -3,7 +3,7 @@
 """The easiest way to optimize a model is with the :func:`pykeen.hpo.hpo_pipeline` function.
 
 All of the following examples are about getting the best model
-when training TransE on the Nations data set. Each gives a bit
+when training TransE on the Nations dataset. Each gives a bit
 of insight into usage of the :func:`hpo_pipeline` function.
 
 The minimal usage of the hyper-parameter optimization is to specify the
