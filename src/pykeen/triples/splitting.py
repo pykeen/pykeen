@@ -3,9 +3,7 @@
 """Implementation of triples splitting functions."""
 
 import logging
-import random
-from collections import defaultdict
-from typing import List, Mapping, Optional, Sequence, Set, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import numpy
 import numpy as np
@@ -102,11 +100,19 @@ def split(
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
         logger.debug('done cleaning up groups')
     elif method == 'coverage' or method is None:
-        triples_groups = _split_triples_with_train_coverage(
-            triples=triples,
-            sizes=sizes,
+        seed_mask = _get_cover_deterministic(triples=triples)
+        train_seed = triples[seed_mask]
+        remaining_triples = triples[~seed_mask]
+        if train_seed.shape[0] > sizes[0]:
+            raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
+        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
+        train, *rest = _split_triples(
+            triples=remaining_triples,
+            sizes=remaining_sizes,
             random_state=random_state,
         )
+        result = np.concatenate([train_seed, train]), *rest
+        triples_groups = result
     else:
         raise ValueError(f'invalid method: {method}')
 
@@ -120,32 +126,6 @@ def split(
             )
 
     return triples_groups
-
-
-def _split_triples_with_train_coverage(
-    triples: np.ndarray,
-    sizes: Sequence[int],
-    random_state: np.random.RandomState,
-) -> Sequence[np.ndarray]:
-    """
-    Split triples into groups ensuring that all entities and relations occur in the first group of triples.
-
-    :param triples: shape: (num_triples, 3)
-        The triples.
-    :param sizes:
-        The group sizes.
-
-    :return:
-        The groups, where the first group is guaranteed to contain each entity and relation at least once.
-    """
-    seed_mask = _get_cover_deterministic(triples=triples)
-    train_seed = triples[seed_mask]
-    remaining_triples = triples[~seed_mask]
-    if train_seed.shape[0] > sizes[0]:
-        raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
-    remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
-    train, *rest = _split_triples(triples=remaining_triples, sizes=remaining_sizes, random_state=random_state)
-    return np.concatenate([train_seed, train]), *rest
 
 
 def _get_cover_deterministic(triples: np.ndarray) -> np.ndarray:
