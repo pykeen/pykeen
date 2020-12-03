@@ -333,8 +333,8 @@ class TestSplit(unittest.TestCase):
 
     def test_get_cover_deterministic(self):
         """Test _get_cover_deterministic."""
-        all_triples = generate_triples()
-        cover = _get_cover_deterministic(triples=all_triples)
+        generated_triples = generate_triples()
+        cover = _get_cover_deterministic(triples=generated_triples)
 
         # check type
         self.assertIsInstance(cover, np.ndarray)
@@ -342,10 +342,14 @@ class TestSplit(unittest.TestCase):
 
         # check format
         self.assertEqual(1, len(cover.shape))
-        self.assertEqual(cover.shape, (all_triples.shape[0],))
+        self.assertEqual(cover.shape, (generated_triples.shape[0],))
 
         # check coverage
-        self.assertEqual(_get_entities(all_triples), _get_entities(all_triples[cover]), msg='coverage is not full')
+        self.assertEqual(
+            _get_entities(generated_triples),
+            _get_entities(generated_triples[cover]),
+            msg='coverage is not full',
+        )
 
 
 def _get_entities(t):

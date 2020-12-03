@@ -103,7 +103,7 @@ def split(
         logger.debug('done cleaning up groups')
     elif method == 'new':
         triples_groups = _split_triples_with_train_coverage(
-            all_triples=triples,
+            triples=triples,
             sizes=sizes,
         )
     else:
@@ -121,14 +121,11 @@ def split(
     return triples_groups
 
 
-def _split_triples_with_train_coverage(
-    all_triples: np.ndarray,
-    sizes: Sequence[int],
-) -> Sequence[np.ndarray]:
+def _split_triples_with_train_coverage(triples: np.ndarray, sizes: Sequence[int]) -> Sequence[np.ndarray]:
     """
     Split triples into groups ensuring that all entities and relations occur in the first group of triples.
 
-    :param all_triples: shape: (num_triples, 3)
+    :param triples: shape: (num_triples, 3)
         The triples.
     :param sizes:
         The group sizes.
@@ -136,9 +133,9 @@ def _split_triples_with_train_coverage(
     :return:
         The groups, where the first group is guaranteed to contain each entity and relation at least once.
     """
-    seed_mask = _get_cover_randomized_greedy(all_triples)
-    train_seed = all_triples[seed_mask]
-    remaining_triples = all_triples[~seed_mask]
+    seed_mask = _get_cover_randomized_greedy(triples)
+    train_seed = triples[seed_mask]
+    remaining_triples = triples[~seed_mask]
     # TODO: what to do if train_seed.shape[0] > sizes[0]
     remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
     train, *rest = _split_triples(remaining_triples, remaining_sizes)
@@ -182,7 +179,7 @@ def _select_to_cover(
     covered: Set[int],
     covered_relations: Set[int],
     covered_entities: Set[int],
-    all_triples: np.ndarray,
+    triples: np.ndarray,
     seed_mask: np.ndarray,
 ) -> None:
     for i, triple_ids in index.items():
@@ -192,18 +189,18 @@ def _select_to_cover(
         tr_id = random.choice(triple_ids)
         seed_mask[tr_id] = True
         # update coverage
-        h_id, r_id, t_id = all_triples[tr_id]
+        h_id, r_id, t_id = triples[tr_id]
         covered_entities.update(h_id, t_id)
         covered_relations.add(r_id)
 
 
-def _get_cover_randomized_greedy(all_triples):
+def _get_cover_randomized_greedy(triples):
     # TODO: Relative split sizes?
-    num_triples = all_triples.shape[0]
+    num_triples = triples.shape[0]
     # index triples
     entities = defaultdict(set)
     relations = defaultdict(set)
-    for i, (h, r, t) in enumerate(all_triples.tolist()):
+    for i, (h, r, t) in enumerate(triples.tolist()):
         entities[h].add(i)
         relations[r].add(i)
         entities[t].add(i)
@@ -225,7 +222,7 @@ def _get_cover_randomized_greedy(all_triples):
         covered=covered_entities,
         covered_relations=covered_relations,
         covered_entities=covered_entities,
-        all_triples=all_triples,
+        triples=triples,
         seed_mask=seed_mask,
     )
     _select_to_cover(
@@ -233,7 +230,7 @@ def _get_cover_randomized_greedy(all_triples):
         covered=covered_relations,
         covered_relations=covered_relations,
         covered_entities=covered_entities,
-        all_triples=all_triples,
+        triples=triples,
         seed_mask=seed_mask,
     )
     return seed_mask
