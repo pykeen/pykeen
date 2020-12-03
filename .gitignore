@@ -117,4 +117,3 @@ docs/source/api/*
 scratch/*
 wandb/*
 mlruns
-benchmarking/results
