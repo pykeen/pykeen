@@ -574,7 +574,7 @@ class TriplesFactory:
         """
         # input normalization
         ratios = _normalize_ratios(ratios)
-        # TODO: Fix ensure_random_state for pytorch
+        # TODO: Fix ensure_random_state for pytorch (int not np.RandomState)
         random_state: int = ensure_random_state(random_state)
 
         # convert to absolute sizes
