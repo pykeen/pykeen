@@ -467,6 +467,9 @@ def torch_is_in_1d(
     """
     Return a boolean mask with Q[i] in T.
 
+    The method guarantees memory complexity of max(size(Q), size(T)) and is thus, memory-wise, superior to naive
+    broadcasting.
+
     :param query_tensor: shape: S
         The query Q.
     :param test_tensor:
@@ -479,7 +482,6 @@ def torch_is_in_1d(
     :return: shape: S
         A boolean mask.
     """
-    # TODO: test
     # normalize input
     if not torch.is_tensor(test_tensor):
         test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
