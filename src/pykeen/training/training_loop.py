@@ -18,7 +18,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from ..constants import PYKEEN_DEFAULT_CHECKPOINT, PYKEEN_DEFAULT_CHECKPOINT_DIR
+from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
 from ..models.base import Model
 from ..stoppers import Stopper
@@ -231,7 +231,7 @@ class TrainingLoop(ABC):
 
         # A checkpoint root is always created to ensure a fallback checkpoint can be saved
         if checkpoint_directory is None:
-            checkpoint_directory = PYKEEN_DEFAULT_CHECKPOINT_DIR
+            checkpoint_directory = PYKEEN_CHECKPOINTS
         checkpoint_directory = pathlib.Path(checkpoint_directory)
         checkpoint_directory.mkdir(parents=True, exist_ok=True)
         logger.debug('using checkpoint_root at %s', checkpoint_directory)

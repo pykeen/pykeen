@@ -179,7 +179,7 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .constants import PYKEEN_DEFAULT_CHECKPOINT_DIR
+from .constants import PYKEEN_CHECKPOINTS
 from .datasets import get_dataset
 from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
@@ -835,7 +835,7 @@ def pipeline(  # noqa: C901
     # used random_seed to ensure reproducible results
     checkpoint_name = training_kwargs.get('checkpoint_name')
     if checkpoint_name is not None:
-        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_directory', PYKEEN_DEFAULT_CHECKPOINT_DIR))
+        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_directory', PYKEEN_CHECKPOINTS))
         checkpoint_directory.mkdir(parents=True, exist_ok=True)
         checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
