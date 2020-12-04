@@ -194,8 +194,7 @@ def normalize_ratios(
     ratios: Union[float, Sequence[float]],
     epsilon: float = 1.0e-06,
 ) -> Tuple[float, ...]:
-    """
-    Normalizes relative sizes.
+    """Normalize relative sizes.
 
     If the sum is smaller than 1, adds (1 - sum)
 
@@ -698,7 +697,7 @@ class TriplesFactory:
         return self.label_triples(
             triples=self.mapped_triples[
                 self.get_mask_for_relations(relations=relations, invert=invert)
-            ]
+            ],
         )
 
     def new_with_relations(self, relations: Collection[Union[int, str]]) -> 'TriplesFactory':

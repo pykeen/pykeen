@@ -7,7 +7,10 @@ import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar,
+    Union,
+)
 
 import numpy
 import numpy as np
@@ -483,7 +486,7 @@ def torch_is_in_1d(
         A boolean mask.
     """
     # normalize input
-    if not torch.is_tensor(test_tensor):
+    if not isinstance(test_tensor, torch.Tensor):
         test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
     if max_id is None:
         max_id = max(query_tensor.max(), test_tensor.max()) + 1

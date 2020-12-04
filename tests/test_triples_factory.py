@@ -10,7 +10,8 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized, get_absolute_split_sizes, normalize_ratios,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    get_absolute_split_sizes, normalize_ratios,
 )
 
 triples = np.array(
@@ -403,7 +404,7 @@ def test_get_absolute_split_sizes():
     """Test get_absolute_split_sizes."""
     for num_splits, n_total in zip(
         (2, 3, 4),
-        (100, 200, 10412)
+        (100, 200, 10412),
     ):
         # generate random ratios
         ratios = np.random.uniform(size=(num_splits,))
