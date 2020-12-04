@@ -14,19 +14,14 @@ jobs:
         python-version: [ 3.7, 3.8 ]
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: conda-incubator/setup-miniconda@v2
         with:
+          auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-      - uses: goanpeca/setup-miniconda@v1
-        with:
-          activate-environment: test
-          python-version: ${{ matrix.python-version }}
-          auto-activate-base: false
-      - shell: bash -l {0}
-        run: |
-          conda info
-          conda list
+      - name: Conda info
+        run: conda info
+      - name: Conda list
+        run: conda list
       - name: Run fast tests
         shell: bash -l {0}
         run: |
