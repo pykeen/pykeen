@@ -21,7 +21,6 @@ from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
 from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
-from ..typing import LabeledTriples
 
 __all__ = [
     'Sealant',
@@ -119,24 +118,6 @@ class Sealant:
     def relations_to_delete(self) -> Set[int]:
         """Relations to delete combine from both duplicates and inverses."""
         return self.duplicate_relations_to_delete.union(self.inverse_relations_to_delete)
-
-    def get_duplicate_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
-        """Get labeled duplicate triples."""
-        # TODO: This method is never used
-        return triples_factory.get_triples_for_relations(self.duplicate_relations_to_delete)
-
-    def new_without_duplicate_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
-        """Make a new triples factory not containing duplicate relationships."""
-        return triples_factory.new_without_relations(self.duplicate_relations_to_delete)
-
-    def get_inverse_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
-        """Get labeled inverse triples."""
-        # TODO: This method is never used
-        return triples_factory.get_triples_for_relations(self.inverse_relations_to_delete)
-
-    def new_without_inverse_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
-        """Make a new triples factory not containing inverse relationships."""
-        return triples_factory.new_without_relations(self.inverse_relations_to_delete)
 
     def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""

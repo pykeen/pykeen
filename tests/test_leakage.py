@@ -102,6 +102,7 @@ class TestLeakage(unittest.TestCase):
             msg='The wrong relation was picked for deletion',
         )
 
-        test_leaked = sealant.get_inverse_triples(test_factory)
+        # Test looking up inverse triples
+        test_leaked = test_factory.get_triples_for_relations(sealant.inverse_relations_to_delete)
         self.assertEqual(1, len(test_leaked))
         self.assertEqual(('-2', test_relation_inverse, '-1'), tuple(test_leaked[0]))
