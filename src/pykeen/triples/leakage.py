@@ -197,6 +197,7 @@ def unleak(
 
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
+    # TODO: ID-based
     triples = np.concatenate(
         [
             triples_factory.triples

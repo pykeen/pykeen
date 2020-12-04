@@ -536,6 +536,7 @@ class TriplesFactory:
         :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
          to keep
         """
+        # TODO: Return IDs / add ID variant
         logger.info(f'applying cutoff of {n} to {self}')
         if isinstance(n, float):
             assert 0 < n < 1
@@ -568,6 +569,7 @@ class TriplesFactory:
 
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
+        # TODO: Allow ID-based
         idx = self.get_idx_for_relations(relations)
         logger.info(
             f'keeping {len(relations)}/{self.num_relations} relations'
