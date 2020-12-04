@@ -225,16 +225,16 @@ class TriplesFactory:
     relation_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.field(init=False)
+    _vectorized_entity_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of relation_label_to_id; initialized automatically
-    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.field(init=False)
+    _vectorized_relation_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.field(init=False)
+    _vectorized_entity_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of relation_id_to_label; initialized automatically
-    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.field(init=False)
+    _vectorized_relation_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
 
     def __post_init__(self):
         """Pre-compute derived mappings."""
