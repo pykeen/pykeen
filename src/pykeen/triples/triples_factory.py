@@ -895,7 +895,8 @@ def _tf_cleanup_all(
         else:
             reference, other = _tf_cleanup_deterministic(reference, other)
         rv.append(other)
-    return reference, *rv
+    # [...] is necessary for Python 3.7 compatibility
+    return [reference, *rv]
 
 
 def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -> Tuple[MappedTriples, MappedTriples]:
