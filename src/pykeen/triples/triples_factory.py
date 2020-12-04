@@ -443,23 +443,35 @@ class TriplesFactory:
             labels=labels,
         )
 
-    def label_triples(self, triples: MappedTriples) -> LabeledTriples:
+    def label_triples(
+        self,
+        triples: MappedTriples,
+        unknown_entity_label: str = "[UNKNOWN]",
+        unknown_relation_label: Optional[str] = None,
+    ) -> LabeledTriples:
         """
         Convert ID-based triples to label-based ones.
 
         :param triples:
             The ID-based triples.
+        :param unknown_entity_label:
+            The label to use for unknown entity IDs.
+        :param unknown_relation_label:
+            The label to use for unknown relation IDs.
 
         :return:
             The same triples, but labeled.
         """
-        # TODO: store these vectorized lookups in object
-        e2id = np.vectorize(self.entity_id_to_label.__getitem__)
-        r2id = np.vectorize(self.relation_id_to_label.__getitem__)
+        if unknown_relation_label is None:
+            unknown_relation_label = unknown_entity_label
         return np.stack([
-            labeler(column)
-            for labeler, column in zip(
-                [e2id, r2id, e2id],
+            labeler(column, unknown_label)
+            for (labeler, unknown_label), column in zip(
+                [
+                    (self._vectorized_entity_labeler, unknown_entity_label),
+                    (self._vectorized_relation_labeler, unknown_relation_label),
+                    (self._vectorized_entity_labeler, unknown_entity_label),
+                ],
                 triples.t().numpy(),
             )
         ], axis=1)
