@@ -122,6 +122,7 @@ class Sealant:
 
     def get_duplicate_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
         """Get labeled duplicate triples."""
+        # TODO: This method is never used
         return triples_factory.get_triples_for_relations(self.duplicate_relations_to_delete)
 
     def new_without_duplicate_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
@@ -130,6 +131,7 @@ class Sealant:
 
     def get_inverse_triples(self, triples_factory: TriplesFactory) -> LabeledTriples:
         """Get labeled inverse triples."""
+        # TODO: This method is never used
         return triples_factory.get_triples_for_relations(self.inverse_relations_to_delete)
 
     def new_without_inverse_relations(self, triples_factory: TriplesFactory) -> TriplesFactory:
