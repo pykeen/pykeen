@@ -198,6 +198,33 @@ def _get_triple_mask(
     return mask
 
 
+def _normalize_ratios(ratios: Union[float, Sequence[float]]) -> Tuple[int, ...]:
+    # TODO: doc + test
+    # Prepare split index
+    if isinstance(ratios, float):
+        ratios = [ratios]
+    ratios = tuple(ratios)
+    ratio_sum = sum(ratios)
+    if ratio_sum < 1.0:
+        ratios = ratios + (1.0 - ratio_sum,)
+    elif ratio_sum > 1.0:
+        raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
+    return ratios
+
+
+def _get_absolute_split_sizes(
+    n_total: int,
+    ratios: Sequence[float, ...],
+) -> Tuple[Tuple[int, ...]]:
+    # TODO: doc + test
+    sizes = [
+        int(split_ratio * n_total)
+        for split_ratio in ratios
+    ]
+    assert sum(sizes) == n_total
+    return sizes
+
+
 @dataclasses.dataclass
 class TriplesFactory:
     """Create instances given the path to triples."""
@@ -545,34 +572,24 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        n_triples = self.num_triples
+        # input normalization
+        ratios = _normalize_ratios(ratios)
+        # TODO: Fix ensure_random_state for pytorch
+        random_state: int = ensure_random_state(random_state)
 
-        # TODO: Directly use pytorch
-        # Prepare shuffle index
-        idx = np.arange(n_triples)
-        random_state = ensure_random_state(random_state)
-        random_state.shuffle(idx)
+        # convert to absolute sizes
+        sizes = _get_absolute_split_sizes(n_total=self.num_triples, ratios=ratios)
 
-        # Prepare split index
-        if isinstance(ratios, float):
-            ratios = [ratios]
-
-        ratio_sum = sum(ratios)
-        if ratio_sum == 1.0:
-            ratios = ratios[:-1]  # vsplit doesn't take the final number into account.
-        elif ratio_sum > 1.0:
-            raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
-
-        sizes = [
-            int(split_ratio * n_triples)
-            for split_ratio in ratios
-        ]
-        # Take cumulative sum so the get separated properly
-        split_idxs = np.cumsum(sizes)
+        # Split indices
+        generator = torch.random.manual_seed(seed=random_state)
+        idx = torch.randperm(self.num_triples, generator=generator)
+        idx_groups = idx.split(split_size=sizes, dim=0)
 
         # Split triples
-        triples_np = self.mapped_triples.numpy()
-        triples_groups = np.vsplit(triples_np[idx], split_idxs)
+        triples_groups = [
+            self.mapped_triples[idx]
+            for idx in idx_groups
+        ]
         logger.info(
             'done splitting triples to groups of sizes %s',
             [triples.shape[0] for triples in triples_groups],
@@ -595,7 +612,7 @@ class TriplesFactory:
         # Make new triples factories for each group
         return [
             TriplesFactory(
-                mapped_triples=torch.from_numpy(triples),
+                mapped_triples=triples,
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
                 relation_to_inverse=self.relation_to_inverse,
@@ -846,11 +863,12 @@ class TriplesFactory:
 
 
 def _tf_cleanup_all(
-    triples_groups: List[np.ndarray],
+    triples_groups: List[MappedTriples],
     *,
     random_state: RandomHint = None,
-) -> List[np.ndarray]:
+) -> Sequence[MappedTriples]:
     """Cleanup a list of triples array with respect to the first array."""
+    # TODO: update to ID-based, torch
     reference, *others = triples_groups
     rv = []
     for other in others:
