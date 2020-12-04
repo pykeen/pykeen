@@ -570,19 +570,35 @@ class TriplesFactory:
             & np.isin(self.triples[:, 2], entities, invert=invert)
         )
 
-    def get_idx_for_relations(self, relations: Collection[str], invert: bool = False):
-        """Get np.array indices for triples with the given relations."""
-        return np.isin(self.triples[:, 1], list(relations), invert=invert)
+    def relations_to_ids(self, relations: Collection[Union[int, str]]) -> Collection[int]:
+        """Normalize relations to IDs."""
+        return [
+            self.relation_to_id[r] if isinstance(r, str) else r
+            for r in relations
+        ]
 
-    def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:
+    def get_mask_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> torch.BoolTensor:
+        """Get a boolean mask for triples with the given relations."""
+        relation_ids = torch.as_tensor(data=list(self.relations_to_ids(relations=relations)), dtype=torch.long)
+        relation_mask = torch.zeros(self.num_relations, dtype=torch.bool)
+        relation_mask[relation_ids] = True
+        if invert:
+            relation_mask = ~relation_mask
+        return relation_mask[self.mapped_triples[:, 1]]
+
+    def get_triples_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> LabeledTriples:
         """Get the labeled triples containing the given relations."""
-        # TODO: Allow ID-based
-        return self.triples[self.get_idx_for_relations(relations, invert=invert)]
+        # TODO: Do we really need labeled triples?
+        return self.label_triples(
+            triples=self.mapped_triples[
+                self.get_mask_for_relations(relations=relations, invert=invert)
+            ]
+        )
 
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
         # TODO: Allow ID-based
-        idx = self.get_idx_for_relations(relations)
+        idx = self.get_mask_for_relations(relations)
         logger.info(
             f'keeping {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples in {self}',
@@ -592,7 +608,7 @@ class TriplesFactory:
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
         # TODO: Allow ID-based
-        idx = self.get_idx_for_relations(relations, invert=True)
+        idx = self.get_mask_for_relations(relations, invert=True)
         logger.info(
             f'removing {len(relations)}/{self.num_relations} relations'
             f' and {idx.sum()}/{self.num_triples} triples',
@@ -726,7 +742,7 @@ class TriplesFactory:
 
         # Filter for relations
         if relations is not None:
-            relation_mask = self.get_idx_for_relations(relations=relations)
+            relation_mask = self.get_mask_for_relations(relations=relations)
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
