@@ -181,6 +181,7 @@ def _torch_is_in_1d(
     max_id: Optional[int] = None,
     invert: bool = False,
 ) -> torch.BoolTensor:
+    # TODO: Doc + test
     # normalize input
     if not torch.is_tensor(test_tensor):
         test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
