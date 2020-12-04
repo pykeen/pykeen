@@ -174,6 +174,29 @@ def _map_triples_elements_to_ids(
     return torch.tensor(unique_mapped_triples, dtype=torch.long)
 
 
+def _get_triple_mask(
+    query_ids: Collection[int],
+    triples: MappedTriples,
+    columns: Union[int, Collection[int]],
+    invert: bool = False,
+    max_id: Optional[int] = None,
+) -> torch.BoolTensor:
+    query_ids = torch.as_tensor(data=list(query_ids), dtype=torch.long)
+    if max_id is None:
+        max_id = triples[:, columns].max().item() + 1
+        logger.debug(f"Inferred max_id={max_id}")
+    id_selection_mask = torch.zeros(max_id, dtype=torch.bool)
+    id_selection_mask[query_ids] = True
+    if invert:
+        id_selection_mask = ~id_selection_mask
+    if isinstance(columns, int):
+        columns = [columns]
+    mask = True
+    for col in columns:
+        mask = mask & id_selection_mask[triples[:, col]]
+    return mask
+
+
 @dataclasses.dataclass
 class TriplesFactory:
     """Create instances given the path to triples."""
@@ -605,13 +628,14 @@ class TriplesFactory:
 
     def get_mask_for_entities(self, entities: Collection[Union[int, str]], invert: bool = False):
         """Get a boolean mask for triples with the given entities."""
-        entity_ids = torch.as_tensor(data=list(self.entities_to_ids(entities=entities)), dtype=torch.long)
-        entity_mask = torch.zeros(self.num_entities, dtype=torch.bool)
-        entity_mask[entity_ids] = True
-        if invert:
-            entity_mask = ~entity_mask
-        # head and entity need to fulfil the requirement
-        return entity_mask[self.triples[:, 0]] & entity_mask[self.triples[:, 2]]
+        entities = self.entities_to_ids(entities=entities)
+        return _get_triple_mask(
+            query_ids=entities,
+            triples=self.mapped_triples,
+            columns=(0, 2),  # head and entity need to fulfil the requirement
+            invert=invert,
+            max_id=self.num_entities,
+        )
 
     def relations_to_ids(self, relations: Collection[Union[int, str]]) -> Collection[int]:
         """Normalize relations to IDs."""
@@ -622,12 +646,14 @@ class TriplesFactory:
 
     def get_mask_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
-        relation_ids = torch.as_tensor(data=list(self.relations_to_ids(relations=relations)), dtype=torch.long)
-        relation_mask = torch.zeros(self.num_relations, dtype=torch.bool)
-        relation_mask[relation_ids] = True
-        if invert:
-            relation_mask = ~relation_mask
-        return relation_mask[self.mapped_triples[:, 1]]
+        relations = self.relations_to_ids(relations=relations)
+        return _get_triple_mask(
+            query_ids=relations,
+            triples=self.mapped_triples,
+            columns=1,
+            invert=invert,
+            max_id=self.num_relations,
+        )
 
     def get_triples_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> LabeledTriples:
         """Get the labeled triples containing the given relations."""
@@ -679,7 +705,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
-        text = [f'{h} {t}' for h, _, t in self.triples]
+        text = [" ".join(ht) for ht in self._vectorized_entity_labeler(self.mapped_triples[:, [0, 2]].numpy()).T]
         return self._word_cloud(text=text, top=top or 100)
 
     def relation_word_cloud(self, top: Optional[int] = None):
@@ -693,7 +719,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
-        text = [r for _, r, _ in self.triples]
+        text = self._vectorized_relation_labeler(self.mapped_triples[:, 1].numpy()).tolist()
         return self._word_cloud(text=text, top=top or 100)
 
     def _word_cloud(self, *, text: List[str], top: int):
