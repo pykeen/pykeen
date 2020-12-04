@@ -7,7 +7,7 @@ import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Callable, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
 import numpy as np
@@ -33,6 +33,7 @@ __all__ = [
     'split_complex',
     'split_list_in_batches_iter',
     'split_list_in_batches',
+    'torch_is_in_1d',
     'normalize_string',
     'normalized_lookup',
     'get_cls',
@@ -455,3 +456,37 @@ def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
     if not isinstance(random_state, torch.Generator):
         raise TypeError
     return random_state
+
+
+def torch_is_in_1d(
+    query_tensor: torch.LongTensor,
+    test_tensor: Union[Collection[int], torch.LongTensor],
+    max_id: Optional[int] = None,
+    invert: bool = False,
+) -> torch.BoolTensor:
+    """
+    Return a boolean mask with Q[i] in T.
+
+    :param query_tensor: shape: S
+        The query Q.
+    :param test_tensor:
+        The test set T.
+    :param max_id:
+        A maximum ID. If not given, will be inferred.
+    :param invert:
+        Whether to invert the result.
+
+    :return: shape: S
+        A boolean mask.
+    """
+    # TODO: test
+    # normalize input
+    if not torch.is_tensor(test_tensor):
+        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
+    if max_id is None:
+        max_id = max(query_tensor.max(), test_tensor.max()) + 1
+    mask = torch.zeros(max_id, dtype=torch.bool)
+    mask[test_tensor] = True
+    if invert:
+        mask = ~mask
+    return mask[query_tensor.view(-1)].view(*query_tensor.shape)

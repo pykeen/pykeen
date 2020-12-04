@@ -18,7 +18,7 @@ from tqdm.autonotebook import tqdm
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, ensure_torch_random_state, invert_mapping, slice_triples
+from ..utils import compact_mapping, ensure_torch_random_state, invert_mapping, slice_triples, torch_is_in_1d
 
 __all__ = [
     'TriplesFactory',
@@ -175,25 +175,6 @@ def _map_triples_elements_to_ids(
     return torch.tensor(unique_mapped_triples, dtype=torch.long)
 
 
-def _torch_is_in_1d(
-    query_tensor: torch.LongTensor,
-    test_tensor: Union[Collection[int], torch.LongTensor],
-    max_id: Optional[int] = None,
-    invert: bool = False,
-) -> torch.BoolTensor:
-    # TODO: Doc + test
-    # normalize input
-    if not torch.is_tensor(test_tensor):
-        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
-    if max_id is None:
-        max_id = max(query_tensor.max(), test_tensor.max()) + 1
-    mask = torch.zeros(max_id, dtype=torch.bool)
-    mask[test_tensor] = True
-    if invert:
-        mask = ~mask
-    return mask[query_tensor.view(-1)].view(*query_tensor.shape)
-
-
 def _get_triple_mask(
     query_ids: Collection[int],
     triples: MappedTriples,
@@ -201,7 +182,7 @@ def _get_triple_mask(
     invert: bool = False,
     max_id: Optional[int] = None,
 ) -> torch.BoolTensor:
-    return _torch_is_in_1d(
+    return torch_is_in_1d(
         query_tensor=triples[:, columns],
         test_tensor=query_ids,
         max_id=max_id,
