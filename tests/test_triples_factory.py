@@ -10,7 +10,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized, get_absolute_split_sizes,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized, get_absolute_split_sizes, normalize_ratios,
 )
 
 triples = np.array(
@@ -422,3 +422,22 @@ def test_get_absolute_split_sizes():
         rel_size = np.asarray(sizes) / n_total
         decimal = np.floor(-np.log10(1 / n_total))
         np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
+
+
+def test_normalize_ratios():
+    """Test normalize_ratios."""
+    for ratios, exp_output in (
+        (0.5, (0.5, 0.5)),
+        ((0.3, 0.2, 0.4), (0.3, 0.2, 0.4, 0.1)),
+    ):
+        output = normalize_ratios(ratios=ratios)
+        # check type
+        assert isinstance(output, tuple)
+        assert all(isinstance(ratio, float) for ratio in output)
+        # check values
+        assert len(output) >= 2
+        assert all(0 <= ratio <= 1 for ratio in output)
+        output_np = np.asarray(output)
+        np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
+        # compare against expected
+        np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
