@@ -31,3 +31,4 @@ Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
 RandomHint = Union[None, int, np.random.RandomState]
+TorchRandomHint = Union[None, int, torch.Generator]

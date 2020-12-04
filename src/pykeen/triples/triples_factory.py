@@ -17,8 +17,8 @@ from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RandomHint, RelationMapping
-from ..utils import compact_mapping, ensure_random_state, invert_mapping, slice_triples
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
+from ..utils import compact_mapping, ensure_torch_random_state, invert_mapping, slice_triples
 
 __all__ = [
     'TriplesFactory',
@@ -557,7 +557,7 @@ class TriplesFactory:
         self,
         ratios: Union[float, Sequence[float]] = 0.8,
         *,
-        random_state: RandomHint = None,
+        random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
@@ -584,14 +584,12 @@ class TriplesFactory:
         """
         # input normalization
         ratios = _normalize_ratios(ratios)
-        # TODO: Fix ensure_random_state for pytorch (int not np.RandomState)
-        random_state: int = ensure_random_state(random_state)
+        generator = ensure_torch_random_state(random_state)
 
         # convert to absolute sizes
         sizes = _get_absolute_split_sizes(n_total=self.num_triples, ratios=ratios)
 
         # Split indices
-        generator = torch.random.manual_seed(seed=random_state)
         idx = torch.randperm(self.num_triples, generator=generator)
         idx_groups = idx.split(split_size=sizes, dim=0)
 
@@ -607,7 +605,7 @@ class TriplesFactory:
 
         # Make sure that the first element has all the right stuff in it
         logger.debug('cleaning up groups')
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        triples_groups = _tf_cleanup_all(triples_groups, random_state=generator if randomize_cleanup else None)
         logger.debug('done cleaning up groups')
 
         for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
@@ -875,7 +873,7 @@ class TriplesFactory:
 def _tf_cleanup_all(
     triples_groups: List[MappedTriples],
     *,
-    random_state: RandomHint = None,
+    random_state: TorchRandomHint = None,
 ) -> Sequence[MappedTriples]:
     """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
@@ -898,9 +896,9 @@ def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -
 
 
 def _tf_cleanup_randomized(
-    training: np.ndarray,
-    testing: np.ndarray,
-    random_state: RandomHint = None,
+    training: MappedTriples,
+    testing: MappedTriples,
+    random_state: TorchRandomHint = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
 
@@ -908,22 +906,19 @@ def _tf_cleanup_randomized(
     2. Choose a triple to move, recalculate move_id_mask
     3. Continue until move_id_mask has no true bits
     """
-    # TODO: update to ID-based, torch
-    random_state = ensure_random_state(random_state)
-
+    generator = ensure_torch_random_state(random_state)
     move_id_mask = _prepare_cleanup(training, testing)
 
     # While there are still triples that should be moved to the training set
     while move_id_mask.any():
         # Pick a random triple to move over to the training triples
-        idx = random_state.choice(move_id_mask.nonzero()[0])
-        training = np.concatenate([training, testing[idx].reshape(1, -1)])
+        candidates, = move_id_mask.nonzero(as_tuple=True)
+        idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
 
-        # Recalculate the testing triples without that index
-        testing_mask = np.ones_like(move_id_mask)
-        testing_mask[idx] = False
-        testing = testing[testing_mask]
-
+        # add to training
+        training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
+        # remove from testing
+        testing = torch.cat([testing[:idx], testing[idx + 1:]], dim=-1)
         # Recalculate the training entities, testing entities, to_move, and move_id_mask
         move_id_mask = _prepare_cleanup(training, testing)
 

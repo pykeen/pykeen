@@ -15,7 +15,7 @@ import pandas as pd
 import torch
 import torch.nn
 
-from .typing import DeviceHint, RandomHint
+from .typing import DeviceHint, RandomHint, TorchRandomHint
 
 __all__ = [
     'compose',
@@ -441,5 +441,17 @@ def ensure_random_state(random_state: RandomHint) -> np.random.RandomState:
     if isinstance(random_state, int):
         random_state = np.random.RandomState(random_state)
     if not isinstance(random_state, np.random.RandomState):
+        raise TypeError
+    return random_state
+
+
+def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
+    """Prepare a random state for PyTorch."""
+    if random_state is None:
+        random_state = random_non_negative_int()
+        logger.warning(f'using automatically assigned random_state={random_state}')
+    if isinstance(random_state, int):
+        random_state = torch.manual_seed(seed=random_state)
+    if not isinstance(random_state, torch.Generator):
         raise TypeError
     return random_state
