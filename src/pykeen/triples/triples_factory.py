@@ -176,7 +176,7 @@ def _map_triples_elements_to_ids(
 
 
 def _get_triple_mask(
-    query_ids: Collection[int],
+    ids: Collection[int],
     triples: MappedTriples,
     columns: Union[int, Collection[int]],
     invert: bool = False,
@@ -184,7 +184,7 @@ def _get_triple_mask(
 ) -> torch.BoolTensor:
     return torch_is_in_1d(
         query_tensor=triples[:, columns],
-        test_tensor=query_ids,
+        test_tensor=ids,
         max_id=max_id,
         invert=invert,
     ).all(dim=-1)
@@ -638,7 +638,7 @@ class TriplesFactory:
         """Get a boolean mask for triples with the given entities."""
         entities = self.entities_to_ids(entities=entities)
         return _get_triple_mask(
-            query_ids=entities,
+            ids=entities,
             triples=self.mapped_triples,
             columns=(0, 2),  # head and entity need to fulfil the requirement
             invert=invert,
@@ -656,7 +656,7 @@ class TriplesFactory:
         """Get a boolean mask for triples with the given relations."""
         relations = self.relations_to_ids(relations=relations)
         return _get_triple_mask(
-            query_ids=relations,
+            ids=relations,
             triples=self.mapped_triples,
             columns=1,
             invert=invert,
