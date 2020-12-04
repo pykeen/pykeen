@@ -204,17 +204,31 @@ def _normalize_ratios(ratios: Union[float, Sequence[float]]) -> Tuple[int, ...]:
     return ratios
 
 
-def _get_absolute_split_sizes(
+def get_absolute_split_sizes(
     n_total: int,
     ratios: Sequence[float],
-) -> Tuple[Tuple[int, ...]]:
-    # TODO: doc + test
-    sizes = [
-        int(split_ratio * n_total)
-        for split_ratio in ratios
-    ]
-    assert sum(sizes) == n_total
-    return sizes
+) -> Tuple[int, ...]:
+    """
+    Compute absolute sizes of splits from given relative sizes.
+
+    .. note ::
+        This method compensates for rounding errors, and ensures that the absolute sizes sum up to the total number.
+    :param n_total:
+        The total number.
+    :param ratios:
+        The relative ratios (should sum to 1).
+
+    :return:
+        The absolute sizes.
+    """
+    # TODO: test
+    # due to rounding errors we might lose a few points, thus we use cumulative ratio
+    cum_ratio = np.cumsum(ratios)
+    cum_ratio[-1] = 1.0
+    split_points = cum_ratio * n_total
+    sizes = np.diff(split_points)
+    assert np.sum(sizes) == n_total
+    return tuple(sizes)
 
 
 @dataclasses.dataclass
@@ -569,7 +583,7 @@ class TriplesFactory:
         generator = ensure_torch_random_state(random_state)
 
         # convert to absolute sizes
-        sizes = _get_absolute_split_sizes(n_total=self.num_triples, ratios=ratios)
+        sizes = get_absolute_split_sizes(n_total=self.num_triples, ratios=ratios)
 
         # Split indices
         idx = torch.randperm(self.num_triples, generator=generator)
