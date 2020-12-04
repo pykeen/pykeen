@@ -7,7 +7,7 @@ import logging
 import os
 import re
 from collections import defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -192,6 +192,38 @@ class TriplesFactory:
     # TODO: Replace by ID-based
     relation_to_inverse: Optional[Mapping[str, str]]
 
+    # The following fields get generated automatically
+
+    #: The inverse mapping for entity_label_to_id; initialized automatically
+    entity_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
+
+    #: The inverse mapping for relation_label_to_id; initialized automatically
+    relation_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
+
+    #: A vectorized version of entity_label_to_id; initialized automatically
+    _vectorized_entity_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.field(init=False)
+
+    #: A vectorized version of relation_label_to_id; initialized automatically
+    _vectorized_relation_mapper: Callable[[np.ndarray, Tuple[int]], np.ndarray] = dataclasses.field(init=False)
+
+    #: A vectorized version of entity_id_to_label; initialized automatically
+    _vectorized_entity_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.field(init=False)
+
+    #: A vectorized version of relation_id_to_label; initialized automatically
+    _vectorized_relation_labeler: Callable[[np.ndarray, Tuple[str]], np.ndarray] = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        """Pre-compute derived mappings."""
+        # ID to label mapping
+        self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
+        self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
+
+        # vectorized versions
+        self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
+        self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
+        self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
+        self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
+
     @classmethod
     def from_labeled_triples(
         cls,
@@ -357,16 +389,6 @@ class TriplesFactory:
         """The labeled triples, a 3-column matrix where each row are the head label, relation label, then tail label."""
         logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
         return self.label_triples(self.mapped_triples)
-
-    @property
-    def entity_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
-        """The mapping from entity IDs to their labels."""
-        return invert_mapping(mapping=self.entity_to_id)
-
-    @property
-    def relation_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
-        """The mapping from relation IDs to their labels."""
-        return invert_mapping(mapping=self.relation_to_id)
 
     def get_inverse_relation_id(self, relation: str) -> int:
         """Get the inverse relation identifier for the given relation."""
