@@ -1,0 +1,36 @@
+name: Windows Tests
+
+on:
+  push:
+    branches-ignore:
+      - 'master'
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          activate-environment: test
+          python-version: ${{ matrix.python-version }}
+          auto-activate-base: false
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Run fast tests
+        shell: bash -l {0}
+        run: |
+          conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+          conda install pytest
+          pip install -e .[mlflow,wandb]
+          pytest --durations=20 tests -m "not slow"
