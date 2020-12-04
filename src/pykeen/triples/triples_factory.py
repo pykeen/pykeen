@@ -184,11 +184,6 @@ class TriplesFactory:
     #: The mapping from relations' labels to their indices
     relation_to_id: RelationMapping
 
-    # TODO: Deprecation warning. Will be replaced by re-constructing them from ID-based + mapping soon.
-    #: A three-column matrix where each row are the head label,
-    #: relation label, then tail label
-    _triples: LabeledTriples
-
     #: A three-column matrix where each row are the head identifier,
     #: relation identifier, then tail identifier
     mapped_triples: MappedTriples
@@ -288,7 +283,6 @@ class TriplesFactory:
         return cls(
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            _triples=triples,
             mapped_triples=mapped_triples,
             relation_to_inverse=relation_to_inverse,
         )
@@ -359,9 +353,17 @@ class TriplesFactory:
 
     @property
     def triples(self) -> np.ndarray:  # noqa: D401
-        """The labeled triples."""
-        # TODO: Deprecation warning. Will be replaced by re-constructing them from ID-based + mapping soon.
-        return self._triples
+        """The labeled triples, a 3-column matrix where each row are the head label, relation label, then tail label."""
+        logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
+        e2id = np.vectorize(self.entity_id_to_label.__getitem__)
+        r2id = np.vectorize(self.relation_id_to_label.__getitem__)
+        return np.stack([
+            labeler(column)
+            for labeler, column in zip(
+                [e2id, r2id, e2id],
+                self.mapped_triples.t().numpy(),
+            )
+        ], axis=1)
 
     @property
     def entity_id_to_label(self) -> Mapping[int, str]:  # noqa: D401
