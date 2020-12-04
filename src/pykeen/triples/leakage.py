@@ -42,8 +42,8 @@ class Sealant:
 
     triples_factory: TriplesFactory
     minimum_frequency: float
-    inverses: Mapping[str, str]
-    inverse_relations_to_delete: Set[str]
+    inverses: Mapping[int, int]
+    inverse_relations_to_delete: Set[int]
 
     def __init__(
         self,
@@ -116,7 +116,7 @@ class Sealant:
         logger.info(f'identified {len(self.inverse_relations_to_delete)} from {self.triples_factory} to delete')
 
     @property
-    def relations_to_delete(self) -> Set[str]:
+    def relations_to_delete(self) -> Set[int]:
         """Relations to delete combine from both duplicates and inverses."""
         return self.duplicate_relations_to_delete.union(self.inverse_relations_to_delete)
 
@@ -240,9 +240,11 @@ def get_candidate_inverse_relations(
     skip_self: bool = True,
     use_tqdm: bool = True,
     use_multiprocessing=False,
-) -> Mapping[Tuple[str, str], float]:
+) -> Mapping[Tuple[int, int], float]:
     """Count which relationships might be inverses of each other.
 
+    :param triples_factory:
+        The triples factory.
     :param symmetric: Should set similarity be calculated as the Jaccard index (symmetric) or as the
      set inclusion percentage (asymmetric)?
     :param minimum_frequency: If set, pairs of relations and candidate inverse relations
@@ -258,10 +260,10 @@ def get_candidate_inverse_relations(
     :return: A counter whose keys are pairs of relations and values are similarity scores
     """
     # A dictionary of all of the head/tail pairs for a given relation
-    relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
+    relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
     # A dictionary for all of the tail/head pairs for a given relation
-    candidate_inverse_relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
-    for h, r, t in triples_factory.triples:
+    candidate_inverse_relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
+    for h, r, t in triples_factory.mapped_triples.tolist():
         relations[r].add((h, t))
         candidate_inverse_relations[r].add((t, h))
 
@@ -299,9 +301,11 @@ def get_candidate_duplicate_relations(
     symmetric: bool = True,
     use_tqdm: bool = True,
     use_multiprocessing: bool = False,
-):
+) -> Mapping[Tuple[int, int], float]:
     """Count which relationships might be duplicates.
 
+    :param triples_factory:
+        The triples factory.
     :param symmetric: Should set similarity be calculated as the Jaccard index (symmetric) or as the
      set inclusion percentage (asymmetric)?
     :param minimum_frequency: If set, pairs of relations and candidate inverse relations
@@ -314,8 +318,8 @@ def get_candidate_duplicate_relations(
     :return: A counter whose keys are pairs of relations and values are similarity scores
     """
     # A dictionary of all of the head/tail pairs for a given relation
-    relations: Dict[str, Set[Tuple[str, str]]] = defaultdict(set)
-    for h, r, t in triples_factory.triples:
+    relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
+    for h, r, t in triples_factory.mapped_triples.tolist():
         relations[r].add((h, t))
 
     it = itt.combinations(relations.items(), 2)

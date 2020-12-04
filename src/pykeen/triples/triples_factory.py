@@ -563,6 +563,7 @@ class TriplesFactory:
 
     def get_triples_for_relations(self, relations: Collection[str], invert: bool = False) -> LabeledTriples:
         """Get the labeled triples containing the given relations."""
+        # TODO: Allow ID-based
         return self.triples[self.get_idx_for_relations(relations, invert=invert)]
 
     def new_with_relations(self, relations: Collection[str]) -> 'TriplesFactory':
@@ -576,6 +577,7 @@ class TriplesFactory:
 
     def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
+        # TODO: Allow ID-based
         idx = self.get_idx_for_relations(relations, invert=True)
         logger.info(
             f'removing {len(relations)}/{self.num_relations} relations'
