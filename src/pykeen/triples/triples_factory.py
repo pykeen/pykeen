@@ -610,15 +610,20 @@ class TriplesFactory:
             relation_to_inverse=self.relation_to_inverse,
         )
 
-    def new_without_relations(self, relations: Collection[str]) -> 'TriplesFactory':
+    def new_without_relations(self, relations: Collection[Union[int, str]]) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
-        # TODO: Allow ID-based
-        idx = self.get_mask_for_relations(relations, invert=True)
+        mask = self.get_mask_for_relations(relations, invert=True)
         logger.info(
             f'removing {len(relations)}/{self.num_relations} relations'
-            f' and {idx.sum()}/{self.num_triples} triples',
+            f' and {mask.sum()}/{self.num_triples} triples',
         )
-        return TriplesFactory.from_labeled_triples(triples=self.triples[idx])
+        # TODO: Compact relation mapping
+        return TriplesFactory(
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            mapped_triples=self.mapped_triples[mask],
+            relation_to_inverse=self.relation_to_inverse,
+        )
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
