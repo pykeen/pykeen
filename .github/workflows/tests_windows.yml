@@ -7,7 +7,7 @@ on:
 
 jobs:
   tests:
-    name: Tests
+    name: Windows
     runs-on: windows-latest
     strategy:
       matrix:
@@ -18,14 +18,12 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-      - name: Conda info
-        run: conda info
-      - name: Conda list
-        run: conda list
       - name: Install dependencies
         run: |
+          conda install pip setuptools wheel pytest sqlite
           conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-          conda install pytest
           pip install -e .[mlflow,wandb]
       - name: Run fast tests
         run: pytest --durations=20 tests -m "not slow"
+      - name: Run slow tests
+        run: pytest --durations=20 tests -m "slow"
