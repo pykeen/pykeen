@@ -204,7 +204,6 @@ def normalize_ratios(
     :return:
         A sequence of ratios of at least two elements which sums to one.
     """
-    # TODO: test
     # Prepare split index
     if isinstance(ratios, float):
         ratios = [ratios]
