@@ -429,6 +429,7 @@ def test_normalize_ratios():
     for ratios, exp_output in (
         (0.5, (0.5, 0.5)),
         ((0.3, 0.2, 0.4), (0.3, 0.2, 0.4, 0.1)),
+        ((0.3, 0.3, 0.4), (0.3, 0.3, 0.4)),
     ):
         output = normalize_ratios(ratios=ratios)
         # check type
