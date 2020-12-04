@@ -190,8 +190,21 @@ def _get_triple_mask(
     ).all(dim=-1)
 
 
-def _normalize_ratios(ratios: Union[float, Sequence[float]]) -> Tuple[int, ...]:
-    # TODO: doc + test
+def normalize_ratios(
+    ratios: Union[float, Sequence[float]]
+) -> Tuple[float, ...]:
+    """
+    Normalizes relative sizes.
+
+    If the sum is smaller than 1, adds (1 - sum)
+
+    :param ratios:
+        The ratios.
+
+    :return:
+        A sequence of ratios of at least two elements which sums to one.
+    """
+    # TODO: test
     # Prepare split index
     if isinstance(ratios, float):
         ratios = [ratios]
@@ -579,7 +592,7 @@ class TriplesFactory:
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
         # input normalization
-        ratios = _normalize_ratios(ratios)
+        ratios = normalize_ratios(ratios)
         generator = ensure_torch_random_state(random_state)
 
         # convert to absolute sizes
