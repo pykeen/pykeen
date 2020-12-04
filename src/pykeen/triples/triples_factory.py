@@ -175,6 +175,24 @@ def _map_triples_elements_to_ids(
     return torch.tensor(unique_mapped_triples, dtype=torch.long)
 
 
+def _torch_is_in_1d(
+    query_tensor: torch.LongTensor,
+    test_tensor: Union[Collection[int], torch.LongTensor],
+    max_id: Optional[int] = None,
+    invert: bool = False,
+) -> torch.BoolTensor:
+    # normalize input
+    if not torch.is_tensor(test_tensor):
+        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
+    if max_id is None:
+        max_id = max(query_tensor.max(), test_tensor.max()) + 1
+    mask = torch.zeros(max_id, dtype=torch.bool)
+    mask[test_tensor] = True
+    if invert:
+        mask = ~mask
+    return mask[query_tensor.view(-1)].view(*query_tensor.shape)
+
+
 def _get_triple_mask(
     query_ids: Collection[int],
     triples: MappedTriples,
@@ -182,20 +200,12 @@ def _get_triple_mask(
     invert: bool = False,
     max_id: Optional[int] = None,
 ) -> torch.BoolTensor:
-    query_ids = torch.as_tensor(data=list(query_ids), dtype=torch.long)
-    if max_id is None:
-        max_id = triples[:, columns].max().item() + 1
-        logger.debug(f"Inferred max_id={max_id}")
-    id_selection_mask = torch.zeros(max_id, dtype=torch.bool)
-    id_selection_mask[query_ids] = True
-    if invert:
-        id_selection_mask = ~id_selection_mask
-    if isinstance(columns, int):
-        columns = [columns]
-    mask = True
-    for col in columns:
-        mask = mask & id_selection_mask[triples[:, col]]
-    return mask
+    return _torch_is_in_1d(
+        query_tensor=triples[:, columns],
+        test_tensor=query_ids,
+        max_id=max_id,
+        invert=invert,
+    ).all(dim=-1)
 
 
 def _normalize_ratios(ratios: Union[float, Sequence[float]]) -> Tuple[int, ...]:
@@ -920,18 +930,29 @@ def _tf_cleanup_randomized(
     return training, testing
 
 
-def _prepare_cleanup(training: np.ndarray, testing: np.ndarray) -> np.ndarray:
-    # TODO: update to ID-based, torch
-    to_move_mask = None
-    for col in [[0, 2], 1]:
-        training_ids, test_ids = [np.unique(triples[:, col]) for triples in [training, testing]]
-        to_move = test_ids[~np.isin(test_ids, training_ids)]
-        this_to_move_mask = np.isin(testing[:, col], to_move)
-        if this_to_move_mask.ndim > 1:
-            this_to_move_mask = this_to_move_mask.any(axis=1)
-        if to_move_mask is None:
-            to_move_mask = this_to_move_mask
-        else:
-            to_move_mask = this_to_move_mask | to_move_mask
+def _prepare_cleanup(
+    training: MappedTriples,
+    testing: MappedTriples,
+    max_ids: Tuple[int, int],
+) -> torch.BoolTensor:
+    """
+    Calculate a mask for the test triples with triples containing test-only entities or relations.
 
+    :param training: shape: (n, 3)
+        The training triples.
+    :param testing: shape: (m, 3)
+        The testing triples.
+
+    :return: shape: (m,)
+        The move mask.
+    """
+    to_move_mask = False
+    for col, max_id in zip([[0, 2], 1], max_ids):
+        # IDs not in training
+        not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
+        not_in_training_mask[training[:, col].view(-1)] = False
+
+        # triples with exclusive test IDs
+        exclusive_triples = not_in_training_mask[testing[:, col].view(-1)].view(-1, len(col)).any(dim=-1)
+        to_move_mask = to_move_mask | exclusive_triples
     return to_move_mask
