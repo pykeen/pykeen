@@ -562,13 +562,22 @@ class TriplesFactory:
         top_counts, top_ids = counts.topk(k=n, largest=True)
         return set(uniq[top_ids].tolist())
 
-    def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
-        """Get np.array indices for triples with the given entities."""
-        entities = np.asanyarray(entities, dtype=self.triples.dtype)
-        return (
-            np.isin(self.triples[:, 0], entities, invert=invert)
-            & np.isin(self.triples[:, 2], entities, invert=invert)
-        )
+    def entities_to_ids(self, entities: Collection[Union[int, str]]) -> Collection[int]:
+        """Normalize entities to IDs."""
+        return [
+            self.entity_to_id[e] if isinstance(e, str) else e
+            for e in entities
+        ]
+
+    def get_mask_for_entities(self, entities: Collection[Union[int, str]], invert: bool = False):
+        """Get a boolean mask for triples with the given entities."""
+        entity_ids = torch.as_tensor(data=list(self.entities_to_ids(entities=entities)), dtype=torch.long)
+        entity_mask = torch.zeros(self.num_entities, dtype=torch.bool)
+        entity_mask[entity_ids] = True
+        if invert:
+            entity_mask = ~entity_mask
+        # head and entity need to fulfil the requirement
+        return entity_mask[self.triples[:, 0]] & entity_mask[self.triples[:, 2]]
 
     def relations_to_ids(self, relations: Collection[Union[int, str]]) -> Collection[int]:
         """Normalize relations to IDs."""
@@ -747,7 +756,7 @@ class TriplesFactory:
 
         # Filter for entities
         if entities is not None:
-            keep_mask = self.get_idx_for_entities(entities=entities)
+            keep_mask = self.get_mask_for_entities(entities=entities)
             logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
 
         # Filter for relations
@@ -761,19 +770,12 @@ class TriplesFactory:
             return self
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
-        factory = TriplesFactory.from_labeled_triples(
-            triples=self.triples[keep_mask],
-            create_inverse_triples=False,
+        return TriplesFactory(
+            mapped_triples=self.mapped_triples[keep_mask],
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
-            compact_id=False,
+            relation_to_inverse=self.relation_to_inverse,
         )
-
-        # manually copy the inverse relation mappings
-        if self.create_inverse_triples:
-            factory.relation_to_inverse = self.relation_to_inverse
-
-        return factory
 
 
 def _tf_cleanup_all(
