@@ -487,8 +487,9 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        n_triples = self.triples.shape[0]
+        n_triples = self.num_triples
 
+        # TODO: Directly use pytorch
         # Prepare shuffle index
         idx = np.arange(n_triples)
         random_state = ensure_random_state(random_state)
@@ -512,7 +513,8 @@ class TriplesFactory:
         split_idxs = np.cumsum(sizes)
 
         # Split triples
-        triples_groups = np.vsplit(self.triples[idx], split_idxs)
+        triples_np = self.mapped_triples.numpy()
+        triples_groups = np.vsplit(triples_np[idx], split_idxs)
         logger.info(
             'done splitting triples to groups of sizes %s',
             [triples.shape[0] for triples in triples_groups],
@@ -534,11 +536,11 @@ class TriplesFactory:
 
         # Make new triples factories for each group
         return [
-            TriplesFactory.from_labeled_triples(
-                triples=triples,
+            TriplesFactory(
+                mapped_triples=torch.from_numpy(triples),
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
-                compact_id=False,
+                relation_to_inverse=self.relation_to_inverse,
             )
             for triples in triples_groups
         ]
