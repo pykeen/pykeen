@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/pykeen/pykeen/actions">
-    <img src="https://github.com/pykeen/pykeen/workflows/Tests/badge.svg"
+    <img src="https://github.com/pykeen/pykeen/workflows/Tests%20master/badge.svg"
          alt="GitHub Actions">
   </a>
 
