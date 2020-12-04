@@ -691,14 +691,9 @@ class TriplesFactory:
             max_id=self.num_relations,
         )
 
-    def get_triples_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> LabeledTriples:
-        """Get the labeled triples containing the given relations."""
-        # TODO: Do we really need labeled triples?
-        return self.label_triples(
-            triples=self.mapped_triples[
-                self.get_mask_for_relations(relations=relations, invert=invert)
-            ],
-        )
+    def get_triples_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> MappedTriples:
+        """Get the triples containing the given relations."""
+        return self.mapped_triples[self.get_mask_for_relations(relations=relations, invert=invert)]
 
     def new_with_relations(self, relations: Collection[Union[int, str]]) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
