@@ -141,7 +141,7 @@ class Sealant:
         return triples_factory.new_without_relations(self.relations_to_delete)
 
 
-def prioritize_mapping(d: Mapping[Tuple[str, str], float]) -> Set[str]:
+def prioritize_mapping(d: Mapping[Tuple[X, X], float]) -> Set[X]:
     """Prioritize elements from a two way mapping."""
     return {
         b
