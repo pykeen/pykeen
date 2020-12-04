@@ -12,11 +12,6 @@
          alt="GitHub Actions">
   </a>
 
-  <a href="https://ci.appveyor.com/project/pykeen/pykeen/branch/master">
-    <img src="https://ci.appveyor.com/api/projects/status/lwp9cfnsa8d5yx62/branch/master?svg=true"
-         alt="AppVeyor">
-  </a>
-
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
