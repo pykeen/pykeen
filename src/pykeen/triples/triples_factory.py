@@ -6,7 +6,7 @@ import dataclasses
 import logging
 import os
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
@@ -545,13 +545,12 @@ class TriplesFactory:
             for triples in triples_groups
         ]
 
-    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[str]:
-        """Get the n most frequent relations.
+    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
+        """Get the IDs of the n most frequent relations.
 
         :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
          to keep
         """
-        # TODO: Return IDs / add ID variant
         logger.info(f'applying cutoff of {n} to {self}')
         if isinstance(n, float):
             assert 0 < n < 1
@@ -559,11 +558,9 @@ class TriplesFactory:
         elif not isinstance(n, int):
             raise TypeError('n must be either an integer or a float')
 
-        counter = Counter(self.triples[:, 1])
-        return {
-            relation
-            for relation, _ in counter.most_common(n)
-        }
+        uniq, counts = self.mapped_triples[:, 1].unique(return_counts=True)
+        top_counts, top_ids = counts.topk(k=n, largest=True)
+        return set(uniq[top_ids].tolist())
 
     def get_idx_for_entities(self, entities: Collection[str], invert: bool = False):
         """Get np.array indices for triples with the given entities."""
