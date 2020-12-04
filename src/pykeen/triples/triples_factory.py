@@ -868,7 +868,6 @@ def _tf_cleanup_all(
     random_state: RandomHint = None,
 ) -> Sequence[MappedTriples]:
     """Cleanup a list of triples array with respect to the first array."""
-    # TODO: update to ID-based, torch
     reference, *others = triples_groups
     rv = []
     for other in others:
@@ -877,16 +876,14 @@ def _tf_cleanup_all(
         else:
             reference, other = _tf_cleanup_deterministic(reference, other)
         rv.append(other)
-    return [reference, *rv]
+    return reference, *rv
 
 
-def _tf_cleanup_deterministic(training: np.ndarray, testing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -> Tuple[MappedTriples, MappedTriples]:
     """Cleanup a triples array (testing) with respect to another (training)."""
     move_id_mask = _prepare_cleanup(training, testing)
-
-    training = np.concatenate([training, testing[move_id_mask]])
+    training = torch.cat([training, testing[move_id_mask]])
     testing = testing[~move_id_mask]
-
     return training, testing
 
 
@@ -901,6 +898,7 @@ def _tf_cleanup_randomized(
     2. Choose a triple to move, recalculate move_id_mask
     3. Continue until move_id_mask has no true bits
     """
+    # TODO: update to ID-based, torch
     random_state = ensure_random_state(random_state)
 
     move_id_mask = _prepare_cleanup(training, testing)
@@ -923,6 +921,7 @@ def _tf_cleanup_randomized(
 
 
 def _prepare_cleanup(training: np.ndarray, testing: np.ndarray) -> np.ndarray:
+    # TODO: update to ID-based, torch
     to_move_mask = None
     for col in [[0, 2], 1]:
         training_ids, test_ids = [np.unique(triples[:, col]) for triples in [training, testing]]
