@@ -2,8 +2,8 @@ name: Tests
 
 on:
   push:
-    branches-ignore:
-      - 'master'
+    branches:
+      - !master
 
 jobs:
   lint:
