@@ -39,6 +39,7 @@ PyKEEN
    reference/ablation
    reference/lookup
    reference/sealant
+   reference/constants
 
 .. toctree::
    :caption: Appendix
