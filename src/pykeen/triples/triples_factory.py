@@ -213,6 +213,7 @@ def get_absolute_split_sizes(
 
     .. note ::
         This method compensates for rounding errors, and ensures that the absolute sizes sum up to the total number.
+
     :param n_total:
         The total number.
     :param ratios:
