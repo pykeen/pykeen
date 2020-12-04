@@ -2,26 +2,26 @@
 
 """Benchmark the speed for generating new datasets by remixing old ones."""
 
-import itertools as itt
 import logging
 import os
-import time
-from pathlib import Path
+from datetime import datetime
 
 import click
+import itertools as itt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import time
 from humanize import intword
 from tqdm import tqdm
 
-from pykeen.constants import PYKEEN_HOME
 from pykeen.datasets import get_dataset
 from pykeen.triples.splitting import split
+from pykeen.utils import get_benchmark
+from pykeen.version import get_git_hash
 
-PYKEEN_BENCHMARK = Path(PYKEEN_HOME) / 'benchmarks'
-SPLITTING_DIRECTORY = PYKEEN_BENCHMARK / 'splitting'
+SPLITTING_DIRECTORY = get_benchmark('splitting')
 RESULTS_DIRECTORY = SPLITTING_DIRECTORY / 'results'
 os.makedirs(RESULTS_DIRECTORY, exist_ok=True)
 
@@ -29,6 +29,7 @@ tsv_path = SPLITTING_DIRECTORY / 'split_benchmark.tsv'
 png_path = SPLITTING_DIRECTORY / 'split_benchmark.png'
 scatter_png_path = SPLITTING_DIRECTORY / 'split_benchmark_scatter.png'
 columns = [
+    'hash',
     'dataset',
     'dataset_size',
     'method',
@@ -41,9 +42,14 @@ columns = [
 ]
 
 
+def _log(s):
+    tqdm.write(f'[{datetime.now().strftime("%H:%M:%S")}] {s}')
+
+
 @click.command()
-@click.option('-r', '--replicates', type=int, default=3, show_default=True)
-def main(replicates: int):
+@click.option('-r', '--replicates', type=int, default=2, show_default=True)
+@click.option('-f', '--force', is_flag=True)
+def main(replicates: int, force: bool):
     import pykeen.triples.splitting
     pykeen.triples.splitting.logger.setLevel(logging.ERROR)
     import pykeen.triples.triples_factory
@@ -51,7 +57,8 @@ def main(replicates: int):
     import pykeen.utils
     pykeen.utils.logger.setLevel(logging.ERROR)
 
-    methods = ['old', 'new']
+    git_hash = get_git_hash()
+    methods = ['cleanup', 'coverage']
     ratios = [0.8]
     datasets = [
         'nations',
@@ -66,7 +73,7 @@ def main(replicates: int):
         'fb15k',
         'yago310',
         'ogbbiokg',
-        'hetionet',
+        # 'hetionet',
         'ogbwikikg',
         'openbiolink',
         'drkg',
@@ -76,22 +83,24 @@ def main(replicates: int):
     outer_it = tqdm(datasets, desc='Dataset')
     for dataset in outer_it:
         dataset_path = RESULTS_DIRECTORY / f'{dataset}.tsv'
-        if dataset_path.exists():
-            tqdm.write(f'loading pre-calculated {dataset}')
+        if dataset_path.exists() and not force:
+            _log(f'loading pre-calculated {dataset}')
             df = pd.read_csv(dataset_path, sep='\t')
             rows.extend(df.values)
             continue
 
-        tqdm.write(f'loading {dataset}')
+        _log(f'loading {dataset}')
         dataset = get_dataset(dataset=dataset)
         dataset_name = dataset.__class__.__name__
+        _log(f'concatenating {dataset_name}')
         triples = np.concatenate([
-            dataset.training.triples,
-            dataset.testing.triples,
-            dataset.validation.triples,
+            dataset.training.mapped_triples,
+            dataset.testing.mapped_triples,
+            dataset.validation.mapped_triples,
         ])
+        _log(f'done concatenating {dataset_name}')
         del dataset
-        tqdm.write('done loading')
+        _log(f'done deleting {dataset_name}')
 
         dataset_rows = []
         inner_it = itt.product(methods, ratios, range(1, 1 + replicates))
@@ -110,6 +119,7 @@ def main(replicates: int):
             )
             total = time.time() - t
             dataset_rows.append((
+                git_hash,
                 dataset_name,
                 triples.shape[0],
                 method,

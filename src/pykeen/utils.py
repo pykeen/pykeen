@@ -7,6 +7,7 @@ import json
 import logging
 import random
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Callable, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy
@@ -15,7 +16,9 @@ import pandas as pd
 import torch
 import torch.nn
 
+from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, RandomHint
+from .version import get_git_hash
 
 __all__ = [
     'compose',
@@ -43,6 +46,7 @@ __all__ = [
     'Result',
     'fix_dataclass_init_docs',
     'ensure_random_state',
+    'get_benchmark',
 ]
 
 logger = logging.getLogger(__name__)
@@ -374,6 +378,13 @@ def fix_dataclass_init_docs(cls: Type) -> Type:
     """
     cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
     return cls
+
+
+def get_benchmark(name: str) -> Path:
+    """Get the benchmark directory for this version."""
+    rv = PYKEEN_BENCHMARKS / name / get_git_hash()
+    rv.mkdir(exist_ok=True, parents=True)
+    return rv
 
 
 def get_model_io(model) -> BytesIO:
