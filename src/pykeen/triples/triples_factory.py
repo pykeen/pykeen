@@ -774,12 +774,10 @@ class TriplesFactory:
         data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
 
         # vectorized label lookup
-        entity_id_to_label = np.vectorize(self.entity_id_to_label.__getitem__)
-        relation_id_to_label = np.vectorize(self.relation_id_to_label.__getitem__)
         for column, id_to_label in dict(
-            head=entity_id_to_label,
-            relation=relation_id_to_label,
-            tail=entity_id_to_label,
+            head=self._vectorized_entity_labeler,
+            relation=self._vectorized_relation_labeler,
+            tail=self._vectorized_entity_labeler,
         ).items():
             data[f'{column}_label'] = id_to_label(data[f'{column}_id'])
 
