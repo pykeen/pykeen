@@ -189,6 +189,7 @@ class TriplesFactory:
     mapped_triples: MappedTriples
 
     #: A dictionary mapping each relation to its inverse, if inverse triples were created
+    # TODO: Replace by ID-based
     relation_to_inverse: Optional[Mapping[str, str]]
 
     @classmethod
