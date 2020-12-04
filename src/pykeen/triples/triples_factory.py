@@ -191,7 +191,8 @@ def _get_triple_mask(
 
 
 def normalize_ratios(
-    ratios: Union[float, Sequence[float]]
+    ratios: Union[float, Sequence[float]],
+    epsilon: float = 1.0e-06,
 ) -> Tuple[float, ...]:
     """
     Normalizes relative sizes.
@@ -200,6 +201,8 @@ def normalize_ratios(
 
     :param ratios:
         The ratios.
+    :param epsilon:
+        A small constant for comparing sum of ratios against 1.
 
     :return:
         A sequence of ratios of at least two elements which sums to one.
@@ -209,9 +212,9 @@ def normalize_ratios(
         ratios = [ratios]
     ratios = tuple(ratios)
     ratio_sum = sum(ratios)
-    if ratio_sum < 1.0:
+    if ratio_sum < 1.0 - epsilon:
         ratios = ratios + (1.0 - ratio_sum,)
-    elif ratio_sum > 1.0:
+    elif ratio_sum > 1.0 + epsilon:
         raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
     return ratios
 
