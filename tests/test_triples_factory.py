@@ -421,6 +421,7 @@ def test_get_absolute_split_sizes():
 
         # check consistency with ratios
         rel_size = np.asarray(sizes) / n_total
+        # the number of decimal digits equivalent to 1 / n_total
         decimal = np.floor(np.log10(n_total))
         np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
 
