@@ -222,13 +222,12 @@ def get_absolute_split_sizes(
     :return:
         The absolute sizes.
     """
-    # TODO: test
     # due to rounding errors we might lose a few points, thus we use cumulative ratio
     cum_ratio = np.cumsum(ratios)
     cum_ratio[-1] = 1.0
-    split_points = cum_ratio * n_total
+    cum_ratio = np.r_[np.zeros(1), cum_ratio]
+    split_points = (cum_ratio * n_total).astype(np.int64)
     sizes = np.diff(split_points)
-    assert np.sum(sizes) == n_total
     return tuple(sizes)
 
 

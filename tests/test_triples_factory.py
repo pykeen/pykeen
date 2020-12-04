@@ -10,7 +10,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized, get_absolute_split_sizes,
 )
 
 triples = np.array(
@@ -397,3 +397,28 @@ class TestLiterals(unittest.TestCase):
         )
 
         self.assertIn(f'likes{INVERSE_SUFFIX}', triples_factory.relation_to_id)
+
+
+def test_get_absolute_split_sizes():
+    """Test get_absolute_split_sizes."""
+    for num_splits, n_total in zip(
+        (2, 3, 4),
+        (100, 200, 10412)
+    ):
+        # generate random ratios
+        ratios = np.random.uniform(size=(num_splits,))
+        ratios = ratios / ratios.sum()
+        sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
+        # check size
+        assert len(sizes) == len(ratios)
+
+        # check value range
+        assert all(0 <= size <= n_total for size in sizes)
+
+        # check total split
+        assert sum(sizes) == n_total
+
+        # check consistency with ratios
+        rel_size = np.asarray(sizes) / n_total
+        decimal = np.floor(-np.log10(1 / n_total))
+        np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
