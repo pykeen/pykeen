@@ -206,7 +206,7 @@ def _normalize_ratios(ratios: Union[float, Sequence[float]]) -> Tuple[int, ...]:
 
 def _get_absolute_split_sizes(
     n_total: int,
-    ratios: Sequence[float, ...],
+    ratios: Sequence[float],
 ) -> Tuple[Tuple[int, ...]]:
     # TODO: doc + test
     sizes = [
