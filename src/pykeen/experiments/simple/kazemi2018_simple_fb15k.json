@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15k Data Set with SimplE as described by Kazemi et al., 2018",
+    "title": "Learn FB15k Dataset with SimplE as described by Kazemi et al., 2018",
     "comments": "They make use of inverse relations. Normalization argument of regularizer is set to false. SimplE uses the optimistic rank definition for evaluation, cf. https://github.com/Mehran-k/SimplE/blob/29108230b63920afa38067b1aff8b8d53d07ed01/reader.py#L148."
   },
   "pipeline": {

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Get triples from the UMLS data set."""
+"""Get triples from the UMLS dataset."""
 
 import os
 
-from ..base import PathDataSet
+from ..base import PathDataset
 
 __all__ = [
     'UMLS_TRAIN_PATH',
@@ -20,8 +20,8 @@ UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
 UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-class UMLS(PathDataSet):
-    """The UMLS data set."""
+class UMLS(PathDataset):
+    """The UMLS dataset."""
 
     def __init__(self, **kwargs):
         super().__init__(

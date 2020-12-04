@@ -8,7 +8,7 @@ import os
 import click
 import numpy as np
 
-from .base import PathDataSet
+from .base import PathDataset
 from ..triples import TriplesFactory
 from ..utils import random_non_negative_int
 
@@ -27,7 +27,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     """Make a dataset from the given triples."""
     os.makedirs(directory, exist_ok=True)
 
-    triples_factory = TriplesFactory(path=path)
+    triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
 
     if seed is None:
@@ -51,7 +51,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
         if no_validation:
             click.secho('Can not load as dataset if --no-validation was flagged.', fg='red')
             return
-        d = PathDataSet(
+        d = PathDataset(
             training_path=os.path.join(directory, 'train.txt'),
             testing_path=os.path.join(directory, 'test.txt'),
             validation_path=os.path.join(directory, 'valid.txt'),

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with ComplEx as described by Trouillon et al., 2016",
+    "title": "Learn FB15K Dataset with ComplEx as described by Trouillon et al., 2016",
     "comments": "In the paper it is not mentioned that they compute the mean of the vector norms as done in the published code base. The rank type can be found at https://github.com/ttrouill/complex/blob/67fef2324d5a7695f7b932b5606d2e4b6de09a41/efe/evaluation.py#L295."
   },
   "pipeline": {

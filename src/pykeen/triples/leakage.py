@@ -208,7 +208,7 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     relation_to_id = create_relation_mapping(set(triples[:, 1]))
 
     return [
-        TriplesFactory(
+        TriplesFactory.from_labeled_triples(
             triples=triples_factory.triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
