@@ -745,7 +745,7 @@ def pipeline(  # noqa: C901
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
-    evaluate_on_cpu_if_needed: bool = False
+    evaluate_on_cpu_if_needed: bool = False,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
