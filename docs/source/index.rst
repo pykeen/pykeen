@@ -18,6 +18,7 @@ PyKEEN
    tutorial/trackers/index
    tutorial/making_predictions
    tutorial/performance
+   extending/index
 
 .. toctree::
    :caption: Reference
@@ -39,6 +40,7 @@ PyKEEN
    reference/ablation
    reference/lookup
    reference/sealant
+   reference/constants
 
 .. toctree::
    :caption: Appendix

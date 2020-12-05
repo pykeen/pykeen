@@ -48,7 +48,7 @@ class LossTensorTest(unittest.TestCase):
 
     def test_lcwa_margin_ranking_loss_helper(self):
         """Test if output is correct for the LCWA training loop use case."""
-        factory = TriplesFactory(triples=self.triples)
+        factory = TriplesFactory.from_labeled_triples(triples=self.triples)
 
         loss_cls = MarginRankingLoss(
             margin=0,

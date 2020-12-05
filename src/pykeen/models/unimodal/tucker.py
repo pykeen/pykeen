@@ -9,6 +9,7 @@ import torch.autograd
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
@@ -65,11 +66,11 @@ class TuckER(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
-        relation_dim=dict(type=int, low=30, high=200, q=25),
-        dropout_0=dict(type=float, low=0.1, high=0.4),
-        dropout_1=dict(type=float, low=0.1, high=0.5),
-        dropout_2=dict(type=float, low=0.1, high=0.6),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        dropout_0=DEFAULT_DROPOUT_HPO_RANGE,
+        dropout_1=DEFAULT_DROPOUT_HPO_RANGE,
+        dropout_2=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
     loss_default = BCEAfterSigmoidLoss
