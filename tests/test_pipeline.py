@@ -134,9 +134,9 @@ class TestPipelineCheckpoints(unittest.TestCase):
 
     def _test_pipeline_x_resumption(self, training_loop_type: str):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
-        checkpoint_directory = self.temporary_directory.name
-
-        # TODO check that there aren't any checkpoint files already existing in the right place
+        # As the resumption capability currently is a function of the training loop, more thorough tests can be found
+        # in the test_training.py unit tests. In the tests below the handling of training loop checkpoints by the
+        # pipeline is checked.
 
         result_standard = pipeline(
             model=self.model,
@@ -156,7 +156,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 use_tqdm=False,
                 use_tqdm_batch=False,
                 checkpoint_name=self.checkpoint_name,
-                checkpoint_directory=checkpoint_directory,
+                checkpoint_directory=self.temporary_directory.name,
                 checkpoint_frequency=0,
             ),
             random_seed=self.random_seed,
@@ -172,7 +172,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 use_tqdm=False,
                 use_tqdm_batch=False,
                 checkpoint_name=self.checkpoint_name,
-                checkpoint_directory=checkpoint_directory,
+                checkpoint_directory=self.temporary_directory.name,
                 checkpoint_frequency=0,
             ),
         )

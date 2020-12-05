@@ -99,6 +99,11 @@ class TrainingLoopTests(unittest.TestCase):
         self.random_seed = 123
         self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
         self.num_epochs = 10
+        self.temporary_directory = tempfile.TemporaryDirectory()
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.temporary_directory.cleanup()
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
@@ -144,15 +149,13 @@ class TrainingLoopTests(unittest.TestCase):
 
     def test_lcwa_checkpoints(self):
         """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
-        with tempfile.TemporaryDirectory() as checkpoint_directory:
-            self._test_checkpoints(training_loop_type='LCWA', checkpoint_directory=checkpoint_directory)
+        self._test_checkpoints(training_loop_type='LCWA')
 
     def test_slcwa_checkpoints(self):
         """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
-        with tempfile.TemporaryDirectory() as checkpoint_directory:
-            self._test_checkpoints(training_loop_type='sLCWA', checkpoint_directory=checkpoint_directory)
+        self._test_checkpoints(training_loop_type='sLCWA')
 
-    def _test_checkpoints(self, training_loop_type: str, checkpoint_directory: str):
+    def _test_checkpoints(self, training_loop_type: str):
         """Test whether interrupting the given training loop type can be resumed using checkpoints."""
         training_loop_class = get_training_loop_cls(training_loop_type)
 
@@ -183,7 +186,7 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
             checkpoint_name=self.checkpoint_file,
-            checkpoint_directory=checkpoint_directory,
+            checkpoint_directory=self.temporary_directory,
             checkpoint_frequency=0,
         )
 
@@ -199,7 +202,7 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
             checkpoint_name=self.checkpoint_file,
-            checkpoint_directory=checkpoint_directory,
+            checkpoint_directory=self.temporary_directory,
             checkpoint_frequency=0,
         )
 
