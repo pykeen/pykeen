@@ -745,6 +745,7 @@ def pipeline(  # noqa: C901
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
+    evaluate_on_cpu_if_needed: bool = False
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -825,6 +826,8 @@ def pipeline(  # noqa: C901
         A JSON dictionary to store with the experiment
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
+    :param evaluate_on_cpu_if_needed:
+        If true, the evaluation will fall back to using the CPU in cases where it failed using the GPU.
     """
     if random_seed is None:
         random_seed = random_non_negative_int()
@@ -1040,7 +1043,11 @@ def pipeline(  # noqa: C901
         except (MemoryError, RuntimeError) as e:
             # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
             # restarted with PyKEEN's automatic memory optimization
-            if model_instance.device.type == 'cuda' and evaluation_kwargs.get('batch_size') is not None:
+            if (
+                model_instance.device.type == 'cuda'
+                and evaluation_kwargs.get('batch_size') is not None
+                and evaluate_on_cpu_if_needed
+            ):
                 logging.warning(
                     "You tried to evaluate the current model on GPU with batch_size="
                     f"{evaluation_kwargs.get('batch_size')}, which was too big for the GPU.",
@@ -1049,7 +1056,11 @@ def pipeline(  # noqa: C901
                 evaluation_kwargs.pop('batch_size', None)
             # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
             # is restarted using the cpu
-            elif model_instance.device.type == 'cuda' and evaluation_kwargs.get('batch_size') is None:
+            elif (
+                model_instance.device.type == 'cuda'
+                and evaluation_kwargs.get('batch_size') is None
+                and evaluate_on_cpu_if_needed
+            ):
                 logging.warning(
                     "Tried to evaluate the current model on GPU, but the model and the dataset are too big for the "
                     "GPU memory currently available.",
