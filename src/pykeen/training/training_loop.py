@@ -79,16 +79,21 @@ class TrainingLoop(ABC):
         self,
         model: Model,
         optimizer: Optional[Optimizer] = None,
+        automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
 
         :param model: The model to train
         :param optimizer: The optimizer to use while training the model
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during
+            training and batch size during evaluation with regards to the hardware at hand.
         """
         self.model = model
         self.optimizer = optimizer
         self.training_instances = None
         self.losses_per_epochs = []
+        self.automatic_memory_optimization = automatic_memory_optimization
 
         if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
             raise TrainingApproachLossMismatchError(
@@ -146,6 +151,9 @@ class TrainingLoop(ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing. This is only possible for LCWA training loops in
             general and only for models that have the slicing capability implemented.
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during training and batch size during evaluation with
+            regards to the hardware at hand.
         :param label_smoothing: (0 <= label_smoothing < 1)
             If larger than zero, use label smoothing.
         :param sampler: (None or 'schlichtkrull')
@@ -154,6 +162,8 @@ class TrainingLoop(ABC):
             If set to False, (re-)initialize the model's weights. Otherwise continue training.
         :param only_size_probing:
             The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
+        :param use_tqdm: Should a progress bar be shown for epochs?
+        :param use_tqdm_batch: Should a progress bar be shown for batching (inside the epoch progress bar)?
         :param tqdm_kwargs:
             Keyword arguments passed to :mod:`tqdm` managing the progress bar.
         :param stopper:
@@ -262,13 +272,13 @@ class TrainingLoop(ABC):
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
-            if self.model.automatic_memory_optimization:
+            if self.automatic_memory_optimization:
                 batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
 
         # This will find necessary parameters to optimize the use of the hardware at hand
-        if not only_size_probing and self.model.automatic_memory_optimization and not batch_size_sufficient:
+        if not only_size_probing and self.automatic_memory_optimization and not batch_size_sufficient:
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
 
@@ -316,8 +326,11 @@ class TrainingLoop(ABC):
         # Bind
         num_training_instances = self.training_instances.num_instances
 
+        _use_outer_tqdm = not only_size_probing and use_tqdm
+        _use_inner_tqdm = _use_outer_tqdm and use_tqdm_batch
+
         # When size probing, we don't want progress bars
-        if not only_size_probing and use_tqdm:
+        if _use_outer_tqdm:
             # Create progress bar
             _tqdm_kwargs = dict(desc=f'Training epochs on {self.device}', unit='epoch')
             if tqdm_kwargs is not None:
@@ -346,7 +359,7 @@ class TrainingLoop(ABC):
 
             # Batching
             # Only create a progress bar when not in size probing mode
-            if not only_size_probing and use_tqdm_batch:
+            if _use_inner_tqdm:
                 batches = tqdm(train_data_loader, desc=f'Training batches on {self.device}', leave=False, unit='batch')
             else:
                 batches = train_data_loader
@@ -407,10 +420,11 @@ class TrainingLoop(ABC):
             result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
             # Print loss information to console
-            epochs.set_postfix({
-                'loss': self.losses_per_epochs[-1],
-                'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
-            })
+            if _use_outer_tqdm:
+                epochs.set_postfix({
+                    'loss': self.losses_per_epochs[-1],
+                    'prev_loss': self.losses_per_epochs[-2] if epoch > 2 else float('nan'),
+                })
 
             if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                 return self.losses_per_epochs

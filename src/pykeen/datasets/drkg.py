@@ -6,11 +6,9 @@ Get a summary with ``python -m pykeen.datasets.drkg``
 """
 
 import logging
-from typing import Union
-
-import numpy as np
 
 from .base import TarFileSingleDataset
+from ..typing import RandomHint
 
 __all__ = [
     'DRKG',
@@ -31,7 +29,7 @@ class DRKG(TarFileSingleDataset):
     def __init__(
         self,
         create_inverse_triples: bool = False,
-        random_state: Union[None, int, np.random.RandomState] = 0,
+        random_state: RandomHint = 0,
         **kwargs,
     ):
         super().__init__(

@@ -14,25 +14,25 @@ from typing import List, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
 
-import numpy as np
 import pandas as pd
 import requests
 from tabulate import tabulate
 
-from ..constants import PYKEEN_HOME
+from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
+from ..typing import RandomHint
 from ..utils import normalize_string
 
 __all__ = [
-    'DataSet',
+    'Dataset',
     'EagerDataset',
-    'LazyDataSet',
-    'PathDataSet',
-    'RemoteDataSet',
-    'UnpackedRemoteDataSet',
-    'TarFileRemoteDataSet',
-    'ZipFileRemoteDataSet',
-    'PackedZipRemoteDataSet',
+    'LazyDataset',
+    'PathDataset',
+    'RemoteDataset',
+    'UnpackedRemoteDataset',
+    'TarFileRemoteDataset',
+    'ZipFileRemoteDataset',
+    'PackedZipRemoteDataset',
     'TarFileSingleDataset',
     'SingleTabbedDataset',
 ]
@@ -40,8 +40,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class DataSet:
-    """Contains a lazy reference to a training, testing, and validation data set."""
+class Dataset:
+    """Contains a lazy reference to a training, testing, and validation dataset."""
 
     #: A factory wrapping the training triples
     training: TriplesFactory
@@ -49,7 +49,7 @@ class DataSet:
     testing: TriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
     validation: TriplesFactory
-    #: All data sets should take care of inverse triple creation
+    #: All datasets should take care of inverse triple creation
     create_inverse_triples: bool
 
     @property
@@ -95,13 +95,13 @@ class DataSet:
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
 
     @classmethod
-    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'DataSet':
+    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
-        tf = TriplesFactory(path=path)
+        tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
 
     @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'DataSet':
+    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = tf.split(ratios or [0.8, 0.1, 0.1])
         return EagerDataset(training=training, testing=testing, validation=validation)
@@ -112,7 +112,7 @@ class DataSet:
         return normalize_string(cls.__name__)
 
 
-class EagerDataset(DataSet):
+class EagerDataset(Dataset):
     """A dataset that has already been loaded."""
 
     def __init__(self, training: TriplesFactory, testing: TriplesFactory, validation: TriplesFactory) -> None:
@@ -126,8 +126,8 @@ class EagerDataset(DataSet):
         )
 
 
-class LazyDataSet(DataSet):
-    """A data set that has lazy loading."""
+class LazyDataset(Dataset):
+    """A dataset that has lazy loading."""
 
     #: The actual instance of the training factory, which is exposed to the user through `training`
     _training: Optional[TriplesFactory] = None
@@ -181,18 +181,18 @@ class LazyDataSet(DataSet):
         :param cache_root: If none is passed, defaults to a subfolder of the
             PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
             The subfolder is named based on the class inheriting from
-            :class:`pykeen.datasets.base.DataSet`.
+            :class:`pykeen.datasets.base.Dataset`.
         """
         if cache_root is None:
-            cache_root = PYKEEN_HOME
+            cache_root = PYKEEN_DATASETS
         cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
         return cache_root
 
 
-class PathDataSet(LazyDataSet):
-    """Contains a lazy reference to a training, testing, and validation data set."""
+class PathDataset(LazyDataset):
+    """Contains a lazy reference to a training, testing, and validation dataset."""
 
     def __init__(
         self,
@@ -202,7 +202,7 @@ class PathDataSet(LazyDataSet):
         eager: bool = False,
         create_inverse_triples: bool = False,
     ) -> None:
-        """Initialize the data set.
+        """Initialize the dataset.
 
         :param training_path: Path to the training triples file or training triples file.
         :param testing_path: Path to the testing triples file or testing triples file.
@@ -221,11 +221,11 @@ class PathDataSet(LazyDataSet):
             self._load_validation()
 
     def _load(self) -> None:
-        self._training = TriplesFactory(
+        self._training = TriplesFactory.from_path(
             path=self.training_path,
             create_inverse_triples=self.create_inverse_triples,
         )
-        self._testing = TriplesFactory(
+        self._testing = TriplesFactory.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
@@ -234,7 +234,7 @@ class PathDataSet(LazyDataSet):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
-        self._validation = TriplesFactory(
+        self._validation = TriplesFactory.from_path(
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
@@ -279,7 +279,7 @@ def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: boo
             raise
 
 
-class UnpackedRemoteDataSet(PathDataSet):
+class UnpackedRemoteDataset(PathDataset):
     """A dataset with all three of train, test, and validation sets as URLs."""
 
     def __init__(
@@ -334,7 +334,7 @@ class UnpackedRemoteDataSet(PathDataSet):
         )
 
 
-class RemoteDataSet(PathDataSet):
+class RemoteDataset(PathDataset):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
     def __init__(
@@ -406,7 +406,7 @@ class RemoteDataSet(PathDataSet):
         super()._load()
 
 
-class TarFileRemoteDataSet(RemoteDataSet):
+class TarFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a tar file."""
 
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
@@ -415,7 +415,7 @@ class TarFileRemoteDataSet(RemoteDataSet):
 
 
 # TODO replace this with the new zip remote dataset class
-class ZipFileRemoteDataSet(RemoteDataSet):
+class ZipFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a zip file."""
 
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
@@ -423,7 +423,7 @@ class ZipFileRemoteDataSet(RemoteDataSet):
             zf.extractall(path=self.cache_root)
 
 
-class PackedZipRemoteDataSet(LazyDataSet):
+class PackedZipRemoteDataset(LazyDataset):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
     head_column: int = 0
@@ -494,7 +494,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
                     header=self.header,
                     sep=self.sep,
                 )
-                rv = TriplesFactory(
+                rv = TriplesFactory.from_labeled_triples(
                     triples=df.values,
                     create_inverse_triples=self.create_inverse_triples,
                 )
@@ -502,7 +502,7 @@ class PackedZipRemoteDataSet(LazyDataSet):
                 return rv
 
 
-class TarFileSingleDataset(LazyDataSet):
+class TarFileSingleDataset(LazyDataset):
     """Loads a dataset that's a single file inside a tar.gz archive."""
 
     ratios = (0.8, 0.1, 0.1)
@@ -517,7 +517,7 @@ class TarFileSingleDataset(LazyDataSet):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: Union[None, int, np.random.RandomState] = None,
+        random_state: RandomHint = None,
         randomize_cleanup: bool = False,
     ):
         """Initialize dataset.
@@ -569,7 +569,7 @@ class TarFileSingleDataset(LazyDataSet):
                 tf.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
@@ -582,7 +582,7 @@ class TarFileSingleDataset(LazyDataSet):
         pass  # already loaded by _load()
 
 
-class SingleTabbedDataset(LazyDataSet):
+class SingleTabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios = (0.8, 0.1, 0.1)
@@ -596,7 +596,7 @@ class SingleTabbedDataset(LazyDataSet):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: Union[None, int, np.random.RandomState] = None,
+        random_state: RandomHint = None,
     ):
         """Initialize dataset.
 
@@ -638,7 +638,7 @@ class SingleTabbedDataset(LazyDataSet):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,

@@ -8,6 +8,7 @@ import torch
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -43,10 +44,10 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
-        hidden_dim=dict(type=int, low=50, high=450, q=25),
-        input_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
-        hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
+        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
     loss_default: Type[Loss] = BCEAfterSigmoidLoss
@@ -60,7 +61,6 @@ class ERMLPE(EntityRelationEmbeddingModel):
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -69,7 +69,6 @@ class ERMLPE(EntityRelationEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,

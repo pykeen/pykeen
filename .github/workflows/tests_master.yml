@@ -1,0 +1,113 @@
+name: Tests master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  lint:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check manifest
+        run: tox -e manifest
+
+      - name: Check code quality with flake8
+        run: tox -e flake8
+
+      - name: Check package metadata with Pyroma
+        run: tox -e pyroma
+
+      - name: Check static typing with MyPy
+        run: tox -e mypy
+  docs:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: Documentation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+
+      - name: Check RST conformity with doc8
+        run: tox -e doc8
+
+      - name: Check README.rst
+        run: tox -e readme
+
+      - name: Check documentation build with Sphinx
+        run: |
+          sudo apt-get install graphviz
+          tox -e docs
+  tests:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install tox
+      - name: Run fast tests
+        run: tox -e py
+      - name: Run slow tests
+        run: tox -e integration
+  windows:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          conda install pip setuptools wheel pytest sqlite
+          conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+          pip install -e .[mlflow,wandb]
+      - name: Run fast tests
+        run: pytest --durations=20 tests -m "not slow"
+      - name: Run slow tests
+        run: pytest --durations=20 tests -m "slow"
+  readthedocs:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: Read the Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger RTDs build
+        uses: dfm/rtds-action@v1
+        with:
+          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+          commit_ref: ${{ github.ref }}

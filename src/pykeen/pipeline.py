@@ -35,8 +35,8 @@ could be used as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
-In this example, the data set was given as a string. A list of available data sets can be found in
-:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.DataSet` could be
+In this example, the dataset was given as a string. A list of available datasets can be found in
+:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
@@ -154,7 +154,9 @@ Arguments for the model can be given as a dictionary using ``model_kwargs``.
 
 The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
-model that explain what kwargs are possible.
+model that explain what kwargs are possible. Each model's default hyper-parameters were chosen based on the
+best reported values from the paper originally publishing the model unless otherwise noted on the model's
+reference page.
 
 Because the pipeline takes care of looking up classes and instantiating them,
 there are several other parameters to :func:`pykeen.pipeline.pipeline` that
@@ -177,7 +179,7 @@ import torch
 from torch.optim.optimizer import Optimizer
 
 from .datasets import get_dataset
-from .datasets.base import DataSet
+from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
@@ -702,7 +704,7 @@ def pipeline_from_config(
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
-    dataset: Union[None, str, DataSet, Type[DataSet]] = None,
+    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, TriplesFactory, str] = None,
     testing: Union[None, TriplesFactory, str] = None,
@@ -738,6 +740,7 @@ def pipeline(  # noqa: C901
     result_tracker: Union[None, str, Type[ResultTracker]] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
+    automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -746,7 +749,7 @@ def pipeline(  # noqa: C901
     """Train and evaluate a model.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.DataSet`
+        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
         instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
@@ -840,7 +843,7 @@ def pipeline(  # noqa: C901
 
     device = resolve_device(device)
 
-    dataset_instance: DataSet = get_dataset(
+    dataset_instance: Dataset = get_dataset(
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
@@ -915,6 +918,7 @@ def pipeline(  # noqa: C901
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
             optimizer=optimizer_instance,
+            automatic_memory_optimization=automatic_memory_optimization,
         )
     elif training_loop is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
@@ -927,14 +931,20 @@ def pipeline(  # noqa: C901
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
+            automatic_memory_optimization=automatic_memory_optimization,
             negative_sampler_cls=negative_sampler,
             negative_sampler_kwargs=negative_sampler_kwargs,
         )
 
     evaluator = get_evaluator_cls(evaluator)
-    evaluator_instance: Evaluator = evaluator(
-        **(evaluator_kwargs or {}),
-    )
+    # TODO @mehdi is setting the automatic memory optimization as an attribute
+    #  of the class appropriate, since it doesn't cause any state to be stored?
+    #  I think it might be better to have this as an argument to the
+    #  Evaluator.evaluate() function instead
+    if evaluator_kwargs is None:
+        evaluator_kwargs = {}
+    evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
+    evaluator_instance: Evaluator = evaluator(**evaluator_kwargs)
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
@@ -975,10 +985,10 @@ def pipeline(  # noqa: C901
         logging.debug(f"dataset: {dataset}")
         logging.debug(f"dataset_kwargs: {dataset_kwargs}")
     else:
-        logging.debug('training: %s', training.path)
-        logging.debug('testing: %s', testing.path)
+        logging.debug('training: %s', training)
+        logging.debug('testing: %s', testing)
         if validation:
-            logging.debug('validation: %s', validation.path)
+            logging.debug('validation: %s', validation)
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")

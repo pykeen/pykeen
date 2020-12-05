@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -37,7 +38,7 @@ class RESCAL(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The regularizer used by [nickel2011]_ for for RESCAL
     #: According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py
@@ -54,7 +55,6 @@ class RESCAL(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -72,7 +72,6 @@ class RESCAL(EntityRelationEmbeddingModel):
             triples_factory=triples_factory,
             embedding_dim=embedding_dim,
             relation_dim=embedding_dim ** 2,  # d x d matrices
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
