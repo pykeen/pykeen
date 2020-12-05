@@ -186,7 +186,7 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
             checkpoint_name=self.checkpoint_file,
-            checkpoint_directory=self.temporary_directory,
+            checkpoint_directory=self.temporary_directory.name,
             checkpoint_frequency=0,
         )
 
@@ -202,7 +202,7 @@ class TrainingLoopTests(unittest.TestCase):
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
             checkpoint_name=self.checkpoint_file,
-            checkpoint_directory=self.temporary_directory,
+            checkpoint_directory=self.temporary_directory.name,
             checkpoint_frequency=0,
         )
 
