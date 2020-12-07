@@ -62,12 +62,12 @@ class ComplExLiteral(ComplEx):
         self.num_of_literals = self.numeric_literals.embedding_dim
 
         self.real_non_lin_transf = torch.nn.Sequential(
-            nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim),
+            nn.Linear(self.embedding_dim // 2 + self.num_of_literals, self.embedding_dim // 2),
             torch.nn.Tanh(),
         )
 
         self.img_non_lin_transf = torch.nn.Sequential(
-            nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim),
+            nn.Linear(self.embedding_dim // 2 + self.num_of_literals, self.embedding_dim // 2),
             torch.nn.Tanh(),
         )
 
@@ -85,7 +85,7 @@ class ComplExLiteral(ComplEx):
         re, im = split_complex(emb)
         re, im = [torch.cat([x, lit], dim=-1) for x in (re, im)]
         re, im = [
-            trans(x.view(-1, x.shape[-1])).view(*x.shape)
+            trans(x.view(-1, x.shape[-1])).view(*(x.shape[:-1]), self.embedding_dim // 2)
             for x, trans in (
                 (re, self.real_non_lin_transf),
                 (im, self.img_non_lin_transf),
