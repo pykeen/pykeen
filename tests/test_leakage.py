@@ -77,7 +77,11 @@ class TestLeakage(unittest.TestCase):
             ['-2', test_relation_inverse, '-1'],  # this one was leaked!
         ]
         train_factory = TriplesFactory.from_labeled_triples(triples=np.array(train, dtype=np.str))
-        test_factory = TriplesFactory.from_labeled_triples(triples=np.array(test, dtype=np.str))
+        test_factory = TriplesFactory.from_labeled_triples(
+            triples=np.array(test, dtype=np.str),
+            entity_to_id=train_factory.entity_to_id,
+            relation_to_id=train_factory.relation_to_id,
+        )
 
         sealant = Sealant(train_factory, symmetric=False)
 
@@ -88,6 +92,10 @@ class TestLeakage(unittest.TestCase):
             expected_forwards_frequency, expected_inverse_frequency,
             msg='Forwards frequency should be higher than inverse frequency',
         )
+
+        test_relation, test_relation_inverse = [
+            train_factory.relation_to_id[r] for r in (test_relation, test_relation_inverse)
+        ]
         self.assertEqual(
             {
                 (test_relation, test_relation_inverse): expected_forwards_frequency,
@@ -110,4 +118,7 @@ class TestLeakage(unittest.TestCase):
         # Test looking up inverse triples
         test_leaked = test_factory.get_triples_for_relations(sealant.inverse_relations_to_delete)
         self.assertEqual(1, len(test_leaked))
-        self.assertEqual(('-2', test_relation_inverse, '-1'), tuple(test_leaked[0]))
+        self.assertEqual(
+            (train_factory.entity_to_id['-2'], test_relation_inverse, train_factory.entity_to_id['-1']),
+            tuple(test_leaked[0])
+        )
