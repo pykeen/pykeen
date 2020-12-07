@@ -1,3 +1,5 @@
+.. _first_steps:
+
 First Steps
 ===========
 .. automodule:: pykeen.pipeline
