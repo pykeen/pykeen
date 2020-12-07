@@ -43,6 +43,7 @@ def _create_multi_label_tails_instance(
     use_tqdm: Optional[bool] = None,
 ) -> Dict[Tuple[int, int], List[int]]:
     """Create for each (h,r) pair the multi tail label."""
+    # TODO: Replace by usage of torch.unique(return_inverses=True)?
     logger.debug('Creating multi label tails instance')
 
     '''
@@ -277,11 +278,13 @@ class TriplesFactory:
     #: relation identifier, then tail identifier
     mapped_triples: MappedTriples
 
-    #: A dictionary mapping each relation to its inverse, if inverse triples were created
-    # TODO: Replace by ID-based
-    relation_to_inverse: Optional[Mapping[str, str]]
+    #: Whether to create inverse triples
+    create_inverse_triples: bool = False
 
     # The following fields get generated automatically
+
+    #: A dictionary mapping each relation to its inverse, if inverse triples were created
+    relation_to_inverse: Optional[Mapping[int, int]] = dataclasses.field(init=False)
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
     entity_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
@@ -303,6 +306,33 @@ class TriplesFactory:
 
     def __post_init__(self):
         """Pre-compute derived mappings."""
+        # inverse triples
+        if self.create_inverse_triples:
+            logger.info("Creating inverse triples.")
+            # update triples
+            h, r, t = self.mapped_triples.t()
+            self.mapped_triples = torch.cat([
+                torch.cat([h, 2 * r, t], dim=-1),
+                torch.cat([t, 2 * r + 1, h], dim=-1),
+            ])
+            # create new relation to id mapping
+            new_relation_to_id = {
+                label: 2 * old_id
+                for label, old_id in self.relation_to_id.items()
+            }
+            # set relation to inverse
+            self.relation_to_inverse = {
+                new_id: new_id + 1
+                for label, new_id in new_relation_to_id.items()
+            }
+            # add inverse relations
+            new_relation_to_id.update({
+                label: self.relation_to_inverse[new_id]
+                for label, new_id in new_relation_to_id.items()
+            })
+            # update relation mapping
+            self.relation_to_id = new_relation_to_id
+
         # ID to label mapping
         self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
         self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
@@ -339,44 +369,19 @@ class TriplesFactory:
         :return:
             A new triples factory.
         """
-        relations = triples[:, 1]
-        unique_relations = set(relations)
+        unique_relations = np.unique(triples[:, 1])
 
         # Check if the triples are inverted already
-        relations_already_inverted = cls._check_already_inverted_relations(unique_relations)
-
-        # TODO: invert triples id-based
-        if create_inverse_triples or relations_already_inverted:
-            create_inverse_triples = True
-            if relations_already_inverted:
-                logger.info(
-                    f'Some triples already have suffix {INVERSE_SUFFIX}. '
-                    f'Creating TriplesFactory based on inverse triples',
-                )
-                relation_to_inverse = {
-                    re.sub('_inverse$', '', relation): f"{re.sub('_inverse$', '', relation)}{INVERSE_SUFFIX}"
-                    for relation in unique_relations
-                }
-
-            else:
-                relation_to_inverse = {
-                    relation: f"{relation}{INVERSE_SUFFIX}"
-                    for relation in unique_relations
-                }
-                inverse_triples = np.stack(
-                    [
-                        triples[:, 2],
-                        np.array([relation_to_inverse[relation] for relation in relations], dtype=np.str),
-                        triples[:, 0],
-                    ],
-                    axis=-1,
-                )
-                # extend original triples with inverse ones
-                triples = np.concatenate([triples, inverse_triples], axis=0)
-
-        else:
-            create_inverse_triples = False
-            relation_to_inverse = None
+        # We re-create them pure index based to ensure that _all_ inverse triples are present and that they are
+        # contained if and only if create_inverse_triples is True.
+        suspected_to_be_inverse_relations = {r for r in unique_relations if r.endswith(INVERSE_SUFFIX)}
+        if len(suspected_to_be_inverse_relations) > 0:
+            logger.warning(
+                f'Some triples already have the inverse relation suffix {INVERSE_SUFFIX}. '
+                f'Re-creating inverse triples to ensure consistency.',
+            )
+            mask = np.isin(element=triples[:, 1], test_elements=suspected_to_be_inverse_relations, invert=True)
+            triples = triples[mask]
 
         # Generate entity mapping if necessary
         if entity_to_id is None:
@@ -386,12 +391,7 @@ class TriplesFactory:
 
         # Generate relation mapping if necessary
         if relation_to_id is None:
-            if create_inverse_triples:
-                relation_to_id = create_relation_mapping(
-                    set(relation_to_inverse.keys()).union(set(relation_to_inverse.values())),
-                )
-            else:
-                relation_to_id = create_relation_mapping(unique_relations)
+            relation_to_id = create_relation_mapping(triples[:, 1])
         if compact_id:
             relation_to_id = compact_mapping(mapping=relation_to_id)[0]
 
@@ -406,7 +406,7 @@ class TriplesFactory:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             mapped_triples=mapped_triples,
-            relation_to_inverse=relation_to_inverse,
+            create_inverse_triples=create_inverse_triples,
         )
 
     @classmethod
@@ -454,11 +454,6 @@ class TriplesFactory:
         )
 
     @property
-    def create_inverse_triples(self) -> bool:  # noqa: D401
-        """Whether inverse triples are added."""
-        return self.relation_to_inverse is not None
-
-    @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
         return len(self.entity_to_id)
@@ -479,12 +474,13 @@ class TriplesFactory:
         logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
         return self.label_triples(self.mapped_triples)
 
-    def get_inverse_relation_id(self, relation: str) -> int:
+    def get_inverse_relation_id(self, relation: Union[str, int]) -> int:
         """Get the inverse relation identifier for the given relation."""
+        # TODO
         if not self.create_inverse_triples:
             raise ValueError('Can not get inverse triple, they have not been created.')
-        inverse_relation = self.relation_to_inverse[relation]
-        return self.relation_to_id[inverse_relation]
+        relation = next(iter(self.relations_to_ids(relations=[relation])))
+        return self.relation_to_inverse[relation]
 
     def extra_repr(self) -> str:
         """Extra representation string."""
@@ -498,31 +494,33 @@ class TriplesFactory:
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}({self.extra_repr()})'
 
-    @staticmethod
-    def _check_already_inverted_relations(relations: Iterable[str]) -> bool:
-        for relation in relations:
-            if relation.endswith(INVERSE_SUFFIX):
-                # We can terminate the search after finding the first inverse occurrence
-                return True
-
-        return False
+    def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
+        """Add inverse triples if necessary."""
+        if self.create_inverse_triples:
+            h, r, t = mapped_triples.t()
+            mapped_triples = torch.cat([
+                torch.cat([h, 2 * r, t], dim=-1),
+                torch.cat([t, 2 * r + 1, h], dim=-1),
+            ])
+        return mapped_triples
 
     def create_slcwa_instances(self) -> SLCWAInstances:
         """Create sLCWA instances for this factory's triples."""
         return SLCWAInstances(
-            mapped_triples=self.mapped_triples,
+            mapped_triples=self._add_inverse_triples_if_necessary(self.mapped_triples),
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
+        mapped_triples = self._add_inverse_triples_if_necessary(self.mapped_triples)
         s_p_to_multi_tails = _create_multi_label_tails_instance(
-            mapped_triples=self.mapped_triples,
+            mapped_triples=mapped_triples,
             use_tqdm=use_tqdm,
         )
         sp, multi_o = zip(*s_p_to_multi_tails.items())
-        mapped_triples: torch.LongTensor = torch.tensor(sp, dtype=torch.long)
+        mapped_triples: torch.LongTensor = torch.as_tensor(sp, dtype=torch.long)
         labels = np.array([np.array(item) for item in multi_o], dtype=object)
 
         return LCWAInstances(
