@@ -9,15 +9,18 @@ import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
+from ..unimodal.complex import ComplEx
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
+from ...nn import Embedding
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
-from ...utils import slice_doubles
+from ...utils import split_complex
 
 
 # TODO: Check entire build of the model
-class ComplExLiteral(MultimodalModel):
+
+class ComplExLiteral(ComplEx, MultimodalModel):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -46,96 +49,62 @@ class ComplExLiteral(MultimodalModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
         )
-
-        self.entity_embs_real = None
-        self.entity_embs_img = None
-        self.relation_embs_real = None
-        self.relation_embs_img = None
 
         # Literal
         # num_ent x num_lit
-        numeric_literals = triples_factory.numeric_literals
-        self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+        self.numeric_literals = Embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=triples_factory.numeric_literals.shape[-1],
+            initializer=lambda x: triples_factory.numeric_literals,
         )
         # Number of columns corresponds to number of literals
-        self.num_of_literals = self.numeric_literals.weight.data.shape[1]
+        self.num_of_literals = self.numeric_literals.embedding_dim
 
         self.real_non_lin_transf = torch.nn.Sequential(
-            nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim),
+            nn.Linear(self.embedding_dim // 2 + self.num_of_literals, self.embedding_dim // 2),
             torch.nn.Tanh(),
         )
 
         self.img_non_lin_transf = torch.nn.Sequential(
-            nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim),
+            nn.Linear(self.embedding_dim // 2 + self.num_of_literals, self.embedding_dim // 2),
             torch.nn.Tanh(),
         )
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
 
-        self._init_embeddings()
+    def _get_entity_representations(
+        self,
+        idx: torch.LongTensor,
+        dropout: bool,
+    ) -> torch.FloatTensor:
+        emb = self.entity_embeddings.get_in_canonical_shape(indices=idx)
+        lit = self.numeric_literals.get_in_canonical_shape(indices=idx)
+        if dropout:
+            emb = self.inp_drop(emb)
+        re, im = split_complex(emb)
+        re, im = [torch.cat([x, lit], dim=-1) for x in (re, im)]
+        re, im = [
+            trans(x.view(-1, x.shape[-1])).view(*(x.shape[:-1]), self.embedding_dim // 2)
+            for x, trans in (
+                (re, self.real_non_lin_transf),
+                (im, self.img_non_lin_transf),
+            )
+        ]
+        x = torch.cat([re, im], dim=-1)
+        if dropout:
+            x = self.inp_drop(x)
+        return x
 
-    def _init_embeddings(self):
-        self.entity_embs_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
-        self.entity_embs_img = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
-        self.relation_embs_real = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
-        self.relation_embs_img = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
-        xavier_normal_(self.entity_embs_real.weight.data)
-        xavier_normal_(self.entity_embs_img.weight.data)
-        xavier_normal_(self.relation_embs_real.weight.data)
-        xavier_normal_(self.relation_embs_img.weight.data)
-
-    def _apply_g_function(self, real_embs, img_embs, literals):
-        real = self.real_non_lin_transf(torch.cat([real_embs, literals], 1))
-        img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
-        return real, img
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        raise NotImplementedError
-
-    def score_t(self, doubles: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (tail) prediction for training with the LCWA."""
-        batch_heads, batch_relations = slice_doubles(doubles)
-
-        heads_embedded_real = self.inp_drop(self.entity_embs_real(batch_heads)).view(-1, self.embedding_dim)
-        rels_embedded_real = self.inp_drop(self.relation_embs_real(batch_relations)).view(
-            -1,
-            self.embedding_dim,
-        )
-        heads_embedded_img = self.inp_drop(self.entity_embs_img(batch_heads)).view(-1, self.embedding_dim)
-        relations_embedded_img = self.inp_drop(self.relation_embs_img(batch_relations)).view(
-            -1,
-            self.embedding_dim,
-        )
-        # Literals
-        head_literals = self.numeric_literals(batch_heads).view(-1, self.num_of_literals)
-        heads_embedded_real, heads_embedded_img = self._apply_g_function(
-            real_embs=heads_embedded_real,
-            img_embs=heads_embedded_img,
-            literals=head_literals,
-        )
-
-        e2_multi_emb_real = self.real_non_lin_transf(
-            torch.cat([self.entity_embs_real.weight, self.numeric_literals.weight], 1),
-        )
-        e2_multi_emb_img = self.img_non_lin_transf(
-            torch.cat([self.entity_embs_img.weight, self.numeric_literals.weight], 1),
-        )
-
-        # End literals
-
-        heads_embedded_real = self.inp_drop(heads_embedded_real)
-        rels_embedded_real = self.inp_drop(rels_embedded_real)
-        heads_embedded_img = self.inp_drop(heads_embedded_img)
-        relations_embedded_img = self.inp_drop(relations_embedded_img)
-
-        real_real_real = torch.mm(heads_embedded_real * rels_embedded_real, e2_multi_emb_real.t())
-        real_img_img = torch.mm(heads_embedded_real * relations_embedded_img, e2_multi_emb_img.t())
-        img_real_img = torch.mm(heads_embedded_img * heads_embedded_real, e2_multi_emb_img.t())
-        img_img_real = torch.mm(heads_embedded_img * relations_embedded_img, e2_multi_emb_real.t())
-
-        predictions = real_real_real + real_img_img + img_real_img - img_img_real
-        predictions = torch.sigmoid(predictions)
-
-        return predictions
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self._get_entity_representations(idx=h_indices, dropout=True)
+        r = self.inp_drop(self.relation_embeddings.get_in_canonical_shape(indices=r_indices))
+        t = self._get_entity_representations(idx=t_indices, dropout=False)
+        return self.interaction_function(h=h, r=r, t=t)
