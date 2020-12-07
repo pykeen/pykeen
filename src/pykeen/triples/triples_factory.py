@@ -328,7 +328,7 @@ class TriplesFactory:
             }
             # add inverse relations
             new_relation_to_id.update({
-                label: self.relation_to_inverse[new_id]
+                label + INVERSE_SUFFIX: self.relation_to_inverse[new_id]
                 for label, new_id in new_relation_to_id.items()
             })
             # update relation mapping
