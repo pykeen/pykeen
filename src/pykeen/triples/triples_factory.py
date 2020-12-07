@@ -313,8 +313,8 @@ class TriplesFactory:
             # update triples
             h, r, t = self.mapped_triples.t()
             self.mapped_triples = torch.cat([
-                torch.cat([h, 2 * r, t], dim=-1),
-                torch.cat([t, 2 * r + 1, h], dim=-1),
+                torch.stack([h, 2 * r, t], dim=-1),
+                torch.stack([t, 2 * r + 1, h], dim=-1),
             ])
             # create new relation to id mapping
             new_relation_to_id = {
