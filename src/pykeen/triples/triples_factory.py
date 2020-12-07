@@ -321,6 +321,7 @@ class TriplesFactory:
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
+        filter_out_candidate_inverse_relations: bool = True,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
@@ -342,21 +343,23 @@ class TriplesFactory:
         # Check if the triples are inverted already
         # We re-create them pure index based to ensure that _all_ inverse triples are present and that they are
         # contained if and only if create_inverse_triples is True.
-        unique_relations, inverse = np.unique(triples[:, 1], return_inverse=True)
-        suspected_to_be_inverse_relations = {r for r in unique_relations if r.endswith(INVERSE_SUFFIX)}
-        if len(suspected_to_be_inverse_relations) > 0:
-            logger.warning(
-                f'Some triples already have the inverse relation suffix {INVERSE_SUFFIX}. '
-                f'Re-creating inverse triples to ensure consistency.',
-            )
-            relation_ids_to_remove = [
-                i
-                for i, r in enumerate(unique_relations.tolist())
-                if r in suspected_to_be_inverse_relations
-            ]
-            mask = np.isin(element=inverse, test_elements=relation_ids_to_remove, invert=True)
-            logger.info(f"Keeping {mask.sum()/mask.shape[0]} triples.")
-            triples = triples[mask]
+        if filter_out_candidate_inverse_relations:
+            unique_relations, inverse = np.unique(triples[:, 1], return_inverse=True)
+            suspected_to_be_inverse_relations = {r for r in unique_relations if r.endswith(INVERSE_SUFFIX)}
+            if len(suspected_to_be_inverse_relations) > 0:
+                logger.warning(
+                    f'Some triples already have the inverse relation suffix {INVERSE_SUFFIX}. '
+                    f'Re-creating inverse triples to ensure consistency. You may disable this behaviour by passing '
+                    f'filter_out_candidate_inverse_relations=False',
+                )
+                relation_ids_to_remove = [
+                    i
+                    for i, r in enumerate(unique_relations.tolist())
+                    if r in suspected_to_be_inverse_relations
+                ]
+                mask = np.isin(element=inverse, test_elements=relation_ids_to_remove, invert=True)
+                logger.info(f"Keeping {mask.sum()/mask.shape[0]} triples.")
+                triples = triples[mask]
 
         # Generate entity mapping if necessary
         if entity_to_id is None:

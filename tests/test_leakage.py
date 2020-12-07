@@ -32,7 +32,10 @@ class TestLeakage(unittest.TestCase):
             ['i', 'r3', 'j'],
             ['k', 'r3', 'l'],
         ]
-        triples_factory = TriplesFactory.from_labeled_triples(triples=np.array(t, dtype=np.str))
+        triples_factory = TriplesFactory.from_labeled_triples(
+            triples=np.array(t, dtype=np.str),
+            filter_out_candidate_inverse_relations=False,
+        )
         frequencies = get_candidate_inverse_relations(triples_factory, minimum_frequency=0.0, symmetric=False)
         expected_frequencies = {
             ('r2', 'r2_inverse'): (2 / 2),
@@ -76,11 +79,15 @@ class TestLeakage(unittest.TestCase):
         test = [
             ['-2', test_relation_inverse, '-1'],  # this one was leaked!
         ]
-        train_factory = TriplesFactory.from_labeled_triples(triples=np.array(train, dtype=np.str))
+        train_factory = TriplesFactory.from_labeled_triples(
+            triples=np.array(train, dtype=np.str),
+            filter_out_candidate_inverse_relations=False,
+        )
         test_factory = TriplesFactory.from_labeled_triples(
             triples=np.array(test, dtype=np.str),
             entity_to_id=train_factory.entity_to_id,
             relation_to_id=train_factory.relation_to_id,
+            filter_out_candidate_inverse_relations=False,
         )
 
         sealant = Sealant(train_factory, symmetric=False)
