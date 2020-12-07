@@ -17,6 +17,7 @@ class TestLiteralModel(unittest.TestCase):
             model=model,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
+            training_loop='lcwa',
         )
 
     def test_complex(self):

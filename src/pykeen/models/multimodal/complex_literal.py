@@ -8,12 +8,12 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
+from .. import ComplEx
 from ..base import MultimodalModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
-from ...utils import slice_doubles
 
 
 # TODO: Check entire build of the model
@@ -86,56 +86,33 @@ class ComplExLiteral(MultimodalModel):
         xavier_normal_(self.relation_embs_real.weight.data)
         xavier_normal_(self.relation_embs_img.weight.data)
 
-    def _apply_g_function(self, real_embs, img_embs, literals):
-        real = self.real_non_lin_transf(torch.cat([real_embs, literals], 1))
-        img = self.img_non_lin_transf(torch.cat([img_embs, literals], 1))
+    def _apply_g_function(
+        self,
+        idx: torch.LongTensor,
+        dropout: bool,
+    ):
+        re = self.entity_embs_real(idx).view(-1, self.embedding_dim)
+        im = self.entity_embs_img(idx).view(-1, self.embedding_dim)
+        lit = self.numeric_literals(idx).view(-1, self.num_of_literals)
+        if dropout:
+            re, im = [self.inp_drop(x) for x in (re, im)]
+        real = self.real_non_lin_transf(torch.cat([re, lit], 1))
+        img = self.img_non_lin_transf(torch.cat([im, lit], 1))
         return real, img
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        raise NotImplementedError
+        hi, ri, ti = hrt_batch.t()
 
-    def score_t(self, doubles: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (tail) prediction for training with the LCWA."""
-        batch_heads, batch_relations = slice_doubles(doubles)
+        # get entity representations combined with literals
+        h_re, h_im = self._apply_g_function(idx=hi, dropout=True)
+        t_re, t_im = self._apply_g_function(idx=ti, dropout=True)
 
-        heads_embedded_real = self.inp_drop(self.entity_embs_real(batch_heads)).view(-1, self.embedding_dim)
-        rels_embedded_real = self.inp_drop(self.relation_embs_real(batch_relations)).view(
-            -1,
-            self.embedding_dim,
-        )
-        heads_embedded_img = self.inp_drop(self.entity_embs_img(batch_heads)).view(-1, self.embedding_dim)
-        relations_embedded_img = self.inp_drop(self.relation_embs_img(batch_relations)).view(
-            -1,
-            self.embedding_dim,
-        )
-        # Literals
-        head_literals = self.numeric_literals(batch_heads).view(-1, self.num_of_literals)
-        heads_embedded_real, heads_embedded_img = self._apply_g_function(
-            real_embs=heads_embedded_real,
-            img_embs=heads_embedded_img,
-            literals=head_literals,
-        )
+        # get relation representations
+        r_re = self.inp_drop(self.relation_embs_real(ri)).view(-1, self.embedding_dim)
+        r_im = self.inp_drop(self.relation_embs_img(ri)).view(-1, self.embedding_dim)
 
-        e2_multi_emb_real = self.real_non_lin_transf(
-            torch.cat([self.entity_embs_real.weight, self.numeric_literals.weight], 1),
-        )
-        e2_multi_emb_img = self.img_non_lin_transf(
-            torch.cat([self.entity_embs_img.weight, self.numeric_literals.weight], 1),
-        )
+        # dropout for h + r
+        h_re, h_im, r_re, r_im = [self.inp_drop(x) for x in (h_re, h_im, r_re, r_im)]
 
-        # End literals
-
-        heads_embedded_real = self.inp_drop(heads_embedded_real)
-        rels_embedded_real = self.inp_drop(rels_embedded_real)
-        heads_embedded_img = self.inp_drop(heads_embedded_img)
-        relations_embedded_img = self.inp_drop(relations_embedded_img)
-
-        real_real_real = torch.mm(heads_embedded_real * rels_embedded_real, e2_multi_emb_real.t())
-        real_img_img = torch.mm(heads_embedded_real * relations_embedded_img, e2_multi_emb_img.t())
-        img_real_img = torch.mm(heads_embedded_img * heads_embedded_real, e2_multi_emb_img.t())
-        img_img_real = torch.mm(heads_embedded_img * relations_embedded_img, e2_multi_emb_real.t())
-
-        predictions = real_real_real + real_img_img + img_real_img - img_img_real
-        predictions = torch.sigmoid(predictions)
-
-        return predictions
+        h, r, t = [torch.cat([re, im], dim=-1) for re, im in ((h_re, h_im), (r_re, r_im), (t_re, t_im))]
+        return ComplEx.interaction_function(h=h, r=r, t=t)
