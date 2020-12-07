@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
@@ -200,6 +200,27 @@ class TestTriplesFactory(unittest.TestCase):
                             exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
                                                                     exp_relations))
                         assert exp_relations.issuperset(present_relations)
+
+    def test_create_lcwa_instances(self):
+        """Test create_lcwa_instances."""
+        factory = Nations().training
+        instances = factory.create_lcwa_instances()
+        assert isinstance(instances, LCWAInstances)
+        # check compressed triples
+        # reconstruct triples from compressed form
+        reconstructed_triples = set()
+        for hr, start, stop in zip(instances.mapped_triples, instances.idx, instances.idx[1:]):
+            tails = instances.targets[start:stop]
+            h, r = hr.tolist()
+            reconstructed_triples.update(
+                (h, r, t)
+                for t in tails.tolist()
+            )
+        original_triples = {
+            tuple(hrt)
+            for hrt in factory.mapped_triples.tolist()
+        }
+        assert original_triples == reconstructed_triples
 
 
 class TestSplit(unittest.TestCase):

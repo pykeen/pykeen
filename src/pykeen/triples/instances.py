@@ -85,9 +85,10 @@ class LCWAInstances(Instances):
             The instances.
         """
         # sort triples by (h, r) pairs
-        idx_r = mapped_triples.argsort(dim=1)
-        idx_h = mapped_triples[idx_r].argsort(dim=1)
-        mapped_triples = mapped_triples[idx_r[idx_h]]
+        idx_r = mapped_triples[:, 1].argsort(dim=0)
+        mapped_triples = mapped_triples[idx_r]
+        idx_h = mapped_triples[:, 0].argsort(dim=0)
+        mapped_triples = mapped_triples[idx_h]
         # get unique (h, r) pairs
         sp, counts = torch.unique_consecutive(mapped_triples[:, :2], dim=0, return_counts=True)
         # sp[inv] = triples[:, :2]
