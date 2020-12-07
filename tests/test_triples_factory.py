@@ -394,8 +394,9 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_num_children], 0)
 
         # Check if multilabels are working correctly
-        self.assertTrue((instance_mapped_triples == instances.mapped_triples.cpu().detach().numpy()).all())
-        self.assertTrue(all(all(instance_labels[i] == instances.labels[i]) for i in range(len(instance_labels))))
+        self.assertTrue((instance_mapped_triples == instances.pairs).all())
+        for i, exp in enumerate(instance_labels):
+            self.assertTrue((exp == instances.compressed[i].nonzero()[-1]).all())
 
     def test_triples(self):
         """Test properties of the triples factory."""
