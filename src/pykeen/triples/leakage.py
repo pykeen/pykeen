@@ -16,6 +16,7 @@ from itertools import starmap
 from multiprocessing import Pool, cpu_count
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
+import numpy
 import torch
 from tabulate import tabulate
 from tqdm.autonotebook import tqdm
@@ -51,8 +52,6 @@ class Sealant:
         triples_factory: TriplesFactory,
         minimum_frequency: Optional[float] = None,
         symmetric: bool = True,
-        use_tqdm: bool = True,
-        use_multiprocessing: bool = False,
     ):
         """Index the inverse frequencies and the inverse relations in the triples factory.
 
@@ -66,29 +65,49 @@ class Sealant:
             minimum_frequency = 0.97
         self.minimum_frequency = minimum_frequency
 
-        if use_multiprocessing:
-            use_tqdm = False
+        # convert relations to sparse adjacency matrices
+        relations = defaultdict(set)
+        inv_relations = defaultdict(set)
+        for (h, r, t) in triples_factory.mapped_triples.tolist():
+            relations[r].add((h, t))
+            inv_relations[r].add((t, h))
+        if not symmetric:
+            raise NotImplementedError
 
-        self.candidate_duplicate_relations = get_candidate_duplicate_relations(
-            triples_factory=self.triples_factory,
-            minimum_frequency=self.minimum_frequency,
-            symmetric=symmetric,
-            use_tqdm=use_tqdm,
-            use_multiprocessing=use_multiprocessing,
-        )
+        # compute Jaccard similarity:
+        # J = |A n B| / |A u B|
+        # Thus, J = 1 / J' with J' = |A u B| / |A n B| = (|A| + |B| + |A n B|) / |A n B| = (|A| + |B|)/(|A n B|) - 1
+        relations_sorted = sorted(relations.keys())
+        n_relations = len(relations_sorted)
+        size = numpy.asarray([len(relations[r]) for r in relations_sorted])
+        # we are not interested in self-similarity, thus we set it to zero
+        intersection_size = numpy.zeros(shape=(n_relations, n_relations))
+        for i, j in tqdm(itt.combinations(range(n_relations), r=2), total=n_relations * (n_relations - 1) // 2):
+            assert j > i
+            ri, rj = [relations_sorted[k] for k in (i, j)]
+            pi, pj, pji = [relations[r] for r in (ri, rj)] + [inv_relations[rj]]
+            intersection_size[i, j] = len(pi.intersection(pj))
+            intersection_size[j, i] = len(pi.intersection(pji))
+        sim = 1.0 / ((size[:, None] + size[None, :]) / numpy.clip(intersection_size, a_min=1, a_max=None) - 1)
+        sim[intersection_size == 0] = 0.0
+
+        matches = zip(*(sim > self.minimum_frequency).nonzero())
+        self.candidate_duplicate_relations = {
+            (relations_sorted[i], relations_sorted[j]): sim[i, j]
+            for i, j in matches
+            if i < j
+        }
         logger.info(
             f'identified {len(self.candidate_duplicate_relations)} candidate duplicate relationships'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}.',
         )
-        self.duplicate_relations_to_delete = {r for r, _ in self.candidate_duplicate_relations}
+        self.duplicate_relations_to_delete = {r for r in self.candidate_duplicate_relations.keys()}
 
-        self.candidate_inverse_relations = get_candidate_inverse_relations(
-            triples_factory=self.triples_factory,
-            minimum_frequency=self.minimum_frequency,
-            symmetric=symmetric,
-            use_tqdm=use_tqdm,
-            use_multiprocessing=use_multiprocessing,
-        )
+        self.candidate_inverse_relations = {
+            (relations_sorted[i], relations_sorted[j]): sim[i, j]
+            for i, j in matches
+            if i > j
+        }
         logger.info(
             f'identified {len(self.candidate_inverse_relations)} candidate inverse pairs'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}',
@@ -289,6 +308,7 @@ def get_candidate_inverse_relations(
      multiple cores?
     :return: A counter whose keys are pairs of relations and values are similarity scores
     """
+    # TODO: Deprecated
     # A dictionary of all of the head/tail pairs for a given relation
     relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
     # A dictionary for all of the tail/head pairs for a given relation
@@ -347,6 +367,7 @@ def get_candidate_duplicate_relations(
      multiple cores?
     :return: A counter whose keys are pairs of relations and values are similarity scores
     """
+    # TODO: Deprecated
     # A dictionary of all of the head/tail pairs for a given relation
     relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
     for h, r, t in triples_factory.mapped_triples.tolist():
@@ -374,6 +395,7 @@ def _check_similar_sets(
     symmetric: bool = True,
     use_multiprocessing: bool = True,
 ) -> Mapping[Tuple[X, X], float]:
+    # TODO: Deprecated
     if symmetric:
         _similarity_metric = _get_jaccard_index_unwrapped
     else:
