@@ -39,6 +39,55 @@ X = TypeVar('X')
 Y = TypeVar('Y')
 
 
+def _jaccard_similarity(
+    sets: Mapping[int, Set[Tuple[X, X]]],
+    inverse_sets: Mapping[int, Set[Tuple[X, X]]],
+) -> numpy.ndarray:
+    r"""
+    Compute Jaccard similarity between pairs of sets.
+
+    .. math ::
+        J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+
+    :param sets:
+        The sets of tuples.
+    :param inverse_sets:
+        The sets of inverted tuples.
+
+    :return:
+        A similarity matrix. The lower triangular matrix contains the Jaccard similarity between the sets.
+        The upper diagonal the similarity to the sets with inverted tuples. The diagonal contains teh similarity
+        between the set and the same set with inverted tuples.
+    """
+    keys = sorted(sets.keys())
+    assert set(sets.keys()) == set(inverse_sets.keys())
+
+    # compute Jaccard similarity:
+    # J = |A n B| / |A u B|
+    # Thus, J = 1 / J' with J' = |A u B| / |A n B| = (|A| + |B| + |A n B|) / |A n B| = (|A| + |B|)/(|A n B|) - 1
+    n_relations = len(keys)
+    size = numpy.asarray([len(sets[r]) for r in keys])
+    # we are not interested in self-similarity, thus we set it to zero
+    intersection_size = numpy.zeros(shape=(n_relations, n_relations), dtype=numpy.int64)
+    comparison = (
+        (i, j)
+        for i in range(n_relations)
+        for j in range(i, n_relations)
+    )
+    for i, j in tqdm(comparison, total=n_relations * (n_relations + 1) // 2):
+        assert j >= i
+        ri, rj = [keys[k] for k in (i, j)]
+        pi, pj, pji = [sets[r] for r in (ri, rj)] + [inverse_sets[rj]]
+        intersection_size[i, j] = len(pi.intersection(pj))
+        intersection_size[j, i] = len(pi.intersection(pji))
+    size = size[:, None] + size[None, :].astype(numpy.float64)
+    mask = intersection_size == 0
+    intersection_size = numpy.clip(intersection_size, a_min=1, a_max=None).astype(numpy.float64)
+    sim = 1.0 / (size / intersection_size - 1)
+    sim[mask] = 0.0
+    return sim
+
+
 class Sealant:
     """Stores inverse frequencies and inverse mappings in a given triples factory."""
 
@@ -71,28 +120,12 @@ class Sealant:
         for (h, r, t) in triples_factory.mapped_triples.tolist():
             relations[r].add((h, t))
             inv_relations[r].add((t, h))
-        if not symmetric:
-            raise NotImplementedError
 
-        # compute Jaccard similarity:
-        # J = |A n B| / |A u B|
-        # Thus, J = 1 / J' with J' = |A u B| / |A n B| = (|A| + |B| + |A n B|) / |A n B| = (|A| + |B|)/(|A n B|) - 1
         relations_sorted = sorted(relations.keys())
-        n_relations = len(relations_sorted)
-        size = numpy.asarray([len(relations[r]) for r in relations_sorted])
-        # we are not interested in self-similarity, thus we set it to zero
-        intersection_size = numpy.zeros(shape=(n_relations, n_relations), dtype=numpy.int64)
-        for i, j in tqdm(itt.combinations(range(n_relations), r=2), total=n_relations * (n_relations - 1) // 2):
-            assert j > i
-            ri, rj = [relations_sorted[k] for k in (i, j)]
-            pi, pj, pji = [relations[r] for r in (ri, rj)] + [inv_relations[rj]]
-            intersection_size[i, j] = len(pi.intersection(pj))
-            intersection_size[j, i] = len(pi.intersection(pji))
-        size = size[:, None] + size[None, :].astype(numpy.float64)
-        mask = intersection_size == 0
-        intersection_size = numpy.clip(intersection_size, a_min=1, a_max=None).astype(numpy.float64)
-        sim = 1.0 / (size / intersection_size - 1)
-        sim[mask] = 0.0
+        if symmetric:
+            sim = _jaccard_similarity(sets=relations, inverse_sets=inv_relations)
+        else:
+            raise NotImplementedError
 
         matches = zip(*(sim > self.minimum_frequency).nonzero())
         self.candidate_duplicate_relations = {
