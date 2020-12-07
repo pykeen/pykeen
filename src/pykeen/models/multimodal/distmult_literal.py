@@ -6,18 +6,16 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from torch.nn.init import xavier_normal_
 
-from ..base import MultimodalModel
+from ..unimodal.distmult import DistMult
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import Embedding
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
-from ...utils import slice_triples
 
 
-# TODO: Check entire build of the model
-class DistMultLiteral(MultimodalModel):
+class DistMultLiteral(DistMult):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -43,87 +41,48 @@ class DistMultLiteral(MultimodalModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
         )
 
-        numeric_literals = triples_factory.numeric_literals
-
-        # Embeddings
-        self.numeric_literals = nn.Embedding.from_pretrained(
-            torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
+        # Literal
+        # num_ent x num_lit
+        self.numeric_literals = Embedding(
+            num_embeddings=triples_factory.num_entities,
+            embedding_dim=triples_factory.numeric_literals.shape[-1],
+            initializer=lambda x: triples_factory.numeric_literals,
         )
         # Number of columns corresponds to number of literals
-        self.num_of_literals = self.numeric_literals.weight.data.shape[1]
+        self.num_of_literals = self.numeric_literals.embedding_dim
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
-        self.input_dropout = torch.nn.Dropout(input_dropout)
+        self.inp_drop = torch.nn.Dropout(input_dropout)
 
-    @staticmethod
-    def _get_embeddings(elements, embedding_module, embedding_dim):
-        return embedding_module(elements).view(-1, embedding_dim)
+    def _get_entity_representations(
+        self,
+        idx: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        emb = self.entity_embeddings.get_in_canonical_shape(indices=idx)
+        lit = self.numeric_literals.get_in_canonical_shape(indices=idx)
+        x = self.linear_transformation(torch.cat([emb, lit], dim=-1))
+        return self.inp_drop(x)
 
-    def _get_literals(self, heads, tails):
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.numeric_literals,
-                embedding_dim=self.num_of_literals,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.numeric_literals,
-                embedding_dim=self.num_of_literals,
-            ),
-        )
+    def forward(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h = self._get_entity_representations(idx=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self._get_entity_representations(idx=t_indices)
+        return self.interaction_function(h=h, r=r, t=t)
 
-    def _get_triple_embeddings(self, heads, relations, tails):
-        return (
-            self._get_embeddings(
-                elements=heads,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=relations,
-                embedding_module=self.relation_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-            self._get_embeddings(
-                elements=tails,
-                embedding_module=self.entity_embeddings,
-                embedding_dim=self.embedding_dim,
-            ),
-        )
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
-    def _apply_g_function(self, entity_embeddings, literals):
-        """Concatenate the entities with its literals and apply the g function which is a linear transformation in this model.
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
-        :param entity_embeddings: batch_size x self.embedding_dim
-        :param literals: batch_size x self.num_literals
-        :return:
-        """
-        return self.linear_transformation(torch.cat([entity_embeddings, literals], dim=1))
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        raise NotImplementedError
-
-    def score_t(self, hr_batch: torch.Tensor) -> torch.Tensor:
-        """Forward pass using right side (tail) prediction for training with the LCWA."""
-        heads, relations, tails = slice_triples(hr_batch)
-        head_embs, relation_embs, tail_embs = self._get_triple_embeddings(
-            heads=heads,
-            relations=relations,
-            tails=tails,
-        )
-        head_literals, tail_literals = self._get_literals(heads=heads, tails=tails)
-
-        g_heads = self._apply_g_function(entity_embeddings=head_embs, literals=head_literals)
-        g_tails = self._apply_g_function(entity_embeddings=tail_embs, literals=tail_literals)
-
-        # apply dropout
-        g_heads = self.input_dropout(g_heads)
-        g_tails = self.input_dropout(g_tails)
-
-        # -, because lower score shall correspond to a more plausible triple.
-        scores = - torch.sum(g_heads * relation_embs * g_tails, dim=1)
-        return scores
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
