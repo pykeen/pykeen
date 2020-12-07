@@ -16,11 +16,13 @@ from itertools import starmap
 from multiprocessing import Pool, cpu_count
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
-import numpy as np
+import torch
 from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
-from .triples_factory import TriplesFactory, create_entity_mapping, create_relation_mapping
+from pykeen.typing import MappedTriples
+from pykeen.utils import compact_mapping
+from .triples_factory import TriplesFactory
 
 __all__ = [
     'Sealant',
@@ -178,27 +180,71 @@ def unleak(
     return reindex(train, *triples_factories)
 
 
+def _generate_vectorized_lookup(
+    ids: torch.LongTensor,
+    label_to_id: Mapping[str, int],
+) -> Tuple[Mapping[str, int], torch.LongTensor]:
+    # get existing IDs
+    existing_ids = set(ids.view(-1).unique().tolist())
+    # remove non-existing ID from label mapping
+    label_to_id, old_to_new_id = compact_mapping(mapping={
+        label: i
+        for label, i in label_to_id.items()
+        if i in existing_ids
+    })
+    translation = torch.full(max(existing_ids) + 1, fill_value=-1)
+    for old, new in old_to_new_id.items():
+        translation[old] = new
+    return label_to_id, translation
+
+
+def _translate_triples(
+    triples: MappedTriples,
+    entity_translation: torch.LongTensor,
+    relation_translation: torch.LongTensor,
+) -> MappedTriples:
+    return torch.stack([
+        trans[column]
+        for column, trans in zip(
+            triples.t(),
+            (entity_translation, relation_translation, entity_translation)
+        )
+    ], dim=-1)
+
+
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
-    # TODO: ID-based
-    triples = np.concatenate(
-        [
-            triples_factory.triples
-            for triples_factory in triples_factories
-        ],
-        axis=0,
-    )
-    entity_to_id = create_entity_mapping(triples)
-    relation_to_id = create_relation_mapping(set(triples[:, 1]))
+    # get entities and relations occurring in triples
+    all_triples = torch.cat([
+        factory.mapped_triples
+        for factory in triples_factories
+    ], dim=-1)
+
+    # generate ID translation and new label to Id mappings
+    one_factory = triples_factories[0]
+    (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = [
+        _generate_vectorized_lookup(
+            ids=all_triples[:, cols],
+            label_to_id=label_to_id,
+        )
+        for cols, label_to_id in (
+            ([0, 2], one_factory.entity_to_id),
+            (1, one_factory.relation_to_id)
+        )
+    ]
 
     return [
-        TriplesFactory.from_labeled_triples(
-            triples=triples_factory.triples,
+        TriplesFactory(
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            # FIXME doesn't carry flag of create_inverse_triples through
+            mapped_triples=_translate_triples(
+                triples=factory.triples,
+                entity_translation=entity_id_translation,
+                relation_translation=relation_id_translation,
+            ),
+            create_inverse_triples=factory.create_inverse_triples,
         )
-        for triples_factory in triples_factories
+        for factory in triples_factories
     ]
 
 
