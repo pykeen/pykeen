@@ -206,12 +206,13 @@ class TestTriplesFactory(unittest.TestCase):
         factory = Nations().training
         instances = factory.create_lcwa_instances()
         assert isinstance(instances, LCWAInstances)
+
         # check compressed triples
         # reconstruct triples from compressed form
         reconstructed_triples = set()
-        for hr, start, stop in zip(instances.mapped_triples, instances.idx, instances.idx[1:]):
-            tails = instances.targets[start:stop]
+        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0])):
             h, r = hr.tolist()
+            _, tails = instances.compressed[row_id].nonzero()
             reconstructed_triples.update(
                 (h, r, t)
                 for t in tails.tolist()
@@ -221,6 +222,17 @@ class TestTriplesFactory(unittest.TestCase):
             for hrt in factory.mapped_triples.tolist()
         }
         assert original_triples == reconstructed_triples
+
+        # check data loader
+        for batch in torch.utils.data.DataLoader(instances, batch_size=2):
+            assert len(batch) == 2
+            assert all(torch.is_tensor(x) for x in batch)
+            x, y = batch
+            batch_size = x.shape[0]
+            assert x.shape == (batch_size, 2)
+            assert x.dtype == torch.long
+            assert y.shape == (batch_size, factory.num_entities)
+            assert y.dtype == torch.get_default_dtype()
 
 
 class TestSplit(unittest.TestCase):
