@@ -70,6 +70,7 @@ class DistMultLiteral(DistMult):
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:  # noqa: D102
+        # TODO: this is very similar to ComplExLiteral, except a few dropout differences
         h = self._get_entity_representations(idx=h_indices)
         r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
         t = self._get_entity_representations(idx=t_indices)
