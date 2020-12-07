@@ -81,15 +81,18 @@ class Sealant:
         n_relations = len(relations_sorted)
         size = numpy.asarray([len(relations[r]) for r in relations_sorted])
         # we are not interested in self-similarity, thus we set it to zero
-        intersection_size = numpy.zeros(shape=(n_relations, n_relations))
+        intersection_size = numpy.zeros(shape=(n_relations, n_relations), dtype=numpy.int64)
         for i, j in tqdm(itt.combinations(range(n_relations), r=2), total=n_relations * (n_relations - 1) // 2):
             assert j > i
             ri, rj = [relations_sorted[k] for k in (i, j)]
             pi, pj, pji = [relations[r] for r in (ri, rj)] + [inv_relations[rj]]
             intersection_size[i, j] = len(pi.intersection(pj))
             intersection_size[j, i] = len(pi.intersection(pji))
-        sim = 1.0 / ((size[:, None] + size[None, :]) / numpy.clip(intersection_size, a_min=1, a_max=None) - 1)
-        sim[intersection_size == 0] = 0.0
+        size = size[:, None] + size[None, :].astype(numpy.float64)
+        mask = intersection_size == 0
+        intersection_size = numpy.clip(intersection_size, a_min=1, a_max=None).astype(numpy.float64)
+        sim = 1.0 / (size / intersection_size - 1)
+        sim[mask] = 0.0
 
         matches = zip(*(sim > self.minimum_frequency).nonzero())
         self.candidate_duplicate_relations = {
