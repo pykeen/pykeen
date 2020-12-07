@@ -933,7 +933,7 @@ def _tf_cleanup_randomized(
         # add to training
         training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
         # remove from testing
-        testing = torch.cat([testing[:idx], testing[idx + 1:]], dim=-1)
+        testing = torch.cat([testing[:idx], testing[idx + 1:]], dim=0)
         # Recalculate the training entities, testing entities, to_move, and move_id_mask
         move_id_mask = _prepare_cleanup(training, testing)
 
