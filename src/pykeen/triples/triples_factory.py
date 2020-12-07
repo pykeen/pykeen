@@ -36,23 +36,6 @@ def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> 
     return mapped_triples[:, [0, 2]].unique()
 
 
-def _create_multi_label_tails_instances(
-    mapped_triples: MappedTriples,
-) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
-    # sort triples by (h, r) pairs
-    idx_r = mapped_triples.argsort(dim=1)
-    idx_h = mapped_triples[idx_r].argsort(dim=1)
-    mapped_triples = mapped_triples[idx_r[idx_h]]
-    # get unique (h, r) pairs
-    sp, counts = torch.unique_consecutive(mapped_triples[:, :2], dim=0, return_counts=True)
-    # sp[inv] = triples[:, :2]
-    start_stop = torch.cumsum(counts, dim=0)
-    start_stop = torch.cat([start_stop.new_zeros(1), start_stop], dim=0)
-    tails = mapped_triples[:, 2]
-    # sp[i], triples[:, 2][start_stop[i]:start_stop[i+1]]
-    return sp, start_stop, tails
-
-
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
