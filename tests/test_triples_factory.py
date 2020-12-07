@@ -3,6 +3,7 @@
 """Unit tests for triples factories."""
 
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import torch
@@ -96,10 +97,15 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a.', 'e5'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
-        reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
-        self.assertTrue(factory.create_inverse_triples)
+        for create_inverse_triples in (False, True):
+            with patch("pykeen.triples.triples_factory.logger.warning") as warning:
+                factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)
+                # check for warning
+                warning.assert_called()
+                # check for filtered triples
+                assert factory.num_triples == 2
+                # check for correct inverse triples flag
+                assert factory.create_inverse_triples == create_inverse_triples
 
     def test_right_sorting(self):
         """Test if the triples and the corresponding inverses are sorted correctly."""
@@ -375,14 +381,14 @@ class TestLiterals(unittest.TestCase):
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
-        self.assertEqual(0, triples_factory.num_relations % 2)
+        self.assertEqual(4, triples_factory.num_relations)
         self.assertEqual(
             set(range(triples_factory.num_entities)),
             set(triples_factory.entity_to_id.values()),
             msg='wrong number entities',
         )
         self.assertEqual(
-            set(range(triples_factory.num_relations)),
+            set(range(triples_factory.real_num_relations)),
             set(triples_factory.relation_to_id.values()),
             msg='wrong number relations',
         )
@@ -396,8 +402,6 @@ class TestLiterals(unittest.TestCase):
             triples_factory.num_relations,
             msg='Wrong number of relations in factory',
         )
-
-        self.assertIn(f'likes{INVERSE_SUFFIX}', triples_factory.relation_to_id)
 
 
 def test_get_absolute_split_sizes():
