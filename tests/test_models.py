@@ -1287,6 +1287,4 @@ class TestRandom(unittest.TestCase):
         self.assertTrue(EntityEmbeddingModel._is_abstract())
         self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
         for model_cls in _MODELS:
-            if issubclass(model_cls, MultimodalModel):
-                continue
             self.assertFalse(model_cls._is_abstract(), msg=f'{model_cls.__name__} should not be abstract')
