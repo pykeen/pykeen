@@ -150,3 +150,7 @@ automatic memory optimization determines the maximum sub-batch size for training
 above described process :ref:`sub_batching`. The batch sizes are determined using binary search taking into
 consideration the `CUDA architecture <https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9926-tensor-core-performance-the-ultimate-guide.pdf>`_
 which ensures that the chosen batch size is the most CUDA efficient one.
+
+Fallback to Evaluation on CPU
+-----------------------------
+See this `pull request <https://github.com/pykeen/pykeen/pull/122>`_ for the original discussion and context.
