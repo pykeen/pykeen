@@ -33,9 +33,6 @@ class Instances(data.Dataset):
     #: A mapping from relation labels to integer identifiers
     entity_to_id: EntityMapping
 
-    #: A mapping from relation labels to integer identifiers
-    relation_to_id: RelationMapping
-
     @property
     def num_instances(self) -> int:  # noqa: D401
         """The number of instances."""
