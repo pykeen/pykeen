@@ -101,9 +101,7 @@ class ComplExLiteral(ComplEx):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:
-        """Unified score function."""
-        # get embeddings
+    ) -> torch.FloatTensor:  # noqa: D102
         h = self._get_entity_representations(idx=h_indices, dropout=True)
         r = self.inp_drop(self.relation_embeddings.get_in_canonical_shape(indices=r_indices))
         t = self._get_entity_representations(idx=t_indices, dropout=False)
