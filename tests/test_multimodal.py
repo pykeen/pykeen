@@ -4,7 +4,7 @@
 
 import unittest
 
-from pykeen.datasets.tnl import NationsLiteralDataset
+from pykeen.datasets.nations import NationsLiteral
 from pykeen.pipeline import pipeline
 
 
@@ -13,7 +13,7 @@ class TestLiteralModel(unittest.TestCase):
 
     def _help(self, model):
         return pipeline(
-            dataset=NationsLiteralDataset,
+            dataset=NationsLiteral,
             model=model,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),

@@ -1,26 +1,41 @@
 # -*- coding: utf-8 -*-
 
-"""Generate the Fake Nations Literal Dataset."""
+"""Generate a fake literals dataset to accompany a real dataset.."""
+
+from typing import Any, List, TextIO, Tuple, Type, Union
 
 import click
 import torch
 
 import pykeen.nn
-from pykeen.datasets.tnl import LITERALS_PATH
+from pykeen.datasets.base import Dataset
 from pykeen.models.base import EntityRelationEmbeddingModel
 from pykeen.pipeline import PipelineResult, pipeline
 
 
 @click.command()
+@click.option('--dataset', required=True)
 @click.option('--features', type=int, default=2, show_default=True)
 @click.option('--seed', type=int, default=2, show_default=True)
-def generate(features: int, seed: int):
+@click.option('--output', type=click.File('w'))
+def main(dataset, features: int, seed: int, output: TextIO):
     """Generate random literals for the Nations dataset."""
+    for h, r, t in generate_literals(dataset=dataset, features=features, seed=seed):
+        print(h, r, t, sep='\t', file=output)
+
+
+def generate_literals(
+    dataset: Union[None, str, Dataset, Type[Dataset]],
+    features: int,
+    seed: int,
+    model: str = 'rotate',
+) -> List[Tuple[str, str, Any]]:
+    """Generate literals or the given dataset."""
     generator = torch.Generator(seed)
 
     pipeline_result: PipelineResult = pipeline(
-        dataset='nations',
-        model='rotate',
+        dataset=dataset,
+        model=model,
         training_kwargs=dict(
             num_epochs=120,
         ),
@@ -41,7 +56,8 @@ def generate(features: int, seed: int):
         feature += torch.normal(mean=0, std=1, size=feature.size(), generator=generator)
         for (_, label), value in zip(sorted(tf.entity_id_to_label.items()), feature):
             rows.append((label, f'feature{i}', value.item()))
+    return rows
 
-    with open(LITERALS_PATH, 'w') as file:
-        for h, r, t in rows:
-            print(h, r, t, sep='\t', file=file)
+
+if __name__ == '__main__':
+    main()
