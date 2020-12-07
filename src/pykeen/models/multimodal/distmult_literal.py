@@ -48,7 +48,6 @@ class DistMultLiteral(MultimodalModel):
         numeric_literals = triples_factory.numeric_literals
 
         # Embeddings
-        self.relation_embeddings = None
         self.numeric_literals = nn.Embedding.from_pretrained(
             torch.tensor(numeric_literals, dtype=torch.float, device=self.device), freeze=True,
         )
@@ -56,12 +55,10 @@ class DistMultLiteral(MultimodalModel):
         self.num_of_literals = self.numeric_literals.weight.data.shape[1]
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
         self.input_dropout = torch.nn.Dropout(input_dropout)
-        self._init_embeddings()
 
-    def _init_embeddings(self):
+    def _reset_parameters_(self):
         """Initialize the entities and relation embeddings based on the XAVIER initialization."""
-        super()._init_embeddings()
-        self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
+        super()._reset_parameters_()
         xavier_normal_(self.entity_embeddings.weight.data)
         xavier_normal_(self.relation_embeddings.weight.data)
 

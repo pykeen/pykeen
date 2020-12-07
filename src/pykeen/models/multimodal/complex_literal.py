@@ -8,8 +8,8 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from .. import ComplEx
 from ..base import MultimodalModel
+from ..unimodal.complex import ComplEx
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...triples import TriplesNumericLiteralsFactory
@@ -74,13 +74,12 @@ class ComplExLiteral(MultimodalModel):
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
 
-        self._init_embeddings()
-
-    def _init_embeddings(self):
         self.entity_embs_real = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.entity_embs_img = nn.Embedding(self.num_entities, self.embedding_dim, padding_idx=0)
         self.relation_embs_real = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
         self.relation_embs_img = nn.Embedding(self.num_relations, self.embedding_dim, padding_idx=0)
+
+    def _reset_parameters_(self):
         xavier_normal_(self.entity_embs_real.weight.data)
         xavier_normal_(self.entity_embs_img.weight.data)
         xavier_normal_(self.relation_embs_real.weight.data)
