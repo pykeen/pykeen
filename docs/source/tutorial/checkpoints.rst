@@ -12,23 +12,41 @@ For fixing possible errors and safety fallbacks please also look at :ref:`word_o
 
 .. _regular_checkpoints_how_to:
 
-Regular Checkpoints - how to do it
-----------------------------------
-In :ref:`first_steps` it was shown how the :func:`pykeen.pipeline.pipeline` function can be used to set up an entire
-KGEM, which will be trained and evaluated in two lines of code. Such an example can be seen here.
+Regular Checkpoints
+-------------------
+The tutorial :ref:`first_steps` showed how the :func:`pykeen.pipeline.pipeline` function can be used to set up an entire
+KGEM for training and evaluation in just two lines of code. A slightly extended example is shown below:
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     pipeline_result = pipeline(
         dataset='Nations',
         model='TransE',
         optimizer='Adam',
-        training_kwargs=dict(num_epochs=1000),
+        training_kwargs=dict(
+            num_epochs=1000,
+        ),
     )
 
-To enable checkpoints all you have to do is adding a ``checkpoint_file`` argument to the ``training_kwargs``.
+To enable checkpoints, all you have to do is add a ``checkpoint_name`` argument to the ``training_kwargs``.
 This argument should have the name you would like the checkpoint files saved on your computer to be called.
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    pipeline_result = pipeline(
+        dataset='Nations',
+        model='TransE',
+        optimizer='Adam',
+        training_kwargs=dict(
+            num_epochs=1000,
+            checkpoint_name='my_checkpoint.pt',
+        ),
+    )
+
 Furthermore, you can set the checkpoint frequency, i.e. how often checkpoints should be saved given in minutes, by
 setting the argument ``checkpoint_frequency`` with an integer. The default frequency is 30 minutes and setting it to
 ``0`` will cause the training loop to save a checkpoint after each epoch.
@@ -37,18 +55,23 @@ Let's look at an example.
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     pipeline_result = pipeline(
         dataset='Nations',
         model='TransE',
         optimizer='Adam',
-        training_kwargs=dict(num_epochs=1000, checkpoint_name='my_checkpoint.pt', checkpoint_frequency=5),
+        training_kwargs=dict(
+            num_epochs=1000,
+            checkpoint_name='my_checkpoint.pt',
+            checkpoint_frequency=5,
+        ),
     )
 
 Here we have defined a pipeline that will save training loop checkpoints in the checkpoint file called
 ``my_checkpoint.pt`` every time an epoch finishes and at least `5` minutes have passed since saving previously.
 Assuming that e.g. this pipeline crashes after 200 epochs, you can simply execute **the same code** and the
 pipeline will load the last state from the checkpoint file and continue training as if nothing happened. The results
-will be excactly same as if you ran the pipeline for `1000` epoch without interruption.
+will be exactly same as if you ran the pipeline for `1000` epoch without interruption.
 
 Another nice feature is that using checkpoints the training loop will save the state whenever the training loop finishes
 or the early stopper stops it. Assuming that you successfully trained the KGEM above for `1000` epochs, but now decide
@@ -58,29 +81,39 @@ execute the code like:
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     pipeline_result = pipeline(
         dataset='Nations',
         model='TransE',
         optimizer='Adam',
-        training_kwargs=dict(num_epochs=2000, checkpoint_name='my_checkpoint.pt', checkpoint_frequency=5),
+        training_kwargs=dict(
+            num_epochs=2000,  # more epochs than before
+            checkpoint_name='my_checkpoint.pt',
+            checkpoint_frequency=5,
+        ),
     )
 
 The above code will load the saved state after finishing `1000` epochs and continue to train to `2000` epochs, giving
 the exact same results as if you would have run it for `2000` epochs in the first place.
 
 By default, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in :mod:`pykeen.constants`,
-which is a subdirectory in your home directory, e.g. ``~/.pykeen/checkpoints``.
+which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints`` (configured via :mod:`pystow`).
 Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path, as shown in this example:
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     pipeline_result = pipeline(
         dataset='Nations',
         model='TransE',
         optimizer='Adam',
-        training_kwargs=dict(num_epochs=2000, checkpoint_name='my_checkpoint.pt', checkpoint_directory='/my/secret/dir'),
+        training_kwargs=dict(
+            num_epochs=2000,
+            checkpoint_name='my_checkpoint.pt',
+            checkpoint_directory='/my/secret/dir',
+        ),
     )
 
 .. _failure_checkpoints_how_to:
@@ -93,6 +126,7 @@ In cases where you only would like to save checkpoints whenever the training loo
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
+
     pipeline_result = pipeline(
         dataset='Nations',
         model='TransE',
@@ -114,7 +148,11 @@ regular checkpoints as defined above, e.g. with this code:
         dataset='Nations',
         model='TransE',
         optimizer='Adam',
-        training_kwargs=dict(num_epochs=2000, checkpoint_name='my_checkpoint.pt', checkpoint_on_failure=True),
+        training_kwargs=dict(
+            num_epochs=2000,
+            checkpoint_name='my_checkpoint.pt',
+            checkpoint_on_failure=True,
+        ),
     )
 
 Note: Use this argument with caution, since every failed training loop will create a distinct checkpoint file.
@@ -173,14 +211,14 @@ To show how to use the checkpoint functionality without the pipeline, we define 
 
 At this point we have a model, dataset and optimizer all setup in a training loop and are ready to train the model with
 the ``training_loop``'s method :func:`pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
-setting the function argument ``checkpoint_file`` to the name you would like it to have.
+setting the function argument ``checkpoint_name`` to the name you would like it to have.
 Furthermore, you can set the checkpoint frequency, i.e. how often checkpoints should be saved given in minutes, by
 setting the argument ``checkpoint_frequency`` with an integer. The default frequency is 30 minutes and setting it to
 ``0`` will cause the training loop to save a checkpoint after each epoch.
 Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path. If you didn't set the
 ``checkpoint_directory`` argument, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in
-:mod:`pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.pykeen/checkpoints``.
+:mod:`pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints``.
 
 Here is an example:
 
@@ -193,7 +231,7 @@ Here is an example:
     )
 
 With this code we have started the training loop with the above defined KGEM. The training loop will save a checkpoint
-in the ``my_checkpoint.pt`` file, which will be saved in the ``~/.pykeen/checkpoints/`` directory, since we haven't
+in the ``my_checkpoint.pt`` file, which will be saved in the ``~/.data/pykeen/checkpoints/`` directory, since we haven't
 set the argument ``checkpoint_directory``.
 The checkpoint file will be saved after 5 minutes since starting the training loop or the last time a checkpoint was
 saved and the epoch finishes, i.e. when one epoch takes 10 minutes the checkpoint will be saved after 10 minutes.
