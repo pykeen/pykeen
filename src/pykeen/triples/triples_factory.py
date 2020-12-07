@@ -696,30 +696,6 @@ class TriplesFactory:
             max_id=self.num_relations,
         )
 
-    def new_with_relations(
-        self,
-        relations: Union[Collection[int], Collection[str]],
-    ) -> 'TriplesFactory':
-        """Make a new triples factory only keeping the given relations."""
-        mask = self.get_mask_for_relations(relations=relations)
-        logger.info(
-            f'keeping {len(relations)}/{self.num_relations} relations'
-            f' and {mask.sum()}/{self.num_triples} triples in {self}',
-        )
-        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[mask])
-
-    def new_without_relations(
-        self,
-        relations: Union[Collection[int], Collection[str]],
-    ) -> 'TriplesFactory':
-        """Make a new triples factory without the given relations."""
-        mask = self.get_mask_for_relations(relations, invert=True)
-        logger.info(
-            f'removing {len(relations)}/{self.num_relations} relations'
-            f' and {mask.sum()}/{self.num_triples} triples',
-        )
-        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[mask])
-
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
 
@@ -824,6 +800,8 @@ class TriplesFactory:
         self,
         entities: Union[None, Collection[int], Collection[str]] = None,
         relations: Union[None, Collection[int], Collection[str]] = None,
+        invert_entity_selection: bool = False,
+        invert_relation_selection: bool = False,
     ) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
 
@@ -831,6 +809,11 @@ class TriplesFactory:
             The entities of interest. If None, defaults to all entities.
         :param relations:
             The relations of interest. If None, defaults to all relations.
+        :param invert_entity_selection:
+            Whether to invert the entity selection, i.e. select those triples without the provided entities.
+        :param invert_relation_selection:
+            Whether to invert the relation selection, i.e. select those triples without the provided relations.
+
         :return:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
@@ -839,12 +822,12 @@ class TriplesFactory:
 
         # Filter for entities
         if entities is not None:
-            keep_mask = self.get_mask_for_entities(entities=entities)
+            keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
 
         # Filter for relations
         if relations is not None:
-            relation_mask = self.get_mask_for_relations(relations=relations)
+            relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 

@@ -121,7 +121,7 @@ class Sealant:
 
     def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""
-        return triples_factory.new_without_relations(self.relations_to_delete)
+        return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
 
 
 def prioritize_mapping(d: Mapping[Tuple[X, X], float]) -> Set[X]:
@@ -157,9 +157,9 @@ def unleak(
     if n is not None:
         frequent_relations = train.get_most_frequent_relations(n=n)
         logger.info(f'keeping most frequent relations from {train}')
-        train = train.new_with_relations(frequent_relations)
+        train = train.new_with_restriction(relations=frequent_relations)
         triples_factories = [
-            triples_factory.new_with_relations(frequent_relations)
+            triples_factory.new_with_restriction(relations=frequent_relations)
             for triples_factory in triples_factories
         ]
 
