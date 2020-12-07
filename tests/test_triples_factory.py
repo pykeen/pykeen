@@ -87,6 +87,9 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_automatic_incomplete_inverse_detection(self):
         """Test if the TriplesFactory detects that the triples contain incomplete inverses and creates correct ids."""
+        # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
+        # inverse relations, although the triples contained in it are not the same we would have when removing the
+        # first triple, and passing create_inverse_triples=True.
         t = [
             ['e3', f'a.{INVERSE_SUFFIX}', 'e10'],
             ['e1', 'a', 'e2'],
