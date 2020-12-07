@@ -238,7 +238,7 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             mapped_triples=_translate_triples(
-                triples=factory.triples,
+                triples=factory.mapped_triples,
                 entity_translation=entity_id_translation,
                 relation_translation=relation_id_translation,
             ),
