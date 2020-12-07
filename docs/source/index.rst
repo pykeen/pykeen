@@ -11,6 +11,7 @@ PyKEEN
    tutorial/first_steps
    tutorial/understanding_evaluation
    tutorial/translational_toy_example
+   tutorial/checkpoints
    tutorial/running_hpo
    tutorial/running_ablation
    tutorial/byod
