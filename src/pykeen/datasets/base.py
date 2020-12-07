@@ -72,17 +72,17 @@ class Dataset:
         """The number of relations."""
         return self.training.num_relations
 
-    def summary_str(self, end='\n') -> str:
-        """Make a summary string of all of the factories."""
-        rows = [
+    def _summary_rows(self):
+        return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
             for label, triples_factory in
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
-        n_triples = sum(
-            triples_factory.num_triples
-            for triples_factory in (self.training, self.testing, self.validation)
-        )
+
+    def summary_str(self, end='\n') -> str:
+        """Make a summary string of all of the factories."""
+        rows = self._summary_rows()
+        n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
         return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
