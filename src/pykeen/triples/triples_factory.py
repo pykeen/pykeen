@@ -8,7 +8,7 @@ import logging
 import os
 import re
 from collections import defaultdict
-from typing import Callable, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -281,10 +281,6 @@ class TriplesFactory:
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
 
-    #: A dictionary mapping each relation to its inverse, if inverse triples were created
-    #: Can be provided explicitly when not using any of the factory methods
-    relation_to_inverse: Optional[Mapping[int, int]] = None
-
     # The following fields get generated automatically
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
@@ -307,35 +303,6 @@ class TriplesFactory:
 
     def __post_init__(self):
         """Pre-compute derived mappings."""
-        # inverse triples
-        if self.create_inverse_triples and self.relation_to_inverse is None:
-            logger.info("Creating inverse triples.")
-            # update triples
-            h, r, t = self.mapped_triples.t()
-            self.mapped_triples = torch.cat([
-                torch.stack([h, 2 * r, t], dim=-1),
-                torch.stack([t, 2 * r + 1, h], dim=-1),
-            ])
-            # create new relation to id mapping
-            new_relation_to_id = {
-                label: 2 * old_id
-                for label, old_id in self.relation_to_id.items()
-            }
-            # set relation to inverse
-            self.relation_to_inverse = {
-                new_id: new_id + 1
-                for label, new_id in new_relation_to_id.items()
-            }
-            # add inverse relations
-            new_relation_to_id.update({
-                label + INVERSE_SUFFIX: self.relation_to_inverse[new_id]
-                for label, new_id in new_relation_to_id.items()
-            })
-            # update relation mapping
-            self.relation_to_id = new_relation_to_id
-        elif self.relation_to_inverse is not None:
-            self.create_inverse_triples = True
-
         # ID to label mapping
         self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
         self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
@@ -372,11 +339,10 @@ class TriplesFactory:
         :return:
             A new triples factory.
         """
-        unique_relations = np.unique(triples[:, 1])
-
         # Check if the triples are inverted already
         # We re-create them pure index based to ensure that _all_ inverse triples are present and that they are
         # contained if and only if create_inverse_triples is True.
+        unique_relations = np.unique(triples[:, 1])
         suspected_to_be_inverse_relations = {r for r in unique_relations if r.endswith(INVERSE_SUFFIX)}
         if len(suspected_to_be_inverse_relations) > 0:
             logger.warning(
@@ -456,6 +422,29 @@ class TriplesFactory:
             compact_id=compact_id,
         )
 
+    def with_other_triples(
+        self,
+        mapped_triples: MappedTriples,
+    ) -> "TriplesFactory":
+        """
+        Create a new triples factory sharing everything except the triples.
+
+        .. note ::
+            We use shallow copies.
+
+        :param mapped_triples:
+            The new mapped triples.
+
+        :return:
+            The new factory.
+        """
+        return TriplesFactory(
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            mapped_triples=mapped_triples,
+            create_inverse_triples=self.create_inverse_triples,
+        )
+
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
@@ -477,14 +466,6 @@ class TriplesFactory:
         logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
         return self.label_triples(self.mapped_triples)
 
-    def get_inverse_relation_id(self, relation: Union[str, int]) -> int:
-        """Get the inverse relation identifier for the given relation."""
-        # TODO
-        if not self.create_inverse_triples:
-            raise ValueError('Can not get inverse triple, they have not been created.')
-        relation = next(iter(self.relations_to_ids(relations=[relation], include_inverses=False)))
-        return self.relation_to_inverse[relation]
-
     def extra_repr(self) -> str:
         """Extra representation string."""
         return (
@@ -497,20 +478,40 @@ class TriplesFactory:
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}({self.extra_repr()})'
 
+    def get_inverse_relation_id(self, relation: Union[str, int]) -> int:
+        """Get the inverse relation identifier for the given relation."""
+        if not self.create_inverse_triples:
+            raise ValueError('Can not get inverse triple, they have not been created.')
+        relation = next(iter(self.relations_to_ids(relations=[relation], include_inverses=False)))
+        return self._get_inverse_relation_id(relation)
+
+    @staticmethod
+    def _get_inverse_relation_id(relation_id: Union[int, torch.LongTensor]) -> Union[int, torch.LongTensor]:
+        return relation_id + 1
+
+    def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
+        """Add inverse triples if they shall be created."""
+        if self.create_inverse_triples:
+            logger.info("Creating inverse triples.")
+            h, r, t = mapped_triples.t()
+            mapped_triples = torch.cat([
+                torch.stack([h, 2 * r, t], dim=-1),
+                torch.stack([t, self._get_inverse_relation_id(2 * r), h], dim=-1),
+            ])
+        return mapped_triples
+
     def create_slcwa_instances(self) -> SLCWAInstances:
         """Create sLCWA instances for this factory's triples."""
-        # TODO: Create inverse triples only when creating training instances.
         return SLCWAInstances(
-            mapped_triples=self.mapped_triples,
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
-        # TODO: Create inverse triples only when creating training instances.
         s_p_to_multi_tails = _create_multi_label_tails_instance(
-            mapped_triples=self.mapped_triples,
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             use_tqdm=use_tqdm,
         )
         sp, multi_o = zip(*s_p_to_multi_tails.items())
@@ -641,14 +642,7 @@ class TriplesFactory:
 
         # Make new triples factories for each group
         return [
-            TriplesFactory(
-                mapped_triples=triples,
-                entity_to_id=self.entity_to_id,
-                relation_to_id=self.relation_to_id,
-                # explicitly copy relation to inverse and do not (re-)create inverse triples
-                create_inverse_triples=False,
-                relation_to_inverse=self.relation_to_inverse,
-            )
+            self.with_other_triples(mapped_triples=triples)
             for triples in triples_groups
         ]
 
@@ -687,27 +681,18 @@ class TriplesFactory:
     def relations_to_ids(
         self,
         relations: Union[Collection[int], Collection[str]],
-        include_inverses: bool = True,
     ) -> Collection[int]:
         """Normalize relations to IDs."""
-        relation_ids = _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_to_id)
-        if self.create_inverse_triples and include_inverses:
-            logger.info(
-                "Since the triples factory contains inverse triples, the selection will be extended to include the "
-                "corresponding inverse relation IDs. You can disable this behaviour by passing include_inverses=False."
-            )
-        return relation_ids
+        return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_to_id)
 
     def get_mask_for_relations(
         self,
         relations: Union[Collection[int], Collection[str]],
         invert: bool = False,
-        include_inverses: bool = True,
     ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
-        relations = self.relations_to_ids(relations=relations, include_inverses=include_inverses)
         return _get_triple_mask(
-            ids=relations,
+            ids=self.relations_to_ids(relations=relations),
             triples=self.mapped_triples,
             columns=1,
             invert=invert,
@@ -718,51 +703,33 @@ class TriplesFactory:
         self,
         relations: Union[Collection[int], Collection[str]],
         invert: bool = False,
-        include_inverses: bool = True,
     ) -> MappedTriples:
         """Get the triples containing the given relations."""
-        mask = self.get_mask_for_relations(relations=relations, invert=invert, include_inverses=include_inverses)
-        return self.mapped_triples[mask]
+        return self.mapped_triples[self.get_mask_for_relations(relations=relations, invert=invert)]
 
     def new_with_relations(
         self,
         relations: Union[Collection[int], Collection[str]],
-        include_inverses: bool = True,
     ) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
-        mask = self.get_mask_for_relations(relations=relations, include_inverses=include_inverses)
+        mask = self.get_mask_for_relations(relations=relations)
         logger.info(
             f'keeping {len(relations)}/{self.num_relations} relations'
             f' and {mask.sum()}/{self.num_triples} triples in {self}',
         )
-        return TriplesFactory(
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            mapped_triples=self.mapped_triples[mask],
-            # explicitly copy relation to inverse and do not (re-)create inverse triples
-            create_inverse_triples=False,
-            relation_to_inverse=self.relation_to_inverse,
-        )
+        return self.with_other_triples(mapped_triples=self.mapped_triples[mask])
 
     def new_without_relations(
         self,
         relations: Union[Collection[int], Collection[str]],
-        include_inverses: bool = True,
     ) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
-        mask = self.get_mask_for_relations(relations, invert=True, include_inverses=include_inverses)
+        mask = self.get_mask_for_relations(relations, invert=True)
         logger.info(
             f'removing {len(relations)}/{self.num_relations} relations'
             f' and {mask.sum()}/{self.num_triples} triples',
         )
-        return TriplesFactory(
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            mapped_triples=self.mapped_triples[mask],
-            # explicitly copy relation to inverse and do not (re-)create inverse triples
-            create_inverse_triples=False,
-            relation_to_inverse=self.relation_to_inverse,
-        )
+        return self.with_other_triples(mapped_triples=self.mapped_triples[mask])
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
@@ -868,7 +835,6 @@ class TriplesFactory:
         self,
         entities: Union[None, Collection[int], Collection[str]] = None,
         relations: Union[None, Collection[int], Collection[str]] = None,
-        include_inverses: bool = True,
     ) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
 
@@ -876,10 +842,6 @@ class TriplesFactory:
             The entities of interest. If None, defaults to all entities.
         :param relations:
             The relations of interest. If None, defaults to all relations.
-        :param include_inverses:
-            Whether to extend the selection of relations to also include their inverse relations. Only effective if
-            create_inverse_triples is True.
-
         :return:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
@@ -893,7 +855,7 @@ class TriplesFactory:
 
         # Filter for relations
         if relations is not None:
-            relation_mask = self.get_mask_for_relations(relations=relations, include_inverses=include_inverses)
+            relation_mask = self.get_mask_for_relations(relations=relations)
             logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
@@ -902,14 +864,7 @@ class TriplesFactory:
             return self
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
-        return TriplesFactory(
-            mapped_triples=self.mapped_triples[keep_mask],
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            # explicitly copy relation to inverse and do not (re-)create inverse triples
-            create_inverse_triples=False,
-            relation_to_inverse=self.relation_to_inverse,
-        )
+        return self.with_other_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 
 def _tf_cleanup_all(
