@@ -338,7 +338,6 @@ class TestLiterals(unittest.TestCase):
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
         self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
         self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
-        self.assertTrue((triples_factory.mapped_triples == triples_factory.map_triples_to_id(triples)).all())
 
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""

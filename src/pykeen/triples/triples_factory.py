@@ -573,22 +573,6 @@ class TriplesFactory:
             )
         ], axis=1)
 
-    def map_triples_to_id(self, triples: Union[str, LabeledTriples]) -> MappedTriples:
-        """Load triples and map to ids based on the existing id mappings of the triples factory.
-
-        Works from either the path to a file containing triples given as string or a numpy array containing triples.
-        """
-        if isinstance(triples, str):
-            triples = load_triples(triples)
-        # Ensure 2d array in case only one triple was given
-        triples = np.atleast_2d(triples)
-        # FIXME this function is only ever used in tests
-        return _map_triples_elements_to_ids(
-            triples=triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-        )
-
     def split(
         self,
         ratios: Union[float, Sequence[float]] = 0.8,
