@@ -116,7 +116,9 @@ class TestLeakage(unittest.TestCase):
         )
 
         # Test looking up inverse triples
-        test_leaked = test_factory.get_triples_for_relations(sealant.inverse_relations_to_delete)
+        test_leaked = test_factory.mapped_triples[
+            test_factory.get_mask_for_relations(relations=sealant.inverse_relations_to_delete, invert=False)
+        ]
         self.assertEqual(1, len(test_leaked))
         self.assertEqual(
             (train_factory.entity_to_id['-2'], test_relation_inverse, train_factory.entity_to_id['-1']),

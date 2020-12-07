@@ -696,14 +696,6 @@ class TriplesFactory:
             max_id=self.num_relations,
         )
 
-    def get_triples_for_relations(
-        self,
-        relations: Union[Collection[int], Collection[str]],
-        invert: bool = False,
-    ) -> MappedTriples:
-        """Get the triples containing the given relations."""
-        return self.mapped_triples[self.get_mask_for_relations(relations=relations, invert=invert)]
-
     def new_with_relations(
         self,
         relations: Union[Collection[int], Collection[str]],
