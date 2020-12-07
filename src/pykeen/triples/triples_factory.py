@@ -679,7 +679,7 @@ class TriplesFactory:
         """Normalize entities to IDs."""
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_to_id)
 
-    def get_mask_for_entities(self, entities: Collection[Union[int, str]], invert: bool = False):
+    def get_mask_for_entities(self, entities: Union[Collection[int], Collection[str]], invert: bool = False):
         """Get a boolean mask for triples with the given entities."""
         entities = self.entities_to_ids(entities=entities)
         return _get_triple_mask(
@@ -694,7 +694,11 @@ class TriplesFactory:
         """Normalize relations to IDs."""
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_to_id)
 
-    def get_mask_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> torch.BoolTensor:
+    def get_mask_for_relations(
+        self,
+        relations: Union[Collection[int], Collection[str]],
+        invert: bool = False,
+    ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
         relations = self.relations_to_ids(relations=relations)
         return _get_triple_mask(
@@ -705,11 +709,18 @@ class TriplesFactory:
             max_id=self.num_relations,
         )
 
-    def get_triples_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> MappedTriples:
+    def get_triples_for_relations(
+        self,
+        relations: Union[Collection[int], Collection[str]],
+        invert: bool = False,
+    ) -> MappedTriples:
         """Get the triples containing the given relations."""
         return self.mapped_triples[self.get_mask_for_relations(relations=relations, invert=invert)]
 
-    def new_with_relations(self, relations: Collection[Union[int, str]]) -> 'TriplesFactory':
+    def new_with_relations(
+        self,
+        relations: Union[Collection[int], Collection[str]],
+    ) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given relations."""
         mask = self.get_mask_for_relations(relations)
         logger.info(
@@ -724,7 +735,10 @@ class TriplesFactory:
             relation_to_inverse=self.relation_to_inverse,
         )
 
-    def new_without_relations(self, relations: Collection[Union[int, str]]) -> 'TriplesFactory':
+    def new_without_relations(
+        self,
+        relations: Union[Collection[int], Collection[str]],
+    ) -> 'TriplesFactory':
         """Make a new triples factory without the given relations."""
         mask = self.get_mask_for_relations(relations, invert=True)
         logger.info(
@@ -841,8 +855,8 @@ class TriplesFactory:
 
     def new_with_restriction(
         self,
-        entities: Optional[Collection[str]] = None,
-        relations: Optional[Collection[str]] = None,
+        entities: Union[None, Collection[int], Collection[str]] = None,
+        relations: Union[None, Collection[int], Collection[str]] = None,
     ) -> 'TriplesFactory':
         """Make a new triples factory only keeping the given entities and relations, but keeping the ID mapping.
 
@@ -861,6 +875,7 @@ class TriplesFactory:
                 'relations as well.',
                 str(self),
             )
+            relations = self.relations_to_ids(relations=relations)
             relations = list(relations) + list(map(self.relation_to_inverse.__getitem__, relations))
 
         keep_mask = None
