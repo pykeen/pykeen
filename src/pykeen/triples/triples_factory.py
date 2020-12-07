@@ -497,6 +497,7 @@ class TriplesFactory:
 
     def create_slcwa_instances(self) -> SLCWAInstances:
         """Create sLCWA instances for this factory's triples."""
+        # TODO: Create inverse triples only when creating training instances.
         return SLCWAInstances(
             mapped_triples=self.mapped_triples,
             entity_to_id=self.entity_to_id,
@@ -505,6 +506,7 @@ class TriplesFactory:
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
+        # TODO: Create inverse triples only when creating training instances.
         s_p_to_multi_tails = _create_multi_label_tails_instance(
             mapped_triples=self.mapped_triples,
             use_tqdm=use_tqdm,
