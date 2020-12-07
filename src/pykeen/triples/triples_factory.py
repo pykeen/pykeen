@@ -355,6 +355,7 @@ class TriplesFactory:
                 if r in suspected_to_be_inverse_relations
             ]
             mask = np.isin(element=inverse, test_elements=relation_ids_to_remove, invert=True)
+            logger.info(f"Keeping {mask.sum()/mask.shape[0]} triples.")
             triples = triples[mask]
 
         # Generate entity mapping if necessary
