@@ -308,7 +308,7 @@ class TriplesFactory:
     def __post_init__(self):
         """Pre-compute derived mappings."""
         # inverse triples
-        if self.create_inverse_triples:
+        if self.create_inverse_triples and self.relation_to_inverse is None:
             logger.info("Creating inverse triples.")
             # update triples
             h, r, t = self.mapped_triples.t()
@@ -333,6 +333,8 @@ class TriplesFactory:
             })
             # update relation mapping
             self.relation_to_id = new_relation_to_id
+        elif self.relation_to_inverse is not None:
+            self.create_inverse_triples = True
 
         # ID to label mapping
         self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
