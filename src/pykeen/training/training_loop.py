@@ -324,7 +324,7 @@ class TrainingLoop(ABC):
             num_workers = 0
 
         # Bind
-        num_training_instances = self.training_instances.num_instances
+        num_training_instances = len(self.training_instances)
 
         _use_outer_tqdm = not only_size_probing and use_tqdm
         _use_inner_tqdm = _use_outer_tqdm and use_tqdm_batch
