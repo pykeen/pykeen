@@ -59,7 +59,7 @@ class LCWAInstances(Instances):
     compressed: scipy.sparse.csr_matrix
 
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> "LCWAInstances":
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> Instances:
         """
         Create LCWA instances from triples.
 
@@ -81,7 +81,7 @@ class LCWAInstances(Instances):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return LCWAInstances(pairs=unique_hr, compressed=compressed)
+        return cls(pairs=unique_hr, compressed=compressed)
 
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]

@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .instances import LCWAInstances, SLCWAInstances
+from .instances import Instances, LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RandomHint, RelationMapping
 from ..utils import compact_mapping, ensure_random_state, invert_mapping, slice_triples
@@ -345,11 +345,11 @@ class TriplesFactory:
 
         return False
 
-    def create_slcwa_instances(self) -> SLCWAInstances:
+    def create_slcwa_instances(self) -> Instances:
         """Create sLCWA instances for this factory's triples."""
         return SLCWAInstances(mapped_triples=self.mapped_triples)
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
         return LCWAInstances.from_triples(mapped_triples=self.mapped_triples, num_entities=self.num_entities)
 
