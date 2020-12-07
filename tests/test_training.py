@@ -2,6 +2,7 @@
 
 """Test that training loops work correctly."""
 
+import tempfile
 import unittest
 from typing import Optional
 
@@ -12,7 +13,8 @@ from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, TransE
 from pykeen.models.base import Model
-from pykeen.training import SLCWATrainingLoop
+from pykeen.optimizers import get_optimizer_cls
+from pykeen.training import SLCWATrainingLoop, get_training_loop_cls
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
 
@@ -94,6 +96,14 @@ class TrainingLoopTests(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
+        self.random_seed = 123
+        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
+        self.num_epochs = 10
+        self.temporary_directory = tempfile.TemporaryDirectory()
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.temporary_directory.cleanup()
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
@@ -136,3 +146,64 @@ class TrainingLoopTests(unittest.TestCase):
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
             NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False)
+
+    def test_lcwa_checkpoints(self):
+        """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
+        self._test_checkpoints(training_loop_type='LCWA')
+
+    def test_slcwa_checkpoints(self):
+        """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
+        self._test_checkpoints(training_loop_type='sLCWA')
+
+    def _test_checkpoints(self, training_loop_type: str):
+        """Test whether interrupting the given training loop type can be resumed using checkpoints."""
+        training_loop_class = get_training_loop_cls(training_loop_type)
+
+        # Train a model in one shot
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=self.random_seed,
+        )
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
+        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        losses = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            use_tqdm=False,
+            use_tqdm_batch=False,
+        )
+
+        # Train a model for the first half
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=self.random_seed,
+        )
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
+        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        training_loop.train(
+            num_epochs=int(self.num_epochs // 2),
+            batch_size=self.batch_size,
+            checkpoint_name=self.checkpoint_file,
+            checkpoint_directory=self.temporary_directory.name,
+            checkpoint_frequency=0,
+        )
+
+        # Continue training of the first part
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=123,
+        )
+        optimizer_cls = get_optimizer_cls(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
+        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        losses_2 = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            checkpoint_name=self.checkpoint_file,
+            checkpoint_directory=self.temporary_directory.name,
+            checkpoint_frequency=0,
+        )
+
+        self.assertEqual(losses, losses_2)
