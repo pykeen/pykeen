@@ -456,6 +456,13 @@ class TriplesFactory:
         return len(self.relation_to_id)
 
     @property
+    def max_relation_id(self) -> int:  # noqa: D401
+        """The largest relation ID (excl.) including potential inverse relations."""
+        if self.create_inverse_triples:
+            return 2 * self.num_relations
+        return self.num_relations
+
+    @property
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
