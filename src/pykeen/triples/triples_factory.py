@@ -182,12 +182,19 @@ def _get_triple_mask(
     invert: bool = False,
     max_id: Optional[int] = None,
 ) -> torch.BoolTensor:
-    return torch_is_in_1d(
-        query_tensor=triples[:, columns],
+    # normalize input
+    triples = triples[:, columns]
+    if isinstance(columns, int):
+        columns = [columns]
+    mask = torch_is_in_1d(
+        query_tensor=triples,
         test_tensor=ids,
         max_id=max_id,
         invert=invert,
-    ).all(dim=-1)
+    )
+    if len(columns) > 1:
+        mask = mask.all(dim=-1)
+    return mask
 
 
 def normalize_ratios(
@@ -533,6 +540,8 @@ class TriplesFactory:
         :return:
             The same triples, but labeled.
         """
+        if len(triples) == 0:
+            return np.empty(shape=(0, 3), dtype=str)
         if unknown_relation_label is None:
             unknown_relation_label = unknown_entity_label
         return np.stack([
