@@ -252,45 +252,45 @@ class TestSplit(unittest.TestCase):
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = np.array([
+        training = torch.as_tensor(data=[
             [1, 1000, 2],
             [1, 1000, 3],
             [1, 1001, 3],
-        ])
-        testing = np.array([
+        ], dtype=torch.long)
+        testing = torch.as_tensor(data=[
             [2, 1001, 3],
             [1, 1002, 4],
-        ])
-        expected_training = [
+        ], dtype=torch.long)
+        expected_training = torch.as_tensor(data=[
             [1, 1000, 2],
             [1, 1000, 3],
             [1, 1001, 3],
             [1, 1002, 4],
-        ]
-        expected_testing = [
+        ], dtype=torch.long)
+        expected_testing = torch.as_tensor(data=[
             [2, 1001, 3],
-        ]
+        ], dtype=torch.long)
 
         new_training, new_testing = _tf_cleanup_deterministic(training, testing)
-        self.assertEqual(expected_training, new_training.tolist())
-        self.assertEqual(expected_testing, new_testing.tolist())
+        assert (expected_training == new_training).all()
+        assert (expected_testing == new_testing).all()
 
         new_testing, new_testing = _tf_cleanup_all([training, testing])
-        self.assertEqual(expected_training, new_training.tolist())
-        self.assertEqual(expected_testing, new_testing.tolist())
+        assert (expected_training == new_training).all()
+        assert (expected_testing == new_testing).all()
 
     def test_cleanup_randomized(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = np.array([
+        training = torch.as_tensor(data=[
             [1, 1000, 2],
             [1, 1000, 3],
-        ])
-        testing = np.array([
+        ], dtype=torch.long)
+        testing = torch.as_tensor(data=[
             [2, 1000, 3],
             [1, 1000, 4],
             [2, 1000, 4],
             [1, 1001, 3],
-        ])
+        ], dtype=torch.long)
         expected_training_1 = {
             (1, 1000, 2),
             (1, 1000, 3),
