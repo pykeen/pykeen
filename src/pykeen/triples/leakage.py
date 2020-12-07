@@ -193,24 +193,25 @@ class Sealant:
             f'identified {len(self.candidate_inverse_relations)} candidate inverse pairs'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}',
         )
-        self.deletion_candidate_pairs = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
-        components = list(_get_connected_components(pairs=((a, b) for (s, a, b) in self.deletion_candidate_pairs)).values())
-        self.relations_to_keep = self.select_to_keep(
+        self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
+        components = list(_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates)).values())
+        self.relations_to_delete = self.select_to_delete(
             components,
             size={r: len(pairs) for r, pairs in relations.items()},
         )
-        logger.info(f'identified {len(self.deletion_candidate_pairs)} from {self.triples_factory} to delete')
+        logger.info(f'identified {len(self.candidates)} from {self.triples_factory} to delete')
 
-    def select_to_keep(self, components: Collection[Collection[int]], size: Mapping[int, int]) -> Collection[int]:
+    def select_to_delete(self, components: Collection[Collection[int]], size: Mapping[int, int]) -> Collection[int]:
         """Relations to delete combine from both duplicates and inverses."""
         result = set()
         for component in components:
-            result.add(max(component, key=size.__getitem__))
+            keep = max(component, key=size.__getitem__)
+            result.update(r for r in component if r != keep)
         return result
 
     def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""
-        return triples_factory.new_with_restriction(relations=self.relations_to_keep)
+        return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
 
 
 def prioritize_mapping(d: Mapping[Tuple[X, X], float]) -> Set[X]:
