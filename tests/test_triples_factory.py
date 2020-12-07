@@ -200,9 +200,6 @@ class TestTriplesFactory(unittest.TestCase):
                     if relation_restriction is not None:
                         present_relations = set(restricted_triples_factory.triples[:, 1])
                         exp_relations = set(relation_restriction)
-                        if original_triples_factory.create_inverse_triples:
-                            exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
-                                                                    exp_relations))
                         assert exp_relations.issuperset(present_relations)
 
 
