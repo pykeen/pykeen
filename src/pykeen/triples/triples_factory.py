@@ -336,6 +336,8 @@ class TriplesFactory:
             The mapping from relations labels to ID. If None, create a new one from the triples.
         :param compact_id:
             Whether to compact IDs such that the IDs are consecutive.
+        :param filter_out_candidate_inverse_relations:
+            Whether to remove triples with relations with the inverse suffix.
 
         :return:
             A new triples factory.
@@ -826,19 +828,28 @@ class TriplesFactory:
         # Filter for entities
         if entities is not None:
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
-            logger.info('Keeping %d/%d entities', len(entities), self.num_entities)
+            remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
+            logger.info(
+                f"Keeping {remaining_entities}/{self.num_entities} "
+                f"({remaining_entities/self.num_entities:2.2%}) entities."
+            )
 
         # Filter for relations
         if relations is not None:
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
-            logger.info('Keeping %d/%d relations', len(relations), self.num_relations)
+            remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
+            logger.info(
+                f"Keeping {remaining_relations}/{self.num_relations} "
+                f"({remaining_relations/self.num_relations:2.2%}) relations."
+            )
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
         # No filtering happened
         if keep_mask is None:
             return self
 
-        logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
+        num_triples = keep_mask.sum()
+        logger.info(f"Keeping {num_triples}/{self.num_triples} ({num_triples/self.num_triples:2.2%}) triples.")
         return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 
