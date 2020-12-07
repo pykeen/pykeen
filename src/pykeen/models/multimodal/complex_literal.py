@@ -73,12 +73,13 @@ class ComplExLiteral(ComplEx):
 
         self.inp_drop = torch.nn.Dropout(input_dropout)
 
-    def _apply_g_function(
+    def _get_entity_representations(
         self,
-        emb: torch.FloatTensor,
-        lit: torch.FloatTensor,
+        idx: torch.LongTensor,
         dropout: bool,
-    ):
+    ) -> torch.FloatTensor:
+        emb = self.entity_embeddings.get_in_canonical_shape(indices=idx)
+        lit = self.numeric_literals.get_in_canonical_shape(indices=idx)
         if dropout:
             emb = self.inp_drop(emb)
         re, im = split_complex(emb)
@@ -90,7 +91,10 @@ class ComplExLiteral(ComplEx):
                 (im, self.img_non_lin_transf),
             )
         ]
-        return torch.cat([re, im], dim=-1)
+        x = torch.cat([re, im], dim=-1)
+        if dropout:
+            x = self.inp_drop(x)
+        return x
 
     def forward(
         self,
@@ -100,23 +104,7 @@ class ComplExLiteral(ComplEx):
     ) -> torch.FloatTensor:
         """Unified score function."""
         # get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-
-        # get literals
-        h_lit, t_lit = [self.numeric_literals.get_in_canonical_shape(indices=i) for i in (h_indices, t_indices)]
-
-        # combine
-        h, t = [
-            self._apply_g_function(emb, lit, dropout=dropout) for emb, lit, dropout in (
-                (h, h_lit, True),
-                (t, t_lit, False),
-            )
-        ]
-
-        # dropout
-        h, r = [self.inp_drop(x) for x in (h, r)]
-
-        # Compute scores
+        h = self._get_entity_representations(idx=h_indices, dropout=True)
+        r = self.inp_drop(self.relation_embeddings.get_in_canonical_shape(indices=r_indices))
+        t = self._get_entity_representations(idx=t_indices, dropout=False)
         return self.interaction_function(h=h, r=r, t=t)
