@@ -929,6 +929,7 @@ def _tf_cleanup_randomized(
         # Pick a random triple to move over to the training triples
         candidates, = move_id_mask.nonzero(as_tuple=True)
         idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
+        idx = candidates[idx]
 
         # add to training
         training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
