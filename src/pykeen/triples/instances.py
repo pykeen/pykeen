@@ -76,7 +76,7 @@ class LCWAInstances(Instances):
         num_pairs = unique_hr.shape[0]
         tails = mapped_triples[:, 2]
         compressed = scipy.sparse.coo_matrix(
-            (np.ones(num_pairs, dtype=np.float32), (pair_idx_to_triple_idx, tails)),
+            (np.ones(mapped_triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, tails)),
             shape=(num_pairs, num_entities)
         )
         # convert to csr for fast row slicing
@@ -87,7 +87,7 @@ class LCWAInstances(Instances):
         return self.pairs.shape[0]
 
     def __getitem__(self, item):  # noqa: D105
-        return self.pairs[item], self.compressed[item, :].todense()
+        return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
 
 
 @fix_dataclass_init_docs
