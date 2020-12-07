@@ -127,17 +127,3 @@ class DistMultLiteral(MultimodalModel):
         # -, because lower score shall correspond to a more plausible triple.
         scores = - torch.sum(g_heads * relation_embs * g_tails, dim=1)
         return scores
-
-    # TODO check if this is the same as the BaseModule
-    def compute_mr_loss(self, positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-        """Compute the mean ranking loss for the positive and negative scores."""
-        # Choose y = -1 since a smaller score is better.
-        # In TransE for example, the scores represent distances
-        if not self.compute_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of Margin Ranking losses. '
-                'Please use the compute_label_loss method instead',
-            )
-        y = torch.ones_like(negative_scores, device=self.device) * -1
-        loss = self.loss(positive_scores, negative_scores, y)
-        return loss
