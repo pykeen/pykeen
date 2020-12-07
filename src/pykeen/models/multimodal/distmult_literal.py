@@ -16,6 +16,9 @@ from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 
 
+# TODO: Check entire build of the model
+
+
 class DistMultLiteral(DistMult, MultimodalModel):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 

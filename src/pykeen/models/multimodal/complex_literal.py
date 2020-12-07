@@ -15,9 +15,10 @@ from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import Embedding
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
-# TODO: Check entire build of the model
 from ...utils import split_complex
 
+
+# TODO: Check entire build of the model
 
 class ComplExLiteral(ComplEx, MultimodalModel):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
