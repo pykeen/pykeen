@@ -428,7 +428,7 @@ class TriplesFactory:
             compact_id=compact_id,
         )
 
-    def with_other_triples(
+    def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
     ) -> "TriplesFactory":
@@ -639,7 +639,7 @@ class TriplesFactory:
 
         # Make new triples factories for each group
         return [
-            self.with_other_triples(mapped_triples=triples)
+            self.clone_and_exchange_triples(mapped_triples=triples)
             for triples in triples_groups
         ]
 
@@ -714,7 +714,7 @@ class TriplesFactory:
             f'keeping {len(relations)}/{self.num_relations} relations'
             f' and {mask.sum()}/{self.num_triples} triples in {self}',
         )
-        return self.with_other_triples(mapped_triples=self.mapped_triples[mask])
+        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[mask])
 
     def new_without_relations(
         self,
@@ -726,7 +726,7 @@ class TriplesFactory:
             f'removing {len(relations)}/{self.num_relations} relations'
             f' and {mask.sum()}/{self.num_triples} triples',
         )
-        return self.with_other_triples(mapped_triples=self.mapped_triples[mask])
+        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[mask])
 
     def entity_word_cloud(self, top: Optional[int] = None):
         """Make a word cloud based on the frequency of occurrence of each entity in a Jupyter notebook.
@@ -861,7 +861,7 @@ class TriplesFactory:
             return self
 
         logger.info('Keeping %d/%d triples', keep_mask.sum(), self.num_triples)
-        return self.with_other_triples(mapped_triples=self.mapped_triples[keep_mask])
+        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 
 def _tf_cleanup_all(
