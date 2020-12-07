@@ -192,7 +192,7 @@ def _generate_vectorized_lookup(
         for label, i in label_to_id.items()
         if i in existing_ids
     })
-    translation = torch.full(max(existing_ids) + 1, fill_value=-1)
+    translation = torch.full(size=(max(existing_ids) + 1,), fill_value=-1)
     for old, new in old_to_new_id.items():
         translation[old] = new
     return label_to_id, translation
