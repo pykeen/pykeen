@@ -34,13 +34,18 @@ class TestLeakage(unittest.TestCase):
         ]
         triples_factory = TriplesFactory.from_labeled_triples(triples=np.array(t, dtype=np.str))
         frequencies = get_candidate_inverse_relations(triples_factory, minimum_frequency=0.0, symmetric=False)
+        expected_frequencies = {
+            ('r2', 'r2_inverse'): (2 / 2),
+            ('r2_inverse', 'r2'): (2 / 2),
+            ('r3', 'r3_inverse'): (1 / 3),
+            ('r3_inverse', 'r3'): (1 / 1),
+        }
+        expected_frequencies = {
+            (triples_factory.relation_to_id[r1n], triples_factory.relation_to_id[r2n]): count
+            for (r1n, r2n), count in expected_frequencies.items()
+        }
         self.assertEqual(
-            {
-                ('r2', 'r2_inverse'): (2 / 2),
-                ('r2_inverse', 'r2'): (2 / 2),
-                ('r3', 'r3_inverse'): (1 / 3),
-                ('r3_inverse', 'r3'): (1 / 1),
-            },
+            expected_frequencies,
             dict(frequencies),
         )
 
