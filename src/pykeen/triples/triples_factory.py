@@ -453,14 +453,14 @@ class TriplesFactory:
     @property
     def num_relations(self) -> int:  # noqa: D401
         """The number of unique relations."""
-        return len(self.relation_to_id)
+        if self.create_inverse_triples:
+            return 2 * self.real_num_relations
+        return self.real_num_relations
 
     @property
-    def max_relation_id(self) -> int:  # noqa: D401
-        """The largest relation ID (excl.) including potential inverse relations."""
-        if self.create_inverse_triples:
-            return 2 * self.num_relations
-        return self.num_relations
+    def real_num_relations(self) -> int:  # noqa: D401
+        """The number of relations without inverse relations."""
+        return len(self.relation_to_id)
 
     @property
     def num_triples(self) -> int:  # noqa: D401
