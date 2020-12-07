@@ -27,7 +27,7 @@ __all__ = [
 class Instances(data.Dataset):
     """Triples and mappings to their indices."""
 
-    def __len__(self):
+    def __len__(self):  # noqa:D401
         """The number of instances."""
         raise NotImplementedError
 
@@ -77,7 +77,7 @@ class LCWAInstances(Instances):
         tails = mapped_triples[:, 2]
         compressed = scipy.sparse.coo_matrix(
             (np.ones(mapped_triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, tails)),
-            shape=(num_pairs, num_entities)
+            shape=(num_pairs, num_entities),
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
