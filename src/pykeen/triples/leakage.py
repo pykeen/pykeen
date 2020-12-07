@@ -14,7 +14,7 @@ import logging
 from collections import Counter, defaultdict
 from itertools import starmap
 from multiprocessing import Pool, cpu_count
-from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy
 import torch
@@ -39,15 +39,26 @@ X = TypeVar('X')
 Y = TypeVar('Y')
 
 
-def _jaccard_similarity(
+def _jaccard_similarity_join(
     sets: Mapping[int, Set[Tuple[X, X]]],
     inverse_sets: Mapping[int, Set[Tuple[X, X]]],
-) -> numpy.ndarray:
+    threshold: float = 0.0,
+) -> Tuple[Collection[Tuple[X, X]], Collection[Tuple[X, X]]]:
     r"""
     Compute Jaccard similarity between pairs of sets.
 
     .. math ::
         J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+
+    The method returns the true value for all pairs with similarity larger than the threshold. For pairs which are
+    guaranteed to be less similar, it may skip to compute the exact value to accelerate. For this, it makes use of
+    the following inequality:
+
+    .. math ::
+        J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+                \leq \frac{\min (|A|, |B|)}{\max (|A|, |B|)}
+
+    Hence, if :math:`\frac{\min (|A|, |B|)}{\max (|A|, |B|)} < \tau`, we know for sure that :math:`J(A, B) < \tau`.
 
     :param sets:
         The sets of tuples.
@@ -60,32 +71,38 @@ def _jaccard_similarity(
         between the set and the same set with inverted tuples.
     """
     keys = sorted(sets.keys())
+    n_relations = len(keys)
     assert set(sets.keys()) == set(inverse_sets.keys())
+
+    # The individual sizes (note that len(inv_set) = len(set)
+    size = numpy.asarray([len(sets[r]) for r in keys])
+    ub = numpy.minimum(size[None, :], size[:, None]) / numpy.maximum(size[None, :], size[:, None])
+    ub[numpy.arange(n_relations), numpy.arange(n_relations)] = 0
+    ub = numpy.triu(ub)
+    candidates = list(zip(*(ub > threshold).nonzero()))
+    max_n_candidates = n_relations * (n_relations - 1) // 2
+    logger.info(
+        f"Reduced candidates from {max_n_candidates} to {len(candidates)} "
+        f"(reduction by {1 - len(candidates)/max_n_candidates:2.2%}) using upper bound."
+    )
 
     # compute Jaccard similarity:
     # J = |A n B| / |A u B|
     # Thus, J = 1 / J' with J' = |A u B| / |A n B| = (|A| + |B| + |A n B|) / |A n B| = (|A| + |B|)/(|A n B|) - 1
-    n_relations = len(keys)
-    size = numpy.asarray([len(sets[r]) for r in keys])
     # we are not interested in self-similarity, thus we set it to zero
-    intersection_size = numpy.zeros(shape=(n_relations, n_relations), dtype=numpy.int64)
-    comparison = (
-        (i, j)
-        for i in range(n_relations)
-        for j in range(i, n_relations)
-    )
-    for i, j in tqdm(comparison, total=n_relations * (n_relations + 1) // 2):
+    duplicates = []
+    inverses = []
+    for i, j in tqdm(candidates, unit="pair", unit_scale=True):
         assert j >= i
         ri, rj = [keys[k] for k in (i, j)]
         pi, pj, pji = [sets[r] for r in (ri, rj)] + [inverse_sets[rj]]
-        intersection_size[i, j] = len(pi.intersection(pj))
-        intersection_size[j, i] = len(pi.intersection(pji))
-    size = size[:, None] + size[None, :].astype(numpy.float64)
-    mask = intersection_size == 0
-    intersection_size = numpy.clip(intersection_size, a_min=1, a_max=None).astype(numpy.float64)
-    sim = 1.0 / (size / intersection_size - 1)
-    sim[mask] = 0.0
-    return sim
+        # J(P_i, P_j) > tau <=> 1 / J' > tau <=> |P_i n P_j| > tau * (|P_i| + |P_j|)
+        comp = threshold * (size[i] + size[j])
+        if len(pi.intersection(pj)) > comp:
+            duplicates.append((ri, rj))
+        if len(pi.intersection(pji)) > comp:
+            inverses.append((ri, rj))
+    return duplicates, inverses
 
 
 class Sealant:
@@ -121,54 +138,24 @@ class Sealant:
             relations[r].add((h, t))
             inv_relations[r].add((t, h))
 
-        relations_sorted = sorted(relations.keys())
         if symmetric:
-            sim = _jaccard_similarity(sets=relations, inverse_sets=inv_relations)
+            self.candidate_duplicate_relations, self.candidate_inverse_relations = _jaccard_similarity_join(
+                sets=relations,
+                inverse_sets=inv_relations,
+                threshold=self.minimum_frequency,
+            )
         else:
             raise NotImplementedError
-
-        matches = zip(*(sim > self.minimum_frequency).nonzero())
-        self.candidate_duplicate_relations = {
-            (relations_sorted[i], relations_sorted[j]): sim[i, j]
-            for i, j in matches
-            if i < j
-        }
         logger.info(
             f'identified {len(self.candidate_duplicate_relations)} candidate duplicate relationships'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}.',
         )
-        self.duplicate_relations_to_delete = {r for r in self.candidate_duplicate_relations.keys()}
-
-        self.candidate_inverse_relations = {
-            (relations_sorted[i], relations_sorted[j]): sim[i, j]
-            for i, j in matches
-            if i > j
-        }
+        self.duplicate_relations_to_delete = {r for r, _ in self.candidate_duplicate_relations}
         logger.info(
             f'identified {len(self.candidate_inverse_relations)} candidate inverse pairs'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}',
         )
-
-        if symmetric:
-            self.inverses = dict(tuple(sorted(k)) for k in self.candidate_inverse_relations.keys())
-            self.inverse_relations_to_delete = set(self.inverses.values())
-        else:
-            self.mutual_inverse = set()
-            self.not_mutual_inverse = set()
-            for r1, r2 in self.candidate_inverse_relations:
-                if (r2, r1) in self.candidate_inverse_relations:
-                    self.mutual_inverse.add((r1, r2))
-                else:
-                    self.not_mutual_inverse.add((r1, r2))
-            logger.info(
-                f'{len(self.mutual_inverse)} are mutual inverse ({len(self.mutual_inverse) // 2}'
-                f' relations) and {len(self.not_mutual_inverse)} non-mutual inverse.',
-            )
-
-            # basically take all candidates
-            self.inverses = dict(self.candidate_inverse_relations.keys())
-            self.inverse_relations_to_delete = prioritize_mapping(self.candidate_inverse_relations)
-
+        self.inverse_relations_to_delete = {r for r, _ in self.candidate_inverse_relations}
         logger.info(f'identified {len(self.inverse_relations_to_delete)} from {self.triples_factory} to delete')
 
     @property
