@@ -281,10 +281,11 @@ class TriplesFactory:
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
 
-    # The following fields get generated automatically
-
     #: A dictionary mapping each relation to its inverse, if inverse triples were created
-    relation_to_inverse: Optional[Mapping[int, int]] = dataclasses.field(init=False)
+    #: Can be provided explicitly when not using any of the factory methods
+    relation_to_inverse: Optional[Mapping[int, int]] = None
+
+    # The following fields get generated automatically
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
     entity_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
@@ -494,29 +495,18 @@ class TriplesFactory:
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}({self.extra_repr()})'
 
-    def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
-        """Add inverse triples if necessary."""
-        if self.create_inverse_triples:
-            h, r, t = mapped_triples.t()
-            mapped_triples = torch.cat([
-                torch.cat([h, 2 * r, t], dim=-1),
-                torch.cat([t, 2 * r + 1, h], dim=-1),
-            ])
-        return mapped_triples
-
     def create_slcwa_instances(self) -> SLCWAInstances:
         """Create sLCWA instances for this factory's triples."""
         return SLCWAInstances(
-            mapped_triples=self._add_inverse_triples_if_necessary(self.mapped_triples),
+            mapped_triples=self.mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
-        mapped_triples = self._add_inverse_triples_if_necessary(self.mapped_triples)
         s_p_to_multi_tails = _create_multi_label_tails_instance(
-            mapped_triples=mapped_triples,
+            mapped_triples=self.mapped_triples,
             use_tqdm=use_tqdm,
         )
         sp, multi_o = zip(*s_p_to_multi_tails.items())
