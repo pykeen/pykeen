@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 
-"""Test Nations Literal Dataset.
+"""Base classes for literal datasets."""
 
-.. warning:: DO NOT USE THIS DATASET FOR BENCHMARKING. It is fake.
-"""
-
-import os
 from typing import TextIO, Union
 
-from pykeen.datasets.base import LazyDataset
-from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
-from pykeen.triples import TriplesNumericLiteralsFactory
+from .base import LazyDataset
+from ..triples import TriplesNumericLiteralsFactory
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-LITERALS_PATH = os.path.join(HERE, 'literals.txt')
+__all__ = [
+    'NumericPathDataset',
+]
 
 
 class NumericPathDataset(LazyDataset):
@@ -82,24 +78,3 @@ class NumericPathDataset(LazyDataset):
         n_triples = n_relations * self.training.num_entities
         rv.append(('Literals', '-', n_relations, n_triples))
         return rv
-
-
-class NationsLiteralDataset(NumericPathDataset):
-    """The Nations dataset with literals."""
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            training_path=NATIONS_TRAIN_PATH,
-            testing_path=NATIONS_TEST_PATH,
-            validation_path=NATIONS_VALIDATE_PATH,
-            literals_path=LITERALS_PATH,
-            **kwargs,
-        )
-
-
-def _main():
-    NationsLiteralDataset().summarize()
-
-
-if __name__ == '__main__':
-    _main()
