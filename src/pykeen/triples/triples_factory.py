@@ -6,13 +6,12 @@ import dataclasses
 import logging
 import os
 import re
-from collections import Counter, defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from collections import Counter
+from typing import Collection, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
-from tqdm.autonotebook import tqdm
 
 from .instances import LCWAInstances, SLCWAInstances
 from .utils import load_triples
@@ -37,59 +36,21 @@ def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> 
     return mapped_triples[:, [0, 2]].unique()
 
 
-def _create_multi_label_tails_instance(
+def _create_multi_label_tails_instances(
     mapped_triples: MappedTriples,
-    use_tqdm: Optional[bool] = None,
-) -> Dict[Tuple[int, int], List[int]]:
-    """Create for each (h,r) pair the multi tail label."""
-    logger.debug('Creating multi label tails instance')
-
-    '''
-    The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
-    https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
-    '''
-    mapped_triples = mapped_triples.cpu().detach().numpy()
-
-    s_p_to_multi_tails_new = _create_multi_label_instances(
-        mapped_triples,
-        element_1_index=0,
-        element_2_index=1,
-        label_index=2,
-        use_tqdm=use_tqdm,
-    )
-
-    logger.debug('Created multi label tails instance')
-
-    return s_p_to_multi_tails_new
-
-
-def _create_multi_label_instances(
-    mapped_triples: MappedTriples,
-    element_1_index: int,
-    element_2_index: int,
-    label_index: int,
-    use_tqdm: Optional[bool] = None,
-) -> Dict[Tuple[int, int], List[int]]:
-    """Create for each (element_1, element_2) pair the multi-label."""
-    instance_to_multi_label = defaultdict(set)
-
-    if use_tqdm is None:
-        use_tqdm = True
-
-    it = mapped_triples
-    if use_tqdm:
-        it = tqdm(mapped_triples, unit='triple', unit_scale=True, desc='Grouping triples')
-    for row in it:
-        instance_to_multi_label[row[element_1_index], row[element_2_index]].add(row[label_index])
-
-    # Create lists out of sets for proper numpy indexing when loading the labels
-    # TODO is there a need to have a canonical sort order here?
-    instance_to_multi_label_new = {
-        key: list(value)
-        for key, value in instance_to_multi_label.items()
-    }
-
-    return instance_to_multi_label_new
+) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+    # sort triples by (h, r) pairs
+    idx_r = mapped_triples.argsort(dim=1)
+    idx_h = mapped_triples[idx_r].argsort(dim=1)
+    mapped_triples = mapped_triples[idx_r[idx_h]]
+    # get unique (h, r) pairs
+    sp, counts = torch.unique_consecutive(mapped_triples[:, :2], dim=0, return_counts=True)
+    # sp[inv] = triples[:, :2]
+    start_stop = torch.cumsum(counts, dim=0)
+    start_stop = torch.cat([start_stop.new_zeros(1), start_stop], dim=0)
+    tails = mapped_triples[:, 2]
+    # sp[i], triples[:, 2][start_stop[i]:start_stop[i+1]]
+    return sp, start_stop, tails
 
 
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
@@ -411,20 +372,7 @@ class TriplesFactory:
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
-        s_p_to_multi_tails = _create_multi_label_tails_instance(
-            mapped_triples=self.mapped_triples,
-            use_tqdm=use_tqdm,
-        )
-        sp, multi_o = zip(*s_p_to_multi_tails.items())
-        mapped_triples: torch.LongTensor = torch.tensor(sp, dtype=torch.long)
-        labels = np.array([np.array(item) for item in multi_o], dtype=object)
-
-        return LCWAInstances(
-            mapped_triples=mapped_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            labels=labels,
-        )
+        return LCWAInstances.from_triples(mapped_triples=self.mapped_triples)
 
     def map_triples_to_id(self, triples: Union[str, LabeledTriples]) -> MappedTriples:
         """Load triples and map to ids based on the existing id mappings of the triples factory.

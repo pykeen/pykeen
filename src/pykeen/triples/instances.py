@@ -64,12 +64,50 @@ class SLCWAInstances(Instances):
 class LCWAInstances(Instances):
     """Triples and mappings to their indices for LCWA."""
 
-    labels: np.ndarray
+    """
+    One batch is given by 
+    mapped_triples[i], targets[idx[i]:idx[i+1]]
+    """
+    #: The targets, shape: (num_triples)
+    targets: torch.LongTensor
+    #: The idx, shape: (num_unique_pairs + 1,)
+    idx: torch.LongTensor
+
+    @classmethod
+    def from_triples(cls, mapped_triples: MappedTriples) -> "LCWAInstances":
+        """
+        Create LCWA instances from triples.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based triples.
+
+        :return:
+            The instances.
+        """
+        # sort triples by (h, r) pairs
+        idx_r = mapped_triples.argsort(dim=1)
+        idx_h = mapped_triples[idx_r].argsort(dim=1)
+        mapped_triples = mapped_triples[idx_r[idx_h]]
+        # get unique (h, r) pairs
+        sp, counts = torch.unique_consecutive(mapped_triples[:, :2], dim=0, return_counts=True)
+        # sp[inv] = triples[:, :2]
+        idx = torch.cumsum(counts, dim=0)
+        idx = torch.cat([idx.new_zeros(1), idx], dim=0)
+        tails = mapped_triples[:, 2]
+        # sp[i], triples[:, 2][idx[i]:idx[i+1]]
+        return LCWAInstances(
+            mapped_triples=sp,
+            entity_to_id=None,
+            relation_to_id=None,
+            targets=tails,
+            idx=idx,
+        )
 
     def __getitem__(self, item):  # noqa: D105
         # Create dense target
         batch_labels_full = torch.zeros(self.num_entities)
-        batch_labels_full[self.labels[item]] = 1
+        targets = self.targets[self.idx[item]:self.idx[item + 1]]
+        batch_labels_full[targets] = 1
         return self.mapped_triples[item], batch_labels_full
 
 
