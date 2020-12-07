@@ -69,7 +69,7 @@ class NumericPathDataset(LazyDataset):
     def __repr__(self) -> str:  # noqa: D105
         return (
             f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",'
-            f' validation_path="{self.validation_path}")'
+            f' validation_path="{self.validation_path}", literals_path="{self.literals_path}")'
         )
 
     def _summary_rows(self):
