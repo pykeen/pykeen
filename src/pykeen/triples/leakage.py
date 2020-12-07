@@ -43,7 +43,7 @@ def _jaccard_similarity_join(
     sets: Mapping[int, Set[Tuple[X, X]]],
     inverse_sets: Mapping[int, Set[Tuple[X, X]]],
     threshold: float = 0.0,
-) -> Tuple[Collection[Tuple[X, X]], Collection[Tuple[X, X]]]:
+) -> Tuple[Collection[Tuple[float, X, X]], Collection[Tuple[float, X, X]]]:
     r"""
     Compute Jaccard similarity between pairs of sets.
 
@@ -83,7 +83,7 @@ def _jaccard_similarity_join(
     max_n_candidates = n_relations * (n_relations - 1) // 2
     logger.info(
         f"Reduced candidates from {max_n_candidates} to {len(candidates)} "
-        f"(reduction by {1 - len(candidates)/max_n_candidates:2.2%}) using upper bound."
+        f"(reduction by {1 - len(candidates) / max_n_candidates:2.2%}) using upper bound."
     )
 
     # compute Jaccard similarity:
@@ -97,12 +97,51 @@ def _jaccard_similarity_join(
         ri, rj = [keys[k] for k in (i, j)]
         pi, pj, pji = [sets[r] for r in (ri, rj)] + [inverse_sets[rj]]
         # J(P_i, P_j) > tau <=> 1 / J' > tau <=> |P_i n P_j| > tau * (|P_i| + |P_j|)
-        comp = threshold * (size[i] + size[j])
-        if len(pi.intersection(pj)) > comp:
-            duplicates.append((ri, rj))
-        if len(pi.intersection(pji)) > comp:
-            inverses.append((ri, rj))
+        size_sum = (size[i] + size[j])
+        i_ij = len(pi.intersection(pj))
+        if i_ij > threshold * size_sum:
+            duplicates.append((1.0 / (size_sum / i_ij - 1), ri, rj))
+        i_ij_i = len(pi.intersection(pji))
+        if i_ij_i > threshold * size_sum:
+            inverses.append((1.0 / (size_sum / i_ij_i - 1), ri, rj))
+    # symmetric similarity: add both pairs
+    duplicates = duplicates + [(a, s, r) for a, r, s in duplicates]
+    inverses = inverses + [(a, s, r) for a, r, s in inverses]
     return duplicates, inverses
+
+
+def find(x: X, parent: Mapping[X, X]) -> X:
+    # check validity
+    if x not in parent:
+        raise ValueError(f'Unknown element: {x}.')
+    # path compression
+    while parent[x] != x:
+        x, parent[x] = parent[x], parent[parent[x]]
+    return x
+
+
+def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Mapping[X, Collection[X]]:
+    # collect connected components using union find with path compression
+    parent = dict()
+    for x, y in pairs:
+        parent.setdefault(x, x)
+        parent.setdefault(y, y)
+        # get representatives
+        x = find(x=x, parent=parent)
+        y = find(x=y, parent=parent)
+        # already merged
+        if x == y:
+            continue
+        # make x the smaller one
+        if y < x:
+            x, y = y, x
+        # merge
+        parent[y] = x
+    # extract partitions
+    result = defaultdict(list)
+    for k, v in parent.items():
+        result[v].append(k)
+    return result
 
 
 class Sealant:
@@ -150,22 +189,28 @@ class Sealant:
             f'identified {len(self.candidate_duplicate_relations)} candidate duplicate relationships'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}.',
         )
-        self.duplicate_relations_to_delete = {r for r, _ in self.candidate_duplicate_relations}
         logger.info(
             f'identified {len(self.candidate_inverse_relations)} candidate inverse pairs'
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}',
         )
-        self.inverse_relations_to_delete = {r for r, _ in self.candidate_inverse_relations}
-        logger.info(f'identified {len(self.inverse_relations_to_delete)} from {self.triples_factory} to delete')
+        self.deletion_candidate_pairs = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
+        components = list(_get_connected_components(pairs=((a, b) for (s, a, b) in self.deletion_candidate_pairs)).values())
+        self.relations_to_keep = self.select_to_keep(
+            components,
+            size={r: len(pairs) for r, pairs in relations.items()},
+        )
+        logger.info(f'identified {len(self.deletion_candidate_pairs)} from {self.triples_factory} to delete')
 
-    @property
-    def relations_to_delete(self) -> Set[int]:
+    def select_to_keep(self, components: Collection[Collection[int]], size: Mapping[int, int]) -> Collection[int]:
         """Relations to delete combine from both duplicates and inverses."""
-        return self.duplicate_relations_to_delete.union(self.inverse_relations_to_delete)
+        result = set()
+        for component in components:
+            result.add(max(component, key=size.__getitem__))
+        return result
 
     def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""
-        return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
+        return triples_factory.new_with_restriction(relations=self.relations_to_keep)
 
 
 def prioritize_mapping(d: Mapping[Tuple[X, X], float]) -> Set[X]:
