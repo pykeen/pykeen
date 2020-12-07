@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
+from ..base import MultimodalModel
 from ..unimodal.complex import ComplEx
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
@@ -18,7 +19,7 @@ from ...typing import DeviceHint
 from ...utils import split_complex
 
 
-class ComplExLiteral(ComplEx):
+class ComplExLiteral(ComplEx, MultimodalModel):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
 
     #: The default strategy for optimizing the model's hyper-parameters

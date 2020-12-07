@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
+from ..base import MultimodalModel
 from ..unimodal.distmult import DistMult
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
@@ -15,7 +16,7 @@ from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 
 
-class DistMultLiteral(DistMult):
+class DistMultLiteral(DistMult, MultimodalModel):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     #: The default strategy for optimizing the model's hyper-parameters
