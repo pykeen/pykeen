@@ -190,9 +190,9 @@ class TestTriplesFactory(unittest.TestCase):
 
                     # verify that triples have been filtered
                     if entity_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 0]).union(
+                        present_entities = set(restricted_triples_factory.triples[:, 0]).union(
                             restricted_triples_factory.triples[:, 2])
-                        assert set(entity_restriction).issuperset(present_relations)
+                        assert set(entity_restriction).issuperset(present_entities)
 
                     if relation_restriction is not None:
                         present_relations = set(restricted_triples_factory.triples[:, 1])
