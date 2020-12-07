@@ -11,7 +11,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
     get_absolute_split_sizes, normalize_ratios,
 )
 
@@ -338,6 +338,11 @@ class TestLiterals(unittest.TestCase):
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
         self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
         self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
+        assert (_map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=triples_factory.entity_to_id,
+            relation_to_id=triples_factory.relation_to_id,
+        ) == triples_factory.mapped_triples).all()
 
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
