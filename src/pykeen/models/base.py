@@ -1180,5 +1180,5 @@ def _can_slice(fn) -> bool:
     return 'slice_size' in inspect.getfullargspec(fn).args
 
 
-class MultimodalModel(EntityRelationEmbeddingModel):
+class MultimodalModel(Model):
     """A multimodal KGE model."""
