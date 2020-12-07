@@ -364,15 +364,11 @@ class TriplesFactory:
 
     def create_slcwa_instances(self) -> SLCWAInstances:
         """Create sLCWA instances for this factory's triples."""
-        return SLCWAInstances(
-            mapped_triples=self.mapped_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-        )
+        return SLCWAInstances(mapped_triples=self.mapped_triples)
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
         """Create LCWA instances for this factory's triples."""
-        return LCWAInstances.from_triples(mapped_triples=self.mapped_triples)
+        return LCWAInstances.from_triples(mapped_triples=self.mapped_triples, num_entities=self.num_entities)
 
     def map_triples_to_id(self, triples: Union[str, LabeledTriples]) -> MappedTriples:
         """Load triples and map to ids based on the existing id mappings of the triples factory.

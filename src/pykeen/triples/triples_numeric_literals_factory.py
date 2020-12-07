@@ -101,8 +101,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         slcwa_instances = super().create_slcwa_instances()
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
-            entity_to_id=slcwa_instances.entity_to_id,
-            relation_to_id=slcwa_instances.relation_to_id,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
         )
@@ -111,11 +109,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Create multi-modal LCWA instances for this factory's triples."""
         lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm)
         return MultimodalLCWAInstances(
-            mapped_triples=lcwa_instances.mapped_triples,
-            entity_to_id=lcwa_instances.entity_to_id,
-            relation_to_id=lcwa_instances.relation_to_id,
+            pairs=lcwa_instances.pairs,
+            compressed=lcwa_instances.compressed,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
-            targets=lcwa_instances.targets,
-            idx=lcwa_instances.idx,
         )
