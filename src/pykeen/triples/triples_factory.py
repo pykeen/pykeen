@@ -956,8 +956,8 @@ def _prepare_cleanup(
     :return: shape: (m,)
         The move mask.
     """
-    columns = [[0, 2], 1]
-    to_move_mask = False
+    columns = [[0, 2], [1]]
+    to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
         max_ids = [
             max(training[:, col].max().item(), testing[:, col].max().item()) + 1
