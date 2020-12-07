@@ -62,32 +62,20 @@ class TestTriplesFactory(unittest.TestCase):
         self.factory = Nations().training
 
     def test_correct_inverse_creation(self):
-        """Test if the triples and the corresponding inverses are created and sorted correctly."""
+        """Test if the triples and the corresponding inverses are created."""
         t = [
             ['e1', 'a.', 'e5'],
             ['e1', 'a', 'e2'],
         ]
         t = np.array(t, dtype=np.str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
-
-    def test_automatic_inverse_detection(self):
-        """Test if the TriplesFactory detects that the triples contain inverses and creates correct ids."""
-        t = [
-            ['e3', f'a.{INVERSE_SUFFIX}', 'e10'],
-            ['e1', 'a', 'e2'],
-            ['e1', 'a.', 'e5'],
-            ['e4', f'a{INVERSE_SUFFIX}', 'e5'],
-        ]
-        t = np.array(t, dtype=np.str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
-        reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
-        self.assertTrue(factory.create_inverse_triples)
+        instances = factory.create_slcwa_instances()
+        assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
-        """Test if the TriplesFactory detects that the triples contain incomplete inverses and creates correct ids."""
+        """
+        Test if the TriplesFactory detects that the triples contain inverses, warns about them and filters them out.
+        """
         # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
         # inverse relations, although the triples contained in it are not the same we would have when removing the
         # first triple, and passing create_inverse_triples=True.
@@ -106,32 +94,6 @@ class TestTriplesFactory(unittest.TestCase):
                 assert factory.num_triples == 2
                 # check for correct inverse triples flag
                 assert factory.create_inverse_triples == create_inverse_triples
-
-    def test_right_sorting(self):
-        """Test if the triples and the corresponding inverses are sorted correctly."""
-        t = [
-            ['e1', 'a', 'e1'],
-            ['e1', 'a.', 'e1'],
-            ['e1', f'a.{INVERSE_SUFFIX}', 'e1'],
-            ['e1', 'a.bc', 'e1'],
-            ['e1', f'a.bc{INVERSE_SUFFIX}', 'e1'],
-            ['e1', f'a{INVERSE_SUFFIX}', 'e1'],
-            ['e1', 'abc', 'e1'],
-            ['e1', f'abc{INVERSE_SUFFIX}', 'e1'],
-        ]
-        t = np.array(t, dtype=np.str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
-        reference_relation_to_id = {
-            'a': 0,
-            f'a{INVERSE_SUFFIX}': 1,
-            'a.': 2,
-            f'a.{INVERSE_SUFFIX}': 3,
-            'a.bc': 4,
-            f'a.bc{INVERSE_SUFFIX}': 5,
-            'abc': 6,
-            f'abc{INVERSE_SUFFIX}': 7,
-        }
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
 
     def test_id_to_label(self):
         """Test ID-to-label conversion."""
