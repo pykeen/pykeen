@@ -116,5 +116,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             relation_to_id=lcwa_instances.relation_to_id,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
-            labels=lcwa_instances.labels,
+            targets=lcwa_instances.targets,
+            idx=lcwa_instances.idx,
         )
