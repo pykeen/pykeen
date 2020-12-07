@@ -934,7 +934,7 @@ def _tf_cleanup_randomized(
         training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
         # remove from testing
         testing = torch.cat([testing[:idx], testing[idx + 1:]], dim=0)
-        # Recalculate the training entities, testing entities, to_move, and move_id_mask
+        # Recalculate the move_id_mask
         move_id_mask = _prepare_cleanup(training, testing)
 
     return training, testing
@@ -956,6 +956,12 @@ def _prepare_cleanup(
     :return: shape: (m,)
         The move mask.
     """
+    # base cases
+    if len(testing) == 0:
+        return torch.empty(0, dtype=torch.bool)
+    if len(training) == 0:
+        return torch.ones(testing.shape[0], dtype=torch.bool)
+
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
