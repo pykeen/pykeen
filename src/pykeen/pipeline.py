@@ -1046,21 +1046,24 @@ def pipeline(  # noqa: C901
             # If the evaluation still fail using the CPU, the error is raised
             if model_instance.device.type != 'cuda' or not evaluate_on_cpu_if_needed:
                 raise e
+
             # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
             # restarted with PyKEEN's automatic memory optimization
             elif 'batch_size' in evaluation_kwargs:
                 logging.warning(
-                    "You tried to evaluate the current model on GPU with batch_size="
-                    f"{evaluation_kwargs.get('batch_size')}, which was too big for the GPU.",
+                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
+                    model_instance.device, evaluation_kwargs['batch_size'], model_instance.device,
                 )
                 logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
                 del evaluation_kwargs['batch_size']
+
             # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
             # is restarted using the cpu
             else:  # 'batch_size' not in evaluation_kwargs
                 logging.warning(
-                    "Tried to evaluate the current model on GPU, but the model and the dataset are too big for the "
-                    "GPU memory currently available.",
+                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
+                    "%s memory currently available.",
+                    model_instance.device, model_instance.device,
                 )
                 logging.warning(
                     "Will revert to using the CPU for evaluation, which will increase the evaluation time "
@@ -1068,7 +1071,7 @@ def pipeline(  # noqa: C901
                 )
                 model_instance.to_cpu_()
         else:
-            break
+            break  # evaluation was successful, don't continue the ``while True`` loop
 
     evaluate_end_time = time.time() - evaluate_start_time
     result_tracker.log_metrics(
