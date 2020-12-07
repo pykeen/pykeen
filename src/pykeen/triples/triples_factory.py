@@ -252,6 +252,17 @@ def get_absolute_split_sizes(
     return tuple(sizes)
 
 
+def _ensure_ids(
+    labels_or_ids: Union[Collection[int], Collection[str]],
+    label_to_id: Mapping[str, int],
+) -> Collection[int]:
+    """Convert labels to IDs."""
+    return [
+        label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i
+        for l_or_i in labels_or_ids
+    ]
+
+
 @dataclasses.dataclass
 class TriplesFactory:
     """Create instances given the path to triples."""
@@ -664,12 +675,9 @@ class TriplesFactory:
         top_counts, top_ids = counts.topk(k=n, largest=True)
         return set(uniq[top_ids].tolist())
 
-    def entities_to_ids(self, entities: Collection[Union[int, str]]) -> Collection[int]:
+    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
         """Normalize entities to IDs."""
-        return [
-            self.entity_to_id[e] if isinstance(e, str) else e
-            for e in entities
-        ]
+        return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_to_id)
 
     def get_mask_for_entities(self, entities: Collection[Union[int, str]], invert: bool = False):
         """Get a boolean mask for triples with the given entities."""
@@ -682,12 +690,9 @@ class TriplesFactory:
             max_id=self.num_entities,
         )
 
-    def relations_to_ids(self, relations: Collection[Union[int, str]]) -> Collection[int]:
+    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
         """Normalize relations to IDs."""
-        return [
-            self.relation_to_id[r] if isinstance(r, str) else r
-            for r in relations
-        ]
+        return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_to_id)
 
     def get_mask_for_relations(self, relations: Collection[Union[int, str]], invert: bool = False) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given relations."""
