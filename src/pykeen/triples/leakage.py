@@ -20,9 +20,9 @@ import torch
 from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
+from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.typing import MappedTriples
 from pykeen.utils import compact_mapping
-from .triples_factory import TriplesFactory
 
 __all__ = [
     'Sealant',
@@ -218,7 +218,7 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     all_triples = torch.cat([
         factory.mapped_triples
         for factory in triples_factories
-    ], dim=-1)
+    ], dim=0)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]
