@@ -74,7 +74,8 @@ def _jaccard_similarity_join(
 
     # The individual sizes (note that len(inv_set) = len(set))
     size = numpy.asarray([len(sets[r]) for r in r])
-    candidates = _get_candidates(size=size, threshold=threshold)
+    # TODO: Only for debug
+    candidates = _get_all_candidates(size=size, threshold=threshold)
 
     # compute Jaccard similarity:
     # J = |A n B| / |A u B|
@@ -114,6 +115,15 @@ def _get_candidates(
     n_cand = len(candidates)
     logger.info(f"keeping {format_relative_comparison(n_cand, n_max_cand)} candidates after using upper bound.")
     return candidates
+
+
+def _get_all_candidates(
+    size: numpy.ndarray,
+    threshold: float,
+) -> Collection[Tuple[int, int]]:
+    # TODO: only for debug
+    n_relations = size.shape[0]
+    return [(i, j) for i in range(n_relations) for j in range(i, n_relations)]
 
 
 def find(x: X, parent: Mapping[X, X]) -> X:
