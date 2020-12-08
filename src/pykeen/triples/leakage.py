@@ -118,6 +118,10 @@ def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatri
     """"
     Compute relation representations as sparse matrices of entity pairs.
 
+    .. note ::
+        Both sets, head-tail-set, tail-head-set, have to be created at once since they need to share the same entity
+        pair to Id mapping.
+
     :param triples_factory:
         The triples factory.
 
