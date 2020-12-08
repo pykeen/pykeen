@@ -495,3 +495,11 @@ def torch_is_in_1d(
     if invert:
         mask = ~mask
     return mask[query_tensor.view(-1)].view(*query_tensor.shape)
+
+
+def format_relative_comparison(
+    part: int,
+    total: int,
+) -> str:
+    """Format a relative comparison."""
+    return f"{part}/{total} ({part / total:2.2%})"

@@ -16,7 +16,7 @@ import torch
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, ensure_torch_random_state, invert_mapping, slice_triples, torch_is_in_1d
+from ..utils import compact_mapping, ensure_torch_random_state, format_relative_comparison, invert_mapping, slice_triples, torch_is_in_1d
 
 __all__ = [
     'TriplesFactory',
@@ -761,19 +761,13 @@ class TriplesFactory:
         if entities is not None:
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
-            logger.info(
-                f"keeping {remaining_entities}/{self.num_entities} "
-                f"({remaining_entities / self.num_entities:2.2%}) entities."
-            )
+            logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
 
         # Filter for relations
         if relations is not None:
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
-            logger.info(
-                f"keeping {remaining_relations}/{self.num_relations} "
-                f"({remaining_relations / self.num_relations:2.2%}) relations."
-            )
+            logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
         # No filtering happened
@@ -781,7 +775,7 @@ class TriplesFactory:
             return self
 
         num_triples = keep_mask.sum()
-        logger.info(f"keeping {num_triples}/{self.num_triples} ({num_triples / self.num_triples:2.2%}) triples.")
+        logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
         return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 

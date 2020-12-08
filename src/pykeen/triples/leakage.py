@@ -23,7 +23,7 @@ from tqdm.autonotebook import tqdm
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.typing import MappedTriples
-from pykeen.utils import compact_mapping
+from pykeen.utils import compact_mapping, format_relative_comparison
 
 __all__ = [
     'Sealant',
@@ -80,8 +80,7 @@ def _jaccard_similarity_join(
     candidates = list(zip(*(ub > threshold).nonzero()))
     max_n_candidates = n_relations * (n_relations - 1) // 2
     logger.info(
-        f"Reduced candidates from {max_n_candidates} to {len(candidates)} "
-        f"(reduction by {1 - len(candidates) / max_n_candidates:2.2%}) using upper bound."
+        f"keeping {format_relative_comparison(len(candidates), max_n_candidates)} candidates after using upper bound."
     )
 
     # compute Jaccard similarity:
