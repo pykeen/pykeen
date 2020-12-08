@@ -295,6 +295,7 @@ def _generate_compact_vectorized_lookup(
         for label, i in label_to_id.items()
         if i in existing_ids
     })
+    # create translation tensor
     translation = torch.full(size=(max(existing_ids) + 1,), fill_value=-1)
     for old, new in old_to_new_id.items():
         translation[old] = new
