@@ -92,7 +92,7 @@ def _jaccard_similarity_join(
     # we are not interested in self-similarity, thus we set it to zero
     duplicates = []
     inverses = []
-    for i, j in tqdm(candidates, unit="pair", unit_scale=True):
+    for i, j in tqdm(candidates, unit="pair", unit_scale=True, disable=True):
         assert j >= i
         ri, rj = [keys[k] for k in (i, j)]
         pi, pj, pji = [sets[r] for r in (ri, rj)] + [inverse_sets[rj]]
