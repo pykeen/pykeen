@@ -12,7 +12,7 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory
-from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, _relations_to_sparse_matrices, _translate_triples, get_candidate_inverse_relations
+from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, _jaccard_similarity_scipy, _relations_to_sparse_matrices, _translate_triples, get_candidate_inverse_relations
 
 
 class TestLeakage(unittest.TestCase):
@@ -212,3 +212,20 @@ def test_relations_to_sparse_matrices():
         assert m.shape[0] == factory.num_relations
         # check 1-hot
         assert m.max() == 1
+
+
+def test_jaccard_similarity_scipy():
+    """Test _jaccard_similarity_scipy."""
+    factory = Nations().training
+    rel, inv = _relations_to_sparse_matrices(triples_factory=factory)
+    sim = _jaccard_similarity_scipy(a=rel, b=rel)
+    # check type
+    assert isinstance(sim, numpy.ndarray)
+    assert sim.dtype == numpy.float64
+    # check shape
+    assert sim.shape == (factory.num_relations, factory.num_relations)
+    # check value range
+    assert (sim >= 0).all()
+    assert (sim <= 1).all()
+    # check self-similarity = 1
+    numpy.testing.assert_allclose(numpy.diag(sim), 1.0)

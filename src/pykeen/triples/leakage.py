@@ -108,7 +108,7 @@ def _jaccard_similarity_scipy(
         The pairwise Jaccard similarity.
     """
     sum_size = numpy.asarray(a.sum(axis=1) + b.sum(axis=1).T)
-    intersection_size = numpy.asarray(a @ b.T)
+    intersection_size = numpy.asarray((a @ b.T).todense())
     # safe division for empty sets
     divisor = numpy.clip(sum_size - intersection_size, a_min=1, a_max=None)
     return intersection_size / divisor
