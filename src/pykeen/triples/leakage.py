@@ -320,13 +320,18 @@ def _translate_triples(
     :return: shape: (num_triples, 3)
         The translated triples.
     """
-    return torch.stack([
-        trans[column]
-        for column, trans in zip(
-            triples.t(),
-            (entity_translation, relation_translation, entity_translation)
-        )
-    ], dim=-1)
+    triples = torch.stack(
+        [
+            trans[column]
+            for column, trans in zip(
+                triples.t(),
+                (entity_translation, relation_translation, entity_translation),
+            )
+        ],
+        dim=-1,
+    )
+    assert (triples >= 0).all()
+    return triples
 
 
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
