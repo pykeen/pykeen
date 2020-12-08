@@ -17,6 +17,7 @@ from multiprocessing import Pool, cpu_count
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy
+import scipy.sparse
 import torch
 from tqdm.autonotebook import tqdm
 
@@ -75,6 +76,8 @@ def _jaccard_similarity_join(
     # The individual sizes (note that len(inv_set) = len(set))
     size = numpy.asarray([len(sets[r]) for r in r])
     candidates = _get_candidates(size=size, threshold=threshold)
+    candidates = [(i, j) for i, j in candidates if i != j]
+    candidates = [(i, j) for i in range(len(r)) for j in range(i + 1, len(r))]
 
     duplicates = []
     inverses = []
@@ -96,13 +99,14 @@ def _jaccard_similarity_join(
             duplicates.append((1.0 / (size_sum / i_ij - 1), r[i], r[j]))
 
         # comparison P_i, P_j'
+        jac = len(sets[r[i]].intersection(inverse_sets[r[j]])) / len(sets[r[i]].union(inverse_sets[r[j]]))
         i_ij_i = len(sets[r[i]].intersection(inverse_sets[r[j]]))
         if i_ij_i > tau:
             inverses.append((1.0 / (size_sum / i_ij_i - 1), r[i], r[j]))
 
     # symmetric similarity: add both pairs
-    duplicates.extend((a, s, r) for a, r, s in duplicates)
-    inverses.extend((a, s, r) for a, r, s in inverses)
+    duplicates = duplicates + [(a, s, r) for a, r, s in duplicates]
+    inverses = inverses + [(a, s, r) for a, r, s in inverses]
     return duplicates, inverses
 
 
@@ -118,7 +122,6 @@ def _get_candidates(
     n_cand = len(candidates)
     logger.info(f"keeping {format_relative_comparison(n_cand, n_max_cand)} candidates after using upper bound.")
     return candidates
-
 
 
 def find(x: X, parent: Mapping[X, X]) -> X:
@@ -167,6 +170,62 @@ def _select_by_most_pairs(
     return result
 
 
+def _jaccard_similarity(
+    a: scipy.sparse.spmatrix,
+    b: scipy.sparse.spmatrix,
+) -> numpy.ndarray:
+    """
+    Compute Jaccard similarity between sets represented as sparse matrices.
+
+    :param a: shape: (m, max_num_elements)
+        The first sets.
+    :param b:shape: (n, max_num_elements)
+        The second sets.
+
+    :return: shape: (m, n)
+        The pairwise Jaccard similarity.
+    """
+    sum_size = numpy.asarray(a.sum(axis=1) + b.sum(axis=1).T)
+    intersection_size = numpy.asarray(a @ b.T)
+    # safe division
+    divisor = numpy.clip(sum_size - intersection_size, a_min=1, a_max=None)
+    return intersection_size / divisor
+
+
+def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+    """"
+    Compute relation representations as sparse matrices of entity pairs.
+
+    :param triples_factory:
+        The triples factory.
+
+    :return: shape: (num_relations, num_entity_pairs)
+        head-tail-set, tail-head-set
+    """
+    mapped_triples = torch.cat(
+        [
+            triples_factory.mapped_triples,
+            triples_factory.mapped_triples.flip(-1),
+        ],
+        dim=0,
+    )
+    pairs, pair_id = mapped_triples.unique(dim=0, return_inverse=True)
+    n_pairs = pairs.shape[0]
+    forward, backward = pair_id.split(triples_factory.num_triples)
+    relations = triples_factory.mapped_triples[:, 1].numpy()
+    rel = scipy.sparse.coo_matrix(
+        (numpy.ones(shape=(forward.shape[0],), dtype=numpy.int32), (relations, forward.numpy())),
+        shape=(triples_factory.num_relations, n_pairs),
+        dtype=numpy.int32,
+    )
+    inv = scipy.sparse.coo_matrix(
+        (numpy.ones(shape=(backward.shape[0],), dtype=numpy.int32), (relations, backward.numpy())),
+        shape=(triples_factory.num_relations, n_pairs),
+        dtype=numpy.int32,
+    )
+    return rel, inv
+
+
 class Sealant:
     """Stores inverse frequencies and inverse mappings in a given triples factory."""
 
@@ -193,19 +252,21 @@ class Sealant:
             minimum_frequency = 0.97
         self.minimum_frequency = minimum_frequency
 
-        # convert relations to sparse adjacency matrices
-        relations = defaultdict(set)
-        inv_relations = defaultdict(set)
-        for (h, r, t) in triples_factory.mapped_triples.tolist():
-            relations[r].add((h, t))
-            inv_relations[r].add((t, h))
-
+        # compute similarities
         if symmetric:
-            self.candidate_duplicate_relations, self.candidate_inverse_relations = _jaccard_similarity_join(
-                sets=relations,
-                inverse_sets=inv_relations,
-                threshold=self.minimum_frequency,
-            )
+            rel, inv = _relations_to_sparse_matrices(triples_factory=triples_factory)
+
+            # duplicates
+            rel_to_rel_sim = _jaccard_similarity(rel, rel)
+            # we are not interested in self-similarity
+            rel_to_rel_sim[numpy.arange(triples_factory.num_relations), numpy.arange(triples_factory.num_relations)] = 0
+            self.candidate_duplicate_relations = set(zip(*(rel_to_rel_sim > self.minimum_frequency).nonzero()))
+
+            # inverses
+            rel_to_inv_sim = _jaccard_similarity(rel, inv)
+            # we are not interested in self-similarity, since we cannot remove one of the relations
+            rel_to_inv_sim[numpy.arange(triples_factory.num_relations), numpy.arange(triples_factory.num_relations)] = 0
+            self.candidate_inverse_relations = set(zip(*(rel_to_inv_sim > self.minimum_frequency).nonzero()))
         else:
             raise NotImplementedError
         logger.info(
@@ -217,9 +278,10 @@ class Sealant:
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}',
         )
         self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
+        sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True)))
         self.relations_to_delete = _select_by_most_pairs(
-            components=_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates)),
-            size={r: len(pairs) for r, pairs in relations.items()},
+            components=_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates if (a != b))),
+            size=sizes,
         )
         logger.info(f'identified {len(self.candidates)} from {self.triples_factory} to delete')
 
