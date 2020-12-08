@@ -24,7 +24,7 @@ from tqdm.autonotebook import tqdm
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.typing import MappedTriples
-from pykeen.utils import compact_mapping, format_relative_comparison
+from pykeen.utils import compact_mapping
 
 __all__ = [
     'Sealant',
@@ -37,91 +37,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 X = TypeVar('X')
 Y = TypeVar('Y')
-
-
-def _jaccard_similarity_join(
-    sets: Mapping[int, Set[Tuple[X, X]]],
-    inverse_sets: Mapping[int, Set[Tuple[X, X]]],
-    threshold: float = 0.0,
-) -> Tuple[Collection[Tuple[float, X, X]], Collection[Tuple[float, X, X]]]:
-    r"""
-    Compute Jaccard similarity between pairs of sets.
-
-    .. math ::
-        J(A, B) = \frac{|A \cap B|}{|A \cup B|}
-
-    The method returns the true value for all pairs with similarity larger than the threshold. For pairs which are
-    guaranteed to be less similar, it may skip to compute the exact value to accelerate. For this, it makes use of
-    the following inequality:
-
-    .. math ::
-        J(A, B) = \frac{|A \cap B|}{|A \cup B|}
-                \leq \frac{\min (|A|, |B|)}{\max (|A|, |B|)}
-
-    Hence, if :math:`\frac{\min (|A|, |B|)}{\max (|A|, |B|)} < \tau`, we know for sure that :math:`J(A, B) < \tau`.
-
-    :param sets:
-        The sets of tuples.
-    :param inverse_sets:
-        The sets of inverted tuples.
-
-    :return:
-        A similarity matrix. The lower triangular matrix contains the Jaccard similarity between the sets.
-        The upper diagonal the similarity to the sets with inverted tuples. The diagonal contains teh similarity
-        between the set and the same set with inverted tuples.
-    """
-    r = sorted(sets.keys())
-    assert set(sets.keys()) == set(inverse_sets.keys())
-
-    # The individual sizes (note that len(inv_set) = len(set))
-    size = numpy.asarray([len(sets[r]) for r in r])
-    candidates = _get_candidates(size=size, threshold=threshold)
-    candidates = [(i, j) for i, j in candidates if i != j]
-    candidates = [(i, j) for i in range(len(r)) for j in range(i + 1, len(r))]
-
-    duplicates = []
-    inverses = []
-    for i, j in tqdm(candidates, unit="pair", unit_scale=True, disable=True):
-        assert j >= i
-        # We need to check whether J(A, B) > T
-        #     J(A, B) = |A n B| / |A u B| > T
-        # <=> |A n B| > T * |A u B|
-        # <=> |A n B| > T * (|A| + |B| - |A n B|)
-        # <=> |A n B| > T * (|A| + |B|) - T|A n B|
-        # <=> (T + 1)|A n B| > T * (|A| + |B|)
-        # <=> |A n B| > T/(T+1) * (|A| + |B|)
-        size_sum = int(size[i] + size[j])
-        tau = size_sum * threshold / (1 + threshold)
-
-        # comparison P_i, P_j
-        i_ij = len(sets[r[i]].intersection(sets[r[j]]))
-        if i != j and i_ij > tau:
-            duplicates.append((1.0 / (size_sum / i_ij - 1), r[i], r[j]))
-
-        # comparison P_i, P_j'
-        jac = len(sets[r[i]].intersection(inverse_sets[r[j]])) / len(sets[r[i]].union(inverse_sets[r[j]]))
-        i_ij_i = len(sets[r[i]].intersection(inverse_sets[r[j]]))
-        if i_ij_i > tau:
-            inverses.append((1.0 / (size_sum / i_ij_i - 1), r[i], r[j]))
-
-    # symmetric similarity: add both pairs
-    duplicates = duplicates + [(a, s, r) for a, r, s in duplicates]
-    inverses = inverses + [(a, s, r) for a, r, s in inverses]
-    return duplicates, inverses
-
-
-def _get_candidates(
-    size: numpy.ndarray,
-    threshold: float,
-) -> Collection[Tuple[int, int]]:
-    ub = numpy.minimum(size[None, :], size[:, None]) / numpy.maximum(size[None, :], size[:, None])
-    ub = numpy.triu(ub)
-    candidates = list(zip(*(ub > threshold).nonzero()))
-    n_relations = size.shape[0]
-    n_max_cand = n_relations * (n_relations - 1) // 2
-    n_cand = len(candidates)
-    logger.info(f"keeping {format_relative_comparison(n_cand, n_max_cand)} candidates after using upper bound.")
-    return candidates
 
 
 def find(x: X, parent: Mapping[X, X]) -> X:
@@ -288,19 +203,6 @@ class Sealant:
     def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""
         return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
-
-
-def prioritize_mapping(d: Mapping[Tuple[X, X], float]) -> Set[X]:
-    """Prioritize elements from a two way mapping."""
-    return {
-        b
-        for a, b in d
-        if (
-            (b, a) not in d  # inverse didn't make the threshold
-            or (d[a, b] == d[b, a] and a > b)  # inverse is equivalent, order by name
-            or (d[a, b] < d[b, a])  # inverse isn't equivalent, use bigger similarity
-        )
-    }
 
 
 def unleak(
@@ -503,49 +405,6 @@ def get_candidate_inverse_relations(
         it,
         skip_zeros=skip_zeros,
         skip_self=skip_self,
-        minimum_frequency=minimum_frequency,
-        symmetric=symmetric,
-        use_multiprocessing=use_multiprocessing,
-    )
-
-
-def get_candidate_duplicate_relations(
-    triples_factory: TriplesFactory,
-    *,
-    minimum_frequency: Optional[float] = None,
-    skip_zeros: bool = True,
-    symmetric: bool = True,
-    use_tqdm: bool = True,
-    use_multiprocessing: bool = False,
-) -> Mapping[Tuple[int, int], float]:
-    """Count which relationships might be duplicates.
-
-    :param triples_factory:
-        The triples factory.
-    :param symmetric: Should set similarity be calculated as the Jaccard index (symmetric) or as the
-     set inclusion percentage (asymmetric)?
-    :param minimum_frequency: If set, pairs of relations and candidate inverse relations
-     with a similarity lower than this value will not be reported.
-    :param skip_zeros: Should similarities between forward and candidate inverses
-     of `0.0` be discarded?
-    :param use_tqdm: Should :mod:`tqdm` be used to track progress of the similarity calculations?
-    :param use_multiprocessing: Should :mod:`multiprocessing` be used to offload the similarity calculations across
-     multiple cores?
-    :return: A counter whose keys are pairs of relations and values are similarity scores
-    """
-    # TODO: Deprecated
-    # A dictionary of all of the head/tail pairs for a given relation
-    relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in triples_factory.mapped_triples.tolist():
-        relations[r].add((h, t))
-
-    it = itt.combinations(relations.items(), 2)
-    if use_tqdm:
-        it = tqdm(it, total=len(relations) * (len(relations) - 1) / 2, desc='getting candidate duplicate relations')
-    return _check_similar_sets(
-        it,
-        skip_zeros=skip_zeros,
-        skip_self=False,
         minimum_frequency=minimum_frequency,
         symmetric=symmetric,
         use_multiprocessing=use_multiprocessing,
