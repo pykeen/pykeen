@@ -18,9 +18,9 @@ from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tup
 
 import numpy
 import torch
-from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
+from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.typing import MappedTriples
 from pykeen.utils import compact_mapping
@@ -31,7 +31,6 @@ __all__ = [
     'get_candidate_duplicate_relations',
     'unleak',
     'reindex',
-    'summarize',
 ]
 
 logger = logging.getLogger(__name__)
@@ -373,19 +372,6 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     ]
 
 
-def summarize(training, testing, validation) -> None:
-    """Summarize the dataset."""
-    headers = ['Set', 'Entities', 'Relations', 'Triples']
-    print(tabulate(
-        [
-            ['Train', training.num_entities, training.num_relations, training.num_triples],
-            ['Test', testing.num_entities, testing.num_relations, testing.num_triples],
-            ['Valid', validation.num_entities, validation.num_relations, validation.num_triples],
-        ],
-        headers=headers,
-    ))
-
-
 def get_candidate_inverse_relations(
     triples_factory: TriplesFactory,
     *,
@@ -581,18 +567,17 @@ def _main():
     from pykeen.datasets import get_dataset
     logging.basicConfig(format='pykeen: %(message)s', level=logging.INFO)
 
-    print('Summary FB15K')
     fb15k = get_dataset(dataset='fb15k')
-    summarize(fb15k.training, fb15k.testing, fb15k.validation)
+    fb15k.summarize()
 
-    print('\nSummary FB15K (cleaned)')
     n = 401  # magic 401 from the paper
     train, test, validate = unleak(fb15k.training, fb15k.testing, fb15k.validation, n=n)
-    summarize(train, test, validate)
+    print()
+    EagerDataset(train, test, validate).summarize(title='FB15k (cleaned)')
 
-    print('\nSummary FB15K-237')
     fb15k237 = get_dataset(dataset='fb15k237')
-    summarize(fb15k237.training, fb15k237.testing, fb15k237.validation)
+    print('\nSummary FB15K-237')
+    fb15k237.summarize()
 
 
 if __name__ == '__main__':
