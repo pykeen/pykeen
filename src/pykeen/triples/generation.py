@@ -30,7 +30,7 @@ def generate_triples(
     """Generate random triples in a torch tensor."""
     random_state = ensure_torch_random_state(random_state)
 
-    mapped_triples = torch.stack([
+    rv = torch.stack([
         torch.randint(num_entities, size=(num_triples,), generator=random_state),
         torch.randint(num_relations, size=(num_triples,), generator=random_state),
         torch.randint(num_entities, size=(num_triples,), generator=random_state),
@@ -39,22 +39,18 @@ def generate_triples(
     if compact:
         new_entity_id = {
             entity: i
-            for i, entity in enumerate(sorted(get_entities(mapped_triples)))
+            for i, entity in enumerate(sorted(get_entities(rv)))
         }
         new_relation_id = {
             relation: i
-            for i, relation in enumerate(sorted(get_relations(mapped_triples)))
+            for i, relation in enumerate(sorted(get_relations(rv)))
         }
-        mapped_triples = torch.tensor([
-            [
-                new_entity_id[h],
-                new_relation_id[r],
-                new_entity_id[t],
-            ]
-            for h, r, t in mapped_triples.tolist()
+        rv = torch.tensor([
+            [new_entity_id[h], new_relation_id[r], new_entity_id[t]]
+            for h, r, t in rv.tolist()
         ], dtype=torch.long)
 
-    return mapped_triples
+    return rv
 
 
 def generate_labeled_triples(
