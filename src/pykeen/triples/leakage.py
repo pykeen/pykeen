@@ -84,12 +84,11 @@ def _select_by_most_pairs(
     return result
 
 
-def _jaccard_similarity_scipy(
+def jaccard_similarity_scipy(
     a: scipy.sparse.spmatrix,
     b: scipy.sparse.spmatrix,
 ) -> numpy.ndarray:
-    r"""
-    Compute Jaccard similarity between sets represented as sparse matrices.
+    r"""Compute the Jaccard similarity between sets represented as sparse matrices.
 
     The similarity is computed as
 
@@ -101,7 +100,7 @@ def _jaccard_similarity_scipy(
 
     :param a: shape: (m, max_num_elements)
         The first sets.
-    :param b:shape: (n, max_num_elements)
+    :param b: shape: (n, max_num_elements)
         The second sets.
 
     :return: shape: (m, n)
@@ -115,8 +114,7 @@ def _jaccard_similarity_scipy(
 
 
 def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
-    """"
-    Compute relation representations as sparse matrices of entity pairs.
+    """Compute relation representations as sparse matrices of entity pairs.
 
     .. note ::
         Both sets, head-tail-set, tail-head-set, have to be created at once since they need to share the same entity
@@ -153,20 +151,19 @@ def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatri
     return rel, inv
 
 
-def _get_candidate_pairs(
+def get_candidate_pairs(
     *,
     a: scipy.sparse.spmatrix,
-    b: scipy.sparse.spmatrix = None,
+    b: Optional[scipy.sparse.spmatrix] = None,
     threshold: float,
     no_self: bool = True,
 ) -> Set[Tuple[int, int]]:
-    """
-    Find pairs of sets with Jaccard similarity above threshold.
+    """Find pairs of sets with Jaccard similarity above threshold using :func:`jaccard_similarity_scipy`.
 
     :param a:
         The first set.
     :param b:
-        The second set.
+        The second set. If not specified, reuse the first set.
     :param threshold:
         The threshold above which the similarity has to be.
     :param no_self:
@@ -178,13 +175,13 @@ def _get_candidate_pairs(
     if b is None:
         b = a
     # duplicates
-    sim = _jaccard_similarity_scipy(a, b)
+    sim = jaccard_similarity_scipy(a, b)
     if no_self:
         # we are not interested in self-similarity
         num = sim.shape[0]
         idx = numpy.arange(num)
         sim[idx, idx] = 0
-    return set(zip(*(sim > threshold).nonzero()))
+    return set(zip(*(sim >= threshold).nonzero()))
 
 
 class Sealant:
@@ -216,8 +213,8 @@ class Sealant:
         # compute similarities
         if symmetric:
             rel, inv = _relations_to_sparse_matrices(triples_factory=triples_factory)
-            self.candidate_duplicate_relations = _get_candidate_pairs(a=rel, threshold=self.minimum_frequency)
-            self.candidate_inverse_relations = _get_candidate_pairs(a=rel, b=inv, threshold=self.minimum_frequency)
+            self.candidate_duplicate_relations = get_candidate_pairs(a=rel, threshold=self.minimum_frequency)
+            self.candidate_inverse_relations = get_candidate_pairs(a=rel, b=inv, threshold=self.minimum_frequency)
         else:
             raise NotImplementedError
         logger.info(
@@ -338,9 +335,9 @@ def _translate_triples(
         [
             trans[column]
             for column, trans in zip(
-            triples.t(),
-            (entity_translation, relation_translation, entity_translation),
-        )
+                triples.t(),
+                (entity_translation, relation_translation, entity_translation),
+            )
         ],
         dim=-1,
     )
@@ -365,7 +362,7 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
         )
         for cols, label_to_id in (
             ([0, 2], one_factory.entity_to_id),
-            (1, one_factory.relation_to_id)
+            (1, one_factory.relation_to_id),
         )
     ]
 

@@ -11,7 +11,8 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids, _tf_cleanup_all, _tf_cleanup_deterministic,
+    _tf_cleanup_randomized,
     get_absolute_split_sizes, normalize_ratios,
 )
 
@@ -73,9 +74,7 @@ class TestTriplesFactory(unittest.TestCase):
         assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
-        """
-        Test if the TriplesFactory detects that the triples contain inverses, warns about them and filters them out.
-        """
+        """Test detecting that the triples contain inverses, warns about them, and filters them out."""
         # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
         # inverse relations, although the triples contained in it are not the same we would have when removing the
         # first triple, and passing create_inverse_triples=True.

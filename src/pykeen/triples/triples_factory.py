@@ -16,7 +16,10 @@ import torch
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, ensure_torch_random_state, format_relative_comparison, invert_mapping, slice_triples, torch_is_in_1d
+from ..utils import (
+    compact_mapping, ensure_torch_random_state, format_relative_comparison, invert_mapping,
+    slice_triples, torch_is_in_1d,
+)
 
 __all__ = [
     'TriplesFactory',
