@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.triples import TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
 )
@@ -201,6 +201,39 @@ class TestTriplesFactory(unittest.TestCase):
                                                                     exp_relations))
                         assert exp_relations.issuperset(present_relations)
 
+    def test_create_lcwa_instances(self):
+        """Test create_lcwa_instances."""
+        factory = Nations().training
+        instances = factory.create_lcwa_instances()
+        assert isinstance(instances, LCWAInstances)
+
+        # check compressed triples
+        # reconstruct triples from compressed form
+        reconstructed_triples = set()
+        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0])):
+            h, r = hr.tolist()
+            _, tails = instances.compressed[row_id].nonzero()
+            reconstructed_triples.update(
+                (h, r, t)
+                for t in tails.tolist()
+            )
+        original_triples = {
+            tuple(hrt)
+            for hrt in factory.mapped_triples.tolist()
+        }
+        assert original_triples == reconstructed_triples
+
+        # check data loader
+        for batch in torch.utils.data.DataLoader(instances, batch_size=2):
+            assert len(batch) == 2
+            assert all(torch.is_tensor(x) for x in batch)
+            x, y = batch
+            batch_size = x.shape[0]
+            assert x.shape == (batch_size, 2)
+            assert x.dtype == torch.long
+            assert y.shape == (batch_size, factory.num_entities)
+            assert y.dtype == torch.get_default_dtype()
+
 
 class TestSplit(unittest.TestCase):
     """Test splitting."""
@@ -361,8 +394,9 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_num_children], 0)
 
         # Check if multilabels are working correctly
-        self.assertTrue((instance_mapped_triples == instances.mapped_triples.cpu().detach().numpy()).all())
-        self.assertTrue(all(all(instance_labels[i] == instances.labels[i]) for i in range(len(instance_labels))))
+        self.assertTrue((instance_mapped_triples == instances.pairs).all())
+        for i, exp in enumerate(instance_labels):
+            self.assertTrue((exp == instances.compressed[i].nonzero()[-1]).all())
 
     def test_triples(self):
         """Test properties of the triples factory."""
