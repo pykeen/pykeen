@@ -597,7 +597,11 @@ class TriplesFactory:
         """Normalize entities to IDs."""
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_to_id)
 
-    def get_mask_for_entities(self, entities: Union[Collection[int], Collection[str]], invert: bool = False):
+    def get_mask_for_entities(
+        self,
+        entities: Union[Collection[int], Collection[str]],
+        invert: bool = False,
+    ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given entities."""
         entities = self.entities_to_ids(entities=entities)
         return _get_triple_mask(
