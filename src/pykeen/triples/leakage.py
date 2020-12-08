@@ -69,12 +69,12 @@ def _jaccard_similarity_join(
         The upper diagonal the similarity to the sets with inverted tuples. The diagonal contains teh similarity
         between the set and the same set with inverted tuples.
     """
-    keys = sorted(sets.keys())
-    n_relations = len(keys)
+    r = sorted(sets.keys())
+    n_relations = len(r)
     assert set(sets.keys()) == set(inverse_sets.keys())
 
     # The individual sizes (note that len(inv_set) = len(set)
-    size = numpy.asarray([len(sets[r]) for r in keys])
+    size = numpy.asarray([len(sets[r]) for r in r])
     ub = numpy.minimum(size[None, :], size[:, None]) / numpy.maximum(size[None, :], size[:, None])
     ub = numpy.triu(ub)
     candidates = list(zip(*(ub > threshold).nonzero()))
@@ -90,16 +90,18 @@ def _jaccard_similarity_join(
     inverses = []
     for i, j in tqdm(candidates, unit="pair", unit_scale=True, disable=True):
         assert j >= i
-        ri, rj = [keys[k] for k in (i, j)]
-        pi, pj, pji = [sets[r] for r in (ri, rj)] + [inverse_sets[rj]]
         # J(P_i, P_j) > tau <=> 1 / J' > tau <=> |P_i n P_j| > tau * (|P_i| + |P_j|)
         size_sum = int(size[i] + size[j])
-        i_ij = len(pi.intersection(pj))
+
+        # comparison P_i, P_j
+        i_ij = len(sets[r[i]].intersection(sets[r[j]]))
         if i_ij > threshold * size_sum:
-            duplicates.append((1.0 / (size_sum / i_ij - 1), ri, rj))
-        i_ij_i = len(pi.intersection(pji))
+            duplicates.append((1.0 / (size_sum / i_ij - 1), r[i], r[j]))
+
+        # comparison P_i, P_j'
+        i_ij_i = len(sets[r[i]].intersection(inverse_sets[r[j]]))
         if i_ij_i > threshold * size_sum:
-            inverses.append((1.0 / (size_sum / i_ij_i - 1), ri, rj))
+            inverses.append((1.0 / (size_sum / i_ij_i - 1), r[i], r[j]))
     # symmetric similarity: add both pairs
     duplicates.extend((a, s, r) for a, r, s in duplicates)
     inverses.extend((a, s, r) for a, r, s in inverses)
