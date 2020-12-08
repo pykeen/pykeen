@@ -96,7 +96,7 @@ def _jaccard_similarity_join(
         ri, rj = [keys[k] for k in (i, j)]
         pi, pj, pji = [sets[r] for r in (ri, rj)] + [inverse_sets[rj]]
         # J(P_i, P_j) > tau <=> 1 / J' > tau <=> |P_i n P_j| > tau * (|P_i| + |P_j|)
-        size_sum = (size[i] + size[j])
+        size_sum = int(size[i] + size[j])
         i_ij = len(pi.intersection(pj))
         if i_ij > threshold * size_sum:
             duplicates.append((1.0 / (size_sum / i_ij - 1), ri, rj))
