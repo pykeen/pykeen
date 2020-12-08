@@ -77,7 +77,6 @@ def _jaccard_similarity_join(
     # The individual sizes (note that len(inv_set) = len(set)
     size = numpy.asarray([len(sets[r]) for r in keys])
     ub = numpy.minimum(size[None, :], size[:, None]) / numpy.maximum(size[None, :], size[:, None])
-    ub[numpy.arange(n_relations), numpy.arange(n_relations)] = 0
     ub = numpy.triu(ub)
     candidates = list(zip(*(ub > threshold).nonzero()))
     max_n_candidates = n_relations * (n_relations - 1) // 2
