@@ -307,6 +307,19 @@ def _translate_triples(
     entity_translation: torch.LongTensor,
     relation_translation: torch.LongTensor,
 ) -> MappedTriples:
+    """
+    Translate triples given vectorized translations for entities and relations.
+
+    :param triples: shape: (num_triples, 3)
+        The original triples
+    :param entity_translation: shape: (num_old_entity_ids,)
+        The translation from old to new entity IDs.
+    :param relation_translation: shape: (num_old_relation_ids,)
+        The translation from old to new relation IDs.
+
+    :return: shape: (num_triples, 3)
+        The translated triples.
+    """
     return torch.stack([
         trans[column]
         for column, trans in zip(
