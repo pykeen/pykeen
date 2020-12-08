@@ -126,8 +126,9 @@ def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatri
         The triples factory.
 
     :return: shape: (num_relations, num_entity_pairs)
-        head-tail-set, tail-head-set
+        head-tail-set, tail-head-set matrices as {0, 1} integer matrices.
     """
+    # compute unique pairs in triples *and* inverted triples for consistent pair-to-id mapping
     mapped_triples = torch.cat(
         [
             triples_factory.mapped_triples,
