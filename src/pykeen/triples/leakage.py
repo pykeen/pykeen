@@ -170,7 +170,7 @@ def _select_by_most_pairs(
     return result
 
 
-def _jaccard_similarity(
+def _jaccard_similarity_scipy(
     a: scipy.sparse.spmatrix,
     b: scipy.sparse.spmatrix,
 ) -> numpy.ndarray:
@@ -257,13 +257,13 @@ class Sealant:
             rel, inv = _relations_to_sparse_matrices(triples_factory=triples_factory)
 
             # duplicates
-            rel_to_rel_sim = _jaccard_similarity(rel, rel)
+            rel_to_rel_sim = _jaccard_similarity_scipy(rel, rel)
             # we are not interested in self-similarity
             rel_to_rel_sim[numpy.arange(triples_factory.num_relations), numpy.arange(triples_factory.num_relations)] = 0
             self.candidate_duplicate_relations = set(zip(*(rel_to_rel_sim > self.minimum_frequency).nonzero()))
 
             # inverses
-            rel_to_inv_sim = _jaccard_similarity(rel, inv)
+            rel_to_inv_sim = _jaccard_similarity_scipy(rel, inv)
             # we are not interested in self-similarity, since we cannot remove one of the relations
             rel_to_inv_sim[numpy.arange(triples_factory.num_relations), numpy.arange(triples_factory.num_relations)] = 0
             self.candidate_inverse_relations = set(zip(*(rel_to_inv_sim > self.minimum_frequency).nonzero()))
