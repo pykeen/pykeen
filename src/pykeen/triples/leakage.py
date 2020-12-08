@@ -161,7 +161,7 @@ def mapped_triples_to_sparse_matrices(
         ],
         dim=0,
     )
-    pairs, pair_id = extended_mapped_triples.unique(dim=0, return_inverse=True)
+    pairs, pair_id = extended_mapped_triples[:, [0, 2]].unique(dim=0, return_inverse=True)
     n_pairs = pairs.shape[0]
     forward, backward = pair_id.split(num_triples)
     relations = mapped_triples[:, 1].numpy()
