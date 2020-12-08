@@ -113,7 +113,9 @@ def jaccard_similarity_scipy(
     return intersection_size / divisor
 
 
-def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+def _relations_to_sparse_matrices(
+    triples_factory: TriplesFactory,
+) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
 
     .. note ::
@@ -126,26 +128,54 @@ def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatri
     :return: shape: (num_relations, num_entity_pairs)
         head-tail-set, tail-head-set matrices as {0, 1} integer matrices.
     """
+    return _mapped_triples_to_sparse_matrices(
+        triples_factory.mapped_triples,
+        num_relations=triples_factory.num_relations,
+        num_triples=triples_factory.num_triples,
+    )
+
+
+def _mapped_triples_to_sparse_matrices(
+    mapped_triples: MappedTriples,
+    num_triples: int,
+    num_relations: int,
+) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
+    """Compute relation representations as sparse matrices of entity pairs.
+
+    .. note ::
+        Both sets, head-tail-set, tail-head-set, have to be created at once since they need to share the same entity
+        pair to Id mapping.
+
+    :param mapped_triples:
+        The input triples.
+    :param num_triples:
+        The number of input triples
+    :param num_relations:
+        The number of input relations
+
+    :return: shape: (num_relations, num_entity_pairs)
+        head-tail-set, tail-head-set matrices as {0, 1} integer matrices.
+    """
     # compute unique pairs in triples *and* inverted triples for consistent pair-to-id mapping
-    mapped_triples = torch.cat(
+    extended_mapped_triples = torch.cat(
         [
-            triples_factory.mapped_triples,
-            triples_factory.mapped_triples.flip(-1),
+            mapped_triples,
+            mapped_triples.flip(-1),
         ],
         dim=0,
     )
-    pairs, pair_id = mapped_triples.unique(dim=0, return_inverse=True)
+    pairs, pair_id = extended_mapped_triples.unique(dim=0, return_inverse=True)
     n_pairs = pairs.shape[0]
-    forward, backward = pair_id.split(triples_factory.num_triples)
-    relations = triples_factory.mapped_triples[:, 1].numpy()
+    forward, backward = pair_id.split(num_triples)
+    relations = mapped_triples[:, 1].numpy()
     rel = scipy.sparse.coo_matrix(
         (numpy.ones(shape=(forward.shape[0],), dtype=numpy.int32), (relations, forward.numpy())),
-        shape=(triples_factory.num_relations, n_pairs),
+        shape=(num_relations, n_pairs),
         dtype=numpy.int32,
     )
     inv = scipy.sparse.coo_matrix(
         (numpy.ones(shape=(backward.shape[0],), dtype=numpy.int32), (relations, backward.numpy())),
-        shape=(triples_factory.num_relations, n_pairs),
+        shape=(num_relations, n_pairs),
         dtype=numpy.int32,
     )
     return rel, inv
