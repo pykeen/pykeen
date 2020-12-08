@@ -88,8 +88,16 @@ def _jaccard_similarity_scipy(
     a: scipy.sparse.spmatrix,
     b: scipy.sparse.spmatrix,
 ) -> numpy.ndarray:
-    """
+    r"""
     Compute Jaccard similarity between sets represented as sparse matrices.
+
+    The similarity is computed as
+
+    .. math ::
+        J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+                = \frac{|A \cap B|}{|A| + |B| - |A \cap B|}
+
+    where the intersection can be computed in one batch as matrix product.
 
     :param a: shape: (m, max_num_elements)
         The first sets.
@@ -101,7 +109,7 @@ def _jaccard_similarity_scipy(
     """
     sum_size = numpy.asarray(a.sum(axis=1) + b.sum(axis=1).T)
     intersection_size = numpy.asarray(a @ b.T)
-    # safe division
+    # safe division for empty sets
     divisor = numpy.clip(sum_size - intersection_size, a_min=1, a_max=None)
     return intersection_size / divisor
 
