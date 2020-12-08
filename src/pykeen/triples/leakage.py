@@ -134,6 +134,21 @@ def triples_factory_to_sparse_matrices(
     )
 
 
+def _to_one_hot(
+    rows: torch.LongTensor,
+    cols: torch.LongTensor,
+    shape: Tuple[int, int],
+) -> scipy.sparse.spmatrix:
+    """Create a one-hot matrix given indices of non-zero elements (potentially containing duplicates)."""
+    rows, cols = torch.stack([rows, cols], dim=0).unique(dim=0).numpy()
+    values = numpy.ones(rows.shape[0], dtype=numpy.int32)
+    return scipy.sparse.coo_matrix(
+        (values, (rows, cols)),
+        shape=shape,
+        dtype=numpy.int32,
+    )
+
+
 def mapped_triples_to_sparse_matrices(
     mapped_triples: MappedTriples,
     num_relations: int,
@@ -164,17 +179,9 @@ def mapped_triples_to_sparse_matrices(
     pairs, pair_id = extended_mapped_triples[:, [0, 2]].unique(dim=0, return_inverse=True)
     n_pairs = pairs.shape[0]
     forward, backward = pair_id.split(num_triples)
-    relations = mapped_triples[:, 1].numpy()
-    rel = scipy.sparse.coo_matrix(
-        (numpy.ones(shape=(forward.shape[0],), dtype=numpy.int32), (relations, forward.numpy())),
-        shape=(num_relations, n_pairs),
-        dtype=numpy.int32,
-    )
-    inv = scipy.sparse.coo_matrix(
-        (numpy.ones(shape=(backward.shape[0],), dtype=numpy.int32), (relations, backward.numpy())),
-        shape=(num_relations, n_pairs),
-        dtype=numpy.int32,
-    )
+    relations = mapped_triples[:, 1]
+    rel = _to_one_hot(rows=relations, cols=forward, shape=(num_relations, n_pairs))
+    inv = _to_one_hot(rows=relations, cols=backward, shape=(num_relations, n_pairs))
     return rel, inv
 
 
@@ -362,9 +369,9 @@ def _translate_triples(
         [
             trans[column]
             for column, trans in zip(
-                triples.t(),
-                (entity_translation, relation_translation, entity_translation),
-            )
+            triples.t(),
+            (entity_translation, relation_translation, entity_translation),
+        )
         ],
         dim=-1,
     )
