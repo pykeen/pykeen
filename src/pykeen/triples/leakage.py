@@ -153,6 +153,40 @@ def _relations_to_sparse_matrices(triples_factory) -> Tuple[scipy.sparse.spmatri
     return rel, inv
 
 
+def _get_candidate_pairs(
+    *,
+    a: scipy.sparse.spmatrix,
+    b: scipy.sparse.spmatrix = None,
+    threshold: float,
+    no_self: bool = True,
+) -> Set[Tuple[int, int]]:
+    """
+    Find pairs of sets with Jaccard similarity above threshold.
+
+    :param a:
+        The first set.
+    :param b:
+        The second set.
+    :param threshold:
+        The threshold above which the similarity has to be.
+    :param no_self:
+        Whether to exclude (i, i) pairs.
+
+    :return:
+        A set of index pairs.
+    """
+    if b is None:
+        b = a
+    # duplicates
+    sim = _jaccard_similarity_scipy(a, b)
+    if no_self:
+        # we are not interested in self-similarity
+        num = sim.shape[0]
+        idx = numpy.arange(num)
+        sim[idx, idx] = 0
+    return set(zip(*(sim > threshold).nonzero()))
+
+
 class Sealant:
     """Stores inverse frequencies and inverse mappings in a given triples factory."""
 
@@ -182,18 +216,8 @@ class Sealant:
         # compute similarities
         if symmetric:
             rel, inv = _relations_to_sparse_matrices(triples_factory=triples_factory)
-
-            # duplicates
-            rel_to_rel_sim = _jaccard_similarity_scipy(rel, rel)
-            # we are not interested in self-similarity
-            rel_to_rel_sim[numpy.arange(triples_factory.num_relations), numpy.arange(triples_factory.num_relations)] = 0
-            self.candidate_duplicate_relations = set(zip(*(rel_to_rel_sim > self.minimum_frequency).nonzero()))
-
-            # inverses
-            rel_to_inv_sim = _jaccard_similarity_scipy(rel, inv)
-            # we are not interested in self-similarity, since we cannot remove one of the relations
-            rel_to_inv_sim[numpy.arange(triples_factory.num_relations), numpy.arange(triples_factory.num_relations)] = 0
-            self.candidate_inverse_relations = set(zip(*(rel_to_inv_sim > self.minimum_frequency).nonzero()))
+            self.candidate_duplicate_relations = _get_candidate_pairs(a=rel, threshold=self.minimum_frequency)
+            self.candidate_inverse_relations = _get_candidate_pairs(a=rel, b=inv, threshold=self.minimum_frequency)
         else:
             raise NotImplementedError
         logger.info(
