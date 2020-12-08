@@ -5,11 +5,14 @@
 import itertools as itt
 import unittest
 
+import numpy
 import numpy as np
+import scipy.sparse
 import torch
 
+from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory
-from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, _translate_triples, get_candidate_inverse_relations
+from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, _relations_to_sparse_matrices, _translate_triples, get_candidate_inverse_relations
 
 
 class TestLeakage(unittest.TestCase):
@@ -195,3 +198,17 @@ def test_translate_triples():
     assert (new_triples >= 0).all()
     assert (new_triples[:, [0, 2]] < max_e_id).all()
     assert (new_triples[:, 1] < max_r_id).all()
+
+
+def test_relations_to_sparse_matrices():
+    """Test _relations_to_sparse_matrices."""
+    factory = Nations().training
+    rel, inv = _relations_to_sparse_matrices(triples_factory=factory)
+    for m in (rel, inv):
+        # check type
+        assert isinstance(m, scipy.sparse.spmatrix)
+        assert m.dtype == numpy.int32
+        # check shape
+        assert m.shape[0] == factory.num_relations
+        # check 1-hot
+        assert m.max() == 1
