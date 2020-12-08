@@ -74,27 +74,30 @@ def _jaccard_similarity_join(
 
     # The individual sizes (note that len(inv_set) = len(set))
     size = numpy.asarray([len(sets[r]) for r in r])
-    # TODO: Only for debug
-    candidates = _get_all_candidates(size=size, threshold=threshold)
+    candidates = _get_candidates(size=size, threshold=threshold)
 
-    # compute Jaccard similarity:
-    # J = |A n B| / |A u B|
-    # Thus, J = 1 / J' with J' = |A u B| / |A n B| = (|A| + |B| + |A n B|) / |A n B| = (|A| + |B|)/(|A n B|) - 1
     duplicates = []
     inverses = []
     for i, j in tqdm(candidates, unit="pair", unit_scale=True, disable=True):
         assert j >= i
-        # J(P_i, P_j) > tau <=> 1 / J' > tau <=> |P_i n P_j| > tau * (|P_i| + |P_j|)
+        # We need to check whether J(A, B) > T
+        #     J(A, B) = |A n B| / |A u B| > T
+        # <=> |A n B| > T * |A u B|
+        # <=> |A n B| > T * (|A| + |B| - |A n B|)
+        # <=> |A n B| > T * (|A| + |B|) - T|A n B|
+        # <=> (T + 1)|A n B| > T * (|A| + |B|)
+        # <=> |A n B| > T/(T+1) * (|A| + |B|)
         size_sum = int(size[i] + size[j])
+        tau = size_sum * threshold / (1 + threshold)
 
         # comparison P_i, P_j
         i_ij = len(sets[r[i]].intersection(sets[r[j]]))
-        if i_ij > threshold * size_sum:
+        if i != j and i_ij > tau:
             duplicates.append((1.0 / (size_sum / i_ij - 1), r[i], r[j]))
 
         # comparison P_i, P_j'
         i_ij_i = len(sets[r[i]].intersection(inverse_sets[r[j]]))
-        if i_ij_i > threshold * size_sum:
+        if i_ij_i > tau:
             inverses.append((1.0 / (size_sum / i_ij_i - 1), r[i], r[j]))
 
     # symmetric similarity: add both pairs
@@ -116,14 +119,6 @@ def _get_candidates(
     logger.info(f"keeping {format_relative_comparison(n_cand, n_max_cand)} candidates after using upper bound.")
     return candidates
 
-
-def _get_all_candidates(
-    size: numpy.ndarray,
-    threshold: float,
-) -> Collection[Tuple[int, int]]:
-    # TODO: only for debug
-    n_relations = size.shape[0]
-    return [(i, j) for i in range(n_relations) for j in range(i, n_relations)]
 
 
 def find(x: X, parent: Mapping[X, X]) -> X:
