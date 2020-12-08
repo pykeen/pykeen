@@ -6,9 +6,10 @@ import itertools as itt
 import unittest
 
 import numpy as np
+import torch
 
 from pykeen.triples import TriplesFactory
-from pykeen.triples.leakage import Sealant, get_candidate_inverse_relations
+from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, get_candidate_inverse_relations
 
 
 class TestLeakage(unittest.TestCase):
@@ -131,3 +132,37 @@ class TestLeakage(unittest.TestCase):
             (train_factory.entity_to_id['-2'], test_relation_inverse, train_factory.entity_to_id['-1']),
             tuple(test_leaked[0])
         )
+
+
+def test_generate_compact_vectorized_lookup():
+    """Test _generate_compact_vectorized_lookup."""
+    max_id = 13
+    ids = torch.randint(2 * max_id, size=(2, 5))
+    label_to_id = {
+        f"e_{i}": i
+        for i in range(2 * max_id)
+    }
+    new_label_to_id, mapping = _generate_compact_vectorized_lookup(
+        ids=ids,
+        label_to_id=label_to_id,
+    )
+    # test new label to ID
+    # type
+    assert isinstance(new_label_to_id, dict)
+    # old labels
+    assert set(new_label_to_id.keys()) == {f"e_{i}" for i in ids.unique().tolist()}
+    # new, compact IDs
+    assert set(new_label_to_id.values()) == set(range(len(ids.unique())))
+
+    # test vectorized lookup
+    # type
+    assert torch.is_tensor(mapping)
+    assert mapping.dtype == torch.long
+    # shape
+    assert mapping.shape == (ids.max() + 1,)
+    # value range
+    assert (mapping >= -1).all()
+    # only occurring Ids get mapped to non-negative numbers
+    assert set((mapping >= 0).nonzero().view(-1).tolist()) == set(ids.unique().tolist())
+    # Ids are mapped to (0, ..., num_unique_ids-1)
+    assert set(mapping[mapping >= 0].tolist()) == set(range(len(ids.unique())))
