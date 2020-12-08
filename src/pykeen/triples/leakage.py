@@ -70,18 +70,11 @@ def _jaccard_similarity_join(
         between the set and the same set with inverted tuples.
     """
     r = sorted(sets.keys())
-    n_relations = len(r)
     assert set(sets.keys()) == set(inverse_sets.keys())
 
-    # The individual sizes (note that len(inv_set) = len(set)
+    # The individual sizes (note that len(inv_set) = len(set))
     size = numpy.asarray([len(sets[r]) for r in r])
-    ub = numpy.minimum(size[None, :], size[:, None]) / numpy.maximum(size[None, :], size[:, None])
-    ub = numpy.triu(ub)
-    candidates = list(zip(*(ub > threshold).nonzero()))
-    max_n_candidates = n_relations * (n_relations - 1) // 2
-    logger.info(
-        f"keeping {format_relative_comparison(len(candidates), max_n_candidates)} candidates after using upper bound."
-    )
+    candidates = _get_candidates(size=size, threshold=threshold)
 
     # compute Jaccard similarity:
     # J = |A n B| / |A u B|
@@ -107,6 +100,20 @@ def _jaccard_similarity_join(
     duplicates.extend((a, s, r) for a, r, s in duplicates)
     inverses.extend((a, s, r) for a, r, s in inverses)
     return duplicates, inverses
+
+
+def _get_candidates(
+    size: numpy.ndarray,
+    threshold: float,
+) -> Collection[Tuple[int, int]]:
+    ub = numpy.minimum(size[None, :], size[:, None]) / numpy.maximum(size[None, :], size[:, None])
+    ub = numpy.triu(ub)
+    candidates = list(zip(*(ub > threshold).nonzero()))
+    n_relations = size.shape[0]
+    n_max_cand = n_relations * (n_relations - 1) // 2
+    n_cand = len(candidates)
+    logger.info(f"keeping {format_relative_comparison(n_cand, n_max_cand)} candidates after using upper bound.")
+    return candidates
 
 
 def find(x: X, parent: Mapping[X, X]) -> X:
