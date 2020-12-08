@@ -239,13 +239,55 @@ class TestLeakage(unittest.TestCase):
 
     def test_candidate_pairs(self):
         """Test :func:`get_candidate_pairs`."""
-        # TODO make example data
-        example_mapped_triples: torch.LongTensor = torch.tensor(...)  # noqa
+        num_entities = 11
+        num_pairs = 100
+        h, t = torch.randint(num_entities, size=(2, num_pairs))
+        r = torch.zeros_like(h)
+
+        # base relation
+        base = torch.stack([h, r, t], dim=-1)
+
+        # exact duplicate
+        dup100 = torch.stack([h, r + 1, t], dim=-1)
+
+        # 99% duplicate
+        dup099 = torch.stack([h, r + 2, t], dim=-1)
+        dup099[99:, [0, 2]] += 1
+
+        # 50% duplicate
+        dup050 = torch.stack([h, r + 3, t], dim=-1)
+        dup050[50:, [0, 2]] += 1
+
+        # exact inverse
+        inv100 = torch.stack([t, r + 4, h], dim=-1)
+
+        # 99% inverse
+        inv099 = torch.stack([t, r + 5, h], dim=-1)
+        inv099[99:, [0, 2]] += 1
+
+        triples = torch.cat([base, dup100, dup099, dup050, inv100, inv099], dim=0)
+
         rel, inv = mapped_triples_to_sparse_matrices(
-            example_mapped_triples,
-            # TODO fill in based on example_mapped_triples
-            num_relations=...,  # TODO fill in based on example_mapped_triples
+            triples,
+            num_relations=6,
         )
+        assert rel.max() == 1 and inv.max() == 1
         candidate_pairs = get_candidate_pairs(a=rel, threshold=0.97)
-        expected_candidate_pairs = ...  # TODO
+        expected_candidate_pairs = {
+            (0, 1), (0, 2),
+            (1, 0), (1, 2),
+            (2, 0), (2, 1),
+            (4, 5),
+            (5, 4),
+        }
+        self.assertEqual(expected_candidate_pairs, candidate_pairs)
+
+        candidate_pairs = get_candidate_pairs(a=rel, b=inv, threshold=0.97)
+        expected_candidate_pairs = {
+            (0, 4), (0, 5),
+            (1, 4), (1, 5),
+            (2, 4), (2, 5),
+            (4, 0), (4, 1), (4, 2),
+            (5, 0), (5, 1), (5, 2),
+        }
         self.assertEqual(expected_candidate_pairs, candidate_pairs)
