@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from pykeen.triples import TriplesFactory
-from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, get_candidate_inverse_relations
+from pykeen.triples.leakage import Sealant, _generate_compact_vectorized_lookup, _translate_triples, get_candidate_inverse_relations
 
 
 class TestLeakage(unittest.TestCase):
@@ -166,3 +166,32 @@ def test_generate_compact_vectorized_lookup():
     assert set((mapping >= 0).nonzero().view(-1).tolist()) == set(ids.unique().tolist())
     # Ids are mapped to (0, ..., num_unique_ids-1)
     assert set(mapping[mapping >= 0].tolist()) == set(range(len(ids.unique())))
+
+
+def test_translate_triples():
+    """Test _translate_triples."""
+    max_e_id = 13
+    max_r_id = 7
+    num_triples = 31
+    triples = torch.stack([
+        2 * torch.randint(max_id, size=(num_triples,))
+        for max_id in (max_e_id, max_r_id, max_e_id)
+    ], dim=-1)
+    entity_translation = torch.full(size=(2 * max_e_id,), fill_value=-1, dtype=torch.long)
+    entity_translation[::2] = torch.arange(max_e_id)
+    relation_translation = torch.full(size=(2 * max_r_id,), fill_value=-1, dtype=torch.long)
+    relation_translation[::2] = torch.arange(max_r_id)
+    new_triples = _translate_triples(
+        triples=triples,
+        entity_translation=entity_translation,
+        relation_translation=relation_translation,
+    )
+    # check type
+    assert torch.is_tensor(new_triples)
+    assert new_triples.dtype == torch.long
+    # check shape
+    assert new_triples.shape == (num_triples, 3)
+    # check content
+    assert (new_triples >= 0).all()
+    assert (new_triples[:, [0, 2]] < max_e_id).all()
+    assert (new_triples[:, 1] < max_r_id).all()
