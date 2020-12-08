@@ -29,7 +29,6 @@ from pykeen.utils import compact_mapping
 __all__ = [
     'Sealant',
     'get_candidate_inverse_relations',
-    'get_candidate_duplicate_relations',
     'unleak',
     'reindex',
 ]
