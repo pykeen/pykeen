@@ -120,7 +120,7 @@ def find(x: X, parent: Mapping[X, X]) -> X:
     return x
 
 
-def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Mapping[X, Collection[X]]:
+def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
     # collect connected components using union find with path compression
     parent = dict()
     for x, y in pairs:
@@ -141,7 +141,7 @@ def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Mapping[X, Collec
     result = defaultdict(list)
     for k, v in parent.items():
         result[v].append(k)
-    return result
+    return list(result.values())
 
 
 def _select_by_most_pairs(
@@ -206,9 +206,8 @@ class Sealant:
             f' at similarity > {self.minimum_frequency} in {self.triples_factory}',
         )
         self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
-        components = list(_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates)).values())
         self.relations_to_delete = _select_by_most_pairs(
-            components=components,
+            components=_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates)),
             size={r: len(pairs) for r, pairs in relations.items()},
         )
         logger.info(f'identified {len(self.candidates)} from {self.triples_factory} to delete')
