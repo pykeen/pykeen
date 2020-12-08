@@ -302,7 +302,7 @@ class TriplesFactory:
                     if r in suspected_to_be_inverse_relations
                 ]
                 mask = np.isin(element=inverse, test_elements=relation_ids_to_remove, invert=True)
-                logger.info(f"Keeping {mask.sum() / mask.shape[0]} triples.")
+                logger.info(f"keeping {mask.sum() / mask.shape[0]} triples.")
                 triples = triples[mask]
 
         # Generate entity mapping if necessary
@@ -762,7 +762,7 @@ class TriplesFactory:
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
             logger.info(
-                f"Keeping {remaining_entities}/{self.num_entities} "
+                f"keeping {remaining_entities}/{self.num_entities} "
                 f"({remaining_entities / self.num_entities:2.2%}) entities."
             )
 
@@ -771,7 +771,7 @@ class TriplesFactory:
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
             logger.info(
-                f"Keeping {remaining_relations}/{self.num_relations} "
+                f"keeping {remaining_relations}/{self.num_relations} "
                 f"({remaining_relations / self.num_relations:2.2%}) relations."
             )
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
@@ -781,7 +781,7 @@ class TriplesFactory:
             return self
 
         num_triples = keep_mask.sum()
-        logger.info(f"Keeping {num_triples}/{self.num_triples} ({num_triples / self.num_triples:2.2%}) triples.")
+        logger.info(f"keeping {num_triples}/{self.num_triples} ({num_triples / self.num_triples:2.2%}) triples.")
         return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 
