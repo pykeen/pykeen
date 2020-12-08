@@ -87,7 +87,6 @@ def _jaccard_similarity_join(
     # compute Jaccard similarity:
     # J = |A n B| / |A u B|
     # Thus, J = 1 / J' with J' = |A u B| / |A n B| = (|A| + |B| + |A n B|) / |A n B| = (|A| + |B|)/(|A n B|) - 1
-    # we are not interested in self-similarity, thus we set it to zero
     duplicates = []
     inverses = []
     for i, j in tqdm(candidates, unit="pair", unit_scale=True, disable=True):
