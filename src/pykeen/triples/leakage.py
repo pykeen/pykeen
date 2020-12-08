@@ -113,7 +113,7 @@ def jaccard_similarity_scipy(
     return intersection_size / divisor
 
 
-def _relations_to_sparse_matrices(
+def triples_factory_to_sparse_matrices(
     triples_factory: TriplesFactory,
 ) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
@@ -128,14 +128,14 @@ def _relations_to_sparse_matrices(
     :return: shape: (num_relations, num_entity_pairs)
         head-tail-set, tail-head-set matrices as {0, 1} integer matrices.
     """
-    return _mapped_triples_to_sparse_matrices(
+    return mapped_triples_to_sparse_matrices(
         triples_factory.mapped_triples,
         num_relations=triples_factory.num_relations,
         num_triples=triples_factory.num_triples,
     )
 
 
-def _mapped_triples_to_sparse_matrices(
+def mapped_triples_to_sparse_matrices(
     mapped_triples: MappedTriples,
     num_triples: int,
     num_relations: int,
@@ -242,7 +242,7 @@ class Sealant:
 
         # compute similarities
         if symmetric:
-            rel, inv = _relations_to_sparse_matrices(triples_factory=triples_factory)
+            rel, inv = triples_factory_to_sparse_matrices(triples_factory=triples_factory)
             self.candidate_duplicate_relations = get_candidate_pairs(a=rel, threshold=self.minimum_frequency)
             self.candidate_inverse_relations = get_candidate_pairs(a=rel, b=inv, threshold=self.minimum_frequency)
         else:

@@ -13,8 +13,9 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory
 from pykeen.triples.leakage import (
-    Sealant, _generate_compact_vectorized_lookup, _relations_to_sparse_matrices, _translate_triples,
-    get_candidate_inverse_relations, jaccard_similarity_scipy,
+    Sealant, _generate_compact_vectorized_lookup, _translate_triples, get_candidate_inverse_relations,
+    get_candidate_pairs, jaccard_similarity_scipy, mapped_triples_to_sparse_matrices,
+    triples_factory_to_sparse_matrices,
 )
 
 
@@ -147,7 +148,7 @@ class TestLeakage(unittest.TestCase):
         )
 
     def test_generate_compact_vectorized_lookup(self):
-        """Test _generate_compact_vectorized_lookup."""
+        """Test :func:`_generate_compact_vectorized_lookup`."""
         max_id = 13
         ids = 2 * torch.randint(max_id, size=(2, 5))
         label_to_id = {
@@ -180,7 +181,7 @@ class TestLeakage(unittest.TestCase):
         assert set(mapping[mapping >= 0].tolist()) == set(range(len(ids.unique())))
 
     def test_translate_triples(self):
-        """Test _translate_triples."""
+        """Test :func:`_translate_triples`."""
         max_e_id = 13
         max_r_id = 7
         num_triples = 31
@@ -208,30 +209,43 @@ class TestLeakage(unittest.TestCase):
         assert (new_triples[:, 1] < max_r_id).all()
 
     def test_relations_to_sparse_matrices(self):
-        """Test _relations_to_sparse_matrices."""
-        factory = Nations().training
-        rel, inv = _relations_to_sparse_matrices(triples_factory=factory)
+        """Test :func:`triples_factory_to_sparse_matrices`."""
+        triples_factory = Nations().training
+        rel, inv = triples_factory_to_sparse_matrices(triples_factory)
         for m in (rel, inv):
             # check type
             assert isinstance(m, scipy.sparse.spmatrix)
             assert m.dtype == numpy.int32
             # check shape
-            assert m.shape[0] == factory.num_relations
+            assert m.shape[0] == triples_factory.num_relations
             # check 1-hot
             assert m.max() == 1
 
     def test_jaccard_similarity_scipy(self):
-        """Test _jaccard_similarity_scipy."""
-        factory = Nations().training
-        rel, inv = _relations_to_sparse_matrices(triples_factory=factory)
+        """Test :func:`jaccard_similarity_scipy`."""
+        triples_factory = Nations().training
+        rel, inv = triples_factory_to_sparse_matrices(triples_factory)
         sim = jaccard_similarity_scipy(a=rel, b=rel)
         # check type
         assert isinstance(sim, numpy.ndarray)
         assert sim.dtype == numpy.float64
         # check shape
-        assert sim.shape == (factory.num_relations, factory.num_relations)
+        assert sim.shape == (triples_factory.num_relations, triples_factory.num_relations)
         # check value range
         assert (sim >= 0).all()
         assert (sim <= 1).all()
         # check self-similarity = 1
         numpy.testing.assert_allclose(numpy.diag(sim), 1.0)
+
+    def test_candidate_pairs(self):
+        """Test :func:`get_candidate_pairs`."""
+        # TODO make example data
+        example_mapped_triples: torch.LongTensor = torch.tensor(...)  # noqa
+        rel, inv = mapped_triples_to_sparse_matrices(
+            example_mapped_triples,
+            num_triples=...,  # TODO fill in based on example_mapped_triples
+            num_relations=...,  # TODO fill in based on example_mapped_triples
+        )
+        candidate_pairs = get_candidate_pairs(a=rel, threshold=0.97)
+        expected_candidate_pairs = ...  # TODO
+        self.assertEqual(expected_candidate_pairs, candidate_pairs)
