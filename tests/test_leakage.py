@@ -243,7 +243,7 @@ class TestLeakage(unittest.TestCase):
         example_mapped_triples: torch.LongTensor = torch.tensor(...)  # noqa
         rel, inv = mapped_triples_to_sparse_matrices(
             example_mapped_triples,
-            num_triples=...,  # TODO fill in based on example_mapped_triples
+            # TODO fill in based on example_mapped_triples
             num_relations=...,  # TODO fill in based on example_mapped_triples
         )
         candidate_pairs = get_candidate_pairs(a=rel, threshold=0.97)

@@ -131,13 +131,11 @@ def triples_factory_to_sparse_matrices(
     return mapped_triples_to_sparse_matrices(
         triples_factory.mapped_triples,
         num_relations=triples_factory.num_relations,
-        num_triples=triples_factory.num_triples,
     )
 
 
 def mapped_triples_to_sparse_matrices(
     mapped_triples: MappedTriples,
-    num_triples: int,
     num_relations: int,
 ) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
@@ -148,14 +146,13 @@ def mapped_triples_to_sparse_matrices(
 
     :param mapped_triples:
         The input triples.
-    :param num_triples:
-        The number of input triples
     :param num_relations:
         The number of input relations
 
     :return: shape: (num_relations, num_entity_pairs)
         head-tail-set, tail-head-set matrices as {0, 1} integer matrices.
     """
+    num_triples = mapped_triples.shape[0]
     # compute unique pairs in triples *and* inverted triples for consistent pair-to-id mapping
     extended_mapped_triples = torch.cat(
         [
