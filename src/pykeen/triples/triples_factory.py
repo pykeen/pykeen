@@ -7,15 +7,13 @@ import itertools
 import logging
 import os
 import re
-from collections import defaultdict
-from typing import Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, Collection, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
-from tqdm.autonotebook import tqdm
 
-from .instances import LCWAInstances, SLCWAInstances
+from .instances import Instances, LCWAInstances, SLCWAInstances
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import compact_mapping, ensure_torch_random_state, invert_mapping, slice_triples, torch_is_in_1d
@@ -36,62 +34,6 @@ TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 
 def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> torch.LongTensor:
     """Return the unique entity IDs used in a tensor of triples."""
     return mapped_triples[:, [0, 2]].unique()
-
-
-def _create_multi_label_tails_instance(
-    mapped_triples: MappedTriples,
-    use_tqdm: Optional[bool] = None,
-) -> Dict[Tuple[int, int], List[int]]:
-    """Create for each (h,r) pair the multi tail label."""
-    # TODO: Replace by usage of torch.unique(return_inverses=True)?
-    logger.debug('Creating multi label tails instance')
-
-    '''
-    The mapped triples matrix has to be a numpy array to ensure correct pair hashing, as explained in
-    https://github.com/pykeen/pykeen/commit/1bc71fe4eb2f24190425b0a4d0b9d6c7b9c4653a
-    '''
-    mapped_triples = mapped_triples.cpu().detach().numpy()
-
-    s_p_to_multi_tails_new = _create_multi_label_instances(
-        mapped_triples,
-        element_1_index=0,
-        element_2_index=1,
-        label_index=2,
-        use_tqdm=use_tqdm,
-    )
-
-    logger.debug('Created multi label tails instance')
-
-    return s_p_to_multi_tails_new
-
-
-def _create_multi_label_instances(
-    mapped_triples: MappedTriples,
-    element_1_index: int,
-    element_2_index: int,
-    label_index: int,
-    use_tqdm: Optional[bool] = None,
-) -> Dict[Tuple[int, int], List[int]]:
-    """Create for each (element_1, element_2) pair the multi-label."""
-    instance_to_multi_label = defaultdict(set)
-
-    if use_tqdm is None:
-        use_tqdm = True
-
-    it = mapped_triples
-    if use_tqdm:
-        it = tqdm(mapped_triples, unit='triple', unit_scale=True, desc='Grouping triples')
-    for row in it:
-        instance_to_multi_label[row[element_1_index], row[element_2_index]].add(row[label_index])
-
-    # Create lists out of sets for proper numpy indexing when loading the labels
-    # TODO is there a need to have a canonical sort order here?
-    instance_to_multi_label_new = {
-        key: list(value)
-        for key, value in instance_to_multi_label.items()
-    }
-
-    return instance_to_multi_label_new
 
 
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
@@ -360,7 +302,7 @@ class TriplesFactory:
                     if r in suspected_to_be_inverse_relations
                 ]
                 mask = np.isin(element=inverse, test_elements=relation_ids_to_remove, invert=True)
-                logger.info(f"Keeping {mask.sum()/mask.shape[0]} triples.")
+                logger.info(f"Keeping {mask.sum() / mask.shape[0]} triples.")
                 triples = triples[mask]
 
         # Generate entity mapping if necessary
@@ -518,30 +460,13 @@ class TriplesFactory:
             ])
         return mapped_triples
 
-    def create_slcwa_instances(self) -> SLCWAInstances:
+    def create_slcwa_instances(self) -> Instances:
         """Create sLCWA instances for this factory's triples."""
-        return SLCWAInstances(
-            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-        )
+        return SLCWAInstances(mapped_triples=self.mapped_triples)
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
-        s_p_to_multi_tails = _create_multi_label_tails_instance(
-            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
-            use_tqdm=use_tqdm,
-        )
-        sp, multi_o = zip(*s_p_to_multi_tails.items())
-        mapped_triples: torch.LongTensor = torch.as_tensor(sp, dtype=torch.long)
-        labels = np.array([np.array(item) for item in multi_o], dtype=object)
-
-        return LCWAInstances(
-            mapped_triples=mapped_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            labels=labels,
-        )
+        return LCWAInstances.from_triples(mapped_triples=self.mapped_triples, num_entities=self.num_entities)
 
     def label_triples(
         self,
@@ -831,7 +756,7 @@ class TriplesFactory:
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
             logger.info(
                 f"Keeping {remaining_entities}/{self.num_entities} "
-                f"({remaining_entities/self.num_entities:2.2%}) entities."
+                f"({remaining_entities / self.num_entities:2.2%}) entities."
             )
 
         # Filter for relations
@@ -840,7 +765,7 @@ class TriplesFactory:
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
             logger.info(
                 f"Keeping {remaining_relations}/{self.num_relations} "
-                f"({remaining_relations/self.num_relations:2.2%}) relations."
+                f"({remaining_relations / self.num_relations:2.2%}) relations."
             )
             keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
@@ -849,7 +774,7 @@ class TriplesFactory:
             return self
 
         num_triples = keep_mask.sum()
-        logger.info(f"Keeping {num_triples}/{self.num_triples} ({num_triples/self.num_triples:2.2%}) triples.")
+        logger.info(f"Keeping {num_triples}/{self.num_triples} ({num_triples / self.num_triples:2.2%}) triples.")
         return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 
