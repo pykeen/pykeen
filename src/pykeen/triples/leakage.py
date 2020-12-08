@@ -140,7 +140,7 @@ def _to_one_hot(
     shape: Tuple[int, int],
 ) -> scipy.sparse.spmatrix:
     """Create a one-hot matrix given indices of non-zero elements (potentially containing duplicates)."""
-    rows, cols = torch.stack([rows, cols], dim=0).unique(dim=0).numpy()
+    rows, cols = torch.stack([rows, cols], dim=0).unique(dim=1).numpy()
     values = numpy.ones(rows.shape[0], dtype=numpy.int32)
     return scipy.sparse.coo_matrix(
         (values, (rows, cols)),
