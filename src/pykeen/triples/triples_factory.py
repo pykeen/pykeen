@@ -815,7 +815,7 @@ def _tf_cleanup_randomized(
     training: MappedTriples,
     testing: MappedTriples,
     random_state: TorchRandomHint = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[MappedTriples, MappedTriples]:
     """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
 
     1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
