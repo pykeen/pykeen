@@ -144,6 +144,18 @@ def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Mapping[X, Collec
     return result
 
 
+def _select_by_most_pairs(
+    components: Collection[Collection[int]],
+    size: Mapping[int, int],
+) -> Collection[int]:
+    """Select relations to keep with the most associated pairs."""
+    result = set()
+    for component in components:
+        keep = max(component, key=size.__getitem__)
+        result.update(r for r in component if r != keep)
+    return result
+
+
 class Sealant:
     """Stores inverse frequencies and inverse mappings in a given triples factory."""
 
@@ -195,19 +207,11 @@ class Sealant:
         )
         self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
         components = list(_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates)).values())
-        self.relations_to_delete = self.select_to_delete(
-            components,
+        self.relations_to_delete = _select_by_most_pairs(
+            components=components,
             size={r: len(pairs) for r, pairs in relations.items()},
         )
         logger.info(f'identified {len(self.candidates)} from {self.triples_factory} to delete')
-
-    def select_to_delete(self, components: Collection[Collection[int]], size: Mapping[int, int]) -> Collection[int]:
-        """Relations to delete combine from both duplicates and inverses."""
-        result = set()
-        for component in components:
-            keep = max(component, key=size.__getitem__)
-            result.update(r for r in component if r != keep)
-        return result
 
     def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""
@@ -324,9 +328,9 @@ def _translate_triples(
         [
             trans[column]
             for column, trans in zip(
-                triples.t(),
-                (entity_translation, relation_translation, entity_translation),
-            )
+            triples.t(),
+            (entity_translation, relation_translation, entity_translation),
+        )
         ],
         dim=-1,
     )
