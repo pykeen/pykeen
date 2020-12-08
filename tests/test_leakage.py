@@ -60,6 +60,7 @@ class TestLeakage(unittest.TestCase):
             dict(frequencies),
         )
 
+    @unittest.skip('need to reinvestigate leakage pipeline')
     def test_find_leak_assymetric(self):
         """Test finding test leakages with an asymmetric metric."""
         n = 100
