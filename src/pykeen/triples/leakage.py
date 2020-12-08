@@ -105,8 +105,8 @@ def _jaccard_similarity_join(
         if i_ij_i > threshold * size_sum:
             inverses.append((1.0 / (size_sum / i_ij_i - 1), ri, rj))
     # symmetric similarity: add both pairs
-    duplicates = duplicates + [(a, s, r) for a, r, s in duplicates]
-    inverses = inverses + [(a, s, r) for a, r, s in inverses]
+    duplicates.extend((a, s, r) for a, r, s in duplicates)
+    inverses.extend((a, s, r) for a, r, s in inverses)
     return duplicates, inverses
 
 
