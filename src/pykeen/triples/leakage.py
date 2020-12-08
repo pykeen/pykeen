@@ -268,10 +268,25 @@ def unleak(
     return reindex(train, *triples_factories)
 
 
-def _generate_vectorized_lookup(
+def _generate_compact_vectorized_lookup(
     ids: torch.LongTensor,
     label_to_id: Mapping[str, int],
 ) -> Tuple[Mapping[str, int], torch.LongTensor]:
+    """
+    Given a tensor of IDs and a label to ID mapping, retain only occurring IDs, and compact the mapping.
+
+    Additionally returns a vectorized translation, i.e. a tensor `translation` of shape (max_old_id,) with
+    `translation[old_id] = new_id` for all translated IDs and `translation[old_id] = -1` for non-occurring IDs.
+    This allows to use `translation[ids]` to translate the IDs as a simple integer index based lookup.
+
+    :param ids:
+        The tensor of IDs.
+    :param label_to_id:
+        The label to ID mapping.
+
+    :return:
+        A tuple new_label_to_id, vectorized_translation.
+    """
     # get existing IDs
     existing_ids = set(ids.view(-1).unique().tolist())
     # remove non-existing ID from label mapping
@@ -311,7 +326,7 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]
     (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = [
-        _generate_vectorized_lookup(
+        _generate_compact_vectorized_lookup(
             ids=all_triples[:, cols],
             label_to_id=label_to_id,
         )
