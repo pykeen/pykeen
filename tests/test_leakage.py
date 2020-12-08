@@ -137,7 +137,7 @@ class TestLeakage(unittest.TestCase):
 def test_generate_compact_vectorized_lookup():
     """Test _generate_compact_vectorized_lookup."""
     max_id = 13
-    ids = torch.randint(2 * max_id, size=(2, 5))
+    ids = 2 * torch.randint(max_id, size=(2, 5))
     label_to_id = {
         f"e_{i}": i
         for i in range(2 * max_id)
