@@ -24,6 +24,7 @@ __all__ = [
     'compose',
     'clamp_norm',
     'compact_mapping',
+    'ensure_torch_random_state',
     'imag_part',
     'invert_mapping',
     'l2_regularization',
