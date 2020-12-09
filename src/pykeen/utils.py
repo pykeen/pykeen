@@ -411,7 +411,11 @@ def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
         pass  # its fine...
 
 
-def invert_mapping(mapping: Mapping[str, int]) -> Mapping[int, str]:
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
     """
     Invert a mapping.
 
