@@ -13,52 +13,13 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.triples import TriplesFactory
 from pykeen.triples.leakage import (
-    Sealant, _generate_compact_vectorized_lookup, _translate_triples, get_candidate_inverse_relations,
-    get_candidate_pairs, jaccard_similarity_scipy, mapped_triples_to_sparse_matrices,
-    triples_factory_to_sparse_matrices,
+    Sealant, _generate_compact_vectorized_lookup, _translate_triples, get_candidate_pairs, jaccard_similarity_scipy,
+    mapped_triples_to_sparse_matrices, triples_factory_to_sparse_matrices,
 )
 
 
 class TestLeakage(unittest.TestCase):
     """Tests for identifying inverse relationships and leakage."""
-
-    def test_count_inverse_frequencies(self):
-        """Test counting inverse frequencies.
-
-        Note, for r3, there are three triples, but the inverse triples are only counted once.
-        """
-        t = [
-            ['a', 'r1', 'b'],
-            #
-            ['b', 'r2', 'c'],
-            ['c', 'r2_inverse', 'b'],
-            ['d', 'r2', 'e'],
-            ['e', 'r2_inverse', 'd'],
-            #
-            ['g', 'r3', 'h'],
-            ['h', 'r3_inverse', 'g'],
-            ['i', 'r3', 'j'],
-            ['k', 'r3', 'l'],
-        ]
-        triples_factory = TriplesFactory.from_labeled_triples(
-            triples=np.array(t, dtype=np.str),
-            filter_out_candidate_inverse_relations=False,
-        )
-        frequencies = get_candidate_inverse_relations(triples_factory, minimum_frequency=0.0, symmetric=False)
-        expected_frequencies = {
-            ('r2', 'r2_inverse'): (2 / 2),
-            ('r2_inverse', 'r2'): (2 / 2),
-            ('r3', 'r3_inverse'): (1 / 3),
-            ('r3_inverse', 'r3'): (1 / 1),
-        }
-        expected_frequencies = {
-            (triples_factory.relation_to_id[r1n], triples_factory.relation_to_id[r2n]): count
-            for (r1n, r2n), count in expected_frequencies.items()
-        }
-        self.assertEqual(
-            expected_frequencies,
-            dict(frequencies),
-        )
 
     @unittest.skip('need to reinvestigate leakage pipeline')
     def test_find_leak_assymetric(self):

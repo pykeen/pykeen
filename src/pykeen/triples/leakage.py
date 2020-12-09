@@ -9,17 +9,13 @@ very easy and not a sign of the generalizability of a model to predict
 novel triples.
 """
 
-import itertools as itt
 import logging
-from collections import Counter, defaultdict
-from itertools import starmap
-from multiprocessing import Pool, cpu_count
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
+from collections import defaultdict
+from typing import Collection, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy
 import scipy.sparse
 import torch
-from tqdm.autonotebook import tqdm
 
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import TriplesFactory
@@ -28,7 +24,6 @@ from pykeen.utils import compact_mapping
 
 __all__ = [
     'Sealant',
-    'get_candidate_inverse_relations',
     'unleak',
     'reindex',
 ]
@@ -413,150 +408,6 @@ def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
         )
         for factory in triples_factories
     ]
-
-
-def get_candidate_inverse_relations(
-    triples_factory: TriplesFactory,
-    *,
-    symmetric: bool = True,
-    minimum_frequency: Optional[float] = None,
-    skip_zeros: bool = True,
-    skip_self: bool = True,
-    use_tqdm: bool = True,
-    use_multiprocessing=False,
-) -> Mapping[Tuple[int, int], float]:
-    """Count which relationships might be inverses of each other.
-
-    :param triples_factory:
-        The triples factory.
-    :param symmetric: Should set similarity be calculated as the Jaccard index (symmetric) or as the
-     set inclusion percentage (asymmetric)?
-    :param minimum_frequency: If set, pairs of relations and candidate inverse relations
-     with a similarity lower than this value will not be reported.
-    :param skip_zeros: Should similarities between forward and candidate inverses
-     of `0.0` be discarded?
-    :param skip_self: Should similarities between a relationship and its own
-     candidate inverse be skipped? Defaults to True, but could be useful to identify
-     relationships that aren't directed.
-    :param use_tqdm: Should :mod:`tqdm` be used to track progress of the similarity calculations?
-    :param use_multiprocessing: Should :mod:`multiprocessing` be used to offload the similarity calculations across
-     multiple cores?
-    :return: A counter whose keys are pairs of relations and values are similarity scores
-    """
-    # TODO: Deprecated
-    # A dictionary of all of the head/tail pairs for a given relation
-    relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
-    # A dictionary for all of the tail/head pairs for a given relation
-    candidate_inverse_relations: Dict[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in triples_factory.mapped_triples.tolist():
-        relations[r].add((h, t))
-        candidate_inverse_relations[r].add((t, h))
-
-    # Calculate the similarity between each relationship (entries in ``forward``)
-    # with all other candidate inverse relationships (entries in ``inverse``)
-    if symmetric:
-        it = (
-            ((r1, relations[r1]), (r2, candidate_inverse_relations[r2]))
-            for r1, r2 in itt.combinations(relations, 2)
-        )
-        total = int(len(relations) * (len(relations) - 1) // 2)
-    else:
-        # Note: uses an asymmetric metric, so results for ``(a, b)`` is not necessarily the
-        # same as for ``(b, a)``
-        it = itt.product(relations.items(), candidate_inverse_relations.items())
-        total = int(len(relations) ** 2)
-
-    if use_tqdm:
-        it = tqdm(it, total=total, desc='getting candidate inverse relations')
-    return _check_similar_sets(
-        it,
-        skip_zeros=skip_zeros,
-        skip_self=skip_self,
-        minimum_frequency=minimum_frequency,
-        symmetric=symmetric,
-        use_multiprocessing=use_multiprocessing,
-    )
-
-
-def _check_similar_sets(
-    it: Iterable[Tuple[Tuple[X, Y], Tuple[X, Y]]],
-    *,
-    skip_zeros: bool,
-    skip_self: bool,
-    minimum_frequency: Optional[float] = None,
-    symmetric: bool = True,
-    use_multiprocessing: bool = True,
-) -> Mapping[Tuple[X, X], float]:
-    # TODO: Deprecated
-    if symmetric:
-        _similarity_metric = _get_jaccard_index_unwrapped
-    else:
-        _similarity_metric = _get_asymmetric_jaccard_index_unwrapped
-
-    if not skip_self:
-        rv = (
-            (r1, r1_pairs, r2, r2_pairs)
-            for (r1, r1_pairs), (r2, r2_pairs) in it
-        )
-    else:
-        # Filter out results between a given relationship and itself
-        rv = (
-            (r1, r1_pairs, r2, r2_pairs)
-            for (r1, r1_pairs), (r2, r2_pairs) in it
-            if r1 != r2
-        )
-
-    if use_multiprocessing:
-        logger.info('using multiprocessing')
-        with Pool(cpu_count()) as pool:
-            rv = pool.starmap(_similarity_metric, rv)
-    else:
-        rv = starmap(_similarity_metric, rv)
-
-    if skip_zeros and minimum_frequency is None:
-        minimum_frequency = 0.0
-
-    if minimum_frequency is not None:
-        # Filter out results below a minimum frequency
-        rv = (
-            ((r1, r2), similarity)
-            for (r1, r2), similarity in rv
-            if minimum_frequency < similarity
-        )
-
-    return Counter(dict(rv))
-
-
-def _get_asymmetric_jaccard_index(a: Set[X], b: Set[X]) -> float:
-    if a:
-        return len(a.intersection(b)) / len(a)
-    return 0.0
-
-
-def _get_jaccard_index(a: Set[X], b: Set[X]) -> float:
-    if a and b:
-        return len(a.intersection(b)) / len(a.union(b))
-    return 0.0
-
-
-def _get_szymkiewicz_simpson_coefficient(a: Set[X], b: Set[X]) -> float:
-    """Calculate the Szymkiewicz–Simpson coefficient.
-
-    .. seealso:: https://en.wikipedia.org/wiki/Overlap_coefficient
-    """
-    if a and b:
-        return len(a.intersection(b)) / min(len(a), len(b))
-    return 0.0
-
-
-def _get_jaccard_index_unwrapped(r1: X, r1_pairs, r2, r2_pairs) -> Tuple[Tuple[X, X], float]:
-    return (r1, r2), _get_jaccard_index(r1_pairs, r2_pairs)
-
-
-def _get_asymmetric_jaccard_index_unwrapped(
-    r1: X, r1_pairs: Set[Y], r2: X, r2_pairs: Set[Y],
-) -> Tuple[Tuple[X, X], float]:
-    return (r1, r2), _get_asymmetric_jaccard_index(r1_pairs, r2_pairs)
 
 
 def _main():
