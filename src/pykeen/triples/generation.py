@@ -45,10 +45,13 @@ def generate_triples(
             relation: i
             for i, relation in enumerate(sorted(get_relations(rv)))
         }
-        rv = torch.tensor([
-            [new_entity_id[h], new_relation_id[r], new_entity_id[t]]
-            for h, r, t in rv.tolist()
-        ], dtype=torch.long)
+        rv = torch.as_tensor(
+            data=[
+                [new_entity_id[h], new_relation_id[r], new_entity_id[t]]
+                for h, r, t in rv.tolist()
+            ],
+            dtype=torch.long,
+        )
 
     return rv
 
