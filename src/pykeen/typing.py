@@ -15,6 +15,7 @@ __all__ = [
     'InteractionFunction',
     'DeviceHint',
     'RandomHint',
+    'TorchRandomHint',
 ]
 
 LabeledTriples = np.ndarray
