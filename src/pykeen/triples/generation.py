@@ -11,7 +11,7 @@ import torch
 from .triples_factory import TriplesFactory
 from .utils import get_entities, get_relations
 from ..typing import TorchRandomHint
-from ..utils import ensure_torch_random_state
+from ..utils import ensure_torch_random_state, invert_mapping
 
 __all__ = [
     'generate_triples',
@@ -90,7 +90,7 @@ def _make_id_to_labels(n: int) -> Mapping[int, str]:
 
 
 def _make_label_to_ids(n: int) -> Mapping[str, int]:
-    return {v: k for k, v in _make_id_to_labels(n).items()}
+    return invert_mapping(mapping=_make_id_to_labels(n))
 
 
 def generate_triples_factory(
