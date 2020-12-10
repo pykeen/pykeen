@@ -11,7 +11,7 @@ from ..base import ERModel
 from ...losses import Loss
 from ...nn import Embedding, EmbeddingSpecification, Interaction, LiteralRepresentations
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
 
 __all__ = [
     "LiteralModel",
@@ -36,6 +36,7 @@ class LiteralInteraction(
         super().__init__()
         self.base = base
         self.combination = combination
+        self.entity_shape = tuple(self.base.entity_shape) + ("e",)
 
     def forward(
         self,
@@ -44,10 +45,10 @@ class LiteralInteraction(
         t: Tuple[Representation, Representation],
     ) -> torch.FloatTensor:
         # combine entity embeddings + literals
-        h, t = [
-            self.combination(torch.cat(x, dim=-1))
-            for x in (h, t)
-        ]
+        h = torch.cat(h, dim=-1)
+        h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)
+        t = torch.cat(t, dim=-1)
+        t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)
         return self.base(h=h, r=r, t=t)
 
 

@@ -41,7 +41,8 @@ class ComplExLiteralCombination(nn.Module):
             nn.Linear(embedding_dim + num_of_literals, embedding_dim),
             torch.nn.Tanh(),
         )
-        self.embedding_dim = embedding_dim
+        # TODO: Determine this automatically
+        self.embedding_dim = 2 * embedding_dim
 
     def forward(
         self,

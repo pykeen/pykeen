@@ -12,6 +12,7 @@ import numpy
 import torch
 
 import pykeen.nn.modules
+from pykeen.models.multimodal.base import LiteralInteraction
 from pykeen.nn.functional import distmult_interaction
 from pykeen.nn.modules import Interaction, TranslationalInteraction
 from pykeen.testing import base as ptb
@@ -612,4 +613,5 @@ class InteractionTestsTest(ptb.TestsTest[Interaction], unittest.TestCase):
     base_test = InteractionTests
     skip_cls = {
         TranslationalInteraction,
+        LiteralInteraction,
     }
