@@ -9,6 +9,7 @@ from torch import nn
 
 from . import ComplEx, DistMult, ERMLP
 from ..base import ERModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification, Interaction
 from ...nn.modules import DistMultInteraction
@@ -39,15 +40,15 @@ class RGCN(ERModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=1000, q=50),
+        embedding_dim=dict(type=int, low=16, high=1024, q=16),
         num_bases_or_blocks=dict(type=int, low=2, high=20, q=1),
         num_layers=dict(type=int, low=1, high=5, q=1),
         use_bias=dict(type='bool'),
         use_batch_norm=dict(type='bool'),
         activation_cls=dict(type='categorical', choices=[None, nn.ReLU, nn.LeakyReLU]),
         base_model_cls=dict(type='categorical', choices=[DistMult, ComplEx, ERMLP]),
-        edge_dropout=dict(type=float, low=0.0, high=.9),
-        self_loop_dropout=dict(type=float, low=0.0, high=.9),
+        edge_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        self_loop_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         edge_weighting=dict(type='categorical', choices=[
             None,
             inverse_indegree_edge_weights,

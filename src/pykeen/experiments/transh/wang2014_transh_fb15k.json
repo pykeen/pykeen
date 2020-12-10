@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn FB15K Data Set with TransH as described by Wang et al., 2014"
+    "title": "Learn FB15K Dataset with TransH as described by Wang et al., 2014"
   },
   "pipeline": {
     "dataset": "fb15k",

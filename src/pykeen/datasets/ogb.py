@@ -9,7 +9,7 @@ from typing import ClassVar, Optional
 
 import numpy as np
 
-from .base import LazyDataSet
+from .base import LazyDataset
 from ..triples import TriplesFactory
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-class OGBLoader(LazyDataSet):
+class OGBLoader(LazyDataset):
     """Load from the Open Graph Benchmark (OGB)."""
 
     #: The name of the dataset to download
@@ -63,7 +63,7 @@ class OGBLoader(LazyDataSet):
         # FIXME these are already identifiers
         triples = triples.astype(np.str)
 
-        return TriplesFactory(
+        return TriplesFactory.from_labeled_triples(
             triples=triples,
             create_inverse_triples=self.create_inverse_triples,
             entity_to_id=entity_to_id,

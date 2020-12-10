@@ -280,8 +280,10 @@ class Model(nn.Module, ABC):
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
             logger.warning('No random seed is specified. This may lead to non-reproducible results.')
+            self._random_seed = None
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
+            self._random_seed = random_seed
 
         # Loss
         if loss is None:

@@ -46,6 +46,15 @@ def iterate_config_paths() -> Iterable[str]:
             yield model, config, path
 
 
+def _should_skip_because_type(x):
+    # don't worry about functions because they can't be specified by JSON.
+    # Could make a better mo
+    if inspect.isfunction(x):
+        return True
+    # later could extend for other non-JSON valid types
+    return False
+
+
 def get_configuration_errors(path: str):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     with open(path) as file:
@@ -122,6 +131,8 @@ def get_configuration_errors(path: str):  # noqa: C901
             annotation = choice.__init__.__annotations__.get(name)
 
             if name in _SKIP_NAMES or annotation in _SKIP_ANNOTATIONS:
+                continue
+            if parameter.default and _should_skip_because_type(parameter.default):
                 continue
 
             if required_kwargs is not None and name not in required_kwargs:

@@ -8,6 +8,7 @@ import torch
 import torch.autograd
 
 from ..base import ERModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import KG2EInteraction
@@ -49,7 +50,7 @@ class KG2E(ERModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
         c_max=dict(type=float, low=1.0, high=10.0),
     )

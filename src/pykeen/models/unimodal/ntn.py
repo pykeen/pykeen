@@ -7,6 +7,7 @@ from typing import Optional
 from torch import nn
 
 from ..base import ERModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import NTNInteraction
@@ -47,7 +48,7 @@ class NTN(ERModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         num_slices=dict(type=int, low=2, high=4),
     )
 

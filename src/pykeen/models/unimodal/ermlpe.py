@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 from ..base import ERModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import ERMLPEInteraction
@@ -41,10 +42,10 @@ class ERMLPE(ERModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
-        hidden_dim=dict(type=int, low=50, high=450, q=25),
-        input_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
-        hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
+        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss

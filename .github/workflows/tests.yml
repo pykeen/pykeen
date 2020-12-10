@@ -1,6 +1,10 @@
 name: Tests
 
-on: [ push ]
+on:
+  push:
+    branches:
+      - '**'
+      - '!master'
 
 jobs:
   lint:
@@ -30,10 +34,9 @@ jobs:
 
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
-      # - name: Check static typing with MyPy
-      #  run: tox -e mypy
-      #  # Allow failure, see https://github.community/t/continue-on-error-allow-failure-ui-indication/16773
-      #  if: succeeded() || failed()
+
+      - name: Check static typing with MyPy
+        run: tox -e mypy
   docs:
     if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Documentation
@@ -79,6 +82,28 @@ jobs:
         run: tox -e py
       - name: Run slow tests
         run: tox -e integration
+  windows:
+    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    name: Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8 ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          conda install pip setuptools wheel pytest sqlite
+          conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+          pip install -e .[mlflow,wandb]
+      - name: Run fast tests
+        run: pytest --durations=20 tests -m "not slow"
+      - name: Run slow tests
+        run: pytest --durations=20 tests -m "slow"
   tests_completed:
     if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     runs-on: ubuntu-latest

@@ -60,12 +60,8 @@ class ComplExLiteral(LiteralModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
-        input_dropout={
-            'type': float,
-            'low': 0.1,
-            'high': 0.3,
-        },
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
     loss_default = BCEWithLogitsLoss
@@ -105,4 +101,6 @@ class ComplExLiteral(LiteralModel):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            entity_initializer=xavier_normal_,
+            relation_initializer=xavier_normal_,
         )

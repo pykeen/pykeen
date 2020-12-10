@@ -7,7 +7,8 @@ from typing import Optional
 from torch import nn
 from torch.nn import functional
 
-from .. import ERModel
+from ..base import ERModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
@@ -53,7 +54,7 @@ class DistMult(ERModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The regularizer used by [yang2014]_ for DistMult
     #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100

@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple, Union
 import torch
 
 from ..base import ERModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import SimplEInteraction
@@ -46,7 +47,7 @@ class SimplE(ERModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
     loss_default = SoftplusLoss
@@ -116,9 +117,9 @@ class SimplE(ERModel):
                 t_source.get_in_canonical_shape(dim="t", indices=t_indices),
             )
             for h_source, r_source, t_source in (
-                (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
-                (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
-            )
+            (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
+            (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
+        )
         ))
         scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)

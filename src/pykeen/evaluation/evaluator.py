@@ -16,7 +16,7 @@ from dataclasses_json import dataclass_json
 from tqdm.autonotebook import tqdm
 
 from ..models.base import Model
-from ..triples.triples_factory import get_unique_entity_ids_from_triples_tensor
+from ..triples.utils import get_entities
 from ..typing import MappedTriples
 from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
 
@@ -480,7 +480,7 @@ def evaluate(
 
     # verify that the triples have been filtered
     if restrict_entities_to is not None and do_time_consuming_checks:
-        present_entity_ids = set(get_unique_entity_ids_from_triples_tensor(mapped_triples=mapped_triples).tolist())
+        present_entity_ids = get_entities(triples=mapped_triples)
         unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
         if len(unwanted) > 0:
             raise ValueError(f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
