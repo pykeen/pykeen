@@ -6,7 +6,7 @@ from typing import Optional, TYPE_CHECKING
 
 import torch.nn as nn
 
-from .base import LiteralModel
+from .base import LiteralInteraction, LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
@@ -47,10 +47,12 @@ class DistMultLiteral(LiteralModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            interaction=DistMultInteraction(),
-            combination=nn.Sequential(
-                nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
-                nn.Dropout(input_dropout),
+            interaction=LiteralInteraction(
+                base=DistMultInteraction(),
+                combination=nn.Sequential(
+                    nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
+                    nn.Dropout(input_dropout),
+                ),
             ),
             entity_specification=EmbeddingSpecification(
                 embedding_dim=embedding_dim,

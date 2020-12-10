@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 import torch
 import torch.nn as nn
 
-from .base import LiteralModel
+from .base import LiteralInteraction, LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import EmbeddingSpecification
@@ -82,11 +82,13 @@ class ComplExLiteral(LiteralModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            interaction=ComplExInteraction(),
-            combination=ComplExLiteralCombination(
-                embedding_dim=embedding_dim,
-                num_of_literals=triples_factory.numeric_literals.shape[-1],
-                dropout=input_dropout,
+            interaction=LiteralInteraction(
+                base=ComplExInteraction(),
+                combination=ComplExLiteralCombination(
+                    embedding_dim=embedding_dim,
+                    num_of_literals=triples_factory.numeric_literals.shape[-1],
+                    dropout=input_dropout,
+                ),
             ),
             entity_specification=EmbeddingSpecification(
                 embedding_dim=embedding_dim,

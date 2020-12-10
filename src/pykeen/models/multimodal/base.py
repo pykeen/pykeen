@@ -2,7 +2,7 @@
 
 """Base classes for multi-modal models."""
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Tuple
 
 import torch
 from torch import nn
@@ -21,14 +21,43 @@ if TYPE_CHECKING:
     from ...typing import Representation  # noqa
 
 
+class LiteralInteraction(
+    Interaction[
+        Tuple[Representation, Representation],
+        Representation,
+        Tuple[Representation, Representation],
+    ]):
+
+    def __init__(
+        self,
+        base: Interaction[Representation, Representation, Representation],
+        combination: nn.Module,
+    ):
+        super().__init__()
+        self.base = base
+        self.combination = combination
+
+    def forward(
+        self,
+        h: Tuple[Representation, Representation],
+        r: Representation,
+        t: Tuple[Representation, Representation],
+    ) -> torch.FloatTensor:
+        # combine entity embeddings + literals
+        h, t = [
+            self.combination(torch.cat(x, dim=-1))
+            for x in (h, t)
+        ]
+        return self.base(h=h, r=r, t=t)
+
+
 class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
     """Base class for models with entity literals."""
 
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,
-        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
-        combination: nn.Module,
+        interaction: LiteralInteraction,
         entity_specification: Optional[EmbeddingSpecification] = None,
         relation_specification: Optional[EmbeddingSpecification] = None,
         loss: Optional[Loss] = None,
@@ -59,21 +88,3 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
                 specification=relation_specification,
             ),
         )
-        self.combination = combination
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = self._get_representations(h_indices, r_indices, t_indices)
-        # combine entity embeddings + literals
-        h, t = [
-            self.combination(torch.cat(x, dim=-1))
-            for x in (h, t)
-        ]
-        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
