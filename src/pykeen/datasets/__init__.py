@@ -94,7 +94,7 @@ def get_dataset(
         if has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]
         elif not os.path.exists(dataset):
-            raise ValueError('dataset is neither a pre-defined dataset string nor a filepath')
+            raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
             return Dataset.from_path(dataset)
 
