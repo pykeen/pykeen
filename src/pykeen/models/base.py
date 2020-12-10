@@ -596,6 +596,9 @@ class Model(nn.Module, ABC):
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
 
+        Note: If the model has been trained with inverse relations, the task of predicting the heads becomes the task
+        of predicting the tail entities of the inverse triples, i.e., f(*,r,t) is predicted by means of f(t,r_inv,*).
+
         Additionally, the model is set to evaluation mode.
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
