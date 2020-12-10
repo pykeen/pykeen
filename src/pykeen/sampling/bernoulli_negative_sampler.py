@@ -19,7 +19,7 @@ class BernoulliNegativeSampler(NegativeSampler):
 
     Negative triples are created by corrupting a positive triple $(h,r,t)\in \mathcal{K}$ by
     replacing either $h$ or $t$.
-    With \acf{bns} [Wang2014]_, the probability of corrupting $h$ or $t$ in $(h,r,t) \in \mathcal{K}$ is determined by
+    With \acf{bns} [wang2014]_, the probability of corrupting $h$ or $t$ in $(h,r,t) \in \mathcal{K}$ is determined by
     the property of the relation $r$: if the relation is a \textit{one-to-many} relation (e.g.\ \textit{motherOf}),
     \ac{bns} assigns a higher probability to replace $h$, and if it is a \textit{many-to-one} relation
     (e.g. \textit{bornIn}) it assigns a higher probability to replace $t$.
