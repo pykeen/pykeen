@@ -2,19 +2,24 @@
 
 """Unit tests for triples factories."""
 
+import itertools as itt
 import unittest
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Nations
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids, _tf_cleanup_all, _tf_cleanup_deterministic,
+from pykeen.triples.generation import generate_triples
+from pykeen.triples.splitting import (
+    SPLIT_METHODS, _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
     _tf_cleanup_randomized,
     get_absolute_split_sizes, normalize_ratios,
 )
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
+from pykeen.triples.utils import get_entities, get_relations
 
 triples = np.array(
     [
@@ -216,10 +221,10 @@ class TestSplit(unittest.TestCase):
     def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
         """Test invariants for result of triples factory splitting."""
         # verify that all entities and relations are present in the training factory
-        assert training_triples_factory.num_entities == self.triples_factory.num_entities
-        assert training_triples_factory.num_relations == self.triples_factory.num_relations
+        self.assertEqual(training_triples_factory.num_entities, self.triples_factory.num_entities)
+        self.assertEqual(training_triples_factory.num_relations, self.triples_factory.num_relations)
 
-        all_factories = (training_triples_factory,) + other_factories
+        all_factories = (training_triples_factory, *other_factories)
 
         # verify that no triple got lost
         self.assertEqual(sum(t.num_triples for t in all_factories), self.triples_factory.num_triples)
@@ -238,17 +243,19 @@ class TestSplit(unittest.TestCase):
             id(self.triples_factory.relation_to_id),
         })
 
-    def test_split_naive(self):
-        """Test splitting a factory in two with a given ratio."""
-        ratio = 0.8
-        train_triples_factory, test_triples_factory = self.triples_factory.split(ratio)
-        self._test_invariants(train_triples_factory, test_triples_factory)
-
-    def test_split_multi(self):
-        """Test splitting a factory in three."""
-        ratios = 0.80, 0.10
-        t0, t1, t2 = self.triples_factory.split(ratios)
-        self._test_invariants(t0, t1, t2)
+    def test_split(self):
+        """Test splitting a factory."""
+        cases = [
+            (2, 0.8),
+            (2, [0.8]),
+            (3, [0.80, 0.10]),
+            (3, [0.80, 0.10, 0.10]),
+        ]
+        for method, (n, ratios), in itt.product(SPLIT_METHODS, cases):
+            with self.subTest(method=method, ratios=ratios):
+                factories = self.triples_factory.split(ratios, method=method)
+                self.assertEqual(n, len(factories))
+                self._test_invariants(*factories)
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
@@ -324,6 +331,29 @@ class TestSplit(unittest.TestCase):
             self.assertEqual(expected_testing_2, new_testing)
         else:
             self.fail('training was not correct')
+
+    def test_get_cover_deterministic(self):
+        """Test _get_cover_deterministic."""
+        generated_triples = generate_triples()
+        cover = _get_cover_deterministic(triples=generated_triples)
+
+        # check type
+        assert torch.is_tensor(cover)
+        assert cover.dtype == torch.bool
+        # check format
+        assert cover.shape == (generated_triples.shape[0],)
+
+        # check coverage
+        self.assertEqual(
+            get_entities(generated_triples),
+            get_entities(generated_triples[cover]),
+            msg='entity coverage is not full',
+        )
+        self.assertEqual(
+            get_relations(generated_triples),
+            get_relations(generated_triples[cover]),
+            msg='relation coverage is not full',
+        )
 
 
 class TestLiterals(unittest.TestCase):
@@ -447,3 +477,16 @@ def test_normalize_ratios():
         np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
         # compare against expected
         np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
+
+
+def test_normalize_invalid_ratio():
+    """Test invalid ratios."""
+    cases = [
+        1.1,
+        [1.1],
+        [0.8, 0.3],
+        [0.8, 0.1, 0.2],
+    ]
+    for ratios in cases:
+        with pytest.raises(ValueError):
+            _ = normalize_ratios(ratios=ratios)
