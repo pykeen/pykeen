@@ -29,6 +29,8 @@ PYKEEN_EXPERIMENTS: Path = PYKEEN_MODULE.get('experiments')
 #: A subdirectory of the PyKEEN data folder for checkpoints, defaults to ``~/.data/pykeen/checkpoints``
 PYKEEN_CHECKPOINTS: Path = PYKEEN_MODULE.get('checkpoints')
 
+PYKEEN_DEFAULT_CHECKPOINT = "PyKEEN_just_saved_my_day.pt"
+
 DEFAULT_DROPOUT_HPO_RANGE = dict(type=float, low=0.0, high=0.5, q=0.1)
 #: We define the embedding dimensions as a multiple of 16 because it is computational beneficial (on a GPU)
 #: see: https://docs.nvidia.com/deeplearning/performance/index.html#optimizing-performance

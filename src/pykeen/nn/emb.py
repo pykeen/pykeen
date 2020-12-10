@@ -58,6 +58,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        trainable: bool = True,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -102,6 +103,7 @@ class Embedding(RepresentationModule):
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
         )
+        self._embeddings.requires_grad_(trainable)
 
     @classmethod
     def init_with_device(

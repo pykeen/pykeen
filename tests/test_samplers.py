@@ -54,7 +54,7 @@ class _NegativeSamplingTestCase:
             num_negs_per_pos=self.num_negs_per_pos,
         )
         random = numpy.random.RandomState(seed=self.seed)
-        batch_indices = random.randint(low=0, high=self.slcwa_instances.num_instances, size=(self.batch_size,))
+        batch_indices = random.randint(low=0, high=len(self.slcwa_instances), size=(self.batch_size,))
         self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
 
     def test_sample(self) -> None:
