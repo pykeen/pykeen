@@ -42,12 +42,8 @@ class NegativeSampler(ABC):
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filtered = filtered if filtered is not None else False
         self.corruption_scheme = corruption_scheme if corruption_scheme is not None else ('h', 't')
-
         # Set the indices
-        self._set_corruption_indices(corruption_scheme)
-
-    def _set_corruption_indices(self, corruption_scheme: Tuple[str]):
-        self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in corruption_scheme]
+        self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
 
     @classmethod
     def get_normalized_name(cls) -> str:

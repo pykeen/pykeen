@@ -57,7 +57,7 @@ class BasicNegativeSampler(NegativeSampler):
                 device=positive_batch.device,
             )
 
-        for index, start in zip(self.corruption_scheme, range(0, num_negs, split_idx)):
+        for index, start in zip(self._corruption_indices, range(0, num_negs, split_idx)):
             stop = min(start + split_idx, num_negs)
             # Replace {heads, relations, tails} – To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
@@ -69,6 +69,6 @@ class BasicNegativeSampler(NegativeSampler):
             else:
                 filter_same_entities = (negative_entities[start:stop] >= positive_batch[start:stop, index])
                 # Corrupt heads or tails
-                negative_batch[start:stop, index] = negative_relations[start:stop] + filter_same_entities.long()
+                negative_batch[start:stop, index] = negative_entities[start:stop] + filter_same_entities.long()
 
         return negative_batch
