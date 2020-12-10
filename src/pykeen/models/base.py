@@ -563,17 +563,16 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    def _score_with_inverse_relations(
+    def score_hrt_inverse(
         self,
         hrt_batch: torch.LongTensor,
     ) -> torch.FloatTensor:
         """Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h)."""
         if not self.triples_factory.create_inverse_triples:
-            raise Exception("Model is not configured to predict with inverse relations. "
-                            "You might set self.triples_factory.create_inverse_triples=True when creating"
-                            "the triples the factory.")
+            raise ValueError("Model is not configured to predict with inverse relations. "
+                             "You might set self.triples_factory.create_inverse_triples=True when creating"
+                             "the triples the factory.")
         hrt_batch_cloned = hrt_batch.clone()
-        hrt_batch_cloned.to(device=hrt_batch.device)
 
         # The number of relations stored in the triples factory includes the number of inverse relations
         # Id of inverse relation: relation + 1
@@ -629,7 +628,6 @@ class Model(nn.Module, ABC):
         of the _inverse relation_ is 4 (id of relation + 1).
         '''
         rt_batch_cloned = rt_batch.clone()
-        rt_batch_cloned.to(device=rt_batch.device)
 
         # The number of relations stored in the triples factory includes the number of inverse relations
         # Id of inverse relation: relation + 1
