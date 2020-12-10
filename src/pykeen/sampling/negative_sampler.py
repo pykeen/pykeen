@@ -16,11 +16,7 @@ __all__ = [
 
 
 class NegativeSampler(ABC):
-    """A negative sampler.
-
-    Because most KGs are generated under the open world assumption, we require training approaches involving techniques
-    such as negative sampling to avoid over-generalization to true facts.
-    """
+    """A negative sampler."""
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]

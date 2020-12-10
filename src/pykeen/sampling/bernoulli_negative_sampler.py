@@ -15,14 +15,22 @@ __all__ = [
 
 
 class BernoulliNegativeSampler(NegativeSampler):
-    r"""An implementation of the bernoulli negative sampling approach proposed by [wang2014]_.
+    r"""An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_.
 
-    Negative triples are created by corrupting a positive triple $(h,r,t)\in \mathcal{K}$ by
-    replacing either $h$ or $t$.
-    With \acf{bns} [wang2014]_, the probability of corrupting $h$ or $t$ in $(h,r,t) \in \mathcal{K}$ is determined by
-    the property of the relation $r$: if the relation is a \textit{one-to-many} relation (e.g.\ \textit{motherOf}),
-    \ac{bns} assigns a higher probability to replace $h$, and if it is a \textit{many-to-one} relation
-    (e.g. \textit{bornIn}) it assigns a higher probability to replace $t$.
+    The probability of corrupting the head $h$ or tail $t$ in a relation $(h,r,t) \in \mathcal{K}$
+    is determined by global properties of the relation $r$:
+
+    - $r$ is *one-to-many* (e.g. *motherOf*): a higher probability is assigned to replace $h$
+    - $r$ is *many-to-one* (e.g. *bornIn*): a higher probability is assigned to replace $t$.
+
+    More precisely, for each relation $r \in \mathcal{R}$, the average number of tails per head
+    (``tph``) and heads per tail (``hpt``) are first computed.
+
+    Then, the head corruption probability $p_r$ is defined as $p_r = \frac{tph}{tph + hpt}$.
+    The tail corruption probability is defined as $1 - p_r = \frac{hpt}{tph + hpt}$.
+
+    For each triple $(h,r,t) \in \mathcal{K}$, the head is corrupted with probability $p_r$ and the tail is
+    corrupted with probability $1 - p_r$.
     """
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters

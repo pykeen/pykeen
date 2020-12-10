@@ -12,13 +12,16 @@ __all__ = [
 
 
 class BasicNegativeSampler(NegativeSampler):
-    r"""A basic negative sampler.
+    r"""A negative sampler that corrupts positive triples $(h,r,t) \in \mathcal{K}$ by replacing either $h$ or $t$.
 
-    Negative triples are created by corrupting a positive triple $(h,r,t) \in \mathcal{K}$ by
-    replacing either $h$ or $t$.
-    The first step is to randomly (uniformly) determine whether $h$ or $t$ shall be corrupted for a positive triple
-    $(h,r,t) \in \mathcal{K}$. Afterwards, an entity $e \in \mathcal{E}$ is uniformly sampled and selected as the
-    corrupted head/tail entity.
+    Steps:
+
+    1. Randomly (uniformly) determine whether $h$ or $t$ shall be corrupted for a positive triple
+       $(h,r,t) \in \mathcal{K}$.
+    2. Randomly (uniformly) sample an entity $e \in \mathcal{E}$ for selection to corrupt the triple.
+
+       - If $h$ was selected before, the corrupted triple is $(e,r,t)$
+       - If $t$ was selected before, the corrupted triple is $(h,r,e)$
     """
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
