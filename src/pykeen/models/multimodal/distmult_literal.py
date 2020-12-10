@@ -80,7 +80,9 @@ class DistMultLiteral(DistMult, MultimodalModel):
         t = self._get_entity_representations(idx=t_indices)
         return self.interaction_function(h=h, r=r, t=t)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
+        if use_inverse:
+            self._score_with_inverse_relations(hrt_batch=hrt_batch)
         return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102

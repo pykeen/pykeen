@@ -563,6 +563,23 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
+    def _score_with_inverse_relations(
+        self,
+        hrt_batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        """Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h)."""
+        hrt_batch_cloned = hrt_batch.clone()
+        hrt_batch_cloned.to(device=hrt_batch.device)
+
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        hrt_batch_cloned[:, 1] = hrt_batch_cloned[:, 1] + 1
+
+        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
+        hrt_batch_cloned = hrt_batch_cloned.flip(1)
+
+        return self.score_hrt(hrt_batch=hrt_batch_cloned)
+
     def predict_scores_all_heads(
         self,
         rt_batch: torch.LongTensor,
@@ -913,7 +930,7 @@ class Model(nn.Module, ABC):
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
