@@ -458,19 +458,20 @@ class TriplesFactory:
         """Split a triples factory into a train/test.
 
         :param ratios:
-            There are three options for this argument.
-            First, a float can be given between 0 and 1.0, non-inclusive. The first set of triples will get this ratio and
-            the second will get the rest.
-            Second, a list of ratios can be given for which set in which order should get what ratios as in ``[0.8, 0.1]``.
-            The final ratio can be omitted because that can be calculated.
-            Third, all ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is
-            1.0.
+            There are three options for this argument:
+
+            1. A float can be given between 0 and 1.0, non-inclusive. The first set of triples will
+               get this ratio and the second will get the rest.
+            2. A list of ratios can be given for which set in which order should get what ratios as in
+               ``[0.8, 0.1]``. The final ratio can be omitted because that can be calculated.
+            3. All ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]``
+               where the sum of all ratios is 1.0.
         :param random_state:
             The random state used to shuffle and split the triples.
         :param randomize_cleanup:
-            If true, uses the non-deterministic method for moving triples to the training set. This has the advantage that
-            it does not necessarily have to move all of them, but it might be significantly slower since it moves one
-            triple at a time.
+            If true, uses the non-deterministic method for moving triples to the training set. This has the
+            advantage that it does not necessarily have to move all of them, but it might be significantly
+            slower since it moves one triple at a time.
         :param method:
             The name of the method to use, from SPLIT_METHODS. Defaults to "coverage".
 

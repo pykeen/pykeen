@@ -17,7 +17,6 @@ import numpy
 import scipy.sparse
 import torch
 
-import pykeen.triples.splitting
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.typing import MappedTriples
@@ -365,9 +364,9 @@ def _translate_triples(
         [
             trans[column]
             for column, trans in zip(
-                triples.t(),
-                (entity_translation, relation_translation, entity_translation),
-            )
+            triples.t(),
+            (entity_translation, relation_translation, entity_translation),
+        )
         ],
         dim=-1,
     )
