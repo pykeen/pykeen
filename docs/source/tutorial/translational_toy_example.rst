@@ -23,8 +23,8 @@ be able to exactly learn the geometric structure.
     from pykeen.pipeline import pipeline
     tf = ...
     results = pipeline(
-        training_triples_factory=tf,
-        testing_triples_factory=...,
+        training=tf,
+        testing=...,
         model = 'TransE',
         model_kwargs=dict(embedding_dim=2),
         random_seed=1,
@@ -49,8 +49,8 @@ number of epochs during training.
 .. code-block:: python
 
     results = pipeline(
-        training_triples_factory=tf,
-        testing_triples_factory=...,
+        training=tf,
+        testing=...,
         model = 'TransE',
         model_kwargs=dict(embedding_dim=2),
         optimizer_kwargs=dict(lr=1.0e-1),
@@ -81,8 +81,8 @@ loss. You can do this by passing ``loss="softplus"`` to the pipeline.
 .. code-block:: python
 
     toy_results = pipeline(
-        training_triples_factory=tf,
-        testing_triples_factory=tf,
+        training=tf,
+        testing=...,
         model='TransE',
         loss='softplus',
         model_kwargs=dict(embedding_dim=2),

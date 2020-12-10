@@ -525,7 +525,7 @@ class PipelineResult(Result):
 
 
 def _reduce_embeddings(embeddings, reducer, fit: bool = False):
-    embeddings_numpy = embeddings.weight.detach().numpy()
+    embeddings_numpy = embeddings.forward(None).detach().numpy()
     if embeddings_numpy.shape[1] == 2:
         logger.debug('not reducing entity embeddings, already dim=2')
         return embeddings_numpy, False
@@ -752,7 +752,8 @@ def pipeline(  # noqa: C901
 
     :param dataset:
         The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
+        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
+        and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
