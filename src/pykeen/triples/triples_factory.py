@@ -32,11 +32,6 @@ INVERSE_SUFFIX = '_inverse'
 TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
 
 
-def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> torch.LongTensor:
-    """Return the unique entity IDs used in a tensor of triples."""
-    return mapped_triples[:, [0, 2]].unique()
-
-
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
     """Create mapping from entity labels to IDs.
 
