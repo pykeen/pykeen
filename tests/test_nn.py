@@ -349,6 +349,7 @@ class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        # TODO: use triple generation
         # generate random triples
         mapped_triples = numpy.stack([
             numpy.random.randint(max_id, size=(self.num_triples,))
@@ -363,7 +364,7 @@ class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
                 (entity_names, relation_names, entity_names),
             )
         ])
-        kwargs["triples_factory"] = TriplesFactory(triples=triples)
+        kwargs["triples_factory"] = TriplesFactory.from_labeled_triples(triples=triples)
         return kwargs
 
 

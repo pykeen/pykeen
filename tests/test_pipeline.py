@@ -7,8 +7,11 @@ import unittest
 
 import pandas as pd
 
+import pykeen
 from pykeen.datasets import Nations
-from pykeen.pipeline import pipeline
+from pykeen.models import Model
+from pykeen.pipeline import PipelineResult, pipeline
+from pykeen.regularizers import NoRegularizer
 
 
 class TestPipeline(unittest.TestCase):

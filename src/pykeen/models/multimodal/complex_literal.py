@@ -102,6 +102,4 @@ class ComplExLiteral(LiteralModel):
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
         )
