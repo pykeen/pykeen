@@ -5,6 +5,7 @@
 from typing import Callable, Mapping, Optional, Set, TextIO, Union
 
 import numpy as np
+import torch
 from pkg_resources import iter_entry_points
 
 from ..typing import LabeledTriples
@@ -58,11 +59,11 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Opti
     )
 
 
-def get_entities(triples) -> Set:
+def get_entities(triples: torch.LongTensor) -> Set[int]:
     """Get all entities from the triples."""
     return set(triples[:, [0, 2]].flatten().tolist())
 
 
-def get_relations(triples) -> Set:
+def get_relations(triples: torch.LongTensor) -> Set[int]:
     """Get all relations from the triples."""
-    return set(triples[:, 1])
+    return set(triples[:, 1].tolist())

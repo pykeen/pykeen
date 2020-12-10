@@ -79,17 +79,17 @@ class Dataset:
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
 
-    def summary_str(self, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
-    def summarize(self) -> None:
+    def summarize(self, title: Optional[str] = None, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str())
+        print(self.summary_str(title=title), file=file)
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
@@ -229,6 +229,7 @@ class PathDataset(LazyDataset):
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self.create_inverse_triples,
         )
 
     def _load_validation(self) -> None:
@@ -238,6 +239,7 @@ class PathDataset(LazyDataset):
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self.create_inverse_triples,
         )
 
     def __repr__(self) -> str:  # noqa: D105
