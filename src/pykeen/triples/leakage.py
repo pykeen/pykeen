@@ -25,6 +25,7 @@ from pykeen.utils import compact_mapping
 __all__ = [
     'Sealant',
     'unleak',
+    'unleak_dataset',
     'reindex',
 ]
 
@@ -267,11 +268,25 @@ class Sealant:
         return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
 
 
+def unleak_dataset(
+    dataset,
+    n: Union[None, int, float] = None,
+    minimum_frequency: Optional[float] = None,
+    use_tqdm: bool = True,
+):
+    from ..datasets.base import EagerDataset
+    return EagerDataset(*unleak(
+        dataset.training, dataset.testing, dataset.validation,
+        n=n, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm,
+    ))
+
+
 def unleak(
     train: TriplesFactory,
     *triples_factories: TriplesFactory,
     n: Union[None, int, float] = None,
     minimum_frequency: Optional[float] = None,
+    use_tqdm: bool = True,
 ) -> Iterable[TriplesFactory]:
     """Unleak a train, test, and validate triples factory.
 
@@ -294,7 +309,7 @@ def unleak(
         ]
 
     # Calculate which relations are the inverse ones
-    sealant = Sealant(train, minimum_frequency=minimum_frequency)
+    sealant = Sealant(train, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm)
 
     if not sealant.relations_to_delete:
         logger.info(f'no relations to delete identified from {train}')
