@@ -8,6 +8,7 @@ from typing import Set
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Nations
@@ -268,19 +269,6 @@ class TestSplit(unittest.TestCase):
             id(self.triples_factory.relation_to_id),
         })
 
-    def test_invalid_ratio(self):
-        """Test invalid ratios."""
-        cases = [
-            1.1,
-            [1.1],
-            [0.8, 0.3],
-            [0.8, 0.1, 0.2],
-        ]
-        for method, ratios in itt.product(SPLIT_METHODS, cases):
-            with self.subTest(method=method, ratio=ratios):
-                with self.assertRaises(ValueError):
-                    _ = self.triples_factory.split(ratios, method=method)
-
     def test_split(self):
         """Test splitting a factory."""
         cases = [
@@ -510,3 +498,16 @@ def test_normalize_ratios():
         np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
         # compare against expected
         np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
+
+
+def test_normalize_invalid_ratio():
+    """Test invalid ratios."""
+    cases = [
+        1.1,
+        [1.1],
+        [0.8, 0.3],
+        [0.8, 0.1, 0.2],
+    ]
+    for ratios in cases:
+        with pytest.raises(ValueError):
+            _ = normalize_ratios(ratios=ratios)
