@@ -2,19 +2,18 @@
 
 """Instance creation utilities."""
 
-from typing import Callable, List, Mapping, Optional, TextIO, Union
+from typing import Callable, Mapping, Optional, Set, TextIO, Union
 
 import numpy as np
+import torch
 from pkg_resources import iter_entry_points
-from tabulate import tabulate
 
 from ..typing import LabeledTriples
 
 __all__ = [
     'load_triples',
-    'concatenate_triples_factories',
-    'summarize',
-    'calculate_ratios',
+    'get_entities',
+    'get_relations',
 ]
 
 
@@ -60,40 +59,11 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Opti
     )
 
 
-def concatenate_triples_factories(*triples_factories) -> np.ndarray:
-    """Concatenate all of the triples over multiple triples factories."""
-    return np.concatenate(
-        [
-            triples_factory.triples
-            for triples_factory in triples_factories
-        ],
-        axis=0,
-    )
+def get_entities(triples: torch.LongTensor) -> Set[int]:
+    """Get all entities from the triples."""
+    return set(triples[:, [0, 2]].flatten().tolist())
 
 
-def summary_str(training, testing, validation) -> str:
-    """Make a summary string for the dataset."""
-    headers = ['Set', 'Entities', 'Relations', 'Triples', 'Ratio']
-    a, b, c = calculate_ratios(training, testing, validation)
-    return tabulate(
-        [
-            ['Train', training.num_entities, training.num_relations, training.num_triples, a],
-            ['Test', testing.num_entities, testing.num_relations, testing.num_triples, b],
-            ['Valid', validation.num_entities, validation.num_relations, validation.num_triples, c],
-        ],
-        headers=headers,
-    )
-
-
-def summarize(training, testing, validation) -> None:
-    """Summarize the dataset."""
-    print(summary_str(training, testing, validation))
-
-
-def calculate_ratios(*triples_factories) -> List[float]:
-    """Calculate the ratios of the triples factories' sizes."""
-    x = [tf.num_triples for tf in triples_factories]
-    total_triples = sum(x)
-    rv = [nt / total_triples for nt in x]
-    rv[-1] = 1.0 - sum(rv[:-1])
-    return rv
+def get_relations(triples: torch.LongTensor) -> Set[int]:
+    """Get all relations from the triples."""
+    return set(triples[:, 1].tolist())

@@ -7,20 +7,27 @@ import json
 import logging
 import random
 from io import BytesIO
-from typing import Any, Callable, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from pathlib import Path
+from typing import (
+    Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar,
+    Union,
+)
 
-import numpy
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn
 
-from .typing import DeviceHint, RandomHint
+from .constants import PYKEEN_BENCHMARKS
+from .typing import DeviceHint, RandomHint, TorchRandomHint
+from .version import get_git_hash
 
 __all__ = [
     'compose',
     'clamp_norm',
     'compact_mapping',
+    'ensure_torch_random_state',
+    'format_relative_comparison',
     'imag_part',
     'invert_mapping',
     'l2_regularization',
@@ -33,6 +40,7 @@ __all__ = [
     'split_complex',
     'split_list_in_batches_iter',
     'split_list_in_batches',
+    'torch_is_in_1d',
     'normalize_string',
     'normalized_lookup',
     'get_cls',
@@ -43,6 +51,7 @@ __all__ = [
     'Result',
     'fix_dataclass_init_docs',
     'ensure_random_state',
+    'get_benchmark',
 ]
 
 logger = logging.getLogger(__name__)
@@ -71,7 +80,7 @@ def l2_regularization(
 
     # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
     if normalize:
-        regularization_term /= sum(numpy.prod(x.shape) for x in xs)
+        regularization_term /= sum(np.prod(x.shape) for x in xs)
 
     return regularization_term
 
@@ -376,6 +385,13 @@ def fix_dataclass_init_docs(cls: Type) -> Type:
     return cls
 
 
+def get_benchmark(name: str) -> Path:
+    """Get the benchmark directory for this version."""
+    rv = PYKEEN_BENCHMARKS / name / get_git_hash()
+    rv.mkdir(exist_ok=True, parents=True)
+    return rv
+
+
 def get_model_io(model) -> BytesIO:
     """Get the model as bytes."""
     model_io = BytesIO()
@@ -407,7 +423,11 @@ def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
         pass  # its fine...
 
 
-def invert_mapping(mapping: Mapping[str, int]) -> Mapping[int, str]:
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
     """
     Invert a mapping.
 
@@ -443,3 +463,59 @@ def ensure_random_state(random_state: RandomHint) -> np.random.RandomState:
     if not isinstance(random_state, np.random.RandomState):
         raise TypeError
     return random_state
+
+
+def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
+    """Prepare a random state for PyTorch."""
+    if random_state is None:
+        random_state = random_non_negative_int()
+        logger.warning(f'using automatically assigned random_state={random_state}')
+    if isinstance(random_state, int):
+        random_state = torch.manual_seed(seed=random_state)
+    if not isinstance(random_state, torch.Generator):
+        raise TypeError
+    return random_state
+
+
+def torch_is_in_1d(
+    query_tensor: torch.LongTensor,
+    test_tensor: Union[Collection[int], torch.LongTensor],
+    max_id: Optional[int] = None,
+    invert: bool = False,
+) -> torch.BoolTensor:
+    """
+    Return a boolean mask with Q[i] in T.
+
+    The method guarantees memory complexity of max(size(Q), size(T)) and is thus, memory-wise, superior to naive
+    broadcasting.
+
+    :param query_tensor: shape: S
+        The query Q.
+    :param test_tensor:
+        The test set T.
+    :param max_id:
+        A maximum ID. If not given, will be inferred.
+    :param invert:
+        Whether to invert the result.
+
+    :return: shape: S
+        A boolean mask.
+    """
+    # normalize input
+    if not isinstance(test_tensor, torch.Tensor):
+        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
+    if max_id is None:
+        max_id = max(query_tensor.max(), test_tensor.max()) + 1
+    mask = torch.zeros(max_id, dtype=torch.bool)
+    mask[test_tensor] = True
+    if invert:
+        mask = ~mask
+    return mask[query_tensor.view(-1)].view(*query_tensor.shape)
+
+
+def format_relative_comparison(
+    part: int,
+    total: int,
+) -> str:
+    """Format a relative comparison."""
+    return f"{part}/{total} ({part / total:2.2%})"

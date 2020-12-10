@@ -170,6 +170,7 @@ import ftplib
 import json
 import logging
 import os
+import pathlib
 import time
 from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
@@ -178,12 +179,14 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
+from .constants import PYKEEN_CHECKPOINTS
 from .datasets import get_dataset
 from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
 from .models.base import Model
+from .nn import Embedding
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
@@ -541,8 +544,8 @@ class PipelineResult(Result):
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
-def _reduce_embeddings(embeddings, reducer, fit: bool = False):
-    embeddings_numpy = embeddings.weight.detach().numpy()
+def _reduce_embeddings(embedding: Embedding, reducer, fit: bool = False):
+    embeddings_numpy = embedding(indices=None).detach().cpu().numpy()
     if embeddings_numpy.shape[1] == 2:
         logger.debug('not reducing entity embeddings, already dim=2')
         return embeddings_numpy, False
@@ -776,7 +779,8 @@ def pipeline(  # noqa: C901
 
     :param dataset:
         The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
+        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
+        and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -852,7 +856,28 @@ def pipeline(  # noqa: C901
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     """
-    if random_seed is None:
+    if training_kwargs is None:
+        training_kwargs = {}
+
+    # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
+    # used random_seed to ensure reproducible results
+    checkpoint_name = training_kwargs.get('checkpoint_name')
+    if checkpoint_name is not None:
+        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_directory', PYKEEN_CHECKPOINTS))
+        checkpoint_directory.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_directory / checkpoint_name
+        if checkpoint_path.is_file():
+            checkpoint_dict = torch.load(checkpoint_path)
+            random_seed = checkpoint_dict['random_seed']
+            logger.info('loaded random seed %s from checkpoint.', random_seed)
+            # We have to set clear optimizer to False since training should be continued
+            clear_optimizer = False
+        else:
+            logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
+            if random_seed is None:
+                random_seed = random_non_negative_int()
+                logger.warning(f'No random seed is specified. Setting to {random_seed}.')
+    elif random_seed is None:
         random_seed = random_non_negative_int()
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
@@ -975,9 +1000,6 @@ def pipeline(  # noqa: C901
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
 
-    if training_kwargs is None:
-        training_kwargs = {}
-
     # Stopping
     if 'stopper' in training_kwargs and stopper is not None:
         raise ValueError('Specified stopper in training_kwargs and as stopper')
@@ -1011,10 +1033,10 @@ def pipeline(  # noqa: C901
         logging.debug(f"dataset: {dataset}")
         logging.debug(f"dataset_kwargs: {dataset_kwargs}")
     else:
-        logging.debug('training: %s', training.path)
-        logging.debug('testing: %s', testing.path)
+        logging.debug('training: %s', training)
+        logging.debug('testing: %s', testing)
         if validation:
-            logging.debug('validation: %s', validation.path)
+            logging.debug('validation: %s', validation)
     logging.debug(f"model: {model}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {loss}")
