@@ -7,9 +7,6 @@ import itertools
 import logging
 import os
 import re
-import typing
-from collections import Counter, defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 from typing import Callable, Collection, List, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
@@ -19,10 +16,8 @@ import torch
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping
-from ..utils import compact_mapping, invert_mapping, random_non_negative_int
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, slice_triples, torch_is_in_1d
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
 __all__ = [
     'TriplesFactory',
