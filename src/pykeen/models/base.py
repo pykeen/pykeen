@@ -568,6 +568,10 @@ class Model(nn.Module, ABC):
         hrt_batch: torch.LongTensor,
     ) -> torch.FloatTensor:
         """Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h)."""
+        if not self.triples_factory.create_inverse_triples:
+            raise Exception("Model is not configured to predict with inverse relations. "
+                            "You might set self.triples_factory.create_inverse_triples=True when creating"
+                            "the triples the factory.")
         hrt_batch_cloned = hrt_batch.clone()
         hrt_batch_cloned.to(device=hrt_batch.device)
 
