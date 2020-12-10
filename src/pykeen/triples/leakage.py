@@ -17,6 +17,7 @@ import numpy
 import scipy.sparse
 import torch
 
+import pykeen.triples.splitting
 from pykeen.datasets.base import EagerDataset
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.typing import MappedTriples
@@ -173,7 +174,7 @@ def mapped_triples_to_sparse_matrices(
     )
     pairs, pair_id = extended_mapped_triples[:, [0, 2]].unique(dim=0, return_inverse=True)
     n_pairs = pairs.shape[0]
-    forward, backward = pair_id.split(num_triples)
+    forward, backward = pykeen.triples.splitting.split(num_triples)
     relations = mapped_triples[:, 1]
     rel = _to_one_hot(rows=relations, cols=forward, shape=(num_relations, n_pairs))
     inv = _to_one_hot(rows=relations, cols=backward, shape=(num_relations, n_pairs))

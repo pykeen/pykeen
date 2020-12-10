@@ -140,61 +140,6 @@ def _get_triple_mask(
     return mask
 
 
-def normalize_ratios(
-    ratios: Union[float, Sequence[float]],
-    epsilon: float = 1.0e-06,
-) -> Tuple[float, ...]:
-    """Normalize relative sizes.
-
-    If the sum is smaller than 1, adds (1 - sum)
-
-    :param ratios:
-        The ratios.
-    :param epsilon:
-        A small constant for comparing sum of ratios against 1.
-
-    :return:
-        A sequence of ratios of at least two elements which sums to one.
-    """
-    # Prepare split index
-    if isinstance(ratios, float):
-        ratios = [ratios]
-    ratios = tuple(ratios)
-    ratio_sum = sum(ratios)
-    if ratio_sum < 1.0 - epsilon:
-        ratios = ratios + (1.0 - ratio_sum,)
-    elif ratio_sum > 1.0 + epsilon:
-        raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
-    return ratios
-
-
-def get_absolute_split_sizes(
-    n_total: int,
-    ratios: Sequence[float],
-) -> Tuple[int, ...]:
-    """
-    Compute absolute sizes of splits from given relative sizes.
-
-    .. note ::
-        This method compensates for rounding errors, and ensures that the absolute sizes sum up to the total number.
-
-    :param n_total:
-        The total number.
-    :param ratios:
-        The relative ratios (should sum to 1).
-
-    :return:
-        The absolute sizes.
-    """
-    # due to rounding errors we might lose a few points, thus we use cumulative ratio
-    cum_ratio = np.cumsum(ratios)
-    cum_ratio[-1] = 1.0
-    cum_ratio = np.r_[np.zeros(1), cum_ratio]
-    split_points = (cum_ratio * n_total).astype(np.int64)
-    sizes = np.diff(split_points)
-    return tuple(sizes)
-
-
 def _ensure_ids(
     labels_or_ids: Union[Collection[int], Collection[str]],
     label_to_id: Mapping[str, int],
@@ -538,45 +483,16 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        # input normalization
-        ratios = normalize_ratios(ratios)
-        generator = ensure_torch_random_state(random_state)
-
-        # convert to absolute sizes
-        sizes = get_absolute_split_sizes(n_total=self.num_triples, ratios=ratios)
-
-        # Split indices
-        idx = torch.randperm(self.num_triples, generator=generator)
-        idx_groups = idx.split(split_size=sizes, dim=0)
-
-        # Split triples
-        triples_groups = [
-            self.mapped_triples[idx]
-            for idx in idx_groups
-        ]
-        logger.info(
-            'done splitting triples to groups of sizes %s',
-            [triples.shape[0] for triples in triples_groups],
-        )
-
-        # Make sure that the first element has all the right stuff in it
-        logger.debug('cleaning up groups')
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=generator if randomize_cleanup else None)
-        logger.debug('done cleaning up groups')
-
-        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
-            actual_size = triples.shape[0]
-            actual_ratio = actual_size / exp_size * exp_ratio
-            if actual_size != exp_size:
-                logger.warning(
-                    f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
-                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.',
-                )
-
         # Make new triples factories for each group
         return [
             self.clone_and_exchange_triples(mapped_triples=triples)
-            for triples in triples_groups
+            for triples in split(
+                mapped_triples=self.mapped_triples,
+                ratios=ratios,
+                random_state=random_state,
+                randomize_cleanup=randomize_cleanup,
+                method=method,
+            )
         ]
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
@@ -782,6 +698,61 @@ class TriplesFactory:
         return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
 
 
+def normalize_ratios(
+    ratios: Union[float, Sequence[float]],
+    epsilon: float = 1.0e-06,
+) -> Tuple[float, ...]:
+    """Normalize relative sizes.
+
+    If the sum is smaller than 1, adds (1 - sum)
+
+    :param ratios:
+        The ratios.
+    :param epsilon:
+        A small constant for comparing sum of ratios against 1.
+
+    :return:
+        A sequence of ratios of at least two elements which sums to one.
+    """
+    # Prepare split index
+    if isinstance(ratios, float):
+        ratios = [ratios]
+    ratios = tuple(ratios)
+    ratio_sum = sum(ratios)
+    if ratio_sum < 1.0 - epsilon:
+        ratios = ratios + (1.0 - ratio_sum,)
+    elif ratio_sum > 1.0 + epsilon:
+        raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
+    return ratios
+
+
+def get_absolute_split_sizes(
+    n_total: int,
+    ratios: Sequence[float],
+) -> Tuple[int, ...]:
+    """
+    Compute absolute sizes of splits from given relative sizes.
+
+    .. note ::
+        This method compensates for rounding errors, and ensures that the absolute sizes sum up to the total number.
+
+    :param n_total:
+        The total number.
+    :param ratios:
+        The relative ratios (should sum to 1).
+
+    :return:
+        The absolute sizes.
+    """
+    # due to rounding errors we might lose a few points, thus we use cumulative ratio
+    cum_ratio = np.cumsum(ratios)
+    cum_ratio[-1] = 1.0
+    cum_ratio = np.r_[np.zeros(1), cum_ratio]
+    split_points = (cum_ratio * n_total).astype(np.int64)
+    sizes = np.diff(split_points)
+    return tuple(sizes)
+
+
 def _tf_cleanup_all(
     triples_groups: List[MappedTriples],
     *,
@@ -877,3 +848,74 @@ def _prepare_cleanup(
         exclusive_triples = not_in_training_mask[testing[:, col].view(-1)].view(-1, len(col)).any(dim=-1)
         to_move_mask = to_move_mask | exclusive_triples
     return to_move_mask
+
+
+def split(
+    mapped_triples: MappedTriples,
+    ratios: Union[float, Sequence[float]] = 0.8,
+    *,
+    random_state: TorchRandomHint = None,
+    randomize_cleanup: bool = False,
+    method: Optional[str] = None,
+) -> Sequence[MappedTriples]:
+    """Split a triples factory into a train/test.
+
+    :param ratios: There are three options for this argument. First, a float can be given between 0 and 1.0,
+     non-inclusive. The first triples factory will get this ratio and the second will get the rest. Second,
+     a list of ratios can be given for which factory in which order should get what ratios as in ``[0.8, 0.1]``.
+     The final ratio can be omitted because that can be calculated. Third, all ratios can be explicitly set in
+     order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is 1.0.
+    :param random_state: The random state used to shuffle and split the triples in this factory.
+    :param randomize_cleanup: If true, uses the non-deterministic method for moving triples to the training set.
+     This has the advantage that it doesn't necessarily have to move all of them, but it might be slower.
+    :param method:
+        The name of the method to use, either 'old' or 'new'. Defaults to new.
+
+    .. code-block:: python
+
+        ratio = 0.8  # makes a [0.8, 0.2] split
+        training_factory, testing_factory = factory.split(ratio)
+
+        ratios = [0.8, 0.1]  # makes a [0.8, 0.1, 0.1] split
+        training_factory, testing_factory, validation_factory = factory.split(ratios)
+
+        ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
+        training_factory, testing_factory, validation_factory = factory.split(ratios)
+    """
+    # input normalization
+    ratios = normalize_ratios(ratios)
+    generator = ensure_torch_random_state(random_state)
+
+    # convert to absolute sizes
+    num_triples = mapped_triples.shape[0]
+    sizes = get_absolute_split_sizes(n_total=num_triples, ratios=ratios)
+
+    # Split indices
+    idx = torch.randperm(num_triples, generator=generator)
+    idx_groups = idx.split(split_size=sizes, dim=0)
+
+    # Split triples
+    triples_groups = [
+        mapped_triples[idx]
+        for idx in idx_groups
+    ]
+    logger.info(
+        'done splitting triples to groups of sizes %s',
+        [triples.shape[0] for triples in triples_groups],
+    )
+
+    # Make sure that the first element has all the right stuff in it
+    logger.debug('cleaning up groups')
+    triples_groups = _tf_cleanup_all(triples_groups, random_state=generator if randomize_cleanup else None)
+    logger.debug('done cleaning up groups')
+
+    for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+        actual_size = triples.shape[0]
+        actual_ratio = actual_size / exp_size * exp_ratio
+        if actual_size != exp_size:
+            logger.warning(
+                f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
+                f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.',
+            )
+
+    return triples_groups
