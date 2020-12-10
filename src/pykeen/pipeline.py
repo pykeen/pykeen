@@ -186,6 +186,7 @@ from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
 from .models.base import Model
+from .nn import Embedding
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
@@ -524,8 +525,8 @@ class PipelineResult(Result):
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
-def _reduce_embeddings(embeddings, reducer, fit: bool = False):
-    embeddings_numpy = embeddings.forward(None).detach().numpy()
+def _reduce_embeddings(embedding: Embedding, reducer, fit: bool = False):
+    embeddings_numpy = embedding(indices=None).detach().cpu().numpy()
     if embeddings_numpy.shape[1] == 2:
         logger.debug('not reducing entity embeddings, already dim=2')
         return embeddings_numpy, False
