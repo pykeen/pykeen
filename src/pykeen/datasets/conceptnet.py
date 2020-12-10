@@ -5,8 +5,6 @@
 Get a summary with ``python -m pykeen.datasets.conceptnet``
 """
 
-import logging
-
 import click
 from more_click import verbose_option
 
@@ -53,5 +51,4 @@ def _main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
     _main()
