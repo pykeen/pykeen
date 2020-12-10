@@ -2,15 +2,18 @@
 
 """Instance creation utilities."""
 
-from typing import Callable, Mapping, Optional, TextIO, Union
+from typing import Callable, Mapping, Optional, Set, TextIO, Union
 
 import numpy as np
+import torch
 from pkg_resources import iter_entry_points
 
 from ..typing import LabeledTriples
 
 __all__ = [
     'load_triples',
+    'get_entities',
+    'get_relations',
 ]
 
 
@@ -54,3 +57,13 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Opti
         delimiter=delimiter,
         encoding=encoding,
     )
+
+
+def get_entities(triples: torch.LongTensor) -> Set[int]:
+    """Get all entities from the triples."""
+    return set(triples[:, [0, 2]].flatten().tolist())
+
+
+def get_relations(triples: torch.LongTensor) -> Set[int]:
+    """Get all relations from the triples."""
+    return set(triples[:, 1].tolist())

@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -51,7 +52,7 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
     loss_default = SoftplusLoss
@@ -74,6 +75,8 @@ class ComplEx(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer=nn.init.normal_,
+        relation_initializer=nn.init.normal_,
     ) -> None:
         """Initialize ComplEx.
 
@@ -99,8 +102,8 @@ class ComplEx(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             # initialize with entity and relation embeddings with standard normal distribution, cf.
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-            entity_initializer=nn.init.normal_,
-            relation_initializer=nn.init.normal_,
+            entity_initializer=entity_initializer,
+            relation_initializer=relation_initializer,
         )
 
     @staticmethod

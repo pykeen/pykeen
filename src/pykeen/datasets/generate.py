@@ -27,7 +27,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     """Make a dataset from the given triples."""
     os.makedirs(directory, exist_ok=True)
 
-    triples_factory = TriplesFactory(path=path)
+    triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
 
     if seed is None:

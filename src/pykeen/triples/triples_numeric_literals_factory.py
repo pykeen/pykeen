@@ -54,6 +54,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples: Optional[LabeledTriples] = None,
         path_to_numeric_triples: Union[None, str, TextIO] = None,
         numeric_triples: Optional[np.ndarray] = None,
+        **kwargs,
     ) -> None:
         """Initialize the multi-modal triples factory.
 
@@ -66,48 +67,39 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
          specified, you should specify ``path_to_numeric_triples``.
         """
-        super().__init__(path=path, triples=triples)
+        if path is None:
+            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
+        else:
+            base = TriplesFactory.from_path(path=path, **kwargs)
+        super().__init__(
+            entity_to_id=base.entity_to_id,
+            relation_to_id=base.relation_to_id,
+            mapped_triples=base.mapped_triples,
+            create_inverse_triples=base.create_inverse_triples,
+        )
 
         if path_to_numeric_triples is None and numeric_triples is None:
             raise ValueError('Must specify one of path_to_numeric_triples or numeric_triples')
         elif path_to_numeric_triples is not None and numeric_triples is not None:
             raise ValueError('Must not specify both path_to_numeric_triples and numeric_triples')
         elif path_to_numeric_triples is not None:
-            self.path_to_numeric_triples = path_to_numeric_triples
-            self.numeric_triples = load_triples(self.path_to_numeric_triples)
-        else:  # numeric_triples is not None:
-            self.path_to_numeric_triples = '<None>'
-            self.numeric_triples = numeric_triples
+            numeric_triples = load_triples(path_to_numeric_triples)
 
-        self.numeric_literals = None
-        self.literals_to_id = None
-
-        self._create_numeric_literals()
-
-    def __repr__(self):  # noqa: D105
-        return (
-            f'{self.__class__.__name__}(path="{self.path}", '
-            f'path_to_numeric_triples="{self.path_to_numeric_triples}")'
+        self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
+            numeric_triples=numeric_triples,
+            entity_to_id=self.entity_to_id,
         )
 
-    def _create_numeric_literals(self) -> None:
-        self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
-            numeric_triples=self.numeric_triples,
-            entity_to_id=self.entity_to_id,
+    def extra_repr(self) -> str:  # noqa: D102
+        return super().extra_repr() + (
+            f"num_literals={len(self.literals_to_id)}"
         )
 
     def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""
         slcwa_instances = super().create_slcwa_instances()
-
-        # FIXME is this ever possible, since this function is called in __init__?
-        if self.numeric_literals is None:
-            self._create_numeric_literals()
-
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
-            entity_to_id=slcwa_instances.entity_to_id,
-            relation_to_id=slcwa_instances.relation_to_id,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
         )
@@ -115,15 +107,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> MultimodalLCWAInstances:
         """Create multi-modal LCWA instances for this factory's triples."""
         lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm)
-
-        if self.numeric_literals is None:
-            self._create_numeric_literals()
-
         return MultimodalLCWAInstances(
-            mapped_triples=lcwa_instances.mapped_triples,
-            entity_to_id=lcwa_instances.entity_to_id,
-            relation_to_id=lcwa_instances.relation_to_id,
+            pairs=lcwa_instances.pairs,
+            compressed=lcwa_instances.compressed,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
-            labels=lcwa_instances.labels,
         )

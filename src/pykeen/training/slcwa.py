@@ -13,7 +13,7 @@ from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models.base import Model
 from ..sampling import BasicNegativeSampler, NegativeSampler
-from ..triples import SLCWAInstances
+from ..triples import Instances
 from ..typing import MappedTriples
 
 __all__ = [
@@ -70,7 +70,7 @@ class SLCWATrainingLoop(TrainingLoop):
         """
         return self.negative_sampler.num_negs_per_pos
 
-    def _create_instances(self, use_tqdm: Optional[bool] = None) -> SLCWAInstances:  # noqa: D102
+    def _create_instances(self, use_tqdm: Optional[bool] = None) -> Instances:  # noqa: D102
         return self.triples_factory.create_slcwa_instances()
 
     @staticmethod

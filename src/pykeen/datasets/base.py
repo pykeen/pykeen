@@ -18,7 +18,7 @@ import pandas as pd
 import requests
 from tabulate import tabulate
 
-from ..constants import PYKEEN_HOME
+from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
 from ..typing import RandomHint
 from ..utils import normalize_string
@@ -72,24 +72,24 @@ class Dataset:
         """The number of relations."""
         return self.training.num_relations
 
-    def summary_str(self, end='\n') -> str:
-        """Make a summary string of all of the factories."""
-        rows = [
+    def _summary_rows(self):
+        return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
             for label, triples_factory in
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
-        n_triples = sum(
-            triples_factory.num_triples
-            for triples_factory in (self.training, self.testing, self.validation)
-        )
+
+    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
+        """Make a summary string of all of the factories."""
+        rows = self._summary_rows()
+        n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
-    def summarize(self) -> None:
+    def summarize(self, title: Optional[str] = None, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str())
+        print(self.summary_str(title=title), file=file)
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
@@ -97,7 +97,7 @@ class Dataset:
     @classmethod
     def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
-        tf = TriplesFactory(path=path)
+        tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
 
     @staticmethod
@@ -184,7 +184,7 @@ class LazyDataset(Dataset):
             :class:`pykeen.datasets.base.Dataset`.
         """
         if cache_root is None:
-            cache_root = PYKEEN_HOME
+            cache_root = PYKEEN_DATASETS
         cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
@@ -221,23 +221,25 @@ class PathDataset(LazyDataset):
             self._load_validation()
 
     def _load(self) -> None:
-        self._training = TriplesFactory(
+        self._training = TriplesFactory.from_path(
             path=self.training_path,
             create_inverse_triples=self.create_inverse_triples,
         )
-        self._testing = TriplesFactory(
+        self._testing = TriplesFactory.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self.create_inverse_triples,
         )
 
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
-        self._validation = TriplesFactory(
+        self._validation = TriplesFactory.from_path(
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self.create_inverse_triples,
         )
 
     def __repr__(self) -> str:  # noqa: D105
@@ -494,7 +496,7 @@ class PackedZipRemoteDataset(LazyDataset):
                     header=self.header,
                     sep=self.sep,
                 )
-                rv = TriplesFactory(
+                rv = TriplesFactory.from_labeled_triples(
                     triples=df.values,
                     create_inverse_triples=self.create_inverse_triples,
                 )
@@ -569,7 +571,7 @@ class TarFileSingleDataset(LazyDataset):
                 tf.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
@@ -639,7 +641,7 @@ class SingleTabbedDataset(LazyDataset):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
-        tf = TriplesFactory(triples=df.values, create_inverse_triples=self.create_inverse_triples)
+        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,

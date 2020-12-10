@@ -7,19 +7,26 @@ from typing import Any, ClassVar, Mapping, Optional, Set, Type, Union
 import torch
 from torch import nn
 from torch.nn import functional
+from torch.nn.modules.loss import _Loss
 
 from .utils import get_cls, normalize_string
 
 __all__ = [
+    # Helpers
+    'get_loss_cls',
+    # Base Classes
     'Loss',
+    'PointwiseLoss',
+    'PairwiseLoss',
+    'SetwiseLoss',
+    # Concrete Classes
     'BCEAfterSigmoidLoss',
-    'SoftplusLoss',
-    'NSSALoss',
+    'BCEWithLogitsLoss',
     'CrossEntropyLoss',
     'MarginRankingLoss',
     'MSELoss',
-    'BCEWithLogitsLoss',
-    'get_loss_cls',
+    'NSSALoss',
+    'SoftplusLoss',
 ]
 
 _REDUCTION_METHODS = dict(
@@ -28,13 +35,17 @@ _REDUCTION_METHODS = dict(
 )
 
 
-class Loss(nn.Module):
+class Loss(_Loss):
     """A loss function."""
 
     synonyms: ClassVar[Optional[Set[str]]] = None
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
+
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
+        super().__init__(size_average=size_average, reduce=reduce, reduction=reduction)
+        self._reduction_method = _REDUCTION_METHODS[reduction]
 
 
 class PointwiseLoss(Loss):
@@ -82,7 +93,7 @@ class MSELoss(PointwiseLoss, nn.MSELoss):
     synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
 
 
-class MarginRankingLoss(PairwiseLoss, nn.MarginRankingLoss):
+class MarginRankingLoss(nn.MarginRankingLoss, PairwiseLoss):
     """A wrapper around the PyTorch margin ranking loss."""
 
     synonyms = {"Pairwise Hinge Loss"}
@@ -96,10 +107,8 @@ class SoftplusLoss(PointwiseLoss):
     """A loss function for the softplus."""
 
     def __init__(self, reduction: str = 'mean') -> None:
-        super().__init__()
-        self.reduction = reduction
+        super().__init__(reduction=reduction)
         self.softplus = torch.nn.Softplus(beta=1, threshold=20)
-        self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def forward(
         self,
@@ -118,10 +127,6 @@ class SoftplusLoss(PointwiseLoss):
 class BCEAfterSigmoidLoss(PointwiseLoss):
     """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
 
-    def __init__(self, reduction: str = 'mean'):
-        super().__init__()
-        self.reduction = reduction
-
     def forward(
         self,
         logits: torch.FloatTensor,
@@ -134,11 +139,6 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
 class CrossEntropyLoss(SetwiseLoss):
     """Evaluate cross entropy after softmax output."""
-
-    def __init__(self, reduction: str = 'mean'):
-        super().__init__()
-        self.reduction = reduction
-        self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def forward(
         self,
@@ -173,11 +173,9 @@ class NSSALoss(SetwiseLoss):
 
         .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
         """
-        super().__init__()
-        self.reduction = reduction
+        super().__init__(reduction=reduction)
         self.adversarial_temperature = adversarial_temperature
         self.margin = margin
-        self._reduction_method = _REDUCTION_METHODS[reduction]
 
     def forward(
         self,
@@ -212,13 +210,6 @@ _LOSSES: Set[Type[Loss]] = {
     MSELoss,
     NSSALoss,
 }
-# To add *all* losses implemented in Torch, uncomment:
-# _LOSSES.update({
-#     loss
-#     for loss in Loss.__subclasses__() + WeightedLoss.__subclasses__()
-#     if not loss.__name__.startswith('_')
-# })
-
 
 #: A mapping of losses' names to their implementations
 losses: Mapping[str, Type[Loss]] = {

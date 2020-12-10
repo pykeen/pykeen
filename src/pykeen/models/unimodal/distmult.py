@@ -10,6 +10,7 @@ from torch import nn
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -53,7 +54,7 @@ class DistMult(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The regularizer used by [yang2014]_ for DistMult
     #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
