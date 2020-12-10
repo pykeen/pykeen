@@ -457,16 +457,26 @@ class TriplesFactory:
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
-        :param ratios: There are three options for this argument. First, a float can be given between 0 and 1.0,
-         non-inclusive. The first triples factory will get this ratio and the second will get the rest. Second,
-         a list of ratios can be given for which factory in which order should get what ratios as in ``[0.8, 0.1]``.
-         The final ratio can be omitted because that can be calculated. Third, all ratios can be explicitly set in
-         order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is 1.0.
-        :param random_state: The random state used to shuffle and split the triples in this factory.
-        :param randomize_cleanup: If true, uses the non-deterministic method for moving triples to the training set.
-         This has the advantage that it doesn't necessarily have to move all of them, but it might be slower.
+        :param ratios:
+            There are three options for this argument.
+            First, a float can be given between 0 and 1.0, non-inclusive. The first set of triples will get this ratio and
+            the second will get the rest.
+            Second, a list of ratios can be given for which set in which order should get what ratios as in ``[0.8, 0.1]``.
+            The final ratio can be omitted because that can be calculated.
+            Third, all ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is
+            1.0.
+        :param random_state:
+            The random state used to shuffle and split the triples.
+        :param randomize_cleanup:
+            If true, uses the non-deterministic method for moving triples to the training set. This has the advantage that
+            it does not necessarily have to move all of them, but it might be significantly slower since it moves one
+            triple at a time.
         :param method:
-            The name of the method to use, either 'old' or 'new'. Defaults to new.
+            The name of the method to use, from SPLIT_METHODS. Defaults to "coverage".
+
+        :return:
+            A partition of triples, which are split (approximately) according to the ratios, stored TriplesFactory's
+            which share everything else with this root triples factory.
 
         .. code-block:: python
 
