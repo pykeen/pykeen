@@ -14,11 +14,11 @@ from pykeen.datasets import Nations
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
-    SPLIT_METHODS, _get_cover_deterministic, _map_triples_elements_to_ids, _tf_cleanup_all, _tf_cleanup_deterministic,
+    SPLIT_METHODS, _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
     _tf_cleanup_randomized,
     get_absolute_split_sizes, normalize_ratios,
 )
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
 from pykeen.triples.utils import get_entities, get_relations
 
 triples = np.array(
@@ -376,12 +376,10 @@ class TestSplit(unittest.TestCase):
         cover = _get_cover_deterministic(triples=generated_triples)
 
         # check type
-        self.assertIsInstance(cover, np.ndarray)
-        self.assertEqual(cover.dtype, np.bool)
-
+        assert torch.is_tensor(cover)
+        assert cover.dtype == torch.bool
         # check format
-        self.assertEqual(1, len(cover.shape))
-        self.assertEqual(cover.shape, (generated_triples.shape[0],))
+        assert cover.shape == (generated_triples.shape[0],)
 
         # check coverage
         self.assertEqual(
