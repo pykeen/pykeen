@@ -87,9 +87,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.linear2.bias)
         nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
-        if use_inverse:
-            self._score_with_inverse_relations(hrt_batch=hrt_batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])

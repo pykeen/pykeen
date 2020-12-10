@@ -101,9 +101,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
         self.left_relation_embeddings.reset_parameters()
         self.right_relation_embeddings.reset_parameters()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
-        if use_inverse:
-            self._score_with_inverse_relations(hrt_batch=hrt_batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim, 1)
         rel_h = self.left_relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)

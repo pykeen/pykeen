@@ -549,9 +549,7 @@ class RGCN(Model):
         self.entity_representations.reset_parameters()
         self.relation_embeddings.reset_parameters()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
-        if use_inverse:
-            self._score_with_inverse_relations(hrt_batch=hrt_batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Enrich embeddings
         h = self.entity_representations(indices=hrt_batch[:, 0])
         t = self.entity_representations(indices=hrt_batch[:, 2])

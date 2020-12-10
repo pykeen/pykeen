@@ -217,9 +217,7 @@ class TransD(EntityRelationEmbeddingModel):
 
         return self.interaction_function(h=h, h_p=h_p, r=r, r_p=r_p, t=t, t_p=t_p)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
-        if use_inverse:
-            self._score_with_inverse_relations(hrt_batch=hrt_batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2])
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102

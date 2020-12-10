@@ -119,9 +119,7 @@ class ConvKB(EntityRelationEmbeddingModel):
         nn.init.constant_(self.conv.weight[..., 2], -0.1)
         nn.init.zeros_(self.conv.bias)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
-        if use_inverse:
-            self._score_with_inverse_relations(hrt_batch=hrt_batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
         t = self.entity_embeddings(indices=hrt_batch[:, 2])

@@ -157,9 +157,7 @@ class TransR(EntityRelationEmbeddingModel):
         # evaluate score function, shape: (b, e)
         return -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:  # noqa: D102
-        if use_inverse:
-            self._score_with_inverse_relations(hrt_batch=hrt_batch)
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
