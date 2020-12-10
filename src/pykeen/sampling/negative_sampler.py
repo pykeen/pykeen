@@ -62,3 +62,18 @@ class NegativeSampler(ABC):
     def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
         """Generate negative samples from the positive batch."""
         raise NotImplementedError
+
+    def _filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.LongTensor:
+        """Filter all proposed negative samples that are positive in the training dataset."""
+        # Check which heads of the mapped triples are also in the negative triples
+        head_filter = (self.triples_factory.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
+        # Reduce the search space by only using possible matches that at least contain the head we look for
+        sub_mapped_triples = self.triples_factory.mapped_triples[head_filter]
+        # Check in this subspace which relations of the mapped triples are also in the negative triples
+        relation_filter = (sub_mapped_triples[:, 1:2].view(1, -1) == negative_batch[:, 1:2]).max(axis=0)[0]
+        # Reduce the search space by only using possible matches that at least contain head and relation we look for
+        sub_mapped_triples = sub_mapped_triples[relation_filter]
+        # Create a filter indicating which of the proposed negative triples are positive in the training dataset
+        final_filter = (sub_mapped_triples[:, 2:3].view(1, -1) == negative_batch[:, 2:3]).max(axis=1)[0]
+        # Return only those proposed negative triples that are not positive in the training dataset
+        return negative_batch[~final_filter]

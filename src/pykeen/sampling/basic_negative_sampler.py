@@ -47,7 +47,12 @@ class BasicNegativeSampler(NegativeSampler):
         negative_batch = positive_batch.clone()
 
         # Sample random entities as replacement
-        negative_entities = torch.randint(high=self.num_entities - 1, size=(num_negs,), device=positive_batch.device)
+        if 0 in self._corruption_indices or 2 in self._corruption_indices:
+            negative_entities = torch.randint(
+                high=self.num_entities - 1,
+                size=(num_negs,),
+                device=positive_batch.device,
+            )
 
         # Sample random relations as replacement, if requested
         if 1 in self._corruption_indices:
@@ -59,16 +64,23 @@ class BasicNegativeSampler(NegativeSampler):
 
         for index, start in zip(self._corruption_indices, range(0, num_negs, split_idx)):
             stop = min(start + split_idx, num_negs)
+            if index == 1:
+                # Corrupt relations
+                negative_batch[start:stop, index] = negative_relations[start:stop]
+            else:
+                # Corrupt heads or tails
+                negative_batch[start:stop, index] = negative_entities[start:stop]
+
             # Replace {heads, relations, tails} – To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
             # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
-            if index == 1:
-                filter_same_relations = (negative_relations[start:stop] >= positive_batch[start:stop, 1])
-                # Corrupt relations
-                negative_batch[start:stop, 1] = negative_relations[start:stop] + filter_same_relations.long()
-            else:
-                filter_same_entities = (negative_entities[start:stop] >= positive_batch[start:stop, index])
-                # Corrupt heads or tails
-                negative_batch[start:stop, index] = negative_entities[start:stop] + filter_same_entities.long()
+            if not self.filtered:
+                negative_batch[start:stop, index] += (
+                        negative_batch[start:stop, index] >= positive_batch[start:stop, index]
+                ).long()
+
+        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
+        if self.filtered:
+            negative_batch = self._filter_negative_triples(negative_batch=negative_batch)
 
         return negative_batch
