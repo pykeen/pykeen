@@ -193,7 +193,7 @@ in ``pykeen``.
 | Name      | Reference                                                                                                                               | Description                                                                            |
 |-----------|-----------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | basic     | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)         | A basic negative sampler.                                                              |
-| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the bernoulli negative sampling approach proposed by [wang2014]_. |
+| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
 
 ### Stoppers (2)
 
@@ -264,6 +264,23 @@ hyper-parameter optimization module. They can be run like:
 ```bash
 pykeen experiments ablation ~/path/to/config.json
 ```
+
+### Large-scale Reproducibility and Benchmarking Study
+
+We used PyKEEN to perform a large-scale reproducibility and benchmarking study which are described in
+[our article](https://arxiv.org/abs/2006.13365):
+
+```bibtex
+@article{ali2020benchmarking,
+  title={Bringing Light Into the Dark: A Large-scale Evaluation of Knowledge Graph Embedding Models Under a Unified Framework},
+  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Galkin, Mikhail and Sharifzadeh, Sahand and Fischer, Asja and Tresp, Volker and Lehmann, Jens},
+  journal={arXiv preprint arXiv:2006.13365},
+  year={2020}
+}
+```
+
+We have made all code, experimental configurations, results, and analyses that lead to our interpretations available
+at https://github.com/pykeen/benchmarking.
 
 ## Contributing
 
