@@ -13,7 +13,6 @@ from typing import (
     Union,
 )
 
-import numpy
 import numpy as np
 import pandas as pd
 import torch
@@ -81,7 +80,7 @@ def l2_regularization(
 
     # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
     if normalize:
-        regularization_term /= sum(numpy.prod(x.shape) for x in xs)
+        regularization_term /= sum(np.prod(x.shape) for x in xs)
 
     return regularization_term
 
