@@ -34,7 +34,7 @@ def _split_triples(
     :param mapped_triples: shape: (n, 3)
         The triples.
     :param sizes:
-        The sizes. TODO: Need to sum up to the number of triples. / need to be at most the number of triples.
+        The sizes.
     :param random_state:
         The random state for reproducible splits.
 
@@ -42,6 +42,8 @@ def _split_triples(
         The splitted triples.
     """
     num_triples = mapped_triples.shape[0]
+    if sum(sizes) != num_triples:
+        raise ValueError(f"Received {num_triples} triples, but the sizes sum up to {sum(sizes)}")
 
     # Split indices
     idx = torch.randperm(num_triples, generator=random_state)
