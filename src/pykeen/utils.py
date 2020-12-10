@@ -27,7 +27,6 @@ from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, RandomHint, TorchRandomHint
 from .version import get_git_hash
 
-# get_subclasses, project_entity, set_random_seed, strip_dim, view_complex
 __all__ = [
     'broadcast_cat',
     'compose',
@@ -37,7 +36,6 @@ __all__ = [
     'compact_mapping',
     'ensure_torch_random_state',
     'format_relative_comparison',
-    'imag_part',
     'complex_normalize',
     'fix_dataclass_init_docs',
     'flatten_dictionary',
@@ -56,7 +54,6 @@ __all__ = [
     'set_random_seed',
     'split_complex',
     'split_list_in_batches_iter',
-    'split_list_in_batches',
     'torch_is_in_1d',
     'normalize_string',
     'normalized_lookup',
@@ -619,7 +616,7 @@ def estimate_cost_of_sequence(
 ) -> int:
     """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
     return sum(map(
-        numpy.prod,
+        np.prod,
         itertools.islice(
             itertools.accumulate(
                 (shape,) + other_shapes,

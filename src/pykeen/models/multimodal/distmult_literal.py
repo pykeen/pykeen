@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING
 import torch.nn as nn
 
 from .base import LiteralModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
