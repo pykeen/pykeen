@@ -567,7 +567,11 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: torch.LongTensor,
     ) -> torch.FloatTensor:
-        """Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h)."""
+        r"""Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h).
+
+        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
+        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
+        """
         if not self.triples_factory.create_inverse_triples:
             raise ValueError("Model is not configured to predict with inverse relations. "
                              "You might set self.triples_factory.create_inverse_triples=True when creating"
