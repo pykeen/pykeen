@@ -15,7 +15,7 @@ URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-asser
 
 
 class ConceptNet(SingleTabbedDataset):
-    """The ConceptNet dataset.
+    """The ConceptNet dataset from [speer2017]_.
 
     The dataset is structured into 5 columns (see https://github.com/commonsense/conceptnet5/wiki/Downloads#assertions):
     edge URL, relation, head, tail, metadata.
