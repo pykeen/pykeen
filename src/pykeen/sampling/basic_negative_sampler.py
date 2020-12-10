@@ -12,7 +12,14 @@ __all__ = [
 
 
 class BasicNegativeSampler(NegativeSampler):
-    """A basic negative sampler."""
+    r"""A basic negative sampler.
+
+    Negative triples are created by corrupting a positive triple $(h,r,t) \in \mathcal{K}$ by
+    replacing either $h$ or $t$.
+    The first step is to randomly (uniformly) determine whether $h$ or $t$ shall be corrupted for a positive triple
+    $(h,r,t) \in \mathcal{K}$. Afterwards, an entity $e \in \mathcal{E}$ is uniformly sampled and selected as the
+    corrupted head/tail entity.
+    """
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default = dict(
