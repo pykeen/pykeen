@@ -40,7 +40,7 @@ class BasicNegativeSampler(NegativeSampler):
         num_negs = positive_batch.shape[0]
 
         # Equally corrupt all sides
-        split_idx = num_negs // len(self.corruption_scheme)
+        split_idx = num_negs // len(self._corruption_indices)
 
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.

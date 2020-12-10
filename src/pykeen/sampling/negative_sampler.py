@@ -34,8 +34,6 @@ class NegativeSampler(ABC):
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False.
-        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
-            Defaults to False.
         :param corruption_scheme: What sides (h, r, t) should be corrupted. Defaults to head and tail (h, t).
         """
         self.triples_factory = triples_factory
