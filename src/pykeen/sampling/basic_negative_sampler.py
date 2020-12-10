@@ -12,7 +12,9 @@ __all__ = [
 
 
 class BasicNegativeSampler(NegativeSampler):
-    r"""A negative sampler that corrupts positive triples $(h,r,t) \in \mathcal{K}$ by replacing either $h$ or $t$.
+    r"""A basic negative sampler.
+
+    This negative sampler that corrupts positive triples $(h,r,t) \in \mathcal{K}$ by replacing either $h$ or $t$.
 
     Steps:
 
