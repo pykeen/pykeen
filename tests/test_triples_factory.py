@@ -4,7 +4,6 @@
 
 import itertools as itt
 import unittest
-from typing import Set
 from unittest.mock import patch
 
 import numpy as np
@@ -207,31 +206,6 @@ class TestTriplesFactory(unittest.TestCase):
             assert x.dtype == torch.long
             assert y.shape == (batch_size, factory.num_entities)
             assert y.dtype == torch.get_default_dtype()
-
-
-class TestGenerate(unittest.TestCase):
-    """Tests for generation of triples."""
-
-    num_entities: int = 33
-    num_relations: int = 7
-    num_triples: int = 101
-
-    def assert_consecutive(self, x: Set[int], msg=None):
-        """Assert that all of the things in the collection are consecutive integers."""
-        self.assertEqual(set(range(len(x))), x, msg=msg)
-
-    def test_compacted(self):
-        """Test that the results are compacted."""
-        for random_state in range(100):
-            x = generate_triples(
-                num_entities=self.num_entities,
-                num_relations=self.num_relations,
-                num_triples=self.num_triples,
-                random_state=random_state,
-            )
-            self.assertEqual(self.num_triples, x.shape[0])
-            self.assert_consecutive(get_entities(x))
-            self.assert_consecutive(get_relations(x))
 
 
 class TestSplit(unittest.TestCase):
