@@ -11,6 +11,7 @@ import pytest
 import torch
 
 from pykeen.datasets import Nations
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
@@ -431,6 +432,19 @@ class TestLiterals(unittest.TestCase):
             triples_factory.num_relations,
             msg='Wrong number of relations in factory',
         )
+
+    def test_path(self):
+        """Test repr() for triples factories."""
+        t = Nations().training
+        self.assertEqual(NATIONS_TRAIN_PATH, t.path)
+
+        first = list(t.entity_to_id)[0]
+        x = t.new_with_restriction(entities=[first])
+        self.assertEqual(NATIONS_TRAIN_PATH, x.path)
+
+        y, z = t.split()
+        self.assertEqual(NATIONS_TRAIN_PATH, y.path)
+        self.assertEqual(NATIONS_TRAIN_PATH, z.path)
 
 
 def test_get_absolute_split_sizes():

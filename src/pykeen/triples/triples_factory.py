@@ -164,6 +164,10 @@ class TriplesFactory:
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
 
+    #: The path to the file/resource from which this factory was created.
+    #: Typically a file path, or none if created directly from triples
+    path: Optional[str] = None
+
     # The following fields get generated automatically
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
@@ -205,6 +209,7 @@ class TriplesFactory:
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
+        path: Optional[str] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
@@ -221,6 +226,8 @@ class TriplesFactory:
             Whether to compact IDs such that the IDs are consecutive.
         :param filter_out_candidate_inverse_relations:
             Whether to remove triples with relations with the inverse suffix.
+        :param path:
+            An optional path/resource name from which the triples were created
 
         :return:
             A new triples factory.
@@ -270,6 +277,7 @@ class TriplesFactory:
             relation_to_id=relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=create_inverse_triples,
+            path=path,
         )
 
     @classmethod
@@ -314,11 +322,13 @@ class TriplesFactory:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             compact_id=compact_id,
+            path=path,
         )
 
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
+        keep_path: bool = True,
     ) -> "TriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -328,6 +338,8 @@ class TriplesFactory:
 
         :param mapped_triples:
             The new mapped triples.
+        :param keep_path:
+            Pass the current path to the new triples factory
 
         :return:
             The new factory.
@@ -337,6 +349,7 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
+            path=self.path if keep_path else None,
         )
 
     @property
