@@ -8,9 +8,9 @@ Get a summary with ``python -m pykeen.datasets.conceptnet``
 import logging
 
 import click
+from more_click import verbose_option
 
 from .base import SingleTabbedDataset
-from ..cli_utils import verbose_option
 from ..typing import RandomHint
 
 URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz'
