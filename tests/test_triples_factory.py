@@ -373,7 +373,12 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(
             get_entities(generated_triples),
             get_entities(generated_triples[cover]),
-            msg='coverage is not full',
+            msg='entity coverage is not full',
+        )
+        self.assertEqual(
+            get_relations(generated_triples),
+            get_relations(generated_triples[cover]),
+            msg='relation coverage is not full',
         )
 
 
