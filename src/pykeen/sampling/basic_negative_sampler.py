@@ -39,8 +39,8 @@ class BasicNegativeSampler(NegativeSampler):
         # Bind number of negatives to sample
         num_negs = positive_batch.shape[0]
 
-        # Equally corrupt head and tail
-        split_idx = num_negs // 2
+        # Equally corrupt all sides
+        split_idx = num_negs // len(self.corruption_scheme)
 
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.
@@ -49,13 +49,26 @@ class BasicNegativeSampler(NegativeSampler):
         # Sample random entities as replacement
         negative_entities = torch.randint(high=self.num_entities - 1, size=(num_negs,), device=positive_batch.device)
 
-        # Replace heads – To make sure we don't replace the head by the original value
-        # we shift all values greater or equal than the original value by one up
-        # for that reason we choose the random value from [0, num_entities -1]
-        filter_same_head = (negative_entities[:split_idx] >= positive_batch[:split_idx, 0])
-        negative_batch[:split_idx, 0] = negative_entities[:split_idx] + filter_same_head.long()
-        # Corrupt tails
-        filter_same_tail = (negative_entities[split_idx:] >= positive_batch[split_idx:, 2])
-        negative_batch[split_idx:, 2] = negative_entities[split_idx:] + filter_same_tail.long()
+        # Sample random relations as replacement, if requested
+        if 1 in self._corruption_indices:
+            negative_relations = torch.randint(
+                high=self.num_relations - 1,
+                size=(num_negs,),
+                device=positive_batch.device,
+            )
+
+        for index, start in zip(self.corruption_scheme, range(0, num_negs, split_idx)):
+            stop = min(start + split_idx, num_negs)
+            # Replace {heads, relations, tails} – To make sure we don't replace the {head, relation, tail} by the
+            # original value we shift all values greater or equal than the original value by one up
+            # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
+            if index == 1:
+                filter_same_relations = (negative_relations[start:stop] >= positive_batch[start:stop, 1])
+                # Corrupt relations
+                negative_batch[start:stop, 1] = negative_relations[start:stop] + filter_same_relations.long()
+            else:
+                filter_same_entities = (negative_entities[start:stop] >= positive_batch[start:stop, index])
+                # Corrupt heads or tails
+                negative_batch[start:stop, index] = negative_relations[start:stop] + filter_same_entities.long()
 
         return negative_batch
