@@ -932,7 +932,7 @@ class Model(nn.Module, ABC):
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor, use_inverse: bool = False) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
