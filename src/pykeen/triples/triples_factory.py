@@ -330,6 +330,7 @@ class TriplesFactory:
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
+        extra_metadata: Optional[Dict[str, Any]] = None,
         keep_metadata: bool = True,
     ) -> "TriplesFactory":
         """
@@ -351,7 +352,10 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata if keep_metadata else None,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),
+            },
         )
 
     @property
@@ -703,14 +707,17 @@ class TriplesFactory:
         """
         keep_mask = None
 
+        extra_metadata = {}
         # Filter for entities
         if entities is not None:
+            extra_metadata['entity_restriction'] = entities
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
             logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
 
         # Filter for relations
         if relations is not None:
+            extra_metadata['relation_restriction'] = relations
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
@@ -722,4 +729,7 @@ class TriplesFactory:
 
         num_triples = keep_mask.sum()
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
-        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
+        return self.clone_and_exchange_triples(
+            mapped_triples=self.mapped_triples[keep_mask],
+            # extra_metadata=extra_metadata,
+        )
