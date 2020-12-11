@@ -3,7 +3,7 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Set
+from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
 import torch
 
@@ -42,6 +42,10 @@ class NegativeSampler(ABC):
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
         self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
+        # Copy the mapped triples to the device for efficient filtering
+        if filtered:
+            self.mapped_triples = self.triples_factory.mapped_triples
+            self._filter_init = False
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -59,11 +63,11 @@ class NegativeSampler(ABC):
         return self.triples_factory.num_relations
 
     @abstractmethod
-    def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
         """Generate negative samples from the positive batch."""
         raise NotImplementedError
 
-    def _filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.LongTensor:
+    def _filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.Tensor:
         """Filter all proposed negative samples that are positive in the training dataset.
 
         Normally there is a low probability that proposed negative samples are positive in the training datasets and
@@ -73,10 +77,14 @@ class NegativeSampler(ABC):
         to control and a researcher might want to exclude the possibility of having false negatives in the proposed
         negative triples.
         """
+        # Make sure the mapped triples are on the right device
+        if not self._filter_init:
+            self.mapped_triples = self.mapped_triples.to(negative_batch.device)
+            self._filter_init = True
         # Check which heads of the mapped triples are also in the negative triples
-        head_filter = (self.triples_factory.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
+        head_filter = (self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
         # Reduce the search space by only using possible matches that at least contain the head we look for
-        sub_mapped_triples = self.triples_factory.mapped_triples[head_filter]
+        sub_mapped_triples = self.mapped_triples[head_filter]
         # Check in this subspace which relations of the mapped triples are also in the negative triples
         relation_filter = (sub_mapped_triples[:, 1:2].view(1, -1) == negative_batch[:, 1:2]).max(axis=0)[0]
         # Reduce the search space by only using possible matches that at least contain head and relation we look for
@@ -84,4 +92,4 @@ class NegativeSampler(ABC):
         # Create a filter indicating which of the proposed negative triples are positive in the training dataset
         final_filter = (sub_mapped_triples[:, 2:3].view(1, -1) == negative_batch[:, 2:3]).max(axis=1)[0]
         # Return only those proposed negative triples that are not positive in the training dataset
-        return negative_batch[~final_filter]
+        return ~final_filter

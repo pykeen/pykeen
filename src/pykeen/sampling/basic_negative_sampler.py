@@ -2,6 +2,8 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
+from typing import Optional, Tuple
+
 import torch
 
 from .negative_sampler import NegativeSampler
@@ -31,7 +33,7 @@ class BasicNegativeSampler(NegativeSampler):
         num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
     )
 
-    def sample(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
         """Generate negative samples from the positive batch."""
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
@@ -81,6 +83,9 @@ class BasicNegativeSampler(NegativeSampler):
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
         if self.filtered:
-            negative_batch = self._filter_negative_triples(negative_batch=negative_batch)
+            batch_filter = self._filter_negative_triples(negative_batch=negative_batch)
+            negative_batch = negative_batch[batch_filter]
+        else:
+            batch_filter = None
 
-        return negative_batch
+        return negative_batch, batch_filter
