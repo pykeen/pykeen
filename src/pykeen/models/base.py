@@ -563,15 +563,23 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    def score_t_inverse(self, hr_batch: torch.LongTensor):
+    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index=1)
-        return self.score_h(rt_batch=r_inv_h)
 
-    def score_h_inverse(self, rt_batch: torch.LongTensor):
+        if slice_size is None:
+            return self.score_h(rt_batch=r_inv_h)
+        else:
+            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+
+    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
-        return self.score_t(hr_batch=t_r_inv)
+
+        if slice_size is None:
+            return self.score_t(hr_batch=t_r_inv)
+        else:
+            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
 
     def score_hrt_inverse(
         self,
@@ -650,12 +658,9 @@ class Model(nn.Module, ABC):
         the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
         of the _inverse relation_ is 4 (id of relation + 1).
         '''
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
 
-        if slice_size is None:
-            scores = self.score_t(t_r_inv)
-        else:
-            scores = self.score_t(t_r_inv, slice_size=slice_size)
+        scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
+
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
