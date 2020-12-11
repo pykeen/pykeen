@@ -1,4 +1,10 @@
-"""Inverse Stability Workflow."""
+# -*- coding: utf-8 -*-
+
+"""Inverse Stability Workflow.
+
+This experiment investigates the differences between
+
+"""
 
 import itertools as itt
 import logging
@@ -31,8 +37,9 @@ def main(force: bool, clip: int):
         df = pd.read_csv(results_path, sep='\t')
         df['residuals'] = df['forward'] - df['inverse']
         df = df[(-clip < df['residuals']) & (df['residuals'] < clip)]
-        g = sns.FacetGrid(df, col='model', row='dataset', hue='training_loop')
-        g.map_dataframe(sns.histplot, x='residuals', binwidth=1)
+        g = sns.FacetGrid(df, col='model', row='dataset', hue='training_loop', sharex=False, sharey=False)
+        g.map_dataframe(sns.histplot, x='residuals', stat="density")
+        g.add_legend()
         g.savefig(INVERSE_STABILITY / 'results_residuals.png', dpi=300)
 
     else:
@@ -41,6 +48,7 @@ def main(force: bool, clip: int):
         models = ['rotate', 'complex', 'simple', 'transe', 'distmult']
         training_loops = ['lcwa', 'slcwa']
         for dataset, model, training_loop in itt.product(datasets, models, training_loops):
+            click.secho(f'{dataset} {model} {training_loop}', fg='cyan')
             df = run_inverse_stability_workflow(dataset=dataset, model=model, training_loop=training_loop)
             outer_dfs.append(df)
         outer_df = pd.concat(outer_dfs)
@@ -85,7 +93,7 @@ def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str,
     scores_inverse = model.score_hrt_inverse(test_tf.mapped_triples)
     scores_inverse_np = scores_inverse.detach().numpy()[:, 0]
 
-    scores_path = dataset_dir / f'{training_loop}_{model_name}_scores.tsv'
+    scores_path = dataset_dir / f'{model_name}_{training_loop}_scores.tsv'
     df = pd.DataFrame(
         list(zip(
             itt.repeat(training_loop),
@@ -99,19 +107,19 @@ def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str,
     df.to_csv(scores_path, sep='\t', index=False)
 
     fig, ax = plt.subplots(1, 1)
-    sns.histplot(data=df, x='forward', label='Forward', ax=ax, color='blue')
-    sns.histplot(data=df, x='inverse', label='Inverse', ax=ax, color='orange')
-    ax.set_title(f'{training_loop} - {dataset_name} - {model_name}')
+    sns.histplot(data=df, x='forward', label='Forward', ax=ax, color='blue', stat="density")
+    sns.histplot(data=df, x='inverse', label='Inverse', ax=ax, color='orange', stat="density")
+    ax.set_title(f'{dataset_name} - {model_name} - {training_loop}')
     ax.set_xlabel('Score')
     plt.legend()
-    plt.savefig(dataset_dir / f'{training_loop}_{model_name}_overlay.png', dpi=300)
+    plt.savefig(dataset_dir / f'{model_name}_{training_loop}_overlay.png', dpi=300)
     plt.close(fig)
 
     fig, ax = plt.subplots(1, 1)
-    sns.histplot(scores_forward_np - scores_inverse_np, ax=ax)
-    ax.set_title(f'{training_loop} - {dataset_name} - {model_name}')
+    sns.histplot(scores_forward_np - scores_inverse_np, ax=ax, stat="density")
+    ax.set_title(f'{dataset_name} - {model_name} - {training_loop}')
     ax.set_xlabel('Forward - Inverse Score Difference')
-    plt.savefig(dataset_dir / f'{training_loop}_{model_name}_residuals.png', dpi=300)
+    plt.savefig(dataset_dir / f'{model_name}_{training_loop}_residuals.png', dpi=300)
     plt.close(fig)
 
     return df
