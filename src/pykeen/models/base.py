@@ -563,6 +563,16 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
+    def score_t_inverse(self, hr_batch: torch.LongTensor):
+        """."""
+        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index=1)
+        return self.score_h(rt_batch=r_inv_h)
+
+    def score_h_inverse(self, rt_batch: torch.LongTensor):
+        """."""
+        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
+        return self.score_t(hr_batch=t_r_inv)
+
     def score_hrt_inverse(
         self,
         hrt_batch: torch.LongTensor,
@@ -572,20 +582,25 @@ class Model(nn.Module, ABC):
         When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
         This function enables users to inspect the scores obtained by using the corresponding inverse triples.
         """
+
+        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index=1)
+
+        return self.score_hrt(hrt_batch=t_r_inv_h)
+
+    def _prepare_inverse_batch(self, batch: torch.LongTensor, index: int):
+        """."""
         if not self.triples_factory.create_inverse_triples:
             raise ValueError("Model is not configured to predict with inverse relations. "
                              "You might set self.triples_factory.create_inverse_triples=True when creating"
                              "the triples the factory.")
-        hrt_batch_cloned = hrt_batch.clone()
+        batch_cloned = batch.clone()
 
         # The number of relations stored in the triples factory includes the number of inverse relations
         # Id of inverse relation: relation + 1
-        hrt_batch_cloned[:, 1] = hrt_batch_cloned[:, 1] + 1
+        batch_cloned[:, index] = batch_cloned[:, index] + 1
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
-        hrt_batch_cloned = hrt_batch_cloned.flip(1)
-
-        return self.score_hrt(hrt_batch=hrt_batch_cloned)
+        return batch_cloned.flip(1)
 
     def predict_scores_all_heads(
         self,
@@ -635,18 +650,12 @@ class Model(nn.Module, ABC):
         the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
         of the _inverse relation_ is 4 (id of relation + 1).
         '''
-        rt_batch_cloned = rt_batch.clone()
+        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
 
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        rt_batch_cloned[:, 0] = rt_batch_cloned[:, 0] + 1
-
-        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
-        rt_batch_cloned = rt_batch_cloned.flip(1)
         if slice_size is None:
-            scores = self.score_t(rt_batch_cloned)
+            scores = self.score_t(t_r_inv)
         else:
-            scores = self.score_t(rt_batch_cloned, slice_size=slice_size)
+            scores = self.score_t(t_r_inv, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
