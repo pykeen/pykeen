@@ -8,8 +8,8 @@ from typing import Iterable
 
 import click
 import pandas as pd
-
 import pystow
+
 from pykeen.datasets.base import TabbedDataset
 
 __all__ = [
@@ -20,7 +20,13 @@ URL = 'https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df
 
 
 class CKG(TabbedDataset):
-    """The Clinical Knowledge Graph (CKG) dataset."""
+    """The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.
+
+    This dataset contains ~7.6 million nodes, 11 relations, and ~26 million triples.
+
+    .. [santos2020] Santos, A., *et al* (2020). `Clinical Knowledge Graph Integrates Proteomics Data into Clinical
+       Decision-Making <https://doi.org/10.1101/2020.05.09.084897>`_. *bioRxiv*, 2020.05.09.084897.
+    """
 
     def _get_df(self) -> pd.DataFrame:
         return _get_df()
@@ -36,6 +42,7 @@ def _get_df() -> pd.DataFrame:
 
 
 COLUMNS = ['START_ID', 'TYPE', 'END_ID']
+
 
 def _iterate_dataframes() -> Iterable[pd.DataFrame]:
     archive_path = pystow.ensure('pykeen', 'datasets', 'ckg', url=URL, name='data.tar.gz')
