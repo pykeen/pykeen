@@ -22,23 +22,32 @@ pykeen.evaluation.evaluator.logger.setLevel(logging.CRITICAL)
 
 
 @click.command()
-def main():
+@click.option('--force', is_flag=True)
+@click.option('--clip', type=int, default=10)
+def main(force: bool, clip: int):
     """Run the inverse stability experiments."""
-    outer_dfs = []
-    for dataset in ['nations', 'kinships']:
-        inner_dfs = []
-        for model in ['rotate', 'complex', 'simple', 'transe', 'distmult']:
-            df = run_inverse_stability_workflow(dataset=dataset, model=model)
-            inner_dfs.append(df)
+    results_path = INVERSE_STABILITY / 'results.tsv'
+    if results_path.exists() and not force:
+        df = pd.read_csv(results_path, sep='\t')
+        df['residuals'] = df['forward'] - df['inverse']
+        df = df[(-clip < df['residuals']) & (df['residuals'] < clip)]
+        g = sns.FacetGrid(df, col='model', row='dataset', hue='training_loop')
+        g.map_dataframe(sns.histplot, x='residuals', binwidth=1)
+        g.savefig(INVERSE_STABILITY / 'results_residuals.png', dpi=300)
+
+    else:
+        outer_dfs = []
+        datasets = ['nations', 'kinships']
+        models = ['rotate', 'complex', 'simple', 'transe', 'distmult']
+        training_loops = ['lcwa', 'slcwa']
+        for dataset, model, training_loop in itt.product(datasets, models, training_loops):
+            df = run_inverse_stability_workflow(dataset=dataset, model=model, training_loop=training_loop)
             outer_dfs.append(df)
-        inner_df = pd.concat(inner_dfs)
-        inner_df.to_csv(INVERSE_STABILITY / dataset / 'results.tsv', sep='\t', index=False)
-
-    outer_df = pd.concat(outer_dfs)
-    outer_df.to_csv(INVERSE_STABILITY / 'results.tsv', sep='\t', index=False)
+        outer_df = pd.concat(outer_dfs)
+        outer_df.to_csv(INVERSE_STABILITY / 'results.tsv', sep='\t', index=False)
 
 
-def run_inverse_stability_workflow(dataset: str, model: str, random_seed=0, device='cpu'):
+def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str, random_seed=0, device='cpu'):
     """Run an inverse stability experiment."""
     dataset: Dataset = get_dataset(
         dataset=dataset,
@@ -56,6 +65,7 @@ def run_inverse_stability_workflow(dataset: str, model: str, random_seed=0, devi
     pipeline_result = pipeline(
         dataset=dataset,
         model=model,
+        training_loop=training_loop,
         training_kwargs=dict(
             num_epochs=1000,
             use_tqdm_batch=False,
@@ -75,27 +85,33 @@ def run_inverse_stability_workflow(dataset: str, model: str, random_seed=0, devi
     scores_inverse = model.score_hrt_inverse(test_tf.mapped_triples)
     scores_inverse_np = scores_inverse.detach().numpy()[:, 0]
 
-    scores_path = dataset_dir / f'{model_name}_scores.tsv'
+    scores_path = dataset_dir / f'{training_loop}_{model_name}_scores.tsv'
     df = pd.DataFrame(
-        list(zip(itt.repeat(dataset_name), itt.repeat(model_name), scores_forward_np, scores_inverse_np)),
-        columns=['dataset', 'model', 'forward', 'inverse'],
+        list(zip(
+            itt.repeat(training_loop),
+            itt.repeat(dataset_name),
+            itt.repeat(model_name),
+            scores_forward_np,
+            scores_inverse_np,
+        )),
+        columns=['training_loop', 'dataset', 'model', 'forward', 'inverse'],
     )
     df.to_csv(scores_path, sep='\t', index=False)
 
     fig, ax = plt.subplots(1, 1)
     sns.histplot(data=df, x='forward', label='Forward', ax=ax, color='blue')
     sns.histplot(data=df, x='inverse', label='Inverse', ax=ax, color='orange')
-    ax.set_title(f'{dataset_name} - {model_name}')
+    ax.set_title(f'{training_loop} - {dataset_name} - {model_name}')
     ax.set_xlabel('Score')
     plt.legend()
-    plt.savefig(dataset_dir / f'{model_name}_overlay.png', dpi=300)
+    plt.savefig(dataset_dir / f'{training_loop}_{model_name}_overlay.png', dpi=300)
     plt.close(fig)
 
     fig, ax = plt.subplots(1, 1)
     sns.histplot(scores_forward_np - scores_inverse_np, ax=ax)
-    ax.set_title(f'{dataset_name} - {model_name}')
+    ax.set_title(f'{training_loop} - {dataset_name} - {model_name}')
     ax.set_xlabel('Forward - Inverse Score Difference')
-    plt.savefig(dataset_dir / f'{model_name}_residuals.png', dpi=300)
+    plt.savefig(dataset_dir / f'{training_loop}_{model_name}_residuals.png', dpi=300)
     plt.close(fig)
 
     return df
