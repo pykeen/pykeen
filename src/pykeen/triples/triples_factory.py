@@ -349,7 +349,7 @@ class TriplesFactory:
 
         :param mapped_triples:
             The new mapped triples.
-        :param extra_metadata
+        :param extra_metadata:
             Extra metadata to include in the new triples factory. If ``keep_metadata`` is true,
             the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
         :param keep_metadata:
