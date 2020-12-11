@@ -564,7 +564,6 @@ class Model(nn.Module, ABC):
         return scores
 
     def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index=1)
 
         if slice_size is None:
@@ -573,7 +572,6 @@ class Model(nn.Module, ABC):
             return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
 
         if slice_size is None:
@@ -590,17 +588,17 @@ class Model(nn.Module, ABC):
         When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
         This function enables users to inspect the scores obtained by using the corresponding inverse triples.
         """
-
         t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index=1)
 
         return self.score_hrt(hrt_batch=t_r_inv_h)
 
     def _prepare_inverse_batch(self, batch: torch.LongTensor, index: int):
-        """."""
         if not self.triples_factory.create_inverse_triples:
-            raise ValueError("Model is not configured to predict with inverse relations. "
-                             "You might set self.triples_factory.create_inverse_triples=True when creating"
-                             "the triples the factory.")
+            raise ValueError(
+                "Your model is not configured to predict with inverse relations."
+                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
+                " or using the pipeline()."
+            )
         batch_cloned = batch.clone()
 
         # The number of relations stored in the triples factory includes the number of inverse relations
