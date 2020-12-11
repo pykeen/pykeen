@@ -445,15 +445,28 @@ class TestLiterals(unittest.TestCase):
             repr(t),
         )
 
-        x = t.new_with_restriction(entities=['poland', 'ussr'])
+        entities = ['poland', 'ussr']
+        x = t.new_with_restriction(entities=entities)
         self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
         self.assertEqual(
             (
                 f'TriplesFactory(num_entities=14, num_relations=55, num_triples=37,'
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
+                f' inverse_triples=False, entity_restriction={repr(entities)}, path="{NATIONS_TRAIN_PATH}")'
             ),
             repr(x),
         )
+
+        relations = ['negativebehavior']
+        v = t.new_with_restriction(relations=relations)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=29,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations)})'
+            ),
+            repr(v),
+        )
+
 
         w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)

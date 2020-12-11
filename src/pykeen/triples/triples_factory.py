@@ -731,5 +731,5 @@ class TriplesFactory:
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
         return self.clone_and_exchange_triples(
             mapped_triples=self.mapped_triples[keep_mask],
-            # extra_metadata=extra_metadata,
+            extra_metadata=extra_metadata,
         )
