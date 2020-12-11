@@ -384,11 +384,16 @@ class TriplesFactory:
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        return (
-            f"num_entities={self.num_entities}, "
-            f"num_relations={self.num_relations}, "
-            f"num_triples={self.num_triples}, "
-            f"inverse_triples={self.create_inverse_triples}"
+        d = [
+            ('num_entities', self.num_entities,),
+            ('num_relations', self.num_relations),
+            ('num_triples', self.num_triples),
+            ('inverse_triples', self.create_inverse_triples),
+        ]
+        d.extend(sorted(self.metadata.items()))
+        return ', '.join(
+            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            for k, v in d
         )
 
     def __repr__(self):  # noqa: D105

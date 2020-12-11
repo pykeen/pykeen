@@ -437,14 +437,34 @@ class TestLiterals(unittest.TestCase):
         """Test metadata passing for triples factories."""
         t = Nations().training
         self.assertEqual(NATIONS_TRAIN_PATH, t.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(t),
+        )
 
-        first = list(t.entity_to_id)[0]
-        x = t.new_with_restriction(entities=[first])
+        x = t.new_with_restriction(entities=['poland', 'ussr'])
         self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=37,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(x),
+        )
 
         w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
         self.assertNotIn('path', w.metadata)
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=5,'
+                f' inverse_triples=False)'
+            ),
+            repr(w),
+        )
 
         y, z = t.split()
         self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
