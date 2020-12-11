@@ -76,7 +76,7 @@ class BasicNegativeSampler(NegativeSampler):
             # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
             if not self.filtered:
                 negative_batch[start:stop, index] += (
-                        negative_batch[start:stop, index] >= positive_batch[start:stop, index]
+                    negative_batch[start:stop, index] >= positive_batch[start:stop, index]
                 ).long()
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
