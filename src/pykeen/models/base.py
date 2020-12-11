@@ -592,7 +592,7 @@ class Model(nn.Module, ABC):
 
         return self.score_hrt(hrt_batch=t_r_inv_h)
 
-    def _prepare_inverse_batch(self, batch: torch.LongTensor, index: int):
+    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int):
         if not self.triples_factory.create_inverse_triples:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
@@ -603,7 +603,7 @@ class Model(nn.Module, ABC):
 
         # The number of relations stored in the triples factory includes the number of inverse relations
         # Id of inverse relation: relation + 1
-        batch_cloned[:, index] = batch_cloned[:, index] + 1
+        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
 
         # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
         return batch_cloned.flip(1)
