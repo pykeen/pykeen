@@ -16,7 +16,7 @@ __all__ = [
     'CKG',
 ]
 
-URL = 'https://data.mendeley.com/public-files/datasets/mrcf7f4tc2/files/c0d058a2-adfa-4b96-97d9-c9ec7fc5adb9/file_downloaded'
+URL = 'https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df-2342-468a-91a9-97a981a479ad'
 
 
 class CKG(TabbedDataset):
