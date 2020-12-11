@@ -7,19 +7,17 @@ import itertools
 import logging
 import os
 import re
-from typing import Callable, Collection, List, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
 import pandas as pd
 import torch
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
+from .splitting import split
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import (
-    compact_mapping, ensure_torch_random_state, format_relative_comparison, invert_mapping,
-    slice_triples, torch_is_in_1d,
-)
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, slice_triples, torch_is_in_1d
 
 __all__ = [
     'TriplesFactory',
@@ -32,11 +30,6 @@ logger = logging.getLogger(__name__)
 
 INVERSE_SUFFIX = '_inverse'
 TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
-
-
-def get_unique_entity_ids_from_triples_tensor(mapped_triples: MappedTriples) -> torch.LongTensor:
-    """Return the unique entity IDs used in a tensor of triples."""
-    return mapped_triples[:, [0, 2]].unique()
 
 
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
@@ -143,61 +136,6 @@ def _get_triple_mask(
     return mask
 
 
-def normalize_ratios(
-    ratios: Union[float, Sequence[float]],
-    epsilon: float = 1.0e-06,
-) -> Tuple[float, ...]:
-    """Normalize relative sizes.
-
-    If the sum is smaller than 1, adds (1 - sum)
-
-    :param ratios:
-        The ratios.
-    :param epsilon:
-        A small constant for comparing sum of ratios against 1.
-
-    :return:
-        A sequence of ratios of at least two elements which sums to one.
-    """
-    # Prepare split index
-    if isinstance(ratios, float):
-        ratios = [ratios]
-    ratios = tuple(ratios)
-    ratio_sum = sum(ratios)
-    if ratio_sum < 1.0 - epsilon:
-        ratios = ratios + (1.0 - ratio_sum,)
-    elif ratio_sum > 1.0 + epsilon:
-        raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
-    return ratios
-
-
-def get_absolute_split_sizes(
-    n_total: int,
-    ratios: Sequence[float],
-) -> Tuple[int, ...]:
-    """
-    Compute absolute sizes of splits from given relative sizes.
-
-    .. note ::
-        This method compensates for rounding errors, and ensures that the absolute sizes sum up to the total number.
-
-    :param n_total:
-        The total number.
-    :param ratios:
-        The relative ratios (should sum to 1).
-
-    :return:
-        The absolute sizes.
-    """
-    # due to rounding errors we might lose a few points, thus we use cumulative ratio
-    cum_ratio = np.cumsum(ratios)
-    cum_ratio[-1] = 1.0
-    cum_ratio = np.r_[np.zeros(1), cum_ratio]
-    split_points = (cum_ratio * n_total).astype(np.int64)
-    sizes = np.diff(split_points)
-    return tuple(sizes)
-
-
 def _ensure_ids(
     labels_or_ids: Union[Collection[int], Collection[str]],
     label_to_id: Mapping[str, int],
@@ -226,6 +164,9 @@ class TriplesFactory:
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
 
+    #: Arbitrary metadata to go with the graph
+    metadata: Optional[Dict[str, Any]] = None
+
     # The following fields get generated automatically
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
@@ -252,6 +193,9 @@ class TriplesFactory:
         self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
         self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
 
+        if self.metadata is None:
+            self.metadata = {}
+
         # vectorized versions
         self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
         self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
@@ -267,6 +211,7 @@ class TriplesFactory:
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
@@ -283,6 +228,8 @@ class TriplesFactory:
             Whether to compact IDs such that the IDs are consecutive.
         :param filter_out_candidate_inverse_relations:
             Whether to remove triples with relations with the inverse suffix.
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata
 
         :return:
             A new triples factory.
@@ -332,6 +279,7 @@ class TriplesFactory:
             relation_to_id=relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=create_inverse_triples,
+            metadata=metadata,
         )
 
     @classmethod
@@ -342,6 +290,7 @@ class TriplesFactory:
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from triples stored in a file.
@@ -356,6 +305,10 @@ class TriplesFactory:
             The mapping from relations labels to ID. If None, create a new one from the triples.
         :param compact_id:
             Whether to compact IDs such that the IDs are consecutive.
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata with the triples factory. Do not
+            include ``path`` as a key because it is automatically taken from the ``path``
+            kwarg to this function.
 
         :return:
             A new triples factory.
@@ -376,11 +329,17 @@ class TriplesFactory:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             compact_id=compact_id,
+            metadata={
+                'path': path,
+                **(metadata or {}),
+            },
         )
 
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
+        extra_metadata: Optional[Dict[str, Any]] = None,
+        keep_metadata: bool = True,
     ) -> "TriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -390,6 +349,11 @@ class TriplesFactory:
 
         :param mapped_triples:
             The new mapped triples.
+        :param extra_metadata:
+            Extra metadata to include in the new triples factory. If ``keep_metadata`` is true,
+            the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
+        :param keep_metadata:
+            Pass the current factory's metadata to the new triples factory
 
         :return:
             The new factory.
@@ -399,6 +363,10 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),
+            },
         )
 
     @property
@@ -431,11 +399,16 @@ class TriplesFactory:
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        return (
-            f"num_entities={self.num_entities}, "
-            f"num_relations={self.num_relations}, "
-            f"num_triples={self.num_triples}, "
-            f"inverse_triples={self.create_inverse_triples}"
+        d = [
+            ('num_entities', self.num_entities),
+            ('num_relations', self.num_relations),
+            ('num_triples', self.num_triples),
+            ('inverse_triples', self.create_inverse_triples),
+        ]
+        d.extend(sorted(self.metadata.items()))
+        return ', '.join(
+            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            for k, v in d
         )
 
     def __repr__(self):  # noqa: D105
@@ -515,17 +488,31 @@ class TriplesFactory:
         *,
         random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
+        method: Optional[str] = None,
     ) -> List['TriplesFactory']:
         """Split a triples factory into a train/test.
 
-        :param ratios: There are three options for this argument. First, a float can be given between 0 and 1.0,
-         non-inclusive. The first triples factory will get this ratio and the second will get the rest. Second,
-         a list of ratios can be given for which factory in which order should get what ratios as in ``[0.8, 0.1]``.
-         The final ratio can be omitted because that can be calculated. Third, all ratios can be explicitly set in
-         order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is 1.0.
-        :param random_state: The random state used to shuffle and split the triples in this factory.
-        :param randomize_cleanup: If true, uses the non-deterministic method for moving triples to the training set.
-         This has the advantage that it doesn't necessarily have to move all of them, but it might be slower.
+        :param ratios:
+            There are three options for this argument:
+
+            1. A float can be given between 0 and 1.0, non-inclusive. The first set of triples will
+               get this ratio and the second will get the rest.
+            2. A list of ratios can be given for which set in which order should get what ratios as in
+               ``[0.8, 0.1]``. The final ratio can be omitted because that can be calculated.
+            3. All ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]``
+               where the sum of all ratios is 1.0.
+        :param random_state:
+            The random state used to shuffle and split the triples.
+        :param randomize_cleanup:
+            If true, uses the non-deterministic method for moving triples to the training set. This has the
+            advantage that it does not necessarily have to move all of them, but it might be significantly
+            slower since it moves one triple at a time.
+        :param method:
+            The name of the method to use, from SPLIT_METHODS. Defaults to "coverage".
+
+        :return:
+            A partition of triples, which are split (approximately) according to the ratios, stored TriplesFactory's
+            which share everything else with this root triples factory.
 
         .. code-block:: python
 
@@ -538,45 +525,16 @@ class TriplesFactory:
             ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
             training_factory, testing_factory, validation_factory = factory.split(ratios)
         """
-        # input normalization
-        ratios = normalize_ratios(ratios)
-        generator = ensure_torch_random_state(random_state)
-
-        # convert to absolute sizes
-        sizes = get_absolute_split_sizes(n_total=self.num_triples, ratios=ratios)
-
-        # Split indices
-        idx = torch.randperm(self.num_triples, generator=generator)
-        idx_groups = idx.split(split_size=sizes, dim=0)
-
-        # Split triples
-        triples_groups = [
-            self.mapped_triples[idx]
-            for idx in idx_groups
-        ]
-        logger.info(
-            'done splitting triples to groups of sizes %s',
-            [triples.shape[0] for triples in triples_groups],
-        )
-
-        # Make sure that the first element has all the right stuff in it
-        logger.debug('cleaning up groups')
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=generator if randomize_cleanup else None)
-        logger.debug('done cleaning up groups')
-
-        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
-            actual_size = triples.shape[0]
-            actual_ratio = actual_size / exp_size * exp_ratio
-            if actual_size != exp_size:
-                logger.warning(
-                    f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
-                    f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.',
-                )
-
         # Make new triples factories for each group
         return [
             self.clone_and_exchange_triples(mapped_triples=triples)
-            for triples in triples_groups
+            for triples in split(
+                mapped_triples=self.mapped_triples,
+                ratios=ratios,
+                random_state=random_state,
+                randomize_cleanup=randomize_cleanup,
+                method=method,
+            )
         ]
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
@@ -760,14 +718,17 @@ class TriplesFactory:
         """
         keep_mask = None
 
+        extra_metadata = {}
         # Filter for entities
         if entities is not None:
+            extra_metadata['entity_restriction'] = entities
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
             logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
 
         # Filter for relations
         if relations is not None:
+            extra_metadata['relation_restriction'] = relations
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
@@ -779,101 +740,7 @@ class TriplesFactory:
 
         num_triples = keep_mask.sum()
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
-        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
-
-
-def _tf_cleanup_all(
-    triples_groups: List[MappedTriples],
-    *,
-    random_state: TorchRandomHint = None,
-) -> Sequence[MappedTriples]:
-    """Cleanup a list of triples array with respect to the first array."""
-    reference, *others = triples_groups
-    rv = []
-    for other in others:
-        if random_state is not None:
-            reference, other = _tf_cleanup_randomized(reference, other, random_state)
-        else:
-            reference, other = _tf_cleanup_deterministic(reference, other)
-        rv.append(other)
-    # [...] is necessary for Python 3.7 compatibility
-    return [reference, *rv]
-
-
-def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -> Tuple[MappedTriples, MappedTriples]:
-    """Cleanup a triples array (testing) with respect to another (training)."""
-    move_id_mask = _prepare_cleanup(training, testing)
-    training = torch.cat([training, testing[move_id_mask]])
-    testing = testing[~move_id_mask]
-    return training, testing
-
-
-def _tf_cleanup_randomized(
-    training: MappedTriples,
-    testing: MappedTriples,
-    random_state: TorchRandomHint = None,
-) -> Tuple[MappedTriples, MappedTriples]:
-    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
-
-    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
-    2. Choose a triple to move, recalculate move_id_mask
-    3. Continue until move_id_mask has no true bits
-    """
-    generator = ensure_torch_random_state(random_state)
-    move_id_mask = _prepare_cleanup(training, testing)
-
-    # While there are still triples that should be moved to the training set
-    while move_id_mask.any():
-        # Pick a random triple to move over to the training triples
-        candidates, = move_id_mask.nonzero(as_tuple=True)
-        idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
-        idx = candidates[idx]
-
-        # add to training
-        training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
-        # remove from testing
-        testing = torch.cat([testing[:idx], testing[idx + 1:]], dim=0)
-        # Recalculate the move_id_mask
-        move_id_mask = _prepare_cleanup(training, testing)
-
-    return training, testing
-
-
-def _prepare_cleanup(
-    training: MappedTriples,
-    testing: MappedTriples,
-    max_ids: Optional[Tuple[int, int]] = None,
-) -> torch.BoolTensor:
-    """
-    Calculate a mask for the test triples with triples containing test-only entities or relations.
-
-    :param training: shape: (n, 3)
-        The training triples.
-    :param testing: shape: (m, 3)
-        The testing triples.
-
-    :return: shape: (m,)
-        The move mask.
-    """
-    # base cases
-    if len(testing) == 0:
-        return torch.empty(0, dtype=torch.bool)
-    if len(training) == 0:
-        return torch.ones(testing.shape[0], dtype=torch.bool)
-
-    columns = [[0, 2], [1]]
-    to_move_mask = torch.zeros(1, dtype=torch.bool)
-    if max_ids is None:
-        max_ids = [
-            max(training[:, col].max().item(), testing[:, col].max().item()) + 1
-            for col in columns
-        ]
-    for col, max_id in zip(columns, max_ids):
-        # IDs not in training
-        not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
-        not_in_training_mask[training[:, col].view(-1)] = False
-
-        # triples with exclusive test IDs
-        exclusive_triples = not_in_training_mask[testing[:, col].view(-1)].view(-1, len(col)).any(dim=-1)
-        to_move_mask = to_move_mask | exclusive_triples
-    return to_move_mask
+        return self.clone_and_exchange_triples(
+            mapped_triples=self.mapped_triples[keep_mask],
+            extra_metadata=extra_metadata,
+        )

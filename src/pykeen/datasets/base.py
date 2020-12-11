@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import List, Optional, TextIO, Tuple, Union
+from typing import Any, List, Mapping, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
 
@@ -597,8 +597,8 @@ class SingleTabbedDataset(LazyDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        delimiter: Optional[str] = None,
         random_state: RandomHint = None,
+        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -618,7 +618,8 @@ class SingleTabbedDataset(LazyDataset):
 
         self._triples_factory = None
         self.random_state = random_state
-        self.delimiter = delimiter or '\t'
+        self.read_csv_kwargs = read_csv_kwargs or {}
+        self.read_csv_kwargs.setdefault('sep', '\t')
 
         self.url = url
         if not os.path.exists(self._get_path()) and not self.url:
@@ -639,7 +640,7 @@ class SingleTabbedDataset(LazyDataset):
         if not os.path.exists(self._get_path()):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
-        df = pd.read_csv(self._get_path(), sep=self.delimiter)
+        df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
         tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
         tf.path = self._get_path()
         self._training, self._testing, self._validation = tf.split(
