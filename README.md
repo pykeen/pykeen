@@ -100,7 +100,7 @@ in ``pykeen``.
 
 | Name          | Reference                                                                                                         | Description                                                                                       |
 |---------------|-------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| ckg           | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                     | The Clinical Knowledge Graph (CKG) dataset.                                                       |
+| ckg           | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                     | The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.                                    |
 | codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                          |
 | codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                         |
 | codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                          |
