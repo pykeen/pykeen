@@ -1,10 +1,12 @@
 """Inverse Stability Workflow."""
 
+import itertools as itt
 import logging
 from typing import Type
 
 import click
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 import pykeen.evaluation.evaluator
@@ -21,12 +23,23 @@ pykeen.evaluation.evaluator.logger.setLevel(logging.CRITICAL)
 
 @click.command()
 def main():
+    """Run the inverse stability experiments."""
+    outer_dfs = []
     for dataset in ['nations', 'kinships']:
+        inner_dfs = []
         for model in ['rotate', 'complex', 'simple', 'transe', 'distmult']:
-            run_inverse_stability_workflow(dataset=dataset, model=model)
+            df = run_inverse_stability_workflow(dataset=dataset, model=model)
+            inner_dfs.append(df)
+            outer_dfs.append(df)
+        inner_df = pd.concat(inner_dfs)
+        inner_df.to_csv(INVERSE_STABILITY / dataset / 'results.tsv', sep='\t', index=False)
+
+    outer_df = pd.concat(outer_dfs)
+    outer_df.to_csv(INVERSE_STABILITY / 'results.tsv', sep='\t', index=False)
 
 
 def run_inverse_stability_workflow(dataset: str, model: str, random_seed=0, device='cpu'):
+    """Run an inverse stability experiment."""
     dataset: Dataset = get_dataset(
         dataset=dataset,
         dataset_kwargs=dict(
@@ -48,31 +61,30 @@ def run_inverse_stability_workflow(dataset: str, model: str, random_seed=0, devi
             use_tqdm_batch=False,
         ),
         stopper='early',
+        stopper_kwargs=dict(patience=5, frequency=5),
         random_seed=random_seed,
         device=device,
     )
     test_tf = dataset.testing
     model = pipeline_result.model
     # Score with original triples
-    scores = model.score_hrt(test_tf.mapped_triples)
-    scores_np = scores.detach().numpy()[:, 0]
-    forward_path = dataset_dir / f'{model_name}_forward.txt'
-    with forward_path.open('w') as file:
-        for forward_score in scores_np:
-            print(forward_score, file=file)
+    scores_forward = model.score_hrt(test_tf.mapped_triples)
+    scores_forward_np = scores_forward.detach().numpy()[:, 0]
 
     # Score with inverse triples
     scores_inverse = model.score_hrt_inverse(test_tf.mapped_triples)
     scores_inverse_np = scores_inverse.detach().numpy()[:, 0]
 
-    inverse_path = dataset_dir / f'{model_name}_inverse.txt'
-    with inverse_path.open('w') as file:
-        for inverse_score in scores_inverse_np:
-            print(inverse_score, file=file)
+    scores_path = dataset_dir / f'{model_name}_scores.tsv'
+    df = pd.DataFrame(
+        list(zip(itt.repeat(dataset_name), itt.repeat(model_name), scores_forward_np, scores_inverse_np)),
+        columns=['dataset', 'model', 'forward', 'inverse'],
+    )
+    df.to_csv(scores_path, sep='\t', index=False)
 
     fig, ax = plt.subplots(1, 1)
-    sns.histplot(scores_np, ax=ax, label='Forward', color='blue')
-    sns.histplot(scores_inverse_np, ax=ax, label='Inverse', color='orange')
+    sns.histplot(data=df, x='forward', label='Forward', ax=ax, color='blue')
+    sns.histplot(data=df, x='inverse', label='Inverse', ax=ax, color='orange')
     ax.set_title(f'{dataset_name} - {model_name}')
     ax.set_xlabel('Score')
     plt.legend()
@@ -80,11 +92,13 @@ def run_inverse_stability_workflow(dataset: str, model: str, random_seed=0, devi
     plt.close(fig)
 
     fig, ax = plt.subplots(1, 1)
-    sns.histplot(scores_np - scores_inverse_np, ax=ax)
+    sns.histplot(scores_forward_np - scores_inverse_np, ax=ax)
     ax.set_title(f'{dataset_name} - {model_name}')
     ax.set_xlabel('Forward - Inverse Score Difference')
     plt.savefig(dataset_dir / f'{model_name}_residuals.png', dpi=300)
     plt.close(fig)
+
+    return df
 
 
 if __name__ == '__main__':
