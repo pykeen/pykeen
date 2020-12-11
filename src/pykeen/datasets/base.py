@@ -619,15 +619,19 @@ class TabbedDataset(LazyDataset):
             self._load()
 
     def _get_path(self) -> Optional[str]:
-        pass
+        """Get the path of the data if there's a single file."""
 
     def _get_df(self) -> pd.DataFrame:
         raise NotImplementedError
 
     def _load(self) -> None:
         df = self._get_df()
-        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self._get_path()
+        path = self._get_path()
+        tf = TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=dict(path=path) if path else None,
+        )
         self._training, self._testing, self._validation = tf.split(
             ratios=self.ratios,
             random_state=self.random_state,
