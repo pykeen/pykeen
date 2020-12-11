@@ -61,12 +61,17 @@ class OAG(TabbedDataset):
 
 def _iterables():
     return [
-        _iter_triples(VENUE_LINKING_URL, 'mid', 'aid', 'venue'),
-        _iter_triples(AUTHOR_LINKING_URL, 'mid', 'aid', 'author'),
+        _iter_triples(VENUE_LINKING_URL, 'mid', 'aid', 'sameVenue'),
+        _iter_triples(AUTHOR_LINKING_URL, 'mid', 'aid', 'sameAuthor'),
     ]
 
 
 def main():
+    for x, y in globals().items():
+        if x.endswith('_URL') and not x.startswith('BASE'):
+            print(x, y)
+            pystow.ensure('pykeen', 'datasets', 'oag', url=y)
+    return
     i = 0
     for line in roundrobin(_iterables()):
         print(line)
