@@ -467,15 +467,11 @@ class TestLiterals(unittest.TestCase):
             repr(v),
         )
 
-
         w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
         self.assertNotIn('path', w.metadata)
         self.assertEqual(
-            (
-                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=5,'
-                f' inverse_triples=False)'
-            ),
+            'TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)',
             repr(w),
         )
 

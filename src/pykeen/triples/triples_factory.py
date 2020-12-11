@@ -211,7 +211,7 @@ class TriplesFactory:
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
-        metadata: Optional[Mapping[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
@@ -290,6 +290,7 @@ class TriplesFactory:
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from triples stored in a file.
@@ -304,6 +305,10 @@ class TriplesFactory:
             The mapping from relations labels to ID. If None, create a new one from the triples.
         :param compact_id:
             Whether to compact IDs such that the IDs are consecutive.
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata with the triples factory. Do not
+            include ``path`` as a key because it is automatically taken from the ``path``
+            kwarg to this function.
 
         :return:
             A new triples factory.
@@ -324,7 +329,10 @@ class TriplesFactory:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             compact_id=compact_id,
-            metadata=dict(path=path),
+            metadata={
+                'path': path,
+                **(metadata or {}),
+            },
         )
 
     def clone_and_exchange_triples(
@@ -341,6 +349,9 @@ class TriplesFactory:
 
         :param mapped_triples:
             The new mapped triples.
+        :param extra_metadata
+            Extra metadata to include in the new triples factory. If ``keep_metadata`` is true,
+            the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
         :param keep_metadata:
             Pass the current factory's metadata to the new triples factory
 
@@ -389,7 +400,7 @@ class TriplesFactory:
     def extra_repr(self) -> str:
         """Extra representation string."""
         d = [
-            ('num_entities', self.num_entities,),
+            ('num_entities', self.num_entities),
             ('num_relations', self.num_relations),
             ('num_triples', self.num_triples),
             ('inverse_triples', self.create_inverse_triples),
