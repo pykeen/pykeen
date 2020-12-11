@@ -3,7 +3,7 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Tuple
+from typing import Any, ClassVar, Mapping, Optional, Set
 
 import torch
 
@@ -25,8 +25,8 @@ class NegativeSampler(ABC):
         self,
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
-        filtered: bool = None,
-        corruption_scheme: Tuple[str] = None,
+        filtered: bool = False,
+        corruption_scheme: Set[str] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
@@ -34,12 +34,12 @@ class NegativeSampler(ABC):
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False.
-        :param corruption_scheme: What sides (h, r, t) should be corrupted. Defaults to head and tail (h, t).
+        :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
         """
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
-        self.filtered = filtered if filtered is not None else False
-        self.corruption_scheme = corruption_scheme if corruption_scheme is not None else ('h', 't')
+        self.filtered = filtered
+        self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
         self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
 
@@ -64,7 +64,15 @@ class NegativeSampler(ABC):
         raise NotImplementedError
 
     def _filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.LongTensor:
-        """Filter all proposed negative samples that are positive in the training dataset."""
+        """Filter all proposed negative samples that are positive in the training dataset.
+
+        Normally there is a low probability that proposed negative samples are positive in the training datasets and
+        thus act as false negatives. This is expected to act as a kind of regularization, since it adds noise signal to
+        the training data. However, the degree of regularization is hard to control since the added noise signal depends
+        on the ratio of true triples for a given entity relation or entity entity pair. Therefore, the effects are hard
+        to control and a researcher might want to exclude the possibility of having false negatives in the proposed
+        negative triples.
+        """
         # Check which heads of the mapped triples are also in the negative triples
         head_filter = (self.triples_factory.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
         # Reduce the search space by only using possible matches that at least contain the head we look for
