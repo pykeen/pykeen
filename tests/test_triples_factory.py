@@ -433,18 +433,22 @@ class TestLiterals(unittest.TestCase):
             msg='Wrong number of relations in factory',
         )
 
-    def test_path(self):
-        """Test repr() for triples factories."""
+    def test_metadata(self):
+        """Test metadata passing for triples factories."""
         t = Nations().training
-        self.assertEqual(NATIONS_TRAIN_PATH, t.path)
+        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata['path'])
 
         first = list(t.entity_to_id)[0]
         x = t.new_with_restriction(entities=[first])
-        self.assertEqual(NATIONS_TRAIN_PATH, x.path)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+
+        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        self.assertIsInstance(w, TriplesFactory)
+        self.assertNotIn('path', w.metadata)
 
         y, z = t.split()
-        self.assertEqual(NATIONS_TRAIN_PATH, y.path)
-        self.assertEqual(NATIONS_TRAIN_PATH, z.path)
+        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
 
 
 def test_get_absolute_split_sizes():

@@ -7,7 +7,7 @@ import itertools
 import logging
 import os
 import re
-from typing import Callable, Collection, List, Mapping, Optional, Sequence, Set, TextIO, Union
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
 import pandas as pd
@@ -164,9 +164,8 @@ class TriplesFactory:
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
 
-    #: The path to the file/resource from which this factory was created.
-    #: Typically a file path, or none if created directly from triples
-    path: Optional[str] = None
+    #: Arbitrary metadata to go with the graph
+    metadata: Optional[Dict[str, Any]] = None
 
     # The following fields get generated automatically
 
@@ -194,6 +193,9 @@ class TriplesFactory:
         self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
         self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
 
+        if self.metadata is None:
+            self.metadata = {}
+
         # vectorized versions
         self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
         self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
@@ -209,7 +211,7 @@ class TriplesFactory:
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
-        path: Optional[str] = None,
+        metadata: Optional[Mapping[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
@@ -226,8 +228,8 @@ class TriplesFactory:
             Whether to compact IDs such that the IDs are consecutive.
         :param filter_out_candidate_inverse_relations:
             Whether to remove triples with relations with the inverse suffix.
-        :param path:
-            An optional path/resource name from which the triples were created
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata
 
         :return:
             A new triples factory.
@@ -277,7 +279,7 @@ class TriplesFactory:
             relation_to_id=relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=create_inverse_triples,
-            path=path,
+            metadata=metadata,
         )
 
     @classmethod
@@ -322,13 +324,13 @@ class TriplesFactory:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             compact_id=compact_id,
-            path=path,
+            metadata=dict(path=path),
         )
 
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
-        keep_path: bool = True,
+        keep_metadata: bool = True,
     ) -> "TriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -338,8 +340,8 @@ class TriplesFactory:
 
         :param mapped_triples:
             The new mapped triples.
-        :param keep_path:
-            Pass the current path to the new triples factory
+        :param keep_metadata:
+            Pass the current factory's metadata to the new triples factory
 
         :return:
             The new factory.
@@ -349,7 +351,7 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
-            path=self.path if keep_path else None,
+            metadata=self.metadata if keep_metadata else None,
         )
 
     @property
