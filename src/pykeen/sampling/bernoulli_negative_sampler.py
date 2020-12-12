@@ -91,7 +91,8 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask
 
-        # Randomly sample corruption
+        # Randomly sample corruption. See below for explanation of
+        # why this is on a range of [0, num_entities - 1]
         negative_entities = torch.randint(
             self.triples_factory.num_entities - 1,
             size=(num_negs,),
