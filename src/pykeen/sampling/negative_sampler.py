@@ -38,6 +38,8 @@ class NegativeSampler(ABC):
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filtered = filtered
+        # Tracking whether required init steps for negative sample filtering are performed
+        self._filter_init = False
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -74,15 +76,25 @@ class NegativeSampler(ABC):
             # Copy the mapped triples to the device for efficient filtering
             self.mapped_triples = self.triples_factory.mapped_triples.to(negative_batch.device)
             self._filter_init = True
-        # Check which heads of the mapped triples are also in the negative triples
-        head_filter = (self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
-        # Reduce the search space by only using possible matches that at least contain the head we look for
-        sub_mapped_triples = self.mapped_triples[head_filter]
-        # Check in this subspace which relations of the mapped triples are also in the negative triples
-        relation_filter = (sub_mapped_triples[:, 1:2].view(1, -1) == negative_batch[:, 1:2]).max(axis=0)[0]
-        # Reduce the search space by only using possible matches that at least contain head and relation we look for
-        sub_mapped_triples = sub_mapped_triples[relation_filter]
-        # Create a filter indicating which of the proposed negative triples are positive in the training dataset
-        final_filter = (sub_mapped_triples[:, 2:3].view(1, -1) == negative_batch[:, 2:3]).max(axis=1)[0]
+        try:
+            # Check which heads of the mapped triples are also in the negative triples
+            head_filter = (self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
+            # Reduce the search space by only using possible matches that at least contain the head we look for
+            sub_mapped_triples = self.mapped_triples[head_filter]
+            # Check in this subspace which relations of the mapped triples are also in the negative triples
+            relation_filter = (sub_mapped_triples[:, 1:2].view(1, -1) == negative_batch[:, 1:2]).max(axis=0)[0]
+            # Reduce the search space by only using possible matches that at least contain head and relation we look for
+            sub_mapped_triples = sub_mapped_triples[relation_filter]
+            # Create a filter indicating which of the proposed negative triples are positive in the training dataset
+            final_filter = (sub_mapped_triples[:, 2:3].view(1, -1) == negative_batch[:, 2:3]).max(axis=1)[0]
+        except RuntimeError as e:
+            # In cases where no triples should be filtered, the subspace reduction technique above will fail
+            if str(e) == (
+                    'cannot perform reduction function max on tensor with no elements because the operation does not '
+                    'have an identity'
+            ):
+                final_filter = torch.zeros(negative_batch.shape[0], dtype=torch.bool, device=negative_batch.device)
+            else:
+                raise e
         # Return only those proposed negative triples that are not positive in the training dataset
         return ~final_filter

@@ -57,8 +57,6 @@ class BasicNegativeSampler(NegativeSampler):
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
         self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
-        # Tracking whether required init steps for negative sample filtering are performed
-        self._filter_init = False
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
         """Generate negative samples from the positive batch."""

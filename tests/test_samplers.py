@@ -76,6 +76,18 @@ class _NegativeSamplingTestCase:
         # Check that all elements got corrupted
         assert (negative_batch != self.positive_batch).any(dim=1).all()
 
+        # Check whether filtering works correctly
+        # First giving an example where all triples have to be filtered
+        batch_filter = self.negative_sampler._filter_negative_triples(negative_batch=self.positive_batch)
+        # The filter should remove all triples
+        assert batch_filter.sum() == 0
+        # Create an example where no triples will be filtered
+        batch_filter = self.negative_sampler._filter_negative_triples(
+            negative_batch=(self.positive_batch + self.negative_sampler.num_entities),
+        )
+        # The filter should not remove any triple
+        assert self.positive_batch.size()[0] == batch_filter.sum()
+
         # Generate scaled negative sample
         scaled_negative_batch, _ = self.scaling_negative_sampler.sample(
             positive_batch=self.positive_batch,
@@ -197,5 +209,7 @@ class AdjacencyListCompressionTest(unittest.TestCase):
 
             # check edge ids
             edge_ids = adj_list[:, 0]
-            adjacent_edges = set(int(a) for a in ((triples[:, 0] == i) | (triples[:, 2] == i)).nonzero().flatten())
+            adjacent_edges = set(
+                int(a) for a in ((triples[:, 0] == i) | (triples[:, 2] == i)).nonzero(as_tuple=False).flatten()
+            )
             assert adjacent_edges == set(map(int, edge_ids))
