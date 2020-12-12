@@ -78,11 +78,11 @@ class _NegativeSamplingTestCase:
 
         # Check whether filtering works correctly
         # First giving an example where all triples have to be filtered
-        batch_filter = self.negative_sampler._filter_negative_triples(negative_batch=self.positive_batch)
+        batch_filter = self.negative_sampler.filter_negative_triples(negative_batch=self.positive_batch)
         # The filter should remove all triples
         assert batch_filter.sum() == 0
         # Create an example where no triples will be filtered
-        batch_filter = self.negative_sampler._filter_negative_triples(
+        batch_filter = self.negative_sampler.filter_negative_triples(
             negative_batch=(self.positive_batch + self.negative_sampler.num_entities),
         )
         # The filter should not remove any triple

@@ -13,6 +13,8 @@ __all__ = [
     'BasicNegativeSampler',
 ]
 
+LOOKUP = {'h': 0, 'r': 1, 't': 2}
+
 
 class BasicNegativeSampler(NegativeSampler):
     r"""A basic negative sampler.
@@ -56,7 +58,6 @@ class BasicNegativeSampler(NegativeSampler):
         )
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
-        LOOKUP = {'h': 0, 'r': 1, 't': 2}
         self._corruption_indices = [LOOKUP[side] for side in self.corruption_scheme]
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
@@ -109,7 +110,7 @@ class BasicNegativeSampler(NegativeSampler):
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
         if self.filtered:
-            batch_filter = self._filter_negative_triples(negative_batch=negative_batch)
+            batch_filter = self.filter_negative_triples(negative_batch=negative_batch)
             negative_batch = negative_batch[batch_filter]
         else:
             batch_filter = None
