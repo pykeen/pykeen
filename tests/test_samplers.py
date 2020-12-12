@@ -116,7 +116,7 @@ class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase)
     def test_sample_bern(self):
         """Test if relations are not corrupted."""
         # Generate negative sample for additional tests
-        negative_batch = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
 
         # test that the relations were not changed
         assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()

@@ -106,4 +106,4 @@ class BernoulliNegativeSampler(NegativeSampler):
         filter_same_tail = (negative_entities[tail_mask] >= positive_batch[:, 2][tail_mask])
         negative_batch[:, 2][tail_mask] = negative_entities[tail_mask] + filter_same_tail.long()
 
-        return negative_batch
+        return negative_batch, None
