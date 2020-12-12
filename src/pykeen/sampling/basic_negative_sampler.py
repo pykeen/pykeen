@@ -39,7 +39,7 @@ class BasicNegativeSampler(NegativeSampler):
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
-        corruption_scheme: Set[str] = None,
+        corruption_scheme: Optional[Set[str]] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
