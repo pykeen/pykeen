@@ -59,7 +59,7 @@ class _NegativeSamplingTestCase:
 
     def test_sample(self) -> None:
         # Generate negative sample
-        negative_batch = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
 
         # check shape
         assert negative_batch.shape == self.positive_batch.shape
@@ -77,7 +77,7 @@ class _NegativeSamplingTestCase:
         assert (negative_batch != self.positive_batch).any(dim=1).all()
 
         # Generate scaled negative sample
-        scaled_negative_batch = self.scaling_negative_sampler.sample(
+        scaled_negative_batch, _ = self.scaling_negative_sampler.sample(
             positive_batch=self.positive_batch,
         )
 
@@ -93,7 +93,7 @@ class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
     def test_sample_basic(self):
         """Test if relations and half of heads and tails are not corrupted."""
         # Generate negative samples
-        negative_batch = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
 
         # test that the relations were not changed
         assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
