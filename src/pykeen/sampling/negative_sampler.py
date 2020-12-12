@@ -34,16 +34,10 @@ class NegativeSampler(ABC):
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False.
-        :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
         """
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filtered = filtered
-        self.corruption_scheme = corruption_scheme or ('h', 't')
-        # Set the indices
-        self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
-        # Tracking whether required init steps for negative sample filtering are performed
-        self._filter_init = False
 
     @classmethod
     def get_normalized_name(cls) -> str:

@@ -2,11 +2,12 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
-from typing import Optional, Tuple
+from typing import Optional, Set, Tuple
 
 import torch
 
 from .negative_sampler import NegativeSampler
+from ..triples import TriplesFactory
 
 __all__ = [
     'BasicNegativeSampler',
@@ -32,6 +33,32 @@ class BasicNegativeSampler(NegativeSampler):
     hpo_default = dict(
         num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
     )
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        num_negs_per_pos: Optional[int] = None,
+        filtered: bool = False,
+        corruption_scheme: Set[str] = None,
+    ) -> None:
+        """Initialize the negative sampler with the given entities.
+
+        :param triples_factory: The factory holding the triples to sample from
+        :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
+        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
+            Defaults to False.
+        :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            num_negs_per_pos=num_negs_per_pos,
+            filtered=filtered,
+        )
+        self.corruption_scheme = corruption_scheme or ('h', 't')
+        # Set the indices
+        self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
+        # Tracking whether required init steps for negative sample filtering are performed
+        self._filter_init = False
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
         """Generate negative samples from the positive batch."""
@@ -73,7 +100,7 @@ class BasicNegativeSampler(NegativeSampler):
                 # Corrupt heads or tails
                 negative_batch[start:stop, index] = negative_entities[start:stop]
 
-            # Replace {heads, relations, tails} – To make sure we don't replace the {head, relation, tail} by the
+            # To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
             # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
             if not self.filtered:
