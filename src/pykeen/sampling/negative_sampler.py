@@ -3,7 +3,7 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
 
