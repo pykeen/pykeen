@@ -2,7 +2,7 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
-from typing import Optional, Set, Tuple
+from typing import Collection, Optional, Tuple
 
 import torch
 
@@ -39,7 +39,7 @@ class BasicNegativeSampler(NegativeSampler):
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
-        corruption_scheme: Optional[Set[str]] = None,
+        corruption_scheme: Optional[Collection[str]] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
@@ -56,7 +56,14 @@ class BasicNegativeSampler(NegativeSampler):
         )
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
-        self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
+        self._corruption_indices = [
+            0 if side == 'h'
+            else
+            1 if side == 'r'
+            else
+            2
+            for side in self.corruption_scheme
+        ]
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
         """Generate negative samples from the positive batch."""
