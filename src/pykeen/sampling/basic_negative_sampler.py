@@ -19,16 +19,21 @@ LOOKUP = {'h': 0, 'r': 1, 't': 2}
 class BasicNegativeSampler(NegativeSampler):
     r"""A basic negative sampler.
 
-    This negative sampler that corrupts positive triples $(h,r,t) \in \mathcal{K}$ by replacing either $h$ or $t$.
+    This negative sampler that corrupts positive triples $(h,r,t) \in \mathcal{K}$ by replacing either $h$, $r$ or $t$
+    based on the chosen corruption scheme. The corruption scheme can contain $h$, $r$ and $t$ or any subset of these.
 
     Steps:
 
-    1. Randomly (uniformly) determine whether $h$ or $t$ shall be corrupted for a positive triple
+    1. Randomly (uniformly) determine whether $h$, $r$ or $t$ shall be corrupted for a positive triple
        $(h,r,t) \in \mathcal{K}$.
-    2. Randomly (uniformly) sample an entity $e \in \mathcal{E}$ for selection to corrupt the triple.
+    2. Randomly (uniformly) sample an entity $e \in \mathcal{E}$ or relation $r' \in \mathcal{R}$ for selection to
+       corrupt the triple.
 
        - If $h$ was selected before, the corrupted triple is $(e,r,t)$
+       - If $r$ was selected before, the corrupted triple is $(h,r',t)$
        - If $t$ was selected before, the corrupted triple is $(h,r,e)$
+    3. If ``filtered`` is set to ``True``, all proposed corrupted triples that also exist as
+       actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters

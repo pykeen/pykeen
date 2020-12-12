@@ -31,6 +31,9 @@ class BernoulliNegativeSampler(NegativeSampler):
 
     For each triple $(h,r,t) \in \mathcal{K}$, the head is corrupted with probability $p_r$ and the tail is
     corrupted with probability $1 - p_r$.
+
+    If ``filtered`` is set to ``True``, all proposed corrupted triples that also exist as
+    actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
