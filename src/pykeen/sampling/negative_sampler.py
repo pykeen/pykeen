@@ -90,8 +90,8 @@ class NegativeSampler(ABC):
         except RuntimeError as e:
             # In cases where no triples should be filtered, the subspace reduction technique above will fail
             if str(e) == (
-                    'cannot perform reduction function max on tensor with no elements because the operation does not '
-                    'have an identity'
+                'cannot perform reduction function max on tensor with no elements because the operation does not '
+                'have an identity'
             ):
                 final_filter = torch.zeros(negative_batch.shape[0], dtype=torch.bool, device=negative_batch.device)
             else:
