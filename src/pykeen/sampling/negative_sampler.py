@@ -32,7 +32,8 @@ class NegativeSampler(ABC):
         :param triples_factory: The factory holding the triples to sample from
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
-            Defaults to False.
+            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
+            a reasonable default.
         """
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
@@ -60,7 +61,7 @@ class NegativeSampler(ABC):
         """Generate negative samples from the positive batch."""
         raise NotImplementedError
 
-    def _filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.Tensor:
+    def filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.Tensor:
         """Filter all proposed negative samples that are positive in the training dataset.
 
         Normally there is a low probability that proposed negative samples are positive in the training datasets and
@@ -69,12 +70,15 @@ class NegativeSampler(ABC):
         on the ratio of true triples for a given entity relation or entity entity pair. Therefore, the effects are hard
         to control and a researcher might want to exclude the possibility of having false negatives in the proposed
         negative triples.
+
+        :param negative_batch: The batch of negative triples
         """
         # Make sure the mapped triples are on the right device
         if not self._filter_init:
             # Copy the mapped triples to the device for efficient filtering
             self.mapped_triples = self.triples_factory.mapped_triples.to(negative_batch.device)
             self._filter_init = True
+
         try:
             # Check which heads of the mapped triples are also in the negative triples
             head_filter = (self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
