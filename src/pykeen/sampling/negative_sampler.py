@@ -42,10 +42,8 @@ class NegativeSampler(ABC):
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
         self._corruption_indices = [0 if side == 'h' else 1 if side == 'r' else 2 for side in self.corruption_scheme]
-        # Copy the mapped triples to the device for efficient filtering
-        if filtered:
-            self.mapped_triples = self.triples_factory.mapped_triples
-            self._filter_init = False
+        # Tracking whether required init steps for negative sample filtering are performed
+        self._filter_init = False
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -79,7 +77,8 @@ class NegativeSampler(ABC):
         """
         # Make sure the mapped triples are on the right device
         if not self._filter_init:
-            self.mapped_triples = self.mapped_triples.to(negative_batch.device)
+            # Copy the mapped triples to the device for efficient filtering
+            self.mapped_triples = self.triples_factory.mapped_triples.to(negative_batch.device)
             self._filter_init = True
         # Check which heads of the mapped triples are also in the negative triples
         head_filter = (self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
