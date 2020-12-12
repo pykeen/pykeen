@@ -24,6 +24,7 @@ from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
 from .nations import Nations
+from .oag import OAG
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
 from .umls import UMLS
@@ -53,6 +54,7 @@ __all__ = [
     'YAGO310',
     'DRKG',
     'ConceptNet',
+    'OAG',
     'get_dataset',
     'has_dataset',
 ]
