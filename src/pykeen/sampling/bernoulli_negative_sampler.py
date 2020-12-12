@@ -113,10 +113,10 @@ class BernoulliNegativeSampler(NegativeSampler):
             # we shift all values greater or equal than the original value by one up
             # for that reason we choose the random value from [0, num_entities -1]
             negative_batch[:, 0][head_mask] += (
-                    negative_batch[:, 0][head_mask] >= positive_batch[:, 0][head_mask]
+                negative_batch[:, 0][head_mask] >= positive_batch[:, 0][head_mask]
             ).long()
             negative_batch[:, 2][tail_mask] += (
-                    negative_batch[:, 2][tail_mask] >= positive_batch[:, 2][tail_mask]
+                negative_batch[:, 2][tail_mask] >= positive_batch[:, 2][tail_mask]
             ).long()
             batch_filter = None
 
