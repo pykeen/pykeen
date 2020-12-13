@@ -11,6 +11,7 @@ import pytest
 import torch
 
 from pykeen.datasets import Nations
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
@@ -431,6 +432,52 @@ class TestLiterals(unittest.TestCase):
             triples_factory.num_relations,
             msg='Wrong number of relations in factory',
         )
+
+    def test_metadata(self):
+        """Test metadata passing for triples factories."""
+        t = Nations().training
+        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(t),
+        )
+
+        entities = ['poland', 'ussr']
+        x = t.new_with_restriction(entities=entities)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=37,'
+                f' inverse_triples=False, entity_restriction={repr(entities)}, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(x),
+        )
+
+        relations = ['negativebehavior']
+        v = t.new_with_restriction(relations=relations)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=29,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations)})'
+            ),
+            repr(v),
+        )
+
+        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        self.assertIsInstance(w, TriplesFactory)
+        self.assertNotIn('path', w.metadata)
+        self.assertEqual(
+            'TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)',
+            repr(w),
+        )
+
+        y, z = t.split()
+        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
 
 
 def test_get_absolute_split_sizes():

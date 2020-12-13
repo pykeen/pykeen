@@ -7,7 +7,7 @@ import itertools
 import logging
 import os
 import re
-from typing import Callable, Collection, List, Mapping, Optional, Sequence, Set, TextIO, Union
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
 import pandas as pd
@@ -162,6 +162,9 @@ class TriplesFactory:
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
 
+    #: Arbitrary metadata to go with the graph
+    metadata: Optional[Dict[str, Any]] = None
+
     # The following fields get generated automatically
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
@@ -188,6 +191,9 @@ class TriplesFactory:
         self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
         self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
 
+        if self.metadata is None:
+            self.metadata = {}
+
         # vectorized versions
         self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
         self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
@@ -203,6 +209,7 @@ class TriplesFactory:
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         filter_out_candidate_inverse_relations: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from label-based triples.
@@ -219,6 +226,8 @@ class TriplesFactory:
             Whether to compact IDs such that the IDs are consecutive.
         :param filter_out_candidate_inverse_relations:
             Whether to remove triples with relations with the inverse suffix.
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata
 
         :return:
             A new triples factory.
@@ -268,6 +277,7 @@ class TriplesFactory:
             relation_to_id=relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=create_inverse_triples,
+            metadata=metadata,
         )
 
     @classmethod
@@ -278,6 +288,7 @@ class TriplesFactory:
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from triples stored in a file.
@@ -292,6 +303,10 @@ class TriplesFactory:
             The mapping from relations labels to ID. If None, create a new one from the triples.
         :param compact_id:
             Whether to compact IDs such that the IDs are consecutive.
+        :param metadata:
+            Arbitrary key/value pairs to store as metadata with the triples factory. Do not
+            include ``path`` as a key because it is automatically taken from the ``path``
+            kwarg to this function.
 
         :return:
             A new triples factory.
@@ -312,11 +327,17 @@ class TriplesFactory:
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             compact_id=compact_id,
+            metadata={
+                'path': path,
+                **(metadata or {}),
+            },
         )
 
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
+        extra_metadata: Optional[Dict[str, Any]] = None,
+        keep_metadata: bool = True,
     ) -> "TriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -326,6 +347,11 @@ class TriplesFactory:
 
         :param mapped_triples:
             The new mapped triples.
+        :param extra_metadata:
+            Extra metadata to include in the new triples factory. If ``keep_metadata`` is true,
+            the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
+        :param keep_metadata:
+            Pass the current factory's metadata to the new triples factory
 
         :return:
             The new factory.
@@ -335,6 +361,10 @@ class TriplesFactory:
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),
+            },
         )
 
     @property
@@ -367,11 +397,16 @@ class TriplesFactory:
 
     def extra_repr(self) -> str:
         """Extra representation string."""
-        return (
-            f"num_entities={self.num_entities}, "
-            f"num_relations={self.num_relations}, "
-            f"num_triples={self.num_triples}, "
-            f"inverse_triples={self.create_inverse_triples}"
+        d = [
+            ('num_entities', self.num_entities),
+            ('num_relations', self.num_relations),
+            ('num_triples', self.num_triples),
+            ('inverse_triples', self.create_inverse_triples),
+        ]
+        d.extend(sorted(self.metadata.items()))
+        return ', '.join(
+            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            for k, v in d
         )
 
     def __repr__(self):  # noqa: D105
@@ -681,14 +716,17 @@ class TriplesFactory:
         """
         keep_mask = None
 
+        extra_metadata = {}
         # Filter for entities
         if entities is not None:
+            extra_metadata['entity_restriction'] = entities
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
             logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
 
         # Filter for relations
         if relations is not None:
+            extra_metadata['relation_restriction'] = relations
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
@@ -700,4 +738,7 @@ class TriplesFactory:
 
         num_triples = keep_mask.sum()
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
-        return self.clone_and_exchange_triples(mapped_triples=self.mapped_triples[keep_mask])
+        return self.clone_and_exchange_triples(
+            mapped_triples=self.mapped_triples[keep_mask],
+            extra_metadata=extra_metadata,
+        )
