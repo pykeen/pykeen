@@ -34,6 +34,7 @@ __all__ = [
     'ZipFileRemoteDataset',
     'PackedZipRemoteDataset',
     'TarFileSingleDataset',
+    'TabbedDataset',
     'SingleTabbedDataset',
 ]
 
@@ -584,7 +585,63 @@ class TarFileSingleDataset(LazyDataset):
         pass  # already loaded by _load()
 
 
-class SingleTabbedDataset(LazyDataset):
+class TabbedDataset(LazyDataset):
+    """This class is for when you've got a single TSV of edges and want them to get auto-split."""
+
+    ratios = (0.8, 0.1, 0.1)
+    _triples_factory: Optional[TriplesFactory]
+
+    def __init__(
+        self,
+        cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        random_state: RandomHint = None,
+    ):
+        """Initialize dataset.
+
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        """
+        self.cache_root = self._help_cache(cache_root)
+
+        self._triples_factory = None
+        self.random_state = random_state
+        self.create_inverse_triples = create_inverse_triples
+        self._training = None
+        self._testing = None
+        self._validation = None
+
+        if eager:
+            self._load()
+
+    def _get_path(self) -> Optional[str]:
+        """Get the path of the data if there's a single file."""
+
+    def _get_df(self) -> pd.DataFrame:
+        raise NotImplementedError
+
+    def _load(self) -> None:
+        df = self._get_df()
+        path = self._get_path()
+        tf = TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=dict(path=path) if path else None,
+        )
+        self._training, self._testing, self._validation = tf.split(
+            ratios=self.ratios,
+            random_state=self.random_state,
+        )
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
+class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios = (0.8, 0.1, 0.1)
@@ -612,12 +669,15 @@ class SingleTabbedDataset(LazyDataset):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        self.cache_root = self._help_cache(cache_root)
+        super().__init__(
+            cache_root=cache_root,
+            create_inverse_triples=create_inverse_triples,
+            random_state=random_state,
+            eager=False,  # because it gets hooked below
+        )
 
         self.name = name or _name_from_url(url)
 
-        self._triples_factory = None
-        self.random_state = random_state
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault('sep', '\t')
 
@@ -625,28 +685,15 @@ class SingleTabbedDataset(LazyDataset):
         if not os.path.exists(self._get_path()) and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self._get_path()}')
 
-        self.create_inverse_triples = create_inverse_triples
-        self._training = None
-        self._testing = None
-        self._validation = None
-
         if eager:
             self._load()
 
     def _get_path(self) -> str:
         return os.path.join(self.cache_root, self.name)
 
-    def _load(self) -> None:
+    def _get_df(self) -> pd.DataFrame:
         if not os.path.exists(self._get_path()):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
-        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self._get_path()
-        self._training, self._testing, self._validation = tf.split(
-            ratios=self.ratios,
-            random_state=self.random_state,
-        )
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
+        return df
