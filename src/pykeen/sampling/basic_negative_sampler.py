@@ -87,14 +87,14 @@ class BasicNegativeSampler(NegativeSampler):
                 # Corrupt relations
                 negative_batch[start:stop, index] = torch.randint(
                     high=self.num_relations - 1,
-                    size=(stop-start,),
+                    size=(stop - start,),
                     device=positive_batch.device,
                 )
             else:
                 # Corrupt heads or tails
                 negative_batch[start:stop, index] = torch.randint(
                     high=self.num_entities - 1,
-                    size=(stop-start,),
+                    size=(stop - start,),
                     device=positive_batch.device,
                 )
 
