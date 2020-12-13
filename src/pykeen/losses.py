@@ -86,6 +86,8 @@ class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
         a negative distance as score and cannot produce positive model outputs.
     """
 
+    synonyms = {'Negative Log Likelihood Loss'}
+
 
 class MSELoss(PointwiseLoss, nn.MSELoss):
     """A wrapper around the PyTorch mean square error loss."""
