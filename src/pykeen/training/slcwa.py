@@ -93,7 +93,7 @@ class SLCWATrainingLoop(TrainingLoop):
         positive_batch = batch[start:stop].to(device=self.device)
 
         # Create negative samples
-        neg_samples = self.negative_sampler.sample(positive_batch=positive_batch)
+        neg_samples, neg_samples_filter = self.negative_sampler.sample(positive_batch=positive_batch)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
@@ -110,6 +110,7 @@ class SLCWATrainingLoop(TrainingLoop):
             positive_scores,
             negative_scores,
             label_smoothing,
+            neg_samples_filter,
         )
         return loss
 
@@ -118,10 +119,14 @@ class SLCWATrainingLoop(TrainingLoop):
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
         _label_smoothing=None,
+        _batch_filter=None,
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
         if self.num_negs_per_pos > 1:
             positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
+
+        if _batch_filter is not None:
+            positive_scores = positive_scores[_batch_filter]
 
         return self.model.compute_mr_loss(
             positive_scores=positive_scores,
@@ -133,6 +138,7 @@ class SLCWATrainingLoop(TrainingLoop):
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
         _label_smoothing=None,
+        _batch_filter=None,
     ) -> torch.FloatTensor:
         """Compute self adversarial negative sampling loss."""
         return self.model.compute_self_adversarial_negative_sampling_loss(
@@ -145,6 +151,7 @@ class SLCWATrainingLoop(TrainingLoop):
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
         label_smoothing: float,
+        _batch_filter=None,
     ) -> torch.FloatTensor:
         # Stack predictions
         predictions = torch.cat([positive_scores, negative_scores], dim=0)
