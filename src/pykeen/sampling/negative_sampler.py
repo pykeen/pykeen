@@ -38,8 +38,8 @@ class NegativeSampler(ABC):
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filtered = filtered
-        # Tracking whether required init steps for negative sample filtering are performed
-        self._filter_init = False
+        # Create mapped triples attribute that is required for filtering
+        self.mapped_triples = None
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -61,7 +61,7 @@ class NegativeSampler(ABC):
         """Generate negative samples from the positive batch."""
         raise NotImplementedError
 
-    def filter_negative_triples(self, negative_batch: torch.LongTensor) -> torch.Tensor:
+    def filter_negative_triples(self, negative_batch: torch.LongTensor) -> Tuple[torch.LongTensor, torch.Tensor]:
         """Filter all proposed negative samples that are positive in the training dataset.
 
         Normally there is a low probability that proposed negative samples are positive in the training datasets and
@@ -70,14 +70,15 @@ class NegativeSampler(ABC):
         on the ratio of true triples for a given entity relation or entity entity pair. Therefore, the effects are hard
         to control and a researcher might want to exclude the possibility of having false negatives in the proposed
         negative triples.
+        Note: Filtering is a very expensive task, since every proposed negative sample has to be checked against the
+        entire training dataset.
 
         :param negative_batch: The batch of negative triples
         """
-        # Make sure the mapped triples are on the right device
-        if not self._filter_init:
+        # Make sure the mapped triples are initiated
+        if self.mapped_triples is None:
             # Copy the mapped triples to the device for efficient filtering
             self.mapped_triples = self.triples_factory.mapped_triples.to(negative_batch.device)
-            self._filter_init = True
 
         try:
             # Check which heads of the mapped triples are also in the negative triples
@@ -100,4 +101,4 @@ class NegativeSampler(ABC):
             else:
                 raise e
         # Return only those proposed negative triples that are not positive in the training dataset
-        return ~final_filter
+        return negative_batch[~final_filter], ~final_filter

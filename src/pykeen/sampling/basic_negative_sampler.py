@@ -53,7 +53,8 @@ class BasicNegativeSampler(NegativeSampler):
         :param triples_factory: The factory holding the triples to sample from
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
-            Defaults to False.
+            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
+            a reasonable default.
         :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
         """
         super().__init__(
@@ -80,30 +81,22 @@ class BasicNegativeSampler(NegativeSampler):
         # Do not detach, as no gradients should flow into the indices.
         negative_batch = positive_batch.clone()
 
-        # Sample random entities as replacement
-        if 0 in self._corruption_indices or 2 in self._corruption_indices:
-            negative_entities = torch.randint(
-                high=self.num_entities - 1,
-                size=(num_negs,),
-                device=positive_batch.device,
-            )
-
-        # Sample random relations as replacement, if requested
-        if 1 in self._corruption_indices:
-            negative_relations = torch.randint(
-                high=self.num_relations - 1,
-                size=(num_negs,),
-                device=positive_batch.device,
-            )
-
         for index, start in zip(self._corruption_indices, range(0, num_negs, split_idx)):
             stop = min(start + split_idx, num_negs)
             if index == 1:
                 # Corrupt relations
-                negative_batch[start:stop, index] = negative_relations[start:stop]
+                negative_batch[start:stop, index] = torch.randint(
+                    high=self.num_relations - 1,
+                    size=(stop-start,),
+                    device=positive_batch.device,
+                )
             else:
                 # Corrupt heads or tails
-                negative_batch[start:stop, index] = negative_entities[start:stop]
+                negative_batch[start:stop, index] = torch.randint(
+                    high=self.num_entities - 1,
+                    size=(stop-start,),
+                    device=positive_batch.device,
+                )
 
             # To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
@@ -115,8 +108,7 @@ class BasicNegativeSampler(NegativeSampler):
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
         if self.filtered:
-            batch_filter = self.filter_negative_triples(negative_batch=negative_batch)
-            negative_batch = negative_batch[batch_filter]
+            negative_batch, batch_filter = self.filter_negative_triples(negative_batch=negative_batch)
         else:
             batch_filter = None
 
