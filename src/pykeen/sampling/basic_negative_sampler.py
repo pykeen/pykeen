@@ -83,20 +83,15 @@ class BasicNegativeSampler(NegativeSampler):
 
         for index, start in zip(self._corruption_indices, range(0, num_negs, split_idx)):
             stop = min(start + split_idx, num_negs)
-            if index == 1:
-                # Corrupt relations
-                negative_batch[start:stop, index] = torch.randint(
-                    high=self.num_relations - 1,
-                    size=(stop - start,),
-                    device=positive_batch.device,
-                )
-            else:
-                # Corrupt heads or tails
-                negative_batch[start:stop, index] = torch.randint(
-                    high=self.num_entities - 1,
-                    size=(stop - start,),
-                    device=positive_batch.device,
-                )
+
+            # Relations have a different index maximum than entities
+            index_max = self.num_relations - 1 if index == 1 else self.num_entities - 1
+
+            negative_batch[start:stop, index] = torch.randint(
+                high=index_max,
+                size=(stop - start,),
+                device=positive_batch.device,
+            )
 
             # To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
