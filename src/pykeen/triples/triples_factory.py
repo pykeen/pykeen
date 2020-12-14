@@ -151,15 +151,21 @@ def _ensure_ids(
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    #: The mapping from entities' labels to their indices
-    entity_to_id: EntityMapping
-
-    #: The mapping from relations' labels to their indices
-    relation_to_id: RelationMapping
-
     #: A three-column matrix where each row are the head identifier,
     #: relation identifier, then tail identifier
     mapped_triples: MappedTriples
+
+    #: The mapping from entities' labels to their indices
+    entity_to_id: EntityMapping = None
+
+    #: The number of entities, if not inferred from the mapping
+    _num_entities: Optional[int] = None
+
+    #: The mapping from relations' labels to their indices
+    relation_to_id: RelationMapping = None
+
+    #: The number of relations, if not inferred from the mapping
+    _num_relations: Optional[int] = None
 
     #: Whether to create inverse triples
     create_inverse_triples: bool = False
@@ -189,18 +195,18 @@ class TriplesFactory:
 
     def __post_init__(self):
         """Pre-compute derived mappings."""
-        # ID to label mapping
-        self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
-        self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
+        if self.entity_id_to_label is not None:
+            self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
+            self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
+            self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
+
+        if self.relation_id_to_label is not None:
+            self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
+            self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
+            self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
 
         if self.metadata is None:
             self.metadata = {}
-
-        # vectorized versions
-        self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
-        self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
-        self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
-        self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
 
     @classmethod
     def from_labeled_triples(
@@ -333,6 +339,44 @@ class TriplesFactory:
                 'path': path,
                 **(metadata or {}),
             },
+        )
+
+    @classmethod
+    def create_without_labels(
+        cls,
+        mapped_triples: MappedTriples,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        create_inverse_triples: bool = False,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ) -> "TriplesFactory":
+        """
+        Create a triples factory without any label information.
+
+        :param mapped_triples: shape: (n, 3)
+            The ID-based triples.
+        :param num_entities:
+            The number of entities. If not given, inferred from mapped_triples.
+        :param num_relations:
+            The number of relations. If not given, inferred from mapped_triples.
+        :param create_inverse_triples:
+            Whether to create inverse triples.
+        :param metadata:
+            Additional metadata to store in the factory.
+
+        :return:
+            A new triples factory.
+        """
+        if num_entities is None:
+            num_entities = mapped_triples[:, [0, 2]].max().item() + 1
+        if num_relations is None:
+            num_relations = mapped_triples[:, 1].max().item() + 1
+        return TriplesFactory(
+            mapped_triples=mapped_triples,
+            _num_entities=num_entities,
+            _num_relations=num_relations,
+            create_inverse_triples=create_inverse_triples,
+            metadata=metadata,
         )
 
     def clone_and_exchange_triples(
