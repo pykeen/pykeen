@@ -418,12 +418,12 @@ class TrainingLoop(ABC):
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
         if drop_last is None:
-            if not only_size_probing:
+            drop_last = model_contains_batch_norm
+            if drop_last and not only_size_probing:
                 logger.info(
                     f"Dropping last (incomplete) batch each epoch "
                     f"({format_relative_comparison(part=1, total=len(self.training_instances))} batches)."
                 )
-            drop_last = model_contains_batch_norm
 
         # Sanity check
         if self.model.is_mr_loss and label_smoothing > 0.:
