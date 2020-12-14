@@ -176,31 +176,31 @@ class TriplesFactory:
     # The following fields get generated automatically
 
     #: The inverse mapping for entity_label_to_id; initialized automatically
-    entity_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
+    entity_id_to_label: Optional[Mapping[int, str]] = None
 
     #: The inverse mapping for relation_label_to_id; initialized automatically
-    relation_id_to_label: Mapping[int, str] = dataclasses.field(init=False)
+    relation_id_to_label: Optional[Mapping[int, str]] = None
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_entity_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_entity_mapper: Optional[Callable[..., np.ndarray]] = None
 
     #: A vectorized version of relation_label_to_id; initialized automatically
-    _vectorized_relation_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_relation_mapper: Optional[Callable[..., np.ndarray]] = None
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_entity_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_entity_labeler: Optional[Callable[..., np.ndarray]] = None
 
     #: A vectorized version of relation_id_to_label; initialized automatically
-    _vectorized_relation_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_relation_labeler: Optional[Callable[..., np.ndarray]] = None
 
     def __post_init__(self):
         """Pre-compute derived mappings."""
-        if self.entity_id_to_label is not None:
+        if self.entity_to_id is not None:
             self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
             self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
             self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
 
-        if self.relation_id_to_label is not None:
+        if self.relation_to_id is not None:
             self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
             self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
             self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
@@ -404,7 +404,9 @@ class TriplesFactory:
         """
         return TriplesFactory(
             entity_to_id=self.entity_to_id,
+            _num_entities=self._num_entities,
             relation_to_id=self.relation_to_id,
+            _num_relations=self._num_relations,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
             metadata={
@@ -416,7 +418,7 @@ class TriplesFactory:
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
-        return len(self.entity_to_id)
+        return self._num_entities or len(self.entity_to_id)
 
     @property
     def num_relations(self) -> int:  # noqa: D401
@@ -428,7 +430,7 @@ class TriplesFactory:
     @property
     def real_num_relations(self) -> int:  # noqa: D401
         """The number of relations without inverse relations."""
-        return len(self.relation_to_id)
+        return self._num_relations or len(self.relation_to_id)
 
     @property
     def num_triples(self) -> int:  # noqa: D401
@@ -491,6 +493,11 @@ class TriplesFactory:
             num_entities=self.num_entities,
         )
 
+    def _requires_labels(self) -> None:
+        """Raise an error if no label information is available."""
+        if self.entity_id_to_label is None:
+            raise ValueError("This triples factory does not contain any label information.")
+
     def label_triples(
         self,
         triples: MappedTriples,
@@ -510,6 +517,7 @@ class TriplesFactory:
         :return:
             The same triples, but labeled.
         """
+        self._requires_labels()
         if len(triples) == 0:
             return np.empty(shape=(0, 3), dtype=str)
         if unknown_relation_label is None:
@@ -649,6 +657,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
+        self._requires_labels()
         return self._word_cloud(ids=self.mapped_triples[:, [0, 2]], id_to_label=self.entity_id_to_label, top=top or 100)
 
     def relation_word_cloud(self, top: Optional[int] = None):
@@ -662,6 +671,7 @@ class TriplesFactory:
             install it automatically, or install it yourself with
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
+        self._requires_labels()
         return self._word_cloud(ids=self.mapped_triples[:, 1], id_to_label=self.relation_id_to_label, top=top or 100)
 
     def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
@@ -703,6 +713,7 @@ class TriplesFactory:
         :return:
             A dataframe with n rows, and 6 + len(kwargs) columns.
         """
+        self._requires_labels()
         # Input validation
         additional_columns = set(kwargs.keys())
         forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
