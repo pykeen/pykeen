@@ -14,7 +14,6 @@ from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
-from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
@@ -27,7 +26,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import format_relative_comparison, is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..utils import empty, format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error, normalize_string
 
 __all__ = [
     'TrainingLoop',
@@ -411,10 +410,7 @@ class TrainingLoop(ABC):
         elif not self.model.supports_subbatching:
             raise SubBatchingNotSupportedError(self.model)
 
-        model_contains_batch_norm = any(
-            isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d, nn.SyncBatchNorm))
-            for m in self.model.modules()
-        )
+        model_contains_batch_norm = not empty(get_batchnorm_modules(base=self.model))
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
         if drop_last is None:

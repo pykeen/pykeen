@@ -519,3 +519,25 @@ def format_relative_comparison(
 ) -> str:
     """Format a relative comparison."""
     return f"{part}/{total} ({part / total:2.2%})"
+
+
+BATCH_NORM_MODULES = (  # must be a tuple
+    torch.nn.BatchNorm1d,
+    torch.nn.BatchNorm2d,
+    torch.nn.BatchNorm3d,
+    torch.nn.SyncBatchNorm,
+)
+
+
+def get_batchnorm_modules(base: torch.nn.Module) -> Iterable[torch.nn.Module]:
+    """Return all submodules which are batch normalization layers."""
+    return (
+        module
+        for module in base.modules()
+        if isinstance(module, BATCH_NORM_MODULES)
+    )
+
+
+def empty(iterable: Iterable) -> bool:
+    """Check whether an iterable is non empty."""
+    return not any(True for _ in iterable)

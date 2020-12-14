@@ -20,7 +20,7 @@ from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, empty, get_batchnorm_modules, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -30,13 +30,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-UNSUPPORTED_FOR_SUBBATCHING = (  # must be a tuple
-    nn.BatchNorm1d,
-    nn.BatchNorm2d,
-    nn.BatchNorm3d,
-    nn.SyncBatchNorm,
-)
 
 
 def _extend_batch(
@@ -319,18 +312,14 @@ class Model(nn.Module, ABC):
         return _can_slice(self.score_t)
 
     @property
-    def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
+    def modules_not_supporting_sub_batching(self) -> Iterable[nn.Module]:
         """Return all modules not supporting sub-batching."""
-        return [
-            module
-            for module in self.modules()
-            if isinstance(module, UNSUPPORTED_FOR_SUBBATCHING)
-        ]
+        return get_batchnorm_modules(base=self)
 
     @property
     def supports_subbatching(self) -> bool:  # noqa: D400, D401
         """Does this model support sub-batching?"""
-        return len(self.modules_not_supporting_sub_batching) == 0
+        return empty(self.modules_not_supporting_sub_batching)
 
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
