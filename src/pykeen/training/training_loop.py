@@ -60,7 +60,7 @@ class SubBatchingNotSupportedError(NotImplementedError):
     def __str__(self):  # noqa: D105
         return (
             f'No sub-batching support for {self.model.__class__.__name__} due to modules '
-            f'{self.model.modules_not_supporting_sub_batching}.'
+            f'{list(self.model.modules_not_supporting_sub_batching)}.'
         )
 
 
