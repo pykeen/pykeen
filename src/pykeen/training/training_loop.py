@@ -27,7 +27,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..utils import format_relative_comparison, is_cuda_oom_error, is_cudnn_error, normalize_string
 
 __all__ = [
     'TrainingLoop',
@@ -418,6 +418,11 @@ class TrainingLoop(ABC):
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
         if drop_last is None:
+            if not only_size_probing:
+                logger.info(
+                    f"Dropping last (incomplete) batch each epoch "
+                    f"({format_relative_comparison(part=1, total=len(self.training_instances))} batches)."
+                )
             drop_last = model_contains_batch_norm
 
         # Sanity check
