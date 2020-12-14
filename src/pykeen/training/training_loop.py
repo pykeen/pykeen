@@ -14,6 +14,7 @@ from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
+from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
@@ -167,6 +168,7 @@ class TrainingLoop(ABC):
         checkpoint_name: Optional[str] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
+        drop_last: Optional[bool] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -218,6 +220,9 @@ class TrainingLoop(ABC):
             which might cause problems with regards to the reproducibility of that specific training loop. Therefore,
             these checkpoints are saved with a distinct checkpoint name, which will be
             ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
+        :param drop_last:
+            Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
+            model contains batch normalization layers. Can be provided explicitly to override.
 
         :return:
             The losses per epoch.
@@ -297,6 +302,7 @@ class TrainingLoop(ABC):
                 checkpoint_path=checkpoint_path,
                 checkpoint_frequency=checkpoint_frequency,
                 checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
+                drop_last=drop_last,
             )
 
         # Ensure the release of memory
@@ -328,6 +334,7 @@ class TrainingLoop(ABC):
         checkpoint_path: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Optional[str] = None,
+        drop_last: Optional[bool] = None,
     ) -> List[float]:
         """Train the KGE model.
 
@@ -370,6 +377,9 @@ class TrainingLoop(ABC):
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param checkpoint_on_failure_file_path:
             The full filepath for saving checkpoints on failure.
+        :param drop_last:
+            Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
+            model contains batch normalization layers. Can be provided explicitly to override.
 
         :return:
             The losses per epoch.
@@ -400,6 +410,15 @@ class TrainingLoop(ABC):
             sub_batch_size = batch_size
         elif not self.model.supports_subbatching:
             raise SubBatchingNotSupportedError(self.model)
+
+        model_contains_batch_norm = any(
+            isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d, nn.SyncBatchNorm))
+            for m in self.model.modules()
+        )
+        if batch_size == 1 and model_contains_batch_norm:
+            raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
+        if drop_last is None:
+            drop_last = model_contains_batch_norm
 
         # Sanity check
         if self.model.is_mr_loss and label_smoothing > 0.:
@@ -459,6 +478,7 @@ class TrainingLoop(ABC):
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=num_workers,
+            drop_last=drop_last,
         )
 
         # Save the time to track when the saved point was available
