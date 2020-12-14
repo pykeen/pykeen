@@ -415,6 +415,24 @@ class TriplesFactory:
             },
         )
 
+    def with_labels(
+        self,
+        entity_to_id: Mapping[str, int],
+        relation_to_id: Mapping[str, int],
+    ) -> "TriplesFactory":
+        """Adds labeling to the TriplesFactory."""
+        if self.entity_to_id is not None or self.relation_to_id is not None:
+            raise ValueError("TriplesFactory already has a labeling.")
+        return TriplesFactory(
+            mapped_triples=self.mapped_triples,
+            entity_to_id=entity_to_id,
+            _num_entities=None,
+            relation_to_id=relation_to_id,
+            _num_relations=None,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
