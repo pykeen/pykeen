@@ -413,7 +413,7 @@ class TrainingLoop(ABC):
         elif self.model.modules_not_supporting_sub_batching:
             raise SubBatchingNotSupportedError(self.model)
 
-        model_contains_batch_norm = get_batchnorm_modules(self.model)
+        model_contains_batch_norm = bool(get_batchnorm_modules(self.model))
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
         if drop_last is None:
