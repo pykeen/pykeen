@@ -19,13 +19,23 @@ from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepres
 from pykeen.version import get_git_hash
 
 
-def _use_case_to_shape(use_case: str, b: int, n: int) -> Tuple[
+def _use_case_to_shape(
+    use_case: str,
+    b: int,
+    n: int,
+    num_neg_samples: int,
+) -> Tuple[
     Tuple[int, int],
     Tuple[int, int],
     Tuple[int, int],
 ]:
     if use_case == "hrt":
+        b = b * num_neg_samples
         return (b, 1), (b, 1), (b, 1)
+    elif use_case == "hrt+":
+        return (b, 1), (b, 1), (b, num_neg_samples)
+    elif use_case == "h+rt":
+        return (b, num_neg_samples), (b, 1), (b, 1)
     elif use_case == "t":
         return (b, 1), (b, 1), (1, n)
     elif use_case == "h":
