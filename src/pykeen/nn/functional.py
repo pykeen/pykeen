@@ -181,6 +181,26 @@ def _complex_stacked_select(
     return h @ t.transpose(-2, -1)
 
 
+def _complex_einsum(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Use einsum."""
+    x = h.new_zeros(2, 2, 2)
+    x[0, 0, 0] = 1
+    x[0, 1, 1] = 1
+    x[1, 0, 1] = 1
+    x[1, 1, 0] = -1
+    return extended_einsum(
+        "ijk,bhdi,brdj,btdk->bhrt",
+        x,
+        h.view(*h.shape[:-1], -1, 2),
+        r.view(*r.shape[:-1], -1, 2),
+        t.view(*t.shape[:-1], -1, 2),
+    )
+
+
 def complex_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
