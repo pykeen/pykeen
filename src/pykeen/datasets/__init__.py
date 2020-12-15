@@ -17,7 +17,10 @@ from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
 )
+from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
+from .conceptnet import ConceptNet
+from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
@@ -49,6 +52,9 @@ __all__ = [
     'WN18',
     'WN18RR',
     'YAGO310',
+    'DRKG',
+    'ConceptNet',
+    'CKG',
     'get_dataset',
     'has_dataset',
 ]
@@ -94,7 +100,7 @@ def get_dataset(
         if has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]
         elif not os.path.exists(dataset):
-            raise ValueError('dataset is neither a pre-defined dataset string nor a filepath')
+            raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
             return Dataset.from_path(dataset)
 

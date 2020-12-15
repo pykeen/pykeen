@@ -7,24 +7,28 @@ import json
 import logging
 import random
 from io import BytesIO
+from pathlib import Path
 from typing import (
     Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar,
     Union,
 )
 
-import numpy
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn
+import torch.nn.modules.batchnorm
 
+from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, RandomHint, TorchRandomHint
+from .version import get_git_hash
 
 __all__ = [
     'compose',
     'clamp_norm',
     'compact_mapping',
     'ensure_torch_random_state',
+    'format_relative_comparison',
     'imag_part',
     'invert_mapping',
     'l2_regularization',
@@ -48,6 +52,7 @@ __all__ = [
     'Result',
     'fix_dataclass_init_docs',
     'ensure_random_state',
+    'get_benchmark',
 ]
 
 logger = logging.getLogger(__name__)
@@ -76,7 +81,7 @@ def l2_regularization(
 
     # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
     if normalize:
-        regularization_term /= sum(numpy.prod(x.shape) for x in xs)
+        regularization_term /= sum(np.prod(x.shape) for x in xs)
 
     return regularization_term
 
@@ -381,6 +386,13 @@ def fix_dataclass_init_docs(cls: Type) -> Type:
     return cls
 
 
+def get_benchmark(name: str) -> Path:
+    """Get the benchmark directory for this version."""
+    rv = PYKEEN_BENCHMARKS / name / get_git_hash()
+    rv.mkdir(exist_ok=True, parents=True)
+    return rv
+
+
 def get_model_io(model) -> BytesIO:
     """Get the model as bytes."""
     model_io = BytesIO()
@@ -508,3 +520,12 @@ def format_relative_comparison(
 ) -> str:
     """Format a relative comparison."""
     return f"{part}/{total} ({part / total:2.2%})"
+
+
+def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+    """Return all submodules which are batch normalization layers."""
+    return [
+        submodule
+        for submodule in module.modules()
+        if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
+    ]
