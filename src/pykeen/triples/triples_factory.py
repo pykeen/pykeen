@@ -363,7 +363,7 @@ class TriplesFactory:
             create_inverse_triples=self.create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore
             },
         )
 
@@ -403,7 +403,7 @@ class TriplesFactory:
             ('num_triples', self.num_triples),
             ('inverse_triples', self.create_inverse_triples),
         ]
-        d.extend(sorted(self.metadata.items()))
+        d.extend(sorted(self.metadata.items()))  # type: ignore
         return ', '.join(
             f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
             for k, v in d
@@ -416,7 +416,7 @@ class TriplesFactory:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
             raise ValueError('Can not get inverse triple, they have not been created.')
-        relation = next(iter(self.relations_to_ids(relations=[relation])))
+        relation = next(iter(self.relations_to_ids(relations=[relation])))  # type:ignore
         return self._get_inverse_relation_id(relation)
 
     @staticmethod

@@ -47,9 +47,9 @@ class LiteralInteraction(
     ) -> torch.FloatTensor:
         # combine entity embeddings + literals
         h = torch.cat(h, dim=-1)
-        h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)
+        h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)  # type: ignore
         t = torch.cat(t, dim=-1)
-        t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)
+        t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)  # type: ignore
         return self.base(h=h, r=r, t=t)
 
 
