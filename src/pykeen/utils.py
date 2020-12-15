@@ -24,7 +24,7 @@ import torch.nn
 from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, RandomHint, Representation, TorchRandomHint
+from .typing import DeviceHint, RandomHint, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [

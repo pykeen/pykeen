@@ -117,9 +117,9 @@ class SimplE(ERModel):
                 t_source.get_in_canonical_shape(dim="t", indices=t_indices),
             )
             for h_source, r_source, t_source in (
-            (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
-            (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
-        )
+                (self.entity_representations[0], self.relation_representations[0], self.entity_representations[1]),
+                (self.entity_representations[1], self.relation_representations[1], self.entity_representations[0]),
+            )
         ))
         scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)

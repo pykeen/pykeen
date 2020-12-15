@@ -26,7 +26,8 @@ class LiteralInteraction(
         Tuple[Representation, Representation],
         Representation,
         Tuple[Representation, Representation],
-    ]):
+    ],
+):
 
     def __init__(
         self,
