@@ -4,8 +4,8 @@
 Functional forms of interaction methods.
 
 The functional forms always assume the general form of the interaction function, where head, relation and tail
-representations are provided in shape (batch_size, num_heads, *), (batch_size, num_relations, *), and
-(batch_size, num_tails, *), and return a score tensor of shape (batch_size, num_heads, num_relations, num_tails).
+representations are provided in shape (batch_size, num_heads, ``*``), (batch_size, num_relations, ``*``), and
+(batch_size, num_tails, ``*``), and return a score tensor of shape (batch_size, num_heads, num_relations, num_tails).
 """
 
 from typing import Optional, Tuple, Union
@@ -122,15 +122,15 @@ def _complex_interaction_optimized_broadcasted(
 ) -> torch.FloatTensor:
     """Manually split into real/imag, and used optimized broadcasted combination."""
     (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-    return sum((
+    return sum(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-        (+1, h_re, r_re, t_re),
-        (+1, h_re, r_im, t_im),
-        (+1, h_im, r_re, t_im),
-        (-1, h_im, r_im, t_re),
-    ]
-    ))
+            (+1, h_re, r_re, t_re),
+            (+1, h_re, r_im, t_im),
+            (+1, h_im, r_re, t_im),
+            (-1, h_im, r_im, t_re),
+        ]
+    )
 
 
 def _complex_interaction_direct(
