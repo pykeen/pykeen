@@ -74,9 +74,8 @@ def _resolve_shapes(
 ) -> Tuple[Tuple[Tuple[int, ...], ...], ...]:
     additional_dims = additional_dims or dict()
     additional_dims.setdefault("d", dim)
-
     return [
-        tuple(*prefix_shape, *(additional_dims[s] for s in suffix_shape))
+        tuple((*prefix_shape, *(additional_dims[s] for ss in s)) for s in suffix_shape)
         for prefix_shape, suffix_shape in zip(
             prefix_shapes,
             (
@@ -106,12 +105,14 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
 
 
 @click.command()
+@click.option('--fast/--no-fast', default=False)
 @click.option('-m', '--max-result-elements-power', type=int, default=30, show_default=True)
 @click.option('-n', '--max-num-entities-power', type=int, default=15, show_default=True)
 @click.option('-b', '--max-batch-size-power', type=int, default=10, show_default=True)
 @click.option('-d', '--max-vector-dimension-power', type=int, default=10, show_default=True)
 @click.option('-s', '--max-sample-power', type=int, default=10, show_default=True)
 def main(
+    fast: bool,
     max_result_elements_power: int,
     max_num_entities_power: int,
     max_batch_size_power: int,
@@ -141,6 +142,8 @@ def main(
         for d in vector_dimensions
         for ul in use_case_labels
     ]
+    if fast:
+        tasks = tasks[:5]
     progress = tqdm(variants, unit="variant")
     for variant in progress:
         # create variant
@@ -158,7 +161,7 @@ def main(
             try:
                 timer = Timer(
                     stmt="interaction(h=h, r=r, t=t)",
-                    globals=dict(interaction=interaction, shapes=shapes, device=device),
+                    globals=dict(interaction=interaction, shapes=shapes, device=device, _generate_hrt=_generate_hrt),
                     setup="h, r, t = _generate_hrt(shapes=shapes, device=device)"
                 )
                 time = timer.blocked_autorange()
