@@ -85,6 +85,7 @@ class TuckER(ERModel):
         where h,r,t are the head, relation, and tail embedding, W is the core tensor, x_i denotes the tensor
         product along the i-th mode, BN denotes batch normalization, and DO dropout.
         """
+        relation_dim = relation_dim or embedding_dim
         super().__init__(
             triples_factory=triples_factory,
             interaction=TuckerInteraction(
