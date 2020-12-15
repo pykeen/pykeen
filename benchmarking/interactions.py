@@ -2,10 +2,8 @@ import random
 from typing import Mapping, Optional, Tuple
 
 import click
-import matplotlib.pyplot as plt
 import numpy
 import pandas
-import seaborn as sns
 import torch
 from torch.utils.benchmark import Timer
 from tqdm import tqdm
@@ -114,7 +112,6 @@ def _get_memory(interaction, shapes, device) -> int:
     return stats["active_bytes.all.peak"]
 
 
-
 @click.command()
 @click.option('--fast/--no-fast', default=False)
 @click.option('--shuffle/--no-shuffle', default=False)
@@ -163,7 +160,8 @@ def main(
     for variant in progress:
         # create variant
         interaction = Interaction.from_func(variant)
-        for i, (b, s, n, d, ul, prefix_shapes) in enumerate(tqdm(tasks, unit="task"), start=1):
+        for i, config in enumerate(tqdm(tasks, unit="task"), start=1):
+            b, s, n, d, ul, prefix_shapes = config
             result_shape = _get_result_shape(prefix_shapes)
             max_memory = median = iqr = float('nan')
             if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
@@ -185,7 +183,7 @@ def main(
                 max_memory = _get_memory(interaction, shapes, device)
 
             except Exception as error:
-                progress.write(f"ERROR: {error}")
+                progress.write(f"ERROR: {error} for {variant}:{config}")
             progress.set_postfix(dict(s=prefix_shapes, t=median, mem=max_memory))
             data.append((i, b, s, n, d, ul, prefix_shapes, variant.__name__, median, iqr, max_memory))
 
@@ -211,12 +209,6 @@ def main(
     ).agg({"time_median": "mean"}).unstack().reset_index().dropna()
     df_agg.to_csv(f"{git_hash}_measurement_agg.tsv", sep="\t", index=False)
     print(df_agg)
-
-    viz_df = df[df["time_median"].notna()]
-    viz_df["variant"] = viz_df["variant"].map(lambda s: ' '.join(s.split('_')[3:]).capitalize())
-    plt.figure(figsize=(14, 6))
-    sns.lineplot(data=viz_df, x='experiment_number', y='time_median', hue='variant')
-    plt.savefig(f"{git_hash}_measurement.png", dpi=300)
 
 
 if __name__ == '__main__':
