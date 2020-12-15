@@ -142,6 +142,39 @@ def _complex_interaction_direct(
     )
 
 
+def _complex_stacked(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Stack vectors."""
+    (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (r, t)]
+    h = torch.cat([h, h], dim=-1)  # re im re im
+    r = torch.cat([r_re, r_re, r_im, r_im], dim=-1)  # re re im im
+    t = torch.cat([t_re, t_im, t_im, t_re], dim=-1)  # re im im re
+    return (h * r * t).sum(dim=-1)
+
+
+def _complex_stacked_select(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Stack vectors and select order."""
+    (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (r, t)]
+    h = torch.cat([h, h], dim=-1)  # re im re im
+    r = torch.cat([r_re, r_re, r_im, r_im], dim=-1)  # re re im im
+    t = torch.cat([t_re, t_im, t_im, t_re], dim=-1)  # re im im re
+    hr_cost = numpy.prod([max(hs, rs) for hs, rs in zip(h.shape, r.shape)])
+    rt_cost = numpy.prod([max(ts, rs) for ts, rs in zip(t.shape, r.shape)])
+    if hr_cost < rt_cost:
+        # h = h_re, -h_im
+        h = h * r
+    else:
+        t = r * t
+    return h @ t.transpose(-2, -1)
+
+
 def complex_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,

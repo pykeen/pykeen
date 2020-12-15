@@ -11,7 +11,7 @@ from tqdm import tqdm
 from pykeen.nn import Interaction
 from pykeen.nn.functional import (
     _complex_interaction_complex_native, _complex_interaction_direct,
-    _complex_interaction_optimized_broadcasted, _complex_select,
+    _complex_interaction_optimized_broadcasted, _complex_select, _complex_stacked, _complex_stacked_select,
 )
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from pykeen.utils import unpack_singletons
@@ -136,6 +136,8 @@ def main(
         _complex_interaction_complex_native,
         _complex_interaction_optimized_broadcasted,
         _complex_interaction_direct,
+        _complex_stacked,
+        _complex_stacked_select,
     ]
     use_case_labels = ["hrt", "hrt+", "h+rt", "t", "h"]
     batch_sizes = [2 ** i for i in range(5, max_batch_size_power + 1)]
@@ -145,47 +147,46 @@ def main(
     vector_dimensions = [2 ** i for i in range(5, max_vector_dimension_power + 1)]
     data = []
     tasks = [
-        (b, s, n, d, ul, _use_case_to_shape(use_case=ul, b=b, n=n, s=s))
+        (v, b, s, n, d, ul, _use_case_to_shape(use_case=ul, b=b, n=n, s=s))
+        for v in variants
         for b in batch_sizes
         for s in negative_samples
         for n in num_entities
         for d in vector_dimensions
         for ul in use_case_labels
     ]
-    if fast:
-        tasks = tasks[:5]
     if shuffle:
         random.shuffle(tasks)
-    progress = tqdm(variants, unit="variant")
-    for variant in progress:
-        # create variant
-        interaction = Interaction.from_func(variant)
-        for i, config in enumerate(tqdm(tasks, unit="task"), start=1):
-            b, s, n, d, ul, prefix_shapes = config
-            result_shape = _get_result_shape(prefix_shapes)
-            max_memory = median = iqr = float('nan')
-            if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
-                continue
-            shapes = _resolve_shapes(
-                prefix_shapes=prefix_shapes,
-                interaction=interaction,
-                dim=d,
+    if fast:
+        tasks = tasks[:5]
+    progress = tqdm(tasks, unit="task")
+    for i, config in enumerate(progress, start=1):
+        v, b, s, n, d, ul, prefix_shapes = config
+        interaction = Interaction.from_func(v)
+        result_shape = _get_result_shape(prefix_shapes)
+        max_memory = median = iqr = float('nan')
+        if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
+            continue
+        shapes = _resolve_shapes(
+            prefix_shapes=prefix_shapes,
+            interaction=interaction,
+            dim=d,
+        )
+        try:
+            timer = Timer(
+                stmt="interaction(h=h, r=r, t=t)",
+                globals=dict(interaction=interaction, shapes=shapes, device=device, _generate_hrt=_generate_hrt),
+                setup="h, r, t = _generate_hrt(shapes=shapes, device=device)"
             )
-            try:
-                timer = Timer(
-                    stmt="interaction(h=h, r=r, t=t)",
-                    globals=dict(interaction=interaction, shapes=shapes, device=device, _generate_hrt=_generate_hrt),
-                    setup="h, r, t = _generate_hrt(shapes=shapes, device=device)"
-                )
-                time = timer.blocked_autorange()
-                median = time.median
-                iqr = time.iqr
-                max_memory = _get_memory(interaction, shapes, device)
+            time = timer.blocked_autorange()
+            median = time.median
+            iqr = time.iqr
+            max_memory = _get_memory(interaction, shapes, device)
 
-            except Exception as error:
-                progress.write(f"ERROR: {error} for {variant}:{config}")
-            progress.set_postfix(dict(s=prefix_shapes, t=median, mem=max_memory))
-            data.append((i, b, s, n, d, ul, prefix_shapes, variant.__name__, median, iqr, max_memory))
+        except Exception as error:
+            progress.write(f"ERROR: {error} for {v}:{config}")
+        progress.set_postfix(dict(s=prefix_shapes, t=median, mem=max_memory))
+        data.append((i, b, s, n, d, ul, prefix_shapes, v.__name__, median, iqr, max_memory))
 
     git_hash = get_git_hash()
     df = pandas.DataFrame(data=data, columns=[
@@ -206,7 +207,7 @@ def main(
 
     df_agg = df.groupby(
         by=["batch_size", "num_entities", "dimension", "use_case", "variant"]
-    ).agg({"time_median": "mean"}).unstack().reset_index().dropna()
+    ).agg({"time_median": "mean"}).unstack().reset_index()#.dropna()
     df_agg.to_csv(f"{git_hash}_measurement_agg.tsv", sep="\t", index=False)
     print(df_agg)
 
