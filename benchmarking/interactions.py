@@ -23,19 +23,41 @@ def _use_case_to_shape(
     use_case: str,
     b: int,
     n: int,
-    num_neg_samples: int,
+    s: int,
 ) -> Tuple[
     Tuple[int, int],
     Tuple[int, int],
     Tuple[int, int],
 ]:
+    """
+    Generate prefix shapes for various use cases.
+
+    :param use_case:
+        The use case.
+
+            - "hrt": score_hrt naive
+            - "hrt+": score_hrt fast SCLWA with tail corruption
+            - "h+rt": score_hrt fast SCLWA with head corruption
+            - "t": score_t
+            - "h": score_t
+
+    :param b:
+        The batch size.
+    :param n:
+        The number of entities.
+    :param s:
+        The number of negative samples.
+
+    :return:
+        A 3-tuple, (head_prefix, relation_prefix, tail_prefix), each a 2-tuple of integers.
+    """
     if use_case == "hrt":
-        b = b * num_neg_samples
+        b = b * s
         return (b, 1), (b, 1), (b, 1)
     elif use_case == "hrt+":
-        return (b, 1), (b, 1), (b, num_neg_samples)
+        return (b, 1), (b, 1), (b, s)
     elif use_case == "h+rt":
-        return (b, num_neg_samples), (b, 1), (b, 1)
+        return (b, s), (b, 1), (b, 1)
     elif use_case == "t":
         return (b, 1), (b, 1), (1, n)
     elif use_case == "h":
