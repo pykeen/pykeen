@@ -105,6 +105,16 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
     return (max(s[0] for s in prefix_shapes),) + tuple([s[1] for s in prefix_shapes])
 
 
+def _get_memory(interaction, shapes, device) -> int:
+    torch.cuda.reset_accumulated_memory_stats()
+    torch.cuda.reset_peak_memory_stats()
+    h, r, t = _generate_hrt(shapes=shapes, device=device)
+    interaction(h=h, r=r, t=t)
+    stats = torch.cuda.memory_stats()
+    return stats["active_bytes.all.peak"]
+
+
+
 @click.command()
 @click.option('--fast/--no-fast', default=False)
 @click.option('--shuffle/--no-shuffle', default=False)
@@ -155,7 +165,7 @@ def main(
         interaction = Interaction.from_func(variant)
         for i, (b, s, n, d, ul, prefix_shapes) in enumerate(tqdm(tasks, unit="task"), start=1):
             result_shape = _get_result_shape(prefix_shapes)
-            median = iqr = float('nan')
+            max_memory = median = iqr = float('nan')
             if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
                 continue
             shapes = _resolve_shapes(
@@ -172,10 +182,12 @@ def main(
                 time = timer.blocked_autorange()
                 median = time.median
                 iqr = time.iqr
+                max_memory = _get_memory(interaction, shapes, device)
+
             except Exception as error:
                 progress.write(f"ERROR: {error}")
-            progress.set_postfix(dict(shape=prefix_shapes, time=median))
-            data.append((i, b, s, n, d, ul, prefix_shapes, variant.__name__, median, iqr))
+            progress.set_postfix(dict(s=prefix_shapes, t=median, mem=max_memory))
+            data.append((i, b, s, n, d, ul, prefix_shapes, variant.__name__, median, iqr, max_memory))
 
     git_hash = get_git_hash()
     df = pandas.DataFrame(data=data, columns=[
@@ -189,6 +201,7 @@ def main(
         "variant",
         "time_median",
         "time_inter_quartile_range",
+        "max_memory",
     ])
     df["device"] = device.type
     df.to_csv(f"{git_hash}_measurement.tsv", sep="\t", index=False)
