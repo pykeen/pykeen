@@ -24,7 +24,7 @@ from ..nn.modules import Interaction
 from ..regularizers import Regularizer, collect_regularization_terms
 from ..triples import TriplesFactory
 from ..typing import DeviceHint, HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from ..utils import NoRandomSeedNecessary, check_shapes, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, check_shapes, get_batchnorm_modules, resolve_device, set_random_seed
 
 if TYPE_CHECKING:
     from ..typing import Representation  # noqa
@@ -35,13 +35,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-UNSUPPORTED_FOR_SUBBATCHING = (  # must be a tuple
-    nn.BatchNorm1d,
-    nn.BatchNorm2d,
-    nn.BatchNorm3d,
-    nn.SyncBatchNorm,
-)
 
 
 def _extend_batch(
@@ -313,16 +306,7 @@ class Model(nn.Module, ABC):
     @property
     def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
         """Return all modules not supporting sub-batching."""
-        return [
-            module
-            for module in self.modules()
-            if isinstance(module, UNSUPPORTED_FOR_SUBBATCHING)
-        ]
-
-    @property
-    def supports_subbatching(self) -> bool:  # noqa: D400, D401
-        """Does this model support sub-batching?"""
-        return len(self.modules_not_supporting_sub_batching) == 0
+        return get_batchnorm_modules(module=self)
 
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""

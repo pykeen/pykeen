@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn
+import torch.nn.modules.batchnorm
 from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
@@ -856,4 +857,13 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
     return [
         x[0] if len(x) == 1 else x
         for x in xs
+    ]
+
+
+def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+    """Return all submodules which are batch normalization layers."""
+    return [
+        submodule
+        for submodule in module.modules()
+        if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
     ]
