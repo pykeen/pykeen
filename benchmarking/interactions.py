@@ -1,3 +1,4 @@
+import random
 from typing import Mapping, Optional, Tuple
 
 import click
@@ -106,6 +107,7 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
 
 @click.command()
 @click.option('--fast/--no-fast', default=False)
+@click.option('--shuffle/--no-shuffle', default=False)
 @click.option('-m', '--max-result-elements-power', type=int, default=30, show_default=True)
 @click.option('-n', '--max-num-entities-power', type=int, default=15, show_default=True)
 @click.option('-b', '--max-batch-size-power', type=int, default=10, show_default=True)
@@ -113,6 +115,7 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
 @click.option('-s', '--max-sample-power', type=int, default=10, show_default=True)
 def main(
     fast: bool,
+    shuffle: bool,
     max_result_elements_power: int,
     max_num_entities_power: int,
     max_batch_size_power: int,
@@ -144,6 +147,8 @@ def main(
     ]
     if fast:
         tasks = tasks[:5]
+    if shuffle:
+        random.shuffle(tasks)
     progress = tqdm(variants, unit="variant")
     for variant in progress:
         # create variant
