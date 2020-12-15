@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of TransR."""
-
 import logging
 from typing import Optional
 
@@ -20,6 +19,8 @@ from ...utils import clamp_norm, compose
 __all__ = [
     'TransR',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class TransR(ERModel):
@@ -104,4 +105,4 @@ class TransR(ERModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        logging.warning("Initialize from TransE")
+        logger.warning("Initialize from TransE")
