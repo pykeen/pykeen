@@ -581,7 +581,7 @@ class Model(nn.Module, ABC):
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
-                " or using the pipeline()."
+                " or using the pipeline().",
             )
         batch_cloned = batch.clone()
 
