@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
-"""Functional forms of interaction methods."""
+"""
+Functional forms of interaction methods.
+
+The functional forms always assume the general form of the interaction function, where head, relation and tail
+representations are provided in shape (batch_size, num_heads, *), (batch_size, num_relations, *), and
+(batch_size, num_tails, *), and return a score tensor of shape (batch_size, num_heads, num_relations, num_tails).
+"""
 
 from typing import Optional, Tuple, Union
 
