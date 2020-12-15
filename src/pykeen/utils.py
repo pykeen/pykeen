@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn
+import torch.nn.modules.batchnorm
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, RandomHint, TorchRandomHint
@@ -521,18 +522,10 @@ def format_relative_comparison(
     return f"{part}/{total} ({part / total:2.2%})"
 
 
-BATCH_NORM_MODULES = (  # must be a tuple
-    torch.nn.BatchNorm1d,
-    torch.nn.BatchNorm2d,
-    torch.nn.BatchNorm3d,
-    torch.nn.SyncBatchNorm,
-)
-
-
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
     return [
         submodule
         for submodule in module.modules()
-        if isinstance(submodule, BATCH_NORM_MODULES)
+        if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
     ]
