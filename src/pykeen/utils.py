@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn
+import torch.nn.modules.batchnorm
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, RandomHint, TorchRandomHint
@@ -519,3 +520,12 @@ def format_relative_comparison(
 ) -> str:
     """Format a relative comparison."""
     return f"{part}/{total} ({part / total:2.2%})"
+
+
+def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+    """Return all submodules which are batch normalization layers."""
+    return [
+        submodule
+        for submodule in module.modules()
+        if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
+    ]
