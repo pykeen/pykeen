@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Unittest for for global utilities."""
-
 import itertools
 import string
 import unittest
@@ -11,8 +10,7 @@ import torch
 
 from pykeen.nn import Embedding
 from pykeen.utils import (
-    clamp_norm, compact_mapping, compose, flatten_dictionary, get_until_first_blank, l2_regularization,
-    torch_is_in_1d,
+    clamp_norm, compact_mapping, compose, flatten_dictionary, get_until_first_blank, l2_regularization, torch_is_in_1d,
 )
 
 

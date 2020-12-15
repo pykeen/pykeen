@@ -8,7 +8,7 @@ import itertools as itt
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -312,7 +312,7 @@ class Model(nn.Module, ABC):
         return _can_slice(self.score_t)
 
     @property
-    def modules_not_supporting_sub_batching(self) -> List[nn.Module]:
+    def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
         """Return all modules not supporting sub-batching."""
         return get_batchnorm_modules(module=self)
 
