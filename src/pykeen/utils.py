@@ -529,15 +529,10 @@ BATCH_NORM_MODULES = (  # must be a tuple
 )
 
 
-def get_batchnorm_modules(base: torch.nn.Module) -> Iterable[torch.nn.Module]:
+def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
-    return (
-        module
-        for module in base.modules()
-        if isinstance(module, BATCH_NORM_MODULES)
-    )
-
-
-def empty(iterable: Iterable) -> bool:
-    """Check whether an iterable is non empty."""
-    return not any(True for _ in iterable)
+    return [
+        submodule
+        for submodule in module.modules()
+        if isinstance(submodule, BATCH_NORM_MODULES)
+    ]

@@ -11,7 +11,7 @@ import torch
 
 from pykeen.nn import Embedding
 from pykeen.utils import (
-    clamp_norm, compact_mapping, compose, empty, flatten_dictionary, get_until_first_blank, l2_regularization,
+    clamp_norm, compact_mapping, compose, flatten_dictionary, get_until_first_blank, l2_regularization,
     torch_is_in_1d,
 )
 
@@ -270,12 +270,3 @@ def test_torch_is_in_1d():
                 invert=invert,
             )
             assert (result == expected_result).all()
-
-
-class TestOther(unittest.TestCase):
-    """Test remaining functions."""
-
-    def test_empty(self):
-        """Test the :func:`empty` function."""
-        self.assertTrue(empty(iter([])))
-        self.assertFalse(empty(iter([1])))

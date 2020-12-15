@@ -26,7 +26,10 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import empty, format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..utils import (
+    format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
+    normalize_string,
+)
 
 __all__ = [
     'TrainingLoop',
@@ -407,18 +410,18 @@ class TrainingLoop(ABC):
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
-        elif not self.model.supports_subbatching:
+        elif self.model.modules_not_supporting_sub_batching:
             raise SubBatchingNotSupportedError(self.model)
 
-        model_contains_batch_norm = not empty(get_batchnorm_modules(base=self.model))
+        model_contains_batch_norm = get_batchnorm_modules(self.model)
         if batch_size == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
         if drop_last is None:
             drop_last = model_contains_batch_norm
             if drop_last and not only_size_probing:
                 logger.info(
-                    f"Dropping last (incomplete) batch each epoch "
-                    f"({format_relative_comparison(part=1, total=len(self.training_instances))} batches)."
+                    "Dropping last (incomplete) batch each epoch (%s batches).",
+                    format_relative_comparison(part=1, total=len(self.training_instances)),
                 )
 
         # Sanity check
@@ -783,7 +786,7 @@ class TrainingLoop(ABC):
 
         if not finished_search:
             logger.info('Starting sub_batch_size search for training now...')
-            if not self.model.supports_subbatching:
+            if self.model.modules_not_supporting_sub_batching:
                 logger.info('This model does not support sub-batching.')
                 supports_sub_batching = False
                 sub_batch_size = batch_size

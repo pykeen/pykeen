@@ -8,7 +8,7 @@ import itertools as itt
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import NoRandomSeedNecessary, empty, get_batchnorm_modules, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, get_batchnorm_modules, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -312,14 +312,9 @@ class Model(nn.Module, ABC):
         return _can_slice(self.score_t)
 
     @property
-    def modules_not_supporting_sub_batching(self) -> Iterable[nn.Module]:
+    def modules_not_supporting_sub_batching(self) -> List[nn.Module]:
         """Return all modules not supporting sub-batching."""
-        return get_batchnorm_modules(base=self)
-
-    @property
-    def supports_subbatching(self) -> bool:  # noqa: D400, D401
-        """Does this model support sub-batching?"""
-        return empty(self.modules_not_supporting_sub_batching)
+        return get_batchnorm_modules(module=self)
 
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
