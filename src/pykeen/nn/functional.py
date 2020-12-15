@@ -83,6 +83,22 @@ def _add_cuda_warning(func):
     return wrapped
 
 
+def _complex_select(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Decide based on result shape whether to combine hr or ht first."""
+    hr_cost = numpy.prod([max(hs, rs) for hs, rs in zip(h.shape, r.shape)])
+    rt_cost = numpy.prod([max(ts, rs) for ts, rs in zip(t.shape, r.shape)])
+    (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+    if hr_cost < rt_cost:
+        h_re, h_im = (h_re * r_re - h_im * r_im), (h_re * r_im + h_im * r_re)
+    else:
+        t_re, t_im = (t_re * r_re - t_im * r_im), (t_re * r_im + t_im * r_re)
+    return h_re @ t_re.transpose(-2, -1) - h_im @ t_im.transpose(-2, -1)
+
+
 def _complex_interaction_complex_native(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -103,11 +119,11 @@ def _complex_interaction_optimized_broadcasted(
     return sum(*(
         factor * tensor_product(hh, rr, tt).sum(dim=-1)
         for factor, hh, rr, tt in [
-            (+1, h_re, r_re, t_re),
-            (+1, h_re, r_im, t_im),
-            (+1, h_im, r_re, t_im),
-            (-1, h_im, r_im, t_re),
-        ]
+        (+1, h_re, r_re, t_re),
+        (+1, h_re, r_im, t_im),
+        (+1, h_im, r_re, t_im),
+        (-1, h_im, r_im, t_re),
+    ]
     ))
 
 

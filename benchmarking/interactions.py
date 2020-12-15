@@ -12,7 +12,7 @@ from tqdm import tqdm
 from pykeen.nn import Interaction
 from pykeen.nn.functional import (
     _complex_interaction_complex_native, _complex_interaction_direct,
-    _complex_interaction_optimized_broadcasted,
+    _complex_interaction_optimized_broadcasted, _complex_select,
 )
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from pykeen.utils import unpack_singletons
@@ -121,6 +121,7 @@ def main(
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(f"Running on {device}.")
     variants = [
+        _complex_select,
         _complex_interaction_complex_native,
         _complex_interaction_optimized_broadcasted,
         _complex_interaction_direct,
