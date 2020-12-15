@@ -14,8 +14,8 @@ from pykeen.nn.functional import (
     _complex_interaction_complex_native, _complex_interaction_direct,
     _complex_interaction_optimized_broadcasted,
 )
-from pykeen.nn.modules import _unpack_singletons
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from pykeen.utils import unpack_singletons
 from pykeen.version import get_git_hash
 
 
@@ -66,25 +66,38 @@ def _use_case_to_shape(
         raise ValueError
 
 
-def _generate_hrt(
+def _resolve_shapes(
     prefix_shapes: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]],
     interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
     dim: int,
-    device: torch.device,
     additional_dims: Optional[Mapping[str, int]] = None,
-) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+) -> Tuple[Tuple[Tuple[int, ...], ...], ...]:
     additional_dims = additional_dims or dict()
     additional_dims.setdefault("d", dim)
-    return _unpack_singletons(*(
-        torch.rand(*prefix_shape, *(additional_dims[s] for s in suffix_shape), requires_grad=True, device=device)
+
+    return [
+        tuple(*prefix_shape, *(additional_dims[s] for s in suffix_shape))
         for prefix_shape, suffix_shape in zip(
-        prefix_shapes,
-        (
-            interaction.entity_shape,
-            interaction.relation_shape,
-            interaction.tail_entity_shape or interaction.entity_shape
+            prefix_shapes,
+            (
+                interaction.entity_shape,
+                interaction.relation_shape,
+                interaction.tail_entity_shape or interaction.entity_shape
+            )
         )
-    )
+    ]
+
+
+def _generate_hrt(
+    shapes: Tuple[Tuple[Tuple[int, ...], ...], ...],
+    device: torch.device,
+) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+    return unpack_singletons(*(
+        [
+            torch.rand(*shape, requires_grad=True, device=device)
+            for shape in single_shapes
+        ]
+        for single_shapes in shapes
     ))
 
 
@@ -94,12 +107,16 @@ def _get_result_shape(prefix_shapes) -> Tuple[int, int, int, int]:
 
 @click.command()
 @click.option('-m', '--max-result-elements-power', type=int, default=30, show_default=True)
+@click.option('-n', '--max-num-entities-power', type=int, default=15, show_default=True)
 @click.option('-b', '--max-batch-size-power', type=int, default=10, show_default=True)
 @click.option('-d', '--max-vector-dimension-power', type=int, default=10, show_default=True)
+@click.option('-s', '--max-sample-power', type=int, default=10, show_default=True)
 def main(
     max_result_elements_power: int,
+    max_num_entities_power: int,
     max_batch_size_power: int,
     max_vector_dimension_power: int,
+    max_sample_power: int,
 ):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print(f"Running on {device}.")
@@ -108,73 +125,75 @@ def main(
         _complex_interaction_optimized_broadcasted,
         _complex_interaction_direct,
     ]
-    use_case_labels = ["hrt", "t", "h"]
+    use_case_labels = ["hrt", "hrt+", "h+rt", "t", "h"]
     batch_sizes = [2 ** i for i in range(5, max_batch_size_power + 1)]
-    num_entities = (100, 15_000)
-    # num_entities = (100,)
+    negative_samples = [2 ** i for i in range(5, max_sample_power + 1)]
+    num_entities = [2 ** i for i in range(7, max_num_entities_power)]
     max_result_elements = 2 ** max_result_elements_power
     vector_dimensions = [2 ** i for i in range(5, max_vector_dimension_power + 1)]
     data = []
     tasks = [
-        (b, n, d, ul, _use_case_to_shape(use_case=ul, b=b, n=n))
-        for ul in use_case_labels
+        (b, s, n, d, ul, _use_case_to_shape(use_case=ul, b=b, n=n, s=s))
         for b in batch_sizes
+        for s in negative_samples
         for n in num_entities
         for d in vector_dimensions
+        for ul in use_case_labels
     ]
     progress = tqdm(variants, unit="variant")
     for variant in progress:
         # create variant
         interaction = Interaction.from_func(variant)
-        for i, (b, n, d, ul, prefix_shapes) in enumerate(tqdm(tasks, unit="task"), start=1):
+        for i, (b, s, n, d, ul, prefix_shapes) in enumerate(tqdm(tasks, unit="task"), start=1):
             result_shape = _get_result_shape(prefix_shapes)
-            n_samples, total_time, time_per_sample = 0, float('nan'), float('nan')
+            median = iqr = float('nan')
             if max_result_elements is not None and max_result_elements < numpy.prod(result_shape):
                 continue
-            h, r, t = _generate_hrt(
+            shapes = _resolve_shapes(
                 prefix_shapes=prefix_shapes,
                 interaction=interaction,
                 dim=d,
-                device=device,
             )
             try:
                 timer = Timer(
                     stmt="interaction(h=h, r=r, t=t)",
-                    globals=dict(interaction=interaction, h=h, r=r, t=t),
+                    globals=dict(interaction=interaction, shapes=shapes, device=device),
+                    setup="h, r, t = _generate_hrt(shapes=shapes, device=device)"
                 )
-                n_samples, total_time = timer.autorange()
-                time_per_sample = total_time / n_samples
+                time = timer.blocked_autorange()
+                median = time.median
+                iqr = time.iqr
             except Exception as error:
                 progress.write(f"ERROR: {error}")
-            progress.set_postfix(dict(shape=prefix_shapes, time=time_per_sample))
-            data.append((i, b, n, d, prefix_shapes, ul, variant.__name__, total_time, n_samples, time_per_sample))
+            progress.set_postfix(dict(shape=prefix_shapes, time=median))
+            data.append((i, b, s, n, d, ul, prefix_shapes, variant.__name__, median, iqr))
 
     git_hash = get_git_hash()
     df = pandas.DataFrame(data=data, columns=[
         "experiment_number",
         "batch_size",
+        "num_negative_samples",
         "num_entities",
         "dimension",
-        "prefix_shapes",
         "use_case",
+        "prefix_shapes",
         "variant",
-        "total_time",
-        "n_samples",
-        "time_per_sample",
+        "time_median",
+        "time_inter_quartile_range",
     ])
     df["device"] = device.type
     df.to_csv(f"{git_hash}_measurement.tsv", sep="\t", index=False)
 
     df_agg = df.groupby(
         by=["batch_size", "num_entities", "dimension", "use_case", "variant"]
-    ).agg({"time_per_sample": "mean"}).unstack().reset_index().dropna()
+    ).agg({"time_median": "mean"}).unstack().reset_index().dropna()
     df_agg.to_csv(f"{git_hash}_measurement_agg.tsv", sep="\t", index=False)
     print(df_agg)
 
-    viz_df = df[df['total_time'].notna()]
-    viz_df['variant'] = viz_df['variant'].map(lambda s: ' '.join(s.split('_')[3:]).capitalize())
+    viz_df = df[df["time_median"].notna()]
+    viz_df["variant"] = viz_df["variant"].map(lambda s: ' '.join(s.split('_')[3:]).capitalize())
     plt.figure(figsize=(14, 6))
-    sns.lineplot(data=viz_df, x='experiment_number', y='total_time', hue='variant')
+    sns.lineplot(data=viz_df, x='experiment_number', y='time_median', hue='variant')
     plt.savefig(f"{git_hash}_measurement.png", dpi=300)
 
 
