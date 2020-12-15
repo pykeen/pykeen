@@ -12,6 +12,7 @@ import numpy
 import torch
 
 import pykeen.nn.modules
+import pykeen.utils
 from pykeen.models.multimodal.base import LiteralInteraction
 from pykeen.nn.functional import distmult_interaction
 from pykeen.nn.modules import Interaction, TranslationalInteraction
@@ -51,7 +52,7 @@ class InteractionTests(ptb.GenericTests[pykeen.nn.modules.Interaction]):
                 [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape],
             )
         )
-        return tuple(pykeen.nn.modules._unpack_singletons(*result))
+        return tuple(pykeen.utils.unpack_singletons(*result))
 
     def _check_scores(self, scores: torch.FloatTensor, exp_shape: Tuple[int, ...]):
         """Check shape, dtype and gradients of scores."""

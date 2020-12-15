@@ -24,7 +24,7 @@ import torch.nn
 from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, RandomHint, TorchRandomHint
+from .typing import DeviceHint, RandomHint, Representation, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -846,3 +846,14 @@ def strip_dim(*x, num: int = 4):
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     """Ensure that the input is a sequence."""
     return x if isinstance(x, Sequence) else (x,)
+
+
+def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    return tuple(upgrade_to_sequence(xx) for xx in x)
+
+
+def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
+    return [
+        x[0] if len(x) == 1 else x
+        for x in xs
+    ]

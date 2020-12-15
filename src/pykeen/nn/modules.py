@@ -12,8 +12,8 @@ from torch import FloatTensor, nn
 
 from . import functional as pkf
 from .representation import CANONICAL_DIMENSIONS, convert_to_canonical_shape
-from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
-from ..utils import upgrade_to_sequence
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..utils import ensure_tuple, upgrade_to_sequence
 
 __all__ = [
     # Base Classes
@@ -45,17 +45,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _ensure_tuple(*x: Union[Representation, Sequence[Representation]]) -> Sequence[Sequence[Representation]]:
-    return tuple(upgrade_to_sequence(xx) for xx in x)
-
-
-def _unpack_singletons(*xs: Tuple) -> Sequence[Tuple]:
-    return [
-        x[0] if len(x) == 1 else x
-        for x in xs
-    ]
-
-
 def _get_prefix(slice_size, slice_dim, d) -> str:
     if slice_size is None or slice_dim != d:
         return 'b'
@@ -64,7 +53,7 @@ def _get_prefix(slice_size, slice_dim, d) -> str:
 
 
 def _get_batches(z, slice_size):
-    for batch in zip(*(hh.split(slice_size, dim=1) for hh in _ensure_tuple(z)[0])):
+    for batch in zip(*(hh.split(slice_size, dim=1) for hh in ensure_tuple(z)[0])):
         if len(batch) == 1:
             batch = batch[0]
         yield batch
