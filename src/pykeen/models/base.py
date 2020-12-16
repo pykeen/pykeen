@@ -400,11 +400,12 @@ class Model(nn.Module, ABC):
 
         .. note::
 
-            We only expect the right side-side predictions, i.e., (h,r,``*``) to change its default behavior when
-            the model has been trained with inverse relations (mainly because of the behavior of the LCWA training
-            approach). This is why the :func:`predict_scores_all_heads()` has different behavior depending on
-            if inverse triples were used in training, and why this function (:func:`predict_scores_all_tails`) has
-            the same behavior regardless of the use of inverse triples.
+            We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
+            default behavior when the model has been trained with inverse relations
+            (mainly because of the behavior of the LCWA training approach). This is why
+            the :func:`predict_scores_all_heads()` has different behavior depending on
+            if inverse triples were used in training, and why this function has the same
+            behavior regardless of the use of inverse triples.
         """
         # Enforce evaluation mode
         self.eval()
@@ -564,9 +565,11 @@ class Model(nn.Module, ABC):
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
 
-        Note: If the model has been trained with inverse relations, the task of predicting the head entities becomes the
-        task of predicting the tail entities of the inverse triples, i.e., f(*,r,t) is predicted by means of
-        f(t,r_inv,*).
+        .. note::
+
+            If the model has been trained with inverse relations, the task of predicting
+            the head entities becomes the task of predicting the tail entities of the
+            inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
 
         Additionally, the model is set to evaluation mode.
 
@@ -929,9 +932,10 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: torch.LongTensor,
     ) -> torch.FloatTensor:
-        r"""Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h).
+        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
 
         When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
+        The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
         This function enables users to inspect the scores obtained by using the corresponding inverse triples.
         """
         t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
@@ -961,7 +965,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses (``*``,r_inv,h,)."""
+        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         # TODO UNUSED
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
 
@@ -994,7 +998,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses (r_inv,t, ``*``)."""
+        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
 
         if slice_size is None:
