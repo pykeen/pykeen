@@ -397,6 +397,14 @@ class Model(nn.Module, ABC):
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
+
+        .. note::
+
+            We only expect the right side-side predictions, i.e., (h,r,``*``) to change its default behavior when
+            the model has been trained with inverse relations (mainly because of the behavior of the LCWA training
+            approach). This is why the :func:`predict_scores_all_heads()` has different behavior depending on
+            if inverse triples were used in training, and why this function (:func:`predict_scores_all_tails`) has
+            the same behavior regardless of the use of inverse triples.
         """
         # Enforce evaluation mode
         self.eval()
