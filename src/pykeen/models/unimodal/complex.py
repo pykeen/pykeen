@@ -12,7 +12,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction
-from ...regularizers import LpRegularizer
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -73,6 +73,7 @@ class ComplEx(ERModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         embedding_specification: Optional[EmbeddingSpecification] = None,
@@ -84,14 +85,17 @@ class ComplEx(ERModel):
             The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param loss: OptionalLoss (optional)
-            The loss to use. Defaults to SoftplusLoss.
-        :param preferred_device: str (optional)
+        :param loss:
+            The loss to use. Defaults to :data:`loss_default`.
+        :param regularizer:
+            The regularizer to use. Defaults to :data:`regularizer_default`.
+        :param preferred_device:
             The default device where to model is located.
-        :param random_seed: int (optional)
+        :param random_seed:
             An optional random seed to set before the initialization of weights.
         """
-        regularizer = self._instantiate_default_regularizer()
+        if regularizer is None:
+            regularizer = self._instantiate_default_regularizer()
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         if embedding_specification is None:

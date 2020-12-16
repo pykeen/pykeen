@@ -11,7 +11,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import SimplEInteraction
-from ...regularizers import PowerSumRegularizer
+from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -69,11 +69,13 @@ class SimplE(ERModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
     ) -> None:
-        regularizer = self._instantiate_default_regularizer()
+        if regularizer is None:
+            regularizer = self._instantiate_default_regularizer()
         super().__init__(
             triples_factory=triples_factory,
             interaction=SimplEInteraction(clamp_score=clamp_score),

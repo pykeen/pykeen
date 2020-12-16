@@ -9,7 +9,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import RESCALInteraction
-from ...regularizers import LpRegularizer
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -56,6 +56,7 @@ class RESCAL(ERModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
@@ -67,7 +68,8 @@ class RESCAL(ERModel):
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
-        regularizer = self._instantiate_default_regularizer()
+        if regularizer is None:
+            regularizer = self._instantiate_default_regularizer()
         super().__init__(
             triples_factory=triples_factory,
             interaction=RESCALInteraction(),

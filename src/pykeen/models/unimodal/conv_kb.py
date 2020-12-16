@@ -10,7 +10,7 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDD
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import ConvKBInteraction
-from ...regularizers import LpRegularizer
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 
@@ -76,6 +76,7 @@ class ConvKB(ERModel):
         hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
@@ -101,12 +102,12 @@ class ConvKB(ERModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
         )
-        regularizer = self._instantiate_default_regularizer()
+        if regularizer is None:
+            regularizer = self._instantiate_default_regularizer()
         # In the code base only the weights of the output layer are used for regularization
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
-        if regularizer is not None:
-            self.append_weight_regularizer(
-                parameter=self.interaction.parameters(),
-                regularizer=regularizer,
-            )
+        self.append_weight_regularizer(
+            parameter=self.interaction.parameters(),
+            regularizer=regularizer,
+        )
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')

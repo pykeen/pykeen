@@ -12,7 +12,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction
-from ...regularizers import LpRegularizer
+from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import compose
@@ -73,6 +73,7 @@ class DistMult(ERModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
@@ -80,6 +81,8 @@ class DistMult(ERModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         """
+        if regularizer is None:
+            regularizer = self._instantiate_default_regularizer()
         super().__init__(
             triples_factory=triples_factory,
             interaction=DistMultInteraction(),
@@ -99,7 +102,7 @@ class DistMult(ERModel):
                     functional.normalize,
                 ),
                 # Only relation embeddings are regularized
-                regularizer=self._instantiate_default_regularizer(),
+                regularizer=regularizer,
             ),
             loss=loss,
             preferred_device=preferred_device,
