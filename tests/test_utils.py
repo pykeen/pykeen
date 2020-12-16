@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Unittest for for global utilities."""
+
 import itertools
 import string
 import unittest
