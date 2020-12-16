@@ -66,7 +66,7 @@ __all__ = [
 
 def _concrete_subclasses(cls: Type[Model]):
     for subcls in cls.__subclasses__():
-        if subcls._is_base_model:
+        if not subcls._is_base_model:
             yield subcls
         yield from _concrete_subclasses(subcls)
 
