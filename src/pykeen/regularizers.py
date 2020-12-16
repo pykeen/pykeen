@@ -2,7 +2,7 @@
 
 """Regularization in PyKEEN."""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
 
 import torch
@@ -24,7 +24,7 @@ __all__ = [
 _REGULARIZER_SUFFIX = 'Regularizer'
 
 
-class Regularizer(nn.Module):
+class Regularizer(nn.Module, ABC):
     """A base class for all regularizers."""
 
     #: The overall regularization weight

@@ -8,7 +8,7 @@ from typing import Iterable, List, Optional
 import numpy
 import torch
 from torch.optim import Adam
-
+import pytest
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
@@ -21,24 +21,34 @@ from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
 
-def test_is_improvement():
-    """Test is_improvement()."""
-    for best_value, current_value, larger_is_better, relative_delta, is_better in [
-        # equal value; larger is better
-        (1.0, 1.0, True, 0.0, False),
-        # equal value; smaller is better
-        (1.0, 1.0, False, 0.0, False),
-        # larger is better; improvement
-        (1.0, 1.1, True, 0.0, True),
-        # larger is better; improvement; but not significant
-        (1.0, 1.1, True, 0.1, False),
-    ]:
-        assert is_better == is_improvement(
-            best_value=best_value,
-            current_value=current_value,
-            larger_is_better=larger_is_better,
-            relative_delta=relative_delta,
-        )
+class TestRandom(unittest.TestCase):
+    """Random tests for early stopper."""
+
+    def test_is_improvement(self):
+        """Test is_improvement()."""
+        for best_value, current_value, larger_is_better, relative_delta, is_better in [
+            # equal value; larger is better
+            (1.0, 1.0, True, 0.0, False),
+            # equal value; smaller is better
+            (1.0, 1.0, False, 0.0, False),
+            # larger is better; improvement
+            (1.0, 1.1, True, 0.0, True),
+            # larger is better; improvement; but not significant
+            (1.0, 1.1, True, 0.1, False),
+        ]:
+            with self.subTest(
+                best_value=best_value,
+                current_value=current_value,
+                larger_is_better=larger_is_better,
+                relative_delta=relative_delta,
+                is_better=is_better,
+            ):
+                self.assertEqual(is_better, is_improvement(
+                    best_value=best_value,
+                    current_value=current_value,
+                    larger_is_better=larger_is_better,
+                    relative_delta=relative_delta,
+                ))
 
 
 class MockEvaluator(Evaluator):
@@ -249,6 +259,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         torch.manual_seed(seed=self.seed)
         numpy.random.seed(seed=self.seed)
 
+    @pytest.mark.slow
     def test_early_stopping(self):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
@@ -272,6 +283,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             num_epochs=self.max_num_epochs,
             batch_size=self.batch_size,
             stopper=stopper,
+            use_tqdm=False,
         )
         self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
         self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')

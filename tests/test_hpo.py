@@ -34,7 +34,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset='nations',
             model='TransE',
-            training_kwargs=dict(num_epochs=5),
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -51,7 +51,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             dataset='nations',
             model='TransE',
             model_kwargs=dict(embedding_dim=target_embedding_dim),
-            training_kwargs=dict(num_epochs=5),
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -66,7 +66,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             dataset='nations',
             model='TransE',
             loss_kwargs=dict(margin=1.0),
-            training_kwargs=dict(num_epochs=5),
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -84,7 +84,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             model_kwargs=dict(embedding_dim=target_embedding_dim),
             loss='MarginRankingLoss',
             loss_kwargs=dict(margin=1.0),
-            training_kwargs=dict(num_epochs=5),
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -104,7 +104,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
             loss_kwargs_ranges=dict(
                 margin=dict(type=int, low=1, high=2),
             ),
-            training_kwargs=dict(num_epochs=5),
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)

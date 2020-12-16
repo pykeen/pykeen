@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch.nn import functional
@@ -51,14 +51,14 @@ class TransH(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default = TransHRegularizer
+    regularizer_default: Type[Regularizer] = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05,
         epsilon=1e-5,
     )
@@ -67,11 +67,12 @@ class TransH(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        scoring_fct_norm: int = 1,
+        scoring_fct_norm: int = 2,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
+        predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         r"""Initialize TransH.
 
@@ -85,6 +86,7 @@ class TransH(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            predict_with_sigmoid=predict_with_sigmoid,
         )
 
         self.scoring_fct_norm = scoring_fct_norm
