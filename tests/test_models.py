@@ -1238,9 +1238,9 @@ class TestRandom(unittest.TestCase):
 
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
-        self.assertTrue(Model._is_base_model)
         self.assertTrue(EntityEmbeddingModel._is_base_model)
         self.assertTrue(EntityRelationEmbeddingModel._is_base_model)
+        self.assertTrue(MultimodalModel._is_base_model)
         for model_cls in _MODELS:
             self.assertFalse(
                 model_cls._is_base_model,
