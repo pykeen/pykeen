@@ -548,7 +548,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        # TODO docstring
+        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses (*,r_inv,h,)."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index=1)
 
         if slice_size is None:
@@ -557,7 +557,7 @@ class Model(nn.Module, ABC):
             return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        # TODO docstring
+        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses (r_inv,t, *)."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
 
         if slice_size is None:
