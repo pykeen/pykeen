@@ -2,7 +2,7 @@
 
 """Implementation of the DistMultLiteral model."""
 
-from typing import Optional, TYPE_CHECKING
+from typing import Any, ClassVar, Mapping, Optional, TYPE_CHECKING
 
 import torch.nn as nn
 
@@ -28,12 +28,12 @@ class DistMultLiteral(LiteralModel):
     """An implementation of DistMultLiteral from [agustinus2018]_."""
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(margin=0.0)
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
 
     def __init__(
         self,

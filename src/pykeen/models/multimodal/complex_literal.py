@@ -2,7 +2,7 @@
 
 """Implementation of the ComplexLiteral model."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.nn as nn
@@ -61,12 +61,12 @@ class ComplExLiteral(LiteralModel):
     """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default = BCEWithLogitsLoss
+    loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
