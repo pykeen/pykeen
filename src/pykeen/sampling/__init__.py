@@ -54,7 +54,7 @@ def get_negative_sampler_cls(query: Union[None, str, Type[NegativeSampler]]) -> 
     """Get the negative sampler class."""
     return get_cls(
         query,
-        base=NegativeSampler,
+        base=NegativeSampler,  # type: ignore
         lookup_dict=negative_samplers,
         default=BasicNegativeSampler,
         suffix=_NEGATIVE_SAMPLER_SUFFIX,
