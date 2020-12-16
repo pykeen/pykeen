@@ -11,7 +11,7 @@ import click
 import pandas as pd
 
 from .base import TabbedDataset
-from ..typing import RandomHint
+from ..typing import TorchRandomHint
 
 __all__ = [
     'CKG',
@@ -34,7 +34,7 @@ class CKG(TabbedDataset):
         self,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        random_state: RandomHint = 0,
+        random_state: TorchRandomHint = 0,
         cache_root: Optional[str] = None,
     ):
         super().__init__(
