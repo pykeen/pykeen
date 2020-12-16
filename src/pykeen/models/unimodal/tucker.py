@@ -2,7 +2,7 @@
 
 """Implementation of TuckEr."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from ..base import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -59,7 +59,7 @@ class TuckER(ERModel):
         dropout_2=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 

@@ -2,7 +2,7 @@
 
 """Implementation of DistMult."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch import nn
 from torch.nn import functional
@@ -60,7 +60,7 @@ class DistMult(ERModel):
     #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
     #: Thus, when we use normalized regularization weight, the normalization factor is 10*sqrt(100) = 100, which is
     #: why the weight has to be increased by a factor of 100 to have the same configuration as in the paper.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [yang2014]_ for DistMult
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.1,

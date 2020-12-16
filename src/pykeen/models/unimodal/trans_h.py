@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch.nn import functional
 
@@ -57,7 +57,7 @@ class TransH(ERModel):
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default = TransHRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05,

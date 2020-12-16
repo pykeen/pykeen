@@ -2,7 +2,7 @@
 
 """Implementation of RESCAL."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 from ..base import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -43,7 +43,7 @@ class RESCAL(ERModel):
     #: The regularizer used by [nickel2011]_ for for RESCAL
     #: According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py
     #: a normalized weight of 10 is used.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nickel2011]_ for for RESCAL
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=10,
