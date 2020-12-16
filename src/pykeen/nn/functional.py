@@ -105,6 +105,23 @@ def _complex_select(
     return h_re @ t_re.transpose(-2, -1) - h_im @ t_im.transpose(-2, -1)
 
 
+def _complex_native_select(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Use torch built-ins for computation with complex numbers and select whether to combine hr or ht first."""
+    h, r, t = [view_complex(x=x) for x in (h, r, t)]
+    hr_cost = numpy.prod([max(hs, rs) for hs, rs in zip(h.shape, r.shape)])
+    rt_cost = numpy.prod([max(ts, rs) for ts, rs in zip(t.shape, r.shape)])
+    t = torch.conj(t)
+    if hr_cost < rt_cost:
+        h = h * r
+    else:
+        t = r * t
+    return torch.real((h * t).sum(dim=-1))
+
+
 def _complex_interaction_complex_native(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
