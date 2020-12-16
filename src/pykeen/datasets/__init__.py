@@ -17,6 +17,7 @@ from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
 )
+from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
 from .drkg import DRKG
@@ -53,6 +54,7 @@ __all__ = [
     'YAGO310',
     'DRKG',
     'ConceptNet',
+    'CKG',
     'get_dataset',
     'has_dataset',
 ]
