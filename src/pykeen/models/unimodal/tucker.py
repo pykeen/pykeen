@@ -51,7 +51,7 @@ class TuckER(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         dropout_0=DEFAULT_DROPOUT_HPO_RANGE,

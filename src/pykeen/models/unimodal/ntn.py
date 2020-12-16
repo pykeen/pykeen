@@ -2,7 +2,7 @@
 
 """Implementation of NTN."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from torch import nn
 
@@ -47,7 +47,7 @@ class NTN(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         num_slices=dict(type=int, low=2, high=4),
     )

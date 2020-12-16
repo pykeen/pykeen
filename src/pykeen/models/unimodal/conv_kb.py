@@ -3,7 +3,7 @@
 """Implementation of the ConvKB model."""
 
 import logging
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from ..base import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -55,7 +55,7 @@ class ConvKB(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
         num_filters=dict(type=int, low=7, high=9, scale='power_two'),
@@ -63,7 +63,7 @@ class ConvKB(ERModel):
     #: The regularizer used by [nguyen2018]_ for ConvKB.
     regularizer_default = LpRegularizer
     #: The LP settings used by [nguyen2018]_ for ConvKB.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.001 / 2,
         p=2.0,
         normalize=True,

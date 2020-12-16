@@ -2,7 +2,7 @@
 
 """Implementation of RESCAL."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from ..base import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -37,7 +37,7 @@ class RESCAL(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The regularizer used by [nickel2011]_ for for RESCAL
@@ -45,7 +45,7 @@ class RESCAL(ERModel):
     #: a normalized weight of 10 is used.
     regularizer_default = LpRegularizer
     #: The LP settings used by [nickel2011]_ for for RESCAL
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=10,
         p=2.,
         normalize=True,

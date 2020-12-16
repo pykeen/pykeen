@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn import functional
 
@@ -52,14 +52,14 @@ class TransH(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
     regularizer_default = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05,
         epsilon=1e-5,
     )

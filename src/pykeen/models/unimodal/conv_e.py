@@ -95,7 +95,7 @@ class ConvE(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         output_channels=dict(type=int, low=4, high=6, scale='power_two'),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         output_dropout=DEFAULT_DROPOUT_HPO_RANGE,

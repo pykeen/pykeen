@@ -2,7 +2,7 @@
 
 """Implementation of KG2E."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
@@ -49,7 +49,7 @@ class KG2E(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
         c_max=dict(type=float, low=1.0, high=10.0),

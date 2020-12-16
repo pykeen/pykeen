@@ -2,7 +2,7 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.nn as nn
@@ -52,17 +52,17 @@ class ComplEx(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = SoftplusLoss
+    loss_default: Type[Loss] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
     #: The regularizer used by [trouillon2016]_ for ComplEx.
-    regularizer_default = LpRegularizer
+    regularizer_default: Type[Regularizer] = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.01,
         p=2.0,
         normalize=True,

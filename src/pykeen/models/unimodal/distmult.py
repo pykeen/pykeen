@@ -2,7 +2,7 @@
 
 """Implementation of DistMult."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from torch import nn
 from torch.nn import functional
@@ -53,7 +53,7 @@ class DistMult(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The regularizer used by [yang2014]_ for DistMult
@@ -62,7 +62,7 @@ class DistMult(ERModel):
     #: why the weight has to be increased by a factor of 100 to have the same configuration as in the paper.
     regularizer_default = LpRegularizer
     #: The LP settings used by [yang2014]_ for DistMult
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.1,
         p=2.0,
         normalize=True,

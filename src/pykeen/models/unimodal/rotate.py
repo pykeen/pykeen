@@ -2,7 +2,7 @@
 
 """Implementation of the RotatE model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 
@@ -46,7 +46,7 @@ class RotatE(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=dict(type=int, low=32, high=1024, q=16),
     )
 

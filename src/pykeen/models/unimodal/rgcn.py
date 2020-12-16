@@ -2,7 +2,7 @@
 
 """Implementation of the R-GCN model."""
 
-from typing import Any, Callable, Mapping, Optional, Type
+from typing import Any, Callable, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -39,7 +39,7 @@ class RGCN(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=dict(type=int, low=16, high=1024, q=16),
         num_bases_or_blocks=dict(type=int, low=2, high=20, q=1),
         num_layers=dict(type=int, low=1, high=5, q=1),

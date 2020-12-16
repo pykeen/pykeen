@@ -46,7 +46,7 @@ class SimplE(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
@@ -58,7 +58,7 @@ class SimplE(ERModel):
     #: regularization term by the number of elements, which is 200.
     regularizer_default = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=20,
         p=2.0,
         normalize=True,

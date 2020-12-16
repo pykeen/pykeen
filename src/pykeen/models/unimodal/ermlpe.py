@@ -41,7 +41,7 @@ class ERMLPE(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,

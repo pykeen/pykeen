@@ -2,7 +2,7 @@
 
 """Implementation of ERMLP."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from ..base import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -35,7 +35,7 @@ class ERMLP(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 

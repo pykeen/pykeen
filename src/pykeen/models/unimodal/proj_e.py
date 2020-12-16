@@ -2,13 +2,13 @@
 
 """Implementation of ProjE."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 from torch import nn
 
 from ..base import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
+from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import ProjEInteraction
@@ -46,13 +46,13 @@ class ProjE(ERModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = nn.BCEWithLogitsLoss
+    loss_default = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
 
     def __init__(
         self,
