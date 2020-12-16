@@ -95,7 +95,7 @@ def get_novelty_mask(
     """
     other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
     other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
-    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
     known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
@@ -195,7 +195,8 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
         _original_init(self, *args, **kwargs)
         self.reset_parameters_()
 
-    cls.__init__ = _new_init
+    # sorry mypy, but this kind of evil must be permitted.
+    cls.__init__ = _new_init  # type: ignore
 
 
 class Model(nn.Module, ABC):
@@ -204,20 +205,25 @@ class Model(nn.Module, ABC):
     #: A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
+    #: Keep track of if this is a base model
+    _is_base_model: ClassVar[bool]
+
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
+
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
-    loss: Loss
+    loss: ClassVar[Loss]
+
     #: The default regularizer class
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
-    regularizer: Regularizer
+    regularizer: ClassVar[Regularizer]
 
     def __init__(
         self,
@@ -260,7 +266,7 @@ class Model(nn.Module, ABC):
 
         # Loss
         if loss is None:
-            self.loss = self.loss_default(**self.loss_default_kwargs)
+            self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
         else:
             self.loss = loss
 
@@ -286,15 +292,11 @@ class Model(nn.Module, ABC):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    @classmethod
-    def _is_abstract(cls) -> bool:
-        return inspect.isabstract(cls)
-
-    def __init_subclass__(cls, reset_parameters_post_init: bool = True, **kwargs):  # noqa:D105
-        if not cls._is_abstract():
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        cls._is_base_model = not autoreset
+        if not cls._is_base_model:
             _track_hyperparameters(cls)
-            if reset_parameters_post_init:
-                _add_post_reset_parameters(cls)
+            _add_post_reset_parameters(cls)
 
     @property
     def can_slice_h(self) -> bool:
@@ -1041,7 +1043,7 @@ class Model(nn.Module, ABC):
         self.load_state_dict(torch.load(path, map_location=self.device))
 
 
-class EntityEmbeddingModel(Model):
+class EntityEmbeddingModel(Model, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
     def __init__(
@@ -1102,7 +1104,7 @@ class EntityEmbeddingModel(Model):
         self.entity_embeddings.post_parameter_update()
 
 
-class EntityRelationEmbeddingModel(Model):
+class EntityRelationEmbeddingModel(Model, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -1198,5 +1200,5 @@ def _can_slice(fn) -> bool:
     return 'slice_size' in inspect.getfullargspec(fn).args
 
 
-class MultimodalModel(Model):
+class MultimodalModel(Model, autoreset=False):
     """A multimodal KGE model."""

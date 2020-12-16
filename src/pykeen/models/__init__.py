@@ -6,7 +6,6 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-import inspect
 from typing import Mapping, Set, Type, Union
 
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel  # noqa:F401
@@ -65,14 +64,14 @@ __all__ = [
 ]
 
 
-def _concrete_subclasses(cls):
+def _concrete_subclasses(cls: Type[Model]):
     for subcls in cls.__subclasses__():
-        if not inspect.isabstract(subcls):
+        if not subcls._is_base_model:
             yield subcls
         yield from _concrete_subclasses(subcls)
 
 
-_MODELS: Set[Type[Model]] = set(_concrete_subclasses(Model))
+_MODELS: Set[Type[Model]] = set(_concrete_subclasses(Model))  # type: ignore
 
 #: A mapping of models' names to their implementations
 models: Mapping[str, Type[Model]] = {
@@ -89,6 +88,6 @@ def get_model_cls(query: Union[str, Type[Model]]) -> Type[Model]:
     """
     return get_cls(
         query,
-        base=Model,
+        base=Model,  # type: ignore
         lookup_dict=models,
     )

@@ -2,7 +2,7 @@
 
 """Implementation of ProjE."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import numpy
 import torch
@@ -11,7 +11,7 @@ from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
+from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -48,11 +48,11 @@ class ProjE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = nn.BCEWithLogitsLoss
+    loss_default: Type[Loss] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs = dict(reduction='mean')
 

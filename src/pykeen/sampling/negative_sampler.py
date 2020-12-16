@@ -82,9 +82,11 @@ class NegativeSampler(ABC):
 
         try:
             # Check which heads of the mapped triples are also in the negative triples
-            head_filter = (self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]).max(axis=0)[0]
+            head_filter = (
+                self.mapped_triples[:, 0:1].view(1, -1) == negative_batch[:, 0:1]  # type: ignore
+            ).max(axis=0)[0]
             # Reduce the search space by only using possible matches that at least contain the head we look for
-            sub_mapped_triples = self.mapped_triples[head_filter]
+            sub_mapped_triples = self.mapped_triples[head_filter]  # type: ignore
             # Check in this subspace which relations of the mapped triples are also in the negative triples
             relation_filter = (sub_mapped_triples[:, 1:2].view(1, -1) == negative_batch[:, 1:2]).max(axis=0)[0]
             # Reduce the search space by only using possible matches that at least contain head and relation we look for

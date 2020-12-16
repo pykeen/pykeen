@@ -17,7 +17,7 @@ from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, slice_triples, torch_is_in_1d
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
 __all__ = [
     'TriplesFactory',
@@ -75,14 +75,12 @@ def _map_triples_elements_to_ids(
         logger.warning('Provided empty triples to map.')
         return torch.empty(0, 3, dtype=torch.long)
 
-    heads, relations, tails = slice_triples(triples)
-
     # When triples that don't exist are trying to be mapped, they get the id "-1"
     entity_getter = np.vectorize(entity_to_id.get)
-    head_column = entity_getter(heads, [-1])
-    tail_column = entity_getter(tails, [-1])
+    head_column = entity_getter(triples[:, 0:1], [-1])
+    tail_column = entity_getter(triples[:, 2:3], [-1])
     relation_getter = np.vectorize(relation_to_id.get)
-    relation_column = relation_getter(relations, [-1])
+    relation_column = relation_getter(triples[:, 1:2], [-1])
 
     # Filter all non-existent triples
     head_filter = head_column < 0
@@ -365,7 +363,7 @@ class TriplesFactory:
             create_inverse_triples=self.create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore
             },
         )
 
@@ -405,7 +403,7 @@ class TriplesFactory:
             ('num_triples', self.num_triples),
             ('inverse_triples', self.create_inverse_triples),
         ]
-        d.extend(sorted(self.metadata.items()))
+        d.extend(sorted(self.metadata.items()))  # type: ignore
         return ', '.join(
             f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
             for k, v in d
@@ -418,7 +416,7 @@ class TriplesFactory:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
             raise ValueError('Can not get inverse triple, they have not been created.')
-        relation = next(iter(self.relations_to_ids(relations=[relation])))
+        relation = next(iter(self.relations_to_ids(relations=[relation])))  # type: ignore
         return self._get_inverse_relation_id(relation)
 
     @staticmethod
@@ -684,7 +682,7 @@ class TriplesFactory:
         for key, values in kwargs.items():
             # convert PyTorch tensors to numpy
             if torch.is_tensor(values):
-                values = values.cpu().numpy()
+                values = values.cpu().numpy()  # type: ignore
             data[key] = values
 
         # convert to dataframe

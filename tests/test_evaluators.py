@@ -428,7 +428,7 @@ class DummyEvaluator(Evaluator):
         return f'{self.__class__.__name__}(losses={self.losses})'
 
 
-class DummyModel(EntityRelationEmbeddingModel):
+class MockModel(EntityRelationEmbeddingModel):
     """A dummy model returning fake scores."""
 
     def __init__(self, triples_factory: TriplesFactory):
@@ -464,7 +464,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
         self.triples_factory = Nations().training
-        self.model = DummyModel(triples_factory=self.triples_factory)
+        self.model = MockModel(triples_factory=self.triples_factory)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""

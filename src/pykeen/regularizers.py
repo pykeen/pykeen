@@ -2,7 +2,7 @@
 
 """Regularization in PyKEEN."""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
 
 import torch
@@ -24,7 +24,7 @@ __all__ = [
 _REGULARIZER_SUFFIX = 'Regularizer'
 
 
-class Regularizer(nn.Module):
+class Regularizer(nn.Module, ABC):
     """A base class for all regularizers."""
 
     #: The overall regularization weight
@@ -92,7 +92,7 @@ class NoRegularizer(Regularizer):
     """
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = {}
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
@@ -114,7 +114,7 @@ class LpRegularizer(Regularizer):
     normalize: bool
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
 
@@ -154,7 +154,7 @@ class PowerSumRegularizer(Regularizer):
     """
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
 
@@ -184,7 +184,7 @@ class TransHRegularizer(Regularizer):
     """A regularizer for the soft constraints in TransH."""
 
     #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
 
@@ -251,7 +251,7 @@ class CombinedRegularizer(Regularizer):
 
 
 _REGULARIZERS: Collection[Type[Regularizer]] = {
-    NoRegularizer,
+    NoRegularizer,  # type: ignore
     LpRegularizer,
     PowerSumRegularizer,
     CombinedRegularizer,
@@ -269,7 +269,7 @@ def get_regularizer_cls(query: Union[None, str, Type[Regularizer]]) -> Type[Regu
     """Get the regularizer class."""
     return get_cls(
         query,
-        base=Regularizer,
+        base=Regularizer,  # type: ignore
         lookup_dict=regularizers,
         default=NoRegularizer,
         suffix=_REGULARIZER_SUFFIX,

@@ -6,6 +6,7 @@ import ftplib
 import json
 import logging
 import random
+from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from typing import (
@@ -31,16 +32,12 @@ __all__ = [
     'format_relative_comparison',
     'imag_part',
     'invert_mapping',
-    'l2_regularization',
     'is_cuda_oom_error',
     'random_non_negative_int',
     'real_part',
     'resolve_device',
-    'slice_triples',
-    'slice_doubles',
     'split_complex',
     'split_list_in_batches_iter',
-    'split_list_in_batches',
     'torch_is_in_1d',
     'normalize_string',
     'normalized_lookup',
@@ -63,29 +60,6 @@ _CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear i
 _CUDA_OOM_ERROR = 'CUDA out of memory.'
 
 
-def l2_regularization(
-    *xs: torch.Tensor,
-    normalize: bool = False,
-) -> torch.Tensor:
-    """
-    Compute squared L2-regularization term.
-
-    :param xs: a list of torch.Tensor
-        The tensors for which to compute the regularization.
-    :param normalize:
-        Whether to divide the term by the total number of elements in the tensors.
-
-    :return: The sum of squared value across all tensors.
-    """
-    regularization_term = sum(x.pow(2).sum() for x in xs)
-
-    # Normalize by the number of elements in the tensors for dimensionality-independent weight tuning.
-    if normalize:
-        regularization_term /= sum(np.prod(x.shape) for x in xs)
-
-    return regularization_term
-
-
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
     if device is None or device == 'gpu':
@@ -98,29 +72,7 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
     return device
 
 
-def slice_triples(triples):
-    """Get the heads, relations, and tails from a matrix of triples."""
-    return (
-        triples[:, 0:1],  # heads
-        triples[:, 1:2],  # relations
-        triples[:, 2:3],  # tails
-    )
-
-
-def slice_doubles(doubles):
-    """Get the heads and relations from a matrix of doubles."""
-    return (
-        doubles[:, 0:1],  # heads
-        doubles[:, 1:2],  # relations
-    )
-
-
 X = TypeVar('X')
-
-
-def split_list_in_batches(input_list: List[X], batch_size: int) -> List[List[X]]:
-    """Split a list of instances in batches of size batch_size."""
-    return list(split_list_in_batches_iter(input_list=input_list, batch_size=batch_size))
 
 
 def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
@@ -329,17 +281,18 @@ def compact_mapping(
     return translated, translation
 
 
-class Result:
+class Result(ABC):
     """A superclass of results that can be saved to a directory."""
 
+    @abstractmethod
     def save_to_directory(self, directory: str, **kwargs) -> None:
         """Save the results to the directory."""
-        raise NotImplementedError
 
+    @abstractmethod
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save the results to the directory in an FTP server."""
-        raise NotImplementedError
 
+    @abstractmethod
     def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
@@ -347,7 +300,6 @@ class Result:
         :param bucket: The name of the S3 bucket
         :param s3: A client from :func:`boto3.client`, if already instantiated
         """
-        raise NotImplementedError
 
 
 def split_complex(

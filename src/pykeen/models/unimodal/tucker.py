@@ -2,7 +2,7 @@
 
 """Implementation of TuckEr."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
@@ -65,7 +65,7 @@ class TuckER(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         dropout_0=DEFAULT_DROPOUT_HPO_RANGE,
@@ -73,9 +73,9 @@ class TuckER(EntityRelationEmbeddingModel):
         dropout_2=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default = BCEAfterSigmoidLoss
+    loss_default: Type[Loss] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,
