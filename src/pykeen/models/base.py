@@ -897,7 +897,6 @@ class Model(nn.Module, ABC):
         # Id of inverse relation: relation + 1
         batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
 
-        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
         return batch_cloned.flip(1)
 
     @abstractmethod
