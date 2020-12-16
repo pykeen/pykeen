@@ -547,53 +547,6 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses (*,r_inv,h,)."""
-        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index=1)
-
-        if slice_size is None:
-            return self.score_h(rt_batch=r_inv_h)
-        else:
-            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
-
-    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses (r_inv,t, *)."""
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index=0)
-
-        if slice_size is None:
-            return self.score_t(hr_batch=t_r_inv)
-        else:
-            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
-
-    def score_hrt_inverse(
-        self,
-        hrt_batch: torch.LongTensor,
-    ) -> torch.FloatTensor:
-        r"""Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h).
-
-        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
-        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
-        """
-        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index=1)
-
-        return self.score_hrt(hrt_batch=t_r_inv_h)
-
-    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int):
-        if not self.triples_factory.create_inverse_triples:
-            raise ValueError(
-                "Your model is not configured to predict with inverse relations."
-                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
-                " or using the pipeline().",
-            )
-        batch_cloned = batch.clone()
-
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
-
-        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
-        return batch_cloned.flip(1)
-
     def predict_scores_all_heads(
         self,
         rt_batch: torch.LongTensor,
@@ -620,30 +573,26 @@ class Model(nn.Module, ABC):
         # Enforce evaluation mode
         self.eval()
 
-        '''
-        In case the model was trained using inverse triples, the scoring of all heads is not handled by calculating
-        the scores for all heads based on a (relation, tail) pair, but instead all possible tails are calculated
-        for a (tail, inverse_relation) pair.
-        '''
         if not self.triples_factory.create_inverse_triples:
+            '''
+            In case the model was trained using inverse triples, the scoring of all heads is not handled by calculating
+            the scores for all heads based on a (relation, tail) pair, but instead all possible tails are calculated
+            for a (tail, inverse_relation) pair.
+            '''
             if slice_size is None:
                 scores = self.score_h(rt_batch)
             else:
                 scores = self.score_h(rt_batch, slice_size=slice_size)
-            if self.predict_with_sigmoid:
-                scores = torch.sigmoid(scores)
-            return scores
-
-        '''
-        The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
-        _native relation_.
-        Example:
-        The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
-        the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
-        of the _inverse relation_ is 4 (id of relation + 1).
-        '''
-
-        scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
+        else:
+            '''
+            The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
+            _native relation_.
+            Example:
+            The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
+            the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
+            of the _inverse relation_ is 4 (id of relation + 1).
+            '''
+            scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
 
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
@@ -937,6 +886,22 @@ class Model(nn.Module, ABC):
             )
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
+    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+        if not self.triples_factory.create_inverse_triples:
+            raise ValueError(
+                "Your model is not configured to predict with inverse relations."
+                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
+                " or using the pipeline().",
+            )
+        batch_cloned = batch.clone()
+
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
+
+        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
+        return batch_cloned.flip(1)
+
     @abstractmethod
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
@@ -951,6 +916,18 @@ class Model(nn.Module, ABC):
             The score for each triple.
         """
         raise NotImplementedError
+
+    def score_hrt_inverse(
+        self,
+        hrt_batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        r"""Score triples based on inverse triples, i.e., compute f(h,r,t) based on f(t,r_inv,h).
+
+        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
+        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
+        """
+        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
+        return self.score_hrt(hrt_batch=t_r_inv_h)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
@@ -975,6 +952,16 @@ class Model(nn.Module, ABC):
         scores = expanded_scores.view(hr_batch.shape[0], -1)
         return scores
 
+    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses (``*``,r_inv,h,)."""
+        # TODO UNUSED
+        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
+
+        if slice_size is None:
+            return self.score_h(rt_batch=r_inv_h)
+        else:
+            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -997,6 +984,15 @@ class Model(nn.Module, ABC):
         # Reshape the scores to match the pre-defined output shape of the score_h function.
         scores = expanded_scores.view(rt_batch.shape[0], -1)
         return scores
+
+    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses (r_inv,t, ``*``)."""
+        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
+
+        if slice_size is None:
+            return self.score_t(hr_batch=t_r_inv)
+        else:
+            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
