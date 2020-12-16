@@ -8,7 +8,7 @@ Get a summary with ``python -m pykeen.datasets.drkg``
 import logging
 
 from .base import TarFileSingleDataset
-from ..typing import RandomHint
+from ..typing import TorchRandomHint
 
 __all__ = [
     'DRKG',
@@ -29,7 +29,7 @@ class DRKG(TarFileSingleDataset):
     def __init__(
         self,
         create_inverse_triples: bool = False,
-        random_state: RandomHint = 0,
+        random_state: TorchRandomHint = 0,
         **kwargs,
     ):
         super().__init__(
