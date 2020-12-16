@@ -584,27 +584,12 @@ class Model(nn.Module, ABC):
         # Enforce evaluation mode
         self.eval()
 
-        if not self.triples_factory.create_inverse_triples:
-            '''
-            In case the model was trained using inverse triples, the scoring of all heads is not handled by calculating
-            the scores for all heads based on a (relation, tail) pair, but instead all possible tails are calculated
-            for a (tail, inverse_relation) pair.
-            '''
-            if slice_size is None:
-                scores = self.score_h(rt_batch)
-            else:
-                scores = self.score_h(rt_batch, slice_size=slice_size)
-        else:
-            '''
-            The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
-            _native relation_.
-            Example:
-            The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
-            the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
-            of the _inverse relation_ is 4 (id of relation + 1).
-            '''
+        if self.triples_factory.create_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
-
+        elif slice_size is None:
+            scores = self.score_h(rt_batch)
+        else:
+            scores = self.score_h(rt_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
