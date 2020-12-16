@@ -52,7 +52,7 @@ class ProjE(EntityRelationEmbeddingModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEWithLogitsLoss
+    loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs = dict(reduction='mean')
 

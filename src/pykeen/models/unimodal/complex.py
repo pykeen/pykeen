@@ -55,11 +55,11 @@ class ComplEx(EntityRelationEmbeddingModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
     #: The regularizer used by [trouillon2016]_ for ComplEx.
-    regularizer_default: Type[Regularizer] = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.01,

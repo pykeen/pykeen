@@ -63,7 +63,7 @@ class ConvKB(EntityRelationEmbeddingModel):
         num_filters=dict(type=int, low=7, high=9, scale='power_two'),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
-    regularizer_default: Type[Regularizer] = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nguyen2018]_ for ConvKB.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.001 / 2,
