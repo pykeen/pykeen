@@ -57,7 +57,7 @@ class Objective:
     dataset: Union[None, str, Type[Dataset]]  # 1.
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
-    regularizer: Type[Regularizer]  # 4.
+    regularizer: Optional[Type[Regularizer]]  # 4.
     optimizer: Type[Optimizer]  # 5.
     training_loop: Type[TrainingLoop]  # 6.
     evaluator: Type[Evaluator]  # 8.
@@ -149,13 +149,16 @@ class Objective:
             kwargs_ranges=self.loss_kwargs_ranges,
         )
         # 4. Regularizer
-        # _regularizer_kwargs = _get_kwargs(
-        #     trial=trial,
-        #     prefix='regularizer',
-        #     default_kwargs_ranges=self.regularizer.hpo_default,
-        #     kwargs=self.regularizer_kwargs,
-        #     kwargs_ranges=self.regularizer_kwargs_ranges,
-        # )
+        if self.regularizer is not None:
+            _regularizer_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='regularizer',
+                default_kwargs_ranges=self.regularizer.hpo_default,
+                kwargs=self.regularizer_kwargs,
+                kwargs_ranges=self.regularizer_kwargs_ranges,
+            )
+        else:
+            _regularizer_kwargs = None
         # 5. Optimizer
         _optimizer_kwargs = _get_kwargs(
             trial=trial,
@@ -205,8 +208,8 @@ class Objective:
                 loss=self.loss,
                 loss_kwargs=_loss_kwargs,
                 # 4. Regularizer
-                # regularizer=self.regularizer,
-                # regularizer_kwargs=_regularizer_kwargs,
+                regularizer=self.regularizer,
+                regularizer_kwargs=_regularizer_kwargs,
                 clear_optimizer=True,
                 # 5. Optimizer
                 optimizer=self.optimizer,

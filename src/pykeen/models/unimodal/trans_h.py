@@ -11,7 +11,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
-from ...regularizers import TransHRegularizer
+from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import pop_only
@@ -70,6 +70,7 @@ class TransH(ERModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -103,9 +104,12 @@ class TransH(ERModel):
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        # Note that the TransH regularizer has a different interface
-        self.regularizer = self._instantiate_default_regularizer(
-            entity_embeddings=pop_only(self.entity_representations[0].parameters()),
-            relation_embeddings=pop_only(self.relation_representations[0].parameters()),
-            normal_vector_embeddings=pop_only(self.relation_representations[1].parameters()),
-        )
+        if regularizer is None:
+            # Note that the TransH regularizer has a different interface
+            self.regularizer = self._instantiate_default_regularizer(
+                entity_embeddings=pop_only(self.entity_representations[0].parameters()),
+                relation_embeddings=pop_only(self.relation_representations[0].parameters()),
+                normal_vector_embeddings=pop_only(self.relation_representations[1].parameters()),
+            )
+        else:
+            self.regularizer = regularizer

@@ -9,7 +9,8 @@ import pandas as pd
 
 import pykeen
 from pykeen.datasets import Nations
-from pykeen.models import Model
+from pykeen.models import DistMult
+from pykeen.nn import Embedding
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
 
@@ -185,7 +186,7 @@ class TestAttributes(unittest.TestCase):
     def test_specify_regularizer(self):
         """Test a pipeline that uses a regularizer."""
         for regularizer, cls in [
-            (None, pykeen.regularizers.NoRegularizer),
+            (None, pykeen.regularizers.LpRegularizer),  # if none, goes to default.
             ('no', pykeen.regularizers.NoRegularizer),
             (NoRegularizer, pykeen.regularizers.NoRegularizer),
             ('powersum', pykeen.regularizers.PowerSumRegularizer),
@@ -193,11 +194,16 @@ class TestAttributes(unittest.TestCase):
         ]:
             with self.subTest(regularizer=regularizer):
                 pipeline_result = pipeline(
-                    model='TransE',
+                    model='DistMult',
                     dataset='Nations',
                     regularizer=regularizer,
-                    training_kwargs=dict(num_epochs=1),
+                    training_kwargs=dict(num_epochs=1, use_tqdm=False),
                 )
                 self.assertIsInstance(pipeline_result, PipelineResult)
-                self.assertIsInstance(pipeline_result.model, Model)
-                self.assertIsInstance(pipeline_result.model.regularizer, cls)
+                self.assertIsInstance(pipeline_result.model, DistMult)
+                self.assertEqual(1, len(pipeline_result.model.entity_representations))
+                self.assertIsInstance(pipeline_result.model.entity_representations[0], Embedding)
+                self.assertIsNone(pipeline_result.model.entity_representations[0].regularizer)
+                self.assertEqual(1, len(pipeline_result.model.relation_representations))
+                self.assertIsInstance(pipeline_result.model.relation_representations[0], Embedding)
+                self.assertIsInstance(pipeline_result.model.relation_representations[0].regularizer, cls)
