@@ -7,7 +7,8 @@ The functional forms always assume the general form of the interaction function,
 representations are provided in shape (batch_size, num_heads, ``*``), (batch_size, num_relations, ``*``), and
 (batch_size, num_tails, ``*``), and return a score tensor of shape (batch_size, num_heads, num_relations, num_tails).
 """
-
+import dataclasses
+from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy
@@ -44,6 +45,41 @@ __all__ = [
     "tucker_interaction",
     "unstructured_model_interaction",
 ]
+
+
+@dataclasses.dataclass
+class SizeInformation:
+    """Size information of generic score function."""
+
+    #: The batch size of the head representations.
+    bh: int
+
+    #: The number of head representations per batch
+    nh: int
+
+    #: The batch size of the relation representations.
+    br: int
+
+    #: The number of relation representations per batch
+    nr: int
+
+    #: The batch size of the tail representations.
+    bt: int
+
+    #: The number of tail representations per batch
+    nt: int
+
+
+def _extract_size_information(
+    h: torch.Tensor,
+    r: torch.Tensor,
+    t: torch.Tensor,
+) -> SizeInformation:
+    """Extract size information from tensors."""
+    bh, nh = h.shape[:2]
+    br, nr = r.shape[:2]
+    bt, nt = t.shape[:2]
+    return SizeInformation(bh=bh, nh=nh, br=br, nr=nr, bt=bt, nt=nt)
 
 
 def _extract_sizes(
