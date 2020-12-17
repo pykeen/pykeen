@@ -1233,8 +1233,8 @@ class MessageWeightingTests(unittest.TestCase):
         self._test_message_weighting(weight_func=symmetric_edge_weights)
 
 
-class TestRandom(unittest.TestCase):
-    """Extra tests."""
+class TestModelUtilities(unittest.TestCase):
+    """Extra tests for utility functions."""
 
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
