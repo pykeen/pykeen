@@ -91,7 +91,7 @@ class NoRegularizer(Regularizer):
     Used to simplify code.
     """
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
+    #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
@@ -113,7 +113,7 @@ class LpRegularizer(Regularizer):
     #: This allows dimensionality-independent weight tuning.
     normalize: bool
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
+    #: The default strategy for optimizing the LP regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
@@ -153,7 +153,7 @@ class PowerSumRegularizer(Regularizer):
     Has some nice properties, cf. e.g. https://github.com/pytorch/pytorch/issues/28119.
     """
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
+    #: The default strategy for optimizing the power sum regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
@@ -183,7 +183,7 @@ class PowerSumRegularizer(Regularizer):
 class TransHRegularizer(Regularizer):
     """A regularizer for the soft constraints in TransH."""
 
-    #: The default strategy for optimizing the regularizer's hyper-parameters
+    #: The default strategy for optimizing the TransH regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         weight=dict(type=float, low=0.01, high=1.0, scale='log'),
     )
