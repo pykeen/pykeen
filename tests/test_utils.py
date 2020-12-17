@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Unittest for for global utilities."""
+"""Tests for the :mod:`pykeen.utils` module."""
 
 import itertools
 import string
