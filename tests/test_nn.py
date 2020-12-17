@@ -23,7 +23,7 @@ from pykeen.triples import TriplesFactory
 from pykeen.typing import GaussianDistribution
 
 
-class RepresentationModuleTests(ptb.GenericTests[RepresentationModule]):
+class RepresentationModuleTestCase(ptb.GenericTestCase[RepresentationModule]):
     """Tests for RepresentationModule."""
 
     #: The batch size
@@ -174,13 +174,13 @@ def _check_call(
     return call_count
 
 
-class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
+class EmbeddingTests(RepresentationModuleTestCase, unittest.TestCase):
     """Tests for Embedding."""
 
     cls = Embedding
     kwargs = dict(
-        num_embeddings=RepresentationModuleTests.num,
-        shape=RepresentationModuleTests.exp_shape,
+        num_embeddings=RepresentationModuleTestCase.num,
+        shape=RepresentationModuleTestCase.exp_shape,
     )
 
     def test_constructor_errors(self):
@@ -305,13 +305,13 @@ class EmbeddingTests(RepresentationModuleTests, unittest.TestCase):
         )
 
 
-class TensorEmbeddingTests(RepresentationModuleTests, unittest.TestCase):
+class TensorEmbeddingTests(RepresentationModuleTestCase, unittest.TestCase):
     """Tests for Embedding with 2-dimensional shape."""
 
     cls = Embedding
     exp_shape = (3, 7)
     kwargs = dict(
-        num_embeddings=RepresentationModuleTests.num,
+        num_embeddings=RepresentationModuleTestCase.num,
         shape=(3, 7),
     )
 
@@ -335,13 +335,13 @@ class LiteralRepresentationsTests(EmbeddingTests, unittest.TestCase):
         self.assertTrue(torch.allclose(x, exp_x))
 
 
-class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
+class RGCNRepresentationTests(RepresentationModuleTestCase, unittest.TestCase):
     """Test RGCN representations."""
 
     cls = RGCNRepresentations
     kwargs = dict(
         num_bases_or_blocks=2,
-        embedding_dim=RepresentationModuleTests.exp_shape[0],
+        embedding_dim=RepresentationModuleTestCase.exp_shape[0],
     )
     num_relations: int = 7
     num_triples: int = 31
@@ -368,11 +368,11 @@ class RGCNRepresentationTests(RepresentationModuleTests, unittest.TestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTest(ptb.TestsTest[RepresentationModule], unittest.TestCase):
+class RepresentationModuleTestsTestCase(ptb.TestsTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = RepresentationModule
-    base_test = RepresentationModuleTests
+    base_test = RepresentationModuleTestCase
     skip_cls = {MockRepresentations}
 
 

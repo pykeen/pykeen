@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Compute kernels for common sub-tasks."""
+
 import numpy
 import torch
 

@@ -1,12 +1,21 @@
+# -*- coding: utf-8 -*-
+
 """Base classes for simplified testing."""
+
+import unittest
 from typing import Any, Collection, Generic, Mapping, MutableMapping, Optional, Type, TypeVar
 
-from pykeen.utils import get_subclasses, set_random_seed
+from ..utils import get_subclasses, set_random_seed
+
+__all__ = [
+    'GenericTestCase',
+    'TestsTestCase',
+]
 
 T = TypeVar("T")
 
 
-class GenericTests(Generic[T]):
+class GenericTestCase(Generic[T]):
     """Generic tests."""
 
     cls: Type[T]
@@ -30,11 +39,11 @@ class GenericTests(Generic[T]):
         """Perform actions after instantiation."""
 
 
-class TestsTest(Generic[T]):
+class TestsTestCase(Generic[T], unittest.TestCase):
     """A generic test for tests."""
 
     base_cls: Type[T]
-    base_test: Type[GenericTests[T]]
+    base_test: Type[GenericTestCase[T]]
     skip_cls: Collection[T] = tuple()
 
     def test_testing(self):

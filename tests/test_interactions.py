@@ -23,7 +23,7 @@ from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 logger = logging.getLogger(__name__)
 
 
-class InteractionTests(ptb.GenericTests[pykeen.nn.modules.Interaction]):
+class InteractionTestCase(ptb.GenericTestCase[pykeen.nn.modules.Interaction]):
     """Generic test for interaction functions."""
 
     dim: int = 2
@@ -254,7 +254,7 @@ class InteractionTests(ptb.GenericTests[pykeen.nn.modules.Interaction]):
         raise NotImplementedError(f"{self.cls.__name__}({sorted(kwargs.keys())})")
 
 
-class ComplExTests(InteractionTests, unittest.TestCase):
+class ComplExTests(InteractionTestCase, unittest.TestCase):
     """Tests for ComplEx interaction function."""
 
     cls = pykeen.nn.modules.ComplExInteraction
@@ -264,7 +264,7 @@ class ComplExTests(InteractionTests, unittest.TestCase):
         return (h * r * torch.conj(t)).sum().real
 
 
-class ConvETests(InteractionTests, unittest.TestCase):
+class ConvETests(InteractionTestCase, unittest.TestCase):
     """Tests for ConvE interaction function."""
 
     cls = pykeen.nn.modules.ConvEInteraction
@@ -273,7 +273,7 @@ class ConvETests(InteractionTests, unittest.TestCase):
         embedding_width=2,
         kernel_height=2,
         kernel_width=1,
-        embedding_dim=InteractionTests.dim,
+        embedding_dim=InteractionTestCase.dim,
     )
 
     def _get_hrt(
@@ -298,13 +298,13 @@ class ConvETests(InteractionTests, unittest.TestCase):
         return (x.view(1, -1) * t.view(1, -1)).sum() + t_bias
 
 
-class ConvKBTests(InteractionTests, unittest.TestCase):
+class ConvKBTests(InteractionTestCase, unittest.TestCase):
     """Tests for ConvKB interaction function."""
 
     cls = pykeen.nn.modules.ConvKBInteraction
     kwargs = dict(
-        embedding_dim=InteractionTests.dim,
-        num_filters=2 * InteractionTests.dim - 1,
+        embedding_dim=InteractionTestCase.dim,
+        num_filters=2 * InteractionTestCase.dim - 1,
     )
 
     def _exp_score(self, h, r, t, conv, activation, hidden_dropout, linear) -> torch.FloatTensor:  # noqa: D102
@@ -316,7 +316,7 @@ class ConvKBTests(InteractionTests, unittest.TestCase):
         return linear(x.view(1, -1))
 
 
-class DistMultTests(InteractionTests, unittest.TestCase):
+class DistMultTests(InteractionTestCase, unittest.TestCase):
     """Tests for DistMult interaction function."""
 
     cls = pykeen.nn.modules.DistMultInteraction
@@ -325,13 +325,13 @@ class DistMultTests(InteractionTests, unittest.TestCase):
         return (h * r * t).sum(dim=-1)
 
 
-class ERMLPTests(InteractionTests, unittest.TestCase):
+class ERMLPTests(InteractionTestCase, unittest.TestCase):
     """Tests for ERMLP interaction function."""
 
     cls = pykeen.nn.modules.ERMLPInteraction
     kwargs = dict(
-        embedding_dim=InteractionTests.dim,
-        hidden_dim=2 * InteractionTests.dim - 1,
+        embedding_dim=InteractionTestCase.dim,
+        hidden_dim=2 * InteractionTestCase.dim - 1,
     )
 
     def _exp_score(self, h, r, t, hidden, activation, final) -> torch.FloatTensor:
@@ -339,13 +339,13 @@ class ERMLPTests(InteractionTests, unittest.TestCase):
         return final(activation(hidden(x)))
 
 
-class ERMLPETests(InteractionTests, unittest.TestCase):
+class ERMLPETests(InteractionTestCase, unittest.TestCase):
     """Tests for ERMLP-E interaction function."""
 
     cls = pykeen.nn.modules.ERMLPEInteraction
     kwargs = dict(
-        embedding_dim=InteractionTests.dim,
-        hidden_dim=2 * InteractionTests.dim - 1,
+        embedding_dim=InteractionTestCase.dim,
+        hidden_dim=2 * InteractionTestCase.dim - 1,
     )
 
     def _exp_score(self, h, r, t, mlp) -> torch.FloatTensor:  # noqa: D102
@@ -353,7 +353,7 @@ class ERMLPETests(InteractionTests, unittest.TestCase):
         return mlp(x).view(1, -1) @ t.view(-1, 1)
 
 
-class HolETests(InteractionTests, unittest.TestCase):
+class HolETests(InteractionTestCase, unittest.TestCase):
     """Tests for HolE interaction function."""
 
     cls = pykeen.nn.modules.HolEInteraction
@@ -365,7 +365,7 @@ class HolETests(InteractionTests, unittest.TestCase):
         return (c * r).sum()
 
 
-class NTNTests(InteractionTests, unittest.TestCase):
+class NTNTests(InteractionTestCase, unittest.TestCase):
     """Tests for NTN interaction function."""
 
     cls = pykeen.nn.modules.NTNInteraction
@@ -389,12 +389,12 @@ class NTNTests(InteractionTests, unittest.TestCase):
         return score
 
 
-class ProjETests(InteractionTests, unittest.TestCase):
+class ProjETests(InteractionTestCase, unittest.TestCase):
     """Tests for ProjE interaction function."""
 
     cls = pykeen.nn.modules.ProjEInteraction
     kwargs = dict(
-        embedding_dim=InteractionTests.dim,
+        embedding_dim=InteractionTestCase.dim,
     )
 
     def _exp_score(self, h, r, t, d_e, d_r, b_c, b_p, activation) -> torch.FloatTensor:
@@ -403,7 +403,7 @@ class ProjETests(InteractionTests, unittest.TestCase):
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 
-class RESCALTests(InteractionTests, unittest.TestCase):
+class RESCALTests(InteractionTestCase, unittest.TestCase):
     """Tests for RESCAL interaction function."""
 
     cls = pykeen.nn.modules.RESCALInteraction
@@ -414,7 +414,7 @@ class RESCALTests(InteractionTests, unittest.TestCase):
         return h.view(1, -1) @ r @ t.view(-1, 1)
 
 
-class KG2ETests(InteractionTests, unittest.TestCase):
+class KG2ETests(InteractionTestCase, unittest.TestCase):
     """Tests for KG2E interaction function."""
 
     cls = pykeen.nn.modules.KG2EInteraction
@@ -428,12 +428,12 @@ class KG2ETests(InteractionTests, unittest.TestCase):
         return -torch.distributions.kl.kl_divergence(p, q)
 
 
-class TuckerTests(InteractionTests, unittest.TestCase):
+class TuckerTests(InteractionTestCase, unittest.TestCase):
     """Tests for Tucker interaction function."""
 
     cls = pykeen.nn.modules.TuckerInteraction
     kwargs = dict(
-        embedding_dim=InteractionTests.dim,
+        embedding_dim=InteractionTestCase.dim,
     )
 
     def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
@@ -446,7 +446,7 @@ class TuckerTests(InteractionTests, unittest.TestCase):
         return (d * t[None, None, :]).sum()
 
 
-class RotatETests(InteractionTests, unittest.TestCase):
+class RotatETests(InteractionTestCase, unittest.TestCase):
     """Tests for RotatE interaction function."""
 
     cls = pykeen.nn.modules.RotatEInteraction
@@ -467,7 +467,7 @@ class RotatETests(InteractionTests, unittest.TestCase):
         return -(d.abs() ** 2).sum(dim=-1).sqrt()
 
 
-class TranslationalInteractionTests(InteractionTests):
+class TranslationalInteractionTests(InteractionTestCase):
     """Common tests for translational interaction."""
 
     kwargs = dict(
@@ -596,7 +596,7 @@ class UMTests(TranslationalInteractionTests, unittest.TestCase):
         return -(h - t).pow(p).sum()
 
 
-class SimplEInteractionTests(InteractionTests, unittest.TestCase):
+class SimplEInteractionTests(InteractionTestCase, unittest.TestCase):
     """Tests for SimplE interaction function."""
 
     cls = pykeen.nn.modules.SimplEInteraction
@@ -607,11 +607,11 @@ class SimplEInteractionTests(InteractionTests, unittest.TestCase):
         return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
 
 
-class InteractionTestsTest(ptb.TestsTest[Interaction], unittest.TestCase):
+class InteractionTestsTestCase(ptb.TestsTestCase[Interaction]):
     """Test for tests for all interaction functions."""
 
     base_cls = Interaction
-    base_test = InteractionTests
+    base_test = InteractionTestCase
     skip_cls = {
         TranslationalInteraction,
         LiteralInteraction,

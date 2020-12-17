@@ -8,6 +8,7 @@ representations are provided in shape (batch_size, num_heads, 1, 1, ``*``), (bat
 and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 (batch_size, num_heads, num_relations, num_tails).
 """
+
 import dataclasses
 from typing import Optional, Tuple, Union
 
@@ -73,7 +74,12 @@ class SizeInformation:
     @property
     def same(self) -> bool:
         """Whether all representations have the same shape."""
-        return self.bh == self.br and self.bh == self.bt and self.nh == self.nr and self.nh == self.nt
+        return (
+            self.bh == self.br
+            and self.bh == self.bt
+            and self.nh == self.nr
+            and self.nh == self.nt
+        )
 
 
 def _extract_size_information(
