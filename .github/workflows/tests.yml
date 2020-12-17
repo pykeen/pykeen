@@ -29,9 +29,6 @@ jobs:
       - name: Check code quality with flake8
         run: tox -e flake8
 
-      - name: Check typing with MyPy
-        run: tox -e mypy
-
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
 
