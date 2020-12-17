@@ -4,8 +4,9 @@
 Functional forms of interaction methods.
 
 The functional forms always assume the general form of the interaction function, where head, relation and tail
-representations are provided in shape (batch_size, num_heads, ``*``), (batch_size, num_relations, ``*``), and
-(batch_size, num_tails, ``*``), and return a score tensor of shape (batch_size, num_heads, num_relations, num_tails).
+representations are provided in shape (batch_size, num_heads, 1, 1, ``*``), (batch_size, 1, num_relations, 1, ``*``),
+and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
+(batch_size, num_heads, num_relations, num_tails).
 """
 import dataclasses
 from typing import Optional, Tuple, Union
