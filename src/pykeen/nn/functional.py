@@ -346,7 +346,7 @@ def ermlp_interaction(
     # same shape
     if sizes.same:
         return final(activation(
-            hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1])))
+            hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
         ).view(sizes.bh, sizes.nh, sizes.nr, sizes.nt)
 
     hidden_dim = hidden.weight.shape[0]

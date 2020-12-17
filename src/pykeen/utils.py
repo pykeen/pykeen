@@ -25,7 +25,7 @@ import torch.nn.modules.batchnorm
 from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, RandomHint, TorchRandomHint
+from .typing import DeviceHint, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -69,7 +69,6 @@ __all__ = [
     'NoRandomSeedNecessary',
     'Result',
     'fix_dataclass_init_docs',
-    'ensure_random_state',
     'get_benchmark',
 ]
 
@@ -423,18 +422,6 @@ def random_non_negative_int() -> int:
     """Generate a random positive integer."""
     sq = np.random.SeedSequence(np.random.randint(0, np.iinfo(np.int_).max))
     return int(sq.generate_state(1)[0])
-
-
-def ensure_random_state(random_state: RandomHint) -> np.random.RandomState:
-    """Prepare a random state."""
-    if random_state is None:
-        random_state = random_non_negative_int()
-        logger.warning(f'using automatically assigned random_state={random_state}')
-    if isinstance(random_state, int):
-        random_state = np.random.RandomState(random_state)
-    if not isinstance(random_state, np.random.RandomState):
-        raise TypeError
-    return random_state
 
 
 def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
