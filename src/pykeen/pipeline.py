@@ -962,10 +962,7 @@ def pipeline(  # noqa: C901
         )
 
     evaluator = get_evaluator_cls(evaluator)
-    # TODO @mehdi is setting the automatic memory optimization as an attribute
-    #  of the class appropriate, since it doesn't cause any state to be stored?
-    #  I think it might be better to have this as an argument to the
-    #  Evaluator.evaluate() function instead
+
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
