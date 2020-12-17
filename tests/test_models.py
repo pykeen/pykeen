@@ -1060,7 +1060,7 @@ class MessageWeightingTests(unittest.TestCase):
 
 
 class TestModelUtilities(unittest.TestCase):
-    """Extra tests for utilit functions."""
+    """Extra tests for utility functions."""
 
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
