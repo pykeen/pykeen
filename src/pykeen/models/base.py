@@ -216,14 +216,14 @@ class Model(nn.Module, ABC):
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
-    loss: ClassVar[Loss]
+    loss: Loss
 
     #: The default regularizer class
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
-    regularizer: ClassVar[Regularizer]
+    regularizer: Regularizer
 
     def __init__(
         self,
@@ -271,7 +271,8 @@ class Model(nn.Module, ABC):
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(self.loss, MarginRankingLoss)
+        self.is_mr_loss: bool = isinstance(self.loss, MarginRankingLoss)
+        self.is_nssa_loss: bool = isinstance(self.loss, NSSALoss)
 
         # Regularizer
         if regularizer is None:
@@ -280,8 +281,6 @@ class Model(nn.Module, ABC):
                 **(self.regularizer_default_kwargs or {}),
             )
         self.regularizer = regularizer
-
-        self.is_nssa_loss = isinstance(self.loss, NSSALoss)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
