@@ -16,7 +16,6 @@ __all__ = [
     'Normalizer',
     'Constrainer',
     'DeviceHint',
-    'RandomHint',
     'TorchRandomHint',
     'HeadRepresentation',
     'RelationRepresentation',
@@ -37,7 +36,6 @@ Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
-RandomHint = Union[None, int, np.random.RandomState]
 TorchRandomHint = Union[None, int, torch.Generator]
 
 Representation = torch.FloatTensor
