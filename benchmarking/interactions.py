@@ -9,10 +9,7 @@ from torch.utils.benchmark import Timer
 from tqdm import tqdm
 
 from pykeen.nn import Interaction
-from pykeen.nn.functional import (
-    _complex_interaction_complex_native, _complex_interaction_direct,
-    _complex_interaction_optimized_broadcasted, _complex_select, _complex_stacked, _complex_stacked_select,
-)
+from pykeen.nn.compute_kernel import _complex_native_complex, _complex_direct, _complex_broadcast_optimized, _complex_select, _complex_stacked, _complex_stacked_select
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from pykeen.utils import unpack_singletons
 from pykeen.version import get_git_hash
@@ -133,9 +130,9 @@ def main(
     print(f"Running on {device}.")
     variants = [
         _complex_select,
-        _complex_interaction_complex_native,
-        _complex_interaction_optimized_broadcasted,
-        _complex_interaction_direct,
+        _complex_native_complex,
+        _complex_broadcast_optimized,
+        _complex_direct,
         _complex_stacked,
         _complex_stacked_select,
     ]
