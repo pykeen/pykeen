@@ -8,7 +8,6 @@ representations are provided in shape (batch_size, num_heads, ``*``), (batch_siz
 (batch_size, num_tails, ``*``), and return a score tensor of shape (batch_size, num_heads, num_relations, num_tails).
 """
 import dataclasses
-from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy
@@ -68,6 +67,11 @@ class SizeInformation:
 
     #: The number of tail representations per batch
     nt: int
+
+    @property
+    def same(self) -> bool:
+        """Whether all representations have the same shape."""
+        return self.bh == self.br and self.bh == self.bt and self.nh == self.nr and self.nh == self.nt
 
 
 def _extract_size_information(
@@ -373,9 +377,6 @@ def convkb_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # bind sizes
-    num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
-
     # decompose convolution for faster computation in 1-n case
     num_filters = conv.weight.shape[0]
     assert conv.weight.shape == (num_filters, 1, 1, 3)
@@ -408,7 +409,7 @@ def convkb_interaction(
     x = hidden_dropout(x)
 
     # Linear layer for final scores; use flattened representations, shape: (b, h, r, t, d * f)
-    x = x.view(*x.shape[:-2], embedding_dim * num_filters)
+    x = x.view(*x.shape[:-2], -1)
     x = linear(x)
     return x.squeeze(dim=-1)
 
@@ -461,14 +462,21 @@ def ermlp_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    num_heads, num_relations, num_tails, embedding_dim, _ = _extract_sizes(h, r, t)
+    sizes = _extract_size_information(h, r, t)
+
+    # same shape
+    if sizes.same:
+        return final(activation(
+            hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1])))
+        ).view(sizes.bh, sizes.nh, sizes.nr, sizes.nt)
+
     hidden_dim = hidden.weight.shape[0]
     # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(embedding_dim)
+    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(h.shape[-1])
     bias = hidden.bias.view(1, 1, 1, 1, -1)
-    h = h @ head_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
-    r = r @ rel_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
-    t = t @ tail_to_hidden.view(1, 1, 1, embedding_dim, hidden_dim)
+    h = h @ head_to_hidden.view(1, 1, 1, h.shape[-1], hidden_dim)
+    r = r @ rel_to_hidden.view(1, 1, 1, r.shape[-1], hidden_dim)
+    t = t @ tail_to_hidden.view(1, 1, 1, t.shape[-1], hidden_dim)
     return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
 
 
