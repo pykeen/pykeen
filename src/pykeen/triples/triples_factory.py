@@ -418,7 +418,7 @@ class TriplesFactory:
         entity_to_id: Mapping[str, int],
         relation_to_id: Mapping[str, int],
     ) -> "TriplesFactory":
-        """Adds labeling to the TriplesFactory."""
+        """Add labeling to the TriplesFactory."""
         if self.entity_to_id is not None or self.relation_to_id is not None:
             raise ValueError("TriplesFactory already has a labeling.")
         return TriplesFactory(
