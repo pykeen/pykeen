@@ -170,7 +170,41 @@ class Labeling:
 
 
 @dataclasses.dataclass
-class TriplesFactory:
+class CoreTriplesFactory:
+    """Create instances from ID-based triples."""
+
+    def __init__(
+        self,
+        mapped_triples: MappedTriples,
+        num_entities: int,
+        num_relations: int,
+        create_inverse_triples: bool = False,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ):
+        """
+
+        :param mapped_triples: shape: (n, 3)
+            A three-column matrix where each row are the head identifier, relation identifier, then tail identifier.
+        :param num_entities:
+            The number of entities.
+        :param num_relations:
+            The number of relations.
+        :param create_inverse_triples:
+            Whether to create inverse triples.
+        :param metadata:
+            Arbitrary metadata to go with the graph
+        """
+        super().__init__()
+        self.mapped_triples = mapped_triples
+        self.num_entities = num_entities
+        self.num_relations = num_relations
+        self.create_inverse_triples = create_inverse_triples
+        if metadata is None:
+            metadata = dict()
+        self.metadata = metadata
+
+
+class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
 
     def __init__(
@@ -200,15 +234,15 @@ class TriplesFactory:
         :param metadata:
             Arbitrary metadata to go with the graph
         """
-        self.mapped_triples = mapped_triples
-        self.create_inverse_triples = create_inverse_triples
-        if metadata is None:
-            metadata = dict()
-        self.metadata = metadata
+        super().__init__(
+            mapped_triples=mapped_triples,
+            num_entities=_num_entities if entity_to_id else len(entity_to_id),
+            num_relations=_num_relations if relation_to_id else len(relation_to_id),
+            create_inverse_triples=create_inverse_triples,
+            metadata=metadata,
+        )
         self.entity_labeling = Labeling(label_to_id=entity_to_id)
-        self._num_entities = _num_entities
         self.relation_labeling = Labeling(label_to_id=relation_to_id)
-        self._num_relations = _num_relations
 
     @classmethod
     def from_labeled_triples(
@@ -406,9 +440,7 @@ class TriplesFactory:
         """
         return TriplesFactory(
             entity_to_id=self.entity_to_id,
-            _num_entities=self._num_entities,
             relation_to_id=self.relation_to_id,
-            _num_relations=self._num_relations,
             mapped_triples=mapped_triples,
             create_inverse_triples=self.create_inverse_triples,
             metadata={
@@ -444,7 +476,7 @@ class TriplesFactory:
     def entity_id_to_label(self) -> Mapping[int, str]:
         assert self.entity_labeling is not None
         return self.entity_labeling.id_to_label
-    
+
     @property
     def _vectorized_entity_mapper(self) -> Callable[..., np.ndarray]:
         assert self.entity_labeling is not None
