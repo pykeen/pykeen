@@ -146,65 +146,69 @@ def _ensure_ids(
 
 
 @dataclasses.dataclass
+class Labeling:
+    """A mapping between labels and IDs."""
+
+    #: The mapping from labels to IDs.
+    label_to_id: Optional[Mapping[str, int]]
+
+    #: The inverse mapping for label_to_id; initialized automatically
+    id_to_label: Optional[Mapping[int, str]] = None
+
+    #: A vectorized version of entity_label_to_id; initialized automatically
+    _vectorized_mapper: Optional[Callable[..., np.ndarray]] = None
+
+    #: A vectorized version of entity_id_to_label; initialized automatically
+    _vectorized_labeler: Optional[Callable[..., np.ndarray]] = None
+
+    def __post_init__(self):
+        """Precompute inverse mappings."""
+        if self.label_to_id is not None:
+            self.id_to_label = invert_mapping(mapping=self.label_to_id)
+            self._vectorized_mapper = np.vectorize(self.label_to_id.get)
+            self._vectorized_labeler = np.vectorize(self.id_to_label.get)
+
+
+@dataclasses.dataclass
 class TriplesFactory:
     """Create instances given the path to triples."""
 
-    #: A three-column matrix where each row are the head identifier,
-    #: relation identifier, then tail identifier
-    mapped_triples: MappedTriples
+    def __init__(
+        self,
+        mapped_triples: MappedTriples,
+        entity_to_id: Optional[EntityMapping] = None,
+        _num_entities: Optional[int] = None,
+        relation_to_id: Optional[RelationMapping] = None,
+        _num_relations: Optional[int] = None,
+        create_inverse_triples: bool = False,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ):
+        """
 
-    #: The mapping from entities' labels to their indices
-    entity_to_id: Optional[EntityMapping] = None
-
-    #: The number of entities, if not inferred from the mapping
-    _num_entities: Optional[int] = None
-
-    #: The mapping from relations' labels to their indices
-    relation_to_id: Optional[RelationMapping] = None
-
-    #: The number of relations, if not inferred from the mapping
-    _num_relations: Optional[int] = None
-
-    #: Whether to create inverse triples
-    create_inverse_triples: bool = False
-
-    #: Arbitrary metadata to go with the graph
-    metadata: Optional[Mapping[str, Any]] = None
-
-    # The following fields get generated automatically
-
-    #: The inverse mapping for entity_label_to_id; initialized automatically
-    entity_id_to_label: Optional[Mapping[int, str]] = None
-
-    #: The inverse mapping for relation_label_to_id; initialized automatically
-    relation_id_to_label: Optional[Mapping[int, str]] = None
-
-    #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_entity_mapper: Optional[Callable[..., np.ndarray]] = None
-
-    #: A vectorized version of relation_label_to_id; initialized automatically
-    _vectorized_relation_mapper: Optional[Callable[..., np.ndarray]] = None
-
-    #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_entity_labeler: Optional[Callable[..., np.ndarray]] = None
-
-    #: A vectorized version of relation_id_to_label; initialized automatically
-    _vectorized_relation_labeler: Optional[Callable[..., np.ndarray]] = None
-
-    def __post_init__(self):
-        """Pre-compute derived mappings."""
-        if self.entity_to_id is not None:
-            self.entity_id_to_label = invert_mapping(mapping=self.entity_to_id)
-            self._vectorized_entity_mapper = np.vectorize(self.entity_to_id.get)
-            self._vectorized_entity_labeler = np.vectorize(self.entity_id_to_label.get)
-
-        if self.relation_to_id is not None:
-            self.relation_id_to_label = invert_mapping(mapping=self.relation_to_id)
-            self._vectorized_relation_mapper = np.vectorize(self.relation_to_id.get)
-            self._vectorized_relation_labeler = np.vectorize(self.relation_id_to_label.get)
-
-        if self.metadata is None:
-            self.metadata = {}
+        :param mapped_triples: shape: (n, 3)
+            A three-column matrix where each row are the head identifier, relation identifier, then tail identifier.
+        :param entity_to_id:
+            The mapping from entities' labels to their indices.
+        :param _num_entities:
+            The number of entities, if not inferred from the mapping.
+        :param relation_to_id:
+            The mapping from relations' labels to their indices.
+        :param _num_relations:
+            The number of relations, if not inferred from the mapping.
+        :param create_inverse_triples:
+            Whether to create inverse triples.
+        :param metadata:
+            Arbitrary metadata to go with the graph
+        """
+        self.mapped_triples = mapped_triples
+        self.create_inverse_triples = create_inverse_triples
+        if metadata is None:
+            metadata = dict()
+        self.metadata = metadata
+        self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        self._num_entities = _num_entities
+        self.relation_labeling = Labeling(label_to_id=relation_to_id)
+        self._num_relations = _num_relations
 
     @classmethod
     def from_labeled_triples(
@@ -432,9 +436,48 @@ class TriplesFactory:
         )
 
     @property
+    def entity_to_id(self) -> Mapping[str, int]:
+        assert self.entity_labeling is not None
+        return self.entity_labeling.label_to_id
+
+    @property
+    def entity_id_to_label(self) -> Mapping[int, str]:
+        assert self.entity_labeling is not None
+        return self.entity_labeling.id_to_label
+    
+    @property
+    def _vectorized_entity_mapper(self) -> Callable[..., np.ndarray]:
+        assert self.entity_labeling is not None
+        return self.entity_labeling._vectorized_mapper
+
+    @property
+    def _vectorized_entity_labeler(self) -> Callable[..., np.ndarray]:
+        assert self.entity_labeling is not None
+        return self.entity_labeling._vectorized_labeler
+
+    @property
+    def relation_to_id(self) -> Mapping[str, int]:
+        return self.relation_labeling.label_to_id
+
+    @property
+    def relation_id_to_label(self) -> Mapping[int, str]:
+        assert self.relation_labeling is not None
+        return self.relation_labeling.id_to_label
+
+    @property
+    def _vectorized_relation_mapper(self) -> Callable[..., np.ndarray]:
+        assert self.relation_labeling is not None
+        return self.relation_labeling._vectorized_mapper
+
+    @property
+    def _vectorized_relation_labeler(self) -> Callable[..., np.ndarray]:
+        assert self.relation_labeling is not None
+        return self.relation_labeling._vectorized_labeler
+
+    @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
-        if self.entity_to_id is None:
+        if self.entity_labeling is None:
             assert self._num_entities is not None
             return self._num_entities
         return len(self.entity_to_id)
