@@ -10,7 +10,7 @@ import logging
 import click
 
 from .base import SingleTabbedDataset
-from ..typing import RandomHint
+from ..typing import TorchRandomHint
 
 __all__ = [
     'Hetionet',
@@ -40,7 +40,7 @@ class Hetionet(SingleTabbedDataset):
         self,
         create_inverse_triples: bool = False,
         eager: bool = False,
-        random_state: RandomHint = 0,
+        random_state: TorchRandomHint = 0,
     ):
         super().__init__(
             url=URL,

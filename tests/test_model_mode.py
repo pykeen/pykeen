@@ -21,7 +21,7 @@ class TestBaseModel(unittest.TestCase):
     batch_size: int
     embedding_dim: int
     factory: TriplesFactory
-    model: EntityRelationEmbeddingModel
+    model: Model
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""

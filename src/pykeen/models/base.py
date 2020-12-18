@@ -20,7 +20,7 @@ from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, get_batchnorm_modules, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -30,13 +30,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-UNSUPPORTED_FOR_SUBBATCHING = (  # must be a tuple
-    nn.BatchNorm1d,
-    nn.BatchNorm2d,
-    nn.BatchNorm3d,
-    nn.SyncBatchNorm,
-)
 
 
 def _extend_batch(
@@ -102,7 +95,7 @@ def get_novelty_mask(
     """
     other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
     other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
-    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)
+    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
     known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
 
@@ -202,7 +195,8 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
         _original_init(self, *args, **kwargs)
         self.reset_parameters_()
 
-    cls.__init__ = _new_init
+    # sorry mypy, but this kind of evil must be permitted.
+    cls.__init__ = _new_init  # type: ignore
 
 
 class Model(nn.Module, ABC):
@@ -211,14 +205,19 @@ class Model(nn.Module, ABC):
     #: A dictionary of hyper-parameters to the models that use them
     _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
+    #: Keep track of if this is a base model
+    _is_base_model: ClassVar[bool]
+
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
+
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
     loss: Loss
+
     #: The default regularizer class
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
     #: The default parameters for the default regularizer class
@@ -267,12 +266,13 @@ class Model(nn.Module, ABC):
 
         # Loss
         if loss is None:
-            self.loss = self.loss_default(**self.loss_default_kwargs)
+            self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
         else:
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss = isinstance(self.loss, MarginRankingLoss)
+        self.is_mr_loss: bool = isinstance(self.loss, MarginRankingLoss)
+        self.is_nssa_loss: bool = isinstance(self.loss, NSSALoss)
 
         # Regularizer
         if regularizer is None:
@@ -281,8 +281,6 @@ class Model(nn.Module, ABC):
                 **(self.regularizer_default_kwargs or {}),
             )
         self.regularizer = regularizer
-
-        self.is_nssa_loss = isinstance(self.loss, NSSALoss)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
@@ -293,15 +291,11 @@ class Model(nn.Module, ABC):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    @classmethod
-    def _is_abstract(cls) -> bool:
-        return inspect.isabstract(cls)
-
-    def __init_subclass__(cls, reset_parameters_post_init: bool = True, **kwargs):  # noqa:D105
-        if not cls._is_abstract():
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        cls._is_base_model = not autoreset
+        if not cls._is_base_model:
             _track_hyperparameters(cls)
-            if reset_parameters_post_init:
-                _add_post_reset_parameters(cls)
+            _add_post_reset_parameters(cls)
 
     @property
     def can_slice_h(self) -> bool:
@@ -321,16 +315,7 @@ class Model(nn.Module, ABC):
     @property
     def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
         """Return all modules not supporting sub-batching."""
-        return [
-            module
-            for module in self.modules()
-            if isinstance(module, UNSUPPORTED_FOR_SUBBATCHING)
-        ]
-
-    @property
-    def supports_subbatching(self) -> bool:  # noqa: D400, D401
-        """Does this model support sub-batching?"""
-        return len(self.modules_not_supporting_sub_batching) == 0
+        return get_batchnorm_modules(module=self)
 
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
@@ -413,6 +398,15 @@ class Model(nn.Module, ABC):
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
+
+        .. note::
+
+            We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
+            default behavior when the model has been trained with inverse relations
+            (mainly because of the behavior of the LCWA training approach). This is why
+            the :func:`predict_scores_all_heads()` has different behavior depending on
+            if inverse triples were used in training, and why this function has the same
+            behavior regardless of the use of inverse triples.
         """
         # Enforce evaluation mode
         self.eval()
@@ -572,6 +566,12 @@ class Model(nn.Module, ABC):
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
 
+        .. note::
+
+            If the model has been trained with inverse relations, the task of predicting
+            the head entities becomes the task of predicting the tail entities of the
+            inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
+
         Additionally, the model is set to evaluation mode.
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
@@ -585,41 +585,12 @@ class Model(nn.Module, ABC):
         # Enforce evaluation mode
         self.eval()
 
-        '''
-        In case the model was trained using inverse triples, the scoring of all heads is not handled by calculating
-        the scores for all heads based on a (relation, tail) pair, but instead all possible tails are calculated
-        for a (tail, inverse_relation) pair.
-        '''
-        if not self.triples_factory.create_inverse_triples:
-            if slice_size is None:
-                scores = self.score_h(rt_batch)
-            else:
-                scores = self.score_h(rt_batch, slice_size=slice_size)
-            if self.predict_with_sigmoid:
-                scores = torch.sigmoid(scores)
-            return scores
-
-        '''
-        The PyKEEN package handles _inverse relations_ by adding the number of relations to the indices of the
-        _native relation_.
-        Example:
-        The triples/knowledge graph used to train the model contained 100 relations. Due to using inverse relations,
-        the model now has an additional 100 inverse relations. If the _native relation_ has the index 3, the index
-        of the _inverse relation_ is 4 (id of relation + 1).
-        '''
-        rt_batch_cloned = rt_batch.clone()
-        rt_batch_cloned.to(device=rt_batch.device)
-
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        rt_batch_cloned[:, 0] = rt_batch_cloned[:, 0] + 1
-
-        # The score_t function requires (entity, relation) pairs instead of (relation, entity) pairs
-        rt_batch_cloned = rt_batch_cloned.flip(1)
-        if slice_size is None:
-            scores = self.score_t(rt_batch_cloned)
+        if self.triples_factory.create_inverse_triples:
+            scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
+        elif slice_size is None:
+            scores = self.score_h(rt_batch)
         else:
-            scores = self.score_t(rt_batch_cloned, slice_size=slice_size)
+            scores = self.score_h(rt_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -912,6 +883,21 @@ class Model(nn.Module, ABC):
             )
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
+    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+        if not self.triples_factory.create_inverse_triples:
+            raise ValueError(
+                "Your model is not configured to predict with inverse relations."
+                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
+                " or using the pipeline().",
+            )
+        batch_cloned = batch.clone()
+
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
+
+        return batch_cloned.flip(1)
+
     @abstractmethod
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
@@ -926,6 +912,19 @@ class Model(nn.Module, ABC):
             The score for each triple.
         """
         raise NotImplementedError
+
+    def score_hrt_inverse(
+        self,
+        hrt_batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
+
+        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
+        The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
+        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
+        """
+        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
+        return self.score_hrt(hrt_batch=t_r_inv_h)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
@@ -950,6 +949,16 @@ class Model(nn.Module, ABC):
         scores = expanded_scores.view(hr_batch.shape[0], -1)
         return scores
 
+    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
+        # TODO UNUSED
+        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
+
+        if slice_size is None:
+            return self.score_h(rt_batch=r_inv_h)
+        else:
+            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -972,6 +981,15 @@ class Model(nn.Module, ABC):
         # Reshape the scores to match the pre-defined output shape of the score_h function.
         scores = expanded_scores.view(rt_batch.shape[0], -1)
         return scores
+
+    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
+        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
+
+        if slice_size is None:
+            return self.score_t(hr_batch=t_r_inv)
+        else:
+            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
@@ -1023,7 +1041,7 @@ class Model(nn.Module, ABC):
         self.load_state_dict(torch.load(path, map_location=self.device))
 
 
-class EntityEmbeddingModel(Model):
+class EntityEmbeddingModel(Model, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
     def __init__(
@@ -1084,7 +1102,7 @@ class EntityEmbeddingModel(Model):
         self.entity_embeddings.post_parameter_update()
 
 
-class EntityRelationEmbeddingModel(Model):
+class EntityRelationEmbeddingModel(Model, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -1180,5 +1198,17 @@ def _can_slice(fn) -> bool:
     return 'slice_size' in inspect.getfullargspec(fn).args
 
 
-class MultimodalModel(Model):
+class MultimodalModel(Model, autoreset=False):
     """A multimodal KGE model."""
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
+
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

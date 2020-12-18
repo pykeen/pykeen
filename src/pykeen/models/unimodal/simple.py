@@ -2,7 +2,7 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional, Tuple, Union
+from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch.autograd
 
@@ -45,19 +45,19 @@ class SimplE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.
-    regularizer_default = PowerSumRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=20,
         p=2.0,
         normalize=True,

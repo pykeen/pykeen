@@ -103,12 +103,6 @@ CLI_OPTIONS = {
         default='distmult',
         show_default=True,
     ),
-    'automatic_memory_optimization': click.option(
-        '--automatic-memory-optimization',
-        type=bool,
-        default=True,
-        show_default=True,
-    ),
 }
 
 device_option = click.option(

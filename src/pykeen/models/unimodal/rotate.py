@@ -2,16 +2,15 @@
 
 """Implementation of the RotatE model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
-import numpy as np
 import torch
 import torch.autograd
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn.init import xavier_uniform_
+from ...nn.init import init_phases, xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -19,12 +18,6 @@ from ...typing import DeviceHint
 __all__ = [
     'RotatE',
 ]
-
-
-def init_phases(x: torch.Tensor) -> torch.Tensor:
-    r"""Generate random phases between 0 and :math:`2\pi`."""
-    phases = 2 * np.pi * torch.rand_like(x[..., :x.shape[-1] // 2])
-    return torch.cat([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
 
 
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
@@ -77,7 +70,7 @@ class RotatE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=dict(type=int, low=32, high=1024, q=16),
     )
 

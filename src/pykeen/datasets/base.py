@@ -20,7 +20,7 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
-from ..typing import RandomHint
+from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
 __all__ = [
@@ -520,7 +520,7 @@ class TarFileSingleDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: RandomHint = None,
+        random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
     ):
         """Initialize dataset.
@@ -596,7 +596,7 @@ class TabbedDataset(LazyDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        random_state: RandomHint = None,
+        random_state: TorchRandomHint = None,
     ):
         """Initialize dataset.
 
@@ -654,7 +654,7 @@ class SingleTabbedDataset(TabbedDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        random_state: RandomHint = None,
+        random_state: TorchRandomHint = None,
         read_csv_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
