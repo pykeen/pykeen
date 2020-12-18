@@ -154,13 +154,13 @@ class TriplesFactory:
     mapped_triples: MappedTriples
 
     #: The mapping from entities' labels to their indices
-    entity_to_id: EntityMapping = None
+    entity_to_id: Optional[EntityMapping] = None
 
     #: The number of entities, if not inferred from the mapping
     _num_entities: Optional[int] = None
 
     #: The mapping from relations' labels to their indices
-    relation_to_id: RelationMapping = None
+    relation_to_id: Optional[RelationMapping] = None
 
     #: The number of relations, if not inferred from the mapping
     _num_relations: Optional[int] = None
@@ -169,7 +169,7 @@ class TriplesFactory:
     create_inverse_triples: bool = False
 
     #: Arbitrary metadata to go with the graph
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Mapping[str, Any]] = None
 
     # The following fields get generated automatically
 
@@ -434,7 +434,10 @@ class TriplesFactory:
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
-        return self._num_entities or len(self.entity_to_id)
+        if self.entity_to_id is None:
+            assert self._num_entities is not None
+            return self._num_entities
+        return len(self.entity_to_id)
 
     @property
     def num_relations(self) -> int:  # noqa: D401
@@ -446,7 +449,10 @@ class TriplesFactory:
     @property
     def real_num_relations(self) -> int:  # noqa: D401
         """The number of relations without inverse relations."""
-        return self._num_relations or len(self.relation_to_id)
+        if self.relation_to_id is None:
+            assert self._num_relations is not None
+            return self._num_relations
+        return len(self.relation_to_id)
 
     @property
     def num_triples(self) -> int:  # noqa: D401
@@ -534,6 +540,8 @@ class TriplesFactory:
             The same triples, but labeled.
         """
         self._requires_labels()
+        assert self._vectorized_entity_labeler is not None
+        assert self._vectorized_relation_labeler is not None
         if len(triples) == 0:
             return np.empty(shape=(0, 3), dtype=str)
         if unknown_relation_label is None:
@@ -624,6 +632,8 @@ class TriplesFactory:
 
     def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
         """Normalize entities to IDs."""
+        self._requires_labels()
+        assert self.entity_to_id is not None
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_to_id)
 
     def get_mask_for_entities(
@@ -646,6 +656,8 @@ class TriplesFactory:
         relations: Union[Collection[int], Collection[str]],
     ) -> Collection[int]:
         """Normalize relations to IDs."""
+        self._requires_labels()
+        assert self.relation_to_id is not None
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_to_id)
 
     def get_mask_for_relations(
@@ -674,6 +686,7 @@ class TriplesFactory:
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         self._requires_labels()
+        assert self.entity_id_to_label is not None
         return self._word_cloud(ids=self.mapped_triples[:, [0, 2]], id_to_label=self.entity_id_to_label, top=top or 100)
 
     def relation_word_cloud(self, top: Optional[int] = None):
@@ -688,6 +701,7 @@ class TriplesFactory:
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         self._requires_labels()
+        assert self.relation_id_to_label is not None
         return self._word_cloud(ids=self.mapped_triples[:, 1], id_to_label=self.relation_id_to_label, top=top or 100)
 
     def _word_cloud(self, *, ids: torch.LongTensor, id_to_label: Mapping[int, str], top: int):
@@ -749,6 +763,7 @@ class TriplesFactory:
             relation=self._vectorized_relation_labeler,
             tail=self._vectorized_entity_labeler,
         ).items():
+            assert id_to_label is not None
             data[f'{column}_label'] = id_to_label(data[f'{column}_id'])
 
         # Additional columns
