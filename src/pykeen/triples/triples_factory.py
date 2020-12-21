@@ -287,8 +287,8 @@ class CoreTriplesFactory:
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
         """Get the IDs of the n most frequent relations.
 
-        :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
-         to keep
+        :param n:
+            Either the (integer) number of top relations to keep or the (float) percentage of top relationships to keep.
         """
         logger.info(f'applying cutoff of {n} to {self}')
         if isinstance(n, float):
