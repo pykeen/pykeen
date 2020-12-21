@@ -166,14 +166,18 @@ class NormedL2RegularizerTest(_LpRegularizerTest, unittest.TestCase):
     def test_expected_norm(self):
         """Numerically check expected norm."""
         n = 100
-        for p in (1, 2):
-            for d in (2, 4, 8, 16):
+        for p in (1, 2, 3):
+            for d in (2, 8, 64):
                 e_norm = _get_expected_norm(p=p, d=d)
                 norm = torch.randn(n, d).norm(p=p, dim=-1).numpy()
                 norm_mean = norm.mean()
                 norm_std = norm.std()
                 # check if within 0.5 std of observed
                 assert (abs(norm_mean - e_norm) / norm_std) < 0.5
+
+        # test error is raised
+        with pytest.raises(NotImplementedError):
+            _get_expected_norm(p=float('inf'), d=d)
 
 
 class CombinedRegularizerTest(_RegularizerTestCase, unittest.TestCase):
