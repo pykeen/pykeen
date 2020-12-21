@@ -9,7 +9,6 @@ from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type,
 import torch
 from torch import nn
 from torch.nn import functional
-import scipy.stats
 
 from .utils import get_cls, normalize_string
 
