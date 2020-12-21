@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Regularization in PyKEEN."""
-
+import math
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
 
@@ -103,6 +103,36 @@ class NoRegularizer(Regularizer):
         return torch.zeros(1, dtype=x.dtype, device=x.device)
 
 
+def _get_expected_norm(
+    p: Union[int, float, str],
+    d: int,
+) -> float:
+    r"""
+    Compute the expected value of the L_p norm.
+
+    .. math ::
+        E[\|x\|_p] = d^{-1/p} E[|x_1|^p]^{1/p}
+
+    under the assumption that :math:`x_i \sim N(0, 1)`.
+
+    :param p:
+        The parameter p of the norm.
+    :param d:
+        The dimension of the vector.
+
+    :return:
+        The expected value.
+    """
+    if isinstance(p, str) or not math.isfinite(p):
+        raise NotImplementedError(f"{p} norm not implemented")
+    # https://en.wikipedia.org/wiki/Half-normal_distribution
+    # cf. https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
+    # we have E[|x|_p] = E[|x|^p]^(1/p) * d^(1/p)
+    # assuming x ~ N(0, 1), E[|x|^p] = 2^(p/2) * Gamma(p/2 + 1/2) / sqrt(pi)
+    exp_abs_norm_p = math.pow(2, p / 2) * math.gamma(p / 2 + 1 / 2) / math.sqrt(math.pi)
+    return math.pow(exp_abs_norm_p * d, 1 / p)
+
+
 class LpRegularizer(Regularizer):
     """A simple L_p norm based regularizer."""
 
@@ -136,15 +166,7 @@ class LpRegularizer(Regularizer):
         value = x.norm(p=self.p, dim=self.dim).mean()
         if not self.normalize:
             return value
-        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-        if self.p == 1:
-            # expected value of |x|_1 = d*E[x_i] for x_i i.i.d.
-            return value / dim
-        if self.p == 2:
-            # expected value of |x|_2 when x_i are normally distributed
-            # cf. https://arxiv.org/pdf/1012.0621.pdf chapter 3.1
-            return value / dim.sqrt()
-        raise NotImplementedError(f'Lp regularization not implemented for p={self.p}')
+        return value / _get_expected_norm(p=self.p, d=x.shape[-1])
 
 
 class PowerSumRegularizer(Regularizer):

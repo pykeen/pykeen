@@ -6,6 +6,8 @@ import logging
 import unittest
 from typing import Any, ClassVar, Dict, Optional, Type
 
+import pytest
+import scipy.stats
 import torch
 from torch.nn import functional
 
@@ -13,7 +15,7 @@ from pykeen.datasets import Nations
 from pykeen.models import ConvKB, RESCAL, TransH
 from pykeen.regularizers import (
     CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer,
-    TransHRegularizer,
+    TransHRegularizer, _get_expected_norm,
 )
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
@@ -160,6 +162,18 @@ class NormedL2RegularizerTest(_LpRegularizerTest, unittest.TestCase):
     """Test an L_2 normed regularizer."""
 
     regularizer_kwargs = {'normalize': True, 'p': 2}
+
+    @pytest.mark.slow
+    def test_expected_norm(self):
+        n = 100
+        for p in (1, 2):
+            for d in (2, 4, 8, 16):
+                e_norm = _get_expected_norm(p=p, d=d)
+                norm = torch.randn(n, d).norm(p=p, dim=-1).numpy()
+                norm_mean = norm.mean()
+                norm_std = norm.std()
+                # check if within 0.5 std of observed
+                assert (abs(norm_mean - e_norm) / norm_std) < 0.5
 
 
 class CombinedRegularizerTest(_RegularizerTestCase, unittest.TestCase):
