@@ -164,6 +164,7 @@ class NormedL2RegularizerTest(_LpRegularizerTest, unittest.TestCase):
 
     @pytest.mark.slow
     def test_expected_norm(self):
+        """Numerically check expected norm."""
         n = 100
         for p in (1, 2):
             for d in (2, 4, 8, 16):
