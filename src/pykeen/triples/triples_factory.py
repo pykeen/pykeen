@@ -197,6 +197,7 @@ class CoreTriplesFactory:
         metadata: Optional[Mapping[str, Any]] = None,
     ):
         """
+        Create the triples factory.
 
         :param mapped_triples: shape: (n, 3)
             A three-column matrix where each row are the head identifier, relation identifier, then tail identifier.
@@ -233,6 +234,7 @@ class TriplesFactory(CoreTriplesFactory):
         metadata: Optional[Mapping[str, Any]] = None,
     ):
         """
+        Create the triples factory.
 
         :param mapped_triples: shape: (n, 3)
             A three-column matrix where each row are the head identifier, relation identifier, then tail identifier.
