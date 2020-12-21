@@ -133,6 +133,7 @@ def _get_expected_norm(
         https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
     """
     if isinstance(p, str) or not math.isfinite(p):
+        # TODO: Use https://en.wikipedia.org/wiki/Gumbel_distribution for p = +inf
         raise NotImplementedError(f"{p} norm not implemented")
     exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
     return math.pow(exp_abs_norm_p * d, 1 / p)
