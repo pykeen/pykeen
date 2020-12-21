@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Regularization in PyKEEN."""
+import functools
 import math
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
@@ -103,6 +104,7 @@ class NoRegularizer(Regularizer):
         return torch.zeros(1, dtype=x.dtype, device=x.device)
 
 
+@functools.lru_cache(maxsize=1)
 def _get_expected_norm(
     p: Union[int, float, str],
     d: int,
