@@ -212,12 +212,94 @@ class CoreTriplesFactory:
         """
         super().__init__()
         self.mapped_triples = mapped_triples
-        self.num_entities = num_entities
-        self.num_relations = num_relations
+        self._num_entities = num_entities
+        self._num_relations = num_relations
         self.create_inverse_triples = create_inverse_triples
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
+
+    @property
+    def num_entities(self) -> int:  # noqa: D401
+        """The number of unique entities."""
+        return self.num_entities
+
+    @property
+    def num_relations(self) -> int:  # noqa: D401
+        """The number of unique relations."""
+        if self.create_inverse_triples:
+            return 2 * self.real_num_relations
+        return self.real_num_relations
+
+    @property
+    def real_num_relations(self) -> int:  # noqa: D401
+        """The number of relations without inverse relations."""
+        return self._num_relations
+
+    @property
+    def num_triples(self) -> int:  # noqa: D401
+        """The number of triples."""
+        return self.mapped_triples.shape[0]
+
+    def extra_repr(self) -> str:
+        """Extra representation string."""
+        d = [
+            ('num_entities', self.num_entities),
+            ('num_relations', self.num_relations),
+            ('num_triples', self.num_triples),
+            ('inverse_triples', self.create_inverse_triples),
+        ]
+        d.extend(sorted(self.metadata.items()))  # type: ignore
+        return ', '.join(
+            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            for k, v in d
+        )
+
+    def __repr__(self):  # noqa: D105
+        return f'{self.__class__.__name__}({self.extra_repr()})'
+
+    @staticmethod
+    def _get_inverse_relation_id(relation_id: Union[int, torch.LongTensor]) -> Union[int, torch.LongTensor]:
+        return relation_id + 1
+
+    def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
+        """Add inverse triples if they shall be created."""
+        if self.create_inverse_triples:
+            logger.info("Creating inverse triples.")
+            h, r, t = mapped_triples.t()
+            mapped_triples = torch.cat([
+                torch.stack([h, 2 * r, t], dim=-1),
+                torch.stack([t, self._get_inverse_relation_id(2 * r), h], dim=-1),
+            ])
+        return mapped_triples
+
+    def create_slcwa_instances(self) -> Instances:
+        """Create sLCWA instances for this factory's triples."""
+        return SLCWAInstances(mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples))
+
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
+        """Create LCWA instances for this factory's triples."""
+        return LCWAInstances.from_triples(
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
+            num_entities=self.num_entities,
+        )
+
+    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
+        """Get the IDs of the n most frequent relations.
+
+        :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
+         to keep
+        """
+        logger.info(f'applying cutoff of {n} to {self}')
+        if isinstance(n, float):
+            assert 0 < n < 1
+            n = int(self.num_relations * n)
+        elif not isinstance(n, int):
+            raise TypeError('n must be either an integer or a float')
+
+        uniq, counts = self.mapped_triples[:, 1].unique(return_counts=True)
+        top_counts, top_ids = counts.topk(k=n, largest=True)
+        return set(uniq[top_ids].tolist())
 
 
 class TriplesFactory(CoreTriplesFactory):
@@ -509,55 +591,10 @@ class TriplesFactory(CoreTriplesFactory):
         return self.relation_labeling.id_to_label
 
     @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of unique entities."""
-        if self.entity_labeling is None:
-            assert self._num_entities is not None
-            return self._num_entities
-        return len(self.entity_to_id)
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relations."""
-        if self.create_inverse_triples:
-            return 2 * self.real_num_relations
-        return self.real_num_relations
-
-    @property
-    def real_num_relations(self) -> int:  # noqa: D401
-        """The number of relations without inverse relations."""
-        if self.relation_to_id is None:
-            assert self._num_relations is not None
-            return self._num_relations
-        return len(self.relation_to_id)
-
-    @property
-    def num_triples(self) -> int:  # noqa: D401
-        """The number of triples."""
-        return self.mapped_triples.shape[0]
-
-    @property
     def triples(self) -> np.ndarray:  # noqa: D401
         """The labeled triples, a 3-column matrix where each row are the head label, relation label, then tail label."""
         logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
         return self.label_triples(self.mapped_triples)
-
-    def extra_repr(self) -> str:
-        """Extra representation string."""
-        d = [
-            ('num_entities', self.num_entities),
-            ('num_relations', self.num_relations),
-            ('num_triples', self.num_triples),
-            ('inverse_triples', self.create_inverse_triples),
-        ]
-        d.extend(sorted(self.metadata.items()))  # type: ignore
-        return ', '.join(
-            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
-            for k, v in d
-        )
-
-    def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}({self.extra_repr()})'
 
     def get_inverse_relation_id(self, relation: Union[str, int]) -> int:
         """Get the inverse relation identifier for the given relation."""
@@ -565,32 +602,6 @@ class TriplesFactory(CoreTriplesFactory):
             raise ValueError('Can not get inverse triple, they have not been created.')
         relation = next(iter(self.relations_to_ids(relations=[relation])))  # type: ignore
         return self._get_inverse_relation_id(relation)
-
-    @staticmethod
-    def _get_inverse_relation_id(relation_id: Union[int, torch.LongTensor]) -> Union[int, torch.LongTensor]:
-        return relation_id + 1
-
-    def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
-        """Add inverse triples if they shall be created."""
-        if self.create_inverse_triples:
-            logger.info("Creating inverse triples.")
-            h, r, t = mapped_triples.t()
-            mapped_triples = torch.cat([
-                torch.stack([h, 2 * r, t], dim=-1),
-                torch.stack([t, self._get_inverse_relation_id(2 * r), h], dim=-1),
-            ])
-        return mapped_triples
-
-    def create_slcwa_instances(self) -> Instances:
-        """Create sLCWA instances for this factory's triples."""
-        return SLCWAInstances(mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples))
-
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
-        """Create LCWA instances for this factory's triples."""
-        return LCWAInstances.from_triples(
-            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
-            num_entities=self.num_entities,
-        )
 
     def _requires_labels(self) -> None:
         """Raise an error if no label information is available."""
@@ -689,23 +700,6 @@ class TriplesFactory(CoreTriplesFactory):
                 method=method,
             )
         ]
-
-    def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
-        """Get the IDs of the n most frequent relations.
-
-        :param n: Either the (integer) number of top relations to keep or the (float) percentage of top relationships
-         to keep
-        """
-        logger.info(f'applying cutoff of {n} to {self}')
-        if isinstance(n, float):
-            assert 0 < n < 1
-            n = int(self.num_relations * n)
-        elif not isinstance(n, int):
-            raise TypeError('n must be either an integer or a float')
-
-        uniq, counts = self.mapped_triples[:, 1].unique(return_counts=True)
-        top_counts, top_ids = counts.topk(k=n, largest=True)
-        return set(uniq[top_ids].tolist())
 
     def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
         """Normalize entities to IDs."""
