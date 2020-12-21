@@ -7,7 +7,6 @@ import unittest
 from typing import Any, ClassVar, Dict, Optional, Type
 
 import pytest
-import scipy.stats
 import torch
 from torch.nn import functional
 
