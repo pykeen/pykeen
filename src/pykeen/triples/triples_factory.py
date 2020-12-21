@@ -260,7 +260,7 @@ class CoreTriplesFactory:
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
-        return self.num_entities
+        return self._num_entities
 
     @property
     def num_relations(self) -> int:  # noqa: D401
