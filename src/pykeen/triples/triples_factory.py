@@ -517,7 +517,7 @@ class CoreTriplesFactory:
         rv = pd.DataFrame(data=data)
 
         # Re-order columns
-        columns = list(TRIPLES_DF_COLUMNS[:3]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
+        columns = list(TRIPLES_DF_COLUMNS[::2]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
         return rv.loc[:, columns]
 
     def new_with_restriction(
@@ -929,7 +929,7 @@ class TriplesFactory(CoreTriplesFactory):
             )
 
         # Re-order columns
-        columns = old_col[:3] + list(TRIPLES_DF_COLUMNS[3:]) + old_col[3:]
+        columns = list(TRIPLES_DF_COLUMNS) + old_col[3:]
         return data.loc[:, columns]
 
     def new_with_restriction(
@@ -939,6 +939,8 @@ class TriplesFactory(CoreTriplesFactory):
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> 'TriplesFactory':  # noqa: D102
+        if entities is None and relations is None:
+            return self
         if entities is not None:
             entities = self.entities_to_ids(entities=entities)
         if relations is not None:
