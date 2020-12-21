@@ -125,11 +125,11 @@ def _get_expected_norm(
     """
     if isinstance(p, str) or not math.isfinite(p):
         raise NotImplementedError(f"{p} norm not implemented")
-    # https://en.wikipedia.org/wiki/Half-normal_distribution
     # cf. https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
     # we have E[|x|_p] = E[|x|^p]^(1/p) * d^(1/p)
-    # assuming x ~ N(0, 1), E[|x|^p] = 2^(p/2) * Gamma(p/2 + 1/2) / sqrt(pi)
-    exp_abs_norm_p = math.pow(2, p / 2) * math.gamma(p / 2 + 1 / 2) / math.sqrt(math.pi)
+    # cf. https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
+    # assuming x ~ N(0, 1), E[|x|^p] = 2^(p/2) * Gamma((p+1)/2) / sqrt(pi)
+    exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
     return math.pow(exp_abs_norm_p * d, 1 / p)
 
 
