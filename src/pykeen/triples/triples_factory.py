@@ -168,6 +168,21 @@ class Labeling:
             self._vectorized_mapper = np.vectorize(self.label_to_id.get)
             self._vectorized_labeler = np.vectorize(self.id_to_label.get)
 
+    def label(
+        self,
+        ids: Union[int, Sequence[int], np.ndarray, torch.LongTensor],
+        unknown_label: str = "unknown",
+    ) -> np.ndarray:
+        """Convert IDs to labels."""
+        # Normalize input
+        if torch.is_tensor(ids):
+            ids = ids.cpu().numpy()
+        if isinstance(ids, int):
+            ids = [ids]
+        ids = np.asanyarray(ids)
+        # label
+        return self._vectorized_labeler(ids, (unknown_label,))
+
 
 @dataclasses.dataclass
 class CoreTriplesFactory:
@@ -480,18 +495,6 @@ class TriplesFactory(CoreTriplesFactory):
         return self.entity_labeling.id_to_label
 
     @property
-    def _vectorized_entity_mapper(self) -> Callable[..., np.ndarray]:
-        """Return the vectorized mapping from entity labels to IDs."""
-        assert self.entity_labeling is not None
-        return self.entity_labeling._vectorized_mapper
-
-    @property
-    def _vectorized_entity_labeler(self) -> Callable[..., np.ndarray]:
-        """Return the vectorized mapping from entity IDs to labels."""
-        assert self.entity_labeling is not None
-        return self.entity_labeling._vectorized_labeler
-
-    @property
     def relation_to_id(self) -> Mapping[str, int]:
         """Return the mapping from relations labels to IDs."""
         assert self.relation_labeling is not None
@@ -502,18 +505,6 @@ class TriplesFactory(CoreTriplesFactory):
         """Return the mapping from relations IDs to labels."""
         assert self.relation_labeling is not None
         return self.relation_labeling.id_to_label
-
-    @property
-    def _vectorized_relation_mapper(self) -> Callable[..., np.ndarray]:
-        """Return the vectorized mapping from relations labels to IDs."""
-        assert self.relation_labeling is not None
-        return self.relation_labeling._vectorized_mapper
-
-    @property
-    def _vectorized_relation_labeler(self) -> Callable[..., np.ndarray]:
-        """Return the vectorized mapping from relations IDs to labels."""
-        assert self.relation_labeling is not None
-        return self.relation_labeling._vectorized_labeler
 
     @property
     def num_entities(self) -> int:  # noqa: D401
@@ -601,7 +592,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def _requires_labels(self) -> None:
         """Raise an error if no label information is available."""
-        if self.entity_id_to_label is None:
+        if self.entity_labeling is None or self.relation_labeling is None:
             raise ValueError("This triples factory does not contain any label information.")
 
     def label_triples(
@@ -624,19 +615,19 @@ class TriplesFactory(CoreTriplesFactory):
             The same triples, but labeled.
         """
         self._requires_labels()
-        assert self._vectorized_entity_labeler is not None
-        assert self._vectorized_relation_labeler is not None
+        assert self.entity_labeling is not None
+        assert self.relation_labeling is not None
         if len(triples) == 0:
             return np.empty(shape=(0, 3), dtype=str)
         if unknown_relation_label is None:
             unknown_relation_label = unknown_entity_label
         return np.stack([
-            labeler(column, unknown_label)
-            for (labeler, unknown_label), column in zip(
+            labeling.label(ids=column, unknown_label=unknown_label)
+            for (labeling, unknown_label), column in zip(
                 [
-                    (self._vectorized_entity_labeler, unknown_entity_label),
-                    (self._vectorized_relation_labeler, unknown_relation_label),
-                    (self._vectorized_entity_labeler, unknown_entity_label),
+                    (self.entity_labeling, unknown_entity_label),
+                    (self.relation_labeling, unknown_relation_label),
+                    (self.entity_labeling, unknown_entity_label),
                 ],
                 triples.t().numpy(),
             )
@@ -842,13 +833,16 @@ class TriplesFactory(CoreTriplesFactory):
         data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
 
         # vectorized label lookup
-        for column, id_to_label in dict(
-            head=self._vectorized_entity_labeler,
-            relation=self._vectorized_relation_labeler,
-            tail=self._vectorized_entity_labeler,
+        for column, labeling in dict(
+            head=self.entity_labeling,
+            relation=self.relation_labeling,
+            tail=self.entity_labeling,
         ).items():
-            assert id_to_label is not None
-            data[f'{column}_label'] = id_to_label(data[f'{column}_id'])
+            assert labeling is not None
+            data[f'{column}_label'] = labeling.label(
+                ids=data[f'{column}_id'],
+                unknown_label=("[unknown_" + column + "]").upper(),
+            )
 
         # Additional columns
         for key, values in kwargs.items():
