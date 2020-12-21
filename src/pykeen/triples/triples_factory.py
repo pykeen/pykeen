@@ -469,40 +469,49 @@ class TriplesFactory(CoreTriplesFactory):
 
     @property
     def entity_to_id(self) -> Mapping[str, int]:
+        """Return the mapping from entity labels to IDs."""
         assert self.entity_labeling is not None
         return self.entity_labeling.label_to_id
 
     @property
     def entity_id_to_label(self) -> Mapping[int, str]:
+        """Return the mapping from entity IDs to labels."""
         assert self.entity_labeling is not None
         return self.entity_labeling.id_to_label
 
     @property
     def _vectorized_entity_mapper(self) -> Callable[..., np.ndarray]:
+        """Return the vectorized mapping from entity labels to IDs."""
         assert self.entity_labeling is not None
         return self.entity_labeling._vectorized_mapper
 
     @property
     def _vectorized_entity_labeler(self) -> Callable[..., np.ndarray]:
+        """Return the vectorized mapping from entity IDs to labels."""
         assert self.entity_labeling is not None
         return self.entity_labeling._vectorized_labeler
 
     @property
     def relation_to_id(self) -> Mapping[str, int]:
+        """Return the mapping from relations labels to IDs."""
+        assert self.relation_labeling is not None
         return self.relation_labeling.label_to_id
 
     @property
     def relation_id_to_label(self) -> Mapping[int, str]:
+        """Return the mapping from relations IDs to labels."""
         assert self.relation_labeling is not None
         return self.relation_labeling.id_to_label
 
     @property
     def _vectorized_relation_mapper(self) -> Callable[..., np.ndarray]:
+        """Return the vectorized mapping from relations labels to IDs."""
         assert self.relation_labeling is not None
         return self.relation_labeling._vectorized_mapper
 
     @property
     def _vectorized_relation_labeler(self) -> Callable[..., np.ndarray]:
+        """Return the vectorized mapping from relations IDs to labels."""
         assert self.relation_labeling is not None
         return self.relation_labeling._vectorized_labeler
 
