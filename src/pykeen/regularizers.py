@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Regularization in PyKEEN."""
-
+import functools
+import math
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
 
@@ -103,6 +104,50 @@ class NoRegularizer(Regularizer):
         return torch.zeros(1, dtype=x.dtype, device=x.device)
 
 
+@functools.lru_cache(maxsize=1)
+def _get_expected_norm(
+    p: Union[int, float, str],
+    d: int,
+) -> float:
+    r"""
+    Compute the expected value of the L_p norm.
+
+    .. math ::
+        E[\|x\|_p] = d^{1/p} E[|x_1|^p]^{1/p}
+
+    under the assumption that :math:`x_i \sim N(0, 1)`, i.e.
+
+    .. math ::
+        E[|x_1|^p] = 2^{p/2} \cdot \Gamma(\frac{p+1}{2} \cdot \pi^{-1/2}
+
+    :param p:
+        The parameter p of the norm.
+    :param d:
+        The dimension of the vector.
+
+    :return:
+        The expected value.
+
+    .. seealso ::
+        https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
+        https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
+    """
+    if isinstance(p, str):
+        p = float(p)
+    if math.isinf(p) and p > 0:  # max norm
+        # TODO: this only works for x ~ N(0, 1), but not for |x|
+        raise NotImplementedError("Normalization for inf norm is not implemented")
+        # cf. https://en.wikipedia.org/wiki/Generalized_extreme_value_distribution
+        # mean = scipy.stats.norm.ppf(1 - 1/d)
+        # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
+        # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
+    elif math.isfinite(p):
+        exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
+        return math.pow(exp_abs_norm_p * d, 1 / p)
+    else:
+        raise NotImplementedError(f"{p} norm not implemented")
+
+
 class LpRegularizer(Regularizer):
     """A simple L_p norm based regularizer."""
 
@@ -136,15 +181,7 @@ class LpRegularizer(Regularizer):
         value = x.norm(p=self.p, dim=self.dim).mean()
         if not self.normalize:
             return value
-        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-        if self.p == 1:
-            # expected value of |x|_1 = d*E[x_i] for x_i i.i.d.
-            return value / dim
-        if self.p == 2:
-            # expected value of |x|_2 when x_i are normally distributed
-            # cf. https://arxiv.org/pdf/1012.0621.pdf chapter 3.1
-            return value / dim.sqrt()
-        raise NotImplementedError(f'Lp regularization not implemented for p={self.p}')
+        return value / _get_expected_norm(p=self.p, d=x.shape[-1])
 
 
 class PowerSumRegularizer(Regularizer):
