@@ -150,23 +150,22 @@ class Labeling:
     """A mapping between labels and IDs."""
 
     #: The mapping from labels to IDs.
-    label_to_id: Optional[Mapping[str, int]]
+    label_to_id: Mapping[str, int]
 
     #: The inverse mapping for label_to_id; initialized automatically
-    id_to_label: Optional[Mapping[int, str]] = None
+    id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_mapper: Optional[Callable[..., np.ndarray]] = None
+    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_labeler: Optional[Callable[..., np.ndarray]] = None
+    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
 
     def __post_init__(self):
         """Precompute inverse mappings."""
-        if self.label_to_id is not None:
-            self.id_to_label = invert_mapping(mapping=self.label_to_id)
-            self._vectorized_mapper = np.vectorize(self.label_to_id.get)
-            self._vectorized_labeler = np.vectorize(self.id_to_label.get)
+        self.id_to_label = invert_mapping(mapping=self.label_to_id)
+        self._vectorized_mapper = np.vectorize(self.label_to_id.get)
+        self._vectorized_labeler = np.vectorize(self.id_to_label.get)
 
     def label(
         self,
@@ -176,7 +175,7 @@ class Labeling:
         """Convert IDs to labels."""
         # Normalize input
         if torch.is_tensor(ids):
-            ids = ids.cpu().numpy()
+            ids = ids.cpu().numpy()  # type: ignore
         if isinstance(ids, int):
             ids = [ids]
         ids = np.asanyarray(ids)
