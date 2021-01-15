@@ -389,7 +389,11 @@ class TrainingLoop(ABC):
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
-            if self.automatic_memory_optimization:
+            # On CPU memory optimization doesn't work, since OOM on RAM will crash the entire host machine.
+            if self.model.device.type == 'cpu':
+                batch_size = 256
+                batch_size_sufficient = True
+            elif self.automatic_memory_optimization:
                 batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
