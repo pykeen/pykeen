@@ -42,7 +42,7 @@ from .trackers import trackers as trackers_dict
 from .training import training_loops as training_dict
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
-from .version import get_version
+from .version import get_git_hash, get_version
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -53,17 +53,30 @@ def _version_callback(ctx, _param, _value):
         ('os.name', os.name),
         ('platform.system()', platform.system()),
         ('platform.release()', platform.release()),
-        ('Python', ".".join(map(str, sys.version_info))),
-        ('PyKEEN', version)
+        ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
+        ('PyKEEN', version),
     ]
 
-    others = ['torch', 'numpy', 'pandas']
+    git_hash = get_git_hash()
+    development = git_hash and git_hash != 'UNHASHED'
+    t3 = [
+        ('version', get_version()),
+        ('development', str(development).lower()),
+    ]
+    if development:
+        t3.append(('hash', git_hash))
+
+    others = ['torch', 'numpy', 'pandas', 'click', 'click-default-group', 'tqdm']
     t2 = [
         (other, importlib.metadata.version(other))
         for other in others
     ]
 
+    click.echo('#### System Configuration\n')
     click.echo(tabulate(t1, tablefmt='github'))
+    click.echo('\n#### PyKEEN Configuration\n')
+    click.echo(tabulate(t3, tablefmt='github'))
+    click.echo('\n#### Installed Packages\n')
     click.echo(tabulate(t2, tablefmt='github', headers=['Package', 'Version']))
     ctx.exit()
 
