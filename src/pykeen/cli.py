@@ -49,9 +49,9 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 def _version_callback(ctx, _param, _value):
     import torch
     t1 = [
-        ('os.name', os.name),
-        ('platform.system()', platform.system()),
-        ('platform.release()', platform.release()),
+        ('`os.name`', os.name),
+        ('`platform.system()`', platform.system()),
+        ('`platform.release()`', platform.release()),
         ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
         ('pykeen', get_version(with_git_hash=True)),
         ('torch', torch.__version__),
