@@ -174,8 +174,8 @@ class Labeling:
     ) -> np.ndarray:
         """Convert IDs to labels."""
         # Normalize input
-        if torch.is_tensor(ids):
-            ids = ids.cpu().numpy()  # type: ignore
+        if isinstance(ids, torch.Tensor):
+            ids = ids.cpu().numpy()
         if isinstance(ids, int):
             ids = [ids]
         ids = np.asanyarray(ids)
@@ -508,8 +508,8 @@ class CoreTriplesFactory:
         # Additional columns
         for key, values in kwargs.items():
             # convert PyTorch tensors to numpy
-            if torch.is_tensor(values):
-                values = values.cpu().numpy()  # type: ignore
+            if isinstance(values, torch.Tensor):
+                values = values.cpu().numpy()
             data[key] = values
 
         # convert to dataframe
