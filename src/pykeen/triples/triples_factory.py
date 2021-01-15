@@ -322,15 +322,16 @@ class CoreTriplesFactory:
 
     def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
         """Add inverse triples if they shall be created."""
-        if self.create_inverse_triples:
-            logger.info("Creating inverse triples.")
-            h, r, t = mapped_triples.t()
-            r = 2 * r
-            mapped_triples = torch.cat([
-                torch.stack([h, r, t], dim=-1),
-                torch.stack([t, self._get_inverse_relation_id(r), h], dim=-1),
-            ])
-        return mapped_triples
+        if not self.create_inverse_triples:
+            return mapped_triples
+
+        logger.info("Creating inverse triples.")
+        h, r, t = mapped_triples.t()
+        r = 2 * r
+        return torch.cat([
+            torch.stack([h, r, t], dim=-1),
+            torch.stack([t, self._get_inverse_relation_id(r), h], dim=-1),
+        ])
 
     def create_slcwa_instances(self) -> Instances:
         """Create sLCWA instances for this factory's triples."""
