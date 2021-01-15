@@ -48,25 +48,20 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 def _version_callback(ctx, _param, _value):
-    version = get_version(with_git_hash=True)
+    import torch
     t1 = [
         ('os.name', os.name),
         ('platform.system()', platform.system()),
         ('platform.release()', platform.release()),
         ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
-        ('PyKEEN', version),
+        ('pykeen', get_version(with_git_hash=True)),
+        ('torch', torch.__version__),
+        ('has gpu', torch.cuda.is_available()),
+        ('cuda', torch.version.cuda),
+        ('cudnn', torch.backends.cudnn.version()),
     ]
 
-    git_hash = get_git_hash()
-    development = git_hash and git_hash != 'UNHASHED'
-    t3 = [
-        ('version', get_version()),
-        ('development', str(development).lower()),
-    ]
-    if development:
-        t3.append(('hash', git_hash))
-
-    others = ['torch', 'numpy', 'pandas', 'click', 'click-default-group', 'tqdm']
+    others = ['numpy', 'pandas', 'click', 'click-default-group', 'tqdm']
     t2 = [
         (other, importlib.metadata.version(other))
         for other in others
@@ -74,9 +69,7 @@ def _version_callback(ctx, _param, _value):
 
     click.echo('#### System Configuration\n')
     click.echo(tabulate(t1, tablefmt='github'))
-    click.echo('\n#### PyKEEN Configuration\n')
-    click.echo(tabulate(t3, tablefmt='github'))
-    click.echo('\n#### Installed Packages\n')
+    click.echo('\n#### Dependencies\n')
     click.echo(tabulate(t2, tablefmt='github', headers=['Package', 'Version']))
     ctx.exit()
 
