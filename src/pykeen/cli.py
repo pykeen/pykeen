@@ -15,6 +15,7 @@ later, but that will cause problems - the code will get executed twice:
 
 import inspect
 import os
+import platform
 import sys
 from itertools import chain
 from typing import Optional
@@ -40,11 +41,30 @@ from .trackers import trackers as trackers_dict
 from .training import training_loops as training_dict
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
+from .version import get_version
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
+def _version_callback(ctx, _param, _value):
+    import torch
+    t1 = [
+        ('`os.name`', os.name),
+        ('`platform.system()`', platform.system()),
+        ('`platform.release()`', platform.release()),
+        ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
+        ('pykeen', get_version(with_git_hash=True)),
+        ('torch', torch.__version__),
+        ('cuda available', str(torch.cuda.is_available()).lower()),
+        ('cuda', torch.version.cuda),
+        ('cudnn', torch.backends.cudnn.version()),
+    ]
+    click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
+    ctx.exit()
+
+
 @click.group()
+@click.option('--version', is_flag=True, expose_value=False, is_eager=True, callback=_version_callback)
 def main():
     """PyKEEN."""
 
