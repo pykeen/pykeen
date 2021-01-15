@@ -22,7 +22,7 @@ Steps to reproduce the behavior:
 
 **Environment:**
 
-Please copy the output of `pykeen --version` here (and delete this text).
+Please copy the table output by `pykeen --version` here (and delete this text).
 This includes information about your system and installation of PyKEEN.
 
 **Additional information**

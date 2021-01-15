@@ -13,7 +13,6 @@ later, but that will cause problems - the code will get executed twice:
 .. seealso:: http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 
-import importlib.metadata
 import inspect
 import os
 import platform
@@ -42,7 +41,7 @@ from .trackers import trackers as trackers_dict
 from .training import training_loops as training_dict
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
-from .version import get_git_hash, get_version
+from .version import get_version
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -56,21 +55,11 @@ def _version_callback(ctx, _param, _value):
         ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
         ('pykeen', get_version(with_git_hash=True)),
         ('torch', torch.__version__),
-        ('has gpu', torch.cuda.is_available()),
+        ('cuda available', str(torch.cuda.is_available()).lower()),
         ('cuda', torch.version.cuda),
         ('cudnn', torch.backends.cudnn.version()),
     ]
-
-    others = ['numpy', 'pandas', 'click', 'click-default-group', 'tqdm']
-    t2 = [
-        (other, importlib.metadata.version(other))
-        for other in others
-    ]
-
-    click.echo('#### System Configuration\n')
     click.echo(tabulate(t1, tablefmt='github'))
-    click.echo('\n#### Dependencies\n')
-    click.echo(tabulate(t2, tablefmt='github', headers=['Package', 'Version']))
     ctx.exit()
 
 
