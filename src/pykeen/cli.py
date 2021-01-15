@@ -59,7 +59,7 @@ def _version_callback(ctx, _param, _value):
         ('cuda', torch.version.cuda),
         ('cudnn', torch.backends.cudnn.version()),
     ]
-    click.echo(tabulate(t1, tablefmt='github'))
+    click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
     ctx.exit()
 
 
