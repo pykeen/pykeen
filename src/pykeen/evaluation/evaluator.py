@@ -534,6 +534,7 @@ def evaluate(
     if batch_size is None:
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
+        logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
     batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
 
     # Show progressbar

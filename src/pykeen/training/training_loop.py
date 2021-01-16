@@ -393,10 +393,12 @@ class TrainingLoop(ABC):
             if self.model.device.type == 'cpu':
                 batch_size = 256
                 batch_size_sufficient = True
+                logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
             elif self.automatic_memory_optimization:
                 batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
+                logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
 
         # This will find necessary parameters to optimize the use of the hardware at hand
         if (
