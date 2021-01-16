@@ -389,13 +389,17 @@ class TrainingLoop(ABC):
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
-            # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
-            if self.model.device.type == 'cpu':
-                batch_size = 256
-                batch_size_sufficient = True
-                logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
-            elif self.automatic_memory_optimization:
-                batch_size, batch_size_sufficient = self.batch_size_search()
+            if self.automatic_memory_optimization:
+                # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
+                if self.model.device.type == 'cpu':
+                    batch_size = 256
+                    batch_size_sufficient = True
+                    logger.info(
+                        "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
+                        "Therefore, the batch_size will be set to the default value '{batch_size}'",
+                    )
+                else:
+                    batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
                 logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")

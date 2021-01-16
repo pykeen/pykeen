@@ -137,23 +137,29 @@ class Evaluator(ABC):
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
-        # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
-        if batch_size is None and self.automatic_memory_optimization and model.device.type != 'cpu':
-            batch_size, slice_size = self.batch_and_slice(
-                model=model,
-                mapped_triples=mapped_triples,
-                batch_size=batch_size,
-                device=device,
-                use_tqdm=False,
-                restrict_entities_to=restrict_entities_to,
-                do_time_consuming_checks=do_time_consuming_checks,
-            )
-            # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
-            self.batch_size = batch_size
-            self.slice_size = slice_size
+        if batch_size is None and self.automatic_memory_optimization:
+            # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
+            if model.device.type == 'cpu':
+                logger.info(
+                    "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
+                    "Therefore, the batch_size will be set to the default value.",
+                )
+            else:
+                batch_size, slice_size = self.batch_and_slice(
+                    model=model,
+                    mapped_triples=mapped_triples,
+                    batch_size=batch_size,
+                    device=device,
+                    use_tqdm=False,
+                    restrict_entities_to=restrict_entities_to,
+                    do_time_consuming_checks=do_time_consuming_checks,
+                )
+                # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
+                self.batch_size = batch_size
+                self.slice_size = slice_size
 
-            # Clear the ranks from the current evaluator
-            self.finalize()
+                # Clear the ranks from the current evaluator
+                self.finalize()
 
         return evaluate(
             model=model,
