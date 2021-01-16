@@ -138,7 +138,7 @@ class Evaluator(ABC):
             mapped_triples = model.triples_factory.mapped_triples
 
         # On CPU memory optimization doesn't work, since OOM on RAM will crash the entire host machine.
-        if batch_size is None and self.automatic_memory_optimization and not model.device.type == 'cpu':
+        if batch_size is None and self.automatic_memory_optimization and model.device.type != 'cpu':
             batch_size, slice_size = self.batch_and_slice(
                 model=model,
                 mapped_triples=mapped_triples,
