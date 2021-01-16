@@ -322,12 +322,8 @@ class HpoPipelineResult(Result):
         best_pipeline_directory = os.path.join(directory, 'best_pipeline')
         os.makedirs(best_pipeline_directory, exist_ok=True)
         # Output best trial as pipeline configuration file
-
-        x = self._get_best_study_config()
-        import pprint
-        pprint.pprint(x)
         with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
-            json.dump(x, file, indent=2, sort_keys=True)
+            json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
         """Save the results to the directory in an FTP server.
