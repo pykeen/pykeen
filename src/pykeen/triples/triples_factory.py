@@ -301,7 +301,15 @@ class CoreTriplesFactory:
         relation_to_id: Mapping[str, int],
     ) -> "TriplesFactory":
         """Add labeling to the TriplesFactory."""
-        # TODO: Check labelings
+        # check new label to ID mappings
+        for name, columns, new_labeling in (
+            ("entity", [0, 2], entity_to_id),
+            ("relation", 1, relation_to_id),
+        ):
+            existing_ids = set(self.mapped_triples[:, columns].unique().tolist())
+            if not existing_ids.issubset(new_labeling.values()):
+                diff = existing_ids.difference(new_labeling.values())
+                raise ValueError(f"Some existing IDs do not occur in the new {name} labeling: {diff}")
         return TriplesFactory(
             mapped_triples=self.mapped_triples,
             entity_to_id=entity_to_id,
