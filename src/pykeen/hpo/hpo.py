@@ -18,6 +18,7 @@ from optuna.storages import BaseStorage
 
 from .pruners import get_pruner_cls
 from .samplers import get_sampler_cls
+from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, get_evaluator_cls
@@ -274,16 +275,14 @@ class HpoPipelineResult(Result):
                 pipeline_config[k] = v
 
         for field in dataclasses.fields(self.objective):
-            if (not field.name.endswith('_kwargs') and field.name not in {
-                'training',
-                'testing',
-                'validation',
-            }) or field.name in {'metric'}:
+            field_value = getattr(self.objective, field.name)
+            if not field_value:
                 continue
-            field_kwargs = getattr(self.objective, field.name)
-            if field_kwargs:
-                logger.debug(f'saving pre-specified field in pipeline config: {field.name}={field_kwargs}')
-                pipeline_config[field.name] = field_kwargs
+            if field.name.endswith('_kwargs'):
+                logger.debug(f'saving pre-specified field in pipeline config: {field.name}={field_value}')
+                pipeline_config[field.name] = field_value
+            elif field.name in {'training', 'testing', 'validation'}:
+                pipeline_config[field.name] = field_value if isinstance(field_value, str) else USER_DEFINED_CODE
 
         for k, v in self.study.best_params.items():
             sk, ssk = k.split('.')
@@ -596,13 +595,14 @@ def hpo_pipeline(
     study.set_user_attr('pykeen_version', get_version())
     study.set_user_attr('pykeen_git_hash', get_git_hash())
     # 1. Dataset
-    study.set_user_attr('dataset', _get_dataset_name(
+    _set_study_dataset(
+        study=study,
         dataset=dataset,
         dataset_kwargs=dataset_kwargs,
         training=training,
         testing=testing,
         validation=validation,
-    ))
+    )
 
     # 2. Model
     model: Type[Model] = get_model_cls(model)
@@ -802,21 +802,24 @@ def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
     return trial.suggest_categorical(name=name, choices=choices)
 
 
-def _get_dataset_name(
+def _set_study_dataset(
+    study: Study,
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, str, TriplesFactory] = None,
     testing: Union[None, str, TriplesFactory] = None,
     validation: Union[None, str, TriplesFactory] = None,
-) -> str:
-    """Make a useful name for the dataset for storage in HPO."""
+):
     if (
         (isinstance(dataset, str) and has_dataset(dataset))
         or isinstance(dataset, Dataset)
         or (isinstance(dataset, type) and issubclass(dataset, Dataset))
     ):
-        return get_dataset(dataset=dataset).get_normalized_name()
-
-    # TODO make more informative
-    return '<user defined>'
+        dataset_name = get_dataset(dataset=dataset).get_normalized_name()
+        study.set_user_attr('dataset', dataset_name)
+    else:
+        study.set_user_attr('dataset', USER_DEFINED_CODE)
+        study.set_user_attr('training', training if isinstance(training, str) else USER_DEFINED_CODE)
+        study.set_user_attr('testing', testing if isinstance(testing, str) else USER_DEFINED_CODE)
+        study.set_user_attr('validation', validation if isinstance(validation, str) else USER_DEFINED_CODE)
