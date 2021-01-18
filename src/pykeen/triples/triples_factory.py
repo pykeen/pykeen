@@ -20,6 +20,7 @@ from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMappi
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
 __all__ = [
+    'CoreTriplesFactory',
     'TriplesFactory',
     'create_entity_mapping',
     'create_relation_mapping',
