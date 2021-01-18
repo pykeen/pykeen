@@ -279,6 +279,14 @@ class CoreTriplesFactory:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
+    def get_entity_ids(self) -> Collection[int]:
+        """Get the set of entity identifiers."""
+        raise NotImplementedError  # TODO @mberr should these be pre-cached on __init__?
+
+    def get_relation_ids(self) -> Collection[int]:
+        """Get the set of relation identifiers."""
+        raise NotImplementedError
+
     def extra_repr(self) -> str:
         """Extra representation string."""
         d = [
@@ -785,6 +793,14 @@ class TriplesFactory(CoreTriplesFactory):
     def relation_id_to_label(self) -> Mapping[int, str]:
         """Return the mapping from relations IDs to labels."""
         return self.relation_labeling.id_to_label
+
+    def get_entity_ids(self) -> Collection[int]:
+        """Get the set of entity identifiers."""
+        return self.entity_to_id.values()
+
+    def get_relation_ids(self) -> Collection[int]:
+        """Get the set of relation identifiers."""
+        return self.relation_to_id.values()
 
     @property
     def triples(self) -> np.ndarray:  # noqa: D401
