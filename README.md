@@ -33,7 +33,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-19">Datasets</a> •
+  <a href="#datasets-21">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -96,13 +96,15 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (19)
+### Datasets (21)
 
 | Name          | Reference                                                                                                         | Description                                                                                       |
 |---------------|-------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| ckg           | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                     | The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.                                    |
 | codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                          |
 | codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                         |
 | codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                          |
+| conceptnet    | [`pykeen.datasets.ConceptNet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ConceptNet.html)       | The ConceptNet dataset from [speer2017]_.                                                         |
 | drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                 |
 | fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k dataset.                                                                                |
 | fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 dataset.                                                                            |
@@ -193,7 +195,7 @@ in ``pykeen``.
 | Name      | Reference                                                                                                                               | Description                                                                            |
 |-----------|-----------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | basic     | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)         | A basic negative sampler.                                                              |
-| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the bernoulli negative sampling approach proposed by [wang2014]_. |
+| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
 
 ### Stoppers (2)
 
@@ -264,6 +266,23 @@ hyper-parameter optimization module. They can be run like:
 ```bash
 pykeen experiments ablation ~/path/to/config.json
 ```
+
+### Large-scale Reproducibility and Benchmarking Study
+
+We used PyKEEN to perform a large-scale reproducibility and benchmarking study which are described in
+[our article](https://arxiv.org/abs/2006.13365):
+
+```bibtex
+@article{ali2020benchmarking,
+  title={Bringing Light Into the Dark: A Large-scale Evaluation of Knowledge Graph Embedding Models Under a Unified Framework},
+  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Galkin, Mikhail and Sharifzadeh, Sahand and Fischer, Asja and Tresp, Volker and Lehmann, Jens},
+  journal={arXiv preprint arXiv:2006.13365},
+  year={2020}
+}
+```
+
+We have made all code, experimental configurations, results, and analyses that lead to our interpretations available
+at https://github.com/pykeen/benchmarking.
 
 ## Contributing
 

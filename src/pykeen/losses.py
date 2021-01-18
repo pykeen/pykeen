@@ -86,6 +86,8 @@ class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
         a negative distance as score and cannot produce positive model outputs.
     """
 
+    synonyms = {'Negative Log Likelihood Loss'}
+
 
 class MSELoss(PointwiseLoss, nn.MSELoss):
     """A wrapper around the PyTorch mean square error loss."""
@@ -98,7 +100,7 @@ class MarginRankingLoss(nn.MarginRankingLoss, PairwiseLoss):
 
     synonyms = {"Pairwise Hinge Loss"}
 
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=0, high=3, q=1),
     )
 
@@ -160,7 +162,7 @@ class NSSALoss(SetwiseLoss):
 
     synonyms = {'Self-Adversarial Negative Sampling Loss', 'Negative Sampling Self-Adversarial Loss'}
 
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=3, high=30, q=3),
         adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     )

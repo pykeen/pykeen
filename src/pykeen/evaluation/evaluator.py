@@ -16,7 +16,7 @@ from dataclasses_json import dataclass_json
 from tqdm.autonotebook import tqdm
 
 from ..models.base import Model
-from ..triples.triples_factory import get_unique_entity_ids_from_triples_tensor
+from ..triples.utils import get_entities
 from ..typing import MappedTriples
 from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
 
@@ -138,21 +138,28 @@ class Evaluator(ABC):
             mapped_triples = model.triples_factory.mapped_triples
 
         if batch_size is None and self.automatic_memory_optimization:
-            batch_size, slice_size = self.batch_and_slice(
-                model=model,
-                mapped_triples=mapped_triples,
-                batch_size=batch_size,
-                device=device,
-                use_tqdm=False,
-                restrict_entities_to=restrict_entities_to,
-                do_time_consuming_checks=do_time_consuming_checks,
-            )
-            # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
-            self.batch_size = batch_size
-            self.slice_size = slice_size
+            # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
+            if model.device.type == 'cpu':
+                logger.info(
+                    "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
+                    "Therefore, the batch_size will be set to the default value.",
+                )
+            else:
+                batch_size, slice_size = self.batch_and_slice(
+                    model=model,
+                    mapped_triples=mapped_triples,
+                    batch_size=batch_size,
+                    device=device,
+                    use_tqdm=False,
+                    restrict_entities_to=restrict_entities_to,
+                    do_time_consuming_checks=do_time_consuming_checks,
+                )
+                # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
+                self.batch_size = batch_size
+                self.slice_size = slice_size
 
-            # Clear the ranks from the current evaluator
-            self.finalize()
+                # Clear the ranks from the current evaluator
+                self.finalize()
 
         return evaluate(
             model=model,
@@ -494,7 +501,7 @@ def evaluate(
 
     # verify that the triples have been filtered
     if restrict_entities_to is not None and do_time_consuming_checks:
-        present_entity_ids = set(get_unique_entity_ids_from_triples_tensor(mapped_triples=mapped_triples).tolist())
+        present_entity_ids = get_entities(triples=mapped_triples)
         unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
         if len(unwanted) > 0:
             raise ValueError(f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
@@ -531,7 +538,9 @@ def evaluate(
 
     # Prepare batches
     if batch_size is None:
-        batch_size = 1
+        # This should be a reasonable default size that works on most setups while being faster than batch_size=1
+        batch_size = 32
+        logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
     batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
 
     # Show progressbar

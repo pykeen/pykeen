@@ -1191,32 +1191,6 @@ class TestTesting(unittest.TestCase):
             self.fail(f'Missing experimental configuration directories for the following models:\n{_s}')
 
 
-def test_extend_batch():
-    """Test `_extend_batch()`."""
-    batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
-    all_ids = [2 * i for i in range(5)]
-
-    batch_size = batch.shape[0]
-    num_choices = len(all_ids)
-
-    for dim in range(3):
-        h_ext_batch = _extend_batch(batch=batch, all_ids=all_ids, dim=dim)
-
-        # check shape
-        assert h_ext_batch.shape == (batch_size * num_choices, 3)
-
-        # check content
-        actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
-        exp_content = set()
-        for i in all_ids:
-            for b in batch:
-                c = list(map(int, b))
-                c.insert(dim, i)
-                exp_content.add(tuple(c))
-
-        assert actual_content == exp_content
-
-
 class MessageWeightingTests(unittest.TestCase):
     """unittests for message weighting."""
 
@@ -1259,32 +1233,59 @@ class MessageWeightingTests(unittest.TestCase):
         self._test_message_weighting(weight_func=symmetric_edge_weights)
 
 
-def test_get_novelty_mask():
-    """Test `get_novelty_mask()`."""
-    num_triples = 7
-    base = torch.arange(num_triples)
-    mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
-    query_ids = torch.randperm(num_triples).numpy()[:num_triples // 2]
-    exp_novel = query_ids != 0
-    col = 2
-    other_col_ids = numpy.asarray([0, 0])
-    mask = get_novelty_mask(
-        mapped_triples=mapped_triples,
-        query_ids=query_ids,
-        col=col,
-        other_col_ids=other_col_ids,
-    )
-    assert mask.shape == query_ids.shape
-    assert (mask == exp_novel).all()
-
-
-class TestRandom(unittest.TestCase):
-    """Extra tests."""
+class TestModelUtilities(unittest.TestCase):
+    """Extra tests for utility functions."""
 
     def test_abstract(self):
         """Test that classes are checked as abstract properly."""
-        self.assertTrue(Model._is_abstract())
-        self.assertTrue(EntityEmbeddingModel._is_abstract())
-        self.assertTrue(EntityRelationEmbeddingModel._is_abstract())
+        self.assertTrue(EntityEmbeddingModel._is_base_model)
+        self.assertTrue(EntityRelationEmbeddingModel._is_base_model)
+        self.assertTrue(MultimodalModel._is_base_model)
         for model_cls in _MODELS:
-            self.assertFalse(model_cls._is_abstract(), msg=f'{model_cls.__name__} should not be abstract')
+            self.assertFalse(
+                model_cls._is_base_model,
+                msg=f'{model_cls.__name__} should not be marked as a a base model',
+            )
+
+    def test_get_novelty_mask(self):
+        """Test `get_novelty_mask()`."""
+        num_triples = 7
+        base = torch.arange(num_triples)
+        mapped_triples = torch.stack([base, base, 3 * base], dim=-1)
+        query_ids = torch.randperm(num_triples).numpy()[:num_triples // 2]
+        exp_novel = query_ids != 0
+        col = 2
+        other_col_ids = numpy.asarray([0, 0])
+        mask = get_novelty_mask(
+            mapped_triples=mapped_triples,
+            query_ids=query_ids,
+            col=col,
+            other_col_ids=other_col_ids,
+        )
+        assert mask.shape == query_ids.shape
+        assert (mask == exp_novel).all()
+
+    def test_extend_batch(self):
+        """Test `_extend_batch()`."""
+        batch = torch.tensor([[a, b] for a in range(3) for b in range(4)]).view(-1, 2)
+        all_ids = [2 * i for i in range(5)]
+
+        batch_size = batch.shape[0]
+        num_choices = len(all_ids)
+
+        for dim in range(3):
+            h_ext_batch = _extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+
+            # check shape
+            assert h_ext_batch.shape == (batch_size * num_choices, 3)
+
+            # check content
+            actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
+            exp_content = set()
+            for i in all_ids:
+                for b in batch:
+                    c = list(map(int, b))
+                    c.insert(dim, i)
+                    exp_content.add(tuple(c))
+
+            assert actual_content == exp_content

@@ -74,9 +74,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         super().__init__(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
-            _triples=base.triples,
             mapped_triples=base.mapped_triples,
-            relation_to_inverse=base.relation_to_inverse,
+            create_inverse_triples=base.create_inverse_triples,
         )
 
         if path_to_numeric_triples is None and numeric_triples is None:

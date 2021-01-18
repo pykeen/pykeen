@@ -5,7 +5,7 @@
 import logging
 import math
 import sys
-from typing import Optional, Tuple, Type
+from typing import Any, ClassVar, Mapping, Optional, Tuple, Type
 
 import torch
 from torch import nn
@@ -148,16 +148,16 @@ class ConvE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         output_channels=dict(type=int, low=4, high=6, scale='power_two'),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
     bn0: Optional[torch.nn.BatchNorm2d]
