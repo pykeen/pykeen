@@ -18,6 +18,7 @@ __all__ = [
 ]
 
 
+# TODO test
 def expected_likelihood(
     h: GaussianDistribution,
     r: GaussianDistribution,
