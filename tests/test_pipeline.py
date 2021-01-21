@@ -8,10 +8,11 @@ import unittest
 import pandas as pd
 
 import pykeen.regularizers
-from pykeen.datasets import Nations
+from pykeen.datasets import EagerDataset, Nations
 from pykeen.models.base import Model
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
+from pykeen.triples.generation import generate_triples_factory
 
 
 class TestPipeline(unittest.TestCase):
@@ -107,6 +108,44 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(possible, len(all_df.index))
         self.assertEqual(self.model.triples_factory.num_triples, all_df['in_training'].sum())
         self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
+
+
+class TestPipelineTriples(unittest.TestCase):
+    """Test applying the pipeline to triples factories."""
+
+    def setUp(self) -> None:
+        """Prepare the training, testing, and validation triples factories."""
+        self.base_tf = generate_triples_factory(
+            num_entities=50,
+            num_relations=9,
+            num_triples=500,
+        )
+        self.training, self.testing, self.validation = self.base_tf.split([0.8, 0.1, 0.1])
+
+    def test_unlabeled_triples(self):
+        """Test running the pipeline on unlabeled triples factories."""
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            model='TransE',
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+        )
+
+    def test_eager_unlabeled_dataset(self):
+        """Test running the pipeline on unlabeled triples factories in a dataset."""
+        dataset = EagerDataset(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+        )
+        _ = pipeline(
+            dataset=dataset,
+            model='TransE',
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+        )
 
 
 class TestPipelineCheckpoints(unittest.TestCase):

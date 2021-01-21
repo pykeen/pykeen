@@ -3,7 +3,7 @@
 """Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
 New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
-`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
+:mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
@@ -30,7 +30,7 @@ from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkL
 from .umls import UMLS
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..utils import normalize_string, normalized_lookup
 
 __all__ = [
@@ -120,8 +120,8 @@ def get_dataset(
             **(dataset_kwargs or {}),
         )
 
-    if isinstance(training, TriplesFactory) and isinstance(testing, TriplesFactory):
-        if validation is not None and not isinstance(validation, TriplesFactory):
+    if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):
+        if validation is not None and not isinstance(validation, CoreTriplesFactory):
             raise TypeError(f'Validation is invalid type: {type(validation)}')
         if dataset_kwargs:
             logger.warning('dataset_kwargs are disregarded when passing pre-instantiated triples factories')
