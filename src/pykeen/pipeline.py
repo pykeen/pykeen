@@ -179,13 +179,14 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .constants import PYKEEN_CHECKPOINTS
+from .constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from .datasets import get_dataset
 from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
 from .models import get_model_cls
 from .models.base import Model
+from .nn import Embedding
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
 from .sampling import NegativeSampler, get_negative_sampler_cls
@@ -524,8 +525,8 @@ class PipelineResult(Result):
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
-def _reduce_embeddings(embeddings, reducer, fit: bool = False):
-    embeddings_numpy = embeddings.weight.detach().numpy()
+def _reduce_embeddings(embedding: Embedding, reducer, fit: bool = False):
+    embeddings_numpy = embedding(indices=None).detach().cpu().numpy()
     if embeddings_numpy.shape[1] == 2:
         logger.debug('not reducing entity embeddings, already dim=2')
         return embeddings_numpy, False
@@ -753,7 +754,8 @@ def pipeline(  # noqa: C901
 
     :param dataset:
         The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the ``training_triples_factory`` and ``testing_triples_factory`` can be specified.
+        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
+        and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -879,7 +881,12 @@ def pipeline(  # noqa: C901
     if dataset is not None:
         result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
-        result_tracker.log_params(dict(dataset='<user defined>'))
+        result_tracker.log_params(dict(
+            dataset=USER_DEFINED_CODE,
+            training=training if isinstance(training, str) else USER_DEFINED_CODE,
+            testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
+            validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
+        ))
 
     training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
     # evaluation restriction to a subset of entities/relations
@@ -963,10 +970,7 @@ def pipeline(  # noqa: C901
         )
 
     evaluator = get_evaluator_cls(evaluator)
-    # TODO @mehdi is setting the automatic memory optimization as an attribute
-    #  of the class appropriate, since it doesn't cause any state to be stored?
-    #  I think it might be better to have this as an argument to the
-    #  Evaluator.evaluate() function instead
+
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)

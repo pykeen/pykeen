@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import List, Optional, TextIO, Tuple, Union
+from typing import Any, List, Mapping, Optional, TextIO, Tuple, Union
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
 
@@ -20,7 +20,7 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
-from ..typing import RandomHint
+from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
 __all__ = [
@@ -34,6 +34,7 @@ __all__ = [
     'ZipFileRemoteDataset',
     'PackedZipRemoteDataset',
     'TarFileSingleDataset',
+    'TabbedDataset',
     'SingleTabbedDataset',
 ]
 
@@ -79,17 +80,17 @@ class Dataset:
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
 
-    def summary_str(self, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
 
-    def summarize(self) -> None:
+    def summarize(self, title: Optional[str] = None, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str())
+        print(self.summary_str(title=title), file=file)
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
@@ -229,6 +230,7 @@ class PathDataset(LazyDataset):
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self.create_inverse_triples,
         )
 
     def _load_validation(self) -> None:
@@ -238,6 +240,7 @@ class PathDataset(LazyDataset):
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
+            create_inverse_triples=self.create_inverse_triples,
         )
 
     def __repr__(self) -> str:  # noqa: D105
@@ -517,7 +520,7 @@ class TarFileSingleDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
-        random_state: RandomHint = None,
+        random_state: TorchRandomHint = None,
         randomize_cleanup: bool = False,
     ):
         """Initialize dataset.
@@ -582,7 +585,63 @@ class TarFileSingleDataset(LazyDataset):
         pass  # already loaded by _load()
 
 
-class SingleTabbedDataset(LazyDataset):
+class TabbedDataset(LazyDataset):
+    """This class is for when you've got a single TSV of edges and want them to get auto-split."""
+
+    ratios = (0.8, 0.1, 0.1)
+    _triples_factory: Optional[TriplesFactory]
+
+    def __init__(
+        self,
+        cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        random_state: TorchRandomHint = None,
+    ):
+        """Initialize dataset.
+
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        """
+        self.cache_root = self._help_cache(cache_root)
+
+        self._triples_factory = None
+        self.random_state = random_state
+        self.create_inverse_triples = create_inverse_triples
+        self._training = None
+        self._testing = None
+        self._validation = None
+
+        if eager:
+            self._load()
+
+    def _get_path(self) -> Optional[str]:
+        """Get the path of the data if there's a single file."""
+
+    def _get_df(self) -> pd.DataFrame:
+        raise NotImplementedError
+
+    def _load(self) -> None:
+        df = self._get_df()
+        path = self._get_path()
+        tf = TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=dict(path=path) if path else None,
+        )
+        self._training, self._testing, self._validation = tf.split(
+            ratios=self.ratios,
+            random_state=self.random_state,
+        )
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
+class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios = (0.8, 0.1, 0.1)
@@ -595,8 +654,8 @@ class SingleTabbedDataset(LazyDataset):
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        delimiter: Optional[str] = None,
-        random_state: RandomHint = None,
+        random_state: TorchRandomHint = None,
+        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -610,22 +669,21 @@ class SingleTabbedDataset(LazyDataset):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        self.cache_root = self._help_cache(cache_root)
+        super().__init__(
+            cache_root=cache_root,
+            create_inverse_triples=create_inverse_triples,
+            random_state=random_state,
+            eager=False,  # because it gets hooked below
+        )
 
         self.name = name or _name_from_url(url)
 
-        self._triples_factory = None
-        self.random_state = random_state
-        self.delimiter = delimiter or '\t'
+        self.read_csv_kwargs = read_csv_kwargs or {}
+        self.read_csv_kwargs.setdefault('sep', '\t')
 
         self.url = url
         if not os.path.exists(self._get_path()) and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self._get_path()}')
-
-        self.create_inverse_triples = create_inverse_triples
-        self._training = None
-        self._testing = None
-        self._validation = None
 
         if eager:
             self._load()
@@ -633,17 +691,9 @@ class SingleTabbedDataset(LazyDataset):
     def _get_path(self) -> str:
         return os.path.join(self.cache_root, self.name)
 
-    def _load(self) -> None:
+    def _get_df(self) -> pd.DataFrame:
         if not os.path.exists(self._get_path()):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
-        df = pd.read_csv(self._get_path(), sep=self.delimiter)
-        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self._get_path()
-        self._training, self._testing, self._validation = tf.split(
-            ratios=self.ratios,
-            random_state=self.random_state,
-        )
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
+        df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+        return df

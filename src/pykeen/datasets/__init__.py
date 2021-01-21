@@ -3,7 +3,7 @@
 """Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
 New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
-`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
+:mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
@@ -17,7 +17,10 @@ from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
 )
+from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
+from .conceptnet import ConceptNet
+from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
 from .kinships import Kinships
@@ -27,7 +30,7 @@ from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkL
 from .umls import UMLS
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..utils import normalize_string, normalized_lookup
 
 __all__ = [
@@ -49,6 +52,9 @@ __all__ = [
     'WN18',
     'WN18RR',
     'YAGO310',
+    'DRKG',
+    'ConceptNet',
+    'CKG',
     'get_dataset',
     'has_dataset',
 ]
@@ -94,7 +100,7 @@ def get_dataset(
         if has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]
         elif not os.path.exists(dataset):
-            raise ValueError('dataset is neither a pre-defined dataset string nor a filepath')
+            raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
             return Dataset.from_path(dataset)
 
@@ -114,8 +120,8 @@ def get_dataset(
             **(dataset_kwargs or {}),
         )
 
-    if isinstance(training, TriplesFactory) and isinstance(testing, TriplesFactory):
-        if validation is not None and not isinstance(validation, TriplesFactory):
+    if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):
+        if validation is not None and not isinstance(validation, CoreTriplesFactory):
             raise TypeError(f'Validation is invalid type: {type(validation)}')
         if dataset_kwargs:
             logger.warning('dataset_kwargs are disregarded when passing pre-instantiated triples factories')

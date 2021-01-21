@@ -2,7 +2,7 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Optional, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -43,16 +43,16 @@ class ERMLPE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,

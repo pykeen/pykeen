@@ -90,15 +90,18 @@ class Embedding(RepresentationModule):
         if initializer_kwargs:
             self.initializer = functools.partial(initializer, **initializer_kwargs)
         else:
-            self.initializer = initializer
-        if constrainer_kwargs:
+            self.initializer = initializer  # type: ignore
+
+        if constrainer is not None and constrainer_kwargs:
             self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
         else:
-            self.constrainer = constrainer
-        if normalizer_kwargs:
+            self.constrainer = constrainer  # type: ignore
+
+        if normalizer is not None and normalizer_kwargs:
             self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
         else:
-            self.normalizer = normalizer
+            self.normalizer = normalizer  # type: ignore
+
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,

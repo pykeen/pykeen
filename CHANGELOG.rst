@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+`1.1.0 <https://github.com/pykeen/pykeen/compare/v1.0.5...v1.1.0>`_ - 2021-01-20
+--------------------------------------------------------------------------------
+New Datasets
+~~~~~~~~~~~~
+- CoDEx (https://github.com/pykeen/pykeen/pull/154)
+- DRKG (https://github.com/pykeen/pykeen/pull/156)
+- OGB (https://github.com/pykeen/pykeen/pull/159)
+- ConceptNet (https://github.com/pykeen/pykeen/pull/160)
+- Clinical Knowledge Graph (https://github.com/pykeen/pykeen/pull/209)
+
+New Trackers
+~~~~~~~~~~~~
+- Neptune.ai (https://github.com/pykeen/pykeen/pull/183)
+
+Added
+~~~~~
+- Add MLFlow set tags function (https://github.com/pykeen/pykeen/pull/139; thanks @sunny1401)
+- Add score_t/h function for ComplEx (https://github.com/pykeen/pykeen/pull/150)
+- Add proper testing for literal datasets and literal models (https://github.com/pykeen/pykeen/pull/199)
+- Checkpoint functionality (https://github.com/pykeen/pykeen/pull/123)
+- Random triple generation (https://github.com/pykeen/pykeen/pull/201)
+- Make negative sampler corruption scheme configurable (https://github.com/pykeen/pykeen/pull/209)
+- Add predict with inverse tripels pipeline (https://github.com/pykeen/pykeen/pull/208)
+- Add generalize p-norm to regularizer (https://github.com/pykeen/pykeen/pull/225)
+
+Changed
+~~~~~~~
+- New harness for resetting parameters (https://github.com/pykeen/pykeen/pull/131)
+- Modularize embeddings (https://github.com/pykeen/pykeen/pull/132)
+- Update first steps documentation (https://github.com/pykeen/pykeen/pull/152; thanks @TobiasUhmann )
+- Switched testing to GitHub Actions (https://github.com/pykeen/pykeen/pull/165 and
+  https://github.com/pykeen/pykeen/pull/194)
+- No longer support Python 3.6
+- Move automatic memory optimization (AMO) option out of model and into
+  training loop (https://github.com/pykeen/pykeen/pull/176)
+- Improve hyper-parameter defaults and HPO defaults (https://github.com/pykeen/pykeen/pull/181
+  and https://github.com/pykeen/pykeen/pull/179)
+- Switch internal usage to ID-based triples (https://github.com/pykeen/pykeen/pull/193 and
+  https://github.com/pykeen/pykeen/pull/220)
+- Optimize triples splitting algorithm (https://github.com/pykeen/pykeen/pull/187)
+- Generalize metadata storage in triples factory (https://github.com/pykeen/pykeen/pull/211)
+- Add drop_last option to data loader in training loop (https://github.com/pykeen/pykeen/pull/217)
+
+Fixed
+~~~~~
+- Whitelist support in HPO pipeline (https://github.com/pykeen/pykeen/pull/124)
+- Improve evaluator instantiation (https://github.com/pykeen/pykeen/pull/125; thanks @kantholtz)
+- CPU fallback on AMO (https://github.com/pykeen/pykeen/pull/232)
+- Fix HPO save issues (https://github.com/pykeen/pykeen/pull/235)
+- Fix GPU issue in plotting (https://github.com/pykeen/pykeen/pull/207)
+
 `1.0.5 <https://github.com/pykeen/pykeen/compare/v1.0.4...v1.0.5>`_ - 2020-10-21
 --------------------------------------------------------------------------------
 Added

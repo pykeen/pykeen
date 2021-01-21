@@ -21,7 +21,7 @@ class TestBaseModel(unittest.TestCase):
     batch_size: int
     embedding_dim: int
     factory: TriplesFactory
-    model: EntityRelationEmbeddingModel
+    model: Model
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""
@@ -192,3 +192,11 @@ class MinimalTriplesFactory:
     }
     num_entities = 2
     num_relations = 2
+
+    @classmethod
+    def get_entity_ids(cls):  # noqa:D102
+        return cls.entity_to_id.values()
+
+    @classmethod
+    def get_relation_ids(cls):  # noqa:D102
+        return cls.relation_to_id.values()

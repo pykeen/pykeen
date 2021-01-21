@@ -2,7 +2,7 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.nn as nn
@@ -51,17 +51,17 @@ class ComplEx(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
     #: The regularizer used by [trouillon2016]_ for ComplEx.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.01,
         p=2.0,
         normalize=True,
@@ -72,26 +72,26 @@ class ComplEx(EntityRelationEmbeddingModel):
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
+        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer=nn.init.normal_,
         relation_initializer=nn.init.normal_,
     ) -> None:
         """Initialize ComplEx.
 
-        :param triples_factory: TriplesFactory
+        :param triples_factory:
             The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param loss: OptionalLoss (optional)
+        :param loss:
             The loss to use. Defaults to SoftplusLoss.
-        :param preferred_device: str (optional)
-            The default device where to model is located.
-        :param random_seed: int (optional)
-            An optional random seed to set before the initialization of weights.
-        :param regularizer: BaseRegularizer
+        :param regularizer:
             The regularizer to use.
+        :param preferred_device:
+            The default device where to model is located.
+        :param random_seed:
+            An optional random seed to set before the initialization of weights.
         """
         super().__init__(
             triples_factory=triples_factory,

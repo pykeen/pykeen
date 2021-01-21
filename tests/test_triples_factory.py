@@ -2,16 +2,25 @@
 
 """Unit tests for triples factories."""
 
+import itertools as itt
 import unittest
+from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 
 from pykeen.datasets import Nations
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.triples_factory import (
-    INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _tf_cleanup_all, _tf_cleanup_deterministic, _tf_cleanup_randomized,
+from pykeen.triples.generation import generate_triples
+from pykeen.triples.splitting import (
+    SPLIT_METHODS, _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
+    _tf_cleanup_randomized,
+    get_absolute_split_sizes, normalize_ratios,
 )
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
+from pykeen.triples.utils import get_entities, get_relations
 
 triples = np.array(
     [
@@ -60,68 +69,36 @@ class TestTriplesFactory(unittest.TestCase):
         self.factory = Nations().training
 
     def test_correct_inverse_creation(self):
-        """Test if the triples and the corresponding inverses are created and sorted correctly."""
+        """Test if the triples and the corresponding inverses are created."""
         t = [
             ['e1', 'a.', 'e5'],
             ['e1', 'a', 'e2'],
         ]
         t = np.array(t, dtype=np.str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
-
-    def test_automatic_inverse_detection(self):
-        """Test if the TriplesFactory detects that the triples contain inverses and creates correct ids."""
-        t = [
-            ['e3', f'a.{INVERSE_SUFFIX}', 'e10'],
-            ['e1', 'a', 'e2'],
-            ['e1', 'a.', 'e5'],
-            ['e4', f'a{INVERSE_SUFFIX}', 'e5'],
-        ]
-        t = np.array(t, dtype=np.str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
-        reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
-        self.assertTrue(factory.create_inverse_triples)
+        instances = factory.create_slcwa_instances()
+        assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
-        """Test if the TriplesFactory detects that the triples contain incomplete inverses and creates correct ids."""
+        """Test detecting that the triples contain inverses, warns about them, and filters them out."""
+        # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
+        # inverse relations, although the triples contained in it are not the same we would have when removing the
+        # first triple, and passing create_inverse_triples=True.
         t = [
             ['e3', f'a.{INVERSE_SUFFIX}', 'e10'],
             ['e1', 'a', 'e2'],
             ['e1', 'a.', 'e5'],
         ]
         t = np.array(t, dtype=np.str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
-        reference_relation_to_id = {'a': 0, f'a{INVERSE_SUFFIX}': 1, 'a.': 2, f'a.{INVERSE_SUFFIX}': 3}
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
-        self.assertTrue(factory.create_inverse_triples)
-
-    def test_right_sorting(self):
-        """Test if the triples and the corresponding inverses are sorted correctly."""
-        t = [
-            ['e1', 'a', 'e1'],
-            ['e1', 'a.', 'e1'],
-            ['e1', f'a.{INVERSE_SUFFIX}', 'e1'],
-            ['e1', 'a.bc', 'e1'],
-            ['e1', f'a.bc{INVERSE_SUFFIX}', 'e1'],
-            ['e1', f'a{INVERSE_SUFFIX}', 'e1'],
-            ['e1', 'abc', 'e1'],
-            ['e1', f'abc{INVERSE_SUFFIX}', 'e1'],
-        ]
-        t = np.array(t, dtype=np.str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=False)
-        reference_relation_to_id = {
-            'a': 0,
-            f'a{INVERSE_SUFFIX}': 1,
-            'a.': 2,
-            f'a.{INVERSE_SUFFIX}': 3,
-            'a.bc': 4,
-            f'a.bc{INVERSE_SUFFIX}': 5,
-            'abc': 6,
-            f'abc{INVERSE_SUFFIX}': 7,
-        }
-        self.assertEqual(reference_relation_to_id, factory.relation_to_id)
+        for create_inverse_triples in (False, True):
+            with patch("pykeen.triples.triples_factory.logger.warning") as warning:
+                factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)
+                # check for warning
+                warning.assert_called()
+                # check for filtered triples
+                assert factory.num_triples == 2
+                # check for correct inverse triples flag
+                assert factory.create_inverse_triples == create_inverse_triples
 
     def test_id_to_label(self):
         """Test ID-to-label conversion."""
@@ -189,16 +166,13 @@ class TestTriplesFactory(unittest.TestCase):
 
                     # verify that triples have been filtered
                     if entity_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 0]).union(
+                        present_entities = set(restricted_triples_factory.triples[:, 0]).union(
                             restricted_triples_factory.triples[:, 2])
-                        assert set(entity_restriction).issuperset(present_relations)
+                        assert set(entity_restriction).issuperset(present_entities)
 
                     if relation_restriction is not None:
                         present_relations = set(restricted_triples_factory.triples[:, 1])
                         exp_relations = set(relation_restriction)
-                        if original_triples_factory.create_inverse_triples:
-                            exp_relations = exp_relations.union(map(original_triples_factory.relation_to_inverse.get,
-                                                                    exp_relations))
                         assert exp_relations.issuperset(present_relations)
 
     def test_create_lcwa_instances(self):
@@ -248,10 +222,10 @@ class TestSplit(unittest.TestCase):
     def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
         """Test invariants for result of triples factory splitting."""
         # verify that all entities and relations are present in the training factory
-        assert training_triples_factory.num_entities == self.triples_factory.num_entities
-        assert training_triples_factory.num_relations == self.triples_factory.num_relations
+        self.assertEqual(training_triples_factory.num_entities, self.triples_factory.num_entities)
+        self.assertEqual(training_triples_factory.num_relations, self.triples_factory.num_relations)
 
-        all_factories = (training_triples_factory,) + other_factories
+        all_factories = (training_triples_factory, *other_factories)
 
         # verify that no triple got lost
         self.assertEqual(sum(t.num_triples for t in all_factories), self.triples_factory.num_triples)
@@ -270,59 +244,61 @@ class TestSplit(unittest.TestCase):
             id(self.triples_factory.relation_to_id),
         })
 
-    def test_split_naive(self):
-        """Test splitting a factory in two with a given ratio."""
-        ratio = 0.8
-        train_triples_factory, test_triples_factory = self.triples_factory.split(ratio)
-        self._test_invariants(train_triples_factory, test_triples_factory)
-
-    def test_split_multi(self):
-        """Test splitting a factory in three."""
-        ratios = 0.80, 0.10
-        t0, t1, t2 = self.triples_factory.split(ratios)
-        self._test_invariants(t0, t1, t2)
+    def test_split(self):
+        """Test splitting a factory."""
+        cases = [
+            (2, 0.8),
+            (2, [0.8]),
+            (3, [0.80, 0.10]),
+            (3, [0.80, 0.10, 0.10]),
+        ]
+        for method, (n, ratios), in itt.product(SPLIT_METHODS, cases):
+            with self.subTest(method=method, ratios=ratios):
+                factories = self.triples_factory.split(ratios, method=method)
+                self.assertEqual(n, len(factories))
+                self._test_invariants(*factories)
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = np.array([
+        training = torch.as_tensor(data=[
             [1, 1000, 2],
             [1, 1000, 3],
             [1, 1001, 3],
-        ])
-        testing = np.array([
+        ], dtype=torch.long)
+        testing = torch.as_tensor(data=[
             [2, 1001, 3],
             [1, 1002, 4],
-        ])
-        expected_training = [
+        ], dtype=torch.long)
+        expected_training = torch.as_tensor(data=[
             [1, 1000, 2],
             [1, 1000, 3],
             [1, 1001, 3],
             [1, 1002, 4],
-        ]
-        expected_testing = [
+        ], dtype=torch.long)
+        expected_testing = torch.as_tensor(data=[
             [2, 1001, 3],
-        ]
+        ], dtype=torch.long)
 
         new_training, new_testing = _tf_cleanup_deterministic(training, testing)
-        self.assertEqual(expected_training, new_training.tolist())
-        self.assertEqual(expected_testing, new_testing.tolist())
+        assert (expected_training == new_training).all()
+        assert (expected_testing == new_testing).all()
 
         new_testing, new_testing = _tf_cleanup_all([training, testing])
-        self.assertEqual(expected_training, new_training.tolist())
-        self.assertEqual(expected_testing, new_testing.tolist())
+        assert (expected_training == new_training).all()
+        assert (expected_testing == new_testing).all()
 
     def test_cleanup_randomized(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = np.array([
+        training = torch.as_tensor(data=[
             [1, 1000, 2],
             [1, 1000, 3],
-        ])
-        testing = np.array([
+        ], dtype=torch.long)
+        testing = torch.as_tensor(data=[
             [2, 1000, 3],
             [1, 1000, 4],
             [2, 1000, 4],
             [1, 1001, 3],
-        ])
+        ], dtype=torch.long)
         expected_training_1 = {
             (1, 1000, 2),
             (1, 1000, 3),
@@ -356,6 +332,29 @@ class TestSplit(unittest.TestCase):
             self.assertEqual(expected_testing_2, new_testing)
         else:
             self.fail('training was not correct')
+
+    def test_get_cover_deterministic(self):
+        """Test _get_cover_deterministic."""
+        generated_triples = generate_triples()
+        cover = _get_cover_deterministic(triples=generated_triples)
+
+        # check type
+        assert torch.is_tensor(cover)
+        assert cover.dtype == torch.bool
+        # check format
+        assert cover.shape == (generated_triples.shape[0],)
+
+        # check coverage
+        self.assertEqual(
+            get_entities(generated_triples),
+            get_entities(generated_triples[cover]),
+            msg='entity coverage is not full',
+        )
+        self.assertEqual(
+            get_relations(generated_triples),
+            get_relations(generated_triples[cover]),
+            msg='relation coverage is not full',
+        )
 
 
 class TestLiterals(unittest.TestCase):
@@ -403,19 +402,23 @@ class TestLiterals(unittest.TestCase):
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
         self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
         self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
-        self.assertTrue((triples_factory.mapped_triples == triples_factory.map_triples_to_id(triples)).all())
+        assert (_map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=triples_factory.entity_to_id,
+            relation_to_id=triples_factory.relation_to_id,
+        ) == triples_factory.mapped_triples).all()
 
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
-        self.assertEqual(0, triples_factory.num_relations % 2)
+        self.assertEqual(4, triples_factory.num_relations)
         self.assertEqual(
             set(range(triples_factory.num_entities)),
             set(triples_factory.entity_to_id.values()),
             msg='wrong number entities',
         )
         self.assertEqual(
-            set(range(triples_factory.num_relations)),
+            set(range(triples_factory.real_num_relations)),
             set(triples_factory.relation_to_id.values()),
             msg='wrong number relations',
         )
@@ -430,4 +433,109 @@ class TestLiterals(unittest.TestCase):
             msg='Wrong number of relations in factory',
         )
 
-        self.assertIn(f'likes{INVERSE_SUFFIX}', triples_factory.relation_to_id)
+    def test_metadata(self):
+        """Test metadata passing for triples factories."""
+        t = Nations().training
+        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(t),
+        )
+
+        entities = ['poland', 'ussr']
+        x = t.new_with_restriction(entities=entities)
+        entities_ids = t.entities_to_ids(entities=entities)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=37,'
+                f' inverse_triples=False, entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(x),
+        )
+
+        relations = ['negativebehavior']
+        v = t.new_with_restriction(relations=relations)
+        relations_ids = t.relations_to_ids(relations=relations)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=29,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
+            ),
+            repr(v),
+        )
+
+        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        self.assertIsInstance(w, TriplesFactory)
+        self.assertNotIn('path', w.metadata)
+        self.assertEqual(
+            'TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)',
+            repr(w),
+        )
+
+        y, z = t.split()
+        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
+
+
+def test_get_absolute_split_sizes():
+    """Test get_absolute_split_sizes."""
+    for num_splits, n_total in zip(
+        (2, 3, 4),
+        (100, 200, 10412),
+    ):
+        # generate random ratios
+        ratios = np.random.uniform(size=(num_splits,))
+        ratios = ratios / ratios.sum()
+        sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
+        # check size
+        assert len(sizes) == len(ratios)
+
+        # check value range
+        assert all(0 <= size <= n_total for size in sizes)
+
+        # check total split
+        assert sum(sizes) == n_total
+
+        # check consistency with ratios
+        rel_size = np.asarray(sizes) / n_total
+        # the number of decimal digits equivalent to 1 / n_total
+        decimal = np.floor(np.log10(n_total))
+        np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
+
+
+def test_normalize_ratios():
+    """Test normalize_ratios."""
+    for ratios, exp_output in (
+        (0.5, (0.5, 0.5)),
+        ((0.3, 0.2, 0.4), (0.3, 0.2, 0.4, 0.1)),
+        ((0.3, 0.3, 0.4), (0.3, 0.3, 0.4)),
+    ):
+        output = normalize_ratios(ratios=ratios)
+        # check type
+        assert isinstance(output, tuple)
+        assert all(isinstance(ratio, float) for ratio in output)
+        # check values
+        assert len(output) >= 2
+        assert all(0 <= ratio <= 1 for ratio in output)
+        output_np = np.asarray(output)
+        np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
+        # compare against expected
+        np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
+
+
+def test_normalize_invalid_ratio():
+    """Test invalid ratios."""
+    cases = [
+        1.1,
+        [1.1],
+        [0.8, 0.3],
+        [0.8, 0.1, 0.2],
+    ]
+    for ratios in cases:
+        with pytest.raises(ValueError):
+            _ = normalize_ratios(ratios=ratios)
