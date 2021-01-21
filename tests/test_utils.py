@@ -198,48 +198,50 @@ def test_torch_is_in_1d():
             )
             assert (result == expected_result).all()
 
-    def test_complex_utils(self):
-        """Test complex tensor utilities."""
-        re = torch.rand(20, 10)
-        im = torch.rand(20, 10)
-        x = combine_complex(x_re=re, x_im=im)
-        re2, im2 = split_complex(x)
-        assert (re2 == re).all()
-        assert (im2 == im).all()
 
-    def test_project_entity(self):
-        """Test _project_entity."""
-        batch_size = 2
-        embedding_dim = 3
-        relation_dim = 5
-        num_entities = 7
+def test_complex_utils():
+    """Test complex tensor utilities."""
+    re = torch.rand(20, 10)
+    im = torch.rand(20, 10)
+    x = combine_complex(x_re=re, x_im=im)
+    re2, im2 = split_complex(x)
+    assert (re2 == re).all()
+    assert (im2 == im).all()
 
-        # random entity embeddings & projections
-        e = torch.rand(1, num_entities, embedding_dim)
-        e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
-        e_p = torch.rand(1, num_entities, embedding_dim)
 
-        # random relation embeddings & projections
-        r_p = torch.rand(batch_size, 1, relation_dim)
+def test_project_entity():
+    """Test _project_entity."""
+    batch_size = 2
+    embedding_dim = 3
+    relation_dim = 5
+    num_entities = 7
 
-        # project
-        e_bot = project_entity(e=e, e_p=e_p, r_p=r_p)
+    # random entity embeddings & projections
+    e = torch.rand(1, num_entities, embedding_dim)
+    e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
+    e_p = torch.rand(1, num_entities, embedding_dim)
 
-        # check shape:
-        assert e_bot.shape == (batch_size, num_entities, relation_dim)
+    # random relation embeddings & projections
+    r_p = torch.rand(batch_size, 1, relation_dim)
 
-        # check normalization
-        assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
+    # project
+    e_bot = project_entity(e=e, e_p=e_p, r_p=r_p)
 
-        # check equivalence of re-formulation
-        # e_{\bot} = M_{re} e = (r_p e_p^T + I^{d_r \times d_e}) e
-        #                     = r_p (e_p^T e) + e'
-        m_re = r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2)
-        m_re = m_re + torch.eye(relation_dim, embedding_dim).view(1, 1, relation_dim, embedding_dim)
-        assert m_re.shape == (batch_size, num_entities, relation_dim, embedding_dim)
-        e_vanilla = (m_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
-        e_vanilla = clamp_norm(e_vanilla, p=2, dim=-1, maxnorm=1)
-        assert torch.allclose(e_vanilla, e_bot)
+    # check shape:
+    assert e_bot.shape == (batch_size, num_entities, relation_dim)
+
+    # check normalization
+    assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
+
+    # check equivalence of re-formulation
+    # e_{\bot} = M_{re} e = (r_p e_p^T + I^{d_r \times d_e}) e
+    #                     = r_p (e_p^T e) + e'
+    m_re = r_p.unsqueeze(dim=-1) @ e_p.unsqueeze(dim=-2)
+    m_re = m_re + torch.eye(relation_dim, embedding_dim).view(1, 1, relation_dim, embedding_dim)
+    assert m_re.shape == (batch_size, num_entities, relation_dim, embedding_dim)
+    e_vanilla = (m_re @ e.unsqueeze(dim=-1)).squeeze(dim=-1)
+    e_vanilla = clamp_norm(e_vanilla, p=2, dim=-1, maxnorm=1)
+    assert torch.allclose(e_vanilla, e_bot)
 
 
 class TestCudaExceptionsHandling(unittest.TestCase):
