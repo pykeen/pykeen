@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, TypeVar, Union
+from typing import Callable, Mapping, NamedTuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -18,6 +18,7 @@ __all__ = [
     'InteractionFunction',
     'DeviceHint',
     'TorchRandomHint',
+    'GaussianDistribution',
 ]
 
 LabeledTriples = np.ndarray
@@ -34,3 +35,10 @@ Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
 TorchRandomHint = Union[None, int, torch.Generator]
+
+
+class GaussianDistribution(NamedTuple):
+    """A gaussian distribution with diagonal covariance matrix."""
+
+    mean: torch.FloatTensor
+    diagonal_covariance: torch.FloatTensor

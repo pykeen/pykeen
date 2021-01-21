@@ -3,8 +3,11 @@
 """Utilities for PyKEEN."""
 
 import ftplib
+import functools
+import itertools as itt
 import json
 import logging
+import operator
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
@@ -49,6 +52,7 @@ __all__ = [
     'Result',
     'fix_dataclass_init_docs',
     'get_benchmark',
+    'extended_einsum',
 ]
 
 logger = logging.getLogger(__name__)
@@ -309,6 +313,12 @@ def split_complex(
     return x[..., :dim], x[..., dim:]
 
 
+def view_complex(x: torch.FloatTensor) -> torch.Tensor:
+    """Convert a PyKEEN complex tensor representation into a torch one."""
+    real, imag = split_complex(x=x)
+    return torch.complex(real=real, imag=imag)
+
+
 def real_part(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
@@ -461,6 +471,41 @@ def format_relative_comparison(
     return f"{part}/{total} ({part / total:2.2%})"
 
 
+def broadcast_cat(
+    x: torch.FloatTensor,
+    y: torch.FloatTensor,
+    dim: int,
+) -> torch.FloatTensor:
+    """Concatenate with broadcasting.
+
+    :param x:
+        The first tensor.
+    :param y:
+        The second tensor.
+    :param dim:
+        The concat dimension.
+
+    :return:
+    """
+    if x.ndimension() != y.ndimension():
+        raise ValueError
+    if dim < 0:
+        dim = x.ndimension() + dim
+    x_rep, y_rep = [], []
+    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
+        xr = yr = 1
+        if d != dim and xd != yd:
+            if xd == 1:
+                xr = yd
+            elif yd == 1:
+                yr = xd
+            else:
+                raise ValueError
+        x_rep.append(xr)
+        y_rep.append(yr)
+    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+
+
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
     return [
@@ -468,3 +513,229 @@ def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
         for submodule in module.modules()
         if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
     ]
+
+
+def calculate_broadcasted_elementwise_result_shape(
+    first: Tuple[int, ...],
+    second: Tuple[int, ...],
+) -> Tuple[int, ...]:
+    """Determine the return shape of a broadcasted elementwise operation."""
+    return tuple(max(a, b) for a, b in zip(first, second))
+
+
+def estimate_cost_of_sequence(
+    shape: Tuple[int, ...],
+    *other_shapes: Tuple[int, ...],
+) -> int:
+    """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
+    return sum(map(
+        np.prod,
+        itt.islice(
+            itt.accumulate(
+                (shape,) + other_shapes,
+                calculate_broadcasted_elementwise_result_shape,
+            ),
+            1,
+            None,
+        ),
+    ))
+
+
+@functools.lru_cache(maxsize=32)
+def _get_optimal_sequence(
+    *sorted_shapes: Tuple[int, ...],
+) -> Tuple[int, Tuple[int, ...]]:
+    """Find the optimal sequence in which to combine tensors element-wise based on the shapes.
+
+    The shapes should be sorted to enable efficient caching.
+    :param sorted_shapes:
+        The shapes of the tensors to combine.
+    :return:
+        The optimal execution order (as indices), and the cost.
+    """
+    return min(
+        (estimate_cost_of_sequence(*(sorted_shapes[i] for i in p)), p)
+        for p in itt.permutations(list(range(len(sorted_shapes))))
+    )
+
+
+@functools.lru_cache(maxsize=64)
+def get_optimal_sequence(*shapes: Tuple[int, ...]) -> Tuple[int, Tuple[int, ...]]:
+    """Find the optimal sequence in which to combine tensors elementwise based on the shapes.
+
+    :param shapes:
+        The shapes of the tensors to combine.
+    :return:
+        The optimal execution order (as indices), and the cost.
+    """
+    # create sorted list of shapes to allow utilization of lru cache (optimal execution order does not depend on the
+    # input sorting, as the order is determined by re-ordering the sequence anyway)
+    arg_sort = sorted(range(len(shapes)), key=shapes.__getitem__)
+
+    # Determine optimal order and cost
+    cost, optimal_order = _get_optimal_sequence(*(shapes[new_index] for new_index in arg_sort))
+
+    # translate back to original order
+    optimal_order = tuple(arg_sort[i] for i in optimal_order)
+
+    return cost, optimal_order
+
+
+def _reorder(
+    tensors: Tuple[torch.FloatTensor, ...],
+) -> Tuple[torch.FloatTensor, ...]:
+    """Re-order tensors for broadcasted element-wise combination of tensors.
+
+    The optimal execution plan gets cached so that the optimization is only performed once for a fixed set of shapes.
+
+    :param tensors:
+        The tensors, in broadcastable shape.
+
+    :return:
+        The re-ordered tensors in optimal processing order.
+    """
+    if len(tensors) < 3:
+        return tensors
+    # determine optimal processing order
+    shapes = tuple(tuple(t.shape) for t in tensors)
+    if len(set(s[0] for s in shapes)) < 2:
+        # heuristic
+        return tensors
+    order = get_optimal_sequence(*shapes)[1]
+    return tuple(tensors[i] for i in order)
+
+
+def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute elementwise sum of tensors in broadcastable shape."""
+    return sum(_reorder(tensors=x))
+
+
+def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute elementwise product of tensors in broadcastable shape."""
+    head, *rest = _reorder(tensors=x)
+    return functools.reduce(operator.mul, rest, head)
+
+
+def negative_norm_of_sum(
+    *x: torch.FloatTensor,
+    p: Union[str, int] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate negative norm of a sum of vectors on already broadcasted representations.
+
+    :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The representations.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm(tensor_sum(*x), p=p, power_norm=power_norm)
+
+
+def negative_norm(
+    x: torch.FloatTensor,
+    p: Union[str, int] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate negative norm of a vector.
+
+    :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
+        The vectors.
+    :param p:
+        The p for the norm. cf. torch.norm.
+    :param power_norm:
+        Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    if power_norm:
+        assert not isinstance(p, str)
+        return -(x.abs() ** p).sum(dim=-1)
+
+    if torch.is_complex(x):
+        assert not isinstance(p, str)
+        # workaround for complex numbers: manually compute norm
+        return -(x.abs() ** p).sum(dim=-1) ** (1 / p)
+
+    return -x.norm(p=p, dim=-1)
+
+
+def extended_einsum(
+    eq: str,
+    *tensors,
+) -> torch.FloatTensor:
+    """Drop dimensions of size 1 to allow broadcasting."""
+    # TODO: check if einsum is still very slow.
+    lhs, rhs = eq.split("->")
+    mod_ops, mod_t = [], []
+    for op, t in zip(lhs.split(","), tensors):
+        mod_op = ""
+        if len(op) != len(t.shape):
+            raise ValueError(f'Shapes not equal: op={op} and t.shape={t.shape}')
+        # TODO: t_shape = list(t.shape); del t_shape[i]; t.view(*shape) -> only one reshape operation
+        for i, c in reversed(list(enumerate(op))):
+            if t.shape[i] == 1:
+                t = t.squeeze(dim=i)
+            else:
+                mod_op = c + mod_op
+        mod_ops.append(mod_op)
+        mod_t.append(t)
+    m_lhs = ",".join(mod_ops)
+    r_keep_dims = set("".join(mod_ops))
+    m_rhs = "".join(c for c in rhs if c in r_keep_dims)
+    m_eq = f"{m_lhs}->{m_rhs}"
+    mod_r = torch.einsum(m_eq, *mod_t)
+    # unsqueeze
+    for i, c in enumerate(rhs):
+        if c not in r_keep_dims:
+            mod_r = mod_r.unsqueeze(dim=i)
+    return mod_r
+
+
+def project_entity(
+    e: torch.FloatTensor,
+    e_p: torch.FloatTensor,
+    r_p: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Project entity relation-specific.
+
+    .. math::
+
+        e_{\bot} = M_{re} e
+                 = (r_p e_p^T + I^{d_r \times d_e}) e
+                 = r_p e_p^T e + I^{d_r \times d_e} e
+                 = r_p (e_p^T e) + e'
+
+    and additionally enforces
+
+    .. math::
+
+        \|e_{\bot}\|_2 \leq 1
+
+    :param e: shape: (..., d_e)
+        The entity embedding.
+    :param e_p: shape: (..., d_e)
+        The entity projection.
+    :param r_p: shape: (..., d_r)
+        The relation projection.
+
+    :return: shape: (..., d_r)
+
+    """
+    # The dimensions affected by e'
+    change_dim = min(e.shape[-1], r_p.shape[-1])
+
+    # Project entities
+    # r_p (e_p.T e) + e'
+    e_bot = r_p * torch.sum(e_p * e, dim=-1, keepdim=True)
+    e_bot[..., :change_dim] += e[..., :change_dim]
+
+    # Enforce constraints
+    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
+
+    return e_bot
