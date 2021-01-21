@@ -10,13 +10,3 @@ Base Classes
     :no-inheritance-diagram:
     :no-heading:
     :headings: ~~
-
-Initialization
---------------
-.. automodule:: pykeen.nn.init
-    :members:
-
-Extra Modules
--------------
-.. automodule:: pykeen.nn
-    :members:

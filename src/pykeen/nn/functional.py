@@ -10,6 +10,7 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -123,6 +124,7 @@ def _apply_optional_bn_to_tensor(
 
 
 def _add_cuda_warning(func):
+    @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -588,7 +590,7 @@ def rotate_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    """Evaluate the interaction function of RotatE for given embeddings.
+    """Evaluate the RotatE interaction function.
 
     :param h: shape: (batch_size, num_heads, 1, 1, 2*dim)
         The head representations.
@@ -811,7 +813,7 @@ def transr_interaction(
     p: int,
     power_norm: bool = True,
 ) -> torch.FloatTensor:
-    """Evaluate the interaction function for given embeddings.
+    """Evaluate the TransR interaction function.
 
     :param h: shape: (batch_size, num_heads, 1, 1, d_e)
         Head embeddings.
