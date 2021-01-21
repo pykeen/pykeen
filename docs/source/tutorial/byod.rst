@@ -18,8 +18,8 @@ pipeline like this:
     testing_path: str = ...
 
     result = pipeline(
-        training_triples_factory=training_path,
-        testing_triples_factory=testing_path,
+        training=training_path,
+        testing=testing_path,
         model='TransE',
     )
     result.save_to_directory('test_pre_stratified_transe')
@@ -41,8 +41,8 @@ the :func:`pykeen.pipeline.pipeline` as in:
 
     result = hpo_pipeline(
         n_trials=30,
-        training_triples_factory=training_path,
-        testing_triples_factory=testing_path,
+        training=training_path,
+        testing=testing_path,
         model='TransE',
     )
     result.save_to_directory('test_hpo_pre_stratified_transe')
@@ -62,8 +62,8 @@ to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse
     testing_path: str = ...
 
     result = pipeline(
-        training_triples_factory=training_path,
-        testing_triples_factory=testing_path,
+        training=training_path,
+        testing=testing_path,
         dataset_kwargs={'create_inverse_triples': True},
         model='TransE',
     )
@@ -88,8 +88,8 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
     )
 
     result = pipeline(
-        training_triples_factory=training,
-        testing_triples_factory=testing,
+        training=training,
+        testing=testing,
         model='TransE',
     )
     pipeline_result.save_to_directory('test_pre_stratified_transe')
@@ -126,8 +126,8 @@ desired behavior as in:
     )
 
     result = pipeline(
-        training_triples_factory=training,
-        testing_triples_factory=testing,
+        training=training,
+        testing=testing,
         model='TransE',
     )
     result.save_to_directory('test_pre_stratified_transe')
@@ -150,8 +150,8 @@ a stratified dataset.
     training, testing = tf.split()
 
     result = pipeline(
-        training_triples_factory=training,
-        testing_triples_factory=testing,
+        training=training,
+        testing=testing,
         model='TransE',
     )
     pipeline_result.save_to_directory('test_unstratified_transe')
@@ -168,9 +168,9 @@ you should specify the splits:
     training, testing, validation = tf.split([.8, .1, .1])
 
     result = pipeline(
-        training_triples_factory=training,
-        testing_triples_factory=testing,
-        validation_triples_factory=validation,
+        training=training,
+        testing=testing,
+        validation=validation,
         model='TransE',
         stopper='early',
     )
