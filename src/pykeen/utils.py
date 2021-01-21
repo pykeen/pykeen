@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from typing import (
-    Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar,
+    Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar,
     Union,
 )
 
@@ -739,3 +739,50 @@ def project_entity(
     e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
     return e_bot
+
+
+CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
+
+
+def _normalize_dim(dim: Union[int, str]) -> int:
+    """Normalize the dimension selection."""
+    if isinstance(dim, int):
+        return dim
+    return CANONICAL_DIMENSIONS[dim.lower()[0]]
+
+
+def convert_to_canonical_shape(
+    x: torch.FloatTensor,
+    dim: Union[int, str],
+    num: Optional[int] = None,
+    batch_size: int = 1,
+    suffix_shape: Union[int, Sequence[int]] = -1,
+) -> torch.FloatTensor:
+    """Convert a tensor to canonical shape.
+
+    :param x:
+        The tensor in compatible shape.
+    :param dim:
+        The "num" dimension.
+    :param batch_size:
+        The batch size.
+    :param num:
+        The number.
+    :param suffix_shape:
+        The suffix shape.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails, ``*``)
+        A tensor in canonical shape.
+    """
+    if num is None:
+        num = x.shape[0]
+    suffix_shape = upgrade_to_sequence(suffix_shape)
+    shape = [batch_size, 1, 1, 1]
+    dim = _normalize_dim(dim=dim)
+    shape[dim] = num
+    return x.view(*shape, *suffix_shape)
+
+
+def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
+    """Ensure that the input is a sequence."""
+    return x if isinstance(x, Sequence) else (x,)
