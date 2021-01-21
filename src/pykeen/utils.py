@@ -319,6 +319,14 @@ def view_complex(x: torch.FloatTensor) -> torch.Tensor:
     return torch.complex(real=real, imag=imag)
 
 
+def combine_complex(
+    x_re: torch.FloatTensor,
+    x_im: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Combine a complex tensor from real and imaginary part."""
+    return torch.cat([x_re, x_im], dim=-1)
+
+
 def real_part(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
