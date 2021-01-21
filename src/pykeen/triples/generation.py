@@ -2,20 +2,15 @@
 
 """Utilities for generating triples."""
 
-from typing import Mapping
-from uuid import uuid4
-
-import numpy as np
 import torch
 
-from .triples_factory import TriplesFactory
+from .triples_factory import CoreTriplesFactory
 from .utils import get_entities, get_relations
 from ..typing import TorchRandomHint
-from ..utils import ensure_torch_random_state, invert_mapping
+from ..utils import ensure_torch_random_state
 
 __all__ = [
     'generate_triples',
-    'generate_labeled_triples',
     'generate_triples_factory',
 ]
 
@@ -56,50 +51,13 @@ def generate_triples(
     return rv
 
 
-def generate_labeled_triples(
-    num_entities: int = 33,
-    num_relations: int = 7,
-    num_triples: int = 101,
-    random_state: TorchRandomHint = None,
-) -> np.ndarray:
-    """Generate labeled random triples."""
-    mapped_triples = generate_triples(
-        num_entities=num_entities,
-        num_relations=num_relations,
-        num_triples=num_triples,
-        compact=False,
-        random_state=random_state,
-    )
-    entity_id_to_label = _make_id_to_labels(num_entities)
-    relation_id_to_label = _make_id_to_labels(num_relations)
-    return np.asarray([
-        (
-            entity_id_to_label[h],
-            relation_id_to_label[r],
-            entity_id_to_label[t],
-        )
-        for h, r, t in mapped_triples
-    ], dtype=str)
-
-
-def _make_id_to_labels(n: int) -> Mapping[int, str]:
-    return {
-        index: str(uuid4())
-        for index in range(n)
-    }
-
-
-def _make_label_to_ids(n: int) -> Mapping[str, int]:
-    return invert_mapping(mapping=_make_id_to_labels(n))
-
-
 def generate_triples_factory(
     num_entities: int = 33,
     num_relations: int = 7,
     num_triples: int = 101,
     random_state: TorchRandomHint = None,
     create_inverse_triples: bool = False,
-) -> TriplesFactory:
+) -> CoreTriplesFactory:
     """Generate a triples factory with random triples."""
     mapped_triples = generate_triples(
         num_entities=num_entities,
@@ -107,9 +65,7 @@ def generate_triples_factory(
         num_triples=num_triples,
         random_state=random_state,
     )
-    return TriplesFactory(
-        entity_to_id=_make_label_to_ids(num_entities),
-        relation_to_id=_make_label_to_ids(num_relations),
+    return CoreTriplesFactory.create(
         mapped_triples=mapped_triples,
         create_inverse_triples=create_inverse_triples,
     )
