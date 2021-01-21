@@ -53,6 +53,8 @@ __all__ = [
     'fix_dataclass_init_docs',
     'get_benchmark',
     'extended_einsum',
+    'upgrade_to_sequence',
+    'ensure_tuple',
 ]
 
 logger = logging.getLogger(__name__)
@@ -794,3 +796,8 @@ def convert_to_canonical_shape(
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     """Ensure that the input is a sequence."""
     return x if isinstance(x, Sequence) else (x,)
+
+
+def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Ensure that all elements in the sequence are upgraded to sequences."""
+    return tuple(upgrade_to_sequence(xx) for xx in x)
