@@ -37,4 +37,8 @@ class LiteralTests(cases.InteractionTestCase):
     cls = MockLiteralInteraction
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        raise NotImplementedError
+        return self.instance.base(
+            self.instance.combination(torch.cat(h, dim=-1)),
+            r,
+            self.instance.combination(torch.cat(t, dim=-1)),
+        )
