@@ -31,13 +31,13 @@ from pykeen.models.base import (
     _extend_batch,
 )
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.predict import get_novelty_mask
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.models.utils import get_novelty_mask
 from pykeen.nn import Embedding, RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
