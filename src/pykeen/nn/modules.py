@@ -57,7 +57,6 @@ def _get_batches(z, slice_size):
         yield batch
 
 
-# TODO rename Interaction -> FunctionalInteraction and then BaseInteraction -> Interaction (later)
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
