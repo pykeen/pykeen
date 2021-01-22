@@ -368,9 +368,9 @@ def _translate_triples(
         [
             trans[column]
             for column, trans in zip(
-            triples.t(),
-            (entity_translation, relation_translation, entity_translation),
-        )
+                triples.t(),
+                (entity_translation, relation_translation, entity_translation),
+            )
         ],
         dim=-1,
     )
