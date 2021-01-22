@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 from torch import FloatTensor, nn
@@ -15,6 +15,9 @@ from torch import FloatTensor, nn
 from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
+
+if TYPE_CHECKING:
+    from ..typing import Representation  # noqa
 
 __all__ = [
     # Base Classes
