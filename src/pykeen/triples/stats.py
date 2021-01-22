@@ -18,15 +18,14 @@ def compute_number_heads_per_tail_relation_tuples(triples: np.ndarray) -> Mappin
     return _count_two_columns(triples, slice(1, 2), slice(2, 3))
 
 
-def _count_two_columns(triples: np.ndarray, c1_slice, c2_slice):
+def _count_two_columns(triples: np.ndarray, c1_slice: slice, c2_slice: slice) -> Mapping[str, int]:
     """Compute number of heads per relation-tail pairs."""
     c1 = triples[:, c1_slice]
     c2 = triples[:, c2_slice]
 
     arr = np.concatenate([c1, c2], axis=-1).tolist()
     stats = Counter(map(tuple, arr))
-    stats = _get_sorted_dict_from_counter(stats)
-    return stats
+    return _get_sorted_dict_from_counter(stats)
 
 
 def _get_sorted_dict_from_counter(counter: Counter) -> Mapping[str, int]:
