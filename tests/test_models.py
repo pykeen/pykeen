@@ -28,6 +28,7 @@ from pykeen.models.base import (
     EntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
+    _extend_batch,
 )
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.unimodal.rgcn import (
@@ -36,7 +37,7 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.models.utils import _extend_batch, get_novelty_mask
+from pykeen.models.utils import get_novelty_mask
 from pykeen.nn import Embedding, RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory

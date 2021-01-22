@@ -2,48 +2,13 @@
 
 """Utilities for models."""
 
-import inspect
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import torch
 
 from ..typing import MappedTriples
-
-
-def _extend_batch(
-    batch: MappedTriples,
-    all_ids: List[int],
-    dim: int,
-) -> MappedTriples:
-    """Extend batch for 1-to-all scoring by explicit enumeration.
-
-    :param batch: shape: (batch_size, 2)
-        The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
-    :param dim: in {0,1,2}
-        The column along which to insert the enumerated IDs.
-
-    :return: shape: (batch_size * num_choices, 3)
-        A large batch, where every pair from the original batch is combined with every ID.
-    """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
-
-    # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
-
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
-
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
-
-    return hrt_batch
 
 
 def get_novelty_mask(
@@ -155,7 +120,3 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     df = df[~df['in_testing']]
     del df['in_testing']
     return df
-
-
-def _can_slice(fn) -> bool:
-    return 'slice_size' in inspect.getfullargspec(fn).args
