@@ -16,14 +16,14 @@ nations_literal = NationsLiteral()
 class MockLiteralInteraction(LiteralInteraction):
     """A mock literal interaction around ComplEx."""
 
-    def __init__(self):
+    def __init__(self, embedding_dim: int, dropout: float = 0.1):
         base = ComplExInteraction()
 
-        embedding_dim = 20
+        # TODO this doesnt make sense
         triples_factory: TriplesNumericLiteralsFactory = nations_literal.training
         combination = nn.Sequential(
             nn.Linear(embedding_dim + triples_factory.numeric_literals.shape[1], embedding_dim),
-            nn.Dropout(0.1),
+            nn.Dropout(dropout),
         )
         super().__init__(
             base=base,
@@ -35,6 +35,9 @@ class LiteralTests(cases.InteractionTestCase):
     """Tests for LiteralInteraction function."""
 
     cls = MockLiteralInteraction
+    kwargs = {
+        'embedding_dim': cases.InteractionTestCase.dim,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         return self.instance.base(
