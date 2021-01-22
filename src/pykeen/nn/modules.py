@@ -7,7 +7,10 @@ from __future__ import annotations
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import (
+    Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union,
+    cast,
+)
 
 import torch
 from torch import FloatTensor, nn
@@ -15,9 +18,6 @@ from torch import FloatTensor, nn
 from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
-
-if TYPE_CHECKING:
-    from ..typing import Representation  # noqa
 
 __all__ = [
     # Base Classes
@@ -158,7 +158,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             if len(value) == 1:
                 value = value[0]
             args.append(value)
-        h, r, t = args
+        h, r, t = cast(Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation], args)
         return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
 
     def _forward_slicing_wrapper(
@@ -364,7 +364,8 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
 
 
 class TranslationalInteraction(
-    FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+    FunctionalInteraction,
+    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     ABC,
 ):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
@@ -945,9 +946,9 @@ class TransDInteraction(
 
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
+        h: Tuple[torch.FloatTensor, torch.FloatTensor],
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
+        t: Tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         h, h_p = h
         r, r_p = r
@@ -978,9 +979,9 @@ class NTNInteraction(
 
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
+        h: torch.FloatTensor,
+        r: Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        t: torch.FloatTensor,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         w, vh, vt, b, u = r
         return dict(h=h, t=t, w=w, b=b, u=u, vh=vh, vt=vt)
@@ -1016,9 +1017,9 @@ class KG2EInteraction(
 
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
+        h: Tuple[torch.FloatTensor, torch.FloatTensor],
+        r: Tuple[torch.FloatTensor, torch.FloatTensor],
+        t: Tuple[torch.FloatTensor, torch.FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:
         h_mean, h_var = h
         r_mean, r_var = r

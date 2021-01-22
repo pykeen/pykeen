@@ -7,10 +7,7 @@ import tempfile
 import timeit
 import unittest
 from abc import ABC, abstractmethod
-from typing import (
-    Any, ClassVar, Collection, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type,
-    TypeVar, Union,
-)
+from typing import Any, ClassVar, Collection, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
 
 import torch
 from torch.nn import functional
@@ -19,7 +16,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.nn.modules import Interaction
 from pykeen.triples import TriplesFactory
-from pykeen.typing import Representation
+from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from pykeen.utils import get_subclasses, set_random_seed, unpack_singletons
 
 T = TypeVar("T")
@@ -244,7 +241,10 @@ class GenericTestCase(Generic[T], unittest.TestCase):
         """Perform actions after instantiation."""
 
 
-class InteractionTestCase(GenericTestCase[Interaction], ABC):
+class InteractionTestCase(
+    GenericTestCase[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    ABC,
+):
     """Generic test for interaction functions."""
 
     dim: int = 2
@@ -261,7 +261,7 @@ class InteractionTestCase(GenericTestCase[Interaction], ABC):
     def _get_hrt(
         self,
         *shapes: Tuple[int, ...],
-    ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:
+    ):
         self.shape_kwargs.setdefault("d", self.dim)
         result = tuple(
             tuple(

@@ -3,7 +3,7 @@
 """Tests for interaction functions."""
 
 import logging
-from typing import Sequence, Tuple, Union
+from typing import Tuple
 
 import numpy
 import torch
@@ -12,7 +12,6 @@ import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import distmult_interaction
 from pykeen.nn.modules import FunctionalInteraction, Interaction, TranslationalInteraction
-from pykeen.typing import Representation
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -44,9 +43,9 @@ class ConvETests(cases.InteractionTestCase):
     def _get_hrt(
         self,
         *shapes: Tuple[int, ...],
-    ) -> Tuple[Union[Representation, Sequence[Representation]], ...]:  # noqa: D102
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]:  # noqa: D102
         h, r, t = super()._get_hrt(*shapes)
-        t_bias = torch.rand_like(t[..., 0, None])
+        t_bias = torch.rand_like(t[..., 0, None])  # type: torch.FloatTensor
         return h, r, (t, t_bias)
 
     def _exp_score(
