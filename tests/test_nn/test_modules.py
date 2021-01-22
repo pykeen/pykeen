@@ -11,7 +11,7 @@ import torch
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, TranslationalInteraction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -368,5 +368,5 @@ class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):
         Interaction,
         FunctionalInteraction,
         TranslationalInteraction,
-        # LiteralInteraction,
+        LiteralInteraction,
     }
