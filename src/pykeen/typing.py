@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, TypeVar, Union
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union
 
 import numpy as np
 import torch
@@ -18,6 +18,9 @@ __all__ = [
     'InteractionFunction',
     'DeviceHint',
     'TorchRandomHint',
+    'HeadRepresentation',
+    'RelationRepresentation',
+    'TailRepresentation',
     'GaussianDistribution',
 ]
 
@@ -35,6 +38,10 @@ Constrainer = Callable[[TensorType], TensorType]
 
 DeviceHint = Union[None, str, torch.device]
 TorchRandomHint = Union[None, int, torch.Generator]
+
+HeadRepresentation = TypeVar("HeadRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
+RelationRepresentation = TypeVar("RelationRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
+TailRepresentation = TypeVar("TailRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
 
 
 class GaussianDistribution(NamedTuple):

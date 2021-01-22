@@ -7,5 +7,6 @@
    :name: nn
 
    functional
+   modules
    similarity
    init
