@@ -6,11 +6,8 @@ from __future__ import annotations
 
 import logging
 import math
-from abc import ABC
-from typing import (
-    Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Type,
-    Union,
-)
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import FloatTensor, nn
@@ -57,7 +54,8 @@ def _get_batches(z, slice_size):
         yield batch
 
 
-class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
+# TODO rename Interaction -> FunctionalInteraction and then BaseInteraction -> Interaction (later)
+class BaseInteraction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
     #: The symbolic shapes for entity representations
@@ -69,48 +67,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
 
-    #: The functional interaction form
-    func: Callable[..., torch.FloatTensor]
-
-    @classmethod
-    def from_func(cls, f) -> Interaction:
-        """Create an instance of a stateless interaction class."""
-        return cls.cls_from_func(f)()
-
-    @classmethod
-    def cls_from_func(cls, f) -> Type[Interaction]:
-        """Create a stateless interaction class."""
-
-        class StatelessInteraction(cls):  # type: ignore
-            func = f
-
-        return StatelessInteraction
-
-    @staticmethod
-    def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, torch.FloatTensor]:
-        """Conversion utility to prepare the h/r/t representations for the functional form."""
-        assert all(torch.is_tensor(x) for x in (h, r, t))
-        return dict(h=h, r=r, t=t)
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
-        """Conversion utility to prepare the state to be passed to the functional form."""
-        return dict()
-
-    def _prepare_for_functional(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> Mapping[str, torch.FloatTensor]:
-        """Conversion utility to prepare the arguments for the functional form."""
-        kwargs = self._prepare_hrt_for_functional(h=h, r=r, t=t)
-        kwargs.update(self._prepare_state_for_functional())
-        return kwargs
-
+    @abstractmethod
     def forward(
         self,
         h: HeadRepresentation,
@@ -129,7 +86,6 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
 
     def score(
         self,
@@ -353,8 +309,60 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
+class Interaction(BaseInteraction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """Base class for interaction functions."""
+
+    #: The functional interaction form
+    func: Callable[..., torch.FloatTensor]
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+
+        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+            The head representations.
+        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+            The relation representations.
+        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+            The tail representations.
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The scores.
+        """
+        return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
+
+    def _prepare_for_functional(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> Mapping[str, torch.FloatTensor]:
+        """Conversion utility to prepare the arguments for the functional form."""
+        kwargs = self._prepare_hrt_for_functional(h=h, r=r, t=t)
+        kwargs.update(self._prepare_state_for_functional())
+        return kwargs
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        """Conversion utility to prepare the h/r/t representations for the functional form."""
+        assert all(torch.is_tensor(x) for x in (h, r, t))
+        return dict(h=h, r=r, t=t)
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        """Conversion utility to prepare the state to be passed to the functional form."""
+        return dict()
+
+
 class LiteralInteraction(
-    Interaction[
+    BaseInteraction[
         Tuple[Representation, Representation],
         Representation,
         Tuple[Representation, Representation],
@@ -367,6 +375,7 @@ class LiteralInteraction(
         base: Interaction[Representation, Representation, Representation],
         combination: nn.Module,
     ):
+        # TODO documentation for this
         super().__init__()
         self.base = base
         self.combination = combination
