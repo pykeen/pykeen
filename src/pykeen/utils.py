@@ -53,6 +53,11 @@ __all__ = [
     'fix_dataclass_init_docs',
     'get_benchmark',
     'extended_einsum',
+    'strip_dim',
+    'upgrade_to_sequence',
+    'ensure_tuple',
+    'unpack_singletons',
+    'get_subclasses',
 ]
 
 logger = logging.getLogger(__name__)
@@ -791,6 +796,34 @@ def convert_to_canonical_shape(
     return x.view(*shape, *suffix_shape)
 
 
+def strip_dim(*x, num: int = 4):
+    """Strip the first dimensions."""
+    return [xx.view(xx.shape[num:]) for xx in x]
+
+
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     """Ensure that the input is a sequence."""
     return x if isinstance(x, Sequence) else (x,)
+
+
+def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
+    """Ensure that all elements in the sequence are upgraded to sequences."""
+    return tuple(upgrade_to_sequence(xx) for xx in x)
+
+
+def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
+    """Unpack sequences of length one."""
+    return [
+        x[0] if len(x) == 1 else x
+        for x in xs
+    ]
+
+
+def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
+    """Get all subclasses.
+
+    Credit to: https://stackoverflow.com/a/33607093.
+    """
+    for subclass in cls.__subclasses__():
+        yield from get_subclasses(subclass)
+        yield subclass
