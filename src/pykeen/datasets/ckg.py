@@ -60,13 +60,19 @@ class CKG(TabbedDataset):
         if not archive_path.exists():
             urlretrieve(URL, archive_path)  # noqa:S310
         with tarfile.TarFile.open(archive_path) as tar_file:
+            if tar_file is None:
+                raise ValueError
             for tarinfo in tar_file:
                 if not tarinfo.name.startswith('data/imports/') or not tarinfo.name.endswith('.tsv'):
                     continue
                 path = Path(tarinfo.name)
                 if path.name.startswith('.'):
                     continue
-                with tar_file.extractfile(tarinfo) as file:
+
+                _inner_file = tar_file.extractfile(tarinfo)
+                if _inner_file is None:
+                    raise ValueError(f'Unable to open inner file: {tarinfo}')
+                with _inner_file as file:
                     df = pd.read_csv(file, usecols=COLUMNS, sep='\t', dtype=str)
                     df = df[COLUMNS]
                     yield df

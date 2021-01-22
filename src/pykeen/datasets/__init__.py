@@ -98,27 +98,28 @@ def get_dataset(
 
     if isinstance(dataset, str):
         if has_dataset(dataset):
-            dataset: Type[Dataset] = datasets[normalize_string(dataset)]
+            dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
         elif not os.path.exists(dataset):
             raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
             return Dataset.from_path(dataset)
 
     if isinstance(dataset, type) and issubclass(dataset, Dataset):
-        return dataset(**(dataset_kwargs or {}))
+        return dataset(**(dataset_kwargs or {}))  # type: ignore
 
     if dataset is not None:
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
     if isinstance(training, str) and isinstance(testing, str):
-        if validation is not None and not isinstance(validation, str):
+        if isinstance(validation, str):
+            return PathDataset(
+                training_path=training,
+                testing_path=testing,
+                validation_path=validation,
+                **(dataset_kwargs or {}),
+            )
+        elif validation is not None:
             raise TypeError(f'Validation is invalid type: {type(validation)}')
-        return PathDataset(
-            training_path=training,
-            testing_path=testing,
-            validation_path=validation,
-            **(dataset_kwargs or {}),
-        )
 
     if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):
         if validation is not None and not isinstance(validation, CoreTriplesFactory):

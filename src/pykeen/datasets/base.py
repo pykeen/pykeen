@@ -10,12 +10,12 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, List, Mapping, Optional, TextIO, Tuple, Union
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Optional, TextIO, Tuple, Union, cast
 from urllib.request import urlretrieve
 
 import pandas as pd
 import requests
+from pystow.utils import name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
@@ -49,7 +49,7 @@ class Dataset:
     #: A factory wrapping the testing triples, that share indices with the training triples
     testing: TriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
-    validation: TriplesFactory
+    validation: Optional[TriplesFactory]
     #: All datasets should take care of inverse triple creation
     create_inverse_triples: bool
 
@@ -104,7 +104,10 @@ class Dataset:
     @staticmethod
     def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
-        training, testing, validation = tf.split(ratios or [0.8, 0.1, 0.1])
+        training, testing, validation = cast(
+            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tf.split(ratios or [0.8, 0.1, 0.1]),
+        )
         return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
@@ -116,14 +119,19 @@ class Dataset:
 class EagerDataset(Dataset):
     """A dataset that has already been loaded."""
 
-    def __init__(self, training: TriplesFactory, testing: TriplesFactory, validation: TriplesFactory) -> None:
+    def __init__(
+        self,
+        training: TriplesFactory,
+        testing: TriplesFactory,
+        validation: Optional[TriplesFactory] = None,
+    ) -> None:
         self.training = training
         self.testing = testing
         self.validation = validation
         self.create_inverse_triples = (
             training.create_inverse_triples
             and testing.create_inverse_triples
-            and self.validation.create_inverse_triples
+            and (self.validation is None or self.validation.create_inverse_triples)
         )
 
 
@@ -140,26 +148,29 @@ class LazyDataset(Dataset):
     cache_root: pathlib.Path
 
     @property
-    def training(self) -> TriplesFactory:  # noqa: D401
+    def training(self) -> TriplesFactory:  # type:ignore # noqa: D401
         """The training triples factory."""
         if not self._loaded:
             self._load()
+        assert self._training is not None
         return self._training
 
     @property
-    def testing(self) -> TriplesFactory:  # noqa: D401
+    def testing(self) -> TriplesFactory:  # type:ignore # noqa: D401
         """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
+        assert self._testing is not None
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory:  # noqa: D401
+    def validation(self) -> TriplesFactory:  # type:ignore # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         if not self._loaded_validation:
             self._load_validation()
+        assert self._validation is not None
         return self._validation
 
     @property
@@ -176,7 +187,7 @@ class LazyDataset(Dataset):
     def _load_validation(self) -> None:
         raise NotImplementedError
 
-    def _help_cache(self, cache_root: Optional[str]) -> pathlib.Path:
+    def _help_cache(self, cache_root: Union[None, str, pathlib.Path]) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
         :param cache_root: If none is passed, defaults to a subfolder of the
@@ -236,6 +247,7 @@ class PathDataset(LazyDataset):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
+        assert self._training is not None
         self._validation = TriplesFactory.from_path(
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
@@ -248,15 +260,6 @@ class PathDataset(LazyDataset):
             f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",'
             f' validation_path="{self.validation_path}")'
         )
-
-
-def _name_from_url(url: str) -> str:
-    """Get the filename form the end of the URL."""
-    parse_result = urlparse(url)
-    path = pathlib.PurePosixPath(parse_result.path)
-    name = path.name
-    logger.debug('parsed name from URL: %s', name)
-    return name
 
 
 def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
@@ -315,9 +318,9 @@ class UnpackedRemoteDataset(PathDataset):
         self.testing_url = testing_url
         self.validation_url = validation_url
 
-        training_path = os.path.join(self.cache_root, _name_from_url(self.training_url))
-        testing_path = os.path.join(self.cache_root, _name_from_url(self.testing_url))
-        validation_path = os.path.join(self.cache_root, _name_from_url(self.validation_url))
+        training_path = os.path.join(self.cache_root, name_from_url(self.training_url))
+        testing_path = os.path.join(self.cache_root, name_from_url(self.testing_url))
+        validation_path = os.path.join(self.cache_root, name_from_url(self.validation_url))
 
         for url, path in [
             (self.training_url, training_path),
@@ -460,7 +463,7 @@ class PackedZipRemoteDataset(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        self.name = name or _name_from_url(url)
+        self.name = name or name_from_url(url)
         self.path = os.path.join(self.cache_root, self.name)
         logger.debug('file path at %s', self.path)
 
@@ -483,8 +486,10 @@ class PackedZipRemoteDataset(LazyDataset):
     def _load_validation(self) -> None:
         self._validation = self._load_helper(self.relative_validation_path)
 
-    def _load_helper(self, relative_path) -> TriplesFactory:
+    def _load_helper(self, relative_path: str) -> TriplesFactory:
         if not os.path.exists(self.path):
+            if self.url is None:
+                raise ValueError('url should be set')
             logger.info('downloading data from %s to %s', self.url, self.path)
             _urlretrieve(self.url, self.path)  # noqa:S310
 
@@ -497,12 +502,11 @@ class PackedZipRemoteDataset(LazyDataset):
                     header=self.header,
                     sep=self.sep,
                 )
-                rv = TriplesFactory.from_labeled_triples(
+                return TriplesFactory.from_labeled_triples(
                     triples=df.values,
                     create_inverse_triples=self.create_inverse_triples,
+                    metadata={'path': relative_path},
                 )
-                rv.path = relative_path
-                return rv
 
 
 class TarFileSingleDataset(LazyDataset):
@@ -541,7 +545,7 @@ class TarFileSingleDataset(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        self.name = name or _name_from_url(url)
+        self.name = name or name_from_url(url)
         self.random_state = random_state
         self.delimiter = delimiter or '\t'
         self.randomize_cleanup = randomize_cleanup
@@ -568,18 +572,25 @@ class TarFileSingleDataset(LazyDataset):
                 self._relative_path,
                 _actual_path,
             )
-            with tarfile.open(self._get_path()) as tf:
-                tf.extract(self._relative_path, self.cache_root)
+            with tarfile.open(self._get_path()) as tar_file:
+                tar_file.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
-        tf = TriplesFactory.from_labeled_triples(triples=df.values, create_inverse_triples=self.create_inverse_triples)
-        tf.path = self._get_path()
-        self._training, self._testing, self._validation = tf.split(
-            ratios=self.ratios,
-            random_state=self.random_state,
-            randomize_cleanup=self.randomize_cleanup,
+        tf_path = self._get_path()
+        tf = TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata={'path': tf_path},
         )
-        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf.path)
+        self._training, self._testing, self._validation = cast(
+            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tf.split(
+                ratios=self.ratios,
+                random_state=self.random_state,
+                randomize_cleanup=self.randomize_cleanup,
+            ),
+        )
+        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf_path)
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
@@ -632,9 +643,12 @@ class TabbedDataset(LazyDataset):
             create_inverse_triples=self.create_inverse_triples,
             metadata=dict(path=path) if path else None,
         )
-        self._training, self._testing, self._validation = tf.split(
-            ratios=self.ratios,
-            random_state=self.random_state,
+        self._training, self._testing, self._validation = cast(
+            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tf.split(
+                ratios=self.ratios,
+                random_state=self.random_state,
+            ),
         )
 
     def _load_validation(self) -> None:
@@ -655,7 +669,7 @@ class SingleTabbedDataset(TabbedDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
-        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
+        read_csv_kwargs: Optional[Dict[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -676,7 +690,7 @@ class SingleTabbedDataset(TabbedDataset):
             eager=False,  # because it gets hooked below
         )
 
-        self.name = name or _name_from_url(url)
+        self.name = name or name_from_url(url)
 
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault('sep', '\t')
