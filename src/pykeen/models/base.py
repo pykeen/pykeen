@@ -2,24 +2,25 @@
 
 """Base module for all KGE models."""
 
+from __future__ import annotations
+
 import functools
-import inspect
 import itertools as itt
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, Mapping, Optional, Set, Tuple, Type, Union
 
-import numpy as np
 import pandas as pd
 import torch
 from torch import nn
 
+from .utils import _can_slice, _extend_batch, _postprocess_prediction_all_df, _postprocess_prediction_df
 from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
+from ..typing import Constrainer, DeviceHint, Initializer, Normalizer
 from ..utils import NoRandomSeedNecessary, get_batchnorm_modules, resolve_device, set_random_seed
 
 __all__ = [
@@ -30,173 +31,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _extend_batch(
-    batch: MappedTriples,
-    all_ids: List[int],
-    dim: int,
-) -> MappedTriples:
-    """Extend batch for 1-to-all scoring by explicit enumeration.
-
-    :param batch: shape: (batch_size, 2)
-        The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
-    :param dim: in {0,1,2}
-        The column along which to insert the enumerated IDs.
-
-    :return: shape: (batch_size * num_choices, 3)
-        A large batch, where every pair from the original batch is combined with every ID.
-    """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
-
-    # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
-
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
-
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
-
-    return hrt_batch
-
-
-def get_novelty_mask(
-    mapped_triples: MappedTriples,
-    query_ids: np.ndarray,
-    col: int,
-    other_col_ids: Tuple[int, int],
-) -> np.ndarray:
-    r"""Calculate for each query ID whether it is novel.
-
-    In particular, computes:
-
-    .. math ::
-        q \notin \{t[col] in T \mid t[\neg col] = p\}
-
-    for each q in query_ids where :math:`\neg col` denotes all columns but `col`, and `p` equals `other_col_ids`.
-
-    :param mapped_triples: shape: (num_triples, 3), dtype: long
-        The mapped triples (i.e. ID-based).
-    :param query_ids: shape: (num_queries,), dtype: long
-        The query IDs. Are assumed to be unique (i.e. without duplicates).
-    :param col:
-        The column to which the query IDs correspond.
-    :param other_col_ids:
-        Fixed IDs for the other columns.
-
-    :return: shape: (num_queries,), dtype: bool
-        A boolean mask indicating whether the ID does not correspond to a known triple.
-    """
-    other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
-    other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
-    filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
-    known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
-    return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
-
-
-def get_novelty_all_mask(
-    mapped_triples: MappedTriples,
-    query: np.ndarray,
-) -> np.ndarray:
-    known = {tuple(triple) for triple in mapped_triples.tolist()}
-    return np.asarray(
-        [tuple(triple) not in known for triple in query],
-        dtype=np.bool,
-    )
-
-
-def _postprocess_prediction_df(
-    rv: pd.DataFrame,
-    *,
-    col: int,
-    add_novelties: bool,
-    remove_known: bool,
-    training: Optional[torch.LongTensor],
-    testing: Optional[torch.LongTensor],
-    query_ids_key: str,
-    other_col_ids: Tuple[int, int],
-) -> pd.DataFrame:
-    if add_novelties or remove_known:
-        rv['in_training'] = ~get_novelty_mask(
-            mapped_triples=training,
-            query_ids=rv[query_ids_key],
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-    if add_novelties and testing is not None:
-        rv['in_testing'] = ~get_novelty_mask(
-            mapped_triples=testing,
-            query_ids=rv[query_ids_key],
-            col=col,
-            other_col_ids=other_col_ids,
-        )
-    return _process_remove_known(rv, remove_known, testing)
-
-
-def _postprocess_prediction_all_df(
-    df: pd.DataFrame,
-    *,
-    add_novelties: bool,
-    remove_known: bool,
-    training: Optional[torch.LongTensor],
-    testing: Optional[torch.LongTensor],
-) -> pd.DataFrame:
-    if add_novelties or remove_known:
-        assert training is not None
-        df['in_training'] = ~get_novelty_all_mask(
-            mapped_triples=training,
-            query=df[['head_id', 'relation_id', 'tail_id']].values,
-        )
-    if add_novelties and testing is not None:
-        assert testing is not None
-        df['in_testing'] = ~get_novelty_all_mask(
-            mapped_triples=testing,
-            query=df[['head_id', 'relation_id', 'tail_id']].values,
-        )
-    return _process_remove_known(df, remove_known, testing)
-
-
-def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optional[torch.LongTensor]) -> pd.DataFrame:
-    if not remove_known:
-        return df
-
-    df = df[~df['in_training']]
-    del df['in_training']
-    if testing is None:
-        return df
-
-    df = df[~df['in_testing']]
-    del df['in_testing']
-    return df
-
-
-def _track_hyperparameters(cls: Type['Model']) -> None:
-    """Initialize the subclass while keeping track of hyper-parameters."""
-    # Keep track of the hyper-parameters that are used across all
-    # subclasses of BaseModule
-    for k in cls.__init__.__annotations__.keys():
-        if k not in Model.__init__.__annotations__:
-            Model._hyperparameter_usage[k].add(cls.__name__)
-
-
-def _add_post_reset_parameters(cls: Type['Model']) -> None:
-    # The following lines add in a post-init hook to all subclasses
-    # such that the reset_parameters_() function is run
-    _original_init = cls.__init__
-
-    @functools.wraps(_original_init)
-    def _new_init(self, *args, **kwargs):
-        _original_init(self, *args, **kwargs)
-        self.reset_parameters_()
-
-    # sorry mypy, but this kind of evil must be permitted.
-    cls.__init__ = _new_init  # type: ignore
 
 
 class Model(nn.Module, ABC):
@@ -360,6 +194,7 @@ class Model(nn.Module, ABC):
         self._set_device('cuda')
         return self.to_device_()
 
+    # TODO excise
     def predict_scores(self, triples: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
@@ -380,6 +215,7 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
+    # used in training/evaluation
     def predict_scores_all_tails(
         self,
         hr_batch: torch.LongTensor,
@@ -418,6 +254,7 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
+    # TODO excise
     def predict_heads(
         self,
         relation_label: str,
@@ -473,6 +310,7 @@ class Model(nn.Module, ABC):
             other_col_ids=(relation_id, tail_id),
         )
 
+    # TODO excise
     def predict_tails(
         self,
         head_label: str,
@@ -528,6 +366,7 @@ class Model(nn.Module, ABC):
             other_col_ids=(head_id, relation_id),
         )
 
+    # TODO excise
     def predict_scores_all_relations(
         self,
         ht_batch: torch.LongTensor,
@@ -557,6 +396,7 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
+    # used in training/evaluation
     def predict_scores_all_heads(
         self,
         rt_batch: torch.LongTensor,
@@ -638,7 +478,7 @@ class Model(nn.Module, ABC):
         if return_tensors:
             return triples, scores
 
-        rv = self.make_labeled_df(triples, score=scores)
+        rv = self.triples_factory.tensor_to_df(triples, score=scores)
         return _postprocess_prediction_all_df(
             df=rv,
             add_novelties=add_novelties,
@@ -647,6 +487,7 @@ class Model(nn.Module, ABC):
             testing=testing,
         )
 
+    # TODO excise
     def score_all_triples(
         self,
         k: Optional[int] = None,
@@ -758,7 +599,7 @@ class Model(nn.Module, ABC):
         if return_tensors:
             return result, scores
 
-        rv = self.make_labeled_df(result, score=scores)
+        rv = self.triples_factory.tensor_to_df(result, score=scores)
         return _postprocess_prediction_all_df(
             df=rv,
             add_novelties=add_novelties,
@@ -766,23 +607,6 @@ class Model(nn.Module, ABC):
             training=self.triples_factory.mapped_triples,
             testing=testing,
         )
-
-    def make_labeled_df(
-        self,
-        tensor: torch.LongTensor,
-        **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
-    ) -> pd.DataFrame:
-        """Take a tensor of triples and make a pandas dataframe with labels.
-
-        :param tensor: shape: (n, 3)
-            The triples, ID-based and in format (head_id, relation_id, tail_id).
-        :param kwargs:
-            Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
-            {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
-        :return:
-            A dataframe with n rows, and 6 + len(kwargs) columns.
-        """
-        return self.triples_factory.tensor_to_df(tensor, **kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -1194,10 +1018,6 @@ class EntityRelationEmbeddingModel(Model, autoreset=False):
         self.relation_embeddings.post_parameter_update()
 
 
-def _can_slice(fn) -> bool:
-    return 'slice_size' in inspect.getfullargspec(fn).args
-
-
 class MultimodalModel(Model, autoreset=False):
     """A multimodal KGE model."""
 
@@ -1212,3 +1032,26 @@ class MultimodalModel(Model, autoreset=False):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
+
+
+def _add_post_reset_parameters(cls: Type[Model]) -> None:
+    # The following lines add in a post-init hook to all subclasses
+    # such that the reset_parameters_() function is run
+    _original_init = cls.__init__
+
+    @functools.wraps(_original_init)
+    def _new_init(self, *args, **kwargs):
+        _original_init(self, *args, **kwargs)
+        self.reset_parameters_()
+
+    # sorry mypy, but this kind of evil must be permitted.
+    cls.__init__ = _new_init  # type: ignore
+
+
+def _track_hyperparameters(cls: Type[Model]) -> None:
+    """Initialize the subclass while keeping track of hyper-parameters."""
+    # Keep track of the hyper-parameters that are used across all
+    # subclasses of BaseModule
+    for k in cls.__init__.__annotations__.keys():
+        if k not in Model.__init__.__annotations__:
+            Model._hyperparameter_usage[k].add(cls.__name__)
