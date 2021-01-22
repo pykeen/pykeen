@@ -194,7 +194,6 @@ class Model(nn.Module, ABC):
         self._set_device('cuda')
         return self.to_device_()
 
-    # TODO excise
     def predict_scores(self, triples: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
@@ -251,7 +250,6 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    # TODO excise
     def predict_heads(
         self,
         relation_label: str,
@@ -290,7 +288,6 @@ class Model(nn.Module, ABC):
             remove_known=remove_known, testing=testing,
         )
 
-    # TODO excise
     def predict_tails(
         self,
         head_label: str,
@@ -388,7 +385,6 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    # TODO excise
     def score_all_triples(
         self,
         k: Optional[int] = None,
@@ -603,7 +599,6 @@ class Model(nn.Module, ABC):
 
     def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
-        # TODO UNUSED
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
 
         if slice_size is None:
