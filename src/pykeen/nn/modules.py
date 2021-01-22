@@ -13,13 +13,12 @@ import torch
 from torch import FloatTensor, nn
 
 from . import functional as pkf
-from ..typing import HeadRepresentation, RelationRepresentation, Representation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
     # Base Classes
     'Interaction',
-    'LiteralInteraction',
     'TranslationalInteraction',
     # Concrete Classes
     'ComplExInteraction',
@@ -359,52 +358,6 @@ class Interaction(BaseInteraction, Generic[HeadRepresentation, RelationRepresent
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         """Conversion utility to prepare the state to be passed to the functional form."""
         return dict()
-
-
-class LiteralInteraction(
-    BaseInteraction[
-        Tuple[Representation, Representation],
-        Representation,
-        Tuple[Representation, Representation],
-    ],
-):
-    """The interaction function shared by literal-containing interactions."""
-
-    def __init__(
-        self,
-        base: Interaction[Representation, Representation, Representation],
-        combination: nn.Module,
-    ):
-        # TODO documentation for this
-        super().__init__()
-        self.base = base
-        self.combination = combination
-        self.entity_shape = tuple(self.base.entity_shape) + ("e",)
-
-    def forward(
-        self,
-        h: Tuple[Representation, Representation],
-        r: Representation,
-        t: Tuple[Representation, Representation],
-    ) -> torch.FloatTensor:
-        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
-
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
-            The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
-            The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
-            The tail representations.
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
-            The scores.
-        """
-        # combine entity embeddings + literals
-        h = torch.cat(h, dim=-1)
-        h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)  # type: ignore
-        t = torch.cat(t, dim=-1)
-        t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)  # type: ignore
-        return self.base(h=h, r=r, t=t)
 
 
 class TranslationalInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
