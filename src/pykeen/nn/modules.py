@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 __all__ = [
     # Base Classes
     'Interaction',
+    'FunctionalInteraction',
     'TranslationalInteraction',
     # Concrete Classes
     'ComplExInteraction',
@@ -57,7 +58,7 @@ def _get_batches(z, slice_size):
 
 
 # TODO rename Interaction -> FunctionalInteraction and then BaseInteraction -> Interaction (later)
-class BaseInteraction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
+class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 
     #: The symbolic shapes for entity representations
@@ -311,7 +312,7 @@ class BaseInteraction(nn.Module, Generic[HeadRepresentation, RelationRepresentat
                 mod.reset_parameters()
 
 
-class Interaction(BaseInteraction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Base class for interaction functions."""
 
     #: The functional interaction form
@@ -363,7 +364,10 @@ class Interaction(BaseInteraction, Generic[HeadRepresentation, RelationRepresent
         return dict()
 
 
-class TranslationalInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
+class TranslationalInteraction(
+    FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+    ABC,
+):
     """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
 
     def __init__(self, p: int, power_norm: bool = False):
@@ -392,7 +396,7 @@ class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, Float
     func = pkf.transe_interaction
 
 
-class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless ComplEx interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.complex_interaction`
@@ -457,7 +461,9 @@ def _calculate_missing_shape_information(
     return input_channels, width, height  # type: ignore
 
 
-class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]]):
+class ConvEInteraction(
+    FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, Tuple[torch.FloatTensor, torch.FloatTensor]],
+):
     """A stateful module for the ConvE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.conve_interaction`
@@ -567,7 +573,7 @@ class ConvEInteraction(Interaction[torch.FloatTensor, torch.FloatTensor, Tuple[t
         )
 
 
-class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ConvKB interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.convkb_interaction``
@@ -611,7 +617,7 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         )
 
 
-class DistMultInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless DistMult interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.distmult_interaction`
@@ -620,7 +626,7 @@ class DistMultInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     func = pkf.distmult_interaction
 
 
-class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP interaction.
 
     .. seealso:: :func:`pykeen.nn.functional.ermlp_interaction`
@@ -671,7 +677,7 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         )
 
 
-class ERMLPEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP (E) interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.ermlpe_interaction`
@@ -730,7 +736,7 @@ class TransRInteraction(
         return dict(h=h, r=r[0], t=t, m_r=r[1])
 
 
-class RotatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class RotatEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless RotatE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.rotate_interaction`
@@ -739,7 +745,7 @@ class RotatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     func = pkf.rotate_interaction
 
 
-class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class HolEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless HolE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.hole_interaction`
@@ -748,7 +754,7 @@ class HolEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     func = pkf.hole_interaction
 
 
-class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ProjE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.proje_interaction`
@@ -789,7 +795,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         return dict(d_e=self.d_e, d_r=self.d_r, b_c=self.b_c, b_p=self.b_p, activation=self.inner_non_linearity)
 
 
-class RESCALInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless RESCAL interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.rescal_interaction`
@@ -823,7 +829,7 @@ class StructuredEmbeddingInteraction(
         return dict(h=h, t=t, r_h=r[0], r_t=r[1])
 
 
-class TuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
+class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the stateless Tucker interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.tucker_interaction`
@@ -951,7 +957,7 @@ class TransDInteraction(
 
 
 class NTNInteraction(
-    Interaction[
+    FunctionalInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
@@ -985,7 +991,7 @@ class NTNInteraction(
 
 
 class KG2EInteraction(
-    Interaction[
+    FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1053,7 +1059,7 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
 
 
 class SimplEInteraction(
-    Interaction[
+    FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
