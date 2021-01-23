@@ -33,7 +33,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_no_novelties(self):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
-        tails_df = self.model.predict_tails(
+        tails_df = self.model.get_tail_prediction_df(
             'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
             add_novelties=False,
         )
@@ -42,7 +42,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
-        tails_df = self.model.predict_tails(
+        tails_df = self.model.get_tail_prediction_df(
             'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
             remove_known=True,
         )
@@ -51,7 +51,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_with_novelties(self):
         """Test scoring tails with labeling as novel w.r.t. training and testing."""
-        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples)
+        tails_df = self.model.get_tail_prediction_df('brazil', 'intergovorgs', testing=self.testing_mapped_triples)
         self.assertEqual(['tail_id', 'tail_label', 'score', 'in_training', 'in_testing'], list(tails_df.columns))
         self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
         training_tails = set(tails_df.loc[tails_df['in_training'], 'tail_label'])
@@ -61,7 +61,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_heads_with_novelties(self):
         """Test scoring heads with labeling as novel w.r.t. training and testing."""
-        heads_df = self.model.predict_heads('conferences', 'brazil', testing=self.testing_mapped_triples)
+        heads_df = self.model.get_head_prediction_df('conferences', 'brazil', testing=self.testing_mapped_triples)
         self.assertEqual(['head_id', 'head_label', 'score', 'in_training', 'in_testing'], list(heads_df.columns))
         self.assertEqual(len(self.model.triples_factory.entity_to_id), len(heads_df.index))
         training_heads = set(heads_df.loc[heads_df['in_training'], 'head_label'])
@@ -71,7 +71,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_no_novelties(self):
         """Test scoring all triples without labeling as novel w.r.t. training and testing."""
-        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples, add_novelties=False)
+        all_df = self.model.get_prediction_df(testing=self.testing_mapped_triples, add_novelties=False)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
@@ -82,7 +82,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_remove_known(self):
         """Test scoring all triples while removing non-novel triples w.r.t. training and testing."""
-        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples, remove_known=True)
+        all_df = self.model.get_prediction_df(testing=self.testing_mapped_triples, remove_known=True)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
@@ -95,7 +95,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_with_novelties(self):
         """Test scoring all triples with labeling as novel w.r.t. training and testing."""
-        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples)
+        all_df = self.model.get_prediction_df(testing=self.testing_mapped_triples)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             [

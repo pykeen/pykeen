@@ -10,7 +10,7 @@ import logging
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import pandas as pd
 import torch
@@ -20,7 +20,7 @@ from ..losses import Loss, MarginRankingLoss, NSSALoss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
+from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer, ScorePack
 from ..utils import NoRandomSeedNecessary, get_batchnorm_modules, resolve_device, set_random_seed
 
 __all__ = [
@@ -194,25 +194,62 @@ class Model(nn.Module, ABC):
         self._set_device('cuda')
         return self.to_device_()
 
-    def predict_scores(self, triples: torch.LongTensor) -> torch.FloatTensor:
+    def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
 
         Additionally, the model is set to evaluation mode.
 
-        :param triples: shape: (number of triples, 3), dtype: long
+        :param hrt_batch: shape: (number of triples, 3), dtype: long
             The indices of (head, relation, tail) triples.
 
         :return: shape: (number of triples, 1), dtype: float
             The score for each triple.
         """
-        from .predict import predict_scores
-        warnings.warn('Use pykeen.predict.predict_scores', DeprecationWarning)
-        return predict_scores(self, triples)
+        self.eval()  # Enforce evaluation mode
+        scores = self.score_hrt(hrt_batch)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
+        return scores
 
-    # used in training/evaluation
-    def predict_scores_all_tails(
+    def predict_h(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
+
+        This method calculates the score for all possible heads for each (relation, tail) pair.
+
+        .. note::
+
+            If the model has been trained with inverse relations, the task of predicting
+            the head entities becomes the task of predicting the tail entities of the
+            inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
+
+        Additionally, the model is set to evaluation mode.
+
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+        self.eval()  # Enforce evaluation mode
+        if self.triples_factory.create_inverse_triples:
+            scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
+        elif slice_size is None:
+            scores = self.score_h(rt_batch)
+        else:
+            scores = self.score_h(rt_batch, slice_size=slice_size)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
+        return scores
+
+    def predict_t(
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
@@ -240,8 +277,7 @@ class Model(nn.Module, ABC):
             if inverse triples were used in training, and why this function has the same
             behavior regardless of the use of inverse triples.
         """
-        # Enforce evaluation mode
-        self.eval()
+        self.eval()  # Enforce evaluation mode
         if slice_size is None:
             scores = self.score_t(hr_batch)
         else:
@@ -250,7 +286,35 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    def predict_heads(
+    def predict_r(
+        self,
+        ht_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        Additionally, the model is set to evaluation mode.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        self.eval()  # Enforce evaluation mode
+        if slice_size is None:
+            scores = self.score_r(ht_batch)
+        else:
+            scores = self.score_r(ht_batch, slice_size=slice_size)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
+        return scores
+
+    def get_head_prediction_df(
         self,
         relation_label: str,
         tail_label: str,
@@ -279,16 +343,16 @@ class Model(nn.Module, ABC):
         ...     dataset='Nations',
         ...     model='RotatE',
         ... )
-        >>> df = result.model.predict_heads('accusation', 'brazil')
+        >>> df = result.model.get_head_prediction_df('accusation', 'brazil')
         """
-        from .predict import predict_heads
-        warnings.warn('Use pykeen.predict.predict_heads', DeprecationWarning)
-        return predict_heads(
+        from .predict import get_head_prediction_df
+        warnings.warn('Use pykeen.predict.get_head_prediction_df', DeprecationWarning)
+        return get_head_prediction_df(
             self, relation_label=relation_label, tail_label=tail_label, add_novelties=add_novelties,
             remove_known=remove_known, testing=testing,
         )
 
-    def predict_tails(
+    def get_tail_prediction_df(
         self,
         head_label: str,
         relation_label: str,
@@ -317,75 +381,13 @@ class Model(nn.Module, ABC):
         ...     dataset='Nations',
         ...     model='RotatE',
         ... )
-        >>> df = result.model.predict_tails('brazil', 'accusation')
+        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation')
         """
-        from .predict import predict_tails
+        from .predict import get_tail_prediction_df
         warnings.warn('Use pykeen.predict.predict_tails', DeprecationWarning)
-        return predict_tails(self, head_label, relation_label, add_novelties, remove_known, testing)
+        return get_tail_prediction_df(self, head_label, relation_label, add_novelties, remove_known, testing)
 
-    def predict_scores_all_relations(
-        self,
-        ht_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        Additionally, the model is set to evaluation mode.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
-        from .predict import predict_scores_all_relations
-        warnings.warn('Use pykeen.predict.predict_scores_all_relations', DeprecationWarning)
-        return predict_scores_all_relations(self, ht_batch, slice_size)
-
-    # used in training/evaluation
-    def predict_scores_all_heads(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        .. note::
-
-            If the model has been trained with inverse relations, the task of predicting
-            the head entities becomes the task of predicting the tail entities of the
-            inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
-
-        Additionally, the model is set to evaluation mode.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
-        # Enforce evaluation mode
-        self.eval()
-
-        if self.triples_factory.create_inverse_triples:
-            scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
-        elif slice_size is None:
-            scores = self.score_h(rt_batch)
-        else:
-            scores = self.score_h(rt_batch, slice_size=slice_size)
-        if self.predict_with_sigmoid:
-            scores = torch.sigmoid(scores)
-        return scores
-
-    def score_all_triples(
+    def get_prediction_df(
         self,
         k: Optional[int] = None,
         batch_size: int = 1,
@@ -393,7 +395,7 @@ class Model(nn.Module, ABC):
         add_novelties: bool = True,
         remove_known: bool = False,
         testing: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple[torch.LongTensor, torch.FloatTensor], pd.DataFrame]:
+    ) -> Union[ScorePack, pd.DataFrame]:
         """Compute scores for all triples, optionally returning only the k highest scoring.
 
         .. note:: This operation is computationally very expensive for reasonably-sized knowledge graphs.
@@ -425,9 +427,9 @@ class Model(nn.Module, ABC):
             # Get scores for top 15 triples
             top_df = model.score_all_triples(k=15)
         """
-        from .predict import score_all_triples
-        warnings.warn('Use pykeen.predict.score_all_triples', DeprecationWarning)
-        return score_all_triples(
+        from .predict import get_prediction_df
+        warnings.warn('Use pykeen.predict.get_prediction_df', DeprecationWarning)
+        return get_prediction_df(
             model=self, k=k, batch_size=batch_size, return_tensors=return_tensors,
             add_novelties=add_novelties, remove_known=remove_known, testing=testing,
         )
