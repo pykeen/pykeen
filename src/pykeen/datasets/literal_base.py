@@ -59,6 +59,7 @@ class NumericPathDataset(LazyDataset):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
+        assert self._training is not None
         self._validation = TriplesNumericLiteralsFactory(
             path=self.validation_path,
             path_to_numeric_triples=self.literals_path,

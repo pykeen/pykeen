@@ -40,6 +40,7 @@ class OGBLoader(LazyDataset):
         dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
         edge_split = dataset.get_edge_split()
         self._training = self._make_tf(edge_split["train"])
+        assert self._training is not None  # makes mypy hapy
         self._testing = self._make_tf(
             edge_split["test"],
             entity_to_id=self._training.entity_to_id,
