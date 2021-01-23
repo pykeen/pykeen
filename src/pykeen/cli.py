@@ -46,7 +46,14 @@ from .version import get_version
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-def _version_callback(ctx, _param, _value):
+@click.group()
+def main():
+    """PyKEEN."""
+
+
+@main.command()
+def version():
+    """Print version information for debugging."""
     import torch
     t1 = [
         ('`os.name`', os.name),
@@ -60,13 +67,6 @@ def _version_callback(ctx, _param, _value):
         ('cudnn', torch.backends.cudnn.version()),
     ]
     click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
-    ctx.exit()
-
-
-@click.group()
-@click.option('--version', is_flag=True, expose_value=False, is_eager=True, callback=_version_callback)
-def main():
-    """PyKEEN."""
 
 
 tablefmt_option = click.option('-f', '--tablefmt', default='plain', show_default=True)
