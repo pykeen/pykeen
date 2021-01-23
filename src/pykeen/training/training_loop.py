@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss
+from ..losses import Loss, has_mr_loss, has_nssa_loss
 from ..models.base import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
@@ -63,7 +63,7 @@ class SubBatchingNotSupportedError(NotImplementedError):
     def __str__(self):  # noqa: D105
         return (
             f'No sub-batching support for {self.model.__class__.__name__} due to modules '
-            f'{self.model.modules_not_supporting_sub_batching}.'
+            f'{get_batchnorm_modules(self.model)}.'
         )
 
 
@@ -115,9 +115,9 @@ class TrainingLoop(ABC):
                 f' with training approach {self.__class__.__name__}',
             )
 
-        if self.model.is_mr_loss:
+        if has_mr_loss(self.model):
             self._loss_helper = self._mr_loss_helper
-        elif self.model.is_nssa_loss:
+        elif has_nssa_loss(model):
             self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
         else:
             self._loss_helper = self._label_loss_helper
@@ -420,7 +420,7 @@ class TrainingLoop(ABC):
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
-        elif self.model.modules_not_supporting_sub_batching:
+        elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
             raise SubBatchingNotSupportedError(self.model)
 
         model_contains_batch_norm = bool(get_batchnorm_modules(self.model))
@@ -435,7 +435,7 @@ class TrainingLoop(ABC):
                 )
 
         # Sanity check
-        if self.model.is_mr_loss and label_smoothing > 0.:
+        if has_mr_loss(self.model) and label_smoothing > 0.:
             raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
 
         # Force weight initialization if training continuation is not explicitly requested.
@@ -637,7 +637,9 @@ class TrainingLoop(ABC):
         current_epoch_loss = loss.item()
 
         # reset the regularizer to free the computational graph
-        self.model.regularizer.reset()
+        _regularizer = getattr(self.model, 'regularizer', None)
+        if _regularizer:
+            _regularizer.reset()
 
         return current_epoch_loss
 
@@ -796,7 +798,7 @@ class TrainingLoop(ABC):
 
         if not finished_search:
             logger.info('Starting sub_batch_size search for training now...')
-            if self.model.modules_not_supporting_sub_batching:
+            if get_batchnorm_modules(self.model):  # if there are any, this is truthy
                 logger.info('This model does not support sub-batching.')
                 supports_sub_batching = False
                 sub_batch_size = batch_size

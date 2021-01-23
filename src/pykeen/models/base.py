@@ -8,19 +8,19 @@ import itertools as itt
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
 import torch
 from torch import nn
 
-from ..losses import Loss, MarginRankingLoss, NSSALoss
+from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer
-from ..utils import NoRandomSeedNecessary, get_batchnorm_modules, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -271,8 +271,8 @@ class Model(nn.Module, ABC):
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss: bool = isinstance(self.loss, MarginRankingLoss)
-        self.is_nssa_loss: bool = isinstance(self.loss, NSSALoss)
+        self.is_mr_loss: bool = has_mr_loss(self)
+        self.is_nssa_loss: bool = has_nssa_loss(self)
 
         # Regularizer
         if regularizer is None:
@@ -311,11 +311,6 @@ class Model(nn.Module, ABC):
     def can_slice_t(self) -> bool:
         """Whether score_t supports slicing."""
         return _can_slice(self.score_t)
-
-    @property
-    def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
-        """Return all modules not supporting sub-batching."""
-        return get_batchnorm_modules(module=self)
 
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
