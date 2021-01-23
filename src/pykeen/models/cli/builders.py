@@ -30,7 +30,7 @@ _SKIP_ARGS = {
     # TODO rethink after RGCN update
     'activation_cls',
     'activation_kwargs',
-    'edge_weighting'
+    'edge_weighting',
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],

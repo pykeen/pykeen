@@ -106,7 +106,7 @@ CLI_OPTIONS = {
     'clamp_score': click.option(
         '--clamp-score',
         type=float,
-    )
+    ),
 }
 
 device_option = click.option(
