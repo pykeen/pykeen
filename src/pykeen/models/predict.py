@@ -179,6 +179,7 @@ def predict_scores_all_relations(
     return scores
 
 
+@torch.no_grad()
 def score_all_triples(
     model: Model,
     k: Optional[int] = None,
@@ -223,70 +224,70 @@ def score_all_triples(
     model.eval()
 
     # Do not track gradients
-    with torch.no_grad():
+
+    logger.warning(
+        f'score_all_triples is an expensive operation, involving {model.num_entities ** 2 * model.num_relations} '
+        f'score evaluations.',
+    )
+
+    if k is None:
         logger.warning(
-            f'score_all_triples is an expensive operation, involving {model.num_entities ** 2 * model.num_relations} '
-            f'score evaluations.',
+            'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
+            'knowledge graphs.',
+        )
+        return _score_all_triples(
+            model=model,
+            batch_size=batch_size,
+            return_tensors=return_tensors,
+            testing=testing,
+            add_novelties=add_novelties,
+            remove_known=remove_known,
         )
 
-        if k is None:
-            logger.warning(
-                'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
-                'knowledge graphs.',
-            )
-            return _score_all_triples(
-                model=model,
-                batch_size=batch_size,
-                return_tensors=return_tensors,
-                testing=testing,
-                add_novelties=add_novelties,
-                remove_known=remove_known,
-            )
+    # initialize buffer on device
+    result = torch.ones(0, 3, dtype=torch.long, device=model.device)
+    scores = torch.empty(0, dtype=torch.float32, device=model.device)
 
-        # initialize buffer on device
-        result = torch.ones(0, 3, dtype=torch.long, device=model.device)
-        scores = torch.empty(0, dtype=torch.float32, device=model.device)
+    for r, e in itt.product(
+        range(model.num_relations),
+        range(0, model.num_entities, batch_size),
+    ):
+        # calculate batch scores
+        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
+        real_batch_size = hs.shape[0]
+        hr_batch = torch.stack([
+            hs,
+            hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
+        ], dim=-1)
+        top_scores = model.predict_scores_all_tails(hr_batch=hr_batch).view(-1)
 
-        for r, e in itt.product(
-            range(model.num_relations),
-            range(0, model.num_entities, batch_size),
-        ):
-            # calculate batch scores
-            hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
-            real_batch_size = hs.shape[0]
-            hr_batch = torch.stack([
-                hs,
-                hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
-            ], dim=-1)
-            top_scores = model.predict_scores_all_tails(hr_batch=hr_batch).view(-1)
+        # get top scores within batch
+        if top_scores.numel() >= k:
+            top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
+            top_heads, top_tails = top_indices // model.num_entities, top_indices % model.num_entities
+        else:
+            top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
+            top_tails = torch.arange(model.num_entities, device=hs.device).view(1, -1).repeat(
+                real_batch_size, 1).view(-1)
 
-            # get top scores within batch
-            if top_scores.numel() >= k:
-                top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
-                top_heads, top_tails = top_indices // model.num_entities, top_indices % model.num_entities
-            else:
-                top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
-                top_tails = torch.arange(model.num_entities, device=hs.device).view(1, -1).repeat(
-                    real_batch_size, 1).view(-1)
+        top_triples = torch.stack([
+            top_heads,
+            top_heads.new_empty(top_heads.shape).fill_(value=r),
+            top_tails,
+        ], dim=-1)
 
-            top_triples = torch.stack([
-                top_heads,
-                top_heads.new_empty(top_heads.shape).fill_(value=r),
-                top_tails,
-            ], dim=-1)
+        # append to global top scores
+        scores = torch.cat([scores, top_scores])
+        result = torch.cat([result, top_triples])
 
-            # append to global top scores
-            scores = torch.cat([scores, top_scores])
-            result = torch.cat([result, top_triples])
+        # reduce size if necessary
+        if result.shape[0] > k:
+            scores, indices = scores.topk(k=k, largest=True, sorted=False)
+            result = result[indices]
 
-            # reduce size if necessary
-            if result.shape[0] > k:
-                scores, indices = scores.topk(k=k, largest=True, sorted=False)
-                result = result[indices]
-
-        # Sort final result
-        scores, indices = torch.sort(scores, descending=True)
-        result = result[indices]
+    # Sort final result
+    scores, indices = torch.sort(scores, descending=True)
+    result = result[indices]
 
     if return_tensors:
         return result, scores
