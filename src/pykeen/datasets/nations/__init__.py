@@ -27,11 +27,17 @@ NATIONS_LITERALS_PATH = os.path.join(HERE, 'literals.txt')
 class Nations(PathDataset):
     """The Nations dataset."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+        """Initialize the Nations dataset.
+
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
+        """
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
             testing_path=NATIONS_TEST_PATH,
             validation_path=NATIONS_VALIDATE_PATH,
+            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
@@ -39,11 +45,17 @@ class Nations(PathDataset):
 class NationsLiteral(NumericPathDataset):
     """The Nations dataset with literals."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+        """Initialize the Nations dataset with literals.
+
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
+        """
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
             testing_path=NATIONS_TEST_PATH,
             validation_path=NATIONS_VALIDATE_PATH,
             literals_path=NATIONS_LITERALS_PATH,
+            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
