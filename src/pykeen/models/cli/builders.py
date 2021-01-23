@@ -27,6 +27,10 @@ _SKIP_ARGS = {
     'triples_factory',
     'preferred_device',
     'regularizer',
+    # TODO rethink after RGCN update
+    'activation_cls',
+    'activation_kwargs',
+    'edge_weighting'
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],

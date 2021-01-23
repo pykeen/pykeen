@@ -103,6 +103,10 @@ CLI_OPTIONS = {
         default='distmult',
         show_default=True,
     ),
+    'clamp_score': click.option(
+        '--clamp-score',
+        type=float,
+    )
 }
 
 device_option = click.option(
