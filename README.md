@@ -33,7 +33,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-21">Datasets</a> •
+  <a href="#datasets-22">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -96,7 +96,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (21)
+### Datasets (22)
 
 | Name          | Reference                                                                                                         | Description                                                                                       |
 |---------------|-------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
@@ -105,6 +105,7 @@ in ``pykeen``.
 | codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                         |
 | codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                          |
 | conceptnet    | [`pykeen.datasets.ConceptNet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ConceptNet.html)       | The ConceptNet dataset from [speer2017]_.                                                         |
+| cskg          | [`pykeen.datasets.CSKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CSKG.html)                   | The CSKG dataset.                                                                                 |
 | drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                 |
 | fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k dataset.                                                                                |
 | fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 dataset.                                                                            |
