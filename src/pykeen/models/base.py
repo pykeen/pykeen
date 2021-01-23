@@ -7,8 +7,7 @@ import inspect
 import itertools as itt
 import logging
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -176,15 +175,6 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
-def _track_hyperparameters(cls: Type['Model']) -> None:
-    """Initialize the subclass while keeping track of hyper-parameters."""
-    # Keep track of the hyper-parameters that are used across all
-    # subclasses of BaseModule
-    for k in cls.__init__.__annotations__.keys():
-        if k not in Model.__init__.__annotations__:
-            Model._hyperparameter_usage[k].add(cls.__name__)
-
-
 def _add_post_reset_parameters(cls: Type['Model']) -> None:
     # The following lines add in a post-init hook to all subclasses
     # such that the reset_parameters_() function is run
@@ -201,9 +191,6 @@ def _add_post_reset_parameters(cls: Type['Model']) -> None:
 
 class Model(nn.Module, ABC):
     """A base module for all of the KGE models."""
-
-    #: A dictionary of hyper-parameters to the models that use them
-    _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
     #: Keep track of if this is a base model
     _is_base_model: ClassVar[bool]
@@ -294,7 +281,6 @@ class Model(nn.Module, ABC):
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
-            _track_hyperparameters(cls)
             _add_post_reset_parameters(cls)
 
     @property
