@@ -17,7 +17,6 @@ import inspect
 import os
 import platform
 import sys
-from itertools import chain
 from typing import Optional
 
 import click
@@ -31,7 +30,6 @@ from .hpo.cli import optimize
 from .hpo.samplers import samplers as hpo_samplers_dict
 from .losses import losses as losses_dict
 from .models import models as models_dict
-from .models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizers as optimizers_dict
 from .regularizers import regularizers as regularizers_dict
@@ -46,7 +44,14 @@ from .version import get_version
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-def _version_callback(ctx, _param, _value):
+@click.group()
+def main():
+    """PyKEEN."""
+
+
+@main.command()
+def version():
+    """Print version information for debugging."""
     import torch
     t1 = [
         ('`os.name`', os.name),
@@ -60,13 +65,6 @@ def _version_callback(ctx, _param, _value):
         ('cudnn', torch.backends.cudnn.version()),
     ]
     click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
-    ctx.exit()
-
-
-@click.group()
-@click.option('--version', is_flag=True, expose_value=False, is_eager=True, callback=_version_callback)
-def main():
-    """PyKEEN."""
 
 
 tablefmt_option = click.option('-f', '--tablefmt', default='plain', show_default=True)
@@ -111,27 +109,6 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
         else:
             author, year = line[1 + l: r - 4], line[r - 4: r]
             yield model.__name__, f'{author.capitalize()}, {year}'
-
-
-@ls.command()
-def parameters():
-    """List hyper-parameter usage."""
-    click.echo('Names of __init__() parameters in all classes:')
-
-    base_parameters = set(chain(
-        Model.__init__.__annotations__,
-        EntityEmbeddingModel.__init__.__annotations__,
-        EntityRelationEmbeddingModel.__init__.__annotations__,
-    ))
-    _hyperparameter_usage = sorted(
-        (k, v)
-        for k, v in Model._hyperparameter_usage.items()
-        if k not in base_parameters
-    )
-    for i, (name, values) in enumerate(_hyperparameter_usage, start=1):
-        click.echo(f'{i:>2}. {name}')
-        for value in sorted(values):
-            click.echo(f'    - {value}')
 
 
 @ls.command()
