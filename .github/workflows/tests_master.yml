@@ -55,6 +55,9 @@ jobs:
       - name: Check README.rst
         run: tox -e readme
 
+      - name: Check docstring coverage
+        run: tox -e docstr-coverage
+
       - name: Check documentation build with Sphinx
         run: |
           sudo apt-get install graphviz
