@@ -23,7 +23,9 @@ __all__ = [
 
 
 class TransE(EntityRelationEmbeddingModel):
-    r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}` [bordes2013]_.
+    r"""An implementation of TransE [bordes2013]_.
+
+    TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
 
     .. math::
 

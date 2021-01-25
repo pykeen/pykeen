@@ -23,8 +23,7 @@ from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, get_evaluator_cls
 from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls
-from ..models import get_model_cls
-from ..models.base import Model
+from ..models import Model, get_model_cls
 from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
 from ..regularizers import Regularizer, get_regularizer_cls

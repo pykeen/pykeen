@@ -11,7 +11,7 @@ from torch.optim.optimizer import Optimizer
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
-from ..models.base import Model
+from ..models import Model
 from ..sampling import BasicNegativeSampler, NegativeSampler
 from ..triples import Instances
 from ..typing import MappedTriples
