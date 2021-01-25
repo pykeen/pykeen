@@ -3,6 +3,7 @@
 """Test cases for PyKEEN."""
 
 import logging
+import pathlib
 import tempfile
 import timeit
 import unittest
@@ -525,10 +526,32 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase, ABC)
                 "margin": 2.0,  # a number
                 "normalize": True,  # a bool
                 "activation": "relu",  # a string
-            }
+            },
         }
         prefix = None
         self.instance.log_params(params=params, prefix=prefix)
+
+
+class FileResultTrackerTests(ResultTrackerTests):
+    """Tests for FileResultTracker."""
+
+    def setUp(self) -> None:
+        """Set up the file result tracker test."""
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.path = pathlib.Path(self.temporary_directory.name).joinpath("test.log")
+        super().setUp()
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        # prepare a temporary test directory
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["path"] = self.path
+        return kwargs
+
+    def tearDown(self) -> None:  # noqa: D102
+        # check that file was created
+        assert self.path.is_file()
+        # delete intermediate files
+        self.temporary_directory.cleanup()
 
 
 class TestsTestCase(Generic[T], unittest.TestCase):
