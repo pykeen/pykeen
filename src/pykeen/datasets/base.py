@@ -125,6 +125,12 @@ class EagerDataset(Dataset):
         testing: TriplesFactory,
         validation: Optional[TriplesFactory] = None,
     ) -> None:
+        """Initialize the eager dataset.
+
+        :param training: A pre-defined triples factory with training triples
+        :param testing: A pre-defined triples factory with testing triples
+        :param validation: A pre-defined triples factory with validation triples
+        """
         self.training = training
         self.testing = testing
         self.validation = validation

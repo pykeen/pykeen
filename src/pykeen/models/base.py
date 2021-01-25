@@ -9,8 +9,7 @@ import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, ClassVar, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -35,9 +34,6 @@ logger = logging.getLogger(__name__)
 
 class Model(nn.Module, ABC):
     """A base module for all of the KGE models."""
-
-    #: A dictionary of hyper-parameters to the models that use them
-    _hyperparameter_usage: ClassVar[Dict[str, Set[str]]] = defaultdict(set)
 
     #: Keep track of if this is a base model
     _is_base_model: ClassVar[bool]
@@ -128,7 +124,6 @@ class Model(nn.Module, ABC):
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
-            _track_hyperparameters(cls)
             _add_post_reset_parameters(cls)
 
     @property
