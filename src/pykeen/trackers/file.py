@@ -56,7 +56,7 @@ class CSVResultTracker(ResultTracker):
             path = pystow.get("logs", f"{datetime.datetime.now().isoformat()}.csv")
         logger.info(f"Logging to {path.as_uri()}.")
         path.parent.mkdir(exist_ok=True, parents=True)
-        self.file = path.open("w", newline="", encoding="utf8")
+        self.file = path.open(mode="w", newline="", encoding="utf8")
         self.csv_writer = csv.writer(self.file, **kwargs)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
