@@ -29,9 +29,9 @@ from pykeen.models.base import (
     Model,
     MultimodalModel,
     _extend_batch,
-    get_novelty_mask,
 )
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
@@ -599,7 +599,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         :param k: The number of triples to return. Set to None, to keep all.
         :param batch_size: The batch size to use for calculating scores.
         """
-        top_triples, top_scores = self.model.score_all_triples(k=k, batch_size=batch_size, return_tensors=True)
+        top_triples, top_scores = predict(model=self.model, batch_size=batch_size, k=k)
 
         # check type
         assert torch.is_tensor(top_triples)
