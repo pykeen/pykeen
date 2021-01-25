@@ -942,7 +942,7 @@ class Model(nn.Module, ABC):
             'score_t function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = _extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.entity_to_id.values()), dim=2)
+        hrt_batch = _extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -975,7 +975,7 @@ class Model(nn.Module, ABC):
             'score_h function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = _extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.entity_to_id.values()), dim=0)
+        hrt_batch = _extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -1007,7 +1007,7 @@ class Model(nn.Module, ABC):
             'score_r function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = _extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.relation_to_id.values()), dim=1)
+        hrt_batch = _extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.get_relation_ids()), dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
