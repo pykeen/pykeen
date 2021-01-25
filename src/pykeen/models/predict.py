@@ -181,7 +181,7 @@ def get_relation_prediction_df(
     ...     dataset='Nations',
     ...     model='RotatE',
     ... )
-    >>> df = get_relation_prediction_df(result.model, 'brazil', 'portugal')
+    >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk')
     """
     head_id = model.triples_factory.entity_to_id[head_label]
     tail_id = model.triples_factory.entity_to_id[tail_label]
@@ -244,17 +244,17 @@ def get_all_prediction_df(
     .. code-block:: python
 
         from pykeen.pipeline import pipeline
+        from pykeen.models.predict import get_all_prediction_df
 
         # Train a model (quickly)
         result = pipeline(model='RotatE', dataset='Nations', training_kwargs=dict(num_epochs=5))
         model = result.model
 
         # Get scores for *all* triples
-        tensor = model.score_all_triples()
-        df = model.make_labeled_df(tensor)
+        df = get_all_prediction_df(model)
 
         # Get scores for top 15 triples
-        top_df = model.score_all_triples(k=15)
+        top_df = get_all_prediction_df(model, k=15)
     """
     score_pack = predict(model=model, k=k, batch_size=batch_size)
     if return_tensors:

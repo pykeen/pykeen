@@ -327,23 +327,6 @@ class Model(nn.Module, ABC):
         :param kwargs: Additional kwargs to pass to :func:`pykeen.models.predict.get_all_prediction_df`.
         :return: shape: (k, 3)
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
-
-        Example usage:
-
-        .. code-block:: python
-
-            from pykeen.pipeline import pipeline
-
-            # Train a model (quickly)
-            result = pipeline(model='RotatE', dataset='Nations', training_kwargs=dict(num_epochs=5))
-            model = result.model
-
-            # Get scores for *all* triples
-            tensor = model.score_all_triples()
-            df = model.make_labeled_df(tensor)
-
-            # Get scores for top 15 triples
-            top_df = model.score_all_triples(k=15)
         """
         from .predict import get_all_prediction_df
         warnings.warn('Use pykeen.models.predict.get_all_prediction_df', DeprecationWarning)
