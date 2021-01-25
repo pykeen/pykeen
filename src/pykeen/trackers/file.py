@@ -8,9 +8,8 @@ import logging
 import pathlib
 from typing import Any, Mapping, Optional, TextIO, Union
 
-import pystow
-
 from .base import ResultTracker
+from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary
 
 __all__ = [
@@ -57,7 +56,7 @@ class CSVResultTracker(ResultTracker):
             Additional keyword based arguments forwarded to csv.writer.
         """
         if path is None:
-            path = pystow.get("logs", f"{datetime.datetime.now().isoformat()}.csv")
+            path = PYKEEN_LOGS / f"{datetime.datetime.now().isoformat()}.csv"
         logger.info(f"Logging to {path.as_uri()}.")
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
