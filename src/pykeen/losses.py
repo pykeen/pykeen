@@ -27,6 +27,8 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
+    'has_mr_loss',
+    'has_nssa_loss',
 ]
 
 _REDUCTION_METHODS = dict(
@@ -236,3 +238,13 @@ def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
         default=MarginRankingLoss,
         suffix=_LOSS_SUFFIX,
     )
+
+
+def has_mr_loss(model) -> bool:
+    """Check if the model has a marging ranking loss."""
+    return isinstance(model.loss, MarginRankingLoss)
+
+
+def has_nssa_loss(model) -> bool:
+    """Check if the model has a NSSA loss."""
+    return isinstance(model.loss, NSSALoss)
