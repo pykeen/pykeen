@@ -10,7 +10,7 @@ import pandas as pd
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
 from pykeen.models.base import Model
-from pykeen.models.predict import get_head_prediction_df, get_prediction_df, get_tail_prediction_df
+from pykeen.models.predict import get_all_prediction_df, get_head_prediction_df, get_tail_prediction_df
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
 from pykeen.triples.generation import generate_triples_factory
@@ -74,7 +74,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_no_novelties(self):
         """Test scoring all triples without labeling as novel w.r.t. training and testing."""
-        all_df = get_prediction_df(model=self.model, testing=self.testing_mapped_triples, add_novelties=False)
+        all_df = get_all_prediction_df(model=self.model, testing=self.testing_mapped_triples, add_novelties=False)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
@@ -85,7 +85,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_remove_known(self):
         """Test scoring all triples while removing non-novel triples w.r.t. training and testing."""
-        all_df = get_prediction_df(model=self.model, testing=self.testing_mapped_triples, remove_known=True)
+        all_df = get_all_prediction_df(model=self.model, testing=self.testing_mapped_triples, remove_known=True)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
@@ -98,7 +98,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_with_novelties(self):
         """Test scoring all triples with labeling as novel w.r.t. training and testing."""
-        all_df = get_prediction_df(model=self.model, testing=self.testing_mapped_triples)
+        all_df = get_all_prediction_df(model=self.model, testing=self.testing_mapped_triples)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             [

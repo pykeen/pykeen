@@ -308,87 +308,12 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
-    def get_head_prediction_df(
+    def get_all_prediction_df(
         self,
-        relation_label: str,
-        tail_label: str,
-        add_novelties: bool = True,
-        remove_known: bool = False,
-        testing: Optional[torch.LongTensor] = None,
-    ) -> pd.DataFrame:
-        """Predict tails for the given head and relation (given by label).
-
-        :param relation_label: The string label for the relation
-        :param tail_label: The string label for the tail entity
-        :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
-         to novel triples?
-        :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-        :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-
-        The following example shows that after you train a model on the Nations dataset,
-        you can score all entities w.r.t a given relation and tail entity.
-
-        >>> from pykeen.pipeline import pipeline
-        >>> result = pipeline(
-        ...     dataset='Nations',
-        ...     model='RotatE',
-        ... )
-        >>> df = result.model.get_head_prediction_df('accusation', 'brazil')
-        """
-        from .predict import get_head_prediction_df
-        warnings.warn('Use pykeen.predict.get_head_prediction_df', DeprecationWarning)
-        return get_head_prediction_df(
-            self, relation_label=relation_label, tail_label=tail_label, add_novelties=add_novelties,
-            remove_known=remove_known, testing=testing,
-        )
-
-    def get_tail_prediction_df(
-        self,
-        head_label: str,
-        relation_label: str,
-        add_novelties: bool = True,
-        remove_known: bool = False,
-        testing: Optional[torch.LongTensor] = None,
-    ) -> pd.DataFrame:
-        """Predict tails for the given head and relation (given by label).
-
-        :param head_label: The string label for the head entity
-        :param relation_label: The string label for the relation
-        :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
-         to novel triples?
-        :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-         On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-         non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-        :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-
-        The following example shows that after you train a model on the Nations dataset,
-        you can score all entities w.r.t a given head entity and relation.
-
-        >>> from pykeen.pipeline import pipeline
-        >>> result = pipeline(
-        ...     dataset='Nations',
-        ...     model='RotatE',
-        ... )
-        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation')
-        """
-        from .predict import get_tail_prediction_df
-        warnings.warn('Use pykeen.predict.predict_tails', DeprecationWarning)
-        return get_tail_prediction_df(self, head_label, relation_label, add_novelties, remove_known, testing)
-
-    def get_prediction_df(
-        self,
+        *,
         k: Optional[int] = None,
         batch_size: int = 1,
-        return_tensors: bool = False,
-        add_novelties: bool = True,
-        remove_known: bool = False,
-        testing: Optional[torch.LongTensor] = None,
+        **kwargs,
     ) -> Union[ScorePack, pd.DataFrame]:
         """Compute scores for all triples, optionally returning only the k highest scoring.
 
@@ -397,10 +322,9 @@ class Model(nn.Module, ABC):
 
         :param k:
             The number of triples to return. Set to None, to keep all.
-
         :param batch_size:
             The batch size to use for calculating scores.
-
+        :param kwargs: Additional kwargs to pass to :func:`pykeen.models.predict.get_all_prediction_df`.
         :return: shape: (k, 3)
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
 
@@ -421,12 +345,77 @@ class Model(nn.Module, ABC):
             # Get scores for top 15 triples
             top_df = model.score_all_triples(k=15)
         """
-        from .predict import get_prediction_df
-        warnings.warn('Use pykeen.predict.get_prediction_df', DeprecationWarning)
-        return get_prediction_df(
-            model=self, k=k, batch_size=batch_size, return_tensors=return_tensors,
-            add_novelties=add_novelties, remove_known=remove_known, testing=testing,
-        )
+        from .predict import get_all_prediction_df
+        warnings.warn('Use pykeen.models.predict.get_all_prediction_df', DeprecationWarning)
+        return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
+
+    def get_head_prediction_df(
+        self,
+        relation_label: str,
+        tail_label: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Predict heads for the given relation and tail (given by label).
+
+        :param relation_label: The string label for the relation
+        :param tail_label: The string label for the tail entity
+        :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_head_prediction_df`
+
+        The following example shows that after you train a model on the Nations dataset,
+        you can score all entities w.r.t a given relation and tail entity.
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(
+        ...     dataset='Nations',
+        ...     model='RotatE',
+        ... )
+        >>> df = result.model.get_head_prediction_df('accusation', 'brazil')
+        """
+        from .predict import get_head_prediction_df
+        warnings.warn('Use pykeen.models.predict.get_head_prediction_df', DeprecationWarning)
+        return get_head_prediction_df(self, relation_label=relation_label, tail_label=tail_label, **kwargs)
+
+    def get_relation_prediction_df(
+        self,
+        head_label: str,
+        tail_label: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Predict relations for the given head and tail (given by label).
+
+        :param head_label: The string label for the head entity
+        :param tail_label: The string label for the tail entity
+        :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_relation_prediction_df`
+        """
+        from .predict import get_relation_prediction_df
+        warnings.warn('Use pykeen.models.predict.get_relation_prediction_df', DeprecationWarning)
+        return get_relation_prediction_df(self, head_label=head_label, tail_label=tail_label, **kwargs)
+
+    def get_tail_prediction_df(
+        self,
+        head_label: str,
+        relation_label: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Predict tails for the given head and relation (given by label).
+
+        :param head_label: The string label for the head entity
+        :param relation_label: The string label for the relation
+        :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_tail_prediction_df`
+
+        The following example shows that after you train a model on the Nations dataset,
+        you can score all entities w.r.t a given head entity and relation.
+
+        >>> from pykeen.pipeline import pipeline
+        >>> result = pipeline(
+        ...     dataset='Nations',
+        ...     model='RotatE',
+        ... )
+        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation')
+        """
+        from .predict import get_tail_prediction_df
+        warnings.warn('Use pykeen.models.predict.get_tail_prediction_df', DeprecationWarning)
+        return get_tail_prediction_df(self, head_label=head_label, relation_label=relation_label, **kwargs)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""

@@ -13,6 +13,14 @@ import torch
 from .base import Model
 from ..typing import MappedTriples, ScorePack
 
+__all__ = [
+    'predict',
+    'get_all_prediction_df',
+    'get_head_prediction_df',
+    'get_relation_prediction_df',
+    'get_tail_prediction_df',
+]
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,23 +38,27 @@ def get_head_prediction_df(
     :param relation_label: The string label for the relation
     :param tail_label: The string label for the tail entity
     :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
-     to novel triples?
+        to novel triples?
     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-     On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-     non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-     may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-     denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :return: shape: (k, 3)
+        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
+        or all possible triples if k is None.
 
     The following example shows that after you train a model on the Nations dataset,
     you can score all entities w.r.t a given relation and tail entity.
 
     >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models.predict import get_head_prediction_df
     >>> result = pipeline(
     ...     dataset='Nations',
     ...     model='RotatE',
     ... )
-    >>> df = result.model.get_head_prediction_df('accusation', 'brazil')
+    >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil')
     """
     tail_id = model.triples_factory.entity_to_id[tail_label]
     relation_id = model.triples_factory.relation_to_id[relation_label]
@@ -77,6 +89,7 @@ def get_tail_prediction_df(
     model: Model,
     head_label: str,
     relation_label: str,
+    *,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -87,23 +100,27 @@ def get_tail_prediction_df(
     :param head_label: The string label for the head entity
     :param relation_label: The string label for the relation
     :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
-     to novel triples?
+        to novel triples?
     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-     On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-     non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-     may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-     denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :return: shape: (k, 3)
+        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
+        or all possible triples if k is None.
 
     The following example shows that after you train a model on the Nations dataset,
     you can score all entities w.r.t a given head entity and relation.
 
     >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models.predict import get_tail_prediction_df
     >>> result = pipeline(
     ...     dataset='Nations',
     ...     model='RotatE',
     ... )
-    >>> df = result.model.get_tail_prediction_df('brazil', 'accusation')
+    >>> df = get_tail_prediction_df(result.model, 'brazil', 'accusation')
     """
     head_id = model.triples_factory.entity_to_id[head_label]
     relation_id = model.triples_factory.relation_to_id[relation_label]
@@ -131,64 +148,69 @@ def get_tail_prediction_df(
 
 
 def get_relation_prediction_df(
-     model: Model,
-     head_label: str,
-     tail_label: str,
-     add_novelties: bool = True,
-     remove_known: bool = False,
-     testing: Optional[torch.LongTensor] = None,
- ) -> pd.DataFrame:
-     """Predict relations for the given head and tail (given by label).
-
-     :param model: A PyKEEN model
-     :param head_label: The string label for the head entity
-     :param tail_label: The string label for the tail entity
-     :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
-      to novel triples?
-     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
-      On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
-      non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
-      may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
-      denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
-     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
-
-     The following example shows that after you train a model on the Nations dataset,
-     you can score all relations w.r.t a given head entity and tail entity.
-
-     >>> from pykeen.pipeline import pipeline
-     >>> result = pipeline(
-     ...     dataset='Nations',
-     ...     model='RotatE',
-     ... )
-     >>> df = result.model.get_relation_prediction_df('brazil', 'portugal')
-     """
-     head_id = model.triples_factory.entity_to_id[head_label]
-     tail_id = model.triples_factory.entity_to_id[tail_label]
-     batch = torch.tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
-     scores = model.predict_r(batch)
-     scores = scores[0, :].tolist()
-     rv = pd.DataFrame(
-         [
-             (relation_id, relation_label, scores[relation_id])
-             for relation_label, relation_id in model.triples_factory.relation_to_id.items()
-         ],
-         columns=['relation_id', 'relation_label', 'score'],
-     ).sort_values('score', ascending=False)
-
-      return _postprocess_prediction_df(
-         rv,
-         add_novelties=add_novelties,
-         remove_known=remove_known,
-         testing=testing,
-         training=model.triples_factory.mapped_triples,
-         query_ids_key='relation_id',
-         col=1,
-         other_col_ids=(head_id, tail_id),
-     )
-
-
-def get_prediction_df(
     model: Model,
+    head_label: str,
+    tail_label: str,
+    add_novelties: bool = True,
+    remove_known: bool = False,
+    testing: Optional[torch.LongTensor] = None,
+) -> pd.DataFrame:
+    """Predict relations for the given head and tail (given by label).
+
+    :param model: A PyKEEN model
+    :param head_label: The string label for the head entity
+    :param tail_label: The string label for the tail entity
+    :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
+        to novel triples?
+    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :return: shape: (k, 3)
+        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
+        or all possible triples if k is None.
+
+    The following example shows that after you train a model on the Nations dataset,
+    you can score all relations w.r.t a given head entity and tail entity.
+
+    >>> from pykeen.pipeline import pipeline
+    >>> from pykeen.models.predict import get_relation_prediction_df
+    >>> result = pipeline(
+    ...     dataset='Nations',
+    ...     model='RotatE',
+    ... )
+    >>> df = get_relation_prediction_df(result.model, 'brazil', 'portugal')
+    """
+    head_id = model.triples_factory.entity_to_id[head_label]
+    tail_id = model.triples_factory.entity_to_id[tail_label]
+    batch = torch.tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
+    scores = model.predict_r(batch)
+    scores = scores[0, :].tolist()
+    rv = pd.DataFrame(
+        [
+            (relation_id, relation_label, scores[relation_id])
+            for relation_label, relation_id in model.triples_factory.relation_to_id.items()
+        ],
+        columns=['relation_id', 'relation_label', 'score'],
+    ).sort_values('score', ascending=False)
+
+    return _postprocess_prediction_df(
+        rv,
+        add_novelties=add_novelties,
+        remove_known=remove_known,
+        testing=testing,
+        training=model.triples_factory.mapped_triples,
+        query_ids_key='relation_id',
+        col=1,
+        other_col_ids=(head_id, tail_id),
+    )
+
+
+def get_all_prediction_df(
+    model: Model,
+    *,
     k: Optional[int] = None,
     batch_size: int = 1,
     return_tensors: bool = False,
@@ -204,8 +226,18 @@ def get_prediction_df(
     :param model: A PyKEEN model
     :param k: The number of triples to return. Set to ``None`` to keep all.
     :param batch_size: The batch size to use for calculating scores
+    :param return_tensors: If true, only return tensors. If false (default), return as a pandas DataFrame
+    :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
+        to novel triples?
+    :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
+        On one hand, this allows you to better assess the goodness of the predictions - you want to see that the
+        non-novel triples generally have higher scores. On the other hand, if you're doing hypothesis generation, they
+        may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
+        denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
+    :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
     :return: shape: (k, 3)
-        A tensor containing the k highest scoring triples, or all possible triples if k=None.
+        A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
+        or all possible triples if k is None.
 
     Example usage:
 
