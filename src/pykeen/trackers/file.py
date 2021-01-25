@@ -61,7 +61,6 @@ class FileResultTracker(ResultTracker):
         logger.info(f"Logging to {path.as_uri()}.")
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
-        self.csv_writer = csv.writer(self.file, **kwargs)
 
     def end_run(self) -> None:  # noqa: D102
         self.file.close()
