@@ -551,6 +551,7 @@ class FileResultTrackerTests(ResultTrackerTests):
         # check that file was created
         assert self.path.is_file()
         # delete intermediate files
+        self.path.unlink()
         self.temporary_directory.cleanup()
 
 
