@@ -637,9 +637,8 @@ class TrainingLoop(ABC):
         current_epoch_loss = loss.item()
 
         # reset the regularizer to free the computational graph
-        _regularizer = getattr(self.model, 'regularizer', None)
-        if _regularizer:
-            _regularizer.reset()
+        if hasattr(self.model, 'regularizer'):
+            self.model.regularizer.reset()
 
         return current_epoch_loss
 
