@@ -10,10 +10,14 @@ import pandas as pd
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
 from pykeen.models.base import Model
-from pykeen.models.predict import get_all_prediction_df, get_head_prediction_df, get_tail_prediction_df
+from pykeen.models.predict import (
+    get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
+    get_tail_prediction_df,
+)
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
 from pykeen.triples.generation import generate_triples_factory
+from pykeen.utils import resolve_device
 
 
 class TestPipeline(unittest.TestCase):
@@ -22,11 +26,14 @@ class TestPipeline(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up a shared result."""
+        cls.device = resolve_device('cuda')
         cls.result = pipeline(
             model='TransE',
             dataset='nations',
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
+            device=cls.device,
+            random_seed=42,
         )
         cls.model = cls.result.model
         nations = Nations()
@@ -56,17 +63,34 @@ class TestPipeline(unittest.TestCase):
         """Test scoring tails with labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(self.model, 'brazil', 'intergovorgs', testing=self.testing_mapped_triples)
         self.assertEqual(['tail_id', 'tail_label', 'score', 'in_training', 'in_testing'], list(tails_df.columns))
-        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
+        self.assertEqual(self.model.num_entities, len(tails_df.index))
         training_tails = set(tails_df.loc[tails_df['in_training'], 'tail_label'])
         self.assertEqual({'usa', 'uk', 'netherlands', 'egypt', 'india', 'israel', 'indonesia'}, training_tails)
         testing_tails = set(tails_df.loc[tails_df['in_testing'], 'tail_label'])
         self.assertEqual({'poland', 'cuba'}, testing_tails)
 
+    def test_predict_relations_with_novelties(self):
+        """Test scoring relations with labeling as novel w.r.t. training and testing."""
+        rel_df = get_relation_prediction_df(self.model, 'brazil', 'uk', testing=self.testing_mapped_triples)
+        self.assertEqual(['relation_id', 'relation_label', 'score', 'in_training', 'in_testing'], list(rel_df.columns))
+        self.assertEqual(self.model.num_relations, len(rel_df.index))
+        training_rels = set(rel_df.loc[rel_df['in_training'], 'relation_label'])
+        self.assertEqual(
+            {
+                'weightedunvote', 'relexports', 'intergovorgs', 'timesinceally', 'exports3', 'booktranslations',
+                'relbooktranslations', 'reldiplomacy', 'ngoorgs3', 'ngo', 'relngo', 'reltreaties', 'independence',
+                'intergovorgs3', 'unweightedunvote', 'commonbloc2', 'relintergovorgs'
+            },
+            training_rels,
+        )
+        testing_heads = set(rel_df.loc[rel_df['in_testing'], 'relation_label'])
+        self.assertEqual({'embassy'}, testing_heads)
+
     def test_predict_heads_with_novelties(self):
         """Test scoring heads with labeling as novel w.r.t. training and testing."""
         heads_df = get_head_prediction_df(self.model, 'conferences', 'brazil', testing=self.testing_mapped_triples)
         self.assertEqual(['head_id', 'head_label', 'score', 'in_training', 'in_testing'], list(heads_df.columns))
-        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(heads_df.index))
+        self.assertEqual(self.model.num_entities, len(heads_df.index))
         training_heads = set(heads_df.loc[heads_df['in_training'], 'head_label'])
         self.assertEqual({'usa', 'india', 'ussr', 'poland', 'cuba'}, training_heads)
         testing_heads = set(heads_df.loc[heads_df['in_testing'], 'head_label'])
