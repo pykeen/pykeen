@@ -857,15 +857,6 @@ class TrainingLoop(ABC):
     ) -> torch.FloatTensor:
         raise NotImplementedError
 
-    def to_embeddingdb(self, session=None, use_tqdm: bool = False):
-        """Upload to the embedding database.
-
-        :param session: Optional SQLAlchemy session
-        :param use_tqdm: Use :mod:`tqdm` progress bar?
-        :rtype: embeddingdb.sql.models.Collection
-        """
-        return self.model.to_embeddingdb(session=session, use_tqdm=use_tqdm)
-
     def _free_graph_and_cache(self):
         if hasattr(self.model, 'regularizer'):
             # The regularizer has to be reset to free the computational graph

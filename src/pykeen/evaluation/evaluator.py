@@ -651,9 +651,9 @@ def _evaluate_batch(
 
     # Predict scores once
     if column == 2:  # tail scores
-        batch_scores_of_corrupted = model.predict_scores_all_tails(batch[:, 0:2], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
     else:
-        batch_scores_of_corrupted = model.predict_scores_all_heads(batch[:, 1:3], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[
