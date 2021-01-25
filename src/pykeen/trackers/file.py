@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Tracking results in local files."""
+
 import csv
 import datetime
 import logging
@@ -35,7 +38,7 @@ class CSVResultTracker(ResultTracker):
     """
 
     #: The column names
-    HEADER = ("type", "step", "key", "value")
+    HEADER = "type", "step", "key", "value"
 
     #: The file where the results are written to.
     file: TextIO
