@@ -8,6 +8,7 @@ from typing import Any, Mapping, Optional, TextIO, Union
 import pystow
 
 from .base import ResultTracker
+from ..utils import flatten_dictionary
 
 __all__ = [
     "CSVResultTracker",
@@ -70,8 +71,9 @@ class CSVResultTracker(ResultTracker):
         params: Mapping[str, Any],
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
+        params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.csv_writer.writerows(
-            ("parameter", 0, _format_key(key=key, prefix=prefix), value)
+            ("parameter", 0, key, value)
             for key, value in params.items()
         )
         self.file.flush()
@@ -82,8 +84,9 @@ class CSVResultTracker(ResultTracker):
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
+        metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.csv_writer.writerows(
-            ("metric", step, _format_key(key=key, prefix=prefix), value)
+            ("metric", step, key, value)
             for key, value in metrics.items()
         )
         self.file.flush()
